@@ -24,14 +24,14 @@ func checkedFigures(ctx context.Context) ([]int, error) {
 
 func figuresUnlessLast(ctx context.Context, last bool) ([]int, error) {
 	if last {
-		return nil, errLast
+		return []int{1}, errLast
 	}
 	return checkedFigures(ctx)
 }
 
 func figuresUnlessLooked(ctx context.Context, looked bool) ([]int, error) {
 	if looked {
-		return nil, errLooked
+		return []int{1}, errLooked
 	}
 	return checkedFigures(ctx)
 }
@@ -39,7 +39,7 @@ func figuresUnlessLooked(ctx context.Context, looked bool) ([]int, error) {
 // An Err name of a package nobody declared to hold only errors.
 func figuresUnlessGone(ctx context.Context, gone bool) ([]int, error) {
 	if gone {
-		return nil, store.ErrGone
+		return []int{1}, store.ErrGone
 	}
 	return checkedFigures(ctx)
 }

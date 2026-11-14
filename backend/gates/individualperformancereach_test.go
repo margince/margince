@@ -83,10 +83,8 @@ var switchWalkConfig = walkConfig{
 		{authPath, "IndividualPerformanceOf", 0},
 		{authPath, "MayMeasureSeat", 0},
 		{identityPath, "IndividualPerformanceTx", 0},
+		{authPath, "OwnSeat", 0},
 		{composePath, "ownScope", 0},
-		// The weekly review's seat, read off the principal as ownScope reads it.
-		// The weekly package sits below compose and cannot call ownScope.
-		{composePath + "/weekly", "reviewUser", 0},
 		// The grouping rule while the switch is off: nil only where no group
 		// splits the answer by a colleague's seat.
 		{composePath, "requireOwnGrouping", 0},

@@ -1,0 +1,104 @@
+package valuestore
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"slices"
+	"strconv"
+	"strings"
+
+	"example.test/auth"
+	"example.test/hooks"
+	"example.test/httperr"
+	"example.test/store"
+)
+
+func teamFigure() []int { return []int{2} }
+
+type Handlers struct{}
+
+// A builder holds what is written into it, so a figure written there is in
+// what it answers.
+func (h Handlers) GetABuilderHoldingAFigure(w http.ResponseWriter, r *http.Request) {
+	var out strings.Builder
+	out.WriteString(strconv.Itoa(teamFigure()[0]))
+	httperr.WriteJSON(w, http.StatusOK, out.String())
+}
+
+// A row scan fills what it is handed with what it read.
+func (h Handlers) GetAScannedFigure(w http.ResponseWriter, r *http.Request) {
+	var total int
+	store.Scan(&total)
+	httperr.WriteJSON(w, http.StatusOK, total)
+}
+
+// A callback the walk cannot run may fill its outer variable at any time.
+func (h Handlers) GetAFigureFilledLater(w http.ResponseWriter, r *http.Request) {
+	names := auth.Catalog()
+	hooks.OnReady(func(ctx context.Context) error {
+		names = []string{strconv.Itoa(teamFigure()[0])}
+		return nil
+	})
+	httperr.WriteJSON(w, http.StatusOK, names)
+}
+
+// A helper that writes a figure into what it is handed changes it.
+func fill(names []string) { names[0] = strconv.Itoa(teamFigure()[0]) }
+
+func (h Handlers) GetAFigureFilledInPlace(w http.ResponseWriter, r *http.Request) {
+	names := auth.Catalog()
+	fill(names)
+	httperr.WriteJSON(w, http.StatusOK, names)
+}
+
+// The request, and what it is turned into, carries no one's figure.
+func (h Handlers) GetTheRequestBack(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, map[string]string{"path": r.URL.Path, "query": r.URL.Query().Encode()})
+}
+
+// Nor does the catalog written through a builder.
+func (h Handlers) GetTheCatalogBuilt(w http.ResponseWriter, r *http.Request) {
+	var out strings.Builder
+	out.WriteString(strings.Join(auth.Catalog(), ", "))
+	httperr.WriteJSON(w, http.StatusOK, out.String())
+}
+
+// A helper that stores a figure and then refuses still leaves it stored.
+func fillThenRefuse(out *[]int) error {
+	*out = teamFigure()
+	return errors.New("refused")
+}
+
+func (h Handlers) GetAFigureStoredBeforeARefusal(w http.ResponseWriter, r *http.Request) {
+	var out []int
+	if err := fillThenRefuse(&out); err != nil {
+		httperr.WriteJSON(w, http.StatusOK, out)
+	}
+}
+
+// So does a literal that stores into its frame and then refuses.
+func (h Handlers) GetAnOuterFigureBeforeARefusal(w http.ResponseWriter, r *http.Request) {
+	names := auth.Catalog()
+	if err := func() error {
+		names = []string{strconv.Itoa(teamFigure()[0])}
+		return errors.New("refused")
+	}(); err != nil {
+		httperr.WriteJSON(w, http.StatusOK, names)
+	}
+}
+
+// What middleware put in the context, another service answered, or a
+// callback yielded is no transform of the request.
+func (h Handlers) GetFromTheContext(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, r.Context().Value("figure"))
+}
+
+func (h Handlers) GetFromAnotherService(w http.ResponseWriter, r *http.Request) {
+	answer, _ := http.Get(r.URL.Path)
+	httperr.WriteJSON(w, http.StatusOK, answer)
+}
+
+func (h Handlers) GetFromACallback(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusOK, slices.Collect(func(yield func(int) bool) { yield(teamFigure()[0]) }))
+}

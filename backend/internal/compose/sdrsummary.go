@@ -302,9 +302,12 @@ func withoutColleagueSubmitters(ctx context.Context, tx pgx.Tx, rows []crmcontra
 	if err != nil || allowed {
 		return err
 	}
-	actor, _ := principal.Actor(ctx)
+	own, err := auth.OwnSeat(ctx)
+	if err != nil {
+		return err
+	}
 	for index := range rows {
-		if submitter := rows[index].SubmitterId; submitter != nil && ids.UUID(*submitter) != actor.UserID {
+		if submitter := rows[index].SubmitterId; submitter != nil && ids.UUID(*submitter) != own {
 			rows[index].SubmitterId = nil
 		}
 	}

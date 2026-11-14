@@ -6,7 +6,8 @@
 package gates
 
 // The path walk of the individual-performance gate. A figure counts as
-// checked only when every path to it passed a read of the switch.
+// checked only when every path to it passed a read of the switch, or the
+// value written is covered (individualperformancevalues_test.go).
 //
 // Branches join so that a check on one does not cover its sibling. A call
 // checks when all it may run checks on every success return. For a func-typed
@@ -74,10 +75,11 @@ func (p *figurePoints) merge(other figurePoints) {
 
 // walkVerdict is what walking one function from one entry state found.
 // guards says every success return passed a check, and bare says each that did
-// not carries no figure. writes are the response writes that carry a figure;
-// returns are the returns that carry a value. answers marks each result that
-// carries the switch's answer on every success return, and captured holds the
-// outer variables a literal leaves holding one.
+// not hands out only covered values. writes are the response writes that carry
+// a figure; returns are the returns that carry a value. answers marks each
+// result that carries the switch's answer on every success return, and
+// captured holds the outer variables a literal leaves holding one. outer is
+// whether a literal leaves each outer variable covered.
 type walkVerdict struct {
 	guards   bool
 	bare     bool
@@ -85,13 +87,18 @@ type walkVerdict struct {
 	returns  figurePoints
 	answers  []bool
 	captured map[types.Object]bool
-	exits    int
+	outer    map[types.Object]bool
+	// kept says, for the receiver and each parameter, that every way out
+	// leaves it covered, so what a caller handed in by reference still is.
+	kept  []bool
+	exits int
 }
 
 type walkKey struct {
-	decl                *types.Func
-	lit                 *ast.FuncLit
-	checked, bare, held bool
+	decl    *types.Func
+	lit     *ast.FuncLit
+	checked bool
+	covered uint64
 }
 
 // switchWalk walks the graph, reusing the verdict of a call whose parameters
@@ -111,7 +118,7 @@ func newSwitchWalk(g *switchGraph) *switchWalk {
 // one that does not check, so recursion cannot lend itself a check.
 func (sw *switchWalk) walk(next run, entry pathState, depth int) walkVerdict {
 	fn := next.fn
-	key := walkKey{fn.decl, fn.lit, entry.checked, entry.bare, entry.held}
+	key := walkKey{fn.decl, fn.lit, entry.checked, coveredMask(fn, entry.covered)}
 	reusable := len(next.bound) == 0 && len(next.names) == 0 && fn.env == nil && len(entry.answers) == 0
 	if verdict, ok := sw.memo[key]; ok && reusable {
 		return verdict
@@ -121,6 +128,7 @@ func (sw *switchWalk) walk(next run, entry pathState, depth int) walkVerdict {
 	}
 	sw.active[key] = true
 	defer delete(sw.active, key)
+
 	ft, body, info := sw.parts(fn)
 	if body == nil {
 		return walkVerdict{}
@@ -129,11 +137,16 @@ func (sw *switchWalk) walk(next run, entry pathState, depth int) walkVerdict {
 		sw: sw, frame: &pathFrame{info: info, bound: next.bound, names: next.names, parent: fn.env, depth: depth},
 		shape: shapeOf(ft, info), verdict: walkVerdict{guards: true, bare: true}, lit: fn.lit,
 		answerCalls: map[*ast.CallExpr]callAnswer{}, discarded: map[*ast.CallExpr]bool{}, hits: map[types.Object]bool{},
-		floorCalls: map[*ast.CallExpr]int{}, floors: map[types.Object]bool{},
+		floorCalls: map[*ast.CallExpr]int{}, floors: map[types.Object]bool{}, covers: map[*ast.CallExpr]bool{},
 	}
-	// Only a function that returns nothing keeps the caller's figure-free
-	// state, as a writer of what it was handed does. Any other makes its own.
-	start := pathState{checked: entry.checked, bare: entry.bare && w.shape.results == 0, answers: entry.answers, held: entry.held}
+	start := pathState{checked: entry.checked, covered: maps.Clone(entry.covered), answers: entry.answers}
+	for _, named := range w.shape.named {
+		start.covered = withMember(start.covered, named, named != nil)
+	}
+	if fn.lit != nil {
+		w.outerAtEntry = entry.covered
+	}
+	w.slots = slotsOf(fn)
 	end, falls := w.block(body.List, start)
 	if falls {
 		w.exit(nil, end, body.Rbrace)
@@ -180,22 +193,17 @@ func shapeOf(ft *ast.FuncType, info *types.Info) resultShape {
 	return shape
 }
 
-// pathState is what holds on one path. checked says a check was passed. bare
-// says all it holds came from a call that answers no figure. nonNil holds the
-// error variables known not to be nil. answers holds the variables that hold
-// the switch's answer: it checks only on a branch a condition on it decides.
+// pathState is what holds on one path. checked says a check was passed.
+// covered holds the variables whose value needs nothing more from the switch.
+// nonNil holds the error variables known not to be nil. answers holds the
+// variables that hold the switch's answer: it checks only on a branch a
+// condition on it decides.
 type pathState struct {
 	checked bool
-	bare    bool
+	covered map[types.Object]bool
 	nonNil  map[types.Object]bool
 	answers map[types.Object]bool
-	// held says the path got a figure from a call no check covered. A
-	// figure-free call after it cannot make the path figure-free again.
-	held bool
 }
-
-// covered reports a path whose output needs nothing more from the switch.
-func (s pathState) covered() bool { return s.checked || s.bare }
 
 func (s pathState) withNonNil(obj types.Object) pathState {
 	s.nonNil = withMember(s.nonNil, obj, true)
@@ -220,7 +228,7 @@ func withMember(set map[types.Object]bool, obj types.Object, in bool) map[types.
 }
 
 func (s pathState) same(other pathState) bool {
-	return s.checked == other.checked && s.bare == other.bare && s.held == other.held && maps.Equal(s.nonNil, other.nonNil) && maps.Equal(s.answers, other.answers)
+	return s.checked == other.checked && maps.Equal(s.covered, other.covered) && maps.Equal(s.nonNil, other.nonNil) && maps.Equal(s.answers, other.answers)
 }
 
 // breakTarget is a statement a break leaves, and for a loop one a continue
@@ -249,6 +257,11 @@ type pathWalk struct {
 	// the variables that hold one.
 	floorCalls map[*ast.CallExpr]int
 	floors     map[types.Object]bool
+	// covers holds whether each call walked answers covered results, and
+	// outerAtEntry what a literal's frame held covered when it was run.
+	covers       map[*ast.CallExpr]bool
+	outerAtEntry map[types.Object]bool
+	slots        []*types.Var
 }
 
 func (w *pathWalk) block(stmts []ast.Stmt, s pathState) (pathState, bool) {
@@ -278,8 +291,8 @@ func (w *pathWalk) stmt(stmt ast.Stmt, s pathState, label string) (pathState, bo
 		for _, rhs := range node.Rhs {
 			s = w.expr(rhs, s)
 		}
-		w.sw.g.observeWrite(node, s)
-		s = w.assign(node.Lhs, node.Rhs, s)
+		w.sw.g.observeWrite(node, s.checked || !slices.ContainsFunc(node.Rhs, func(rhs ast.Expr) bool { return !w.isCovered(rhs, s) }))
+		s = w.assign(node.Lhs, node.Rhs, node.Tok, s)
 	case *ast.DeclStmt:
 		s = w.expr(declValues(node), s)
 		s = w.declare(node, s)
@@ -298,7 +311,7 @@ func (w *pathWalk) stmt(stmt ast.Stmt, s pathState, label string) (pathState, bo
 	case *ast.ForStmt:
 		return w.loop(node.Init, node.Cond, node.Body, s, label)
 	case *ast.RangeStmt:
-		return w.loop(nil, node.X, node.Body, s, label)
+		return w.rangeLoop(node, s, label)
 	case *ast.SwitchStmt:
 		return w.switchStmt(node.Init, node.Tag, node.Body, s, label)
 	case *ast.TypeSwitchStmt:
@@ -353,28 +366,60 @@ func (w *pathWalk) ifStmt(node *ast.IfStmt, s pathState) (pathState, bool) {
 	return joinPaths(s, ends, falls)
 }
 
-// loop walks a body that may run no time at all. What follows holds only what
-// held on entry and at every way an iteration ends. A loop entered with no
-// figure stays figure-free when every way an iteration ends is checked or
-// figure-free. Zero passes add nothing, and each pass adds only checked ones.
+// loop walks a body that may run no time at all. What follows keeps covered
+// only what is covered on entry and at every way an iteration ends. A pass
+// starts from what the passes before it left, so the body is walked again
+// until that settles.
 func (w *pathWalk) loop(init ast.Stmt, cond ast.Expr, body *ast.BlockStmt, s pathState, label string) (pathState, bool) {
 	if init != nil {
 		s, _ = w.stmt(init, s, "")
 	}
 	s = w.expr(cond, s)
-	target := &breakTarget{label: label, loop: true}
-	w.targets = append(w.targets, target)
-	end, falls := w.block(body.List, s)
-	w.targets = w.targets[:len(w.targets)-1]
-	ends := slices.Concat(target.breakers, target.continues)
-	if falls {
-		ends = append(ends, end)
+	return w.passes(body, s, label, func(top pathState) pathState { return top }), true
+}
+
+// rangeLoop is loop over a range, whose key and value are covered where what
+// it ranges over is.
+func (w *pathWalk) rangeLoop(node *ast.RangeStmt, s pathState, label string) (pathState, bool) {
+	s = w.expr(node.X, s)
+	over := w.isCovered(node.X, s)
+	bindKeys := func(top pathState) pathState {
+		for _, key := range []ast.Expr{node.Key, node.Value} {
+			if obj := assignedObject(key, w.frame.info); key != nil && obj != nil {
+				top.covered = withMember(top.covered, obj, over || top.checked)
+			}
+		}
+		return top
 	}
-	for _, e := range ends {
-		s.bare = s.bare && e.covered()
-		s.held = s.held || e.held
+	return w.passes(node.Body, s, label, bindKeys), true
+}
+
+// maxPasses bounds how often a loop body is walked before its covered set
+// settles. Each pass only removes variables, so a body settles within as
+// many passes as it assigns variables in a chain.
+const maxPasses = 4
+
+func (w *pathWalk) passes(body *ast.BlockStmt, s pathState, label string, top func(pathState) pathState) pathState {
+	for range maxPasses {
+		target := &breakTarget{label: label, loop: true}
+		w.targets = append(w.targets, target)
+		end, falls := w.block(body.List, top(s))
+		w.targets = w.targets[:len(w.targets)-1]
+		ends := slices.Concat(target.breakers, target.continues)
+		if falls {
+			ends = append(ends, end)
+		}
+		next := s.covered
+		for _, e := range ends {
+			next = intersectCovered(next, e.covered)
+		}
+		if maps.Equal(next, s.covered) {
+			return s
+		}
+		s.covered = next
 	}
-	return s, true
+	s.covered = nil
+	return s
 }
 
 // switchStmt walks each clause from the state after the tag. Without a
@@ -449,19 +494,19 @@ func (w *pathWalk) branch(node *ast.BranchStmt, s pathState) {
 // joinPaths is the state after the paths that fall out of a statement: a check
 // holds only if it holds on each.
 func joinPaths(before pathState, ends []pathState, falls []bool) (pathState, bool) {
-	joined, someFall := pathState{checked: true, bare: true, nonNil: before.nonNil}, false
+	joined, someFall := pathState{checked: true, nonNil: before.nonNil}, false
 	for i, end := range ends {
 		if !falls[i] {
 			continue
 		}
 		if !someFall {
-			joined.answers = end.answers
+			joined.answers, joined.covered = end.answers, end.covered
 		}
+		joined.covered = intersectCovered(joined.covered, end.covered)
 		for obj := range joined.answers {
 			joined.answers = withMember(joined.answers, obj, end.answers[obj])
 		}
-		joined.checked, joined.bare, someFall = joined.checked && end.checked, joined.bare && end.bare, true
-		joined.held = joined.held || end.held
+		joined.checked, someFall = joined.checked && end.checked, true
 	}
 	if !someFall {
 		return before, false
@@ -487,17 +532,22 @@ func stopsThePath(expr ast.Expr, info *types.Info) bool {
 // be nil is a refusal, and hands out nothing. A return that hands back the
 // error of a call that checks has passed that check if the error is nil.
 func (w *pathWalk) exit(results []ast.Expr, s pathState, at token.Pos) {
+	// What a refusal stored through a reference stays stored, so every way
+	// out counts for what it leaves the caller holding.
+	w.keepOuter(s)
+	w.keepSlots(s)
 	if w.shape.errLast && len(results) == w.shape.results && w.refuses(results[len(results)-1], s, w.carriesValue(results)) {
 		return
 	}
 	answered := w.returnAnswers(results, s)
 	checked := s.checked || (w.shape.errLast && answered[w.shape.results-1])
+	covered := checked || w.resultsCovered(results, s)
 	if !checked {
 		w.verdict.guards = false
-		w.verdict.bare = w.verdict.bare && s.bare
+		w.verdict.bare = w.verdict.bare && covered
 	}
 	if w.carriesValue(results) {
-		w.verdict.returns.add(at, s.covered() || checked)
+		w.verdict.returns.add(at, covered)
 	}
 	if w.verdict.exits == 0 {
 		w.verdict.answers, w.verdict.captured = answered, w.outerAnswers(s)
@@ -509,6 +559,29 @@ func (w *pathWalk) exit(results []ast.Expr, s pathState, at token.Pos) {
 		w.verdict.captured = withMember(w.verdict.captured, obj, s.answers[obj])
 	}
 	w.verdict.exits++
+}
+
+// keepOuter records, for a literal, which outer variables one way out leaves
+// covered: those covered when it ran and those it covered. Each stays
+// covered only where every way out leaves it so.
+func (w *pathWalk) keepOuter(s pathState) {
+	if w.lit == nil {
+		return
+	}
+	if w.verdict.outer != nil {
+		for obj, kept := range w.verdict.outer {
+			w.verdict.outer[obj] = kept && s.covered[obj]
+		}
+		return
+	}
+	w.verdict.outer = map[types.Object]bool{}
+	for _, set := range []map[types.Object]bool{w.outerAtEntry, s.covered} {
+		for obj := range set {
+			if obj.Pos() < w.lit.Pos() || obj.Pos() > w.lit.End() {
+				w.verdict.outer[obj] = s.covered[obj]
+			}
+		}
+	}
 }
 
 // finishAnswers settles the error result: it carries the answer when every

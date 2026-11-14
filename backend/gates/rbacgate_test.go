@@ -781,15 +781,15 @@ var authNotDecisions = map[string]string{
 // with the reason it refuses — expected data about the auth package, not costs
 // this gate is paying.
 //
-// authDecisionsByRatification are the decisions whose names do not carry a
-// refusal verb. Each entry says why it refuses, because a name that reads like
-// a query and behaves like a gate is the thing a reader gets wrong.
+// authDecisionsByRatification each say why they refuse: a name that reads
+// like a query and behaves like a gate is the thing a reader gets wrong.
 var authDecisionsByRatification = map[string]string{
 	"EdgeReadAdmitted": "the relationship-edge admission itself: it answers whether this caller may read an edge, and the readers that compose a clause call it first",
 	"EdgeReadScope":    "calls EdgeReadAdmitted before composing, so a caller it refuses gets an error rather than a predicate",
 	"VisibleTo":        "per-record read admission — it answers about ONE row and its callers act on the refusal",
 	"WritableBy":       "the write half of the same question",
 	"Allows":           "Require read as a boolean, recording nothing: its callers withhold what the caller lacks, by the same decision Require refuses on",
+	"OwnSeat":          "the reader's own seat, refusing a caller with no signed-in seat: its callers read a record keyed by it as the reader's own",
 }
 
 // TestTheAuthDecisionVerbsStillDescribeThePackage holds the convention the gate

@@ -56,6 +56,7 @@ func (w *pathWalk) expr(expr ast.Expr, s pathState) pathState {
 	ast.Inspect(expr, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.FuncLit:
+			s = w.uncoverAssigned(node, s)
 			return false
 		case *ast.CallExpr:
 			s = w.call(node, s)
@@ -85,7 +86,8 @@ func (a callAnswer) at(i, n int) bool {
 // call walks one call after its operands. A reader's call answers the
 // switch, which checks only where a condition reads that answer. So does a
 // call whose error carries a check. Any other call checks when everything it
-// runs checks on every success return.
+// runs checks on every success return. Its results are covered when a
+// figure-free call answers them, or what it runs hands out only covered values.
 func (w *pathWalk) call(call *ast.CallExpr, s pathState) pathState {
 	s = w.expr(call.Fun, s)
 	for _, arg := range call.Args {
@@ -105,40 +107,47 @@ func (w *pathWalk) call(call *ast.CallExpr, s pathState) pathState {
 			return s
 		}
 		if w.sw.g.bareSet[callee.Origin()] {
-			s.bare = !s.held
+			w.covers[call] = true
 			return s
 		}
 	}
 	runs, resolved, external := w.runs(call, callee)
 	runs = w.dispatched(call, runs)
 	if w.writesFigure(call, resolved && !external) {
-		w.verdict.writes.add(call.Pos(), s.covered())
+		w.verdict.writes.add(call.Pos(), s.checked || w.payloadCovered(call, s))
 	}
 	guards, bare := resolved && len(runs) > 0, resolved && len(runs) > 0
 	answer := callAnswer{}
-	var captured map[types.Object]bool
+	var captured, outer map[types.Object]bool
+	var kept [][]bool
 	for i, next := range runs {
-		entry := pathState{checked: s.checked, bare: s.bare, held: s.held, answers: w.answeredParams(next.fn, call, s)}
+		entry := pathState{checked: s.checked, covered: w.entryCovered(next.fn, call, external, s), answers: w.answeredParams(next.fn, call, s)}
 		verdict := w.sw.walk(next, entry, w.frame.depth+1)
 		w.verdict.writes.merge(verdict.writes)
 		guards, bare = guards && verdict.guards, bare && verdict.bare
 		answer.results = andAnswers(answer.results, verdict.answers, i == 0)
 		captured = keptAnswers(captured, verdict.captured, i == 0)
+		outer = keptAnswers(outer, verdict.outer, i == 0)
+		kept = append(kept, slotKept(next.fn, verdict.kept))
 	}
 	for obj := range captured {
 		s.answers = withMember(s.answers, obj, true)
 	}
+	for obj, kept := range outer {
+		s.covered = withMember(s.covered, obj, kept)
+	}
+	covers := (external && len(runs) == 0 && w.pureCall(call, callee, s)) || (!guards && bare)
 	if errLast, known := errorLast(info.TypeOf(call)); guards && (errLast || (!known && external)) {
 		answer.lastErr = true
 	} else {
 		s.checked = s.checked || guards
 	}
 	w.answerCalls[call] = answer
-	if !external || len(runs) > 0 {
-		s.bare = !guards && bare
-		s.held = s.held || (!guards && !bare && !s.checked)
+	w.covers[call] = covers
+	if external || !resolved {
+		kept = nil
 	}
-	return s
+	return w.stored(call, covers, kept, s)
 }
 
 // readerCall records what a reader answers. Some answer is neither a bool
@@ -193,12 +202,23 @@ func keptAnswers(acc, next map[types.Object]bool, first bool) map[types.Object]b
 	return acc
 }
 
-// assign keeps, for each variable lhs names, whether it now holds an answer.
-func (w *pathWalk) assign(lhs, rhs []ast.Expr, s pathState) pathState {
+// assign keeps, for each variable lhs names, whether it now holds an answer
+// and whether its value is covered. A store through a field, index or pointer
+// keeps its variable covered only when what it stores is.
+func (w *pathWalk) assign(lhs, rhs []ast.Expr, tok token.Token, s pathState) pathState {
 	for i, target := range lhs {
+		covered := w.assignedCovered(lhs, rhs, i, s)
+		if _, plain := ast.Unparen(target).(*ast.Ident); !plain || (tok != token.ASSIGN && tok != token.DEFINE) {
+			if root := rootOf(target, w.frame.info); root != nil {
+				s.covered = withMember(s.covered, root, s.covered[root] && covered)
+			}
+		}
 		obj := assignedObject(target, w.frame.info)
 		if obj == nil {
 			continue
+		}
+		if _, plain := ast.Unparen(target).(*ast.Ident); plain && (tok == token.ASSIGN || tok == token.DEFINE) {
+			s.covered = withMember(s.covered, obj, covered)
 		}
 		answered := false
 		if len(rhs) == len(lhs) {
@@ -222,6 +242,8 @@ func (w *pathWalk) assign(lhs, rhs []ast.Expr, s pathState) pathState {
 	return s
 }
 
+// declare walks a var block. A variable declared without a value holds its
+// zero value, which is covered.
 func (w *pathWalk) declare(decl *ast.DeclStmt, s pathState) pathState {
 	gen, ok := decl.Decl.(*ast.GenDecl)
 	if !ok {
@@ -229,16 +251,38 @@ func (w *pathWalk) declare(decl *ast.DeclStmt, s pathState) pathState {
 	}
 	for _, spec := range gen.Specs {
 		vs, ok := spec.(*ast.ValueSpec)
-		if !ok || len(vs.Values) == 0 {
+		if !ok {
 			continue
 		}
 		lhs := make([]ast.Expr, len(vs.Names))
 		for i, name := range vs.Names {
 			lhs[i] = name
+			if len(vs.Values) == 0 {
+				s.covered = withMember(s.covered, w.frame.info.Defs[name], true)
+			}
 		}
-		s = w.assign(lhs, vs.Values, s)
+		if len(vs.Values) > 0 {
+			s = w.assign(lhs, vs.Values, token.DEFINE, s)
+		}
 	}
 	return s
+}
+
+// assignedCovered reports whether the value lhs[i] receives is covered. One
+// call answering every target covers each where its results are covered; a
+// comma-ok read covers its ok, a bool.
+func (w *pathWalk) assignedCovered(lhs, rhs []ast.Expr, i int, s pathState) bool {
+	switch {
+	case s.checked:
+		return true
+	case len(rhs) == len(lhs):
+		return w.isCovered(rhs[i], s)
+	case len(rhs) == 1 && i > 0:
+		if _, isCall := ast.Unparen(rhs[0]).(*ast.CallExpr); !isCall {
+			return true
+		}
+	}
+	return len(rhs) == 1 && w.isCovered(rhs[0], s)
 }
 
 // isAnswer reports an expression that holds the switch's answer.

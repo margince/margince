@@ -104,56 +104,6 @@ var carriesNoColleagueFigure = gatekit.Waive(map[string]string{
 	"proposeReportSetup":              "answers a model's proposed selection, read from the metric catalog, products and industries, with no figure",
 })
 
-// notYetHeldOnEveryPath holds operations the walk still flags and nobody has
-// sorted into a fixed path or an exact walk. Each says what is left. An entry
-// whose operation passes fails the test, so the list only shrinks.
-var notYetHeldOnEveryPath = gatekit.Waive(map[string]string{
-	"compareReportingEditions":     editionsOffBranch,
-	"getReportingEdition":          editionsOffBranch,
-	"exportReportingEdition":       editionsOffBranch,
-	"getReportingEditionEvidence":  editionsOffBranch,
-	"listReportingEditions":        editionsOffBranch,
-	"evaluateReporting":            evaluationOffBranch,
-	"evaluateReportingReport":      evaluationOffBranch,
-	"exportReportingEvaluation":    evaluationOffBranch,
-	"getReportingEvidence":         evaluationOffBranch,
-	"previewReportingReportAsRole": evaluationOffBranch,
-	"assessSalesReview":            evaluationOffBranch,
-	"getReportingMetrics":          "the read_reporting tool shares one handler, which reaches the edition and evaluation paths: " + evaluationOffBranch,
-	"getReportingReport":           "the read_reporting tool shares one handler, which reaches the edition and evaluation paths: " + evaluationOffBranch,
-	"listReportingReports":         "the read_reporting tool shares one handler, which reaches the edition and evaluation paths: " + evaluationOffBranch,
-	"getReportingTarget":           targetsOffBranch,
-	"listReportingTargets":         targetsOffBranch,
-	"updateReportingTarget":        targetsOffBranch,
-	"getSdrTeamReview":             targetsOffBranch,
-	"getSalesGoalPlan":             goalsOffBranch,
-	"listSalesGoalSellers":         goalsOffBranch,
-	"saveSalesGoalDraft":           goalsOffBranch,
-	"discardSalesGoalDraft":        goalsOffBranch,
-	"publishSalesGoalPlan":         goalsOffBranch,
-	"withdrawSalesGoalPlan":        goalsOffBranch,
-	"proposeSalesGoalMonths":       goalsOffBranch,
-	"getSalesProgress":             goalsOffBranch + "; " + evaluationOffBranch,
-	"summarizeSalesProgress":       "the summary reads the page through getSalesProgress's own read: " + goalsOffBranch + "; " + evaluationOffBranch,
-	"getForecastMovement":          "Store.SnapshotSide narrows a snapshot's rows through the lens, which filters them one by one and skips a colleague's row with continue",
-	"listSdrWaitingHandoffs":       "on the off branch withoutColleagueSubmitters blanks each colleague's submitter id in place, which the walk does not read as the floor",
-	"renderAnalyticsReport": evaluationOffBranch + "; requireNoLoneColleagueIn returns early on the off branch when the spec names no seat " +
-		"(sql == \"\"), and requireRequestedPopulationFloor hands the off branch to a population-floor chain the walk does not prove",
-})
-
-// The off-branch floors the walk does not read, shared by several operations.
-const (
-	editionsOffBranch = "on the off branch readerMeasurableOwners answers the reader alone as the measurable population " +
-		"(IndividualOff), which the edition reads narrow by; the walk does not read that narrowing as the floor"
-	evaluationOffBranch = "on the off branch explainWithheldOwners marks owner charts withheld in place, targetReach takes " +
-		"targetFloor's team floor, readerMeasurableOwners answers the reader alone, and the forecast snapshot lens filters rows " +
-		"with continue; the walk reads none of these as the floor"
-	targetsOffBranch = "targetReach's off branch takes targetFloor, which builds the team floor from a membership query, and " +
-		"readerMeasurableOwners, which answers the reader alone; the walk reads neither as the floor"
-	goalsOffBranch = "goalAccess admits a colleague's plan through reportingAuthority.MeasurableOwners, whose off branch " +
-		"narrows the candidates with slices.DeleteFunc over MayMeasureSeat; the walk does not read the filter as the floor"
-)
-
 // scopedOperation is one contract operation inside a family.
 type scopedOperation struct {
 	family, method, path, id string
@@ -281,7 +231,6 @@ func TestEveryFamilyTheSwitchNamesIsPlacedOnTheContract(t *testing.T) {
 func TestEverySurfaceTheSwitchCoversReadsIt(t *testing.T) {
 	t.Parallel()
 	defer carriesNoColleagueFigure.AssertAllMatched(t)
-	defer notYetHeldOnEveryPath.AssertAllMatched(t)
 	doc := loadContract(t)
 	paths, _ := doc["paths"].(map[string]any)
 	ops, err := scopedOperations(paths, contractSwitchFamilies(t, doc), familyPaths)
@@ -298,7 +247,7 @@ func TestEverySurfaceTheSwitchCoversReadsIt(t *testing.T) {
 			t.Error(finding)
 		}
 		for _, finding := range paths {
-			if !carriesNoColleagueFigure.Waived(t, op.id) && !notYetHeldOnEveryPath.Waived(t, op.id) {
+			if !carriesNoColleagueFigure.Waived(t, op.id) {
 				t.Error(finding)
 			}
 		}
@@ -322,7 +271,7 @@ func surfaceFindings(walk *switchWalk, op scopedOperation) (census, paths []stri
 		}
 	}
 	for _, root := range slices.Concat(handlers, tools) {
-		verdict := walk.walk(run{fn: fnValue{decl: root}}, pathState{}, 0)
+		verdict := walk.walk(run{fn: fnValue{decl: root}}, pathState{covered: rootCovered(root)}, 0)
 		figures := verdict.writes
 		if slices.Contains(tools, root) {
 			figures.merge(verdict.returns)

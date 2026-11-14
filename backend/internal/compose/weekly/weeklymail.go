@@ -110,7 +110,7 @@ func (e *Engine) ClaimMailAttemptTx(ctx context.Context, tx pgx.Tx, reviewID ids
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return MailAttempt{}, false, err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return MailAttempt{}, false, err
 	}
@@ -178,7 +178,7 @@ func (e *Engine) MailFailed(ctx context.Context, reviewID ids.UUID, cause string
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return err
 	}
@@ -230,7 +230,7 @@ func (e *Engine) MailPending(ctx context.Context, reviewID ids.UUID) (bool, erro
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return false, err
 	}
-	user, err := reviewUser(ctx)
+	user, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return false, err
 	}

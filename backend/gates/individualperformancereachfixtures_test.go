@@ -118,15 +118,19 @@ func TestACallbackResolvesPerCallSiteAndAFieldByEveryValueItIsGiven(t *testing.T
 	}
 }
 
+// A branch that hands out a figure without the check fails beside one that
+// asks. A loop that skips a row without the check hands nothing out for it,
+// so it filters and passes.
 func TestABranchThatSkipsTheCheckBesideOneThatAsksFails(t *testing.T) {
 	t.Parallel()
 	ops := []string{
-		"getProgress", "getProgressBySwitch", "getEachRowSkippingOne", "getEachRowCheckingInside", "getAfterTheCatalog", "getAFigureBesideARefusal",
+		"getProgress", "getProgressBySwitch", "getEachRowCheckingInside", "getAfterTheCatalog", "getAFigureBesideARefusal",
 		"getAFigureBesideASentinel", "getAFigureBesideAWrappedSentinel",
 		"getAFigureBesideAnImportedSentinel", "getAFigureBesideAnErrorLiteral",
+		"getEachRowSkippingOne",
 	}
-	if got := walkFixture(t, "ownerbranch", ops...); !slices.Equal(got, ops) {
-		t.Errorf("flagged %v, want %v", got, ops)
+	if got, want := walkFixture(t, "ownerbranch", ops...), ops[:len(ops)-1]; !slices.Equal(got, want) {
+		t.Errorf("flagged %v, want %v", got, want)
 	}
 }
 
@@ -259,6 +263,21 @@ func TestACacheChecksOnlyOnAHitOfAFieldFilledOnlyChecked(t *testing.T) {
 	}
 }
 
+// A value keeps what is stored in it. A builder's method stores, as does a
+// scan's address. So do a callback the walk cannot run and a helper handed a
+// slice. A store before a refusal stays. A context value is a figure, as are
+// another service's answer and a callback's yield. The request, and the
+// catalog built into a string, stay figure-free.
+func TestAValueKeepsWhatIsStoredInIt(t *testing.T) {
+	t.Parallel()
+	ops := []string{"getABuilderHoldingAFigure", "getAScannedFigure", "getAFigureFilledLater", "getAFigureFilledInPlace",
+		"getAFigureStoredBeforeARefusal", "getAnOuterFigureBeforeARefusal", "getFromTheContext", "getFromAnotherService",
+		"getFromACallback", "getTheRequestBack", "getTheCatalogBuilt"}
+	if got, want := walkFixture(t, "valuestore", ops...), ops[:9]; !slices.Equal(got, want) {
+		t.Errorf("flagged %v, want %v", got, want)
+	}
+}
+
 // A bool answer checks only where it permits, and a floor's only where it
 // does not withhold. The team's figure on the off branch, or inside the
 // floor, fails; a refusal there, or the floor passed first, does not.
@@ -270,11 +289,13 @@ func TestAnAnswerChecksOnlyOnTheBranchThatPermits(t *testing.T) {
 	}
 }
 
-// A figure-free call cannot make a path figure-free once it holds an
-// unchecked figure.
-func TestAFigureFreeCallAfterAFigureCoversNothing(t *testing.T) {
+// A figure-free call covers only what it answers. A figure held before it
+// still fails, and so do a literal after it and arithmetic on a held figure.
+// What is worked out from its answer alone passes.
+func TestAFigureFreeCallCoversOnlyItsOwnAnswer(t *testing.T) {
 	t.Parallel()
-	if got := walkFixture(t, "polarity", "getAFigureThenTheCatalog"); !slices.Equal(got, []string{"getAFigureThenTheCatalog"}) {
-		t.Errorf("flagged %v, want getAFigureThenTheCatalog", got)
+	ops := []string{"getAFigureThenTheCatalog", "getTheCatalogThenALiteral", "getTheCatalogThenArithmetic", "getTheCatalogCounted"}
+	if got, want := walkFixture(t, "polarity", ops...), ops[:3]; !slices.Equal(got, want) {
+		t.Errorf("flagged %v, want %v", got, want)
 	}
 }

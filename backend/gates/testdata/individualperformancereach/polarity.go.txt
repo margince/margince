@@ -70,3 +70,22 @@ func (h Handlers) GetAFigureThenTheCatalog(w http.ResponseWriter, r *http.Reques
 	auth.Catalog()
 	httperr.WriteJSON(w, http.StatusOK, figures)
 }
+
+// Nor does it cover a figure in the response itself, or one worked out from a
+// figure held before it.
+func (h Handlers) GetTheCatalogThenALiteral(w http.ResponseWriter, r *http.Request) {
+	auth.Catalog()
+	httperr.WriteJSON(w, http.StatusOK, []int{42})
+}
+
+func (h Handlers) GetTheCatalogThenArithmetic(w http.ResponseWriter, r *http.Request) {
+	figures := teamFigure()
+	auth.Catalog()
+	httperr.WriteJSON(w, http.StatusOK, figures[0]*2)
+}
+
+// What is worked out from the catalog alone is figure-free.
+func (h Handlers) GetTheCatalogCounted(w http.ResponseWriter, r *http.Request) {
+	names := auth.Catalog()
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"names": names, "count": len(names)})
+}

@@ -90,7 +90,8 @@ func readerMeasurableOwners(ctx context.Context, tx pgx.Tx) (reporting.Measurabl
 		return reporting.MeasurableOwners{}, err
 	}
 	if !allowed {
-		return reporting.MeasurableOwners{Members: []ids.UUID{actor.UserID}, IndividualOff: true}, nil
+		own, err := auth.OwnSeat(ctx)
+		return reporting.MeasurableOwners{Members: []ids.UUID{own}, IndividualOff: true}, err
 	}
 	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
 		return reporting.MeasurableOwners{Every: true}, nil
@@ -108,10 +109,11 @@ func (a reportingAuthority) MeasurableOwners(ctx context.Context, tx pgx.Tx, can
 		return nil, err
 	}
 	if !allowed {
-		candidates = slices.DeleteFunc(slices.Clone(candidates), func(id ids.UUID) bool { return !auth.MayMeasureSeat(ctx, false, id) })
-		if len(candidates) == 0 {
-			return nil, nil
+		own, err := auth.OwnSeat(ctx)
+		if err != nil || !slices.Contains(candidates, own) {
+			return nil, err
 		}
+		candidates = []ids.UUID{own}
 	}
 	return reportingMembersAmong(ctx, tx, crmcontracts.ReportingScope{}, candidates)
 }
