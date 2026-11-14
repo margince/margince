@@ -480,7 +480,9 @@ it("reads Home's shape for Home and the queue for an open drawer", async () => {
 
   await screen.findByRole("dialog", { name: en["brief.queue.title"] });
   await screen.findAllByText("Call Weber");
-  expect(shapes.sort()).toEqual(["home", null]);
+  expect(shapes).toHaveLength(2);
+  expect(shapes).toContain("home");
+  expect(shapes).toContain(null);
 });
 
 it("keeps a closed drawer's count on Home's live read after the drawer was open", async () => {
