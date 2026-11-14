@@ -85,6 +85,11 @@ func Disclosures() []Disclosure {
 			Control:  "the subscription itself; deleting it stops the delivery",
 		},
 		{
+			Product: ChatProduct, Endpoint: "the team's own Dispact install", Personal: true,
+			Category: "linked deal and project names, stages, close dates, owner names and emails, the subjects of activities shared with the whole workspace, and the emails of members invited to a new channel",
+			Control:  "Settings → Integrations: disconnecting the Dispact bot stops every call; unlinking a record stops posts for it",
+		},
+		{
 			Product: MailProduct, Endpoint: "the configured SMTP relay", Personal: true,
 			Category: "the message and its recipients",
 			Control:  "the outbound mail channel's own configuration",

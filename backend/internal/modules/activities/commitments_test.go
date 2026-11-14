@@ -92,11 +92,11 @@ func TestNarrowingToOneRecordIsAnExistsRatherThanAJoin(t *testing.T) {
 	if strings.Contains(where, "JOIN") {
 		t.Errorf("narrowing to one record joins, which duplicates a task linked twice: %s", where)
 	}
-	if !strings.Contains(where, "l.project_id = $2") {
+	if !strings.Contains(where, "l.entity_type = 'project' AND l.project_id = $1") {
 		t.Errorf("narrowing to a project does not match project_id: %s", where)
 	}
-	if len(args) != 2 || args[1] != entity {
-		t.Errorf("the filter bound %v, want the record id in position 2", args)
+	if len(args) != 1 || args[0] != entity {
+		t.Errorf("the filter bound %v, want the record id alone", args)
 	}
 }
 

@@ -323,3 +323,14 @@ func TestTheAssessmentNamesRecordsByTheRefsItShowed(t *testing.T) {
 		t.Error("a reply writing a ref into reader text was kept")
 	}
 }
+
+func TestOnlyAProgressRequestCarriesTheProgressRule(t *testing.T) {
+	in := assessmentInput()
+	if review := Request(in, "en"); strings.Contains(review.System, progressRule) {
+		t.Fatal("the sales review's request carries the Progress rule, which changes what its site is certified on")
+	}
+	in.View = ViewProgress
+	if summary := Request(in, "en"); !strings.Contains(summary.System, progressRule) || !strings.Contains(summary.Messages[0].Content, `"view":"progress"`) {
+		t.Fatal("a Progress summary's request names neither its view nor its rule")
+	}
+}

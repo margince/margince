@@ -42,7 +42,7 @@ var (
 )
 
 // writerSeatVoice is the author the row's own columns name, before
-// WithMessageVoices weighs it against the message's parties.
+// withMessageVoices weighs it against the message's parties.
 func writerSeatVoice(seat *ids.UUID, name, email *string) *crmcontracts.ActivityVoice {
 	if seat == nil {
 		return nil
@@ -58,13 +58,11 @@ func writerSeatVoice(seat *ids.UUID, name, email *string) *crmcontracts.Activity
 	return &crmcontracts.ActivityVoice{Author: author}
 }
 
-// WithMessageVoices fills `voice.author` on every readable row of a page.
+// withMessageVoices fills `voice.author` on every readable row of a page.
 // A withheld row gets no voice: who wrote it is content.
-func WithMessageVoices(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
-	parties, err := partiesForVoices(ctx, tx, page)
-	if err != nil {
-		return err
-	}
+func withMessageVoices(
+	ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity, parties map[ids.UUID]emailParties,
+) error {
 	reader := ids.Nil
 	if actor, ok := principal.Actor(ctx); ok {
 		reader = actor.UserID
@@ -85,9 +83,9 @@ func WithMessageVoices(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	return resolveAuthorContacts(ctx, tx, unresolved)
 }
 
-// partiesForVoices reads the parties of the readable rows whose author is a
-// party: messages and meetings. A page of notes and tasks reads nothing.
-func partiesForVoices(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) (map[ids.UUID]emailParties, error) {
+// pageParties reads the parties of the readable rows whose author is a party:
+// messages and meetings. A page of notes and tasks reads nothing.
+func pageParties(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) (map[ids.UUID]emailParties, error) {
 	var wanted []ids.UUID
 	for i := range page {
 		switch page[i].Kind {

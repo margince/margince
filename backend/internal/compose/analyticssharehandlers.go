@@ -118,17 +118,21 @@ func (h analyticsShareHandlers) OpenForecastShare(
 ) {
 	var out crmcontracts.SharedForecastView
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
-		share, frozen, err := h.resolveForReader(ctx, tx, token)
+		share, err := h.shares.Resolve(ctx, tx, token)
 		if err != nil {
 			return err
 		}
 		out.Kind = crmcontracts.SharedForecastViewKind(share.Kind)
 		out.Target = share.Target
 
-		if share.Kind == shareKindSnapshot {
-			return h.serveSnapshot(ctx, tx, share, frozen, &out)
+		if share.Kind != shareKindSnapshot {
+			return h.serveLive(ctx, tx, share, &out)
 		}
-		return h.serveLive(ctx, tx, share, &out)
+		frozen, err := readFrozenForReader(ctx, tx, share)
+		if err != nil {
+			return err
+		}
+		return h.serveSnapshot(ctx, tx, share, frozen, &out)
 	}); err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -147,29 +151,26 @@ type frozenForReader struct {
 	Reason  string
 }
 
-// resolveForReader resolves a share for the signed-in reader. Both the frozen
-// reading and its export pass it. A frozen share answers to the switch like a
+// readFrozenForReader reads a snapshot share for the signed-in reader. Both the
+// frozen reading and its export pass it. A frozen share answers to the switch like a
 // live read: its population, the owners behind its figures, and no colleague
 // named on its rows. The range, like the totals, still counts colleagues' deals.
-func (h analyticsShareHandlers) resolveForReader(
-	ctx context.Context, tx pgx.Tx, token string,
-) (Share, frozenForReader, error) {
-	share, err := h.shares.Resolve(ctx, tx, token)
-	if err != nil || share.Kind != shareKindSnapshot || share.SnapshotID == nil {
-		return share, frozenForReader{}, err
+func readFrozenForReader(ctx context.Context, tx pgx.Tx, share Share) (frozenForReader, error) {
+	if share.SnapshotID == nil {
+		return frozenForReader{}, apperrors.ErrNotFound
 	}
 	rows, err := SharedSnapshotRows(ctx, tx, *share.SnapshotID)
 	if err != nil {
-		return Share{}, frozenForReader{}, err
+		return frozenForReader{}, err
 	}
 	out := frozenForReader{Range: sharedRange(rows)}
 	if out.Rows, out.Limited, err = requireFrozenShareMeasurable(ctx, tx, share.Scope, rows); err != nil {
-		return Share{}, frozenForReader{}, err
+		return frozenForReader{}, err
 	}
 	if out.Limited {
 		out.Reason = ownRowsReason(ctx, tx)
 	}
-	return share, out, nil
+	return out, nil
 }
 
 // serveSnapshot re-sums a frozen state over the rows this caller may read.
@@ -333,17 +334,19 @@ func (h analyticsShareHandlers) ExportForecastShare(
 	var frozen frozenForReader
 	var frame shareFrame
 	if err := h.forecast.InTx(r.Context(), func(ctx context.Context, tx pgx.Tx) error {
-		share, read, err := h.resolveForReader(ctx, tx, token)
+		share, err := h.shares.Resolve(ctx, tx, token)
 		if err != nil {
 			return err
 		}
-		if share.Kind != shareKindSnapshot || share.SnapshotID == nil {
+		if share.Kind != shareKindSnapshot {
 			// A live share's rows are the deals as they stand, which the
 			// forecast's own export already answers for a signed-in caller.
 			// Refusing beats exporting a set assembled a second way here.
 			return apperrors.ErrNotFound
 		}
-		frozen = read
+		if frozen, err = readFrozenForReader(ctx, tx, share); err != nil {
+			return err
+		}
 		frame, err = snapshotFrame(ctx, tx, *share.SnapshotID)
 		return err
 	}); err != nil {

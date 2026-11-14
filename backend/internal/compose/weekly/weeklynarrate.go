@@ -42,7 +42,7 @@ func (e *Engine) writeNarration(ctx context.Context, reviewID ids.UUID, sentence
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return err
 	}

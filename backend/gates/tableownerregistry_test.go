@@ -373,6 +373,10 @@ var tableOwners = map[string]string{
 	// status. It is a connection, so it sits with capture_connection under the
 	// ONE connector.Sink rather than with the identities it delivers.
 	"channel_connection": "internal/modules/capture",
+	// A deal's or project's chat channel, and the ledger of what was posted
+	// there.
+	"chat_link":      "internal/modules/chatlinks",
+	"chat_post_item": "internal/modules/chatlinks",
 	// The installation-settings table (ADR-0090/A135). Owned by the platform
 	// mechanism rather than by any module, which is the point: a setting's
 	// MEANING belongs to the module that declares its entry, but no module

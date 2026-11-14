@@ -28,11 +28,14 @@ import (
 // reporting it. A source absent here leaves through a verb of its own, and
 // TestEverySourceOffersAWayOffTheList holds that each one does.
 var doneInPlace = map[crmcontracts.WorklistItemSource]bool{
-	crmcontracts.WorklistItemSourceAwaitingReply:       true,
-	crmcontracts.WorklistItemSourceDomainQuestion:      true,
-	crmcontracts.WorklistItemSourceMeetingFollowUp:     true,
-	crmcontracts.WorklistItemSourceDealAtRisk:          true,
-	crmcontracts.WorklistItemSourceMeeting:             true,
+	crmcontracts.WorklistItemSourceAwaitingReply:   true,
+	crmcontracts.WorklistItemSourceDomainQuestion:  true,
+	crmcontracts.WorklistItemSourceMeetingFollowUp: true,
+	crmcontracts.WorklistItemSourceDealAtRisk:      true,
+	crmcontracts.WorklistItemSourceMeeting:         true,
+	// An attendee who may not change the meeting cannot answer it. Done is how
+	// they leave the organizer's question to the organizer.
+	crmcontracts.WorklistItemSourceMeetingOutcome:      true,
 	crmcontracts.WorklistItemSourceLeadResponse:        true,
 	crmcontracts.WorklistItemSourceIntroductionRequest: true,
 	crmcontracts.WorklistItemSourceBatch:               true,

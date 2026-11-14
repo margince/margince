@@ -58,7 +58,7 @@ func TestTranscriptCertificationRejectsAValidButWrongPromiser(t *testing.T) {
 		t.Fatal("unexpected transcript certification case")
 	}
 	for _, party := range c.parties {
-		reply := fmt.Sprintf(`{"proposals":[{"summary":"Pay","owner":"Ines","promiser_ref":%q,"due_date":"","source_lines":[1],"confidence":0.95,"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":""}}]}`, party.Ref)
+		reply := fmt.Sprintf(`{"proposals":[{"summary":"Pay","owner":"Ines","promiser_ref":%q,"due_date":"","source_lines":[1],"confidence":0.95,"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":""}}],"meeting_summary":{"key_points":[{"text":"The call","source_lines":[1]}],"next_steps":[]}}`, party.Ref)
 		trace, err := prepared.Run(t.Context(), fixedCompleter{reply: reply})
 		if err != nil {
 			t.Fatal(err)
@@ -85,11 +85,23 @@ func TestTranscriptCertificationGradesDatesExactly(t *testing.T) {
 				source, precision, quote = "Mira: I will send pricing on "+answer+".", "day", answer
 			}
 			c := transcriptProposeCase{lines: []string{source}, expected: []transcriptProposeExpectation{{Line: 1, DueDate: wanted}}}
-			trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send pricing","owner":"Mira","promiser_ref":"","due_date":%q,"source_lines":[1],"confidence":0.95,"commitment":{"state":"open","condition":"","deadline_precision":%q,"deadline_quote":%q}}]}`, answer, precision, quote)}
+			trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send pricing","owner":"Mira","promiser_ref":"","due_date":%q,"source_lines":[1],"confidence":0.95,"commitment":{"state":"open","condition":"","deadline_precision":%q,"deadline_quote":%q}}],"meeting_summary":{"key_points":[{"text":"The call","source_lines":[1]}],"next_steps":[]}}`, answer, precision, quote)}
 			got := c.Evaluate(trace)
 			if (got.Result == aitasks.OutcomeAccepted) != (answer == wanted) {
 				t.Fatalf("wanted date %q, answer %q: %+v", wanted, answer, got)
 			}
+		}
+	}
+}
+
+func TestTranscriptCertificationGradesAnOptionalTentativeDateExactly(t *testing.T) {
+	for _, answer := range []string{"2026-03-06", "2026-03-11"} {
+		source := "Mira: I will try to send pricing on " + answer + "."
+		c := transcriptProposeCase{lines: []string{source}, expected: []transcriptProposeExpectation{{Line: 1, Optional: true, DueDate: "2026-03-06"}}}
+		trace := aitasks.Trace{Output: fmt.Sprintf(`{"proposals":[{"summary":"Send pricing","owner":"Mira","promiser_ref":"","due_date":%q,"source_lines":[1],"confidence":0.5,"commitment":{"state":"optional","condition":"","deadline_precision":"day","deadline_quote":%q}}],"meeting_summary":{"key_points":[{"text":"The call","source_lines":[1]}],"next_steps":[]}}`, answer, answer)}
+		got := c.Evaluate(trace)
+		if (got.Result == aitasks.OutcomeAccepted) != (answer == "2026-03-06") {
+			t.Fatalf("answer %q: %+v", answer, got)
 		}
 	}
 }

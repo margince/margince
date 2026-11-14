@@ -27,9 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/weekly/learnings"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Review is one rep's week, as it was measured.
@@ -289,16 +287,6 @@ func (e *Engine) WithForecast(forecast ForecastWeek) *Engine {
 func (e *Engine) WithAttention(attention TeamAttention) *Engine {
 	e.attention = attention
 	return e
-}
-
-// reviewUser is the acting rep. A review is a personal record — whose week it
-// was — so there is no argument by which a caller asks for somebody else's.
-func reviewUser(ctx context.Context) (ids.UUID, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return ids.Nil, apperrors.ErrPermissionDenied
-	}
-	return actor.UserID, nil
 }
 
 // LatestReview serves the acting rep's most recent weekly review, or the one

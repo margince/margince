@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/assurancefloor"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -230,7 +231,7 @@ func TestAnUnreadableSignalCensusCannotClearFindingsOrClaimACompletePreview(t *t
 			perms.Objects = maps.Clone(perms.Objects)
 			delete(perms.Objects, object)
 			reader := e.As(e.AdminUser, nil, perms)
-			preview, err := scanner.Preview(reader, e.now)
+			preview, err := scanner.Preview(reader, e.now, assurancefloor.Preview(requireNoLoneColleague, populationMembers))
 			if err != nil {
 				t.Fatal(err)
 			}

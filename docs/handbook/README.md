@@ -61,6 +61,7 @@ Records, deals and mail in Margince, by page:
 - How do I see my weekly review or plan my week? → [Your week](your-week.md)
 - An extension suggested a record for a message. What do I do? → [Suggested links](suggested-links.md)
 - How do I link a deal to another deal, a company or a contact? → [Links between records](deal-links.md)
+- How do I give a deal or project its own channel in the team chat? → [Team chat channels](chat-channels.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
 - What does the import preview show, and how do I correct companies with a spreadsheet? → [Importing data](importing-data.md)
@@ -165,6 +166,8 @@ Records, deals and mail in Margince, by page:
 - [Contracts and invoices](contracts-and-invoices.md): the two value bases, and
   why they are never added up. Why a status is never guessed from a date.
   Renewing and cancelling, what counts as a signed win, and the finance mirror.
+- [Team chat channels](chat-channels.md): a private Dispact channel for a deal
+  or project, what Margince posts there, and why private mail never reaches it.
 - [Deal Rooms](deal-rooms.md): the page for one deal that the buyer sees. What
   a room holds, the five states, and why Close is not a freeze. Personal
   one-time links, what a buyer never sees, and what an agent may not touch.

@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
+	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/compose/magic"
@@ -428,3 +429,14 @@ func (o ownDomainReader) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, b
 
 // salesProgressReading names the Progress handlers as the inventory embeds them.
 type salesProgressReading = salesprogress.Reading
+
+// goalProposalHandlers names the Sales goals proposal the same way.
+type goalProposalHandlers = goalproposal.Handlers
+
+// progressSummaryHandlers names the Progress summary the same way.
+type progressSummaryHandlers = salesprogress.SummaryHandlers
+
+// newGoalProposals reads a seller's closed revenue as Progress does.
+func (s *Server) newGoalProposals() goalProposalHandlers {
+	return goalproposal.Handlers{Progress: s.salesProgressReading, Now: time.Now}
+}

@@ -59,7 +59,7 @@ func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 			}
 		}
 		ready := assurance.Readiness(coverage, nil, assurance.Config{})
-		return store.FinishRun(ctx, tx, run, 1, 0, 0, assurance.StatusComplete, ready)
+		return store.FinishRun(ctx, tx, run, assurance.Eligible{Deals: 1}, 0, assurance.StatusComplete, ready)
 	}); err != nil {
 		t.Fatalf("recording a finished input check: %v", err)
 	}
@@ -68,6 +68,12 @@ func FinishInputCheck(t *testing.T, e *AppEnv, perms principal.Permissions) {
 // FreezeAt takes one workspace-wide forecast snapshot of the quarter holding
 // `at`, by a seat holding perms, and answers its id.
 func FreezeAt(t *testing.T, e *AppEnv, perms principal.Permissions, at time.Time) string {
+	t.Helper()
+	return FreezeScopeAt(t, e, perms, forecasting.Scope{Kind: forecasting.ScopeWorkspace}, at)
+}
+
+// FreezeScopeAt is FreezeAt for one population.
+func FreezeScopeAt(t *testing.T, e *AppEnv, perms principal.Permissions, scope forecasting.Scope, at time.Time) string {
 	t.Helper()
 	admin := AdminContext(t, e, perms)
 	store := forecasting.NewStore(compose.InstallationDB(e.DB().Pool()))
@@ -78,7 +84,7 @@ func FreezeAt(t *testing.T, e *AppEnv, perms principal.Permissions, at time.Time
 			return err
 		}
 		id, err = store.TakeSnapshot(admin, tx, forecasting.NewSnapshot{
-			Period: period, Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace},
+			Period: period, Scope: scope,
 			Trigger: forecasting.TriggerRecheck, BaseCurrency: base, TakenAt: at,
 		})
 		return err

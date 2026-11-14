@@ -1,5 +1,6 @@
 import { useId } from "react";
 import type { components } from "../../api/schema";
+import { ChannelPanel } from "../../components/channelpanel";
 import { Badge, Button } from "../../design-system/atoms";
 import {
   OverviewCard,
@@ -280,6 +281,11 @@ export function DealOverviewPane({
             />
           )}
           <DealRoomCard dealId={deal.id} onOpen={() => onOpenTab("room")} />
+          <ChannelPanel
+            recordType="deal"
+            recordId={deal.id}
+            canEdit={!readOnly}
+          />
           <DealMarginceChangesCard dealId={deal.id} />
         </div>
       </div>

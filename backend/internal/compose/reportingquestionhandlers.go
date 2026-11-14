@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/jackc/pgx/v5"
@@ -15,35 +16,48 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// errQuestionRestricted ends a card's transaction before any figure is read,
+// for a reader the card is restricted for. It is answered, not refused.
+var errQuestionRestricted = errors.New("compose: the question card is restricted for this reader")
+
+// restrictedQuestionAnswer is a restricted card's answer: its binding and no figure.
+func restrictedQuestionAnswer(binding *crmcontracts.ReportingQuestionBinding) crmcontracts.ReportingQuestionAnswer {
+	return crmcontracts.ReportingQuestionAnswer{Status: crmcontracts.ReportingQuestionAnswerStatusRestricted, Binding: binding}
+}
+
 // AnswerReportingQuestionCard implements GET /analytics/reports/{id}/questions/{card_id}/answer.
 func (h analyticsQueryHandlers) AnswerReportingQuestionCard(
 	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, cardID string, params crmcontracts.AnswerReportingQuestionCardParams,
 ) {
 	ctx := r.Context()
 	var (
-		query      analyticsquery.Query
-		restricted bool
-		answer     AnalyticsAnswer
-		binding    *crmcontracts.ReportingQuestionBinding
+		query   analyticsquery.Query
+		answer  AnalyticsAnswer
+		binding *crmcontracts.ReportingQuestionBinding
 	)
-	if err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
+	err := h.db.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		card, scope, err := h.reportMetrics.QuestionCardIn(ctx, tx, ids.UUID(id), params.Revision, cardID)
 		if err != nil {
 			return err
 		}
 		binding = card.Binding
+		var restricted bool
 		query, restricted, err = resolveCard(ctx, tx, card, scope)
-		if err != nil || restricted {
+		if err != nil {
 			return err
+		}
+		if restricted {
+			return errQuestionRestricted
 		}
 		answer, err = RunAnalyticsQuery(ctx, tx, query, h.floor)
 		return err
-	}); err != nil {
-		httperr.Write(w, r, err)
+	})
+	if errors.Is(err, errQuestionRestricted) {
+		httperr.WriteJSON(w, http.StatusOK, restrictedQuestionAnswer(binding))
 		return
 	}
-	if restricted {
-		httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReportingQuestionAnswer{Status: crmcontracts.ReportingQuestionAnswerStatusRestricted, Binding: binding})
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	labelled := h.labelledAnswer(ctx, query, answer)

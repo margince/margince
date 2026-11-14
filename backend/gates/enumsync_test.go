@@ -61,6 +61,10 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// know, so a half-widened palette reaches a reader as a tag with no dot,
 	// which is exactly how an uncoloured tag looks.
 	"tag.color": {"internal/contracts", "TagColor"},
+	// A chat link's level and state are served as they are stored, so the
+	// contract's enums and the CHECKs are one vocabulary.
+	"chat_link.verbosity": {"internal/contracts", "ChannelVerbosity"},
+	"chat_link.status":    {"internal/contracts", "ChannelLinkStatus"},
 	// Where a saved draft was opened. The wire enum is what the composer sends,
 	// so a value the contract admits and the CHECK refuses would be a save that
 	// fails with a constraint error instead of a validation answer.

@@ -24,6 +24,9 @@ may_call:
 
 must_mention:
   - "(?i)consent|newsletter"
+# A spoken yes is not recorded consent; an answer saying it recorded one is false.
+must_not_mention:
+  - "(?i)\b(?:I(?:\s+have|['’]ve)?|we(?:\s+have|['’]ve))\s+(?:just\s+|now\s+)?(?:recorded|saved|logged|noted|added|set)\b.{0,40}\b(?:consent|opt-?in|subscription)"
 
 runs: 3
 pass_at: 2

@@ -1,0 +1,10 @@
+{
+  "verb": "link_channel",
+  "checks": [
+    "deal.update"
+  ],
+  "takes": [
+    "company",
+    "unlinked_channel_deal"
+  ]
+}

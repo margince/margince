@@ -38,12 +38,10 @@ func (s *Service) goalAccess(ctx context.Context, tx pgx.Tx, owner ids.UUID) (go
 	if !ok {
 		return goalAccess{}, apperrors.ErrPermissionDenied
 	}
-	seller := actor.UserID
-	if actor.Type == principal.PrincipalAgent {
-		seller = actor.OnBehalfOf
-	}
-	access := goalAccess{self: !seller.IsZero() && seller == owner}
-	if !access.self {
+	// The switch's own rule names the reader's seat, which an agent on a
+	// passport shares with its human.
+	self := auth.MayMeasureSeat(ctx, false, owner)
+	if !self {
 		// The individual-performance switch and the reader's population both
 		// live in this one rule, so a goal is read where its figures are.
 		measured, err := s.authority.MeasurableOwners(ctx, tx, []ids.UUID{owner})
@@ -58,9 +56,7 @@ func (s *Service) goalAccess(ctx context.Context, tx pgx.Tx, owner ids.UUID) (go
 	if err != nil {
 		return goalAccess{}, err
 	}
-	access.edit = edit
-	access.drafts = access.self || edit
-	return access, nil
+	return goalAccess{self: self, edit: edit, drafts: self || edit}, nil
 }
 
 // goalWriteReaches asks the target route's own write rule of an owner scope.
@@ -73,8 +69,8 @@ func (s *Service) goalWriteReaches(ctx context.Context, tx pgx.Tx, actor princip
 	return s.writeReaches(ctx, tx, crmcontracts.ReportingScope{Kind: reportingOwner, Id: &id})
 }
 
-// requireGoalEdit refuses a plan write the caller may not make.
-func (s *Service) requireGoalEdit(ctx context.Context, tx pgx.Tx, owner ids.UUID) error {
+// RequireGoalEdit refuses a plan write the caller may not make.
+func (s *Service) RequireGoalEdit(ctx context.Context, tx pgx.Tx, owner ids.UUID) error {
 	access, err := s.goalAccess(ctx, tx, owner)
 	if err != nil {
 		return err

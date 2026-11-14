@@ -140,3 +140,19 @@ func TestTheProviderSeamDoesNotOpenTheImporterNamespace(t *testing.T) {
 		t.Errorf("refusal names %q, want source_system", refused.Field)
 	}
 }
+
+// A chat summary's key is the chat engine's alone. A caller who could plant a
+// note under it would hide the real summary, or pass off a fake one.
+func TestNoCallerMayPlantANoteUnderAChatSummaryKey(t *testing.T) {
+	for _, ctx := range []context.Context{
+		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "u-1"}),
+		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "a-1"}),
+		principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalSystem, ID: "system"}),
+	} {
+		planted := reminderCreate(provenance.ChatSummarySource)
+		planted.Kind, planted.SourceId = "note", new("acme:1")
+		if _, err := logInputForPrincipal(ctx, planted); err == nil {
+			t.Fatal("a note under a chat summary key was admitted; it would stand in for the real summary")
+		}
+	}
+}

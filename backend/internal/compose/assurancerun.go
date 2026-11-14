@@ -30,6 +30,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/assurancefloor"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -63,7 +64,7 @@ func (h assuranceRunHandlers) PreviewForecastAssurance(w http.ResponseWriter, r 
 	scanner := assuranceScanner(h.pool, store)
 	// The gate is inside InPreviewTx, on create rather than read: the only
 	// reason to look is to decide whether to start a pass.
-	preview, err := scanner.Preview(ctx, h.now())
+	preview, err := scanner.Preview(ctx, h.now(), assurancefloor.Preview(requireNoLoneColleague, populationMembers))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

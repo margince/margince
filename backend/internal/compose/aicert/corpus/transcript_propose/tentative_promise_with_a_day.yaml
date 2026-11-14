@@ -9,8 +9,8 @@
   ],
   "expect": {
     "outcome": "accepted",
-    "answer": [],
+    "answer": [{"line": 1, "due_date": "2026-03-06", "tentative": true}],
     "judge": "none",
-    "judge_none_reason": "Trying to send a document does not establish an unconditional deliverable. A named day does not turn tentative work into an open promise; the semantic checker rejects an actionable proposal."
+    "judge_none_reason": "Trying to send a document is a tentative promise. It is read in the tentative band with its stated day, so it waits for a member to accept it and never becomes a task by itself."
   }
 }

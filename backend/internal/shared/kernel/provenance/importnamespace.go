@@ -91,6 +91,11 @@ const WebsiteLeadSource = "siteread"
 // holds only while no client can spell it.
 const WebFormSource = "web_form"
 
+// ChatSummarySource names a note summarising chat channel talk. Its source_id
+// is the channel and the talk's first message, so a replay files nothing. A
+// client that could spell it would claim a summary before it is written.
+const ChatSummarySource = "dispact"
+
 // WebsiteInquirySource binds a task and its handling run to one accepted submission.
 const WebsiteInquirySource = "website_inquiry"
 
@@ -157,6 +162,7 @@ var internalSourceSystems = map[string]bool{
 	LeadForContactSource:         true,
 	WebFormSource:                true,
 	WebsiteInquirySource:         true,
+	ChatSummarySource:            true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system

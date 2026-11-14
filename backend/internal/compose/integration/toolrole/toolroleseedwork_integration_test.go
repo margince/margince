@@ -369,7 +369,7 @@ func meetingSeeders(s sweepSeed) map[string]func() string {
 			c := &apptest.ChannelConversation{AppEnv: s.e, User: apptest.SessionUserID(s.t, s.e)}
 			// The bot may already be live, connected by an earlier seed or call.
 			connected := func() {
-				if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE archived_at IS NULL`) == "0" {
+				if s.ownerScalar(`SELECT count(*)::text FROM channel_connection WHERE provider = 'telegram' AND archived_at IS NULL`) == "0" {
 					c.ConnectBot(s.t)
 				}
 			}

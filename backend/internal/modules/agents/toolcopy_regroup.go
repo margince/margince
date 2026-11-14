@@ -70,7 +70,8 @@ var readAnalyticsCopy = toolCopy{
 
 var changeActivitiesCopy = toolCopy{
 	Purpose: "Log, plan and file activities. log records an email, call, meeting, note or " +
-		"message that already happened, on its records. task creates a task for a seat. attach " +
+		"message that already happened, on its records; one the user only tells you about is " +
+		"logged from what they said, saying so, without its exact words. task creates a task for a seat. attach " +
 		"attaches a file to a record. relink files one activity under another record too, and " +
 		"relink_many a named set; with replace_existing_of_type they move it off the old record " +
 		"of that type instead. ready says the user is ready for a meeting they attend; unready " +

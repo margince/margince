@@ -19,6 +19,20 @@ export const timelineBaseKey = (
   entityId: string,
 ): QueryKey => ["activities", entityType, entityId];
 
+/** The newest reading of one transcript, and the summary it shows. */
+export const transcriptReadLatestKey = (activityId: string): QueryKey => [
+  "transcript-read-latest",
+  activityId,
+];
+
+/**
+ * Whether a key is a transcript's newest reading. It carries words drawn from
+ * the transcript, which an erasure deletes on the server while a page is open.
+ */
+export function isTranscriptReadingRead(key: QueryKey): boolean {
+  return key.length === 2 && key[0] === "transcript-read-latest";
+}
+
 /**
  * Whether a key is a record's timeline read, under any filters or page.
  *
@@ -236,7 +250,11 @@ const SHAPE_ID = "\u0000id";
 // and the canonical email read itself — a drawer's thread-member page can carry
 // a message the reader did not open and did not change.
 function messageBearingShapes(): unknown[][] {
-  const shapes: unknown[][] = [["activities"], ["email-presentation"]];
+  const shapes: unknown[][] = [
+    ["activities"],
+    ["email-presentation"],
+    ["transcript-read-latest"],
+  ];
   for (const seed of Object.values(TIMELINE_SEED_KEYS)) {
     shapes.push(seed(SHAPE_ID) as unknown[]);
   }

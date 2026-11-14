@@ -73,6 +73,8 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	// A website form's intake: the visitor holds no seat, and the form's allowed
 	// origins, or its signature, admit the post.
 	"submitWebForm": "a website visitor holds no seat; the form key names the form, and its allowed origins or signature admit the post",
+	// A connected chat's push, which the chat itself sends.
+	"receiveDispactChannelEvent": "Dispact's signed notice: the Standard Webhooks signature with the events secret sealed on the connected bot authenticates it, and the chat itself sends it",
 
 	// Pages a buyer opens from a link, holding no seat here. The token in the
 	// URL is the capability, and requiring a session would make the page

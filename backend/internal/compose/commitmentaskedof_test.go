@@ -28,6 +28,8 @@ func TestACommitmentProposalNamesTheColleagueItIsFor(t *testing.T) {
 		{"recipients for a task nobody holds", CommitmentTaskProposal{ExistingTaskID: &task, PromiserSeatID: &promiser}, nil},
 		{"staged for somebody who did not promise", CommitmentTaskProposal{SeatID: &other, PromiserSeatID: &promiser}, nil},
 		{"no promiser at all", CommitmentTaskProposal{SeatID: &other, PromiserUnresolved: true}, nil},
+		{"a follow-up for the member who chases it", CommitmentTaskProposal{FollowUpOf: &task, SeatID: &holder}, &holder},
+		{"a follow-up for nobody", CommitmentTaskProposal{FollowUpOf: &task}, nil},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

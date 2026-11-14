@@ -683,6 +683,29 @@ export const AMeetingWithNoOutcomeRecorded: Story = {
 };
 
 /**
+ * A colleague's meeting the reader attended but may not change. It reminds them
+ * that no outcome is recorded, says why they cannot record it, and offers Done.
+ */
+export const AMeetingTheReaderMayOnlyRead: Story = {
+  args: {
+    ...baseArgs,
+    item: {
+      ...AMeetingWithNoOutcomeRecorded.args?.item,
+      occurred_precision: "instant",
+      id: "m4",
+      source: "meeting_outcome",
+      category: "meetings",
+      level: 1,
+      consequence: "data_drifts",
+      title: "Quarterly review with Turbinenbau",
+      because: [{ kind: "outcome_unrecorded" }, { kind: "read_only" }],
+      actions: [],
+      dispositions: ["handled"],
+    },
+  },
+};
+
+/**
  * The same row naming who the meeting was with, the account they work for and
  * who hosted it. A host whose name the reader may not resolve arrives with no
  * label and is not drawn.

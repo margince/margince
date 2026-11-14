@@ -21,19 +21,21 @@ type commitmentSubject struct {
 	ExistingTaskID *ids.UUID `json:"existing_task_id"`
 	SeatID         *ids.UUID `json:"seat_id"`
 	PromiserSeatID *ids.UUID `json:"promiser_seat_id"`
+	FollowUpOf     *ids.UUID `json:"follow_up_of"`
 }
 
 // CommitmentAskedOf is the one member a commitment proposal may be put to.
 // A new task is for the colleague who made the promise: the payload must name
 // them, and a seat it names must be theirs. A request to add recipients to an
-// existing task is for the colleague who holds that task. Any other shape
-// names nobody, and nobody may read, decide or be told about it.
+// existing task is for the colleague who holds that task. A follow-up of a
+// customer's promise is for the member its seat names, who made no promise.
+// Any other shape names nobody, and nobody may read, decide or be told about it.
 func CommitmentAskedOf(body json.RawMessage) (ids.UUID, bool) {
 	var subject commitmentSubject
 	if err := json.Unmarshal(body, &subject); err != nil {
 		return ids.Nil, false
 	}
-	if subject.ExistingTaskID != nil {
+	if subject.ExistingTaskID != nil || subject.FollowUpOf != nil {
 		return named(subject.SeatID)
 	}
 	if subject.SeatID != nil && (subject.PromiserSeatID == nil || *subject.SeatID != *subject.PromiserSeatID) {

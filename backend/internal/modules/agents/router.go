@@ -111,6 +111,22 @@ func (r *Registry) routedSpec(rt router) mcp.ToolSpec {
 	return spec
 }
 
+// routerRunSpec is the spec of the tool a router runs for one of its actions,
+// and false when the router has no such action.
+func (r *Registry) routerRunSpec(routerName, action string) (mcp.ToolSpec, bool) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	rt, isRouter := r.tools[routerName].(router)
+	if !isRouter {
+		return mcp.ToolSpec{}, false
+	}
+	target, known := r.tools[rt.routeTargets()[action]]
+	if !known {
+		return mcp.ToolSpec{}, false
+	}
+	return target.Spec(), true
+}
+
 // routeTarget is one registered target's own spec, refused unless a router may
 // front it. A dynamic target keeps its resolver: a call is routed before it is
 // admitted. The last three are refused because the listing reads them off the

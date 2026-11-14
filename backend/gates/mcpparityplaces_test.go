@@ -125,6 +125,7 @@ var parityAreas = []parityArea{
 	{"buyer_rooms", "Buyer deal rooms", groupPublic},
 	{"booking_pages", "Booking and meeting pages", groupPublic},
 	{"public_links", "Forms, confirmations and preference links", groupPublic},
+	{"provider_notices", "Signed notices from connected chats", groupPublic},
 }
 
 // parityTagAreas is the default area of an operation's first tag.
@@ -222,6 +223,7 @@ var parityPathAreas = map[string]string{
 	"/dedupe/settings":                    "sales_rules",
 	"/email-signature-template":           "sales_rules",
 	"/embeddings":                         "search_index",
+	"/channel-events":                     "provider_notices",
 	"/existing-customer-notices":          "consent",
 	"/exports":                            "exports",
 	"/ext-oauth/{provider}/callback":      "oauth_callbacks",

@@ -507,6 +507,10 @@ func (stubs) ListSalesProgressDeals(w nethttp.ResponseWriter, r *nethttp.Request
 	httperr.NotImplemented(w, r, "ListSalesProgressDeals")
 }
 
+func (stubs) SummarizeSalesProgress(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SummarizeSalesProgress")
+}
+
 func (stubs) RunAnalyticsQuery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "RunAnalyticsQuery")
 }
@@ -629,6 +633,10 @@ func (stubs) DiscardSalesGoalDraft(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) SaveSalesGoalDraft(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.SaveSalesGoalDraftParams) {
 	httperr.NotImplemented(w, r, "SaveSalesGoalDraft")
+}
+
+func (stubs) ProposeSalesGoalMonths(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int) {
+	httperr.NotImplemented(w, r, "ProposeSalesGoalMonths")
 }
 
 func (stubs) PublishSalesGoalPlan(w nethttp.ResponseWriter, r *nethttp.Request, ownerId openapi_types.UUID, year int, params crmcontracts.PublishSalesGoalPlanParams) {
@@ -1081,6 +1089,30 @@ func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id 
 
 func (stubs) ReplaceChannelToken(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ReplaceChannelToken")
+}
+
+func (stubs) ReceiveDispactChannelEvent(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReceiveDispactChannelEvent")
+}
+
+func (stubs) UnlinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UnlinkChannel")
+}
+
+func (stubs) GetChannelLink(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetChannelLink")
+}
+
+func (stubs) SetChannelVerbosity(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SetChannelVerbosity")
+}
+
+func (stubs) LinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "LinkChannel")
+}
+
+func (stubs) FileChannelMessage(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "FileChannelMessage")
 }
 
 func (stubs) ListChannelProviders(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -2499,6 +2531,10 @@ func (stubs) GetInstallationSetup(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GetInstallationSetup")
 }
 
+func (stubs) GetDispactAppManifest(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetDispactAppManifest")
+}
+
 func (stubs) GetIntegrationsSettings(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetIntegrationsSettings")
 }
@@ -3165,6 +3201,10 @@ func (stubs) IssuePassport(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) RevokePassport(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RevokePassport")
+}
+
+func (stubs) ReleasePassportAppBinding(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ReleasePassportAppBinding")
 }
 
 func (stubs) SetPassportAreas(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

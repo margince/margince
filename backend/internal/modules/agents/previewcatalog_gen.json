@@ -910,6 +910,8 @@
      "Product",
     "project_id":
      "Project",
+    "promise_strength":
+     "How firm",
     "promote_create_contact":
      "promote create contact",
     "promote_fill_company_industry":
@@ -11266,6 +11268,12 @@
      "Unknown",
     "project_id/boolean/true":
      "Yes",
+    "promise_strength/text/tentative":
+     "Tentative: they said they would try",
+    "promise_strength/lifecycle/tentative":
+     "Tentative: they said they would try",
+    "promise_strength/boolean/true":
+     "Yes",
     "promote_create_contact/lifecycle/customer":
      "Customer",
     "promote_create_contact/lifecycle/disqualified":
@@ -18582,6 +18590,12 @@
      "Not set",
     "project_id/execution":
      "Set when applied",
+    "promise_strength/boolean":
+     "No",
+    "promise_strength/empty":
+     "Not set",
+    "promise_strength/execution":
+     "Set when applied",
     "promote_create_contact/boolean":
      "No",
     "promote_create_contact/empty":
@@ -20762,6 +20776,8 @@
      "Produkt",
     "project_id":
      "Projekt",
+    "promise_strength":
+     "Wie verbindlich",
     "promote_create_contact":
      "promote create contact",
     "promote_fill_company_industry":
@@ -31118,6 +31134,12 @@
      "Unbekannt",
     "project_id/boolean/true":
      "Ja",
+    "promise_strength/text/tentative":
+     "Mit Vorbehalt: Es hieß, man versuche es",
+    "promise_strength/lifecycle/tentative":
+     "Mit Vorbehalt: Es hieß, man versuche es",
+    "promise_strength/boolean/true":
+     "Ja",
     "promote_create_contact/lifecycle/customer":
      "Kunde",
     "promote_create_contact/lifecycle/disqualified":
@@ -38434,6 +38456,12 @@
      "Nicht gesetzt",
     "project_id/execution":
      "Wird beim Anwenden festgelegt",
+    "promise_strength/boolean":
+     "Nein",
+    "promise_strength/empty":
+     "Nicht gesetzt",
+    "promise_strength/execution":
+     "Wird beim Anwenden festgelegt",
     "promote_create_contact/boolean":
      "Nein",
     "promote_create_contact/empty":
@@ -40614,6 +40642,8 @@
      "Sản phẩm",
     "project_id":
      "Dự án",
+    "promise_strength":
+     "Mức chắc chắn",
     "promote_create_contact":
      "promote create contact",
     "promote_fill_company_industry":
@@ -50970,6 +51000,12 @@
      "Chưa rõ",
     "project_id/boolean/true":
      "Có",
+    "promise_strength/text/tentative":
+     "Chưa chắc chắn: họ nói sẽ cố gắng",
+    "promise_strength/lifecycle/tentative":
+     "Chưa chắc chắn: họ nói sẽ cố gắng",
+    "promise_strength/boolean/true":
+     "Có",
     "promote_create_contact/lifecycle/customer":
      "Khách hàng",
     "promote_create_contact/lifecycle/disqualified":
@@ -58285,6 +58321,12 @@
     "project_id/empty":
      "Chưa đặt",
     "project_id/execution":
+     "Được xác định khi áp dụng",
+    "promise_strength/boolean":
+     "Không",
+    "promise_strength/empty":
+     "Chưa đặt",
+    "promise_strength/execution":
      "Được xác định khi áp dụng",
     "promote_create_contact/boolean":
      "Không",

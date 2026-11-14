@@ -40,7 +40,7 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return Review{}, err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return Review{}, err
 	}
@@ -170,7 +170,7 @@ func (e *Engine) ListWeeks(ctx context.Context, limit int) ([]WeekEntry, error) 
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return nil, err
 	}

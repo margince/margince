@@ -344,9 +344,10 @@ function WrittenAssessment({
 
 // The first sentence leads, the rest of its paragraph follows, and the
 // remaining paragraphs fold behind one door, so the rail reads at a glance.
-function OutlookProse({
+export function OutlookProse({
   assessment,
-}: Readonly<{ assessment: SalesAssessment }>) {
+  more: moreLabel,
+}: Readonly<{ assessment: SalesAssessment; more?: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const [first = [], ...later] = assessmentParagraphs(assessment).map(
@@ -361,11 +362,13 @@ function OutlookProse({
       {lead && <p className="analytics-outlook-lead">{lead}</p>}
       {rest.length > 0 && <p>{rest.join(" ")}</p>}
       {more.length > 0 && (
-        <Disclosure summary={t("analytics.outlook.more")}>
-          {more.map((paragraph) => (
-            <p key={paragraph}>{paragraph}</p>
-          ))}
-        </Disclosure>
+        <div className="analytics-outlook-more">
+          <Disclosure summary={moreLabel ?? t("analytics.outlook.more")}>
+            {more.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+          </Disclosure>
+        </div>
       )}
     </div>
   );
@@ -443,7 +446,8 @@ function evidenceOf(
   return metric ? metricOf(evaluation, metric.id)?.evidence : undefined;
 }
 
-function readableAssessment(
+/** Whether every sentence reads as prose, with no code or bare figure left in it. */
+export function readableAssessment(
   assessment: SalesAssessment,
   locale: Locale,
 ): boolean {

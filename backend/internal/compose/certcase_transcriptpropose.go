@@ -34,6 +34,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -50,9 +51,12 @@ type transcriptProposeExpectation struct {
 	Recipients []string           `json:"recipients,omitempty"`
 	Meaning    *commitmentMeaning `json:"meaning,omitempty"`
 	Optional   bool               `json:"optional,omitempty"`
-	Promiser   string             `json:"promiser,omitempty"`
-	Line       int                `json:"line"`
-	DueDate    string             `json:"due_date"`
+	// Tentative expects the step read in the tentative band; an optional
+	// step may be read there and need not be.
+	Tentative bool   `json:"tentative,omitempty"`
+	Promiser  string `json:"promiser,omitempty"`
+	Line      int    `json:"line"`
+	DueDate   string `json:"due_date"`
 }
 
 // transcriptProposeCases serves the one site that reads next steps out of a
@@ -219,6 +223,9 @@ func (c *transcriptProposeCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	if msg := validateTranscriptPayload(payload, c.lines, c.parties); msg != "" {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
 	}
+	if _, msg := transcriptsummary.Read(payload.Summary, len(c.lines)); msg != "" {
+		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: msg}
+	}
 	if disagreements := c.disagreements(payload); len(disagreements) > 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeWrongAnswer, Detail: strings.Join(disagreements, "; ")}
 	}
@@ -234,7 +241,7 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 	}
 	var confidences []float64
 	for _, step := range payload.proposals() {
-		if step.Meaning.withheldOutcome() != "" {
+		if step.withheldOutcome() != "" {
 			continue
 		}
 		confidences = append(confidences, float64(step.Confidence))
@@ -252,12 +259,15 @@ func (c *transcriptProposeCase) AnswerConfidence(trace aitasks.Trace) (low, high
 // commitment. Only line numbers are named in the detail — the transcript's own
 // words are a speaker's, and they have no business being echoed into a record.
 func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []string {
-	wanted := make(map[string]string, len(c.expected))
+	wanted, optional := make(map[string]string, len(c.expected)), map[string]string{}
+	tentative := map[string]bool{}
 	for _, step := range c.expected {
+		key := fmt.Sprintf("%d:%s", step.Line, step.Promiser)
 		if step.Optional {
+			optional[key] = step.DueDate
 			continue
 		}
-		wanted[fmt.Sprintf("%d:%s", step.Line, step.Promiser)] = step.DueDate
+		wanted[key], tentative[key] = step.DueDate, step.Tentative
 	}
 	answered := map[string]bool{}
 	var out []string
@@ -271,16 +281,18 @@ func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []strin
 				out = append(out, "the commitment meaning does not match the source")
 			}
 		}
-		if step.Meaning.withheldOutcome() != "" {
+		if step.withheldOutcome() != "" {
 			continue
 		}
 		matched := false
 		for _, line := range step.SourceLines {
 			key := fmt.Sprintf("%d:%s", line, c.promiserKeys[step.PromiserRef])
-			if due, exists := wanted[key]; exists && step.DueDate == due {
+			if due, exists := wanted[key]; exists && step.DueDate == due && (!tentative[key] || step.tentative()) {
 				answered[key] = true
 				matched = true
 			}
+			due, isOptional := optional[key]
+			matched = matched || (isOptional && step.tentative() && step.DueDate == due)
 		}
 		if !matched {
 			out = append(out, fmt.Sprintf(

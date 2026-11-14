@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -68,4 +69,34 @@ func Sign(secret string, msgID string, ts int64, body []byte) (string, error) {
 	mac.Write([]byte("."))
 	mac.Write(body)
 	return signatureVersion + "," + base64.StdEncoding.EncodeToString(mac.Sum(nil)), nil
+}
+
+// CheckSecret reports whether secret is a usable signing secret: the whsec_
+// prefix, then standard base64 that decodes to a key.
+func CheckSecret(secret string) error {
+	encoded, ok := strings.CutPrefix(secret, secretPrefix)
+	if !ok {
+		return fmt.Errorf("webhooks: a signing secret starts with %s", secretPrefix)
+	}
+	key, err := base64.StdEncoding.DecodeString(encoded)
+	if err != nil || len(key) == 0 {
+		return errors.New("webhooks: the signing secret is not base64 after its prefix")
+	}
+	return nil
+}
+
+// Verify reports whether header, a space-separated Standard Webhooks signature
+// list, holds one v1 entry that Sign makes for the same delivery. A sender
+// rotating its secret sends one entry per secret, so one match is enough.
+func Verify(secret, msgID string, ts int64, body []byte, header string) (bool, error) {
+	want, err := Sign(secret, msgID, ts, body)
+	if err != nil {
+		return false, err
+	}
+	for entry := range strings.FieldsSeq(header) {
+		if hmac.Equal([]byte(entry), []byte(want)) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

@@ -133,8 +133,12 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
 			return err
 		}
-		advice := attentionDealMoves{cards: newDealStatusService(pool, func() time.Time { return at })}
+		cards := newDealStatusService(pool, func() time.Time { return at })
+		advice := attentionDealMoves{cards: cards}
 		if _, err := advice.CurrentMoves(ctx, []ids.UUID{deal}); err != nil {
+			return err
+		}
+		if _, err := cards.ReadFacts(ctx, ids.From[ids.DealKind](deal)); err != nil {
 			return err
 		}
 		if err := readSuggestionLanes(ctx, db); err != nil {
@@ -178,6 +182,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s",
 		"FROM brief_item bi", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
 		"a.meeting_status IS NULL OR a.meeting_status = 'booked'", "NOT (a.captured_by = 'system'",
+		"al.entity_type = 'deal'",
 	} {
 		if !slices.ContainsFunc(sent.sql, func(sql string) bool { return strings.Contains(sql, held) }) {
 			t.Fatalf("no statement %s was sent, so the check does not hold that read", held)

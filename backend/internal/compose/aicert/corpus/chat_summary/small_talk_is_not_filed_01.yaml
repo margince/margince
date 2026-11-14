@@ -1,0 +1,24 @@
+name: small_talk_is_not_filed
+task: chat_summary
+site: episode
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+# Lunch plans in the deal's channel matter to nothing on the deal.
+fixture:
+  record: "deal Acme renewal"
+  facts: ["Stage: Proposal"]
+  channel: "acme-renewal"
+  messages:
+    - {author: "Rita Rep", at: "2026-11-10T12:00:00Z", text: "Lunch at the Thai place?"}
+    - {author: "Sam Lead", at: "2026-11-10T12:01:00Z", text: "Sure, 12:30 works."}
+expect:
+  outcome: accepted
+  answer:
+    relevant: false
+    keeps: []
+    omits: []
+  bands:
+    certified_min: 80
+    degraded_min: 60
+    floor: 50
+  rubric: "The answer is not relevant and files nothing."

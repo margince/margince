@@ -42,12 +42,13 @@ func (s *Store) waitingQueueSlots(
 	instant := arg(asOf)
 	// The CONTENT gate, not the discover one: everything this read answers is
 	// derived from thread membership. A message the reader may not read makes
-	// no row, and a reply they may not read lifts no snooze.
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	// no row, and a reply they may not read lifts no snooze. Both rows are
+	// messages, so the message form answers alike at a third of the size.
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return waitingSlots{}, err
 	}
-	backContent, err := auth.ActivityContentClause(ctx, "back", arg)
+	backContent, err := auth.ActivityMessageContentClause(ctx, "back", arg)
 	if err != nil {
 		return waitingSlots{}, err
 	}

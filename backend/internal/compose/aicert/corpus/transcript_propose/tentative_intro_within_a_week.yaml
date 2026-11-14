@@ -1,0 +1,15 @@
+name: tentative_intro_within_a_week
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - 'Lars: Let me check with our head of IT. I will try to get you an intro, give me one week or less.'
+  - 'Ines: Thank you.'
+expect:
+  outcome: accepted
+  answer: [{"line": 1, "due_date": "", "tentative": true}]
+  judge: none
+  judge_none_reason: >
+    Trying to arrange an intro within a week is a tentative promise. A week is a range, so it has no due day.
+    It is read in the tentative band and waits for a member to accept it.

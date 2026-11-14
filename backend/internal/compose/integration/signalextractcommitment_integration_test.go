@@ -77,6 +77,10 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM signal WHERE kind = 'commitment_made'`); n != 1 {
 		t.Errorf("want the account's commitment signal kept for Deal Scout, got %d", n)
 	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task' AND status = 'pending'
+		AND requested_decider_id = $1 AND proposed_change ? 'follow_up_of'`, e.Rep1); n != 1 {
+		t.Errorf("want one follow-up for the mailbox owner, got %d", n)
+	}
 	// The company page counts it, for a reader whose scope reaches everything.
 	var open int
 	var complete bool
@@ -86,6 +90,27 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 		return err
 	}); err != nil || open != 1 || !complete {
 		t.Errorf("the account counts %d open commitment(s), complete=%v, err=%v; want 1 and complete", open, complete, err)
+	}
+}
+
+// A customer's promise in mail no member owns is watched, and nobody is
+// asked to follow it up in their place.
+func TestACustomersPromiseInMailNobodyOwnsAsksNobodyToFollowItUp(t *testing.T) {
+	e := Setup(t)
+	e.Contacts.SetClock(func() time.Time { return extractClock })
+	ines := employeeOf(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "Ines Huber")
+	message := captureCommitmentMessage(t, e, ines, "thread-volumes", "Volumes", "Thanks. "+pricingPromise, "inbound",
+		extractClock.Add(-48*time.Hour))
+	party(t, message, "from", nil, &ines)
+	e.WsExec(t, `UPDATE activity SET captured_by = 'connector:gmail' WHERE id = $1`, message)
+
+	extractPass(t, e, &scriptedBrain{reply: commitmentReply(t, message, "contact:"+ines.String(), pricingPromise, "2026-06-05")})
+
+	if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE kind = 'commitment_theirs' AND contact_id = $1`, ines); n != 1 {
+		t.Fatalf("want the customer's promise filed once on them, got %d claims", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("mail nobody owns staged %d follow-up(s)", n)
 	}
 }
 

@@ -124,7 +124,7 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 }
 
 func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, tx pgx.Tx, c Commitment, held approvals.Offer, bundleID ids.UUID, late bool) (CommitmentOutcome, ids.UUID, error) {
-	if !held.Pending() || c.Theirs != nil || c.Meaning.withheldOutcome() != "" || len(commitmentRecipients(c)) == 0 {
+	if !held.Pending() || c.Theirs != nil || c.withheldOutcome() != "" || len(commitmentRecipients(c)) == 0 {
 		return CommitmentRemembered, ids.Nil, nil
 	}
 	var proposal CommitmentTaskProposal
@@ -188,5 +188,5 @@ func (d *CommitmentDispatcher) recipientTaskTarget(ctx context.Context, tx pgx.T
 }
 
 func canReconcileTaskRecipients(c Commitment, reason activities.CommitmentAdmissionReason) bool {
-	return reason == activities.CommitmentCurrent && c.Meaning.withheldOutcome() == "" && !c.NeedsConfirmation && len(commitmentRecipients(c)) > 0
+	return reason == activities.CommitmentCurrent && c.withheldOutcome() == "" && !c.NeedsConfirmation && len(commitmentRecipients(c)) > 0
 }

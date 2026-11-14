@@ -82,19 +82,24 @@ func operatorListings(t *testing.T, d *apptest.TwoDoors, recorded *toolCheckReco
 			offered := offeredCalls(t, clients[0].ListedTools(t), specs)
 			answers := map[string]roleAnswer{}
 			for n, call := range calls {
-				pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
-				got, args := callHolding(t, e, email, clients[n/toolRoleCallsPerPassport], call, pool, holding)
-				roleRefused := refused(call.verb, got)
-				// A refusal the admin meets too is about the record, not the role.
-				// The published matrix says how the admin was answered; a kind
-				// variant it does not hold is asked of the admin on the same records.
-				adminAdmitted, published := adminRows[call.row]
-				if !published {
-					apptest.AssignRoleTo(t, e, email, "admin")
-					adminAdmitted = !refused(call.verb, controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args))
-					apptest.AssignRoleTo(t, e, email, holding...)
-				}
-				answers[call.row] = roleAnswer{ran: !got.IsError, refused: roleRefused && adminAdmitted, text: got.Text}
+				oneWebFormAtATime(t, call, func() {
+					pool.caller = clients[n/toolRoleCallsPerPassport].Bearer()
+					got, args := callHolding(t, e, email, clients[n/toolRoleCallsPerPassport], call, pool, holding)
+					holdNoBusyForm(t, call.verb, got)
+					roleRefused := refused(call.verb, got)
+					// A refusal the admin meets too is about the record, not the role.
+					// The published matrix says how the admin was answered; a kind
+					// variant it does not hold is asked of the admin on the same records.
+					adminAdmitted, published := adminRows[call.row]
+					if !published {
+						apptest.AssignRoleTo(t, e, email, "admin")
+						control := controls[n/toolRoleCallsPerPassport].Call(t, call.verb, args)
+						holdNoBusyForm(t, call.verb, control)
+						adminAdmitted = !refused(call.verb, control)
+						apptest.AssignRoleTo(t, e, email, holding...)
+					}
+					answers[call.row] = roleAnswer{ran: !got.IsError, refused: roleRefused && adminAdmitted, text: got.Text}
+				})
 			}
 			for _, disagreement := range listingDisagreements(calls, specs, offered, answers) {
 				t.Error(disagreement)

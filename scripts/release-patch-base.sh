@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # The patch base of the next release, as shell values the release workflow reads.
 #
-# The release CLI's `resolve-patch-base --version <next> --jsonl` asks the dist
+# The release CLI's `resolve-patch-base --release <next> --jsonl` asks the dist
 # service and writes one record: `patch-base-resolved` with the version and git
 # revision of the newest release that went out on the next release's line,
 # withdrawn included, or `first-release` when none went out on `main`. One dist
 # row gives both values, so the patch is cut from the same release the upload
 # names as its base.
 #
-# Usage: release-management resolve-patch-base --version <next> --jsonl | scripts/release-patch-base.sh
+# Usage: release-management resolve-patch-base --release <next> --jsonl | scripts/release-patch-base.sh
 #
 # Prints `first_release=true`, or `first_release=false`, `base_version=<v>` and
 # `base_revision=<r>`, one per line. Any other record exits 1 and prints nothing

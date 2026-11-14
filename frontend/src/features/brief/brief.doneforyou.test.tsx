@@ -102,7 +102,7 @@ it("shows five deals with their reasons, and every one in the review drawer", as
     six.map((n) => bundle(n, [auditId(n)])),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const preview = await screen.findByRole("list", {
     name: en["brief.done.dealsLabel"],
   });
@@ -143,7 +143,7 @@ it("reads what changed, why and the customer's words apart", async () => {
     [bundle(1, [auditId(1)]), bundle(2, [auditId(2)]), bundle(3, [auditId(3)])],
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const first = (await screen.findByRole("link", { name: "Deal 1" })).closest(
     "li",
   );
@@ -174,7 +174,7 @@ it("keeps an older server's summary whole and claims no missing reason", async (
     [change(1, 0, { headline: undefined, reason: undefined })],
     [bundle(1, [auditId(1)])],
   );
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   expect(await screen.findByText("Closed as lost — reason 1.0")).toBeTruthy();
   expect(screen.queryByText(en["brief.done.noReason"])).toBeNull();
 });
@@ -197,7 +197,7 @@ it("undoes exactly the changes a deal lists, never one that arrived since", asyn
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "Undo 2 changes" }),
   );
@@ -216,7 +216,7 @@ it("undoes exactly the changes a deal lists, never one that arrived since", asyn
 
 it("lists a deal the server counts even when no loaded page holds its changes", async () => {
   routes([], [bundle(1, [auditId(1, 0), auditId(1, 1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   expect(await screen.findByText("1 deal Margince changed")).toBeTruthy();
   const open = screen.getByRole("link", { name: "View 2 changes" });
   expect(open.getAttribute("href")).toContain(dealId(1));
@@ -245,7 +245,7 @@ it("reviews all by sending only the shown changes the server still allows", asyn
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -280,7 +280,7 @@ it("says the changes did not load and retries both reads when the count fails", 
     },
   });
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const retry = await screen.findByRole("button", { name: en["state.retry"] });
   // No partial list stands in for the one the server could not count.
   expect(screen.queryByText("reason 1.0")).toBeNull();
@@ -319,7 +319,7 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -339,7 +339,7 @@ it("keeps the drawer's list and its Undo together until the reader asks for new 
   const bundles = [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])];
   routes(receipts, bundles);
   const user = userEvent.setup();
-  const { client } = render(<DoneForYou completed={null} />);
+  const { client } = render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -362,7 +362,7 @@ it("opens the first deal and says where a closed one ended up", async () => {
     [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const first = (await screen.findByRole("link", { name: "Deal 1" })).closest(
     "summary",
   );
@@ -382,7 +382,7 @@ it("opens the first deal and says where a closed one ended up", async () => {
 
 it("says what a change moved without naming the deal it sits under", async () => {
   routes([change(1)], [bundle(1, [auditId(1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const card = (await screen.findByRole("link", { name: "Deal 1" })).closest(
     "li",
   );
@@ -426,7 +426,7 @@ it("offers one Undo for every change on a deal and asks for no review", async ()
         truncated: false,
       }),
   });
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   expect(
     await screen.findByRole("button", { name: "Undo 2 changes" }),
   ).toBeTruthy();
@@ -452,7 +452,7 @@ it("undoes only the deals left ticked, and starts with every deal ticked", async
     undoneEach,
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 3 deals" }),
   );
@@ -518,7 +518,7 @@ it("still says what the last Undo of many did after a reload, until the reader c
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -533,7 +533,7 @@ it("still says what the last Undo of many did after a reload, until the reader c
 
   // The reload: deal 1 still waits, deal 2 is gone from the list.
   routes([change(1)], [bundle(1, [auditId(1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(await screen.findByRole("button", { name: "See 1 deal" }));
   const drawer = await screen.findByRole("dialog");
   expect(within(drawer).getByText(/Undone on 1 deal\./)).toBeTruthy();
@@ -563,7 +563,7 @@ it("opens the list of all deals from the address, so Back from a deal reopens it
   );
   window.location.hash = `#/?${DONE_REVIEW_PARAM}=1`;
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const drawer = await screen.findByRole("dialog", {
     name: "2 deals Margince changed",
   });
@@ -579,7 +579,7 @@ it("opens the list of all deals from the address, so Back from a deal reopens it
 
 it("links Change history to the Worklist's Change history panel", async () => {
   routes([change(1)], [bundle(1, [auditId(1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const link = await screen.findByRole("link", {
     name: en["brief.done.history"],
   });

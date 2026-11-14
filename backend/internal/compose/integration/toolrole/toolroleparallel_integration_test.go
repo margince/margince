@@ -156,6 +156,7 @@ func callAsSeat(t *testing.T, seat roleSeat, client *apptest.MCPClient, call too
 	withArgs(t, seat, call, pool, func(args map[string]any) {
 		got, releaseRefused = callThroughApproval(t, seat.e, client, call.verb, args)
 	})
+	holdNoBusyForm(t, call.verb, got)
 	return got, releaseRefused
 }
 
@@ -166,14 +167,16 @@ func callAsSeat(t *testing.T, seat roleSeat, client *apptest.MCPClient, call too
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func withArgs(t *testing.T, seat roleSeat, call toolRoleCall, pool *recordPool, run func(args map[string]any)) {
 	t.Helper()
-	if !runsAlone(t, call) {
-		run(call.args(pool))
-		return
-	}
-	installationSeeds.Lock()
-	defer installationSeeds.Unlock()
-	apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
-	args := call.args(pool)
-	apptest.AssignRoleTo(t, seat.e, seat.email, seat.role.Key)
-	run(args)
+	oneWebFormAtATime(t, call, func() {
+		if !runsAlone(t, call) {
+			run(call.args(pool))
+			return
+		}
+		installationSeeds.Lock()
+		defer installationSeeds.Unlock()
+		apptest.AssignRoleTo(t, seat.e, seat.email, "admin")
+		args := call.args(pool)
+		apptest.AssignRoleTo(t, seat.e, seat.email, seat.role.Key)
+		run(args)
+	})
 }

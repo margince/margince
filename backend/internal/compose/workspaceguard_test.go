@@ -31,6 +31,7 @@ import (
 
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -136,6 +137,14 @@ func zeroPayloadRefusalDrivers() map[string]func(context.Context) error {
 		},
 		CapturedDealRefileArgs{}.Kind(): func(ctx context.Context) error {
 			return (&capturedDealRefileWorker{}).Work(ctx, &river.Job[CapturedDealRefileArgs]{})
+		},
+		ChatLinkFlushArgs{}.Kind(): func(ctx context.Context) error {
+			worker := &chatsync.Worker[ChatLinkFlushArgs]{Bind: workspaceJobCtx}
+			return worker.Work(ctx, &river.Job[ChatLinkFlushArgs]{})
+		},
+		ChatPullArgs{}.Kind(): func(ctx context.Context) error {
+			worker := &chatsync.PullWorker[ChatPullArgs]{Bind: workspaceJobCtx}
+			return worker.Work(ctx, &river.Job[ChatPullArgs]{})
 		},
 		GeocodeCompanyArgs{}.Kind(): func(ctx context.Context) error {
 			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeCompanyArgs]{})

@@ -24,6 +24,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -45,8 +47,8 @@ import (
 // role may read the status.
 const channelConnectionObject = "channel_connection"
 
-// ProviderTelegram is the only channel provider implemented, and the only
-// value channel_connection.provider's CHECK admits.
+// ProviderTelegram is the provider whose check this module carries itself;
+// compose adds the others through WithBotCheck.
 const ProviderTelegram = telegram.ProviderName
 
 // The channel_connection lifecycle states. There is deliberately no
@@ -77,7 +79,8 @@ const (
 
 // channelConnectionColumns is the read shape, spelled once so every scan
 // agrees with every select.
-const channelConnectionColumns = `id, provider, channel_id, channel_label, status, version, created_at, updated_at`
+const channelConnectionColumns = `id, provider, channel_id, channel_label, address, status, version, created_at, updated_at,
+	events_credential_ref IS NOT NULL`
 
 // ChannelConnection is one channel binding as read back. No vault ref rides this
 // shape: the bot token lives sealed in the vault, addressed by a ref no caller
@@ -92,10 +95,16 @@ type ChannelConnection struct {
 	// mutable and re-assignable, so it identifies nothing; ChannelID (the
 	// bot's global numeric id) is the key.
 	ChannelLabel string
-	Status       string
-	Version      int64
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	// Address is the web address of a self-hosted provider's install, and
+	// empty for a provider with one fixed API.
+	Address string
+	// EventsSecretSet reports a sealed secret the provider signs its
+	// notices with. The secret itself never leaves the vault through here.
+	EventsSecretSet bool
+	Status          string
+	Version         int64
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // ConnectRequest is Connect's input: which provider, and the BotFather token to
@@ -105,6 +114,9 @@ type ChannelConnection struct {
 type ConnectRequest struct {
 	Provider string
 	BotToken string
+	Address  string
+	// EventsSecret is optional; only a provider that pushes notices takes one.
+	EventsSecret string
 }
 
 // ErrChannelWorkspaceBotAlreadyBound reports that this installation already
@@ -138,7 +150,7 @@ type ChannelStore struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db    *database.DB
 	vault keyvault.Vault
-	api   telegram.API
+	bots  map[string]ChannelBotCheck
 	log   *slog.Logger
 }
 
@@ -150,7 +162,8 @@ func NewChannelStore(db *database.DB, vault keyvault.Vault, api telegram.API, lo
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ChannelStore{db: db, vault: vault, api: api, log: log}
+	bots := map[string]ChannelBotCheck{ProviderTelegram: telegramBotCheck{api: api}}
+	return &ChannelStore{db: db, vault: vault, bots: bots, log: log}
 }
 
 // withVault returns a copy of the store carrying the credential custodian. The
@@ -163,25 +176,11 @@ func (s *ChannelStore) withVault(vault keyvault.Vault) *ChannelStore {
 	return &next
 }
 
-// Connect binds one bot to this workspace. The ORDER is the design's (v2 §4) and
-// is not interchangeable:
-//
-//  1. getMe — validates the token and yields the bot id and username. A bad
-//     token fails here, before anything is sealed or written.
-//  2. deleteWebhook — clears any registration the bot still carries, because
-//     Telegram refuses getUpdates while one exists. Pending updates are
-//     deliberately KEPT: they are the customer's messages.
-//  3. Seal the token in the vault.
-//  4. Insert the row `connected` with a zero cursor, in one transaction with its
-//     audit row.
-//
-// Nothing follows step 4 — no registration, no flip — which is why there is no
-// `pending` state to reach: a poll dials out, so a committed row is already live,
-// and a failure anywhere before the commit leaves nothing behind but a vault entry
-// this path destroys itself. The dispatcher's next tick picks the row up.
-//
-// Step 2 precedes step 3 for the ordinary reason: a provider refusal must not
-// leave a sealed secret nothing names.
+// Connect binds one bot to this workspace, and the order matters. The
+// provider confirms the token before it is sealed, and Telegram's check also
+// clears its webhook. So a refusal leaves no secret that nothing names.
+// The row is inserted `connected` with its audit row last; no provider call
+// follows, so there is no half-connected state.
 func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (ChannelConnection, error) {
 	if err := auth.Require(ctx, channelConnectionObject, principal.ActionCreate); err != nil {
 		return ChannelConnection{}, err
@@ -191,39 +190,39 @@ func (s *ChannelStore) Connect(ctx context.Context, req ConnectRequest) (Channel
 	if err := auth.RequireHuman(ctx); err != nil {
 		return ChannelConnection{}, err
 	}
-	if err := s.requireConnectWiring(req.Provider); err != nil {
+	check, err := s.requireConnectWiring(req.Provider)
+	if err != nil {
 		return ChannelConnection{}, err
 	}
-	if err := telegram.ValidateToken(req.BotToken); err != nil {
+	address, err := connectAddress(check, req.Address)
+	if err != nil {
+		return ChannelConnection{}, err
+	}
+	if err := check.ValidateToken(req.BotToken); err != nil {
+		return ChannelConnection{}, err
+	}
+	if err := checkEventsSecret(check, req.EventsSecret); err != nil {
 		return ChannelConnection{}, err
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return ChannelConnection{}, errors.New("capture: channel connect called outside a workspace context")
 	}
-
-	bot, err := s.api.GetMe(ctx, req.BotToken)
+	bot, err := check.Confirm(ctx, address, req.BotToken)
 	if err != nil {
 		return ChannelConnection{}, err
 	}
-	if err := s.clearWebhook(ctx, req.BotToken); err != nil {
-		return ChannelConnection{}, err
-	}
-
-	credentialRef, err := s.sealBotToken(ctx, ws, req.BotToken)
+	refs, err := s.sealConnectionSecrets(ctx, ws, req.BotToken, req.EventsSecret)
 	if err != nil {
 		return ChannelConnection{}, err
 	}
-	row, err := s.insertConnected(ctx, bot, credentialRef)
+	row, err := s.insertConnected(ctx, req.Provider, address, bot, refs)
 	if err != nil {
-		// A lost race for either unique index is the one failure that
-		// GUARANTEES no row persisted, so the just-sealed ref is definitely
-		// orphaned and safe to destroy. Any other error leaves the commit
-		// outcome ambiguous, and deleting then could strand a live
-		// connection's credential — the same put-then-commit posture
-		// Registry.Connect and overlay's Connect document.
+		// A lost race for a unique index GUARANTEES no row persisted, so the
+		// just-sealed refs are safe to destroy. Any other error leaves the commit
+		// outcome ambiguous, and deleting then could strand a live credential.
 		if constraint, unique := storekit.UniqueViolation(err); unique {
-			keyvault.DeleteDetached(ctx, s.vault, s.log, ws, credentialRef, "channel-connect-lost-race")
+			s.destroyDetached(ctx, ws, "channel-connect-lost-race", refs.token, refs.events)
 			return ChannelConnection{}, channelUniquenessRefusal(constraint)
 		}
 		return ChannelConnection{}, err
@@ -259,46 +258,52 @@ func channelUniquenessRefusal(constraint string) error {
 const channelOneLiveBotIndex = "uq_channel_connection_provider"
 
 // requireConnectWiring refuses a connect this deployment cannot honestly
-// complete: an unimplemented provider, or a missing vault (nothing could seal the
-// token). Each refusal names what to fix.
-func (s *ChannelStore) requireConnectWiring(provider string) error {
-	if provider != ProviderTelegram {
-		return fmt.Errorf("channel provider %q is not implemented: %w", provider, apperrors.ErrConflict)
+// complete: a provider with no composed check, or a missing vault (nothing could
+// seal the token). Each refusal names what to fix.
+//
+//nolint:ireturn // returns the provider's check through the ChannelBotCheck seam, as botCheck does.
+func (s *ChannelStore) requireConnectWiring(provider string) (ChannelBotCheck, error) {
+	check, err := s.botCheck(provider)
+	if err != nil {
+		return nil, err
 	}
 	if s.vault == nil {
-		return fmt.Errorf("configure a credential store for this installation, so a bot token can be sealed: %w",
+		return nil, fmt.Errorf("configure a credential store for this installation, so a bot token can be sealed: %w",
 			ErrChannelWiringIncomplete)
 	}
-	return nil
+	return check, nil
 }
 
-// clearWebhook removes any webhook a bot still carries, because Telegram refuses
-// getUpdates for a bot with one registered (telegram.ErrWebhookActive). It runs
-// before anything is sealed or written, so a provider refusal leaves no trace to
-// clean up.
-//
-// drop_pending_updates is NOT sent: those pending updates are the customer's
-// messages, and the first poll is meant to collect them.
-//
-// This DOES take a bot away from whatever had registered that webhook — a staging
-// installation, or an unrelated integration. That is unavoidable rather than
-// overlooked: the two ingress modes cannot coexist on one bot, so binding a bot
-// here means taking it, and the operator pasting the token is the one asserting
-// they may.
-func (s *ChannelStore) clearWebhook(ctx context.Context, token string) error {
-	if err := s.api.DeleteWebhook(ctx, token); err != nil {
-		return fmt.Errorf("capture: clearing the bot's webhook so its updates can be polled: %w", err)
+// addressScheme is the scheme a self-hosted provider's address uses, with or
+// without TLS.
+const addressScheme = "http"
+
+// connectAddress holds the provider's address rule: a self-hosted provider
+// needs its install's web address, and a fixed-API one takes none.
+func connectAddress(check ChannelBotCheck, raw string) (string, error) {
+	address := strings.TrimRight(strings.TrimSpace(raw), "/")
+	if !check.NeedsAddress() {
+		if address != "" {
+			return "", fmt.Errorf("this provider takes no web address: %w", apperrors.ErrInvalidArgument)
+		}
+		return "", nil
 	}
-	return nil
+	parsed, err := url.Parse(address)
+	if err != nil || (parsed.Scheme != addressScheme && parsed.Scheme != addressScheme+"s") || parsed.Host == "" {
+		return "", fmt.Errorf("enter the chat's web address, such as https://chat.example.com: %w", apperrors.ErrInvalidArgument)
+	}
+	return address, nil
 }
 
-// sealBotToken puts the token in the vault before any row names it
-// (put-then-commit). One secret per connection now: a poll authenticates with the
-// bot token alone, so there is no second value to mint, rotate or destroy.
-func (s *ChannelStore) sealBotToken(ctx context.Context, ws ids.UUID, token string) (keyvault.Ref, error) {
-	ref, err := s.vault.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(token))
+// sealSecret puts one secret in the vault before any row names it
+// (put-then-commit). An empty secret seals nothing and answers an empty ref.
+func (s *ChannelStore) sealSecret(ctx context.Context, ws ids.UUID, what, secret string) (keyvault.Ref, error) {
+	if secret == "" {
+		return "", nil
+	}
+	ref, err := s.vault.Put(ctx, ids.From[ids.WorkspaceKind](ws), []byte(secret))
 	if err != nil {
-		return "", fmt.Errorf("capture: sealing the bot token: %w", err)
+		return "", fmt.Errorf("capture: sealing the %s: %w", what, err)
 	}
 	return ref, nil
 }
@@ -306,7 +311,7 @@ func (s *ChannelStore) sealBotToken(ctx context.Context, ws ids.UUID, token stri
 // insertConnected writes the live row and its audit in one transaction. The
 // cursor starts at 0 — "whatever Telegram still holds" — so a freshly connected
 // bot collects the messages waiting for it rather than starting from silence.
-func (s *ChannelStore) insertConnected(ctx context.Context, bot telegram.Bot, credentialRef keyvault.Ref) (ChannelConnection, error) {
+func (s *ChannelStore) insertConnected(ctx context.Context, provider, address string, bot ChannelBot, refs connectionRefs) (ChannelConnection, error) {
 	connectedBy, err := channelActor(ctx)
 	if err != nil {
 		return ChannelConnection{}, err
@@ -315,29 +320,20 @@ func (s *ChannelStore) insertConnected(ctx context.Context, bot telegram.Bot, cr
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		out, err = scanChannelConnection(tx.QueryRow(ctx, `
 			INSERT INTO channel_connection
-			  (provider, channel_id, channel_label, credential_ref, status, poll_offset, connected_by)
-			VALUES ($1, $2, $3, $4, $5, 0, $6)
+			  (provider, channel_id, channel_label, address, credential_ref, events_credential_ref, status, poll_offset, connected_by)
+			VALUES ($1, $2, $3, NULLIF($4, ''), $5, NULLIF($6, ''), $7, 0, $8)
 			RETURNING `+channelConnectionColumns,
-			ProviderTelegram, channelIDOf(bot), bot.Username,
-			string(credentialRef), channelStatusConnected, connectedBy))
+			provider, bot.ID, bot.Label, address,
+			string(refs.token), string(refs.events), channelStatusConnected, connectedBy))
 		if err != nil {
 			return err
 		}
-		return auditLifecycle(ctx, tx, "create", channelConnectionObject, out.ID, nil,
-			channelAuditImage(out.ChannelID, out.ChannelLabel, out.Status))
+		return auditLifecycle(ctx, tx, "create", channelConnectionObject, out.ID, nil, channelAuditImage(out))
 	})
 	if err != nil {
 		return ChannelConnection{}, err
 	}
 	return out, nil
-}
-
-// channelIDOf renders the bot's global numeric id as the channel_id column's
-// text. Text rather than bigint because channel_id is the provider's opaque
-// handle for whatever a future provider calls a channel, not an integer this
-// system does arithmetic on.
-func channelIDOf(bot telegram.Bot) string {
-	return fmt.Sprintf("%d", bot.ID)
 }
 
 // channelActor resolves the human a connection is attributed to. connected_by
@@ -361,18 +357,25 @@ func channelActor(ctx context.Context) (ids.UUID, error) {
 // channelAuditImage is one side of a channel connection's audit trail. Neither
 // vault ref appears: the audit spine must not become a second custodian of the
 // credentials, and a ref tells a reader nothing the bot's own identity does not.
-func channelAuditImage(channelID, label, status string) map[string]any {
+// Whether an events secret is sealed does appear, so setting one is on record.
+func channelAuditImage(c ChannelConnection) map[string]any {
 	return map[string]any{
-		"provider":      ProviderTelegram,
-		"channel_id":    channelID,
-		"channel_label": label,
-		"status":        status,
+		"provider":          c.Provider,
+		"channel_id":        c.ChannelID,
+		"channel_label":     c.ChannelLabel,
+		"address":           c.Address,
+		"status":            c.Status,
+		"events_secret_set": c.EventsSecretSet,
 	}
 }
 
 func scanChannelConnection(r pgx.Row) (ChannelConnection, error) {
 	var c ChannelConnection
-	err := r.Scan(&c.ID, &c.Provider, &c.ChannelID, &c.ChannelLabel,
-		&c.Status, &c.Version, &c.CreatedAt, &c.UpdatedAt)
+	var address *string
+	err := r.Scan(&c.ID, &c.Provider, &c.ChannelID, &c.ChannelLabel, &address,
+		&c.Status, &c.Version, &c.CreatedAt, &c.UpdatedAt, &c.EventsSecretSet)
+	if address != nil {
+		c.Address = *address
+	}
 	return c, err
 }

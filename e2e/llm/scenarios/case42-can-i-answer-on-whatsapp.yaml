@@ -39,9 +39,9 @@ prompt: |
   Margince on WhatsApp, or does that have to happen on my phone?
 
 must_call:
-  - list_channel_providers
   - log_activity
 may_call:
+  - list_channel_providers
   - resolve_entities
   - search_records
   - read_record

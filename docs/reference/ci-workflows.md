@@ -327,8 +327,8 @@ build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does:
 
-1. The CLI asks the dist service for the patch base (`resolve-patch-base --version`): the newest published
-   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --patch-base <version>`. The first release has no base: its patch is
+1. The CLI asks the dist service for the patch base (`resolve-patch-base --release`): the newest published
+   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first release has no base: its patch is
    the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source tree, generated again at the release commit (`make sbom`).
    The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
 
@@ -346,8 +346,8 @@ What a run does:
      after a quiet night starts with an empty cache.
 3. The images are pushed to the constellation registry (`registry.test.margince.com/margince/<role>`).
    They log in as the registry publisher through the `MARGINCE_AUTH_PUBLISHER_TOKEN` secret. They
-   are added to the draft with `add-artifacts`, as references pinned by digest.
-4. The release is published with `publish-release`. The dist uploads log in with the dist
+   are added to the draft with `add-artifacts --release <version>`, as references pinned by digest.
+4. The release is published with `publish-release --release <version>`. The dist uploads log in with the dist
    publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
 
 Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).

@@ -95,7 +95,6 @@ function MagicLineRow({
   byDay: boolean;
 }>) {
   const t = useT();
-  const sentence = magicSentenceKey(line.summary.key);
   const { locale } = useLocale();
   const detail = lineDetail(line, t, locale);
   return (
@@ -120,14 +119,7 @@ function MagicLineRow({
         </div>
       ) : (
         <p className="magic-line-text">
-          {sentence
-            ? t(sentence, readableValues(line.summary.values, t))
-            : t(
-                line.lane === "needs_you"
-                  ? "magic.approval.reviewChange"
-                  : "magic.undescribed",
-              )}{" "}
-          <LineSubject line={line} since={since} />{" "}
+          {lineSentence(line, t)} <LineSubject line={line} since={since} />{" "}
           {detail.length > 0 && (
             <span className="t-caption">
               {detail.map((part) => (
@@ -143,20 +135,39 @@ function MagicLineRow({
   );
 }
 
-// Unknown detail keys cannot supply a trustworthy explanation.
-function lineDetail(
-  line: MagicLine,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): string[] {
+/** What a line says happened, without the record it happened to. */
+export function lineSentence(line: MagicLine, t: Translator): string {
+  const sentence = magicSentenceKey(line.summary.key);
+  if (sentence) {
+    return t(sentence, readableValues(line.summary.values, t));
+  }
+  return t(
+    line.lane === "needs_you"
+      ? "magic.approval.reviewChange"
+      : "magic.undescribed",
+  );
+}
+
+/**
+ * Who acted, why, and what the reader should know before reaching for an
+ * undo. Unknown detail keys cannot supply a trustworthy explanation.
+ */
+export function lineNotes(line: MagicLine, t: Translator, locale: Locale) {
   const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
   const why = line.reason ? magicWhyKey(line.reason.key) : null;
-  return [
-    by && t(by, line.actor.label?.values),
-    why && t(why, forecastReasonValues(line, locale)),
-    captureCoverage(line, t),
-    noWayBack(line, t),
-  ].filter((part): part is string => Boolean(part));
+  return {
+    by: by ? t(by, line.actor.label?.values) : null,
+    why: why ? t(why, forecastReasonValues(line, locale)) : null,
+    coverage: captureCoverage(line, t),
+    noWayBack: noWayBack(line, t),
+  };
+}
+
+function lineDetail(line: MagicLine, t: Translator, locale: Locale): string[] {
+  const notes = lineNotes(line, t, locale);
+  return [notes.by, notes.why, notes.coverage, notes.noWayBack].filter(
+    (part): part is string => Boolean(part),
+  );
 }
 
 function captureCoverage(line: MagicLine, t: Translator): string | null {
@@ -191,7 +202,7 @@ function forecastReasonValues(line: MagicLine, locale: Locale) {
 // Why a done change to one record cannot be put back, said rather than shown as
 // a greyed control. A line standing for many says it per record inside, and on
 // the other lanes nothing changed, so "nothing to put back" would be noise.
-function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
+function noWayBack(line: MagicLine, t: Translator): string | null {
   const entity = line.entity;
   if (line.lane !== "done" || (standsForMany(line) && entity)) {
     return null;
@@ -212,7 +223,7 @@ function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
  * A decision waiting has nothing to undo. Its control opens that decision in
  * the drawer over Home, where it is answered.
  */
-function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
+export function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
   if (line.lane === "needs_you") {
     return (
@@ -320,7 +331,7 @@ function manySummary({
  * interpolating a record's name into a translated clause is how a sentence
  * ends up ungrammatical in two of three languages.
  */
-function LineSubject({
+export function LineSubject({
   line,
   since,
 }: Readonly<{ line: MagicLine; since: string | undefined }>) {

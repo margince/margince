@@ -20,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -34,7 +33,7 @@ import (
 // nothing else does.
 type channelRow struct {
 	ChannelConnection
-	credentialRef keyvault.Ref
+	refs connectionRefs
 }
 
 // ReplaceToken points a live connection at a new bot token (design v2 §4). It
@@ -51,41 +50,34 @@ type channelRow struct {
 // Telegram refuses getUpdates while a webhook is registered. The OUTGOING bot
 // needs nothing: it stops being polled the instant the row stops naming it, and
 // this installation never registered anything against it that could outlive that.
-func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token string) error {
+//
+// A non-empty eventsSecret replaces the sealed events secret in the same change;
+// an empty one keeps it.
+func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token, eventsSecret string) error {
 	if err := auth.Require(ctx, channelConnectionObject, principal.ActionUpdate); err != nil {
 		return err
 	}
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	if err := s.requireConnectWiring(ProviderTelegram); err != nil {
-		return err
-	}
-	if err := telegram.ValidateToken(token); err != nil {
-		return err
-	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return errors.New("capture: channel token replacement called outside a workspace context")
 	}
-
 	current, err := s.readChannelRow(ctx, id)
 	if err != nil {
 		return err
 	}
-	bot, err := s.api.GetMe(ctx, token)
+	bot, err := s.confirmReplacement(ctx, current, token, eventsSecret)
 	if err != nil {
-		return err
-	}
-	if err := s.clearWebhook(ctx, token); err != nil {
 		return err
 	}
 
-	credentialRef, err := s.sealBotToken(ctx, ws, token)
+	refs, err := s.sealConnectionSecrets(ctx, ws, token, eventsSecret)
 	if err != nil {
 		return err
 	}
-	if err := s.repoint(ctx, current, bot, credentialRef); err != nil {
+	if err := s.repoint(ctx, current, bot, refs); err != nil {
 		// Each of these proves the transaction wrote NOTHING — a unique index
 		// refused it, zero rows matched the version predicate, or the row was
 		// archived out from under it — so the ref just sealed is definitely
@@ -93,18 +85,46 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token stri
 		// ambiguous, and destroying then could strand a live connection's
 		// credential.
 		if constraint, unique := storekit.UniqueViolation(err); unique {
-			keyvault.DeleteDetached(ctx, s.vault, s.log, ws, credentialRef, "channel-replace-lost-race")
+			s.destroyDetached(ctx, ws, "channel-replace-lost-race", refs.token, refs.events)
 			return channelUniquenessRefusal(constraint)
 		}
 		if errors.Is(err, apperrors.ErrVersionSkew) || errors.Is(err, apperrors.ErrNotFound) {
-			keyvault.DeleteDetached(ctx, s.vault, s.log, ws, credentialRef, "channel-replace-lost-race")
+			s.destroyDetached(ctx, ws, "channel-replace-lost-race", refs.token, refs.events)
 		}
 		return err
 	}
-	// The row now names the new ref, so the superseded one is unreachable from any
-	// row and must be destroyed here — nothing else will ever collect it.
-	keyvault.DeleteDetached(ctx, s.vault, s.log, ws, current.credentialRef, "channel-token-replaced")
+	// The row now names the new refs, so no row names the superseded ones.
+	// Nothing else will ever collect them, so they are destroyed here.
+	superseded := []keyvault.Ref{current.refs.token}
+	if refs.events != "" {
+		superseded = append(superseded, current.refs.events)
+	}
+	s.destroyDetached(ctx, ws, "channel-token-replaced", superseded...)
 	return nil
+}
+
+// confirmReplacement runs the provider's checks on a replacement token before
+// anything is sealed. It refuses a token of another team where links are bound
+// to the bot's team.
+func (s *ChannelStore) confirmReplacement(ctx context.Context, current channelRow, token, eventsSecret string) (ChannelBot, error) {
+	check, err := s.requireConnectWiring(current.Provider)
+	if err != nil {
+		return ChannelBot{}, err
+	}
+	if err := check.ValidateToken(token); err != nil {
+		return ChannelBot{}, err
+	}
+	if err := checkEventsSecret(check, eventsSecret); err != nil {
+		return ChannelBot{}, err
+	}
+	bot, err := check.Confirm(ctx, current.Address, token)
+	if err != nil {
+		return ChannelBot{}, err
+	}
+	if check.FixedIdentity() && bot.ID != current.ChannelID {
+		return ChannelBot{}, fmt.Errorf("this token belongs to another team; disconnect the bot and connect the new one: %w", apperrors.ErrConflict)
+	}
+	return bot, nil
 }
 
 // repoint re-points the connection at the new bot and its newly sealed token, in
@@ -120,23 +140,28 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token stri
 // Zero rows matched means another replacement already moved this connection on,
 // and this one would otherwise destroy the credential that winner is now polling
 // with.
-func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot telegram.Bot, credentialRef keyvault.Ref) error {
+func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot ChannelBot, refs connectionRefs) error {
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if _, err := storekit.LockRow(ctx, tx, "channel_connection", current.ID, storekit.LiveOnly); err != nil {
 			return err
 		}
 		out, err := scanChannelConnection(tx.QueryRow(ctx, `
 			UPDATE channel_connection
-			   SET channel_id = $2, channel_label = $3, credential_ref = $4, poll_offset = 0
+			   SET channel_id = $2, channel_label = $3, credential_ref = $4, poll_offset = 0,
+			       events_credential_ref = coalesce(NULLIF($6, ''), events_credential_ref)
 			 WHERE id = $1 AND version = $5 AND archived_at IS NULL
 			 RETURNING `+channelConnectionColumns,
-			current.ID, channelIDOf(bot), bot.Username, string(credentialRef), current.Version))
+			current.ID, bot.ID, bot.Label, string(refs.token), current.Version, string(refs.events)))
 		if err != nil {
 			return err
 		}
+		after := channelAuditImage(out)
+		if refs.events != "" {
+			// Set-to-set reads as no change, so a replaced secret says so itself.
+			after["events_secret_replaced"] = true
+		}
 		return auditLifecycle(ctx, tx, "update", channelConnectionObject, out.ID,
-			channelAuditImage(current.ChannelID, current.ChannelLabel, current.Status),
-			channelAuditImage(out.ChannelID, out.ChannelLabel, out.Status))
+			channelAuditImage(current.ChannelConnection), after)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The lock resolved a LIVE row, so the live clause held and only the
@@ -147,8 +172,8 @@ func (s *ChannelStore) repoint(ctx context.Context, current channelRow, bot tele
 }
 
 // Disconnect withdraws the binding: it archives the row as `disconnected` and
-// destroys the sealed token. Already-captured activities are retained —
-// disconnecting stops capture, it does not erase history.
+// destroys the sealed token and events secret. Already-captured activities are
+// retained: disconnecting stops capture, it does not erase history.
 //
 // Archiving is what actually stops ingress: the poll dispatcher's due-scan selects
 // only live `connected` rows, so an archived connection is never polled again. It
@@ -177,7 +202,7 @@ func (s *ChannelStore) Disconnect(ctx context.Context, id ids.UUID) error {
 	if err := s.archiveDisconnected(ctx, current); err != nil {
 		return err
 	}
-	keyvault.DeleteDetached(ctx, s.vault, s.log, ws, current.credentialRef, "channel-disconnected")
+	s.destroyDetached(ctx, ws, "channel-disconnected", current.refs.token, current.refs.events)
 	return nil
 }
 
@@ -205,8 +230,7 @@ func (s *ChannelStore) archiveDisconnected(ctx context.Context, current channelR
 			return err
 		}
 		return auditLifecycle(ctx, tx, "archive", channelConnectionObject, after.ID,
-			channelAuditImage(current.ChannelID, current.ChannelLabel, current.Status),
-			channelAuditImage(after.ChannelID, after.ChannelLabel, after.Status))
+			channelAuditImage(current.ChannelConnection), channelAuditImage(after))
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The lock resolved a LIVE row — an already-archived or absent one fails
@@ -222,12 +246,19 @@ func (s *ChannelStore) archiveDisconnected(ctx context.Context, current channelR
 // existence-hiding, and an archived connection is not editable.
 func (s *ChannelStore) readChannelRow(ctx context.Context, id ids.UUID) (channelRow, error) {
 	var out channelRow
-	var credentialRef string
+	var credentialRef, eventsRef string
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `SELECT `+channelConnectionColumns+`, credential_ref
+		row := tx.QueryRow(ctx, `SELECT `+channelConnectionColumns+`, credential_ref, coalesce(events_credential_ref, '')
 			 FROM channel_connection WHERE id = $1 AND archived_at IS NULL`, id)
-		return row.Scan(&out.ID, &out.Provider, &out.ChannelID, &out.ChannelLabel,
-			&out.Status, &out.Version, &out.CreatedAt, &out.UpdatedAt, &credentialRef)
+		var address *string
+		if err := row.Scan(&out.ID, &out.Provider, &out.ChannelID, &out.ChannelLabel, &address,
+			&out.Status, &out.Version, &out.CreatedAt, &out.UpdatedAt, &out.EventsSecretSet, &credentialRef, &eventsRef); err != nil {
+			return err
+		}
+		if address != nil {
+			out.Address = *address
+		}
+		return nil
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return channelRow{}, apperrors.ErrNotFound
@@ -235,6 +266,6 @@ func (s *ChannelStore) readChannelRow(ctx context.Context, id ids.UUID) (channel
 	if err != nil {
 		return channelRow{}, fmt.Errorf("capture: reading channel connection %s: %w", id, err)
 	}
-	out.credentialRef = keyvault.Ref(credentialRef)
+	out.refs = connectionRefs{token: keyvault.Ref(credentialRef), events: keyvault.Ref(eventsRef)}
 	return out, nil
 }

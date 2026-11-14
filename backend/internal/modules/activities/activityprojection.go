@@ -321,6 +321,7 @@ func (s *activityScan) record(ctx context.Context) crmcontracts.Activity {
 		raw := s.raw
 		a.Raw = &raw
 		a.WebForm = webFormSubmissionOf(a.SourceSystem, raw)
+		a.ChatEpisode = chatEpisodeOf(a.SourceSystem, raw)
 	}
 	s.projectStatuses(&a)
 	a.ThreadKey = threadKey

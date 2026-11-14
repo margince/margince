@@ -36,7 +36,7 @@ Run the full sweep for each target, one after the other, as
 [the run guide plans it](test-the-mcp-surface-end-to-end.md#4-plan-a-full-sweep-and-know-its-cost).
 Never run them with other heavy work on the same Claude subscription, because the
 judge uses it too. Use the loop that runs one scenario at a time in
-[test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md#sweeping-through-a-subscription-limit).
+[test-the-mcp-surface-end-to-end.md](test-the-mcp-surface-end-to-end.md#sweep-with-scriptse2e-llm-sweepsh).
 Then a subscription limit pauses the sweep and does not end it.
 
 `e2e/llm/records/` holds one transcript for each run of each scenario (`run1`,

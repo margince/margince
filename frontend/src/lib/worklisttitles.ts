@@ -10,13 +10,15 @@
 import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { displayedTitle } from "./systemdisplay";
-import { partyName } from "./worklistcopyreasons";
+import { mayOnlyRead, partyName } from "./worklistcopyreasons";
 import type { WorklistItem } from "./worklisttypes";
 
 type Framing = Readonly<{
   key: MessageKey;
   // The row's `kind` that picks another sentence, where the lane sends one.
   byKind?: Readonly<Record<string, MessageKey>>;
+  // The sentence for a reader who may not change what the row names.
+  readOnly?: MessageKey;
 }>;
 
 const FRAMED: Readonly<Partial<Record<WorklistItem["source"], Framing>>> = {
@@ -32,7 +34,10 @@ const FRAMED: Readonly<Partial<Record<WorklistItem["source"], Framing>>> = {
       blocked: "worklist.title.automation_run.blocked",
     },
   },
-  meeting_outcome: { key: "worklist.title.meeting_outcome" },
+  meeting_outcome: {
+    key: "worklist.title.meeting_outcome",
+    readOnly: "worklist.title.meeting_outcome.read_only",
+  },
   meeting_follow_up: { key: "worklist.title.meeting_follow_up" },
   awaiting_reply: { key: "worklist.title.awaiting_reply" },
   bounce: { key: "worklist.title.bounce" },
@@ -62,6 +67,8 @@ function framedTitle(item: WorklistItem, t: Translator): string | undefined {
   const name = own || item.subject?.label?.trim() || partyName(item);
   if (!name) return undefined;
   const kind = item.kind ?? "";
+  if (framing.readOnly && mayOnlyRead(item))
+    return t(framing.readOnly, { name });
   const key =
     framing.byKind && Object.hasOwn(framing.byKind, kind)
       ? framing.byKind[kind]

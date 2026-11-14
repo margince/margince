@@ -1,0 +1,38 @@
+name: progress_summary_judges_nothing_against_a_goal_nobody_set
+task: report_interpret
+site: progress_summary
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# A team's year has closed revenue and open deals but no sales goal, so the
+# reading carries no goal cell. The summary reads the two figures and measures
+# them against nothing.
+fixture:
+  frame:
+    scope: Northern team
+    period: year
+    window: "2026-01-01 to 2027-01-01"
+    currency: EUR
+    today: "2026-11-12"
+  cells:
+    - {label: "progress:closed", name: "Closed revenue", value: "480000.00 EUR", unit: EUR, window: "2026-01-01 to 2026-11-12", coverage: ok}
+    - {label: "progress:planned", name: "Open deals expected to close in the period", value: "90000.00 EUR", unit: EUR, window: "2026-01-01 to 2027-01-01", coverage: ok}
+    - {label: "progress:product", name: "Closed revenue from products", value: "300000.00 EUR", unit: EUR, window: "2026-01-01 to 2026-11-12", coverage: ok}
+    - {label: "progress:service", name: "Closed revenue from services", value: "180000.00 EUR", unit: EUR, window: "2026-01-01 to 2026-11-12", coverage: ok}
+  candidate_deals: []
+  decisions: []
+expect:
+  outcome: accepted
+  answer:
+    cites: ["progress:closed", "progress:planned"]
+    next_decision: none
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the summary reads the year without a goal. It must give the
+    480,000 closed and the 90,000 of open deals expected in the year, and may
+    describe the split between products and services. It must not call the
+    year ahead of, behind or on a goal, and must not invent a goal, a share
+    reached or an amount missing. Saying that no goal is set for the year is
+    right; any figure the cells do not carry fails the scenario.

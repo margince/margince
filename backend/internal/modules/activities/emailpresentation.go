@@ -229,13 +229,7 @@ func availableSummary(
 			summary.Preview = &preview
 		}
 	}
-	// Who it was with: the far side of the exchange, which is the sender on a
-	// message that came in and the recipients on one that went out.
-	far := parties.to
-	if activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound {
-		far = parties.from
-	}
-	summary.Counterparty, summary.CounterpartyContactId = counterpartyOf(far)
+	summary.Counterparty, summary.CounterpartyContactId = rowCounterparty(activity.Direction, parties)
 	if activity.EmailSummary != nil {
 		summary.Move = activity.EmailSummary.Move
 	}

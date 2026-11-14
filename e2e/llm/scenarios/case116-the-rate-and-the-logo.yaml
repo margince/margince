@@ -19,7 +19,7 @@ must_call_with:
 
 must_call_matching:
   - 'change_settings~"from_currency": "USD"'
-  - 'change_settings~"rate": "0\.92"'
+  - 'change_settings~"rate": "0\.920*"'
   - 'change_settings~iVBORw0KGgo'
 
 must_not_call_with:

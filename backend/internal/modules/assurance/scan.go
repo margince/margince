@@ -72,7 +72,11 @@ type walked struct {
 	// makes the census assert x == x and leaves a loop that broke early looking
 	// complete.
 	eligible int
-	raised   []raised
+	// owners are the eligible deals' owners and signalOwners the eligible
+	// signals', one per subject.
+	owners       []string
+	signalOwners []string
+	raised       []raised
 	// seen are the logical keys of this walk's findings, and deals are the ids
 	// it visited. Together they are what absence stands on: a finding whose key
 	// is missing from a walk that visited its deal has no condition left.
@@ -97,6 +101,15 @@ func (w walked) findings() []Finding {
 	return out
 }
 
+// contributions are the seats behind this walk's figures.
+func (w walked) contributions() Contributions {
+	out := Contributions{DealOwners: w.owners, Raised: make([]Contribution, 0, len(w.raised))}
+	for _, r := range w.raised {
+		out.Raised = append(out.Raised, Contribution{Finding: r.finding, Owner: r.owner})
+	}
+	return out
+}
+
 // askEveryRule asks every rule of every subject, once, and writes nothing.
 //
 // A rule whose sources were not read tonight is not asked. Its finding would be
@@ -107,6 +120,7 @@ func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []Sour
 	askable := sourcesRead(coverage)
 	for _, subject := range subjects {
 		out.deals = append(out.deals, subject.DealID)
+		out.owners = append(out.owners, subject.Owner)
 		out.eligible++
 		for _, rule := range Rules() {
 			if !askable(rule) {
@@ -178,7 +192,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 			// which is the night worth reporting.
 			out.Status = StatusIncomplete
 			out.Readiness = ReadinessChecksIncomplete
-			return s.store.FinishRun(ctx, tx, runID, 0, 0, 0, out.Status, out.Readiness)
+			return s.store.FinishRun(ctx, tx, runID, Eligible{}, 0, out.Status, out.Readiness)
 		}
 
 		pass := askEveryRule(now, subjects, s.cfg, coverage)
@@ -189,7 +203,7 @@ func (s *Scanner) Scan(ctx context.Context, now time.Time, requestedBy *string) 
 		if err != nil {
 			out.Status = StatusIncomplete
 			out.Readiness = ReadinessChecksIncomplete
-			return s.store.FinishRun(ctx, tx, runID, pass.eligible, 0, 0, out.Status, out.Readiness)
+			return s.store.FinishRun(ctx, tx, runID, Eligible{Deals: pass.eligible, DealOwners: pass.owners}, 0, out.Status, out.Readiness)
 		}
 		out.EligibleDeals = pass.eligible
 		out.Findings = len(pass.raised)
@@ -266,8 +280,8 @@ func (s *Scanner) conclude(
 			return err
 		}
 	}
-	return s.store.FinishRun(ctx, tx, runID, out.EligibleDeals, out.EligibleSignals, out.Cleared,
-		out.Status, out.Readiness)
+	eligible := Eligible{Deals: out.EligibleDeals, Signals: out.EligibleSignals, DealOwners: pass.owners, SignalOwners: pass.signalOwners}
+	return s.store.FinishRun(ctx, tx, runID, eligible, out.Cleared, out.Status, out.Readiness)
 }
 
 // clearableTypes names the rule types whose findings tonight's pass may close

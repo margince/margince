@@ -33,28 +33,34 @@ func SharedMailWorkOwnerSQL(alias string) string {
 	 WHERE other.activity_id = %[1]s.id AND other.role = %[2]s
 	   AND NOT EXISTS (SELECT 1 FROM capture_connection own_box
 	     WHERE own_box.user_id IS NULL AND lower(own_box.account_label) = lower(other.address))) party`, alias, partyRoleSQL(alias))
-	return fmt.Sprintf(`(SELECT CASE WHEN contact_owner.seats = 1 THEN contact_owner.seat
-	   WHEN contact_owner.seats = 0 AND company_owner.seats = 1 THEN company_owner.seat
-	   WHEN backup_owner.seats = 1 THEN backup_owner.seat END
-	 FROM %[2]s contact_owner, %[3]s company_owner, %[4]s backup_owner WHERE %[1]s)`,
-		only, soleOf(alias, `SELECT party_contact.owner_id AS seat FROM `+parties+`
-	   JOIN contact party_contact ON party_contact.id = `+partyContactSQL+` AND party_contact.archived_at IS NULL`),
-		soleOf(alias, `SELECT employer.owner_id AS seat FROM `+parties+`
-	   JOIN relationship job ON job.contact_id = `+partyContactSQL+` AND `+employment.LiveCurrentPrimarySQL("job")+`
-	   JOIN company employer ON employer.id = job.company_id AND employer.archived_at IS NULL`),
-		soleOf(alias, `SELECT shared_box.backup_owner_id AS seat FROM capture_import shared_import
+	candidates := `SELECT 1 AS step, party_contact.owner_id AS seat FROM ` + parties + `
+	   JOIN contact party_contact ON party_contact.id = ` + partyContactSQL + ` AND party_contact.archived_at IS NULL
+	 UNION ALL SELECT 2, employer.owner_id FROM ` + parties + `
+	   JOIN relationship job ON job.contact_id = ` + partyContactSQL + ` AND ` + employment.LiveCurrentPrimarySQL("job") + `
+	   JOIN company employer ON employer.id = job.company_id AND employer.archived_at IS NULL
+	 UNION ALL SELECT 3, shared_box.backup_owner_id FROM capture_import shared_import
 	   JOIN capture_connection shared_box ON shared_box.id = shared_import.connection_id AND shared_box.user_id IS NULL
 	   JOIN team_membership backup_member ON backup_member.team_id = shared_box.reader_team_id
 	    AND backup_member.user_id = shared_box.backup_owner_id
-	  WHERE shared_import.activity_id = `+alias+`.id AND shared_import.user_id IS NULL`))
+	  WHERE shared_import.activity_id = ` + alias + `.id AND shared_import.user_id IS NULL`
+	// One join judges every step's seats, so the read check is planned once.
+	return fmt.Sprintf(`(SELECT CASE WHEN %[2]s = 1 THEN %[3]s
+	   WHEN %[2]s = 0 AND %[4]s = 1 THEN %[5]s
+	   WHEN %[6]s = 1 THEN %[7]s END
+	 FROM (%[8]s) shared_owner JOIN app_user shared_owner_seat ON shared_owner_seat.id = shared_owner.seat AND %[9]s AND %[10]s
+	 WHERE %[1]s)`,
+		only, stepSeats(1), stepSeat(1), stepSeats(2), stepSeat(2), stepSeats(3), stepSeat(3), candidates,
+		auth.AssigneeEligibleSQL("shared_owner_seat"), auth.SeatMayReadMailSQL(alias, "shared_owner_seat.id"))
 }
 
-// soleOf counts the distinct seats candidates name that may hold work from
-// message alias and read it, beside one of them.
-func soleOf(alias, candidates string) string {
-	return fmt.Sprintf(`(SELECT count(DISTINCT shared_owner_seat.id) AS seats, min(shared_owner_seat.id::text)::uuid AS seat
-	  FROM (%s) shared_owner JOIN app_user shared_owner_seat ON shared_owner_seat.id = shared_owner.seat AND %s AND %s)`,
-		candidates, auth.AssigneeEligibleSQL("shared_owner_seat"), auth.SeatMayReadMailSQL(alias, "shared_owner_seat.id"))
+// stepSeats counts the distinct seats one routing step names; stepSeat is one
+// of them, the one when the count is one.
+func stepSeats(step int) string {
+	return fmt.Sprintf("count(DISTINCT shared_owner_seat.id) FILTER (WHERE shared_owner.step = %d)", step)
+}
+
+func stepSeat(step int) string {
+	return fmt.Sprintf("min(shared_owner_seat.id::text) FILTER (WHERE shared_owner.step = %d)::uuid", step)
 }
 
 // partyContactSQL is the contact of participant `party`: the one capture

@@ -21,6 +21,7 @@ import {
   readerTask,
   reasonText,
   rowHref,
+  saysReadOnly,
   sentenceTitled,
   subjectHref,
   whenText,
@@ -204,8 +205,10 @@ export function WorklistRow({
   // again in a coarser register.
   // A card's ask already states its leading reason as a sentence.
   const asked = askedReason(item, framed);
+  // A row the reader may only read says so first: it is why no verb is drawn.
   const reasons = phrasedReasons(item, when !== null)
     .filter((reason) => reason.kind !== asked)
+    .sort((a, b) => Number(saysReadOnly(b)) - Number(saysReadOnly(a)))
     .map((reason) => reasonText(reason, t, locale, zone, partyName(item)))
     .filter((phrase): phrase is string => phrase !== null);
   // The row says its one current reason; the rest are facts its Details lists.

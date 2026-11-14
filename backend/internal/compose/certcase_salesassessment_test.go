@@ -58,7 +58,7 @@ func (m minted) owner(label string) string {
 
 func runSalesAssessment(t *testing.T, expected string, build func(ids minted) string) aitasks.Outcome {
 	t.Helper()
-	prepared, err := salesAssessmentCases{}.Prepare(json.RawMessage(salesAssessmentFixtureJSON), json.RawMessage(expected))
+	prepared, err := salesReviewCases.Prepare(json.RawMessage(salesAssessmentFixtureJSON), json.RawMessage(expected))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -127,11 +127,11 @@ func TestTheSalesAssessmentCaseKeepsOnlyGroundedSentencesAndCandidateDecisions(t
 }
 
 func TestTheSalesAssessmentCaseRefusesAnExpectationTheFixtureCannotCarry(t *testing.T) {
-	_, err := salesAssessmentCases{}.Prepare(json.RawMessage(salesAssessmentFixtureJSON), json.RawMessage(`{"cites":["win_rate"],"next_decision":"none"}`))
+	_, err := salesReviewCases.Prepare(json.RawMessage(salesAssessmentFixtureJSON), json.RawMessage(`{"cites":["win_rate"],"next_decision":"none"}`))
 	if err == nil || !strings.Contains(err.Error(), "win_rate") {
 		t.Fatalf("an expected citation outside the fixture was prepared: %v", err)
 	}
-	_, err = salesAssessmentCases{}.Prepare(json.RawMessage(salesAssessmentFixtureJSON), json.RawMessage(`{"cites":[],"next_decision":"globex"}`))
+	_, err = salesReviewCases.Prepare(json.RawMessage(salesAssessmentFixtureJSON), json.RawMessage(`{"cites":[],"next_decision":"globex"}`))
 	if err == nil || !strings.Contains(err.Error(), "globex") {
 		t.Fatalf("an expected decision outside the candidates was prepared: %v", err)
 	}

@@ -82,6 +82,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	"ActivityDiscoverClause":           {table: "activity"},
 	"ActivityContentClause":            {table: "activity"},
+	"ActivityMessageContentClause":     {table: "activity"},
 	"EnsureActivityVisible":            {table: "activity"},
 	"EnsureActivityVisibleLive":        {table: "activity"},
 	"EnsureActivityContentVisible":     {table: "activity"},
@@ -664,5 +665,11 @@ const (
 	// Also counted: contacts.holdCohortActivities locks the activities a cohort
 	// repair may write before it locks the contact. The ids bound that repair's
 	// writes inside its transaction, and none is returned to a caller.
-	modulesTierUnscopedCeiling = 163
+	//
+	// 164–165: chatlinks.linkedRecords and chatlinks.AdoptProject read the
+	// project of a deal whose chat channel is being written. linkedRecords runs
+	// after auth.HoldWritableLive on that deal. AdoptProject runs only under the
+	// chat engine's system principal. Each project id is stored on the link,
+	// never returned to a caller.
+	modulesTierUnscopedCeiling = 165
 )

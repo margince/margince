@@ -1,0 +1,31 @@
+name: transcript_meeting_summary_cites_its_lines_de
+task: transcript_propose
+site: next_steps
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  - 'Ines: Danke, dass du Zeit hast. Wir haben die Zahlen für Graz noch einmal durchgesehen.'
+  - 'Lars: Haben sich die Mengen stark verändert?'
+  - 'Ines: Bei den Paletten etwa fünfzehn Prozent mehr, bei den Retouren etwas weniger.'
+  - 'Lars: Das ändert die Staffelung. Ich schicke dir die neuen Preise bis Freitag.'
+  - 'Ines: Gut. Die Anbindung läuft seit dem Update stabil.'
+expect:
+  outcome: accepted
+  answer:
+    - line: 4
+      due_date: "2026-03-06"
+  rubric: >
+    A short German meeting with one commitment: Lars sends the new pricing by
+    Friday, stated on line 4. The check already refuses a meeting summary that
+    cites a line the transcript lacks, so grade what it cannot see. Score the
+    meeting summary highest when it is in German, the language the meeting was
+    held in, although the reply's other sentences follow an English language
+    rule. Its key points should name the changed volumes (line 3) and the stable
+    integration (line 5), and its next steps the pricing by Friday (line 4),
+    each citing the line it states. Score it low when it is in English, when it
+    states something the transcript does not say, or when it judges what should
+    happen to the account.
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40

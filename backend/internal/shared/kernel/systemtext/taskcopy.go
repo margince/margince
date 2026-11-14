@@ -17,6 +17,10 @@ var definitions = map[string]Definition{
 		Vi: "Nhiều deal đang mở phù hợp với thư này, nên Margince chưa gắn thư vào deal nào. Hãy mở thư và dùng Liên kết lại để gắn vào đúng deal, hoặc chọn Không thuộc deal nào.",
 	}},
 	"task.reply_to_email": {Words: langcopy.Phrase{En: "Reply to email", De: "Auf die E-Mail antworten", Vi: "Trả lời email"}},
+	"commitment.follow_up": {
+		Words:     langcopy.Phrase{En: "Follow up on: %s", De: "Nachfassen: %s", Vi: "Hỏi lại: %s"},
+		Arguments: []string{argumentText},
+	},
 	"commitment.explanation": {
 		Words:     langcopy.Phrase{En: "Promiser: %s. Commitment in the email %q, sent %s.", De: "Zugesagt von: %s. Zusage in der E-Mail %q, gesendet am %s.", Vi: "Người cam kết: %s. Cam kết trong email %q, gửi ngày %s."},
 		Arguments: []string{argumentText, argumentText, argumentDate},

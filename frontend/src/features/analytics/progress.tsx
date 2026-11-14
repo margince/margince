@@ -32,6 +32,7 @@ import {
   useSalesProgress,
 } from "./progress.queries";
 import { goalText, ProgressReadings, ProgressResult } from "./progress.result";
+import { ProgressSummary } from "./progress.summary";
 import { ProgressMembers, ProgressMonths } from "./progress.tables";
 import { ProgressWork } from "./progress.work";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -228,6 +229,7 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
         </div>
       </div>
       <aside className="analytics-board-rail" aria-label={t("progress.rail")}>
+        <ProgressSummary ask={askOf(progress)} progress={progress} />
         <ProgressGoalBasis progress={progress} />
       </aside>
       {evidence && progress.evaluation && (

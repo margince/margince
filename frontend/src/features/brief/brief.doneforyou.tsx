@@ -3,7 +3,7 @@
 
 // What Margince finished for the reader, as one section on Home. The deals it
 // changed come first, each change with what moved, when and why, and its
-// Undo. Other updates follow in `completed`.
+// Undo. The small changes follow as the last card, drawn by `completed`.
 //
 // The first five deals show here and every one shows in the drawer of all.
 // Both draw the same rows, so a sixth deal loses nothing a third one had.
@@ -47,7 +47,12 @@ import {
 /** How many changed deals Home shows before "See all". */
 export const DONE_PREVIEW_DEALS = 5;
 
-export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
+export function DoneForYou({
+  completed,
+}: Readonly<{
+  /** The small changes; `alone` when no deal card stands above them. */
+  completed: (alone: boolean) => ReactNode;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -115,24 +120,26 @@ export function DoneForYou({ completed }: Readonly<{ completed: ReactNode }>) {
             asOf={handled.data?.as_of}
             onSettled={settle}
           />
-          <div className="brief-done-foot">
-            <AllChanges
-              count={changed ?? groups.length}
-              groups={groups}
-              pending={pending}
-              asOf={handled.data?.as_of}
-              handled={handled}
-              onSettled={settle}
-            />
-          </div>
         </SurfaceState>
+      )}
+      {completed(state === "empty")}
+      {state === "ready" && (
+        <div className="brief-done-foot">
+          <AllChanges
+            count={changed ?? groups.length}
+            groups={groups}
+            pending={pending}
+            asOf={handled.data?.as_of}
+            handled={handled}
+            onSettled={settle}
+          />
+        </div>
       )}
       {state === "empty" && lastRun && (
         <div className="brief-done-foot">
           <BundleUndo bundles={[]} remember label="" />
         </div>
       )}
-      {completed}
     </section>
   );
 }

@@ -26,6 +26,7 @@ import {
   useMagic,
 } from "../../lib/magic.queries";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
+import { MagicDoneCard } from "./magic.done";
 import { MagicLaneSection } from "./magic.lines";
 import { spansDays } from "./magic.marks";
 import "../brief/brief.css";
@@ -77,11 +78,14 @@ export function MagicPanel({
   visibleReceiptIds = [],
   lanes = LANES,
   embedded = false,
+  doneOpen = false,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
   lanes?: readonly MagicLane[];
   embedded?: boolean;
+  /** Embedded, the done card opens on arrival: nothing above it to read first. */
+  doneOpen?: boolean;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -167,20 +171,15 @@ export function MagicPanel({
         </SurfaceState>
       </PanelBody>
       {drawn.map((lane) => (
-        <MagicLaneSection
+        <DrawnLane
           key={lane}
           lane={lane}
-          title={t(
-            embedded && lane === "done"
-              ? "magic.lane.doneOther"
-              : labelFor(LANE_HEADING, lane),
-          )}
-          rows={shown?.[lane] ?? []}
-          since={shown?.since}
+          shown={shown}
           zone={zone}
           byDay={byDay}
-          fold={lane === "done" ? doneFold : undefined}
+          embedded={embedded}
           note={laneNote(lane)}
+          done={{ fold: doneFold, floor: doneFloor, open: doneOpen }}
         />
       ))}
       {notShown.length > 0 && (
@@ -200,6 +199,58 @@ export function MagicPanel({
       </Eyebrow>
       {body}
     </section>
+  );
+}
+
+/**
+ * One lane under its heading. Embedded, the done lane is Done for you's last
+ * card instead, its coverage caveat under it.
+ */
+function DrawnLane({
+  lane,
+  shown,
+  zone,
+  byDay,
+  embedded,
+  note,
+  done,
+}: Readonly<{
+  lane: MagicLane;
+  shown: MagicReceipt | undefined;
+  zone: string;
+  byDay: boolean;
+  embedded: boolean;
+  /** Why the lane may hold more than it draws, under it. */
+  note: string | undefined;
+  done: Readonly<{ fold: string; floor: boolean; open: boolean }>;
+}>) {
+  const t = useT();
+  if (embedded && lane === "done") {
+    return (
+      <>
+        <MagicDoneCard
+          rows={rowsOf(shown?.done)}
+          since={shown?.since}
+          zone={zone}
+          byDay={byDay}
+          floor={done.floor}
+          defaultOpen={done.open}
+        />
+        {note && <p className="t-caption">{note}</p>}
+      </>
+    );
+  }
+  return (
+    <MagicLaneSection
+      lane={lane}
+      title={t(labelFor(LANE_HEADING, lane))}
+      rows={shown?.[lane] ?? []}
+      since={shown?.since}
+      zone={zone}
+      byDay={byDay}
+      fold={lane === "done" ? done.fold : undefined}
+      note={note}
+    />
   );
 }
 

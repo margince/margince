@@ -2,8 +2,10 @@ package everypath
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
+	"example.test/apperrors"
 	"example.test/auth"
 	"example.test/database"
 	"example.test/httperr"
@@ -125,7 +127,7 @@ func (h Handlers) GetThroughABuiltReader(w http.ResponseWriter, r *http.Request)
 	serve(w, r, checkedReader())
 }
 
-var errUnknown = database.Wrap("unknown")
+var errUnknown = errors.New("unknown")
 
 // A sentinel wrapped by another call is still a refusal.
 func checkedUnlessUnknown(ctx context.Context, known bool) ([]int, error) {
@@ -142,4 +144,78 @@ func (h Handlers) GetUnlessUnknown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// A malformed request refused before the check hands out nothing.
+func checkedUnlessMalformed(ctx context.Context, malformed bool) ([]int, error) {
+	if malformed {
+		return nil, httperr.Validation("arguments", "malformed_json", "the arguments are not an object")
+	}
+	return checkedFigures(ctx)
+}
+
+func (h Handlers) GetUnlessMalformed(w http.ResponseWriter, r *http.Request) {
+	out, err := checkedUnlessMalformed(r.Context(), r.URL == nil)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// An answer a helper hands back is decided where its caller reads it: in the
+// first way past err != nil || allowed the error is set, in the second the
+// switch is on.
+func individualPerformance(ctx context.Context) (bool, error) {
+	allowed, _ := auth.IndividualPerformanceOf(ctx)
+	return allowed, nil
+}
+
+func refuseUnlessShown(ctx context.Context) error {
+	allowed, err := individualPerformance(ctx)
+	if err != nil || allowed {
+		return err
+	}
+	return auth.OffError{}
+}
+
+func (h Handlers) GetPastADerivedAnswer(w http.ResponseWriter, r *http.Request) {
+	if err := refuseUnlessShown(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, []int{1})
+}
+
+// The error a check carries may be read by the helper it is handed to.
+func respond(w http.ResponseWriter, r *http.Request, out []int, err error) {
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+func (h Handlers) GetThroughARespondingHelper(w http.ResponseWriter, r *http.Request) {
+	out, err := checkedFigures(r.Context())
+	respond(w, r, out, err)
+}
+
+// A declared package's sentinel, and a function whose every return refuses,
+// are refusals.
+func refusal() error { return auth.OffError{} }
+
+func checkedUnlessRefused(ctx context.Context, missing, refused bool) ([]int, error) {
+	if missing {
+		return nil, apperrors.ErrNotFound
+	}
+	if refused {
+		return nil, refusal()
+	}
+	return checkedFigures(ctx)
+}
+
+func (h Handlers) GetUnlessRefused(w http.ResponseWriter, r *http.Request) {
+	out, err := checkedUnlessRefused(r.Context(), r.URL == nil, r.Body == nil)
+	respond(w, r, out, err)
 }

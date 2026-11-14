@@ -38,6 +38,17 @@
   gap: var(--gapActions);
 }
 
+/* The proposal answers under the row that asked for it, at the editor's width. */
+.goal-proposal {
+  flex-basis: 100%;
+  display: grid;
+  gap: var(--space-3);
+  margin-block: var(--space-2);
+}
+.goal-proposal-bars {
+  margin-block: var(--space-3);
+}
+
 .goal-editor-months {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));

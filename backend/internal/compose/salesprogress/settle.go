@@ -15,9 +15,9 @@ import (
 
 var saleCategoryOrder = []string{Product, Service, Unresolved}
 
-// settleShares splits total over weights by largest remainder, in minor units,
+// SettleShares splits total over weights by largest remainder, in minor units,
 // so the shares add up to total. A tie goes to the earlier weight.
-func settleShares(total int64, weights []int64) []int64 {
+func SettleShares(total int64, weights []int64) []int64 {
 	out := make([]int64, len(weights))
 	var sum int64
 	for _, weight := range weights {
@@ -99,7 +99,7 @@ func settleDeal(facts []reporting.Fact, indexes []int, total *int64, invalidLabe
 	for _, part := range parts {
 		weights[slices.Index(saleCategoryOrder, Category(part.GroupKey))] += *part.Money
 	}
-	shares := settleShares(*total, weights)
+	shares := SettleShares(*total, weights)
 	for category, share := range shares {
 		var lines []int
 		var lineWeights []int64
@@ -108,7 +108,7 @@ func settleDeal(facts []reporting.Fact, indexes []int, total *int64, invalidLabe
 				lines, lineWeights = append(lines, index), append(lineWeights, *part.Money)
 			}
 		}
-		for position, amount := range settleShares(share, lineWeights) {
+		for position, amount := range SettleShares(share, lineWeights) {
 			setFactMoney(&parts[lines[position]], amount)
 		}
 	}

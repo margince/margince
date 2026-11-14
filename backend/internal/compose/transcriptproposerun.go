@@ -3,15 +3,9 @@
 
 package compose
 
-// What one reading of one transcript does, from claiming the run record to
-// closing it.
-//
-// The division of labour with transcriptpropose.go is: that file owns the
-// question put to the model and what may come back, this one owns the run — the
-// claim, the staging, and the three outcomes a rep can be shown. Keeping the
-// outcomes here is deliberate, because the difference between them is the
-// product: "still reading", "read it and it stated nothing", and "could not
-// read it" must never collapse into one another.
+// One reading of one transcript, from claiming the run record to closing it.
+// transcriptpropose.go owns the question and the answer; this file owns the
+// run. "Still reading", "it stated nothing" and "could not read it" stay apart.
 
 import (
 	"context"
@@ -21,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -29,19 +24,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// transcriptTargetType is what the proposal is filed against: the transcript it
-// was read from. The proposal does not MODIFY that activity — it proposes a new
-// one — which is why the kind is a context target in approvals rather than a
-// version-pinned one.
+// transcriptTargetType is the transcript a proposal is filed against. The
+// proposal adds an activity and changes none, so the target is not pinned.
 const transcriptTargetType = string(recordTypeActivity)
 
 // Read performs one reading: claim the run, put the transcript to the model,
 // stage what it says was promised, and close the run with what happened.
 //
-// It returns an error only for a fault the JOB should retry — the model lane
-// being down, the database being unreachable. A reading that legitimately
-// could not be used closes the run as failed and returns nil, because retrying
-// would ask the same question of the same text and get the same answer.
+// It returns an error only for a fault the job should retry. A reading that
+// could not be used closes as failed: a retry would get the same answer.
 func (p *TranscriptProposer) Read(ctx context.Context, store transcriptReadStore, readID ids.UUID, activityID ids.ActivityID) error {
 	reader := *p
 	reader.said = transcriptCopyFor(identity.BaseLanguageForPrompt(ctx, p.pool))
@@ -57,46 +48,25 @@ func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcrip
 		if failure, terminal := unreadableTranscript(err); terminal {
 			return p.fail(ctx, store, readID, activityID, *failure)
 		}
-		// Anything else — the database unreachable, a scoped transient fault —
-		// is the JOB's to retry. Closing the reading here would turn a blip
-		// into a permanent verdict the rep has to notice and undo.
+		// A transient fault is the job's to retry, not a verdict for the rep.
 		return err
 	}
-	// Checked again even though the door checked it: the body can be edited
-	// between the request and the reading, and a re-normalized transcript is a
-	// different size than the one that was queued.
+	// Checked again: the body can be edited between the request and the reading.
 	if err := activities.WithinReadingBounds(reading.Lines); err != nil {
 		if failure, terminal := unreadableTranscript(err); terminal {
 			return p.fail(ctx, store, readID, activityID, *failure)
 		}
 		return err
 	}
-	// The day the activity is FILED under, which is the best available answer
-	// to "when was this conversation". The composer offers it as an editable
-	// date capped at today, so a rep pasting a three-week-old transcript can
-	// set the day it happened — and it defaults to today, so one who does not
-	// leaves the paste day standing.
-	//
-	// Said plainly because the difference matters: a relative deadline resolves
-	// against whatever this says, so "by Friday" on a backdated transcript
-	// whose date was left at today resolves to the wrong week. The reviewer
-	// sees the resulting date on the card before any task exists, which is
-	// where that is caught.
-	// The reading is ABOUT this meeting, and the request it makes IS the
-	// transcript — the largest copy of what was said in that room. Naming the
-	// activity is what lets an erasure of anyone quoted in it destroy the
-	// captured payload by citation: a transcript names its speakers rather than
-	// addressing them, and may
-	// never spell an address, so the content match alone leaves it standing.
-	// The label is the rail's, and a transcript has no subject line of its own
-	// to give it — the meeting's own summary is what the reader recognises, so
-	// an unnamed reading draws the rail's unnamed sentence rather than a
-	// quotation from somebody's transcript.
+	// "By Friday" resolves against the day the meeting is filed under, which
+	// the rep may backdate; the card shows the resulting day before any task.
+	// The call names the meeting as its subject, so an erasure of anyone
+	// quoted in it reaches the captured request by citation.
 	parties, err := p.readCommitmentParties(ctx, activityID)
 	if err != nil {
 		return err
 	}
-	steps, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""), activityID.UUID,
+	reply, err := p.ask(ai.WithSubject(ctx, activityID.Ref(), ""), activityID.UUID,
 		reading.Lines, reading.OccurredAt.Format(time.DateOnly), parties)
 	if err != nil {
 		if errors.Is(err, errRefusedTranscript) {
@@ -107,42 +77,30 @@ func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcrip
 		}
 		return err
 	}
-	return p.stageAndFinish(ctx, store, readID, aboveFloor(steps), reading, activityID)
+	return p.stageAndFinish(ctx, store, readID, reply, reading, activityID)
 }
 
-// stageAndFinish commits the quotations and the record that produced them as
-// ONE fact, under the lock the engines that destroy a transcript take.
-//
-// They were separate transactions, and nothing ordered either against those
-// engines. So an erasure could land while the model call was out: it nulled the
-// body, found no proposals to scrub because none were staged yet, deleted the
-// reading, and committed certifying the words destroyed — and this worker then
-// came back and staged them. Nothing revisits those rows (storekit.
-// LockTranscriptBody says why), so the quotations stayed in the approvals inbox
-// permanently.
-//
-// The lock is taken FIRST and the reading re-read under it, so the two
-// interleavings both land somewhere honest: an erasure that got here first has
-// already deleted the reading and this stages nothing, and one that arrives
-// second waits, then finds the proposals and scrubs them with everything else.
-//
-// A re-check without the lock only narrows the window while reading as
-// complete, which is worse than the honest gap.
+// stageAndFinish commits the quotations, the summary and the run record as one fact, under
+// the lock the engines that destroy a transcript take (storekit.
+// LockTranscriptBody). The reading is re-read under it: an erasure that came
+// first leaves nothing to stage, and one that comes second scrubs what was.
 func (p *TranscriptProposer) stageAndFinish(
 	ctx context.Context,
 	store transcriptReadStore,
 	readID ids.UUID,
-	kept []proposedStep,
+	reply transcriptPayload,
 	reading activities.TranscriptReading,
 	activityID ids.ActivityID,
 ) error {
 	return p.finishUnderLock(ctx, store, readID, activityID,
 		func(tx pgx.Tx) (activities.TranscriptReadOutcome, error) {
+			kept := aboveFloor(reply.proposals())
 			staged, err := p.stage(ctx, tx, kept, reading, activityID)
 			if err != nil {
 				return activities.TranscriptReadOutcome{}, err
 			}
 			facts := staged.facts(len(kept))
+			transcriptsummary.Onto(ctx, p.log, facts, reply.Summary, len(reading.Lines))
 			return activities.TranscriptReadOutcome{
 				Status:      activities.TranscriptReadDone,
 				ProposalIDs: staged.approvalIDs(),
@@ -153,13 +111,9 @@ func (p *TranscriptProposer) stageAndFinish(
 		})
 }
 
-// finishUnderLock closes a run inside the interlock: the lock, the probe, the
-// caller's own way of producing the outcome, and the close — one transaction.
-//
-// EVERY close goes through it, including the failures and the readings that
-// found nothing. A close outside the lock answers ErrConflict for a reading an
-// erasure has deleted, and the job reads that as a fault to retry — against a
-// reading that will never come back, on a transcript that no longer exists.
+// finishUnderLock closes a run in one transaction with the lock and the probe.
+// Every close goes through it: one outside the lock would retry, forever, a
+// reading an erasure deleted.
 func (p *TranscriptProposer) finishUnderLock(
 	ctx context.Context,
 	store transcriptReadStore,
@@ -171,9 +125,7 @@ func (p *TranscriptProposer) finishUnderLock(
 		if err := storekit.LockTranscriptBody(ctx, tx, []ids.UUID{activityID.UUID}); err != nil {
 			return err
 		}
-		// Under the lock, before anything is produced: a reading whose row is
-		// gone is a reading whose transcript was destroyed, and the work of
-		// quoting it is work that must not happen rather than work to roll back.
+		// A reading whose row is gone had its transcript destroyed: quote nothing.
 		live, err := readingIsRunning(ctx, tx, readID)
 		if err != nil {
 			return err
@@ -219,12 +171,8 @@ func (p *TranscriptProposer) fail(
 		})
 }
 
-// stage hands each promise to the commitment rule, under one bundle id.
-//
-// One bundle because they were asked together: a meeting that produced three
-// commitments is one act of reading, and an inbox showing them as three
-// unrelated questions makes the rep reconstruct that themselves (0200). Each
-// still keeps its own diff hash, expiry and verdict.
+// stage hands each promise to the commitment rule under one bundle id, since
+// they were read together. Each keeps its own diff hash, expiry and verdict.
 func (p *TranscriptProposer) stage(
 	ctx context.Context, tx pgx.Tx, steps []proposedStep,
 	reading activities.TranscriptReading, activityID ids.ActivityID,
@@ -249,6 +197,13 @@ func (p *TranscriptProposer) stage(
 			continue
 		}
 		switch outcome {
+		case CommitmentWatched:
+			// The customer's promise, and the follow-up when somebody chases it.
+			out.watched++
+			if id.IsZero() {
+				continue
+			}
+			fallthrough
 		case CommitmentProposed, CommitmentHistoricalProposed:
 			seat, err := proposalDecider(ctx, tx, id)
 			if err != nil {
@@ -261,8 +216,6 @@ func (p *TranscriptProposer) stage(
 				return transcriptStaging{}, err
 			}
 			out.tasks[seat]++
-		case CommitmentWatched:
-			out.watched++
 		case CommitmentRemembered, CommitmentRetained:
 			// Already a task, already waiting, refused or dismissed: this
 			// reading adds nothing new, and says whom it was put to.

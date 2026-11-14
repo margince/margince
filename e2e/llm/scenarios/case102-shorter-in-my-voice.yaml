@@ -13,7 +13,7 @@ must_call_with:
   - change_my_settings.action=update_voice_profile|change_my_settings.action=create_voice_profile
 
 must_call_matching:
-  - 'change_my_settings~(?i)(five|5) sentences'
+  - 'change_my_settings~(?i)(five|5)[- ]sentences?'
 
 must_not_call_with:
   - change_settings~.
