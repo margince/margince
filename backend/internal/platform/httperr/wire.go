@@ -10,6 +10,8 @@ package httperr
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -279,6 +281,28 @@ func WriteJSON(w http.ResponseWriter, status int, body any) {
 		DropSuccessHeaders(w.Header())
 		writeProblem(w, problem{Status: http.StatusInternalServerError, Code: codeInternal})
 	}
+}
+
+// WriteJSONTagged writes body as WriteJSON does, tagged with an ETag of its
+// bytes. A request whose If-None-Match already names the tag gets 304 and no
+// body, so a client re-reading an unchanged answer downloads nothing.
+func WriteJSONTagged(w http.ResponseWriter, r *http.Request, body any) {
+	encoded, err := json.Marshal(withEmptyLists(body))
+	if err != nil {
+		WriteJSON(w, http.StatusOK, body)
+		return
+	}
+	sum := sha256.Sum256(encoded)
+	etag := `"` + hex.EncodeToString(sum[:16]) + `"`
+	w.Header().Set("ETag", etag)
+	if IfNoneMatchHit(r, etag) {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	//craft:ignore swallowed-errors the status line is already on the wire, so a failed write (the client left) has no channel back
+	_, _ = w.Write(append(encoded, '\n'))
 }
 
 // successHeaders describe a body that a failure replaces. Headers the chassis
