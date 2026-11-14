@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 9,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 6205,
+    "tokens_served_but_never_driven": 6407,
     "use_case_cases": 73,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
@@ -3926,8 +3926,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "change_relationships",
-      "tokens": 816,
+      "name": "change_record_parts",
+      "tokens": 1017,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -3938,8 +3938,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "change_record_parts",
-      "tokens": 815,
+      "name": "change_relationships",
+      "tokens": 816,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

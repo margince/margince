@@ -48,8 +48,7 @@ var changeRecordPartsCopy = toolCopy{
 		"profile fields, a project's companies and stakeholders. Prices are in minor units; read a " +
 		"product for its unit_price_minor rather than inventing one.",
 	Limits: "An offer's totals are computed from its lines and cannot be supplied, and a sent or " +
-		"accepted offer keeps its lines. Pass if_version from your read so a change made since is " +
-		"refused. Each action answers as its route does.",
+		"accepted offer keeps its lines.",
 	Instead: "Use update_record for a record's own fields, and create_record with record_type offer " +
 		"to make an offer with its first lines.",
 }

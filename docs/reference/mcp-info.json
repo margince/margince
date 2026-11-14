@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 274840,
+    "tool_catalog_bytes": 275646,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 70115,
+    "approx_wire_tokens_total": 70317,
     "largest_tool_bytes": 17633,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 54774,
-      "input_schema_bytes": 155240,
+      "description_bytes": 54669,
+      "input_schema_bytes": 156151,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 210014
+      "description_plus_input_schema_bytes": 210820
     }
   },
   "tools": {
@@ -1963,11 +1963,12 @@
           "readOnlyHint": false,
           "title": "Change the parts of a record"
         },
-        "description": "Change what is kept under a record: an offer's line items, a company's facts and profile fields, a project's companies and stakeholders. Prices are in minor units; read a product for its unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot be supplied, and a sent or accepted offer keeps its lines. Pass if_version from your read so a change made since is refused. Each action answers as its route does. Use update_record for a record's own fields, and create_record with record_type offer to make an offer with its first lines. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Change what is kept under a record: an offer's line items, a company's facts and profile fields, a project's companies and stakeholders. Prices are in minor units; read a product for its unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot be supplied, and a sent or accepted offer keeps its lines. Use update_record for a record's own fields, and create_record with record_type offer to make an offer with its first lines. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
             "action": {
+              "description": "The arguments each action needs:\nadd_company_fact: company_id, category, field, value; states one by hand\nadd_offer_line: offer_id, line\nconfirm_company_fact: company_id, fact_key\nconfirm_company_profile_field: company_id, field\nremove_company_fact: company_id, fact_key; one the company does not state\nremove_offer_line: offer_id, line_item_id\nremove_project_company: project_id, company_id\nremove_project_stakeholder: project_id, contact_id\nset_project_company: project_id, company_id; adds it or changes its role; takes role\nset_project_stakeholder: project_id, contact_id, role; adds it or changes its role\nupdate_company_fact: company_id, fact_key, value; corrects an extracted fact\nupdate_company_profile_field: company_id, field, value\nupdate_offer_line: offer_id, line_item_id, line",
               "enum": [
                 "add_company_fact",
                 "add_offer_line",
@@ -2058,7 +2059,7 @@
               "type": "string"
             },
             "if_version": {
-              "description": "The version you read, so a change made since is refused rather than overwritten",
+              "description": "The version you read; a change made since is refused",
               "type": "integer"
             },
             "line": {
@@ -2135,9 +2136,11 @@
               "type": "string"
             },
             "role": {
+              "description": "What the company or contact is to the project",
               "type": "string"
             },
             "value": {
+              "description": "The fact's or profile field's new value",
               "type": "string"
             }
           },

@@ -135,7 +135,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 9 |
 | … of those, permitted somewhere but never required | 4 |
-| Prompt tokens spent on tools no case requires | 6205 |
+| Prompt tokens spent on tools no case requires | 6407 |
 | Use cases | 73 |
 | Acceptance criteria the cases declare, each with a statement | 120 |
 
@@ -745,8 +745,8 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 |---|---:|---|---|---|
 | `run_research` | 1344 | - | `case108_ask_sofia_for_an_intro` | - |
 | `read_analytics` | 1020 | - | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` | - |
+| `change_record_parts` | 1017 | - | - | - |
 | `change_relationships` | 816 | - | - | - |
-| `change_record_parts` | 815 | - | - | - |
 | `read_view` | 815 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |

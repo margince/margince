@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 268.4 KB |
+| Tool catalog | 269.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 70115 |
+| Approx. wire tokens | 70317 |
 | Largest tool | `read_details` (17.2 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.5 KB | 19% | Yes, every step |
-| Input schemas | 151.6 KB | 56% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.4 KB | 19% | Yes, every step |
+| Input schemas | 152.5 KB | 56% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **205.1 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **205.9 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -75,7 +75,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 620 |
 | [`change_my_settings`](#change_my_settings) | Change the user's own preferences and voice |  |  | 867 |
 | [`change_offers`](#change_offers) | Work offers, contracts and deal rooms |  |  | 1096 |
-| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 815 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 1017 |
 | [`change_relationships`](#change_relationships) | Work a company's relationships and briefs |  |  | 816 |
 | [`change_reports`](#change_reports) | Work saved reports and the forecast |  |  | 1599 |
 | [`change_settings`](#change_settings) | Change how the workspace is set up |  |  | 3159 |
@@ -2474,10 +2474,9 @@ themselves; requires passport scope "write".)
 Change what is kept under a record: an offer's line items, a company's facts and profile fields, a
 project's companies and stakeholders. Prices are in minor units; read a product for its
 unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot
-be supplied, and a sent or accepted offer keeps its lines. Pass if_version from your read so a
-change made since is refused. Each action answers as its route does. Use update_record for a
-record's own fields, and create_record with record_type offer to make an offer with its first lines.
-(Runs immediately; requires passport scope "write".)
+be supplied, and a sent or accepted offer keeps its lines. Use update_record for a record's own
+fields, and create_record with record_type offer to make an offer with its first lines. (Runs
+immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2487,6 +2486,7 @@ record's own fields, and create_record with record_type offer to make an offer w
   "additionalProperties": false,
   "properties": {
     "action": {
+      "description": "The arguments each action needs:\nadd_company_fact: company_id, category, field, value; states one by hand\nadd_offer_line: offer_id, line\nconfirm_company_fact: company_id, fact_key\nconfirm_company_profile_field: company_id, field\nremove_company_fact: company_id, fact_key; one the company does not state\nremove_offer_line: offer_id, line_item_id\nremove_project_company: project_id, company_id\nremove_project_stakeholder: project_id, contact_id\nset_project_company: project_id, company_id; adds it or changes its role; takes role\nset_project_stakeholder: project_id, contact_id, role; adds it or changes its role\nupdate_company_fact: company_id, fact_key, value; corrects an extracted fact\nupdate_company_profile_field: company_id, field, value\nupdate_offer_line: offer_id, line_item_id, line",
       "enum": [
         "add_company_fact",
         "add_offer_line",
@@ -2577,7 +2577,7 @@ record's own fields, and create_record with record_type offer to make an offer w
       "type": "string"
     },
     "if_version": {
-      "description": "The version you read, so a change made since is refused rather than overwritten",
+      "description": "The version you read; a change made since is refused",
       "type": "integer"
     },
     "line": {
@@ -2654,9 +2654,11 @@ record's own fields, and create_record with record_type offer to make an offer w
       "type": "string"
     },
     "role": {
+      "description": "What the company or contact is to the project",
       "type": "string"
     },
     "value": {
+      "description": "The fact's or profile field's new value",
       "type": "string"
     }
   },
