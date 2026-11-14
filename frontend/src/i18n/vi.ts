@@ -6693,6 +6693,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
+  "brief.feed.systemBadge_one": "1 mục hệ thống",
+  "brief.feed.systemBadge_other": "{count} mục hệ thống",
   "brief.feed.loading": "Đang tải Bản tin sáng…",
   "brief.feed.clear":
     "Không có ưu tiên cần xử lý ngay. Có thể xem toàn bộ Danh sách công việc.",

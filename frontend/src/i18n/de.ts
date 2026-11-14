@@ -6860,6 +6860,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
+  "brief.feed.systemBadge_one": "1 Systemmeldung",
+  "brief.feed.systemBadge_other": "{count} Systemmeldungen",
   "brief.feed.loading": "Morgenbericht wird geladen…",
   "brief.feed.clear":
     "Keine unmittelbaren Prioritäten. Die vollständige Worklist ist verfügbar.",

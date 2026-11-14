@@ -33,6 +33,17 @@ export function worklistLaneHref(
   return hashWithParams(routeHash(target.route), target.params);
 }
 
+/** The Worklist drawer, opened on its System view. */
+export function worklistSystemHref() {
+  return hashWithParams(
+    routeHash({ screen: "home" }),
+    new Map([
+      ["queue", "1"],
+      [WORKLIST_VIEW_PARAM, "system"],
+    ]),
+  );
+}
+
 /** The dial naming the part of the Worklist a link opens it on. */
 export const WORKLIST_SECTION_PARAM = "queue_at";
 /** The Change history panel, last on the Worklist. */

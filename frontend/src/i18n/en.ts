@@ -6847,6 +6847,8 @@ export const en = {
   // What is on screen out of what the day holds, on the panel's own line.
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
+  "brief.feed.systemBadge_one": "1 system item",
+  "brief.feed.systemBadge_other": "{count} system items",
   "brief.feed.loading": "Loading Morning brief…",
   "brief.feed.clear":
     "No immediate priorities. The full Worklist is available.",
