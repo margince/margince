@@ -36,10 +36,14 @@ func liveWrites(table string) func(context.Context, pgx.Tx, principal.Principal,
 		if err != nil {
 			return nil, err
 		}
-		for id := range archived {
-			delete(writable, id)
-		}
+		excludeArchived(writable, archived)
 		return writable, nil
+	}
+}
+
+func excludeArchived(writable, archived map[ids.UUID]bool) {
+	for id := range archived {
+		delete(writable, id)
 	}
 }
 
@@ -139,13 +143,25 @@ func ArchivableSubset(ctx context.Context, tx pgx.Tx, r ArchiveRule, rowIDs []id
 	if err != nil {
 		return nil, err
 	}
-	canDelete := Allows(ctx, r.object, principal.ActionDelete)
-	if !seatAdmitsWrites(p) || len(rowIDs) == 0 || (!canDelete && !Allows(ctx, r.object, principal.ActionUpdate)) {
+	admitted, canDelete := archiveAdmission(ctx, p, r)
+	if !admitted || len(rowIDs) == 0 {
 		return map[ids.UUID]bool{}, nil
 	}
 	writable, err := r.writable(ctx, tx, p, rowIDs)
-	if err != nil || canDelete {
-		return writable, err
+	if err != nil {
+		return nil, err
+	}
+	return archivableFromLive(ctx, tx, r, writable, canDelete)
+}
+
+func archiveAdmission(ctx context.Context, p principal.Principal, r ArchiveRule) (admitted, canDelete bool) {
+	canDelete = Allows(ctx, r.object, principal.ActionDelete)
+	return seatAdmitsWrites(p) && (canDelete || Allows(ctx, r.object, principal.ActionUpdate)), canDelete
+}
+
+func archivableFromLive(ctx context.Context, tx pgx.Tx, r ArchiveRule, writable map[ids.UUID]bool, canDelete bool) (map[ids.UUID]bool, error) {
+	if canDelete {
+		return writable, nil
 	}
 	candidates := make([]ids.UUID, 0, len(writable))
 	for id, may := range writable {
