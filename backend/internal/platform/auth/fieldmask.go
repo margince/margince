@@ -105,20 +105,16 @@ func WritableSubset(ctx context.Context, tx pgx.Tx, table string, rowIDs []ids.U
 		return nil, err
 	}
 	out := make(map[ids.UUID]bool, len(rowIDs))
-	// The row arm alone is not write authority: a caller whose role lost the
-	// object's update verb can still OWN a row, and a mask conditioned on
-	// write authority must not lift for them. EnsureWritable never sees this
-	// case because its handlers Require(update) first; this helper is asked
-	// bare, so it asks itself.
-	//
-	// Asked BEFORE the unbounded shortcut, not after: an all-scope human whose
-	// role carries no update verb is refused by auth.Require on every mutation,
-	// and answering "yes, writable" for them would be the one case where the
-	// shortcut disagrees with the gate it stands in for.
-	if !p.Permissions.Allows(table, principal.ActionUpdate) && p.Type != principal.PrincipalSystem {
+	// Masks must not expose fields through row ownership after the update grant is lost.
+	// Require it before the unbounded shortcut, just as mutations do.
+	if !hasUpdateGrant(p, table) {
 		return out, nil
 	}
 	return rowWriteSubset(ctx, tx, p, table, rowIDs)
+}
+
+func hasUpdateGrant(p principal.Principal, table string) bool {
+	return p.Permissions.Allows(table, principal.ActionUpdate) || p.Type == principal.PrincipalSystem
 }
 
 // rowWriteSubset is WritableSubset's row half without the update grant: the
