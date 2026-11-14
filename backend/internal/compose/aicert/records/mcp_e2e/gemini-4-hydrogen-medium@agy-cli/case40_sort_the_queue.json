@@ -1,0 +1,25 @@
+{
+  "scenario": "case40_sort_the_queue",
+  "criteria": [
+    1,
+    2,
+    3
+  ],
+  "passed": 2,
+  "runs": 2,
+  "pass_at": 2,
+  "driver": "gemini:cli",
+  "effort": "reasoning medium",
+  "system_prompt": "cli-default",
+  "search": "semantic",
+  "self_judged": false,
+  "usage": {
+    "input_tokens": 76995,
+    "output_tokens": 18414,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 272608,
+    "runs_measured": 2,
+    "runs_costed": 0,
+    "cost_usd": null
+  }
+}
