@@ -120,8 +120,10 @@ func setupLinks(t *testing.T) *linkEnv {
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
-	e := &linkEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7(),
-		deal: ids.NewV7(), second: ids.NewV7(), project: ids.NewV7()}
+	e := &linkEnv{
+		owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7(),
+		deal: ids.NewV7(), second: ids.NewV7(), project: ids.NewV7(),
+	}
 	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	for _, u := range []ids.UUID{e.rep, e.other} {
 		e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, u, "rep-"+u.String()+"@chat.test")
@@ -181,9 +183,9 @@ func (e *linkEnv) count(t *testing.T, sql string, args ...any) int {
 	return n
 }
 
-func (e *linkEnv) seat(user ids.UUID, scope principal.RowScope) context.Context {
+func (e *linkEnv) seat(user ids.UUID) context.Context {
 	grant := principal.ObjectGrant{Read: true, Update: true}
-	return e.seatWith(user, scope, map[string]principal.ObjectGrant{"deal": grant, "project": grant})
+	return e.seatWith(user, principal.RowScopeOwn, map[string]principal.ObjectGrant{"deal": grant, "project": grant})
 }
 
 func (e *linkEnv) seatWith(user ids.UUID, scope principal.RowScope, grants map[string]principal.ObjectGrant) context.Context {
@@ -197,13 +199,15 @@ func (e *linkEnv) seatWith(user ids.UUID, scope principal.RowScope, grants map[s
 
 func (e *linkEnv) system() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:chat_links",
-		Permissions: principal.Permissions{RowScope: principal.RowScopeAll}})
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:chat_links",
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
 }
 
 func TestCreatingAChannelLinksTheDealWithItsProjectAndInvitesTheRep(t *testing.T) {
 	e := setupLinks(t)
-	state, err := e.store.Link(e.seat(e.rep, principal.RowScopeOwn), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
+	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -213,7 +217,7 @@ func TestCreatingAChannelLinksTheDealWithItsProjectAndInvitesTheRep(t *testing.T
 	if state.Invites == nil || state.Invites.Invited != 1 || len(e.chat.members[state.Link.ChannelSlug]) != 1 {
 		t.Fatalf("invites = %+v to %v, want the rep once (the linker is also the owner)", state.Invites, e.chat.members)
 	}
-	project, err := e.store.GetState(e.seat(e.rep, principal.RowScopeOwn), RecordProject, e.project)
+	project, err := e.store.GetState(e.seat(e.rep), RecordProject, e.project)
 	if err != nil || project.Link == nil || project.Link.ID != state.Link.ID {
 		t.Fatalf("project state = %+v, %v; want the deal's channel", project, err)
 	}
@@ -227,7 +231,7 @@ func TestCreatingAChannelLinksTheDealWithItsProjectAndInvitesTheRep(t *testing.T
 
 func TestAnExistingChannelMustExistBePrivateAndHoldTheBot(t *testing.T) {
 	e := setupLinks(t)
-	ctx := e.seat(e.rep, principal.RowScopeOwn)
+	ctx := e.seat(e.rep)
 	no := false
 	for channel, want := range map[string]error{"lobby": ErrChannelNotPrivate, "secret": ErrBotNotMember, "nowhere": ErrChannelNotFound} {
 		_, err := e.store.Link(ctx, RecordDeal, e.deal, LinkRequest{Mode: ModeExisting, Channel: channel, SummarizeHistory: &no})
@@ -242,7 +246,7 @@ func TestAnExistingChannelMustExistBePrivateAndHoldTheBot(t *testing.T) {
 
 func TestARecordAndAChannelCarryOneLinkEach(t *testing.T) {
 	e := setupLinks(t)
-	ctx := e.seat(e.rep, principal.RowScopeOwn)
+	ctx := e.seat(e.rep)
 	yes := true
 	existing := LinkRequest{Mode: ModeExisting, Channel: "https://chat.test/channels/team-acme", SummarizeHistory: &yes}
 	first, err := e.store.Link(ctx, RecordDeal, e.deal, existing)
@@ -259,7 +263,7 @@ func TestARecordAndAChannelCarryOneLinkEach(t *testing.T) {
 
 func TestARepWhoMayNotEditTheDealCannotLinkIt(t *testing.T) {
 	e := setupLinks(t)
-	ctx := e.seat(e.other, principal.RowScopeOwn)
+	ctx := e.seat(e.other)
 	if _, err := e.store.Link(ctx, RecordDeal, e.deal, LinkRequest{Mode: ModeCreate}); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("link by a rep who does not own the deal = %v, want permission denied", err)
 	}
@@ -273,12 +277,14 @@ func TestARepWhoMayNotEditTheDealCannotLinkIt(t *testing.T) {
 
 func TestAReplayedEventAddsNothingAndASilentLinkRecordsNothing(t *testing.T) {
 	e := setupLinks(t)
-	state, err := e.store.Link(e.seat(e.rep, principal.RowScopeOwn), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
+	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ev := Event{EventID: ids.NewV7(), EventType: "deal.stage_changed", EntityType: "deal", EntityID: e.deal,
-		Tier: TierMilestone, Detail: map[string]any{"to_stage_name": "Won"}, Deals: []ids.UUID{e.deal}}
+	ev := Event{
+		EventID: ids.NewV7(), EventType: "deal.stage_changed", EntityType: "deal", EntityID: e.deal,
+		Tier: TierMilestone, Detail: map[string]any{"to_stage_name": "Won"}, Deals: []ids.UUID{e.deal},
+	}
 	for range 2 {
 		if err := e.store.RecordEvent(e.system(), ev); err != nil {
 			t.Fatal(err)
@@ -287,7 +293,7 @@ func TestAReplayedEventAddsNothingAndASilentLinkRecordsNothing(t *testing.T) {
 	if n := e.count(t, `SELECT count(*) FROM chat_post_item WHERE link_id = $1`, state.Link.ID); n != 1 {
 		t.Fatalf("a replayed event left %d items, want 1", n)
 	}
-	if _, err := e.store.SetVerbosity(e.seat(e.rep, principal.RowScopeOwn), RecordDeal, e.deal, VerbositySilent); err != nil {
+	if _, err := e.store.SetVerbosity(e.seat(e.rep), RecordDeal, e.deal, VerbositySilent); err != nil {
 		t.Fatal(err)
 	}
 	ev.EventID = ids.NewV7()
@@ -304,7 +310,7 @@ func TestAReplayedEventAddsNothingAndASilentLinkRecordsNothing(t *testing.T) {
 
 func TestANarrowedActivityIsWithdrawnAndItsPostRewritten(t *testing.T) {
 	e := setupLinks(t)
-	state, err := e.store.Link(e.seat(e.rep, principal.RowScopeOwn), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
+	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -342,7 +348,7 @@ func TestANarrowedActivityIsWithdrawnAndItsPostRewritten(t *testing.T) {
 
 func TestUnlinkingFreesTheChannelForTheRecordAgain(t *testing.T) {
 	e := setupLinks(t)
-	ctx := e.seat(e.rep, principal.RowScopeOwn)
+	ctx := e.seat(e.rep)
 	no := false
 	existing := LinkRequest{Mode: ModeExisting, Channel: "team-acme", SummarizeHistory: &no}
 	if _, err := e.store.Link(ctx, RecordDeal, e.second, existing); err != nil {
@@ -365,7 +371,8 @@ func TestUnlinkingFreesTheChannelForTheRecordAgain(t *testing.T) {
 func TestADealsProjectJoinsItsChannelOnlyWhenTheRepMayEditTheProject(t *testing.T) {
 	e := setupLinks(t)
 	ctx := e.seatWith(e.rep, principal.RowScopeOwn, map[string]principal.ObjectGrant{
-		"deal": {Read: true, Update: true}, "project": {Read: true}})
+		"deal": {Read: true, Update: true}, "project": {Read: true},
+	})
 	state, err := e.store.Link(ctx, RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
 		t.Fatal(err)
@@ -377,13 +384,15 @@ func TestADealsProjectJoinsItsChannelOnlyWhenTheRepMayEditTheProject(t *testing.
 
 func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
 	e := setupLinks(t)
-	state, err := e.store.Link(e.seat(e.rep, principal.RowScopeOwn), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
+	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
 		t.Fatal(err)
 	}
 	activity := ids.NewV7()
-	if err := e.store.RecordEvent(e.system(), Event{EventID: ids.NewV7(), EventType: "activity.captured", EntityType: "activity",
-		EntityID: activity, ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal}}); err != nil {
+	if err := e.store.RecordEvent(e.system(), Event{
+		EventID: ids.NewV7(), EventType: "activity.captured", EntityType: "activity",
+		EntityID: activity, ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal},
+	}); err != nil {
 		t.Fatal(err)
 	}
 	pending, err := e.store.PendingFor(e.system(), state.Link.ID)

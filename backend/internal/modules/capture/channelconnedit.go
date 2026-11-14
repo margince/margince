@@ -68,22 +68,9 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token, eve
 	if err != nil {
 		return err
 	}
-	check, err := s.requireConnectWiring(current.Provider)
+	bot, err := s.confirmReplacement(ctx, current, token, eventsSecret)
 	if err != nil {
 		return err
-	}
-	if err := check.ValidateToken(token); err != nil {
-		return err
-	}
-	if err := checkEventsSecret(check, eventsSecret); err != nil {
-		return err
-	}
-	bot, err := check.Confirm(ctx, current.Address, token)
-	if err != nil {
-		return err
-	}
-	if check.FixedIdentity() && bot.ID != current.ChannelID {
-		return fmt.Errorf("this token belongs to another team; disconnect the bot and connect the new one: %w", apperrors.ErrConflict)
 	}
 
 	refs, err := s.sealConnectionSecrets(ctx, ws, token, eventsSecret)
@@ -114,6 +101,30 @@ func (s *ChannelStore) ReplaceToken(ctx context.Context, id ids.UUID, token, eve
 	}
 	s.destroyDetached(ctx, ws, "channel-token-replaced", superseded...)
 	return nil
+}
+
+// confirmReplacement runs the provider's checks on a replacement token before
+// anything is sealed, and refuses a token of another team where links are bound
+// to the bot's team.
+func (s *ChannelStore) confirmReplacement(ctx context.Context, current channelRow, token, eventsSecret string) (ChannelBot, error) {
+	check, err := s.requireConnectWiring(current.Provider)
+	if err != nil {
+		return ChannelBot{}, err
+	}
+	if err := check.ValidateToken(token); err != nil {
+		return ChannelBot{}, err
+	}
+	if err := checkEventsSecret(check, eventsSecret); err != nil {
+		return ChannelBot{}, err
+	}
+	bot, err := check.Confirm(ctx, current.Address, token)
+	if err != nil {
+		return ChannelBot{}, err
+	}
+	if check.FixedIdentity() && bot.ID != current.ChannelID {
+		return ChannelBot{}, fmt.Errorf("this token belongs to another team; disconnect the bot and connect the new one: %w", apperrors.ErrConflict)
+	}
+	return bot, nil
 }
 
 // repoint re-points the connection at the new bot and its newly sealed token, in

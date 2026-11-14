@@ -64,14 +64,18 @@ func (a ChatPullArgs) Connection() ids.UUID { return a.ConnectionID }
 // InsertOpts makes one pull per bot wait or run at a time, whoever enqueues
 // it, because two pulls would judge the same talk.
 func (ChatPullArgs) InsertOpts() river.InsertOpts {
-	return river.InsertOpts{MaxAttempts: sweptJobMaxAttempts,
-		UniqueOpts: river.UniqueOpts{ByArgs: true, ByState: activeSweepStates}}
+	return river.InsertOpts{
+		MaxAttempts: sweptJobMaxAttempts,
+		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
+	}
 }
 
 func chatLinks(pool *pgxpool.Pool, vault func() keyvault.Vault, in chatsync.TxInserter, delay time.Duration, private bool) (*chatlinks.Store, chatsync.LiveChats) {
-	return chatsync.Wire(InstallationDB(pool), vault, chatsync.Enqueuer{Inserter: in, Delay: delay,
+	return chatsync.Wire(InstallationDB(pool), vault, chatsync.Enqueuer{
+		Inserter: in, Delay: delay,
 		MaxAttempts: oneOffJobMaxAttempts, States: activeSweepStates,
-		Job: func(ws, link ids.UUID) river.JobArgs { return ChatLinkFlushArgs{Workspace: ws, LinkID: link} }}, private)
+		Job: func(ws, link ids.UUID) river.JobArgs { return ChatLinkFlushArgs{Workspace: ws, LinkID: link} },
+	}, private)
 }
 
 // WithChatLinks composes /channel-links and the Dispact bot connect; it must
@@ -103,12 +107,18 @@ func registerChatLinkFlush(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 	if cfg.ChannelVault != nil {
 		store, chats := chatLinks(pool, func() keyvault.Vault { return cfg.ChannelVault }, chatsync.AmbientInserter{},
 			chatsync.Window, cfg.SendOrigin.Environment.IsNonProduction())
-		addDeclaredWorker[ChatLinkFlushArgs](reg, &chatsync.Worker[ChatLinkFlushArgs]{Bind: workspaceJobCtx,
-			Flusher: chatsync.NewFlusher(pool, chats, store, cfg.SendOrigin.PublicBaseURL, log)})
-		addDeclaredWorker[ChatPullArgs](reg, &chatsync.PullWorker[ChatPullArgs]{Bind: workspaceJobCtx,
-			Puller: chatsync.NewPuller(pool, store, chats, cfg.ChatSummaryBrain, log), Marks: cfg.ChatPushMarks})
-		addDeclaredWorker[ChatPullSweepArgs](reg, &chatPullSweepWorker{pool: pool, log: log,
-			cadence: chatsync.Sweeper{Marks: cfg.ChatPushMarks, Now: time.Now, Log: log}})
+		addDeclaredWorker[ChatLinkFlushArgs](reg, &chatsync.Worker[ChatLinkFlushArgs]{
+			Bind:    workspaceJobCtx,
+			Flusher: chatsync.NewFlusher(pool, chats, store, cfg.SendOrigin.PublicBaseURL, log),
+		})
+		addDeclaredWorker[ChatPullArgs](reg, &chatsync.PullWorker[ChatPullArgs]{
+			Bind:   workspaceJobCtx,
+			Puller: chatsync.NewPuller(pool, store, chats, cfg.ChatSummaryBrain, log), Marks: cfg.ChatPushMarks,
+		})
+		addDeclaredWorker[ChatPullSweepArgs](reg, &chatPullSweepWorker{
+			pool: pool, log: log,
+			cadence: chatsync.Sweeper{Marks: cfg.ChatPushMarks, Now: time.Now, Log: log},
+		})
 		return periodicFor(cfg, ChatPullSweepArgs{})
 	}
 	return nil

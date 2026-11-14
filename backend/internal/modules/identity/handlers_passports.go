@@ -176,8 +176,11 @@ func (h Handlers) ReleasePassportAppBinding(w http.ResponseWriter, r *http.Reque
 	}
 	err := h.svc.ReleaseAppBinding(r.Context(), identity, ids.From[ids.PassportKind](ids.UUID(id)))
 	if errors.Is(err, ErrAppBindingLive) {
-		httperr.Write(w, r, &httperr.DetailedError{Status: http.StatusConflict, Code: "passport_still_live",
-			Detail: "This passport is still live. Revoke it first."})
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict,
+			Code:   "passport_still_live",
+			Detail: "This passport is still live. Revoke it first.",
+		})
 		return
 	}
 	if err != nil {

@@ -40,6 +40,8 @@ var seatlessMethods = []string{methodInitialize, methodPing, methodDiscover, met
 
 // seatlessRefusal answers a method a seatless app caller may not use, and nil
 // for any other request.
+//
+//nolint:ireturn // EdgeRefusal is the edge's refusal seam; nil means admit.
 func seatlessRefusal(ctx context.Context, method string) EdgeRefusal {
 	surface, ok := appSurfaceOf(ctx)
 	if !ok || surface.Seatless == nil || slices.Contains(seatlessMethods, method) {

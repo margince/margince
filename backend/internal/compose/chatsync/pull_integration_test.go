@@ -104,8 +104,10 @@ func setupPull(t *testing.T) *pullEnv {
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	chats := httpChats{client: dispact.New(srv.Client(), srv.URL, "gwapp_test"), connection: e.conn}
 	acts := activities.NewStore(db)
-	e.puller = &Puller{Pool: e.pool, Store: e.store, Chats: chats, Activities: acts, Lane: e.lane,
-		Now: func() time.Time { return e.now }, Zone: time.UTC, Log: slog.Default()}
+	e.puller = &Puller{
+		Pool: e.pool, Store: e.store, Chats: chats, Activities: acts, Lane: e.lane,
+		Now: func() time.Time { return e.now }, Zone: time.UTC, Log: slog.Default(),
+	}
 	e.filer = &Filer{Pool: e.pool, Store: e.store, Chats: chats, Activities: acts, Lane: e.lane}
 	return e
 }

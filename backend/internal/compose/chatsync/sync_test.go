@@ -86,8 +86,8 @@ func TestAMilestoneLevelPostsOnlyMilestones(t *testing.T) {
 	if tier, _, _ := chatTier(edit); tier != chatlinks.TierEverything {
 		t.Fatalf("a description edit is tier %q, want everything", tier)
 	}
-	close := events.Envelope{Type: "deal.updated", Payload: json.RawMessage(`{"changed_fields":{"expected_close_date":"2026-12-01"}}`)}
-	if tier, _, _ := chatTier(close); tier != chatlinks.TierImportant {
+	closeDate := events.Envelope{Type: "deal.updated", Payload: json.RawMessage(`{"changed_fields":{"expected_close_date":"2026-12-01"}}`)}
+	if tier, _, _ := chatTier(closeDate); tier != chatlinks.TierImportant {
 		t.Fatalf("a close date change is tier %q, want important", tier)
 	}
 	if _, _, posts := chatTier(events.Envelope{Type: "deal.created"}); posts {

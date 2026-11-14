@@ -55,8 +55,10 @@ func TestANewChannelInvitesWhoMaySeeTheDealUpToTheCap(t *testing.T) {
 
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
-		Permissions: principal.Permissions{RowScope: principal.RowScopeOwn,
-			Objects: map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}}},
+		Permissions: principal.Permissions{
+			RowScope: principal.RowScopeOwn,
+			Objects:  map[string]principal.ObjectGrant{"deal": {Read: true, Update: true}},
+		},
 	})
 	state, err := e.store.Link(principal.WithCorrelationID(ctx, ids.NewV7()), chatlinks.RecordDeal, e.deal,
 		chatlinks.LinkRequest{Mode: chatlinks.ModeCreate})

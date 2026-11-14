@@ -78,7 +78,7 @@ func (s *ChannelStore) destroyDetached(ctx context.Context, ws ids.UUID, lifecyc
 // events secret its notices are signed with. It answers ErrNoConnection when
 // no bot is connected and ErrNoEventsSecret when the bot has no secret.
 func (r *Registry) LiveBotEvents(ctx context.Context, provider string) (LiveBot, string, error) {
-	bot, _, err := r.liveBot(ctx, provider)
+	bot, _, err := r.readLiveBot(ctx, provider)
 	if err != nil {
 		return LiveBot{}, "", err
 	}

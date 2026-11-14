@@ -41,19 +41,19 @@ type Chats interface {
 }
 
 var (
-	// ErrBotNotConnected: no chat bot is connected, so nothing can be linked.
+	// ErrBotNotConnected means no chat bot is connected, so nothing can be linked.
 	ErrBotNotConnected = errors.New("chatlinks: no chat bot is connected")
-	// ErrChannelNotFound: the named channel does not exist in the chat.
+	// ErrChannelNotFound means the named channel does not exist in the chat.
 	ErrChannelNotFound = errors.New("chatlinks: the channel was not found")
-	// ErrChannelNotPrivate: only a private channel may carry a record.
+	// ErrChannelNotPrivate means only a private channel may carry a record.
 	ErrChannelNotPrivate = errors.New("chatlinks: the channel is public")
-	// ErrBotNotMember: the bot must be in the channel before it is linked.
+	// ErrBotNotMember means the bot must be in the channel before it is linked.
 	ErrBotNotMember = errors.New("chatlinks: the bot is not in the channel")
-	// ErrChannelAlreadyLinked: the channel carries another record.
+	// ErrChannelAlreadyLinked means the channel carries another record.
 	ErrChannelAlreadyLinked = errors.New("chatlinks: the channel is linked to another record")
-	// ErrRecordAlreadyLinked: the record has a channel already.
+	// ErrRecordAlreadyLinked means the record has a channel already.
 	ErrRecordAlreadyLinked = errors.New("chatlinks: the record already has a channel")
-	// ErrLinkNotFound: the record has no channel.
+	// ErrLinkNotFound means the record has no channel.
 	ErrLinkNotFound = errors.New("chatlinks: the record has no channel")
 	// ErrMessageNotFound means the named message is not in the record's channel.
 	ErrMessageNotFound = errors.New("chatlinks: the message was not found in the channel")
@@ -64,6 +64,6 @@ var (
 	ErrNoSummaryModel = errors.New("chatlinks: no AI model summarises chat talk")
 	// ErrSummaryFailed means the model could not summarise the talk; nothing was filed.
 	ErrSummaryFailed = errors.New("chatlinks: the talk could not be summarised")
-	// ErrChatUnreachable: the chat could not be reached; nothing was written.
+	// ErrChatUnreachable means the chat could not be reached; nothing was written.
 	ErrChatUnreachable = errors.New("chatlinks: the chat could not be reached")
 )

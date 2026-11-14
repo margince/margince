@@ -113,8 +113,10 @@ func newPushEnv(t *testing.T) *pushEnv {
 	t.Helper()
 	e := &pushEnv{conn: ids.NewV7(), marks: fakeMarks{}, replays: fakeReplays{}, now: pushNow}
 	e.link = chatlinks.Link{ID: ids.NewV7(), ConnectionID: e.conn, ChannelSlug: "deal-acme", Status: chatlinks.StatusActive}
-	e.links = &fakeEventLinks{links: []chatlinks.Link{e.link,
-		{ID: ids.NewV7(), ConnectionID: ids.NewV7(), ChannelSlug: "deal-other", Status: chatlinks.StatusActive}}}
+	e.links = &fakeEventLinks{links: []chatlinks.Link{
+		e.link,
+		{ID: ids.NewV7(), ConnectionID: ids.NewV7(), ChannelSlug: "deal-other", Status: chatlinks.StatusActive},
+	}}
 	e.receiver = &Receiver{
 		Bots:  fakeEventBots{bot: capture.LiveBot{ConnectionID: e.conn, TeamID: pushTeam}, secret: pushSecret},
 		Links: e.links, Replays: e.replays, Marks: e.marks, Now: func() time.Time { return e.now }, Log: slog.Default(),
@@ -326,16 +328,21 @@ func (closedChats) Open(context.Context) (chatlinks.Session, error) {
 
 type pullArgs struct{ conn ids.UUID }
 
-func (pullArgs) Kind() string                                                      { return "chat_pull" }
-func (pullArgs) WorkspaceID() ids.UUID                                             { return ids.Nil }
-func (a pullArgs) Connection() ids.UUID                                            { return a.conn }
+func (pullArgs) Kind() string { return "chat_pull" }
+
+func (pullArgs) WorkspaceID() ids.UUID { return ids.Nil }
+
+func (a pullArgs) Connection() ids.UUID { return a.conn }
+
 func bindAny(ctx context.Context, _ jobs.WorkspaceScoped) (context.Context, error) { return ctx, nil }
 
 func TestANoticeDuringAPullRunsItOnceMore(t *testing.T) {
 	conn := ids.NewV7()
 	marks := fakeMarks{}
-	worker := &PullWorker[pullArgs]{Bind: bindAny, Marks: marks,
-		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }}}
+	worker := &PullWorker[pullArgs]{
+		Bind: bindAny, Marks: marks,
+		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }},
+	}
 	job := &river.Job[pullArgs]{Args: pullArgs{conn: conn}}
 
 	marks[noticeKey(conn)] = pushNow.Add(-time.Second)
@@ -390,8 +397,10 @@ func TestANoticeOfUnknownShapeIsRefusedBeforeItCounts(t *testing.T) {
 }
 
 func TestAPullWhoseMarksCannotBeReadRunsOnceMore(t *testing.T) {
-	worker := &PullWorker[pullArgs]{Bind: bindAny, Marks: brokenMarks{},
-		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }}}
+	worker := &PullWorker[pullArgs]{
+		Bind: bindAny, Marks: brokenMarks{},
+		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return pushNow }},
+	}
 	var snooze *river.JobSnoozeError
 	if err := worker.Work(context.Background(), &river.Job[pullArgs]{Args: pullArgs{conn: ids.NewV7()}}); !errors.As(err, &snooze) {
 		t.Errorf("an unreadable notice mark: %v; want the pull to run again", err)
@@ -403,8 +412,10 @@ func TestANoticeInTheMillisecondThePullStartedRunsItOnceMore(t *testing.T) {
 	start := pushNow.Add(400 * time.Microsecond)
 	// The store keeps milliseconds, so a notice 300µs after the start reads back as pushNow.
 	marks := fakeMarks{noticeKey(conn): time.UnixMilli(start.Add(300 * time.Microsecond).UnixMilli())}
-	worker := &PullWorker[pullArgs]{Bind: bindAny, Marks: marks,
-		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return start }}}
+	worker := &PullWorker[pullArgs]{
+		Bind: bindAny, Marks: marks,
+		Puller: &Puller{Chats: closedChats{}, Now: func() time.Time { return start }},
+	}
 	var snooze *river.JobSnoozeError
 	if err := worker.Work(context.Background(), &river.Job[pullArgs]{Args: pullArgs{conn: conn}}); !errors.As(err, &snooze) {
 		t.Errorf("a notice in the start's millisecond: %v; want the pull to run again", err)

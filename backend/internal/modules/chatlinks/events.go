@@ -67,8 +67,10 @@ func NewEventHandlers(receiver EventReceiver) EventHandlers {
 // shared count is out. Each notice costs a secret decrypt and a database read,
 // so an anonymous caller is never let through unmetered.
 func eventHandlersOn(receiver EventReceiver, newLimiter func(string, ratelimit.Kind, int, time.Duration) *ratelimit.Limiter) EventHandlers {
-	return EventHandlers{receiver: receiver,
-		perPeer: newLimiter("channel-events/dispact", ratelimit.FailClosed, eventsPerMinute, time.Minute)}
+	return EventHandlers{
+		receiver: receiver,
+		perPeer:  newLimiter("channel-events/dispact", ratelimit.FailClosed, eventsPerMinute, time.Minute),
+	}
 }
 
 // ReceiveDispactChannelEvent takes one signed notice from Dispact.
@@ -78,14 +80,18 @@ func (h EventHandlers) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http
 		return
 	}
 	if !h.perPeer.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, &httperr.DetailedError{Status: http.StatusTooManyRequests, Code: "rate_limited",
-			RetryAfterSeconds: h.perPeer.RetryAfterSeconds(), Detail: "Too many notices. Send it again after the wait."})
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusTooManyRequests, Code: "rate_limited",
+			RetryAfterSeconds: h.perPeer.RetryAfterSeconds(), Detail: "Too many notices. Send it again after the wait.",
+		})
 		return
 	}
 	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxEventBody))
 	if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
-		httperr.Write(w, r, &httperr.DetailedError{Status: http.StatusRequestEntityTooLarge, Code: "channel_event_too_large",
-			Detail: "The body is larger than a notice can be."})
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusRequestEntityTooLarge, Code: "channel_event_too_large",
+			Detail: "The body is larger than a notice can be.",
+		})
 		return
 	}
 	if err != nil {

@@ -29,7 +29,7 @@ import (
 // a request or a worker.
 const callTimeout = 15 * time.Second
 
-// chatHTTPClient builds the client the bot calls the chat with. A team hosts
+// HTTPClient builds the client the bot calls the chat with. A team hosts
 // Dispact itself, so in production its address must resolve to a public IP.
 // Otherwise a token's owner could aim this server at its own network. Dev and
 // test run the chat on loopback.
@@ -53,6 +53,7 @@ type LiveChats struct {
 	HTTP  dispact.HTTPDoer
 }
 
+// Open implements chatlinks.Chats.
 func (c LiveChats) Open(ctx context.Context) (chatlinks.Session, error) {
 	vault := c.Vault()
 	if vault == nil {
@@ -84,8 +85,10 @@ type BotCheck struct {
 	AllowHTTP bool
 }
 
+// NeedsAddress is true: every team hosts its own Dispact.
 func (BotCheck) NeedsAddress() bool { return true }
 
+// ValidateToken refuses a token without the Dispact app prefix.
 func (BotCheck) ValidateToken(token string) error {
 	if !strings.HasPrefix(token, dispact.TokenPrefix) || len(token) <= len(dispact.TokenPrefix) {
 		return fmt.Errorf("a Dispact app token starts with %s: %w", dispact.TokenPrefix, capture.ErrChannelTokenRejected)
@@ -93,12 +96,14 @@ func (BotCheck) ValidateToken(token string) error {
 	return nil
 }
 
+// FixedIdentity is true: links are bound to the bot's team.
 func (BotCheck) FixedIdentity() bool { return true }
 
 // ValidateEventsSecret makes Dispact a provider that pushes signed notices, so
 // its connection takes an events secret.
 func (BotCheck) ValidateEventsSecret(secret string) error { return webhooks.CheckSecret(secret) }
 
+// Confirm asks the chat who the token belongs to.
 func (c BotCheck) Confirm(ctx context.Context, address, token string) (capture.ChannelBot, error) {
 	if !c.AllowHTTP && !strings.HasPrefix(address, "https://") {
 		return capture.ChannelBot{}, fmt.Errorf("the chat address must start with https://: %w", apperrors.ErrInvalidArgument)

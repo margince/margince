@@ -28,7 +28,7 @@ type LiveBot struct {
 // liveChannelBinding, so it counts the same rows a reply send counts, and
 // answers ErrNoConnection when no bot is connected.
 func (r *Registry) LiveBot(ctx context.Context, provider string) (LiveBot, error) {
-	bot, binding, err := r.liveBot(ctx, provider)
+	bot, binding, err := r.readLiveBot(ctx, provider)
 	if err != nil {
 		return LiveBot{}, err
 	}
@@ -43,11 +43,11 @@ func (r *Registry) LiveBot(ctx context.Context, provider string) (LiveBot, error
 // LiveBotIdentity is LiveBot without its token, for code that only checks what
 // the bot's install signed. It opens no vault.
 func (r *Registry) LiveBotIdentity(ctx context.Context, provider string) (LiveBot, error) {
-	bot, _, err := r.liveBot(ctx, provider)
+	bot, _, err := r.readLiveBot(ctx, provider)
 	return bot, err
 }
 
-func (r *Registry) liveBot(ctx context.Context, provider string) (LiveBot, channelBinding, error) {
+func (r *Registry) readLiveBot(ctx context.Context, provider string) (LiveBot, channelBinding, error) {
 	binding, err := r.liveChannelBinding(ctx, provider)
 	if err != nil {
 		return LiveBot{}, channelBinding{}, err
