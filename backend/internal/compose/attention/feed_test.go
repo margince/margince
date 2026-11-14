@@ -165,9 +165,9 @@ func (s *stubTasks) CountOpenForViewer(
 	return len(s.rows), nil
 }
 
-// PlannedForViewer answers the day's rows, the upcoming rows and the reminders,
-// each window recorded on its own so a test can prove the reads are bounded
-// independently rather than sharing one allocation.
+// PlannedForViewer answers the day's rows, the upcoming rows and the reminders.
+// Each window is recorded on its own, so a test can prove the reads are bounded
+// apart rather than sharing one allocation.
 func (s *stubTasks) PlannedForViewer(_ context.Context, ask PlannedAsk) (PlannedTasks, error) {
 	s.until, s.scope, s.owner = &ask.Window.Until, ask.Window.Scope, ask.Window.Owner
 	s.upcomingFrom, s.upcomingUntil, s.upcomingLimit = &ask.Window.Until, &ask.Horizon, ask.UpcomingLimit

@@ -158,12 +158,11 @@ type Tasks interface {
 	CountOpenForViewer(ctx context.Context, asOf, until time.Time, scope TaskScope, owner ids.UUID, team []ids.UUID) (int, error)
 }
 
-// PlannedAsk is the planned lane's question. The day's work, due by
-// Window.Until, and the work due after it up to Horizon are two bounded reads,
-// because a full day's backlog would fill a shared limit before a single
-// upcoming row was reached. Reminders asks for every task of the reader's own
-// whose reminder is due, latest first and uncapped, because the lane's count
-// counts them all.
+// PlannedAsk is the planned lane's question. The day's work is due by
+// Window.Until, and the work after it is due by Horizon. They are two bounded
+// reads, so a full day's backlog cannot fill the limit before an upcoming row.
+// Reminders asks for every due reminder of the reader's own, uncapped, because
+// the lane's count counts them all.
 type PlannedAsk struct {
 	Window                  TaskWindow
 	Horizon                 time.Time
