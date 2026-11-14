@@ -225,3 +225,21 @@ func TestATSThatIsNotDispactsIsRefused(t *testing.T) {
 		t.Errorf("seqOf(12.000345) = %d, %v", seq, err)
 	}
 }
+
+func TestTheChannelListShowsPublicChannelsAndThePrivateOnesTheBotIsIn(t *testing.T) {
+	chat := dispacttest.New("team")
+	chat.AddChannel("deal-acme")
+	chat.AddPublicChannel("general")
+	chat.AddChannelWithoutBot("leadership")
+	channels, err := serve(t, chat).Channels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]Channel{}
+	for _, ch := range channels {
+		got[ch.Slug] = ch
+	}
+	if len(got) != 2 || !got["deal-acme"].IsPrivate || !got["deal-acme"].BotIsMember || got["general"].IsPrivate {
+		t.Fatalf("channels = %+v; want deal-acme (private, bot in it) and general (public)", channels)
+	}
+}

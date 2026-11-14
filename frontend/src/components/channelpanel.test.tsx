@@ -56,6 +56,14 @@ function stubServer(
     "fetch",
     vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
+      if (path === `${LINK_PATH}/channels` && request.method === "GET") {
+        return jsonResponse({
+          channels: [
+            { slug: "deal-acme-renewal", name: "deal-acme-renewal" },
+            { slug: "deal-globex", name: "deal-globex" },
+          ],
+        });
+      }
       if (path !== LINK_PATH) {
         throw new Error(`unstubbed: ${request.method} ${path}`);
       }
@@ -145,7 +153,7 @@ describe("ChannelPanel", () => {
     expect(writes).toEqual([{ method: "POST", body: { mode: "create" } }]);
   });
 
-  it("links an existing channel with the history summary asked for by default", async () => {
+  it("links an existing channel picked from the ones the bot is in, with the history summary asked for by default", async () => {
     const writes = stubServer({ state: "none" }, () =>
       jsonResponse({ state: "linked", link }, 201),
     );
@@ -162,7 +170,10 @@ describe("ChannelPanel", () => {
     ).toBeChecked();
     await user.type(
       within(dialog).getByLabelText("Channel name or link *"),
-      "deal-acme-renewal",
+      "acme",
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /deal-acme-renewal/ }),
     );
     await pickOption(
       user,

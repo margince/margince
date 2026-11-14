@@ -12190,7 +12190,7 @@ export const en = {
   "channelLink.linkFailed": "Channel not linked",
   "channelLink.channelField": "Channel name or link",
   "channelLink.channelHint":
-    "A private channel the bot is already a member of.",
+    "Pick a private channel the bot is in. To link another one, add the bot to it in the chat first.",
   "channelLink.summarize": "Summarize the talk so far (up to 5 summaries)",
   "channelLink.verbosity": "What Margince posts",
   "channelLink.verbosityHint":
@@ -12223,7 +12223,7 @@ export const en = {
   "channelLink.refused.botNotConnected":
     "No chat bot is connected. An administrator connects one in Settings.",
   "channelLink.refused.channelNotFound":
-    "No channel with this name or link was found.",
+    "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
   "channelLink.refused.channelNotPrivate":
     "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember":
