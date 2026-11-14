@@ -97,6 +97,7 @@ func TestHomeBudget(t *testing.T) {
 		t.Logf("home-budget: row %s p50=%dms p95=%dms budget=%dms samples=%d 5xx=%d 422=%d",
 			r.Row, r.P50.Milliseconds(), r.P95.Milliseconds(), r.Budget.Milliseconds(), r.Samples, r.Status5xx, r.Status422)
 	}
+	logHomePlanning(t, e, in.Seat, timed, results)
 	failures := HomeBudgetFailures(results, mode)
 	largest := database.LargestSQLStatementBytes()
 	t.Logf("home-budget: sql largest=%d bytes limit=%d bytes", largest, homeStatementBudget)
