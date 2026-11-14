@@ -1193,6 +1193,7 @@ const (
 	AiActivityKindDocumentExtract               AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                    AiActivityKind = "draft_reply"
 	AiActivityKindEnrich                        AiActivityKind = "enrich"
+	AiActivityKindExtensionCall                 AiActivityKind = "extension_call"
 	AiActivityKindGrowthFit                     AiActivityKind = "growth_fit"
 	AiActivityKindMorningBrief                  AiActivityKind = "morning_brief"
 	AiActivityKindNlSearch                      AiActivityKind = "nl_search"
@@ -1251,6 +1252,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindDraftReply:
 		return true
 	case AiActivityKindEnrich:
+		return true
+	case AiActivityKindExtensionCall:
 		return true
 	case AiActivityKindGrowthFit:
 		return true
@@ -1794,6 +1797,7 @@ const (
 	AiTaskDocumentExtract               AiTask = "document_extract"
 	AiTaskDraftReply                    AiTask = "draft_reply"
 	AiTaskEnrich                        AiTask = "enrich"
+	AiTaskExtensionCall                 AiTask = "extension_call"
 	AiTaskGrowthFit                     AiTask = "growth_fit"
 	AiTaskNlSearch                      AiTask = "nl_search"
 	AiTaskOfferDraft                    AiTask = "offer_draft"
@@ -1851,6 +1855,8 @@ func (e AiTask) Valid() bool {
 	case AiTaskDraftReply:
 		return true
 	case AiTaskEnrich:
+		return true
+	case AiTaskExtensionCall:
 		return true
 	case AiTaskGrowthFit:
 		return true
@@ -42757,6 +42763,9 @@ type ComposedExtension struct {
 	// Name The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`.
 	Name string `json:"name"`
 
+	// Needs The core capabilities the unit declares it uses, each with the reason its author gave. The core grants exactly these and refuses the rest, so this list is the whole of what the unit can borrow from the core (its AI models, its object store). Sorted by capability; absent for a unit that declares none.
+	Needs *[]ComposedExtensionNeed `json:"needs,omitempty"`
+
 	// RbacObjects The `ext_<name>_<object>` names this unit's operations gate on, registered into the vocabulary at boot — exactly the objects `setRoleObjectGrant` will accept for this unit. Sorted, and empty for a unit that owns no records (the common case).
 	RbacObjects []string `json:"rbac_objects"`
 
@@ -42765,6 +42774,15 @@ type ComposedExtension struct {
 
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
+}
+
+// ComposedExtensionNeed One core capability a unit declares it uses.
+type ComposedExtensionNeed struct {
+	// Capability What the unit uses. `models` is the installation's AI models; `objects` is a key prefix of its own in the object store.
+	Capability string `json:"capability"`
+
+	// Reason One sentence from the unit's author saying what it does with the capability.
+	Reason string `json:"reason"`
 }
 
 // ComposedExtensionRoute One published extension operation.

@@ -113,9 +113,9 @@ type unitManifest struct {
 	// consent asks for, and the endpoint that receives the client secret.
 	// omitempty for the reason the fields above have it.
 	OAuthApps []declaredOAuthApp `json:"oauth_apps,omitempty"`
-
 	// SystemReads are the deals and colleagues' details the unit reads.
-	SystemReads []string `json:"system_reads,omitempty"`
+	SystemReads []string       `json:"system_reads,omitempty"`
+	Needs       []declaredNeed `json:"needs,omitempty"`
 }
 
 // inboundEndpoint is one declared anonymous edge (see

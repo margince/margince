@@ -323,6 +323,19 @@ tasks:
     company_context: none
     doc: "One rewrite verb (Polish, Shorter, Warmer, More formal, Add a deadline) over the words a rep has on screen: an email body in the composer, or a task or note in Add task and Log activity. It keeps their meaning, language, names, numbers, dates and links, reads no company context and no record, and writes nothing. Its own task, apart from draft_reply, so it can run premium first: the cheap tier adds meaning to the rep's words, and a rewrite that changes what they said is worse than none. The cheap tier stays as the fallback, because a rep who pressed a button is better served by a careful cheap answer than by an outage."
 
+  extension_call:
+    display_name: "Extension model call"
+    summary: "Answers a request an installed extension sends to the installation's model, so the extension holds no key."
+    ladder: [cheap_cloud, premium]
+    execution_mode: interactive
+    on_budget_exhausted: degrade
+    status: shipped
+    subject_restriction: honour
+    sites: [extension_call]
+    company_context: none
+    no_payload: true
+    doc: "One site shared by every extension that declares the Models need. The extension writes the messages and the core adds nothing to them: no company context, no record. The core does the rest the way it does for its own calls: the installation's model choice, the secret stripper, the budget and the call record, with the extension's name in the audit row beside the call's correlation id. The request must name the records its text was built from, or say that it holds no contact's data, so a contact under a restriction of processing is refused. No payload is kept, because the core cannot know what an extension put in its own prompt. There is no cap per extension: one shared budget serves them all, and the audit rows say which unit spent it."
+
   nl_search:
     display_name: "Natural-language search"
     summary: "Turns a list described in plain words into filters you can check and save."

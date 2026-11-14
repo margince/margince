@@ -19,10 +19,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -357,5 +359,67 @@ func TestBoundExtensionRuntimeDepsReachTheHandler(t *testing.T) {
 	}
 	if got.deps.pool != pool || got.deps.vault != vault {
 		t.Fatalf("the per-call Runtime was built over pool=%p vault=%v, not the bound pair", got.deps.pool, got.deps.vault)
+	}
+}
+
+// countingLane is the model boundary: it records that it was reached.
+type countingLane struct{ calls int }
+
+func (c *countingLane) Complete(context.Context, model.Request) (model.Response, error) {
+	c.calls++
+	return model.Response{Text: "ok"}, nil
+}
+
+var oneMessage = extension.CompleteRequest{
+	Messages: []extension.Message{{Role: "user", Text: "hello"}}, NoContactData: "a fixed greeting",
+}
+
+// composeNeeds composes one unit, "summaries", declaring needs, and mints a
+// Runtime for it in a fresh workspace.
+func composeNeeds(t *testing.T, deps extensionRuntimeBinding, needs ...extension.Need) (*callRuntime, context.Context) {
+	t.Helper()
+	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0", Needs: needs}})
+	t.Cleanup(func() { setComposedExtensions(nil) })
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	deps.pool = &pgxpool.Pool{}
+	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", deps)
+	t.Cleanup(rt.release)
+	return rt, ctx
+}
+
+// A unit that did not declare a capability is refused it, and what is behind
+// the refusal is never reached.
+func TestAnUndeclaredCapabilityIsRefusedAndNeverReached(t *testing.T) {
+	lane, blob := &countingLane{}, blobstore.NewMemory()
+	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: lane, blob: blob})
+	_, getErr := rt.Objects().Get(ctx, "report")
+	_, completeErr := rt.Models().Complete(ctx, oneMessage)
+	for name, err := range map[string]error{
+		"Complete": completeErr, "Get": getErr,
+		"Put": rt.Objects().Put(ctx, "report", []byte("x")), "Delete": rt.Objects().Delete(ctx, "report"),
+	} {
+		if !errors.Is(err, extension.ErrNotDeclared) {
+			t.Errorf("%s, undeclared: err = %v, want ErrNotDeclared", name, err)
+		}
+	}
+	if lane.calls != 0 {
+		t.Errorf("the model lane was reached %d times by a unit that declared no Models", lane.calls)
+	}
+}
+
+// Declaring one capability grants that one. Taking the declaration away cuts
+// access on the next call, on a Runtime minted while it held.
+func TestADeclaredCapabilityGrantsOnlyItselfAndRemovingItCutsAccess(t *testing.T) {
+	rt, ctx := composeNeeds(t, extensionRuntimeBinding{models: &countingLane{}, blob: blobstore.NewMemory()},
+		extension.Need{Capability: extension.CapabilityObjects, Reason: "Keeps generated files."})
+	if _, err := rt.Models().Complete(ctx, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
+		t.Errorf("Complete with only Objects declared: err = %v, want ErrNotDeclared", err)
+	}
+	if err := rt.Objects().Put(ctx, "a", []byte("x")); err != nil {
+		t.Fatalf("Put while declared: %v", err)
+	}
+	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0"}})
+	if err := rt.Objects().Put(ctx, "a", []byte("x")); !errors.Is(err, extension.ErrNotDeclared) {
+		t.Errorf("Put after the declaration was removed: err = %v, want ErrNotDeclared", err)
 	}
 }

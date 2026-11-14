@@ -159,8 +159,9 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
-- [extensions-can-override-core-s-translati.md](reference/extensions-can-override-core-s-translati.md): how an
-  extension changes the text that core shows.
+- Extension translations: [overview](reference/extensions-can-override-core-s-translati.md), the text an extension changes.
+- Extension AI models and files: [overview](reference/extensions-can-use-core-s-ai-models-s3-a.md), [capabilities](reference/extension-capabilities.md), [why](explanation/extension-capability-grants.md).
+- Extension apps in the drawer: [overview](reference/extensions-can-appear-as-apps-in-the-hom.md), [why](explanation/extension-apps-in-the-drawer.md).
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
@@ -199,8 +200,6 @@ ready before we need it, because the first date comes 24 hours after we learn of
   rights and routes.
 - [extension-privacy-and-retention.md](reference/extension-privacy-and-retention.md): how an extension's data
   follows core's privacy and retention rules, feature by feature.
-- [extension-apps-in-the-drawer.md](explanation/extension-apps-in-the-drawer.md): why an extension may have an app.
-- [extensions-can-appear-as-apps-in-the-hom.md](reference/extensions-can-appear-as-apps-in-the-hom.md): the app work.
 - [mcp-protocol.md](reference/mcp-protocol.md): how `/mcp` works: message forms, limits and client sign-in.
 - [mcp-info.md](reference/mcp-info.md): each MCP tool's text as a client sees it. Generated.
 - [ai-prompts.md](reference/ai-prompts.md): every text this build sends to a model. Generated.

@@ -415,6 +415,9 @@ type Extension struct {
 	// reads without opening its source.
 	SystemReads []SystemRead
 
+	// Needs are the core capabilities the unit uses, with a reason each (see need.go).
+	Needs []Need
+
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit
