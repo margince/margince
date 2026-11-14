@@ -62,9 +62,13 @@ export const recordReferences: Handler = ({ url, json }, state) => {
     default:
       return json({ title: "Invalid record kind", status: 422 }, 422);
   }
+  const requested = url.searchParams.getAll("id");
+  if (requested.length < 1 || requested.length > 100) {
+    return json({ title: "Invalid record count", status: 422 }, 422);
+  }
   const found = new Map(rows.map((row) => [row.id, row]));
   return json({
-    data: [...new Set(url.searchParams.getAll("id"))].flatMap((id) => {
+    data: [...new Set(requested)].flatMap((id) => {
       const row = state.recordReferences.get(`${kind}:${id}`) ?? found.get(id);
       if (!row) return [];
       const patch = kind === "deal" ? state.dealPatches[id] : undefined;
