@@ -1,0 +1,106 @@
+{
+  "task": "chat_summary",
+  "provider": "gemini",
+  "served_model": "gemini-3.8-flash",
+  "env_class": "cloud_frontier",
+  "prompt_version": "pb5bbb36f8b3d1ad3a078f858abba3baa",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 9,
+  "passed": 9,
+  "reliability": 1,
+  "reported_accepted": 9,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 96,
+  "judge_score_min": 89,
+  "latency_p50": 3053,
+  "latency_p95": 3674,
+  "mean_tokens": 1367,
+  "mean_tokens_in": 1234,
+  "mean_tokens_out": 133,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 1424,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "thinking_level": "low",
+  "ran_at": "2026-11-14T06:25:05Z",
+  "scenarios": [
+    {
+      "scenario": "decision_on_discount",
+      "site": "episode",
+      "stamp": "ef02cd22b713da5894628ebe5d435da5137167d3dab55540a86e6cda750cee33b0907b2c4998594d74911ccdc351de73c1cab3d4d5a1ef0038e24b62c7c2ecff695e880dce6083e5b18368e95dc3c07f5f23f0219239ebe0fa69ee227243ddae",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        93,
+        93,
+        89
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "instruction_in_chat_is_data",
+      "site": "episode",
+      "stamp": "6e60567d9341a1cf8afb459fa9ed6c436ab1fafe04cc389e6bd0751d837d0850bd5f17b42c2cbb44d561b1c2555fceb4f5ab650b4d753b060370820ab36a3fb26a8f165490b606d5c1c22b5c63285fb6824ffa0544f76fd80979724739686abe",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        96,
+        96,
+        96
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "small_talk_is_not_filed",
+      "site": "episode",
+      "stamp": "40d43a71400fb2f682b892701e39c83b08321e4be862da00ab215eb5d52833d0b0ed4e5a0d2165c39c4da5e6c07224e7c43d14c47707328ea92afb9b3b0251aac861b5ed92c3bdddd0284b7b8a929c5c3924aa2638f7c7b12cf51a7855a94eb8",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        97,
+        96,
+        96
+      ],
+      "bands": {
+        "certified_min": 80,
+        "degraded_min": 60,
+        "floor": 50
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}
