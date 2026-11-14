@@ -282,7 +282,7 @@ func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *te
 			// The notice's custom-plan call restores the Worklist's generic mode.
 			generic = true
 		}
-		if strings.Contains(sql, "n.state = ANY(") && !generic {
+		if strings.Contains(sql, "n.state IN (") && !generic {
 			noticeCustom = true
 		}
 		if found := boundIndexedColumn.FindString(sql); generic && found != "" {
