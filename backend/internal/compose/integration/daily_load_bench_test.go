@@ -173,8 +173,8 @@ func runMorningLoad(t *testing.T, e *apptest.AppEnv, s Seats, c DailyCorpus, abs
 	}
 	admission := database.ReadAdmissionStats(e.Pool)
 	admission.Wait -= admissionBefore.Wait
-	// The pool keeps its maxima for its whole life, so a maximum the run did not
-	// raise says nothing about this run and is left out of the row.
+	// The pool keeps its maxima for its whole life.
+	// A maximum this run did not raise says nothing about it, so the row omits it.
 	if admission.MaxWait <= admissionBefore.MaxWait {
 		admission.MaxWait = 0
 	}
