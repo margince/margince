@@ -57,16 +57,25 @@ func TestSnapshotsAndBoundedReadsShareCapacityBeforeBorrowing(t *testing.T) {
 			})
 		}()
 	}
+	finishedSeen := 0
 	t.Cleanup(func() {
 		close(release)
-		for range 2 {
+		for ; finishedSeen < 2; finishedSeen++ {
 			if err := <-finished; err != nil {
 				t.Error(err)
 			}
 		}
 	})
-	for range 2 {
-		<-entered
+	for holding := 0; holding < 2; {
+		select {
+		case <-entered:
+			holding++
+		case err := <-finished:
+			finishedSeen++
+			t.Fatalf("a snapshot worker ended before holding its connection: %v", err)
+		case <-time.After(30 * time.Second):
+			t.Fatal("two snapshot workers did not start holding connections within 30s")
+		}
 	}
 	admission := admissionOf(pool)
 	if admission.slots.TryAcquire(1) {
