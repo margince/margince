@@ -3,15 +3,11 @@
 
 package contacts
 
-// The total beside a list page: how many rows match the request once the
-// keyset cursor is set aside. Split from listpage.go, which owns the page
-// read — the count is a second statement over the same WHERE, and keeping it
-// here is what makes "same filters, same scope, no cursor" one readable rule
-// rather than a branch inside the page read.
-
 import (
 	"context"
 	"strings"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -110,4 +106,14 @@ func countWhere[T any](
 		sql:  `SELECT count(*) FROM ` + spec.entity + ` WHERE ` + strings.Join(where, " AND "),
 		args: args,
 	}, nil
+}
+
+// fetched includes the extra row requested to detect another page.
+func exactListTotal(ctx context.Context, tx pgx.Tx, total countQuery, fetched, limit int, firstPage bool) (int, error) {
+	if firstPage && fetched <= limit {
+		return fetched, nil
+	}
+	var matching int
+	err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&matching)
+	return matching, err
 }
