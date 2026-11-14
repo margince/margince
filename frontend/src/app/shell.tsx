@@ -12,6 +12,7 @@ import { ComposeDockProvider } from "../features/mail/composedock";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import { routeHash, useRoute } from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
@@ -236,11 +237,7 @@ export function Shell({
                 onOpenSearch={onOpenSearch}
               />
             )}
-            <CaptureHealthBanner />
-            <ConnectivityBanner />
-            <EconomyBanner />
-            <EmbedReindexBanner />
-            <LicenseBanner />
+            <ShellBanners />
             {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column
@@ -275,3 +272,17 @@ export function Shell({
 
 export { navigate } from "../lib/router";
 export { useRoute };
+
+// Each banner makes its own read; they wait for the first screen's day.
+function ShellBanners() {
+  if (!useFirstScreenSettled()) return null;
+  return (
+    <>
+      <CaptureHealthBanner />
+      <ConnectivityBanner />
+      <EconomyBanner />
+      <EmbedReindexBanner />
+      <LicenseBanner />
+    </>
+  );
+}

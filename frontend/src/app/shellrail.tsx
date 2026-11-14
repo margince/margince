@@ -23,6 +23,7 @@ import { useMe } from "../lib/session";
 import { useGoToShortcuts } from "../lib/shortcuts";
 import { usePhoneViewport } from "../lib/viewport";
 import "./agentrail.css";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import {
   currentClaim,
   firstAvailableRoute,
@@ -46,18 +47,16 @@ const AgentRailBody = lazy(
 
 function AgentRail(props: ComponentProps<typeof AgentRailBody>) {
   const t = useT();
+  // The rail's reads and its animation wait for the first screen's day.
+  const settled = useFirstScreenSettled();
+  const loading = (
+    <span className="arblock" role="status" aria-label={t("common.loading")}>
+      <BusyMark />
+    </span>
+  );
+  if (!settled) return loading;
   return (
-    <Suspense
-      fallback={
-        <span
-          className="arblock"
-          role="status"
-          aria-label={t("common.loading")}
-        >
-          <BusyMark />
-        </span>
-      }
-    >
+    <Suspense fallback={loading}>
       <AgentRailBody {...props} />
     </Suspense>
   );
