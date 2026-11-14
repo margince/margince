@@ -1561,6 +1561,7 @@
     "listLegalReviews": "legal_reviews",
     "listLinkSuggestions": "activities",
     "listLinkTypes": "search",
+    "listLinkableChannels": "connectors",
     "listListHistory": "lists",
     "listListMembers": "lists",
     "listLists": "lists",

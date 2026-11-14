@@ -81027,6 +81027,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
             /** @description The chat could not be reached (`code: channel_provider_unreachable`). */
             502: {
                 headers: {
