@@ -18,7 +18,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
 | `claude-sonnet-5-5` | Claude Code CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 73 of 73 | 🟡 Mostly | Reliable on 72 of 73 jobs tried; not yet: The user asks for the message to Sofia that asks her for an. |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
 | `gpt-5.6-sol` | Codex CLI | 73 of 73 | 🟡 Mostly | Reliable on 72 of 73 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
@@ -94,7 +94,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Near neighbour of case104. Reading what changed must not spend the marker the answer is counted from | Reading does not spend the marker | ✅ | ✅ | ✅ |
 | The user asks to turn off a rule they own, and the agent turns it off | A seeded rule stays on and stays nobody's | ✅ | ✅ | ✅ |
 | What a buyer reads in a deal room changes the moment it is saved, | Ask before the buyer sees it | ✅ | ✅ | ❌ |
-| The user asks for the message to Sofia that asks her for an | The ask goes to the colleague | ✅ | ❌ | ✅ |
+| The user asks for the message to Sofia that asks her for an | The ask goes to the colleague | ✅ | ✅ | ✅ |
 | An agent sets its user's time zone only as source `agent`. The zone | The agent's zone is the agent's | ✅ | ✅ | ✅ |
 | The draft routes reach only an agent's own draft. Where the user | The user's own draft stays theirs | ✅ | ✅ | ✅ |
 | An admin's questions about the installation are reads: the job page, | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅ | ✅ | ✅ |
@@ -146,10 +146,8 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
 | `claude-sonnet-5-5@claude-cli` | 73 of 73 | 73 | 0 | 146/147 | 99% |
-| `gemini-4-hydrogen-medium@agy-cli` | 73 of 73 | 72 | 1 | 145/147 | 99% |
+| `gemini-4-hydrogen-medium@agy-cli` | 73 of 73 | 73 | 0 | 146/148 | 99% |
 | `gpt-5.6-sol@codex-cli` | 73 of 73 | 72 | 1 | 144/154 | 94% |
-
-> `gemini-4-hydrogen-medium@agy-cli` below its bar on: case108_ask_sofia_for_an_intro
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room
 
@@ -224,7 +222,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case107_tidy_up_the_room](../../e2e/llm/scenarios/case107-tidy-up-the-room.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Ask before the buyer sees it | `find_records` or `read_details` or `read_record` |
 | [case107_tidy_up_the_room](../../e2e/llm/scenarios/case107-tidy-up-the-room.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 0/2 | 2 | **1** Ask before the buyer sees it | `find_records` or `read_details` or `read_record` |
 | [case108_ask_sofia_for_an_intro](../../e2e/llm/scenarios/case108-ask-sofia-for-an-intro.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The ask goes to the colleague | - |
-| [case108_ask_sofia_for_an_intro](../../e2e/llm/scenarios/case108-ask-sofia-for-an-intro.yaml) | `gemini-4-hydrogen-medium@agy-cli` | **FAIL** | 1/1 | 2 | **1** The ask goes to the colleague | - |
+| [case108_ask_sofia_for_an_intro](../../e2e/llm/scenarios/case108-ask-sofia-for-an-intro.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The ask goes to the colleague | - |
 | [case108_ask_sofia_for_an_intro](../../e2e/llm/scenarios/case108-ask-sofia-for-an-intro.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The ask goes to the colleague | - |
 | [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |
 | [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |

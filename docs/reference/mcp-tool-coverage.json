@@ -27,14 +27,12 @@
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
       "cases_with_a_committed_run": 73,
-      "cases_that_reached_their_bar": 72,
-      "cases_below_their_bar": 1,
-      "runs": 147,
-      "passed": 145,
-      "reliability": 0.9863945578231292,
-      "cases_below_their_bar_named": [
-        "case108_ask_sofia_for_an_intro"
-      ],
+      "cases_that_reached_their_bar": 73,
+      "cases_below_their_bar": 0,
+      "runs": 148,
+      "passed": 146,
+      "reliability": 0.9864864864864865,
+      "cases_below_their_bar_named": [],
       "route": "Antigravity CLI"
     },
     {
@@ -463,10 +461,10 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 1,
-          "passed": 1,
+          "runs": 2,
+          "passed": 2,
           "pass_at": 2,
-          "held": false,
+          "held": true,
           "driver": "gemini:cli",
           "search": "semantic"
         },
