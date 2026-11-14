@@ -34,7 +34,7 @@ An inbound message keeps `reply_settled_at`: when a newer message on its thread,
 reached its sender, settled it. The owed check reads it before its full clause, so a settled message
 skips the costly thread and answer reads. Only the `reply_settled_stamp` job writes it, through the
 same SQL the full clause uses. Triggers on `activity`, `activity_participant` and `contact_email`
-clear it whenever a write can change it, so a missing or cleared stamp only costs time.
+clear it when a write can change it, so a missing or cleared stamp only costs time.
 
 The stage metrics count database calls as well as statements, with a batch counted as one exchange.
 Internal plan lookups can cost another protocol round trip. The Worklist integration read holds a
