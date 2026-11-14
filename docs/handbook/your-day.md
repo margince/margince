@@ -156,7 +156,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
-- **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that. A mailbox, booking page, AI task or automation that stopped takes no card. A badge beside **Needs you** counts the system issues and opens the Worklist on **System**. A bounced message keeps its card and is counted there too.
+- **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that. A mailbox, booking page, AI task or automation that stopped takes no card. A badge beside **Needs you** counts the system issues and opens the Worklist on **System**. Mail that could not be delivered keeps its card and is counted there too.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
