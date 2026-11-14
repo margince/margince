@@ -68,11 +68,7 @@ func (w *briefGenerateWorker) morningMessageItems(ctx context.Context, now time.
 		if scope == identity.RoutineCombined && chosen.sectioned {
 			chosen.body.Heading(words.MailPersonal)
 		}
-		items := day.Queue
-		if day.Focus != nil {
-			items = day.Focus.Items
-		}
-		chosen.append(items, 3, settings, w.mail.PublicBaseURL, words)
+		chosen.append(morningItems(day), 3, settings, w.mail.PublicBaseURL, words)
 		previous, err := w.engine.LastMailedBefore(ctx, now)
 		if err != nil {
 			return emailview.Message{}, false, nil, err
@@ -210,4 +206,20 @@ func (s *morningSelection) append(items []crmcontracts.WorklistItem, limit int, 
 		}
 	}
 	return shown
+}
+
+// morningItems is what the morning email draws from: Home's Focus, then the
+// stopped sources and automations Focus leaves to System health. Those still
+// owe someone a fix, so a day holding only them is still worth a mail.
+func morningItems(day crmcontracts.Worklist) []crmcontracts.WorklistItem {
+	if day.Focus == nil {
+		return day.Queue
+	}
+	items := slices.Clone(day.Focus.Items)
+	for _, row := range day.Queue {
+		if row.Destination != nil && *row.Destination == crmcontracts.WorklistItemDestinationWorklistDestinationSystemHealth {
+			items = append(items, row)
+		}
+	}
+	return items
 }

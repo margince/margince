@@ -5,7 +5,6 @@
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { en } from "../../i18n/en";
-import { worklistSystemHref } from "../../lib/worklistrouting";
 import {
   readingsDay,
   taskRow,
@@ -31,17 +30,17 @@ it("counts the system items beside Needs you and opens the System view", () => {
   ]);
   render(<BriefFeed day={day} state="ready" />);
   const link = screen.getByRole("link", {
-    name: en["brief.feed.systemBadge_other"].replace("{count}", "3"),
+    name: en["brief.agenda.system_other"].replace("{count}", "3"),
   });
-  expect(link.getAttribute("href")?.endsWith(worklistSystemHref())).toBe(true);
+  expect(link.getAttribute("href")).toContain(
+    "#/home?queue=1&queue_view=system",
+  );
 });
 
 it("names no system items on a day without any", () => {
   render(<BriefFeed day={readingsDay({}, rows)} state="ready" />);
   expect(
-    screen.queryByText(
-      en["brief.feed.systemBadge_other"].replace("{count}", "0"),
-    ),
+    screen.queryByText(en["brief.agenda.system_other"].replace("{count}", "0")),
   ).toBeNull();
-  expect(screen.queryByText(/system item/)).toBeNull();
+  expect(screen.queryByText(/system issue/)).toBeNull();
 });

@@ -28,7 +28,7 @@ import { HOME_DAY_TIMING } from "./elementtiming";
 import "../worklist/worklist.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { pillFigure } from "../../lib/worklistcounts";
-import { worklistSystemHref } from "../../lib/worklistrouting";
+import { worklistLaneHref } from "../../lib/worklistrouting";
 import "./brief.feed.css";
 
 export function BriefFeed({
@@ -164,8 +164,8 @@ function useCardChoice(rows: readonly WorklistItem[]) {
   };
 }
 
-// Stopped sources and automations stay out of the cards; their count opens
-// the System view, where an admin restores them.
+// Stopped sources and automations take no card. The badge counts every row of
+// the System view it opens, so a bounce that holds a card is counted there too.
 function SystemBadge({ day }: Readonly<{ day: Worklist | undefined }>) {
   const { locale } = useLocale();
   const plural = usePlural();
@@ -173,8 +173,8 @@ function SystemBadge({ day }: Readonly<{ day: Worklist | undefined }>) {
   if (!figure || figure.count === 0) return null;
   const count = `${formatNumber(figure.count, locale)}${figure.floor ? "+" : ""}`;
   return (
-    <AppLink className="entity-link" href={worklistSystemHref()}>
-      <Badge>{plural("brief.feed.systemBadge", figure.count, { count })}</Badge>
+    <AppLink className="entity-link" href={worklistLaneHref("system")}>
+      <Badge>{plural("brief.agenda.system", figure.count, { count })}</Badge>
     </AppLink>
   );
 }
