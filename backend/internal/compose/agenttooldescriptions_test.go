@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -577,5 +578,96 @@ func TestEverySchemaIsValidJSONAndArrivesCompacted(t *testing.T) {
 				"the difference is whitespace, and it rides every prompt",
 				spec.Name, len(spec.InputSchema), compact.Len())
 		}
+	}
+}
+
+// routerActionField is the argument a listed router picks its action by.
+const routerActionField = "action"
+
+// undescribedActions names each action of a router that no line of its served
+// action description opens with, as "<action>: what it does". The actions are
+// the registry's, so an action added to a router is checked without a list here.
+func undescribedActions(t *testing.T, spec mcp.ToolSpec) []string {
+	t.Helper()
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatalf("reading %s's input schema: %v", spec.Name, err)
+	}
+	described := schema.Properties[routerActionField].Description
+	var missing []string
+	for _, a := range spec.Actions {
+		line := regexp.MustCompile(`(?m)(^|; )` + regexp.QuoteMeta(a.Action) + `: \S`)
+		if !line.MatchString(described) {
+			missing = append(missing, a.Action)
+		}
+	}
+	return missing
+}
+
+// A model that sees an action only as a name in the enum guesses what it does,
+// or goes looking outside the server. Every listed router therefore says, for
+// each action, what it does, in the description a client is served.
+func TestEveryRouterActionHasALineInItsServedDescription(t *testing.T) {
+	var routers, actions int
+	for _, spec := range servedSurface(t).ListedSpecs() {
+		if spec.Unlisted || spec.ActionField != routerActionField {
+			continue
+		}
+		routers++
+		actions += len(spec.Actions)
+		if missing := undescribedActions(t, spec); len(missing) > 0 {
+			t.Errorf("%s serves action %s with no line of its own in the action description; "+
+				"each action's line comes from the verb it runs, so give that verb a purpose or summary",
+				spec.Name, strings.Join(missing, ", "))
+		}
+	}
+	if routers == 0 || actions == 0 {
+		t.Fatalf("read %d router(s) and %d action(s) off the served listing, so nothing here was checked", routers, actions)
+	}
+}
+
+// The check is worth having only if it fires: a served router with one line
+// taken out must be named with that action.
+func TestTheRouterActionLineCheckNamesTheActionWhoseLineIsGone(t *testing.T) {
+	idx := slices.IndexFunc(servedSurface(t).ListedSpecs(), func(spec mcp.ToolSpec) bool {
+		return !spec.Unlisted && spec.ActionField == routerActionField && len(spec.Actions) > 1
+	})
+	if idx < 0 {
+		t.Fatal("no listed router takes more than one action, so the check cannot be shown to fire")
+	}
+	spec := servedSurface(t).ListedSpecs()[idx]
+	gone := spec.Actions[len(spec.Actions)-1].Action
+	var schema struct {
+		Properties map[string]map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatalf("reading %s's input schema: %v", spec.Name, err)
+	}
+	var text string
+	if err := json.Unmarshal(schema.Properties[routerActionField]["description"], &text); err != nil {
+		t.Fatalf("reading %s's action description: %v", spec.Name, err)
+	}
+	var kept []string
+	for _, line := range strings.Split(text, "\n") {
+		if !strings.HasPrefix(line, gone+": ") {
+			kept = append(kept, line)
+		}
+	}
+	description, err := json.Marshal(strings.Join(kept, "\n"))
+	if err != nil {
+		t.Fatalf("writing the doctored description: %v", err)
+	}
+	schema.Properties[routerActionField]["description"] = description
+	doctored, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatalf("writing the doctored schema: %v", err)
+	}
+	spec.InputSchema = doctored
+	if missing := undescribedActions(t, spec); !slices.Equal(missing, []string{gone}) {
+		t.Errorf("with %s's line for %s taken out, the check named %v", spec.Name, gone, missing)
 	}
 }

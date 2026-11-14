@@ -135,7 +135,7 @@ Everything below is the detail behind the two tables above: which tools each job
 | … some case requires as one of a set | 2 |
 | … **no case requires** | 9 |
 | … of those, permitted somewhere but never required | 4 |
-| Prompt tokens spent on tools no case requires | 5192 |
+| Prompt tokens spent on tools no case requires | 6073 |
 | Use cases | 73 |
 | Acceptance criteria the cases declare, each with a statement | 120 |
 
@@ -556,30 +556,30 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
+| `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
+| `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
-| `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `find_records` | 1.00 | 6 | `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
-| `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
+| `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
+| `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
-| `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
+| `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
 | `preview_import` | 1.00 | 4 | `case10_finish_the_import`, `case3_spreadsheet` |
 | `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
-| `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
-| `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
-| `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
+| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
@@ -593,26 +593,26 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
+| `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
+| `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
 | `read_reports` | 1.00 | 4 | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
 | `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
-| `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `change_state` | 1.00 | 10 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
-| `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
-| `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
+| `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
+| `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
 | `create_record` | 1.00 | 4 | `case54_a_word_from_the_fair`, `case56_not_the_same` |
+| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
-| `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
-| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
-| `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
@@ -627,27 +627,27 @@ Every run of every case requiring this tool passed, for the model named.
 
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
-| `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
 | `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
-| `change_activities` | 1.00 | 12 | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
+| `change_activities` | 1.00 | 12 | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
+| `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
+| `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
+| `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
 | `send_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
-| `change_capture` | 1.00 | 4 | `case82_keep_that_newsletter_out`, `case97_import_this_card` |
-| `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
-| `change_attention` | 1.00 | 6 | `case104_mark_it_seen`, `case70_clear_my_notices`, `case99_they_raised_money` |
 | `change_compliance` | 1.00 | 8 | `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data` |
+| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
+| `read_forecast` | 1.00 | 4 | `case22_can_i_trust_the_numbers`, `case50_what_moved_my_quarter` |
+| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
 | `bulk_update_records` | 1.00 | 2 | `case47_tidy_the_fair_list` |
 | `read_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
-| `change_access` | 1.00 | 2 | `case114_the_fleet_team` |
-| `change_offers` | 1.00 | 2 | `case71_record_the_signed_contract` |
+| `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `update_record` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case43_the_fair_leads_are_prospects` |
 | `change_lists` | 1.00 | 2 | `case47_tidy_the_fair_list` |
-| `change_my_settings` | 1.00 | 6 | `case102_shorter_in_my_voice`, `case109_show_my_times_in_lisbon`, `case115_my_hours_and_my_language` |
-| `change_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
+| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
 | `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
@@ -688,8 +688,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
 | `read_reports` | 0.80 | 4/5 | - | `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` |
-| `find_records` | 0.86 | 6/7 | - | `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `change_state` | 0.91 | 10/11 | - | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
+| `find_records` | 0.86 | 6/7 | - | `case5_before_the_meeting`, `case63_is_she_already_here`, `case6_ask_the_company` |
 | `preview_import` | 0.80 | 4/5 | - | `case10_finish_the_import`, `case3_spreadsheet` |
 | `create_record` | 0.80 | 4/5 | - | `case54_a_word_from_the_fair`, `case56_not_the_same` |
 | `resolve_duplicates` | 0.80 | 4/5 | - | `case33_two_cards_for_one_company`, `case56_not_the_same` |
@@ -728,7 +728,7 @@ and the case's pass rate belongs to the set rather than to this row. That is why
 
 | Tool | Tokens | Required as one of a set by | Permitted in | Graded by | Attached to |
 |---|---:|---|---|---|---|
-| `read_record` | 336 | `case105_what_changed_there`, `case107_tidy_up_the_room`, `case66_what_are_these_two_worth`, `case67_where_do_i_open_it` | `case104_mark_it_seen`, `case108_ask_sofia_for_an_intro`, `case10_finish_the_import`, `case110_write_greta_a_thank_you`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case117_log_it_and_say_what_waits`, `case118_is_the_crane_job_at_risk`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case99_they_raised_money`, `case9_filed_in_the_wrong_place` | `agent_loop` | `morning_brief`, `overnight_at_risk_sweep` |
+| `read_record` | 284 | `case105_what_changed_there`, `case107_tidy_up_the_room`, `case66_what_are_these_two_worth`, `case67_where_do_i_open_it` | `case104_mark_it_seen`, `case108_ask_sofia_for_an_intro`, `case10_finish_the_import`, `case110_write_greta_a_thank_you`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case117_log_it_and_say_what_waits`, `case118_is_the_crane_job_at_risk`, `case1_log_it`, `case23_find_us_a_slot`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case41_close_the_project`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case44_chase_what_is_slipping`, `case45_move_the_deal_on`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case48_that_whole_thread_is_filed_wrong`, `case49_who_can_introduce_us`, `case4_use_the_moment`, `case50_what_moved_my_quarter`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case5_before_the_meeting`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case6_ask_the_company`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case99_they_raised_money`, `case9_filed_in_the_wrong_place` | `agent_loop` | `morning_brief`, `overnight_at_risk_sweep` |
 | `whoami` | 129 | `case75_sofia_is_leaving` | `case102_shorter_in_my_voice`, `case103_stop_telling_me`, `case104_mark_it_seen`, `case105_what_changed_there`, `case106_turn_that_rule_off`, `case107_tidy_up_the_room`, `case109_show_my_times_in_lisbon`, `case110_write_greta_a_thank_you`, `case111_how_is_the_workspace_doing`, `case112_my_plan_and_the_dossier`, `case113_after_the_sales_review`, `case114_the_fleet_team`, `case115_my_hours_and_my_language`, `case116_the_rate_and_the_logo`, `case117_log_it_and_say_what_waits`, `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing`, `case33_two_cards_for_one_company`, `case40_sort_the_queue`, `case42_can_i_answer_on_whatsapp`, `case43_the_fair_leads_are_prospects`, `case46_get_us_in_a_room`, `case47_tidy_the_fair_list`, `case54_a_word_from_the_fair`, `case56_not_the_same`, `case58_quiet_for_three_weeks`, `case59_file_it_on_the_meeting_and_the_contract`, `case60_send_one_draft_one`, `case61_what_have_i_promised`, `case62_held_meetings_to_opportunities`, `case63_is_she_already_here`, `case64_catch_me_up_and_the_brief`, `case65_clear_out_the_dead_deals`, `case70_clear_my_notices`, `case71_record_the_signed_contract`, `case74_read_the_file_back`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case78_she_asked_us_to_stop`, `case79_put_it_on_hold`, `case81_she_wants_her_data`, `case82_keep_that_newsletter_out`, `case85_the_pilot_slipped`, `case86_tell_her_what_we_hold`, `case88_send_it_anyway`, `case91_add_a_review_stage`, `case93_count_that_stage_as_won`, `case94_a_field_for_the_region`, `case97_import_this_card`, `case99_they_raised_money` | - | - |
 
 ## 4. What no use case requires
@@ -743,11 +743,11 @@ A tool in the `Permitted in` column is worse than one with nothing: a case is al
 
 | Tool | Tokens | Graded by | Permitted in | Attached to |
 |---|---:|---|---|---|
+| `run_research` | 1344 | - | `case108_ask_sofia_for_an_intro` | - |
 | `read_analytics` | 1020 | - | `case20_put_it_in_the_board_pack`, `case49_who_can_introduce_us`, `case62_held_meetings_to_opportunities` | - |
+| `change_relationships` | 816 | - | - | - |
 | `change_record_parts` | 815 | - | - | - |
-| `run_research` | 776 | - | `case108_ask_sofia_for_an_intro` | - |
 | `read_view` | 683 | - | `case102_shorter_in_my_voice`, `case106_turn_that_rule_off`, `case118_is_the_crane_job_at_risk`, `case76_she_said_yes_at_the_fair`, `case77_record_her_yes`, `case91_add_a_review_stage`, `case94_a_field_for_the_region` | - |
-| `change_relationships` | 503 | - | - | - |
 | `decide_approvals` | 429 | - | - | - |
 | `annotate_brief` | 417 | `agent_loop` | - | `morning_brief` |
 | `enrich` | 395 | `enrich` | - | - |

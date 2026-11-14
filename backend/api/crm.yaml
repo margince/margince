@@ -4613,7 +4613,7 @@ paths:
       operationId: getCompanyScan
       x-mcp-tool: { verb: get_company_scan, router: read_details, action: company_scan, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: What this account needs, as the model last judged it for this reader.
+      summary: What this company needs, as the model last judged it for this reader.
       description: |
         The account scan is the model's reading of one account for one reader: what the
         exchanges and the pipeline say needs a contact, each finding citing the records it
@@ -4645,7 +4645,7 @@ paths:
       operationId: ensureCompanyScan
       x-mcp-tool: { verb: ensure_company_scan, router: run_research, action: refresh_scan, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Make sure this reader's scan of the account is current, reading it again only when the account changed.
+      summary: Make sure this reader's scan of the company is current, reading it again only when the company changed.
       description: |
         Opening an account page calls this once. It compares the account as this reader
         sees it now — a fingerprint over the composite read, the recent message words, the
@@ -4752,7 +4752,7 @@ paths:
       deprecated: true
       x-mcp-tool: { verb: get_company_brief, router: read_details, action: company_brief, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: The standing account brief — what this account is, where it stands, and what changed.
+      summary: The standing company brief — what this company is, where it stands, and what changed.
       description: |
         A short written brief over the same records the 360 serves, cached and reused
         until its inputs change.
@@ -4798,7 +4798,7 @@ paths:
       deprecated: true
       x-mcp-tool: { verb: regenerate_company_brief, router: run_research, action: refresh_company_brief, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Regenerate this account's brief, ignoring the cached one.
+      summary: Regenerate this company's brief, ignoring the cached one.
       description: |
         The explicit refresh behind the brief card's "outdated — refresh". It reads and
         writes only the cached brief: no record field changes, and nothing is sent.
@@ -4916,7 +4916,7 @@ paths:
       x-waits-on-model: always
       x-mcp-tool: { verb: ask_about_company, router: run_research, action: ask_about_company, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Ask one of the prepared questions about this account.
+      summary: Ask one of the prepared questions about this company.
       description: |
         The company view's "Ask Margince". The question is chosen from a fixed list, not
         typed: each prepared question names records the answer must be written from, so
@@ -10645,7 +10645,7 @@ paths:
       operationId: previewAccountSendAuthorization
       x-mcp-tool: { verb: preview_account_send_authorization, router: change_activities, action: check_new_send, tier: auto_execute, scope: write, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Would this account-started message be allowed, and on what ground.
+      summary: Would a new message with no thread behind it be allowed, and on what ground.
       description: |
         The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
         with no anchor to derive a category from. It names its own `links`, exactly as the send
@@ -28806,7 +28806,7 @@ paths:
     post:
       tags: [Identity]
       operationId: removeMember
-      summary: Retire an account while preserving historical attribution.
+      summary: Retire a member while preserving historical attribution.
       description: Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: remove_workspace_member, router: change_access, action: remove_member, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
@@ -35197,7 +35197,7 @@ paths:
       operationId: getMyLinkedInReach
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_my_linked_in_reach, router: read_details, action: my_linkedin_reach, tier: auto_execute, scope: read, served_by: route }
-      summary: Which accounts your imported network reaches.
+      summary: Which companies your imported network reaches.
       parameters:
         - $ref: '#/components/parameters/Limit'
         - name: cursor
@@ -36055,7 +36055,7 @@ paths:
       operationId: listCompanyContracts
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_company_contracts, router: read_details, action: company_contracts, tier: auto_execute, scope: read, served_by: route }
-      summary: The agreements this account holds, newest first (CONTRACT-WIRE-1).
+      summary: The agreements this company holds, newest first (CONTRACT-WIRE-1).
       description: |
         Every contract anchored to this company, whatever its status.
 

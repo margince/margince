@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 2,
     "never_driven": 9,
     "permitted_but_never_required": 4,
-    "tokens_served_but_never_driven": 5192,
+    "tokens_served_but_never_driven": 6073,
     "use_case_cases": 73,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
@@ -3896,6 +3896,20 @@
   ],
   "tools": [
     {
+      "name": "run_research",
+      "tokens": 1344,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case108_ask_sofia_for_an_intro"
+      ],
+      "driven": false,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {}
+    },
+    {
       "name": "read_analytics",
       "tokens": 1020,
       "agents": [],
@@ -3912,8 +3926,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "change_record_parts",
-      "tokens": 815,
+      "name": "change_relationships",
+      "tokens": 816,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -3924,14 +3938,12 @@
       "measured_by_model": {}
     },
     {
-      "name": "run_research",
-      "tokens": 776,
+      "name": "change_record_parts",
+      "tokens": 815,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case108_ask_sofia_for_an_intro"
-      ],
+      "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
@@ -3952,18 +3964,6 @@
         "case91_add_a_review_stage",
         "case94_a_field_for_the_region"
       ],
-      "driven": false,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {}
-    },
-    {
-      "name": "change_relationships",
-      "tokens": 503,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
       "driven": false,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
@@ -4027,7 +4027,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 336,
+      "tokens": 284,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -4165,6 +4165,132 @@
       "measured_by_model": {}
     },
     {
+      "name": "read_details",
+      "tokens": 4397,
+      "agents": [],
+      "required_by_cases": [
+        "case112_my_plan_and_the_dossier",
+        "case88_send_it_anyway"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case105_what_changed_there",
+        "case107_tidy_up_the_room",
+        "case110_write_greta_a_thank_you"
+      ],
+      "permitted_in_cases": [
+        "case106_turn_that_rule_off",
+        "case111_how_is_the_workspace_doing",
+        "case70_clear_my_notices",
+        "case75_sofia_is_leaving",
+        "case86_tell_her_what_we_hold"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_settings",
+      "tokens": 3159,
+      "agents": [],
+      "required_by_cases": [
+        "case106_turn_that_rule_off",
+        "case116_the_rate_and_the_logo",
+        "case91_add_a_review_stage"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case93_count_that_stage_as_won"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_activities",
+      "tokens": 2821,
+      "agents": [
+        "overnight_at_risk_sweep"
+      ],
+      "required_by_cases": [
+        "case42_can_i_answer_on_whatsapp",
+        "case46_get_us_in_a_room",
+        "case48_that_whole_thread_is_filed_wrong",
+        "case59_file_it_on_the_meeting_and_the_contract",
+        "case74_read_the_file_back",
+        "case9_filed_in_the_wrong_place"
+      ],
+      "required_as_one_of_a_set_by_cases": [
+        "case110_write_greta_a_thank_you",
+        "case1_log_it"
+      ],
+      "permitted_in_cases": [
+        "case117_log_it_and_say_what_waits"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 13,
+          "passed": 12,
+          "reliability": 0.9230769230769231,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 13,
+          "passed": 12,
+          "reliability": 0.9230769230769231,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 12,
+          "passed": 12,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "read_reports",
       "tokens": 2784,
       "agents": [],
@@ -4281,90 +4407,38 @@
       }
     },
     {
-      "name": "read_details",
-      "tokens": 2241,
+      "name": "change_state",
+      "tokens": 2260,
       "agents": [],
       "required_by_cases": [
-        "case112_my_plan_and_the_dossier",
-        "case88_send_it_anyway"
+        "case40_sort_the_queue",
+        "case41_close_the_project",
+        "case45_move_the_deal_on",
+        "case47_tidy_the_fair_list",
+        "case85_the_pilot_slipped"
       ],
-      "required_as_one_of_a_set_by_cases": [
-        "case105_what_changed_there",
-        "case107_tidy_up_the_room",
-        "case110_write_greta_a_thank_you"
-      ],
-      "permitted_in_cases": [
-        "case106_turn_that_rule_off",
-        "case111_how_is_the_workspace_doing",
-        "case70_clear_my_notices",
-        "case75_sofia_is_leaving",
-        "case86_tell_her_what_we_hold"
-      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 4,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "change_activities",
-      "tokens": 2176,
-      "agents": [
-        "overnight_at_risk_sweep"
-      ],
-      "required_by_cases": [
-        "case42_can_i_answer_on_whatsapp",
-        "case46_get_us_in_a_room",
-        "case48_that_whole_thread_is_filed_wrong",
-        "case59_file_it_on_the_meeting_and_the_contract",
-        "case74_read_the_file_back",
-        "case9_filed_in_the_wrong_place"
-      ],
-      "required_as_one_of_a_set_by_cases": [
-        "case110_write_greta_a_thank_you",
-        "case1_log_it"
-      ],
-      "permitted_in_cases": [
-        "case117_log_it_and_say_what_waits"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 13,
-          "passed": 12,
-          "reliability": 0.9230769230769231,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 13,
-          "passed": 12,
-          "reliability": 0.9230769230769231,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
           "runs": 12,
-          "passed": 12,
+          "passed": 10,
+          "reliability": 0.8333333333333334,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 10,
+          "passed": 10,
           "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 11,
+          "passed": 10,
+          "reliability": 0.9090909090909091,
           "cases_below_their_bar": []
         }
       }
@@ -4468,15 +4542,12 @@
       }
     },
     {
-      "name": "change_state",
-      "tokens": 1969,
+      "name": "change_capture",
+      "tokens": 1817,
       "agents": [],
       "required_by_cases": [
-        "case40_sort_the_queue",
-        "case41_close_the_project",
-        "case45_move_the_deal_on",
-        "case47_tidy_the_fair_list",
-        "case85_the_pilot_slipped"
+        "case82_keep_that_newsletter_out",
+        "case97_import_this_card"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
@@ -4485,38 +4556,36 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 12,
-          "passed": 10,
-          "reliability": 0.8333333333333334,
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 10,
-          "passed": 10,
+          "runs": 4,
+          "passed": 4,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 11,
-          "passed": 10,
-          "reliability": 0.9090909090909091,
+          "runs": 4,
+          "passed": 4,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
     },
     {
-      "name": "change_settings",
-      "tokens": 1730,
+      "name": "change_attention",
+      "tokens": 1775,
       "agents": [],
       "required_by_cases": [
-        "case106_turn_that_rule_off",
-        "case116_the_rate_and_the_logo",
-        "case91_add_a_review_stage"
+        "case104_mark_it_seen",
+        "case70_clear_my_notices",
+        "case99_they_raised_money"
       ],
       "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case93_count_that_stage_as_won"
-      ],
+      "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
@@ -4577,7 +4646,7 @@
     },
     {
       "name": "change_reports",
-      "tokens": 1357,
+      "tokens": 1599,
       "agents": [],
       "required_by_cases": [
         "case113_after_the_sales_review"
@@ -4609,12 +4678,14 @@
       }
     },
     {
-      "name": "change_capture",
-      "tokens": 1129,
+      "name": "change_compliance",
+      "tokens": 1274,
       "agents": [],
       "required_by_cases": [
-        "case82_keep_that_newsletter_out",
-        "case97_import_this_card"
+        "case77_record_her_yes",
+        "case78_she_asked_us_to_stop",
+        "case79_put_it_on_hold",
+        "case81_she_wants_her_data"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
@@ -4623,20 +4694,88 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 8,
+          "passed": 8,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 8,
+          "passed": 8,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 8,
+          "passed": 8,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_offers",
+      "tokens": 1096,
+      "agents": [],
+      "required_by_cases": [
+        "case71_record_the_signed_contract"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_access",
+      "tokens": 1074,
+      "agents": [],
+      "required_by_cases": [
+        "case114_the_fleet_team"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case75_sofia_is_leaving"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -4720,77 +4859,6 @@
       }
     },
     {
-      "name": "change_attention",
-      "tokens": 899,
-      "agents": [],
-      "required_by_cases": [
-        "case104_mark_it_seen",
-        "case70_clear_my_notices",
-        "case99_they_raised_money"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "change_compliance",
-      "tokens": 879,
-      "agents": [],
-      "required_by_cases": [
-        "case77_record_her_yes",
-        "case78_she_asked_us_to_stop",
-        "case79_put_it_on_hold",
-        "case81_she_wants_her_data"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 8,
-          "passed": 8,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "create_record",
       "tokens": 873,
       "agents": [],
@@ -4824,6 +4892,41 @@
           "runs": 5,
           "passed": 4,
           "reliability": 0.8,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
+      "name": "change_my_settings",
+      "tokens": 867,
+      "agents": [],
+      "required_by_cases": [
+        "case102_shorter_in_my_voice",
+        "case109_show_my_times_in_lisbon",
+        "case115_my_hours_and_my_language"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 6,
+          "passed": 6,
+          "reliability": 1,
           "cases_below_their_bar": []
         }
       }
@@ -4897,68 +5000,37 @@
       }
     },
     {
-      "name": "change_access",
-      "tokens": 706,
+      "name": "change_tags",
+      "tokens": 652,
       "agents": [],
       "required_by_cases": [
-        "case114_the_fleet_team"
+        "case30_a_word_for_it",
+        "case31_wrong_word_on_the_record",
+        "case32_two_words_for_one_thing"
       ],
       "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [
-        "case75_sofia_is_leaving"
+        "case56_not_the_same"
       ],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
+          "runs": 7,
+          "passed": 6,
+          "reliability": 0.8571428571428571,
           "cases_below_their_bar": []
         },
         "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "change_offers",
-      "tokens": 678,
-      "agents": [],
-      "required_by_cases": [
-        "case71_record_the_signed_contract"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
+          "runs": 6,
+          "passed": 6,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -5066,78 +5138,6 @@
       }
     },
     {
-      "name": "change_my_settings",
-      "tokens": 601,
-      "agents": [],
-      "required_by_cases": [
-        "case102_shorter_in_my_voice",
-        "case109_show_my_times_in_lisbon",
-        "case115_my_hours_and_my_language"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "change_tags",
-      "tokens": 562,
-      "agents": [],
-      "required_by_cases": [
-        "case30_a_word_for_it",
-        "case31_wrong_word_on_the_record",
-        "case32_two_words_for_one_thing"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case56_not_the_same"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 7,
-          "passed": 6,
-          "reliability": 0.8571428571428571,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 6,
-          "passed": 6,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
       "name": "draft_outbound",
       "tokens": 517,
       "agents": [],
@@ -5174,6 +5174,39 @@
       }
     },
     {
+      "name": "schedule_meeting",
+      "tokens": 484,
+      "agents": [],
+      "required_by_cases": [
+        "case46_get_us_in_a_room"
+      ],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": null,
+      "measured_by_model": {
+        "claude-sonnet-5-5@claude-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        },
+        "gemini-3.8-flash-medium@agy-cli": {
+          "runs": 3,
+          "passed": 2,
+          "reliability": 0.6666666666666666,
+          "cases_below_their_bar": []
+        },
+        "gpt-5.6-sol@codex-cli": {
+          "runs": 2,
+          "passed": 2,
+          "reliability": 1,
+          "cases_below_their_bar": []
+        }
+      }
+    },
+    {
       "name": "list_approvals",
       "tokens": 474,
       "agents": [],
@@ -5201,39 +5234,6 @@
           "runs": 2,
           "passed": 2,
           "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gpt-5.6-sol@codex-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        }
-      }
-    },
-    {
-      "name": "schedule_meeting",
-      "tokens": 456,
-      "agents": [],
-      "required_by_cases": [
-        "case46_get_us_in_a_room"
-      ],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": null,
-      "measured_by_model": {
-        "claude-sonnet-5-5@claude-cli": {
-          "runs": 2,
-          "passed": 2,
-          "reliability": 1,
-          "cases_below_their_bar": []
-        },
-        "gemini-3.8-flash-medium@agy-cli": {
-          "runs": 3,
-          "passed": 2,
-          "reliability": 0.6666666666666666,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {

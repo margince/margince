@@ -69,13 +69,11 @@ var readAnalyticsCopy = toolCopy{
 }
 
 var changeActivitiesCopy = toolCopy{
-	Purpose: "Log, plan and file activities. log records an email, call, meeting, note or " +
-		"message that already happened, on its records; one the user only tells you about is " +
-		"logged from what they said, saying so, without its exact words. task creates a task for a seat. attach " +
-		"attaches a file to a record. relink files one activity under another record too, and " +
-		"relink_many a named set; with replace_existing_of_type they move it off the old record " +
-		"of that type instead. ready says the user is ready for a meeting they attend; unready " +
-		"takes it back.",
+	Purpose: "Log, plan and file activities, and work the mail, drafts and documents on them. log " +
+		"records what already happened; one the user only tells you about is logged from what they " +
+		"said, saying so, without its exact words. relink files one activity under another record " +
+		"too, and relink_many a named set; with replace_existing_of_type they move it off the old " +
+		"record of that type instead.",
 	Limits: "relink and relink_many usually run at once; filing under a project, or a move the " +
 		"installation's policy holds, answers staged with an approval id, and nothing has moved " +
 		"until the retry answers. Tell the user before you file under a project, " +
@@ -103,17 +101,7 @@ var scheduleMeetingCopy = toolCopy{
 }
 
 var changeStateCopy = toolCopy{
-	Purpose: "Move a lead, deal or project on, or set up a company as a partner. qualify fills what a lead's own data already " +
-		"implies, today the company name from its email domain, and names the fields still " +
-		"empty. promote turns a lead who has genuinely engaged into a contact. disqualify " +
-		"closes out a lead going nowhere. demote reverses a promotion. move_deal moves a deal " +
-		"to a stage, with a note. move_project moves a project to a phase; closed closes it. set_up_partner starts a " +
-		"partner program on a company, with company_id, partner_kinds and optionally " +
-		"relationship_stage, next_step and next_step_due_at. record_project_health and " +
-		"correct_project_health say how a project is going, transfer_projects hands one owner's " +
-		"projects to another, and decide_commission approves, pays or voids a commission entry. " +
-		"merge_member_accounts consolidates an unused member into a different surviving colleague " +
-		"after a confirmed retirement preview.",
+	Purpose: "Move a lead, deal or project on, or set up a company as a partner.",
 	Limits: "promote needs a trigger naming the engagement; cold outreach nobody answered " +
 		"never promotes. demote needs a reason and is refused once the contact owns a deal. " +
 		"set_up_partner always waits for a human, takes no margin tier (a human sets that on the " +
@@ -123,7 +111,8 @@ var changeStateCopy = toolCopy{
 		"move_project to closed needs a reason and leaves the project's tasks open. When the user " +
 		"asked for the close, report what is still open and close: an open task is news for " +
 		"them, not a reason to hold back. " +
-		"read_workspace topic pipelines gives the stage ids.",
+		"read_workspace topic pipelines gives the stage ids. merge_member_accounts needs a confirmed " +
+		"preview first: read_workspace topic member_retirement with mode merge.",
 	Instead: "Use update_record for a record's other fields, and enrich to learn about a " +
 		"company from its website.",
 	Retain: "A promotion answers with the new contact's id. A staged answer's approval id is " +
