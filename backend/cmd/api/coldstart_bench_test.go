@@ -24,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // coldStartBudget is PERF-6: the single binary answers ready within 2 s.
@@ -77,6 +78,10 @@ func TestColdStartBudget(t *testing.T) {
 // binary an operator runs.
 func buildAPI(t *testing.T) string {
 	t.Helper()
+	// The build reads the composed extensions, and the boot reads the config.
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../extensions", "../../../build/composition", "../../../config/margince.example.yaml"); err != nil {
+		t.Fatal(err)
+	}
 	binary := filepath.Join(t.TempDir(), "api")
 	build := exec.Command("go", "build", "-o", binary, ".")
 	if out, err := build.CombinedOutput(); err != nil {
