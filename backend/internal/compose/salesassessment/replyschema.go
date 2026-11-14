@@ -49,7 +49,7 @@ func replySchema(in Input) json.RawMessage {
 	))
 }
 
-// distinct is ids sorted with each named once, so an enum lists no value twice.
+// distinct is ids sorted with repeats dropped, so an enum lists no value twice.
 func distinct(ids []string) []string {
 	return slices.Compact(slices.Sorted(slices.Values(ids)))
 }
