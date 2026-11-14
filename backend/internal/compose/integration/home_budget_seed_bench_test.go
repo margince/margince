@@ -75,6 +75,17 @@ func seedHomeProfile(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64
 // visits each one often.
 func settleHomeCorpus(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
+	stampSeededMail(t, e)
+	if _, err := e.Owner.Exec(context.Background(), `VACUUM ANALYZE`); err != nil {
+		t.Fatalf("vacuuming the seeded Home corpus: %v", err)
+	}
+}
+
+// stampSeededMail runs the reply-settled stamping pass until it stamps nothing,
+// as the worker's pass does within a minute of capture. A bench that read
+// unstamped mail would time the owed check's full clause on every message.
+func stampSeededMail(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
 	ws := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Pool)
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws), principal.Principal{
 		Type: principal.PrincipalSystem, ID: "system:reply_settled_stamp",
@@ -86,9 +97,6 @@ func settleHomeCorpus(t *testing.T, e *apptest.AppEnv) {
 		if stamped, err = store.StampReplySettledBatch(ctx, 500); err != nil {
 			t.Fatalf("stamping the seeded mail: %v", err)
 		}
-	}
-	if _, err := e.Owner.Exec(context.Background(), `VACUUM ANALYZE`); err != nil {
-		t.Fatalf("vacuuming the seeded Home corpus: %v", err)
 	}
 }
 
