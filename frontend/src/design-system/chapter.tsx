@@ -10,8 +10,8 @@ import { FlatPanelHeads } from "./panel";
 import "./chapter.css";
 
 // A long record tab reads as a few chapters in a fixed order. Every chapter
-// has the same anatomy, so a reader learns the rhythm once and scans the rest:
-// a title, the one sentence that answers it, the chapter's verb, then one card.
+// has the same anatomy, so a reader learns the rhythm once. The anatomy is a
+// title, the one sentence that answers it, the chapter's verb, then one card.
 export function Chapter({
   id,
   title,

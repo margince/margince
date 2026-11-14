@@ -15,10 +15,10 @@ import { useNetworkReadings } from "./decision";
 
 // What each reading says when the payload is SHORT of what it rests on.
 //
-// The hook is read directly rather than through the tab: these are the
-// readings' own contract (a value is a non-empty string, a detail is a receipt
-// and never a substituted one), and reading them through the page would mean
-// the fixture had to satisfy a graph, an ask list and a map.
+// The hook is read directly rather than through the tab. These are the
+// readings' own contract: a value is a non-empty string, and a detail is a
+// receipt, never a substituted one. Through the page, the fixture would need
+// a graph, an ask list and a map.
 
 type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
 type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
@@ -169,8 +169,8 @@ describe("the latest change states no receipt it does not have", () => {
   });
 });
 
-// A name the server sent as whitespace is a name it does not have, and letting
-// it through reads as a reading which failed to load.
+// A name the server sent as whitespace is a name it does not have. Letting it
+// through reads as a reading which failed to load.
 describe("a name the server sent blank is no name", () => {
   it("reads a blank legacy route name as no way in", () => {
     stubSession();
@@ -191,9 +191,9 @@ describe("a name the server sent blank is no name", () => {
   });
 });
 
-// Once the colleague has agreed the move is the REQUESTER's, and where the
-// payload leaves them unnamed the session is the only thing that can name
-// them, which it may do only when the reader IS that requester.
+// Once the colleague has agreed, the move is the requester's. Where the
+// payload leaves them unnamed, only the session can name them. It may do so
+// only when the reader is that requester.
 describe("the handoff names nobody it cannot name yet", () => {
   const mine = ask({
     status: "accepted",

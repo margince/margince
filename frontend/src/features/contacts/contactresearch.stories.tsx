@@ -8,9 +8,9 @@ import {
 import { providerCompletedProfile } from "./contactprovider.fixtures";
 import { ContactResearchTab } from "./contactresearch";
 
-// The Research tab's own gallery: its three chapters (what to check, what
-// each source says, the record's own keeping), the tab with nothing to check,
-// and the provider half withheld for lack of a grant.
+// The Research tab's own gallery. Its three chapters are what to check, what
+// each source says, and the record's own keeping. It also shows the tab with
+// nothing to check, and the provider half withheld for lack of a grant.
 
 const meta: Meta<typeof ContactResearchTab> = {
   title: "Records/Contact 360/Research tab",

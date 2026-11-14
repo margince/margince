@@ -20,9 +20,9 @@ import { ContactHoldSection } from "./contactrail";
 import "./contact360.css";
 
 // The Research tab: what a machine read about this contact, kept beside the
-// canonical record rather than folded into it, then the record-keeping a rep
-// does not need on the overview. Three chapters in a fixed order: what waits
-// for the reader's verdict, what each source says, and the record itself.
+// canonical record rather than folded into it. Then comes the record-keeping
+// a rep does not need on the overview. Three chapters in a fixed order: what
+// waits for the reader's verdict, what each source says, and the record.
 // The enrichment rows are the panel that takes a verdict on each value
 // (EnrichedFields); a second, read-only spelling of that list drifted.
 
@@ -193,9 +193,9 @@ function SourcesBody({
   );
 }
 
-// The record-keeping a rep does not need on the overview: consent with its
-// proof, billing roles, every field with its edit, the correspondence hold,
-// the lists and what extensions add.
+// The record-keeping a rep does not need on the overview. It holds consent
+// with its proof, billing roles, every field with its edit, and the
+// correspondence hold. The lists and what extensions add close it.
 function ContactRecordKeeping({ view }: Readonly<{ view: Contact360 }>) {
   return (
     <>
