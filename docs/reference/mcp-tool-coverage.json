@@ -18,21 +18,23 @@
       "cases_with_a_committed_run": 73,
       "cases_that_reached_their_bar": 73,
       "cases_below_their_bar": 0,
-      "runs": 152,
+      "runs": 147,
       "passed": 146,
-      "reliability": 0.9605263157894737,
+      "reliability": 0.9931972789115646,
       "cases_below_their_bar_named": [],
       "route": "Claude Code CLI"
     },
     {
       "model": "gemini-4-hydrogen-medium@agy-cli",
       "cases_with_a_committed_run": 73,
-      "cases_that_reached_their_bar": 73,
-      "cases_below_their_bar": 0,
-      "runs": 148,
-      "passed": 146,
-      "reliability": 0.9864864864864865,
-      "cases_below_their_bar_named": [],
+      "cases_that_reached_their_bar": 72,
+      "cases_below_their_bar": 1,
+      "runs": 147,
+      "passed": 145,
+      "reliability": 0.9863945578231292,
+      "cases_below_their_bar_named": [
+        "case108_ask_sofia_for_an_intro"
+      ],
       "route": "Antigravity CLI"
     },
     {
@@ -461,10 +463,10 @@
         },
         {
           "model": "gemini-4-hydrogen-medium@agy-cli",
-          "runs": 2,
-          "passed": 2,
+          "runs": 1,
+          "passed": 1,
           "pass_at": 2,
-          "held": true,
+          "held": false,
           "driver": "gemini:cli",
           "search": "semantic"
         },
@@ -1033,7 +1035,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1205,7 +1207,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1291,7 +1293,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1334,7 +1336,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -1549,7 +1551,7 @@
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
           "pass_at": 2,
           "held": true,
@@ -2059,10 +2061,14 @@
         2
       ],
       "requires": [
-        "draft_outbound",
-        "send_outbound"
+        "draft_outbound"
       ],
-      "requires_one_of": [],
+      "requires_one_of": [
+        [
+          "change_activities",
+          "send_outbound"
+        ]
+      ],
       "by_model": [
         {
           "model": "claude-sonnet-5-5@claude-cli",
@@ -4262,7 +4268,8 @@
       ],
       "required_as_one_of_a_set_by_cases": [
         "case110_write_greta_a_thank_you",
-        "case1_log_it"
+        "case1_log_it",
+        "case60_send_one_draft_one"
       ],
       "permitted_in_cases": [
         "case117_log_it_and_say_what_waits"
@@ -4426,9 +4433,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 12,
+          "runs": 10,
           "passed": 10,
-          "reliability": 0.8333333333333334,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
@@ -4617,30 +4624,31 @@
       "tokens": 1722,
       "agents": [],
       "required_by_cases": [
-        "case44_chase_what_is_slipping",
+        "case44_chase_what_is_slipping"
+      ],
+      "required_as_one_of_a_set_by_cases": [
         "case60_send_one_draft_one"
       ],
-      "required_as_one_of_a_set_by_cases": [],
       "permitted_in_cases": [],
       "driven": true,
       "required_only_as_one_of_a_set": false,
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         },
         "gpt-5.6-sol@codex-cli": {
-          "runs": 4,
-          "passed": 4,
+          "runs": 2,
+          "passed": 2,
           "reliability": 1,
           "cases_below_their_bar": []
         }
@@ -5019,9 +5027,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 7,
+          "runs": 6,
           "passed": 6,
-          "reliability": 0.8571428571428571,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
@@ -5402,9 +5410,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 7,
+          "runs": 6,
           "passed": 6,
-          "reliability": 0.8571428571428571,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
@@ -5437,9 +5445,9 @@
       "graded_by_certification_tasks": null,
       "measured_by_model": {
         "claude-sonnet-5-5@claude-cli": {
-          "runs": 3,
+          "runs": 2,
           "passed": 2,
-          "reliability": 0.6666666666666666,
+          "reliability": 1,
           "cases_below_their_bar": []
         },
         "gemini-4-hydrogen-medium@agy-cli": {
