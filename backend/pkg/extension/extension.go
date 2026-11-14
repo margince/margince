@@ -417,7 +417,6 @@ type Extension struct {
 
 	// Needs are the core capabilities the unit uses, with a reason each (see need.go).
 	Needs []Need
-
 	// Migrations is the unit's SQL schema layer: a read-only filesystem
 	// holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql
 	// pairs, which a unit supplies with `//go:embed migrations`. A unit
@@ -485,9 +484,7 @@ type Extension struct {
 	// Panels are the unit's components drawn inline on core pages, such as a
 	// deal page's side column. See Panel.
 	Panels []Panel
-
-	// App is the unit's own screen offered in the home side drawer, apart
-	// from its sub-setting under Settings. Nil means the unit has none. See App.
+	// App is the unit's own screen in the home side drawer. Nil means none.
 	App *App
 
 	// Instrumentation observes the whole process and the browser: logs,
