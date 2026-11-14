@@ -237,6 +237,9 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// 3.6-flash is priced at half the 3.5 rate through 2026-12-31 and at the 3.5
 		// rate from 2027-01-01; the step is an effective-dated row an operator adds.
 		rateOn(day, providerGemini, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
+		// 3.8-flash follows the same step: half rate through 2026-12-31, then
+		// $1.50/$7.50 with a $0.15 cache read; the step is an operator's row too.
+		rateOn(day, providerGemini, "gemini-3.8-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
 		// gemini-3.1-pro-preview is the example file's frontier binding. It is
 		// the only Gemini model here whose rate varies with prompt size
@@ -272,6 +275,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// OPERATOR CONFIRMATION against the Vertex sheet for the bound location.
 		rateOn(day, providerGeminiVertex, "gemini-3.5-flash", 1_500_000, 9_000_000, 150_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
+		rateOn(day, providerGeminiVertex, "gemini-3.8-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
 		withLongContext(rateOn(day, providerGeminiVertex, "gemini-3.1-pro-preview", 2_000_000, 12_000_000, 200_000, 0),
 			200_000, 4_000_000, 18_000_000, 400_000, 0),
