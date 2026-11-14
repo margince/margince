@@ -241,6 +241,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// $1.50/$7.50 with a $0.15 cache read; the step is an operator's row too.
 		rateOn(day, providerGemini, "gemini-3.8-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGemini, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
+		rateOn(day, providerGemini, "gemini-3.5-flash-lite", 300_000, 2_500_000, 30_000, 0),
 		// gemini-3.1-pro-preview is the example file's frontier binding. It is
 		// the only Gemini model here whose rate varies with prompt size
 		// (verified 2026-08-12). It costs $2.00/$12.00 per MTok up to 200k
@@ -277,6 +278,7 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		rateOn(day, providerGeminiVertex, "gemini-3.6-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.8-flash", 750_000, 3_750_000, 75_000, 0),
 		rateOn(day, providerGeminiVertex, "gemini-3.1-flash-lite", 250_000, 1_500_000, 25_000, 0),
+		rateOn(day, providerGeminiVertex, "gemini-3.5-flash-lite", 300_000, 2_500_000, 30_000, 0),
 		withLongContext(rateOn(day, providerGeminiVertex, "gemini-3.1-pro-preview", 2_000_000, 12_000_000, 200_000, 0),
 			200_000, 4_000_000, 18_000_000, 400_000, 0),
 		embedOn(day, providerGeminiVertex, "gemini-embedding-001", 150_000),
