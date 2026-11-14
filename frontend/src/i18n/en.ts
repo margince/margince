@@ -6822,12 +6822,6 @@ export const en = {
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
-  "brief.intro.waiting": "Waiting on you",
-  "brief.intro.meetings": "Meetings today",
-  "brief.intro.urgent": "Urgent",
-  "brief.intro.read_one": "Last nightly run: 1 email synced.",
-  "brief.intro.read_other": "Last nightly run: {count} emails synced.",
-  "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says
   // which factor it lost, never why.

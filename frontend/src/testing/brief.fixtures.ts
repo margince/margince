@@ -6,7 +6,6 @@ import type { components } from "../api/schema";
 import type {
   Deal,
   MorningBrief,
-  MorningDigest,
 } from "../features/brief/brief.queries";
 import { jsonResponse } from "./story-utils";
 
@@ -185,50 +184,6 @@ export const quietRun: MorningBrief = {
   items: [],
 };
 
-export const digest: MorningDigest = {
-  date: "2026-08-20",
-  generated_at: "2026-08-21T03:00:00Z",
-  capture: {
-    messages_synced: 42,
-    activities_created: 42,
-    contacts_created: 5,
-    companies_created: 2,
-  },
-  review: {
-    dedupe_open: 3,
-    approvals_pending: 4,
-    classify: { commitments: 4, meetings: 2, noise: 30 },
-  },
-  connectors: [
-    { provider: "gmail", status: "connected" },
-    { provider: "gcal", status: "connected" },
-  ],
-  projects: {
-    phase_changes: [
-      {
-        project_id: "01a00000-0000-7000-8000-000000000001",
-        name: "ERP replacement",
-        from_phase: "pursuing",
-        to_phase: "delivering",
-        occurred_at: "2026-08-21T01:00:00Z",
-      },
-    ],
-    new_commitments: [],
-    gone_quiet: [
-      {
-        project_id: "01a00000-0000-7000-8000-000000000002",
-        name: "Depot rollout",
-        phase: "delivering",
-        quiet_since: "2026-07-12T01:00:00Z",
-        days_quiet: 40,
-      },
-    ],
-  },
-};
-
-// The open pipeline, per currency. Two of them, because that is the case worth
-// looking at: they get a line each rather than a sum, since adding native minor
-// units across currencies produces a number that is not money.
 export const pipelineRows = [
   {
     currency: "EUR",

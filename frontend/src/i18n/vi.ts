@@ -6672,13 +6672,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
   "brief.first.title": "Cần bạn xử lý",
-  "brief.intro.waiting": "Đang chờ bạn",
-  "brief.intro.meetings": "Cuộc họp hôm nay",
-  "brief.intro.urgent": "Khẩn cấp",
-  "brief.intro.read_one": "Lần chạy ban đêm gần nhất: đã đồng bộ 1 email.",
-  "brief.intro.read_other":
-    "Lần chạy ban đêm gần nhất: đã đồng bộ {count} email.",
-  "brief.intro.skip": "Nhấn phím bất kỳ hoặc bấm để tiếp tục",
   "brief.order.withheld": "Thứ tự này chưa tính: {factors}",
   "brief.factor.warmth": "mức độ thân thiết của quan hệ",
   "brief.factor.unknown": "một yếu tố mà phiên bản này không thể gọi tên",

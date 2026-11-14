@@ -6,7 +6,6 @@ import type { QueryLike } from "../design-system/querystates";
 import { unwrap } from "./problem";
 import {
   briefKey,
-  digestKey,
   isLiveWorkRead,
   magicKey,
   worklistKey,
@@ -245,7 +244,6 @@ export function invalidateApprovalViews(client: QueryClient) {
       worklistKey,
       briefKey,
       magicKey,
-      digestKey,
     ].map((queryKey) => client.invalidateQueries({ queryKey })),
   );
 }
