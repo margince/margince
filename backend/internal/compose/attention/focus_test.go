@@ -206,3 +206,26 @@ func TestTerminationFocusKeepsPreviewConflictsAndOtherTransitionsInReview(t *tes
 		}
 	}
 }
+
+// Every source the catalog sends to System health stays out of Focus, however
+// urgent its row; Home names how many there are instead.
+func TestFocusLeavesSystemHealthToItsOwnView(t *testing.T) {
+	var checked int
+	for source, kind := range worklistKinds {
+		if kind.destination != destinationSystemHealth {
+			continue
+		}
+		checked++
+		row := ranked{
+			item:       crmcontracts.WorklistItem{Id: string(source), Source: source},
+			deadlineAt: rankInstant.Add(-time.Hour),
+			overdue:    true,
+		}
+		if focusEligible(row, rankInstant) {
+			t.Errorf("an overdue %s row takes a Focus card; it belongs on System health", source)
+		}
+	}
+	if checked == 0 {
+		t.Fatal("the catalog sends no source to System health, so this test checked nothing")
+	}
+}
