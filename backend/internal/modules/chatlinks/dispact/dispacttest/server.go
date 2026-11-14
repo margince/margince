@@ -215,8 +215,8 @@ func (s *Server) route(method string, u *url.URL, body map[string]any) map[strin
 	return s.routeChannel(method, strings.TrimPrefix(path, "channels/"), u.Query(), body)
 }
 
-// list answers the channels the bot can see: every public channel and each
-// private one it is in, by slug, archived ones left out, as Dispact does.
+// list answers the channels the bot can see, by slug, as Dispact does. That is
+// every public channel and each private one it is in, with archived ones left out.
 func (s *Server) list() map[string]any {
 	out := []map[string]any{}
 	for slug, ch := range s.channels {

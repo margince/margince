@@ -147,8 +147,8 @@ function useLinkChannel(
   });
 }
 
-// The channels the record can be linked to, read only while the dialog is open:
-// the list is the bot's, and it changes in the chat, not here.
+// The channels the record can be linked to. It is read only while the dialog
+// is open, because the list is the bot's and changes in the chat.
 function useLinkableChannels(record: RecordRef, open: boolean) {
   const t = useT();
   return useQuery({
