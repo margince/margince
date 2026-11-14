@@ -1,0 +1,13 @@
+{
+  "tool": "change_activities",
+  "action": "file_channel_message",
+  "verb": "file_channel_message",
+  "allowed_for": [],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "not_found",
+    "rep": "not_found"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "tool": "change_capture",
+  "action": "unlink_channel",
+  "verb": "unlink_channel",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "rep"
+  ],
+  "refused_for": [
+    "read_only"
+  ],
+  "colleague_record": {
+    "manager": "refused",
+    "rep": "refused"
+  }
+}

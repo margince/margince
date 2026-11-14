@@ -1,0 +1,10 @@
+{
+  "verb": "file_channel_message",
+  "checks": [
+    "activity.create"
+  ],
+  "takes": [
+    "channel_deal",
+    "company"
+  ]
+}
