@@ -30,8 +30,9 @@ var (
 )
 
 // sweepChat is the Dispact bot API as the channel verbs call it. Every channel
-// is private with the bot in it, and every history holds one message, seq 1,
-// posted after any link the sweep makes, since talk from before a link is not read.
+// is private with the bot in it, and every history holds one message, seq 1.
+// It is posted after any link the sweep makes, because talk from before a link
+// is not read.
 func sweepChat() string {
 	sweepChatOnce.Do(func() {
 		srv := httptest.NewServer(http.HandlerFunc(serveSweepChat))
