@@ -52,10 +52,9 @@ export function markJourney(mark: JourneyMark): void {
   performance.mark(name, { detail: journey === "" ? null : journey });
 }
 
-// The shell's side reads (the agent rail, the setup reminder, the banners) wait
-// until Home's day is on screen, so they do not compete with the read and the
-// paint Home is measured on. Another first screen, or a day that takes longer
-// than the grace, lets them start anyway.
+// The shell's side reads wait until Home's day is on screen. They then do not
+// compete with the read and the paint Home is measured on. Another first
+// screen, or a day that takes longer than the grace, lets them start anyway.
 export const FIRST_SCREEN_GRACE_MS = 2_000;
 
 let firstScreenSettled = false;
