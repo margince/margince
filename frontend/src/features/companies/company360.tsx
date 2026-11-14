@@ -38,9 +38,10 @@ export function useCompany360(id: string, enabled = true) {
   return useQuery<Company360>({
     queryKey: ["company360", id],
     enabled: enabled && id !== "",
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/companies/{id}/360", {
+          signal,
           params: { path: { id } },
         }),
       );

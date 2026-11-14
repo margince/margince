@@ -23,8 +23,9 @@ type Company = components["schemas"]["Company"];
 export function useEmployerSummary(companyId: string) {
   return useQuery({
     queryKey: ["company", companyId],
-    queryFn: async (): Promise<Company | null> => {
+    queryFn: async ({ signal }): Promise<Company | null> => {
       const { data, error, response } = await api.GET("/companies/{id}", {
+        signal,
         params: { path: { id: companyId } },
       });
       if (error) {

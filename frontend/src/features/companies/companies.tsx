@@ -150,9 +150,10 @@ export function CompanyScreen({ id }: Readonly<{ id: string }>) {
   // whatever the composite is doing.
   const companyQuery = useQuery({
     queryKey: ["company", id],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/companies/{id}", {
+          signal,
           params: { path: { id } },
         }),
       );

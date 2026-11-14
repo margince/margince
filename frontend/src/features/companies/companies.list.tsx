@@ -65,9 +65,11 @@ import { companyTypeLabel, useCompanyTypeDirectory } from "./companytypes";
 async function fetchCompaniesPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Company>> {
   const data = unwrap(
     await api.GET("/companies", {
+      signal,
       params: {
         query: {
           q: query.q || undefined,

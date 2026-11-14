@@ -47,9 +47,11 @@ import "./projects.css";
 async function fetchProjectsPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Project>> {
   const data = unwrap(
     await api.GET("/projects", {
+      signal,
       params: {
         query: {
           q: query.q || undefined,

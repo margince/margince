@@ -404,7 +404,8 @@ export const BoughtPhonePhone: Story = {
   tags: ["uat-phone"],
 };
 
-const LONG_ADDRESS = "sebastian.sachsinger@straight.de";
+const LONG_ADDRESS =
+  "sebastian.sachsinger.procurement@straight-logistics-holding.de";
 
 // An address wider than the column breaks at its `@`: the domain drops under
 // the mailbox name, and neither half is cut.

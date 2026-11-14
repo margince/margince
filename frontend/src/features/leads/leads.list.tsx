@@ -91,9 +91,11 @@ const LEAD_SLA_STATES = [
 export async function fetchLeadsPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Lead>> {
   const data = unwrap(
     await api.GET("/leads", {
+      signal,
       params: {
         query: {
           ...leadsQueryParams(query),

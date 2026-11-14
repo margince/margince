@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -281,31 +282,15 @@ const (
 	listingBudgetDenominator = 24
 )
 
-// oneToolBudgetNumerator/Denominator bound a SINGLE tool's rendered entry.
-//
-// The two bounds above ration the listing as a whole, and neither of them is
-// what actually moves: between 2026-09-03 and 2026-09-06 the catalog grew 1,809
-// tokens, and 707 of that was existing tools getting fatter — run_report alone
-// took +153 across six changes that each appended one more aggregate to the
-// same sentence. No individual change was worth objecting to and nothing
-// counted them together, which is what a whole-catalog floor 7,000 tokens away
-// cannot see.
-//
-// 1/32 of the window. The fraction is not a judgement about how much a tool
-// deserves — it is set just above the fattest tool the surface ships, so the
-// bound is a ratchet on the ONE tool that is drifting rather than a budget
-// every tool is invited to spend up to.
-//
-// WHEN THIS FIRES, the answer is not a bigger fraction. It is the move this
-// tree has already made twice and measured both times: publish the enumeration
-// as a document and have the description name it. run_report's own vocabulary
-// went that way (reportvocabularydoc.go) and so did the per-record_type write
-// fields, and the second one bought back 18% of the whole listing. A tool that
-// cannot be answered that way is a tool worth splitting, and either is a better
-// conversation than raising this by one thirty-second.
+// oneToolBudgetNumerator/Denominator bound one tool's rendered entry: a
+// ratchet set just above the fattest non-router tool, not a share every tool
+// may spend. A description that names what each argument accepts is worth its
+// tokens. Models that met an undescribed argument went looking outside the
+// surface for the answer. When this fires, publish a long enumeration as a
+// document and name it, or split the tool.
 const (
 	oneToolBudgetNumerator   = 1
-	oneToolBudgetDenominator = 32
+	oneToolBudgetDenominator = 16
 )
 
 // Every written description rides in every step of the window of every agent
@@ -577,5 +562,96 @@ func TestEverySchemaIsValidJSONAndArrivesCompacted(t *testing.T) {
 				"the difference is whitespace, and it rides every prompt",
 				spec.Name, len(spec.InputSchema), compact.Len())
 		}
+	}
+}
+
+// routerActionField is the argument a listed router picks its action by.
+const routerActionField = "action"
+
+// undescribedActions names each action of a router that no line of its served
+// action description opens with, as "<action>: what it does". The actions are
+// the registry's, so an action added to a router is checked without a list here.
+func undescribedActions(t *testing.T, spec mcp.ToolSpec) []string {
+	t.Helper()
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatalf("reading %s's input schema: %v", spec.Name, err)
+	}
+	described := schema.Properties[routerActionField].Description
+	var missing []string
+	for _, a := range spec.Actions {
+		line := regexp.MustCompile(`(?m)(^|; )` + regexp.QuoteMeta(a.Action) + `: \S`)
+		if !line.MatchString(described) {
+			missing = append(missing, a.Action)
+		}
+	}
+	return missing
+}
+
+// A model that sees an action only as a name in the enum guesses what it does,
+// or goes looking outside the server. Every listed router therefore says, for
+// each action, what it does, in the description a client is served.
+func TestEveryRouterActionHasALineInItsServedDescription(t *testing.T) {
+	var routers, actions int
+	for _, spec := range servedSurface(t).ListedSpecs() {
+		if spec.Unlisted || spec.ActionField != routerActionField {
+			continue
+		}
+		routers++
+		actions += len(spec.Actions)
+		if missing := undescribedActions(t, spec); len(missing) > 0 {
+			t.Errorf("%s serves action %s with no line of its own in the action description; "+
+				"each action's line comes from the verb it runs, so give that verb a purpose or summary",
+				spec.Name, strings.Join(missing, ", "))
+		}
+	}
+	if routers == 0 || actions == 0 {
+		t.Fatalf("read %d router(s) and %d action(s) off the served listing, so nothing here was checked", routers, actions)
+	}
+}
+
+// The check is worth having only if it fires: a served router with one line
+// taken out must be named with that action.
+func TestTheRouterActionLineCheckNamesTheActionWhoseLineIsGone(t *testing.T) {
+	idx := slices.IndexFunc(servedSurface(t).ListedSpecs(), func(spec mcp.ToolSpec) bool {
+		return !spec.Unlisted && spec.ActionField == routerActionField && len(spec.Actions) > 1
+	})
+	if idx < 0 {
+		t.Fatal("no listed router takes more than one action, so the check cannot be shown to fire")
+	}
+	spec := servedSurface(t).ListedSpecs()[idx]
+	gone := spec.Actions[len(spec.Actions)-1].Action
+	var schema struct {
+		Properties map[string]map[string]json.RawMessage `json:"properties"`
+	}
+	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
+		t.Fatalf("reading %s's input schema: %v", spec.Name, err)
+	}
+	var text string
+	if err := json.Unmarshal(schema.Properties[routerActionField]["description"], &text); err != nil {
+		t.Fatalf("reading %s's action description: %v", spec.Name, err)
+	}
+	var kept []string
+	for line := range strings.SplitSeq(text, "\n") {
+		if !strings.HasPrefix(line, gone+": ") {
+			kept = append(kept, line)
+		}
+	}
+	description, err := json.Marshal(strings.Join(kept, "\n"))
+	if err != nil {
+		t.Fatalf("writing the doctored description: %v", err)
+	}
+	schema.Properties[routerActionField]["description"] = description
+	doctored, err := json.Marshal(schema)
+	if err != nil {
+		t.Fatalf("writing the doctored schema: %v", err)
+	}
+	spec.InputSchema = doctored
+	if missing := undescribedActions(t, spec); !slices.Equal(missing, []string{gone}) {
+		t.Errorf("with %s's line for %s taken out, the check named %v", spec.Name, gone, missing)
 	}
 }

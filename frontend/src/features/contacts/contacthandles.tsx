@@ -4,7 +4,11 @@
 import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
-import { ContactLink, CopyEmail } from "../../design-system/contactlink";
+import {
+  ContactLink,
+  CopyEmail,
+  EmailFace,
+} from "../../design-system/contactlink";
 import {
   EMAIL_TYPE_LABEL,
   PHONE_TYPE_LABEL,
@@ -52,7 +56,7 @@ export function EmailHandles({
         <span key={row.id} className="fieldgrid-handle">
           <span className="contactlink-copyable">
             <ContactLink kind="email" value={row.email} record={record}>
-              {row.email}
+              <EmailFace address={row.email} />
             </ContactLink>
             <CopyEmail address={row.email} />
           </span>

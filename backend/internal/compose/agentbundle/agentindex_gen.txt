@@ -81,7 +81,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /contacts/{id}/network` | getContactNetwork | Who on our team knows this contact, and how well. | Read records | at once |
 | `POST /me/linkedin-connections` | importLinkedInConnections | Import your own LinkedIn connections export. | Change records | at once |
 | `GET /companies/{id}/linkedin-reach` | getCompanyLinkedInReach | Which colleagues can get you in at this company. | Read records | at once |
-| `GET /me/linkedin-reach` | getMyLinkedInReach | Which accounts your imported network reaches. | Read records | at once |
+| `GET /me/linkedin-reach` | getMyLinkedInReach | Which companies your imported network reaches. | Read records | at once |
 | `GET /me/linkedin-account` | getMyLinkedInAccount | Your own LinkedIn account as this CRM records it. | Read records | at once |
 | `PUT /me/linkedin-account` | saveMyLinkedInAccount | Record or correct your own LinkedIn profile. | Change records | at once |
 | `GET /me/email-signature` | getMyEmailSignature | The sign-off appended to mail you send. | Read records | at once |
@@ -114,15 +114,15 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /companies/{id}/dossier` | getCompanyDossier | What this company IS — assembled from its own facts, every sentence citing one. | Read records | at once |
 | `POST /companies/{id}/dossier` | refreshCompanyDossier | Reassemble the dossier now, past a fingerprint that still matches. | Use AI and buy data | at once |
 | `GET /companies/{id}/evidence/{entityType}/{entityId}` | getClaimEvidence | The receipt behind one cited record — where it came from, and what is missing. | Read records | at once |
-| `GET /companies/{id}/scan` | getCompanyScan | What this account needs, as the model last judged it for this reader. | Read records | at once |
-| `POST /companies/{id}/scan` | ensureCompanyScan | Make sure this reader's scan of the account is current, reading it again only when the account changed. | Use AI and buy data | at once |
+| `GET /companies/{id}/scan` | getCompanyScan | What this company needs, as the model last judged it for this reader. | Read records | at once |
+| `POST /companies/{id}/scan` | ensureCompanyScan | Make sure this reader's scan of the company is current, reading it again only when the company changed. | Use AI and buy data | at once |
 | `GET /companies/{id}/growth-fit` | getCompanyGrowthFit | How well this company fits what we sell — banded, with both completeness counts. | Read records | at once |
 | `POST /companies/{id}/growth-fit` | refreshCompanyGrowthFit | Re-assemble the caller's growth fit now, past a fingerprint that still matches. | Use AI and buy data | at once |
-| `GET /companies/{id}/brief` | getCompanyBrief | The standing account brief — what this account is, where it stands, and what changed. | Read records | at once |
-| `POST /companies/{id}/brief` | regenerateCompanyBrief | Regenerate this account's brief, ignoring the cached one. | Use AI and buy data | at once |
+| `GET /companies/{id}/brief` | getCompanyBrief | The standing company brief — what this company is, where it stands, and what changed. | Read records | at once |
+| `POST /companies/{id}/brief` | regenerateCompanyBrief | Regenerate this company's brief, ignoring the cached one. | Use AI and buy data | at once |
 | `POST /companies/{id}/suggestions/dismiss` | dismissCompanySuggestion | Dismiss one next-step suggestion for the calling human. | Change records | at once |
 | `DELETE /companies/{id}/suggestions/dismiss` | restoreCompanySuggestion | Show a dismissed suggestion or moment again, the undo behind "Not now". | Change records | at once |
-| `POST /companies/{id}/ask` | askAboutCompany | Ask one of the prepared questions about this account. | Use AI and buy data | at once |
+| `POST /companies/{id}/ask` | askAboutCompany | Ask one of the prepared questions about this company. | Use AI and buy data | at once |
 | `POST /companies/{id}/view-ack` | acknowledgeCompanyView | Record that the user has now seen this company — the baseline `since_last_visit` counts from. | Change records | at once |
 | `PUT /companies/{id}/partner` | upsertPartner | Create/update the partner extension on a company (adds `partner` to its relationship types). | Change records | at once |
 | `GET /companies/{id}/partner` | getPartner | Read the partner extension on a company (404 if the company is not a partner). | Read records | at once |
@@ -308,7 +308,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
-| `GET /companies/{id}/contracts` | listCompanyContracts | The agreements this account holds, newest first. | Read records | at once |
+| `GET /companies/{id}/contracts` | listCompanyContracts | The agreements this company holds, newest first. | Read records | at once |
 | `POST /contracts` | createContract | Record an agreement. | Change records | at once |
 | `GET /contracts/{id}` | getContract | One contract. | Read records | at once |
 | `PATCH /contracts/{id}` | updateContract | Change an agreement's recorded terms. | Change records | at once |
@@ -350,7 +350,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /activities/{id}/draft-email` | draftEmail | Draft a reply/follow-up email for context (the `draft_email` MCP verb). | Draft messages | at once |
 | `GET /activities/{id}/reply-recipient` | getReplyRecipient | Who a reply to this message would be addressed to. | Read records | at once |
 | `POST /activities/{id}/send-email:preview` | previewSendAuthorization | Would this reply be allowed, and on what ground — asked before a word is typed. | Change records | at once |
-| `POST /emails:preview` | previewAccountSendAuthorization | Would this account-started message be allowed, and on what ground. | Change records | at once |
+| `POST /emails:preview` | previewAccountSendAuthorization | Would a new message with no thread behind it be allowed, and on what ground. | Change records | at once |
 | `POST /emails:sign-off` | previewEmailSignOff | The sign-off a send of this message would append beneath it. | Change records | at once |
 | `POST /activities/{id}/send-email` | sendEmail | Send a (possibly edited) email draft — runs directly, consent-gated. | Send messages | at once |
 | `POST /emails` | sendCompanyEmail | Start a new email conversation from a record — runs directly, consent-gated. | Send messages | at once |
@@ -683,7 +683,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /users/{id}` | updateMember | Edit a member's identity, role and teams. | Change records | at once |
 | `GET /users/{id}/retirement-preview` | previewMemberRetirement | Preview removing a member or merging them into another account. | Read records | at once |
 | `POST /users/{id}/merge` | mergeMembers | Merge a duplicate into the selected surviving member. | Change records | waits for approval |
-| `POST /users/{id}/remove` | removeMember | Retire an account while preserving historical attribution. | Change records | at once |
+| `POST /users/{id}/remove` | removeMember | Retire a member while preserving historical attribution. | Change records | at once |
 | `GET /users/assignable-roles` | listAssignableRoles | The live roles this caller may hand out when inviting or re-roling a member. | Read records | at once |
 | `POST /users/former` | createFormerMember | Record a colleague who has already left. Admin-only. | Change records | at once |
 | `GET /users/names` | nameSeats | Name the colleagues behind a set of ids. Read-only. | Read records | at once |

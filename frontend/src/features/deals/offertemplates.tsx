@@ -29,9 +29,11 @@ type OfferTemplate = components["schemas"]["OfferTemplate"];
 async function fetchTemplatesPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<OfferTemplate>> {
   const data = unwrap(
     await api.GET("/offer-templates", {
+      signal,
       params: {
         query: {
           sort: query.sort || undefined,

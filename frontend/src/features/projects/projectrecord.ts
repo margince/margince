@@ -30,8 +30,9 @@ export function useProjectRecord(
     // freshness window.
     queryKey: ["project", id, "record"],
     queryFn: id
-      ? async () => {
+      ? async ({ signal }) => {
           const { data, error } = await api.GET("/projects/{id}", {
+            signal,
             params: { path: { id } },
           });
           // A project the reader may not open is not an error to shout about
