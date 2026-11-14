@@ -80877,8 +80877,9 @@ type GetWorklistParams struct {
 	Relationships *GetWorklistParamsRelationships `form:"relationships,omitempty" json:"relationships,omitempty"`
 
 	// Shape How much of the ranked day the page carries. `queue` is the page of the queue
-	// and its cursor. `home` is what Home draws: `focus`, every figure, and the day's
-	// meeting rows as `queue`, with no cursor and no rows below the cut. Focus, the
+	// and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+	// the day's meeting rows plus every row that comes due in the next five minutes,
+	// with no cursor and no rows below the cut. Focus, the
 	// summary, `counts[].considered`, `reach[].considered` and the readings are the
 	// same in both shapes; `shown` counts the rows this page carries.
 	Shape *GetWorklistParamsShape `form:"shape,omitempty" json:"shape,omitempty"`

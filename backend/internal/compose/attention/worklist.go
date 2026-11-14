@@ -17,6 +17,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/homecache"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -465,20 +466,24 @@ func pageLimit(limit int) int {
 }
 
 // cut is the page this read answers. Home's shape is the day's meetings, which
-// its schedule draws beside Focus: no walk is frozen and no tail is read.
+// its schedule draws beside Focus, and every row that comes due before Home's
+// kept answer ends, which tells Home when to read again. No walk is frozen and
+// no tail is read.
 func (s *Service) cut(
 	ctx context.Context, rows []ranked, limit int, cursor worklistCursor, scope, filter string,
 	day crmcontracts.Attention, bounded map[crmcontracts.WorklistItemSource]bool,
 	missing []crmcontracts.WorklistSourceUnavailable,
 ) ([]ranked, bool, int, walkState, *backlogCursor, []crmcontracts.WorklistSourceUnavailable) {
 	if s.homeShape {
-		var meetings []ranked
+		var drawn []ranked
 		for _, row := range rows {
-			if row.item.Source == sourceMeeting {
-				meetings = append(meetings, row)
+			due := row.item.DueAt
+			comesDue := due != nil && due.After(day.AsOf) && !due.After(day.AsOf.Add(homecache.Life))
+			if row.item.Source == sourceMeeting || comesDue {
+				drawn = append(drawn, row)
 			}
 		}
-		return meetings, false, 0, walkState{}, nil, nil
+		return drawn, false, 0, walkState{}, nil, nil
 	}
 	shown, more, reached, walk := s.pageOf(
 		ctx, rows, limit, cursor, scope, askedFor(s.view, filter), unreadSources(missing), day.AsOf)

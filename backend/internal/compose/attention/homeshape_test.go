@@ -20,6 +20,7 @@ func TestHomesShapeAnswersTheSameDayWithOnlyItsMeetings(t *testing.T) {
 		Planned: []crmcontracts.AttentionItem{
 			item("overdue", "task", withDue(rankInstant.Add(-time.Hour))),
 			item("later", "task", withDue(rankInstant.Add(3*time.Hour))),
+			item("soon", "task", withDue(rankInstant.Add(2*time.Minute))),
 		},
 		NeedsYou: []crmcontracts.AttentionItem{item("approve", "approval")},
 		Meetings: lane(
@@ -52,13 +53,13 @@ func TestHomesShapeAnswersTheSameDayWithOnlyItsMeetings(t *testing.T) {
 	if home.NextCursor != nil {
 		t.Error("Home's shape names a cursor; it walks nothing")
 	}
-	if len(home.Queue) != 2 {
-		t.Fatalf("Home's shape carries %d rows, want the day's 2 meetings", len(home.Queue))
-	}
+	carried := map[string]bool{}
 	for _, row := range home.Queue {
-		if row.Source != sourceMeeting {
-			t.Errorf("Home's shape carries a %s row; it draws only meetings beside Focus", row.Source)
-		}
+		carried[row.Id] = true
+	}
+	want := map[string]bool{"standup": true, "review": true, "soon": true}
+	if !reflect.DeepEqual(carried, want) {
+		t.Errorf("Home's shape carries %v, want the day's meetings and the task that comes due before Home reads again", carried)
 	}
 }
 

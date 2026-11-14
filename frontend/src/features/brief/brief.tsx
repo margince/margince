@@ -86,16 +86,17 @@ export function BriefScreen() {
   const t = useT();
   const nowMs = useNow(60_000);
   const me = useMe();
-  // The drawer's default queue, so an open drawer joins this read.
+  const [params, setParams] = useUrlParams();
+  // Home's own shape, unless a link names a row that may be outside it: then
+  // the queue, so the row it names is there to open.
   const query = useWorklist(
     "mine",
     "all",
     undefined,
     true,
     DEFAULT_VIEW,
-    "home",
+    params.get(FOCUS_PARAM) ? undefined : "home",
   );
-  const [params, setParams] = useUrlParams();
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
   const drawerOpen = params.get("queue") === "1";
