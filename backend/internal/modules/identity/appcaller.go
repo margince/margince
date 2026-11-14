@@ -149,8 +149,8 @@ func mintAppPassport(ctx context.Context, tx pgx.Tx, c AppCaller, expired appBin
 var ErrAppBindingLive = errors.New("identity: revoke the passport before allowing its chat user again")
 
 // ReleaseAppBinding lets a chat app's user be bound again after their passport
-// was revoked. The passport stays revoked; it only stops naming the user, so
-// their next call mints a fresh passport under the same checks as a first one.
+// was revoked. The passport stays revoked and only stops naming the user. Their
+// next call mints a fresh passport under the same checks as a first one.
 func (s *Service) ReleaseAppBinding(ctx context.Context, id Identity, passportID ids.PassportID) error {
 	ctx = actorCtx(ctx, id)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

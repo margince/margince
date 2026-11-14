@@ -11136,9 +11136,11 @@ export interface paths {
         put?: never;
         /**
          * Link a deal or project to a new or existing private chat channel.
-         * @description `create` makes a private channel named after the record and invites the member linking it
-         *     and the record's owner, when they have a chat account. `existing` takes a private channel the bot is
-         *     already in, named by its slug or its link, and changes nobody's membership.
+         * @description `create` makes a private channel named after the record and invites every live member who may
+         *     open the record, the record's owner and the member linking it first, at most 50. A member with
+         *     no chat account is counted in `not_in_chat`, and members over the 50 in `skipped_over_cap`.
+         *     `existing` takes a private channel the bot is already in, named by its slug or its link, and
+         *     changes nobody's membership.
          *
          *     Linking an existing channel requires `summarize_history`. When it is true, the talk so far
          *     is read and up to five summaries are filed as notes; an agent must ask the user first. A

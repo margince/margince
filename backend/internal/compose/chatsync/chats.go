@@ -123,5 +123,5 @@ func (c BotCheck) Confirm(ctx context.Context, address, token string) (capture.C
 // flush scheduled through enqueuer.
 func Wire(db *database.DB, vault func() keyvault.Vault, enqueuer Enqueuer, allowPrivate bool) (*chatlinks.Store, LiveChats) {
 	chats := LiveChats{DB: db, Vault: vault, HTTP: HTTPClient(allowPrivate)}
-	return chatlinks.NewStore(db, chats, enqueuer), chats
+	return chatlinks.NewStore(db, chats, enqueuer, Viewers), chats
 }

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -133,7 +134,7 @@ func (s *Store) Link(ctx context.Context, kind string, id ids.UUID, req LinkRequ
 	}
 	var invites *Invites
 	if req.Mode == ModeCreate {
-		invites, err = s.invite(ctx, session.Chat, channel.Slug, facts)
+		invites, err = s.invite(ctx, session.Chat, channel.Slug, kind, id, facts)
 		if err != nil {
 			return State{}, err
 		}
@@ -190,11 +191,10 @@ func channelSlugOf(raw string) string {
 
 // recordFacts is what linking needs to know about the record.
 type recordFacts struct {
-	name       string
-	ownerEmail string
-	actorEmail string
-	actor      ids.UUID
-	projectID  *ids.UUID
+	name      string
+	owner     *ids.UUID
+	actor     ids.UUID
+	projectID *ids.UUID
 }
 
 // precheckLink refuses early what the write would refuse anyway. So the chat
@@ -224,11 +224,9 @@ func readFacts(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, facts *
 	if kind == RecordDeal {
 		project = "r.project_id"
 	}
-	query := fmt.Sprintf(`SELECT r.name, coalesce(o.email, ''), %s,
-		(SELECT coalesce(email, '') FROM app_user WHERE id = $2)
-		FROM %s r LEFT JOIN app_user o ON o.id = r.owner_id WHERE r.id = $1`,
+	query := fmt.Sprintf(`SELECT r.name, r.owner_id, %s FROM %s r WHERE r.id = $1`,
 		project, pgx.Identifier{kind}.Sanitize())
-	return tx.QueryRow(ctx, query, id, facts.actor).Scan(&facts.name, &facts.ownerEmail, &facts.projectID, &facts.actorEmail)
+	return tx.QueryRow(ctx, query, id).Scan(&facts.name, &facts.owner, &facts.projectID)
 }
 
 // linkActor is the human a link is recorded against: the signed-in member, or
@@ -297,10 +295,23 @@ func ChatFailure(err error) error {
 	return fmt.Errorf("%w: %w", ErrChatUnreachable, err)
 }
 
-// invite opens a new channel to the member linking and the record's owner. A
-// member with no chat account is counted, not refused.
-func (s *Store) invite(ctx context.Context, chat Chat, slug string, facts recordFacts) (*Invites, error) {
-	emails := uniqueEmails(facts.actorEmail, facts.ownerEmail)
+// inviteCap is the most members a new channel is opened to.
+const inviteCap = 50
+
+// invite opens a new channel to the members who may open the record, the
+// record's owner and the member linking first, at most inviteCap. A member
+// with no chat account is counted, not refused.
+func (s *Store) invite(ctx context.Context, chat Chat, slug, kind string, id ids.UUID, facts recordFacts) (*Invites, error) {
+	var viewers []Viewer
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		viewers, err = s.viewers(ctx, tx, kind, id)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	emails, skipped := invitees(viewers, facts.owner, facts.actor)
 	if len(emails) == 0 {
 		return &Invites{}, nil
 	}
@@ -308,19 +319,37 @@ func (s *Store) invite(ctx context.Context, chat Chat, slug string, facts record
 	if err != nil {
 		return nil, ChatFailure(err)
 	}
-	return &Invites{Invited: len(result.Added), NotInChat: len(result.NotFound)}, nil
+	return &Invites{Invited: len(result.Added), NotInChat: len(result.NotFound), SkippedOverCap: skipped}, nil
 }
 
-func uniqueEmails(candidates ...string) []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, email := range candidates {
-		key := strings.ToLower(strings.TrimSpace(email))
-		if key == "" || seen[key] {
-			continue
+// invitees orders the viewers owner first, then the linker, then as given,
+// and keeps inviteCap of them. It answers the emails kept and how many were
+// left over.
+func invitees(viewers []Viewer, owner *ids.UUID, actor ids.UUID) ([]string, int) {
+	rank := func(v Viewer) int {
+		switch {
+		case owner != nil && v.ID == *owner:
+			return 0
+		case v.ID == actor:
+			return 1
 		}
-		seen[key] = true
-		out = append(out, key)
+		return 2
 	}
-	return out
+	ordered := slices.Clone(viewers)
+	slices.SortStableFunc(ordered, func(a, b Viewer) int { return rank(a) - rank(b) })
+	emails := make([]string, 0, min(len(ordered), inviteCap))
+	seen := map[string]bool{}
+	skipped := 0
+	for _, v := range ordered {
+		key := strings.ToLower(strings.TrimSpace(v.Email))
+		switch {
+		case key == "" || seen[key]:
+		case len(emails) == inviteCap:
+			skipped++
+		default:
+			seen[key] = true
+			emails = append(emails, key)
+		}
+	}
+	return emails, skipped
 }

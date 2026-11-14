@@ -329,7 +329,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		},
 		"cg:commitment-settle": {"gw:events:crm:activity", "gw:events:crm:contact"},
 		// What happens on a deal or project, posted into its linked chat channel.
-		"cg:chat-links": {"gw:events:crm:activity", "gw:events:crm:deal"},
+		"cg:chat-links": {"gw:events:crm:activity", "gw:events:crm:contact", "gw:events:crm:deal"},
 		// The AI-activity projection (ai_task_run). Its own group, and the only
 		// group on the aitask stream: a projection backlog must not be able to
 		// stall a consumer that spends money or moves a record.

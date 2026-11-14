@@ -14,7 +14,7 @@ afterEach(() => {
 });
 
 // A revoked passport a chat app minted keeps its chat user out until the owner
-// releases it; one with no app binding offers nothing to release.
+// releases it. One with no app binding offers nothing to release.
 function chatPassportsBackend(released: string[]) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input instanceof Request ? input.url : input);

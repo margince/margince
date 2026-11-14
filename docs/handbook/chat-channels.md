@@ -21,8 +21,9 @@ An admin connects the Dispact bot once for everyone.
 
 ### How do I give a deal a channel?
 Open the deal. The **Team chat** card is on its overview.
-- Click **Create a channel** to make a new private channel named after the deal. You and the deal's
-  owner are invited.
+- Click **Create a channel** to make a new private channel named after the deal. Every member who can
+  see the deal is invited, at most 50, starting with the deal's owner and you. Someone without a chat
+  account is not added.
 - Click **Link an existing channel** to use a private channel you already have. Enter the **Channel name
   or link**. The bot must already be in that channel, and the channel must be private.
 

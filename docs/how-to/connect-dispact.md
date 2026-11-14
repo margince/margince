@@ -116,9 +116,10 @@ follows no redirect. Otherwise a token holder could point the server at its own 
 
 ## What the worker does
 
-- **The consumer `cg:chat-links`** reads deal, project, offer, contract and activity events. For each
-  linked record it adds one row to `chat_post_item`, keyed on the link and the event id, so a replayed
-  event adds nothing. It starts only when the worker has a credential store.
+- **The consumer `cg:chat-links`** reads deal, project, offer, contract and activity events, and
+  `retention.restricted` from the contact stream. For each linked record it adds one row to
+  `chat_post_item`, keyed on the link and the event id, so a replayed event adds nothing. It starts only
+  when the worker has a credential store.
 - **The job `chat_link_flush`** sends one post per link with the rows that are waiting, after a window of
   two minutes. It also posts the record's card once and edits it when a fact on it changes.
 - **The job `chat_pull_sweep`** runs every minute and enqueues one **`chat_pull`** per live bot. While

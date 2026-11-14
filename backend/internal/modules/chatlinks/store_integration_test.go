@@ -155,8 +155,14 @@ func setupLinks(t *testing.T) *linkEnv {
 		"secret":    {Slug: "secret", Name: "Secret", IsPrivate: true, BotIsMember: false},
 	}, members: map[string][]string{}}
 	e.flush = &flushes{links: map[ids.UUID]int{}}
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), fakeChats{chat: e.chat, connection: connection}, e.flush)
+	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)), fakeChats{chat: e.chat, connection: connection}, e.flush, e.onlyRep)
 	return e
+}
+
+// onlyRep is the member judgement compose injects, answering that the rep
+// alone may open every record; compose/chatsync tests the real judgement.
+func (e *linkEnv) onlyRep(context.Context, pgx.Tx, string, ids.UUID) ([]Viewer, error) {
+	return []Viewer{{ID: e.rep, Email: "rep-" + e.rep.String() + "@chat.test"}}, nil
 }
 
 func (e *linkEnv) exec(t *testing.T, sql string, args ...any) {
