@@ -49,6 +49,24 @@ class MustCallMatchingTest(unittest.TestCase):
         problems = check.check({"must_call_matching": ["draft_outbound"]}, path)
         self.assertEqual(problems, ["must_call_matching entry 'draft_outbound' is not tool~regex"])
 
+    def test_alternatives_joined_by_a_double_bar_are_one_any_of_group(self):
+        either = {"must_call_matching": ["draft_outbound~Jonas || send_outbound~jonas\\.reinhard"]}
+        for call in (("draft_outbound", {"intent": "Chaser to Jonas"}),
+                     ("send_outbound", {"as": "email_reply", "to": ["jonas.reinhard@replydeutschland.test"]})):
+            with self.subTest(tool=call[0]):
+                self.assertEqual(check.check(either, run([call])), [])
+
+    def test_an_any_of_group_with_no_match_names_every_alternative(self):
+        either = {"must_call_matching": ["draft_outbound~Jonas || send_outbound~jonas\\.reinhard"]}
+        problems = check.check(either, run([("send_outbound", {"as": "email_new", "to": ["greta@x.test"]})]))
+        self.assertEqual(len(problems), 1)
+        self.assertIn("draft_outbound", problems[0])
+        self.assertIn("send_outbound", problems[0])
+
+    def test_a_single_bar_stays_inside_the_regex(self):
+        path = run([("send_outbound", {"body": "Jonas"})])
+        self.assertEqual(len(check.check(AIMS, path)), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

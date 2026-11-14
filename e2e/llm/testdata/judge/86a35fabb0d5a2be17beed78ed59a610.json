@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer explicitly states a chaser was drafted for Reply Deutschland Verlängerung as the only deal that has gone quiet, does not claim a chaser for Körber Sensorik Rollout or other deals, and correctly distinguishes the messages to Greta Lindqvist and Lena Bauer as failed outbound communications rather than chasers.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer says a chaser was written for Reply Deutschland Verlängerung, the one deal that has gone quiet, whether drafted on its own or written into the send it tried, and does not say a chaser was drafted for Körber Sensorik Rollout or for any other deal. The first mail to Greta Lindqvist and the reply to Lena Bauer are not chasers for a deal. Answer no if it names no chaser for Reply Deutschland, or names a deal other than Reply Deutschland as one it chased.",
+  "answer": "Drafted one chaser: Reply Deutschland Verlängerung is the only deal that has gone quiet (nothing since July). None of the three messages went out. The mail to Jonas Reinhard and the first mail to Greta Lindqvist were refused because no mailbox is connected, and the Telegram reply to Lena Bauer was refused because no Telegram bot is connected. Connect a mailbox and the bot, or send them yourself; the draft chaser is on the deal's timeline."
+}

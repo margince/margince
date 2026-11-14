@@ -705,14 +705,21 @@ def _sent_problems(calls, entry):
 
 
 def _unmatched_problem(calls, entry):
-    """A problem line when no call to `tool` carries what `tool~regex` asks, or None."""
-    tool, sep, pattern = str(entry).partition("~")
-    if not sep or not tool or not pattern:
-        return f"must_call_matching entry {entry!r} is not tool~regex"
-    for name, arguments in calls:
-        if tool_matches([name], tool) and re.search(pattern, json.dumps(arguments, ensure_ascii=False), re.IGNORECASE):
-            return None
-    return f"never called {tool} carrying anything matching /{pattern}/"
+    """A problem line when no call carries what any `tool~regex` of the entry asks, or None.
+
+    ` || ` joins alternatives, since `|` already means "or" inside each regex.
+    """
+    wanted = []
+    for alternative in str(entry).split(" || "):
+        tool, sep, pattern = alternative.strip().partition("~")
+        if not sep or not tool or not pattern:
+            return f"must_call_matching entry {entry!r} is not tool~regex"
+        wanted.append((tool, pattern))
+    for tool, pattern in wanted:
+        for name, arguments in calls:
+            if tool_matches([name], tool) and re.search(pattern, json.dumps(arguments, ensure_ascii=False), re.IGNORECASE):
+                return None
+    return "never called " + " or ".join(f"{tool} carrying anything matching /{pattern}/" for tool, pattern in wanted)
 
 
 def check(scenario, transcript_path):
