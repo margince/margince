@@ -197,9 +197,9 @@ func (g *switchGraph) cacheHeld(field *types.Var) bool {
 }
 
 // observeWrite records the state a walk reaches a watched write in.
-func (g *switchGraph) observeWrite(assign *ast.AssignStmt, s pathState) {
+func (g *switchGraph) observeWrite(assign *ast.AssignStmt, covered bool) {
 	if watch, ok := g.caches.watching[assign]; ok {
-		watch.reached, watch.covered = true, watch.covered && s.covered()
+		watch.reached, watch.covered = true, watch.covered && covered
 	}
 }
 

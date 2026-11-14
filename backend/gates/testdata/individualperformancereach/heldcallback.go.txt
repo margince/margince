@@ -34,9 +34,10 @@ func (h *Handlers) GetAfterARegistration(w http.ResponseWriter, r *http.Request)
 	httperr.WriteJSON(w, http.StatusOK, []int{1})
 }
 
-// An iterator over no rows calls its callback no time.
+// An iterator calls its callback once per row, so over none it calls it no
+// time.
 func (h *Handlers) GetAfterAnIterator(w http.ResponseWriter, r *http.Request) {
-	rows := []int{}
+	rows := []int{1}
 	refused := slices.ContainsFunc(rows, func(int) bool {
 		if allowed, _ := auth.IndividualPerformanceOf(r.Context()); !allowed {
 			return true

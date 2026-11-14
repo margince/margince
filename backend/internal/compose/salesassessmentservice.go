@@ -139,10 +139,10 @@ func (s *salesAssessments) prepareAssessment(ctx context.Context, selection crmc
 	var evaluation crmcontracts.ReportingEvaluation
 	var in salesassessment.Input
 	if view != nil && !view.Valid() {
-		return evaluation, in, apperrors.ErrInvalidArgument
+		return crmcontracts.ReportingEvaluation{}, salesassessment.Input{}, apperrors.ErrInvalidArgument
 	}
 	if view != nil && *view == crmcontracts.SalesAssessmentViewProspecting && (selection.Scope.Kind != ScopeKindOwner || (selection.Scope.Id != nil && selection.Scope.Id.String() != reader.String())) {
-		return evaluation, in, apperrors.ErrPermissionDenied
+		return crmcontracts.ReportingEvaluation{}, salesassessment.Input{}, apperrors.ErrPermissionDenied
 	}
 	var err error
 	if receipt == nil {

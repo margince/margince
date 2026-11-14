@@ -24,14 +24,14 @@ func (checkedTool) Handle(ctx context.Context, in []byte) ([]byte, error) {
 	if err := auth.Require(ctx); err != nil {
 		return nil, err
 	}
-	return []byte("1"), nil
+	return []byte{1}, nil
 }
 
 type uncheckedTool struct{}
 
 func (uncheckedTool) Spec() ToolSpec { return ToolSpec{Name: "unchecked_tool"} }
 
-func (uncheckedTool) Handle(ctx context.Context, in []byte) ([]byte, error) { return []byte("1"), nil }
+func (uncheckedTool) Handle(ctx context.Context, in []byte) ([]byte, error) { return []byte{1}, nil }
 
 // Registry runs a tool by its name, through a map the walk cannot read.
 type Registry struct{ tools map[string]tool }
