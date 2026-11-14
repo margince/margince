@@ -7,8 +7,8 @@
 // Home's day reads assemble the reader's whole day on the server. Each request
 // paid that again, however little had changed. An answer here is served while:
 //   - it is younger than Life, which is how far behind Home may be for changes
-//     made by colleagues and by background work. A day answer is also served
-//     for StaleGrace past Life, flagged stale, while it is read again;
+//     made by colleagues and by background work. A day answer is served for
+//     StaleGrace past Life too. It is then flagged stale and read again;
 //   - the access fence has not moved since its own read began. Every write that
 //     can take a record out of somebody's reach advances home_read_fence through
 //     a trigger, so no writer can forget it. A write that only widens reach
@@ -18,7 +18,7 @@
 //   - the walk its first page started can still be resumed.
 //
 // An answer served in its last minute of Life, or past it, is read again behind
-// it, so a reader who keeps Home open does not wait on its expiry. A refresh
+// it. So a reader who keeps Home open does not wait on its expiry. A refresh
 // that fails is not tried again for a minute. The reader's own writes drop
 // their answers (Forget), so what they do shows at once. That covers the writes that emit no event and no audit row.
 //
