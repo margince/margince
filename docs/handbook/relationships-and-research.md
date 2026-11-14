@@ -17,6 +17,8 @@ Also called: who knows this client, warm path, relationship map, colleague conne
 
 A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
 
+The tab reads in three parts, each with a one-line answer under its title. **Way in** counts the routes and shows the best one. **Who knows {name}** is the map. **Progress** holds the introduction steps, your asks and what changed lately. The chips at the top of the tab jump to each part. A contact's **Research** tab has three parts in the same shape. **To check** holds what Margince read from mail and pages, for you to confirm, correct or dismiss. **Sources** shows what each data provider says, with **Research public sources**. **Record keeping** holds the details, permissions, lists and settings kept on the contact.
+
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
 ### What does Reach on the Overview count?
@@ -30,8 +32,7 @@ Relationship strength in Margince comes from one rule, worked out from captured 
 **Recency × Frequency × Reciprocity**, scored out of 100.
 
 - **Recency** is cut by half every 30 days since the contact last wrote to you or had a meeting or call with you. Your own mail they have not answered does not reset it.
-- **Frequency** counts up to 20 interactions in 90 days; any more add
-  nothing.
+- **Frequency** counts up to 20 interactions in 90 days; any more add nothing.
 - **Reciprocity** gives more for an exchange that goes both ways than for one that goes one way, and never goes below a quarter.
 
 **You cannot change it by hand.** It shows what happened in captured interactions.
@@ -79,7 +80,6 @@ A contact's last-message dates count only the messages you can open. The same ru
 - the dates on that contact's Worklist rows.
 
 What this means for you:
-
 
 - A reply on a private thread you are part of counts for you. A colleague who cannot open that
   thread does not see the reply, and their dates, card and rows stay as they were.

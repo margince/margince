@@ -27,6 +27,13 @@ import {
 // one you can actually use" above an empty list. Nothing threw, every element
 // existed, and a DOM query would have passed.
 
+// The sentence a chapter leads with, read once its heading has rendered.
+async function chapterAnswer(title: string): Promise<string> {
+  const heading = await screen.findByRole("heading", { name: title });
+  const answer = heading.closest("section")?.querySelector(".chapter-answer");
+  return answer?.textContent ?? "";
+}
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -209,17 +216,14 @@ describe("several ways in", () => {
       groups_omitted: [],
     });
 
-    // The COUNT is the reading: the verdict panel above already names the
-    // lead, and a strip repeating that name read as two findings. By the
-    // slot's own value element — a route rank on the list below is a "3" too.
-    await screen.findByText("3", { selector: ".stat-card-value" });
-    expect(
-      screen.getByText(
-        en["contact.intro.stripWhoMix"]
-          .replace("{direct}", "2")
-          .replace("{indirect}", "1"),
-      ),
-    ).toBeTruthy();
+    // The COUNT is the reading: the lead panel under it already names the
+    // best route, and an answer repeating that name reads as two findings.
+    const mix = en["contact.intro.stripWhoMix"]
+      .replace("{direct}", "2")
+      .replace("{indirect}", "1");
+    expect(await chapterAnswer(en["contact.chapter.wayIn"])).toBe(
+      `3 routes: ${mix}.`,
+    );
     // The lead is the verdict panel's; the card under it lists the OTHER two,
     // ranked as the second and third way in rather than as a new list of one.
     expect(screen.getByText(en["contact.intro.otherRoutesTitle"])).toBeTruthy();
@@ -448,15 +452,18 @@ describe("the handoff with an ask open", () => {
   it("says the colleague owes an answer, and by when", async () => {
     renderTab(graph, "en", {}, { asks: [ask] });
 
-    // Once on the strip's handoff slot, once under the steps: the same
-    // words, from the same reading of the ask.
+    // In the chapter's answer and under the steps: the same words, from the
+    // same reading of the ask.
+    const owner = en["contact.intro.handoffOwner"].replace(
+      "{name}",
+      "Sofia Meier",
+    );
     await waitFor(() => {
-      expect(
-        screen.getAllByText(
-          en["contact.intro.handoffOwner"].replace("{name}", "Sofia Meier"),
-        ).length,
-      ).toBe(2);
+      expect(screen.getAllByText(owner).length).toBe(1);
     });
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      owner,
+    );
     expect(screen.getByText(/^due /)).toBeTruthy();
     expect(
       screen.getByText(
@@ -477,13 +484,16 @@ describe("the handoff with an ask open", () => {
       },
     );
 
+    const owner = en["contact.intro.handoffOwner"].replace(
+      "{name}",
+      "Demo Admin",
+    );
     await waitFor(() => {
-      expect(
-        screen.getAllByText(
-          en["contact.intro.handoffOwner"].replace("{name}", "Demo Admin"),
-        ).length,
-      ).toBe(2);
+      expect(screen.getAllByText(owner).length).toBe(1);
     });
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      owner,
+    );
     // The answer window has closed; nothing is due.
     expect(screen.queryByText(/^due /)).toBeNull();
     expect(
@@ -495,7 +505,7 @@ describe("the handoff with an ask open", () => {
 });
 
 // What moved lately is a dated list, newest first, and its head is the same
-// change the strip's "why now" slot was read from.
+// change the Progress chapter's answer was read from.
 describe("what changed lately", () => {
   const graph: ContactGraph = {
     contact_id: CONTACT,
@@ -528,18 +538,15 @@ describe("what changed lately", () => {
 
     const head = en["contact.change.repliedAfterGap"].replace("{days}", "41");
     // One change, two surfaces, two shapes: the panel writes the sentence,
-    // the strip writes the same change as a word over what it rests on.
+    // the answer writes the same change as a word over what it rests on.
     await waitFor(() => {
       expect(screen.getAllByText(head).length).toBe(1);
     });
-    expect(screen.getByText(en["contact.intro.change.replied"])).toBeTruthy();
-    expect(
-      screen.getByText(
-        en["contact.intro.change.repliedSub"].replace("{days}", "41"),
-      ),
-    ).toBeTruthy();
-    // The label over the slot and the badge on the head say the same words.
-    expect(screen.getAllByText(en["contact.intro.stripWhyNow"]).length).toBe(2);
+    const sub = en["contact.intro.change.repliedSub"].replace("{days}", "41");
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      `${en["contact.intro.change.replied"]} (${sub})`,
+    );
+    expect(screen.getAllByText(en["contact.intro.stripWhyNow"]).length).toBe(1);
     expect(
       screen.getByText(
         en["contact.change.warmed"]
@@ -562,7 +569,9 @@ describe("what changed lately", () => {
     expect(
       await screen.findByText(en["contact.network.noMoments"]),
     ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripNoMoment"])).toBeTruthy();
+    expect(await chapterAnswer(en["contact.chapter.progress"])).toContain(
+      en["contact.intro.stripNoMoment"],
+    );
   });
 
   it("does not claim nothing moved when the section was withheld", async () => {
@@ -577,10 +586,11 @@ describe("what changed lately", () => {
 
     expect(await screen.findByText(en["state.withheld"])).toBeTruthy();
     expect(screen.queryByText(en["contact.network.noMoments"])).toBeNull();
-    // A refused section is not an empty one, and the slot must not report
+    // A refused section is not an empty one, and the answer must not report
     // the relationship as unmoved out of a permission boundary.
-    expect(screen.getByText(en["reading.restricted"])).toBeTruthy();
-    expect(screen.queryByText(en["contact.intro.stripNoMoment"])).toBeNull();
+    const answer = await chapterAnswer(en["contact.chapter.progress"]);
+    expect(answer).toContain(en["reading.restricted"]);
+    expect(answer).not.toContain(en["contact.intro.stripNoMoment"]);
   });
 });
 
@@ -732,24 +742,27 @@ describe("the reader's own route", () => {
     expect(screen.getByText(en["contact.intro.ownRouteNoAsk"])).toBeTruthy();
   });
 
-  it("is the only way in, and the strip says so as one contact", async () => {
+  it("is the only way in, and the answer counts it as one route", async () => {
     renderTab(reachedByReader([mine]));
 
-    // Counted like anybody else, and named on a line of its own: a reading
-    // states a fact and does not address its reader.
-    expect(
-      await screen.findByText("1", { selector: ".stat-card-value" }),
-    ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripWhoOwn"])).toBeTruthy();
+    // Counted like anybody else, and named in a sentence of its own.
+    // The reader is known once the session answers.
+    await waitFor(async () => {
+      const answer = await chapterAnswer(en["contact.chapter.wayIn"]);
+      expect(answer).toMatch(/^1 route:/);
+      expect(answer).toContain(en["contact.intro.stripWhoOwn"]);
+    });
   });
 
   it("is counted apart from the colleagues who can be asked", async () => {
     renderTab(reachedByReader([mine, colleague]));
 
-    expect(
-      await screen.findByText("2", { selector: ".stat-card-value" }),
-    ).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripWhoOwn"])).toBeTruthy();
+    // The reader is known once the session answers.
+    await waitFor(async () => {
+      const answer = await chapterAnswer(en["contact.chapter.wayIn"]);
+      expect(answer).toMatch(/^2 routes:/);
+      expect(answer).toContain(en["contact.intro.stripWhoOwn"]);
+    });
     // And the colleague beside them keeps their own ask.
     expect(
       screen.getByRole("button", {
@@ -903,9 +916,11 @@ describe("the handoff while the ask list is still being read", () => {
       { asksPending: true },
     );
 
-    const label = await screen.findByText(en["contact.intro.stripHandoff"]);
-    const card = label.closest(".stat-card");
-    expect(card?.textContent).toContain(en["common.loading"]);
+    const heading = await screen.findByRole("heading", {
+      name: en["contact.chapter.progress"],
+    });
+    const chapter = heading.closest("section");
+    expect(chapter?.textContent).toContain(en["common.loading"]);
     expect(
       screen.queryByText(en["contact.intro.handoffNotStarted"]),
     ).toBeNull();

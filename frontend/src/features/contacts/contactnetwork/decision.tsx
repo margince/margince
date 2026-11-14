@@ -3,17 +3,13 @@
 
 import { INTRO_STATUS_LABELS as HANDOFF_VALUE } from "../../../format/introstatus";
 
-// The three readings a rep opens this tab for: who can open the door, why it
-// is worth doing now, and who owns the next move.
-//
-// They sit above everything because they are the answer. The evidence under
-// them explains it; a reader who trusts the answer never has to scroll.
+// The readings a rep opens this tab for: who can open the door, what moved
+// lately, and who owns the next move. They are the answers the tab's chapters
+// lead with, so a reader who trusts them never has to scroll.
 
 import type { components } from "../../../api/schema";
-import { StatCard } from "../../../design-system/atoms";
-import { StatStrip } from "../../../design-system/statstrip";
 import { formatNumber } from "../../../format/format";
-import { type Locale, useLocale, useT } from "../../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { labelFor } from "../../../lib/labelfor";
 import { useMe } from "../../../lib/session";
@@ -25,17 +21,20 @@ type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
 type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
 type Translate = ReturnType<typeof useT>;
 
+/** A chapter's reading: the short form a jump chip shows, and the sentence the
+ * chapter leads with. */
+export type ChapterReading = Readonly<{ chip: string; answer: string }>;
+
 /**
- * DecisionStrip states who reaches them, what moved lately, and the handoff.
+ * useNetworkReadings states who reaches them, what moved lately, and the
+ * handoff, as the answers of the Way in and Progress chapters.
  *
- * The first slot COUNTS the ways in rather than naming the best one: the
- * verdict panel above it already names the lead, and a strip repeating the
- * same name in a smaller type read as two findings rather than one. The reader
- * is one of the routes the server ranks, so they are counted like anybody else
- * and named on a line of their own — a stat card states a reading and does not
- * address its reader.
+ * The ways in are COUNTED rather than named: the lead panel under the answer
+ * already names the best one. The reader is one of the routes the server
+ * ranks, so they are counted like anybody else and named in a sentence of
+ * their own.
  */
-export function DecisionStrip({
+export function useNetworkReadings({
   routes,
   legacyVia,
   change,
@@ -46,116 +45,150 @@ export function DecisionStrip({
 }: Readonly<{
   routes: readonly RouteCandidate[];
   // The colleague named by a server that predates the candidate list. Without
-  // it this strip would read "nobody reaches them" beside a card naming the
-  // contact who does — the page contradicting itself on its own headline.
+  // it the answer would read "nobody reaches them" over a card naming the
+  // contact who does.
   legacyVia: string | undefined;
-  // The newest change on this relationship, if there is one to read.
   change: RelationshipChange | undefined;
-  // Whether the changes section was refused rather than empty. Two opposite
-  // facts, and a card that folds them tells a reader nothing has moved on a
-  // relationship it was simply not allowed to look at.
+  // Refused rather than empty: a refused section reading as "nothing new" is
+  // a claim about the relationship made out of a permission.
   changeWithheld: boolean;
-  // The ask in flight, if there is one. Its absence is a reading too: nobody
-  // owes anybody anything yet.
+  // The ask in flight. Its absence is a reading too: nobody owes anything yet.
   open: IntroRequest | undefined;
   // The asks are still being read, or could not be read. In both cases "not
   // started" would be a guess.
   openPending?: boolean;
   openUnread?: boolean;
-}>) {
+}>): Readonly<{ wayIn: ChapterReading; progress: ChapterReading }> {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const own = useOwnRoute();
   const reader = useMe().data?.user;
-  // A name the server sent as whitespace is a name it does not have. A
-  // StatCard value is a non-empty string by contract, and a blank one draws a
-  // slot that reads as a reading which failed to load.
-  const via = legacyVia?.trim() || undefined;
-  const lead = routes[0];
-  const mine = routes.some(own);
-  const indirect = routes.filter((r) => r.through_display_name).length;
-  // Every slot declares the NARROW shape, and every slot on the row must:
-  // below the strip's two-up width a `row` slot folds to one full-width line
-  // (statstrip.css), and the fold is the plate's — a strip where only some
-  // cards carry it draws a bordered box among a column of borderless rows.
-  return (
-    <StatStrip density="plate" label={t("contact.intro.stripLabel")}>
-      <StatCard
-        narrow="row"
-        label={t("contact.intro.stripWho")}
-        value={
-          lead
-            ? formatNumber(routes.length, locale)
-            : (via ?? t("contact.intro.stripNoRoutes"))
-        }
-        detail={
-          lead ? (
-            <>
-              <span>
-                {t("contact.intro.stripWhoMix", {
-                  direct: formatNumber(routes.length - indirect, locale),
-                  indirect: formatNumber(indirect, locale),
-                })}
-              </span>
-              {/* The reader's own relationship is the strongest way in this
-                  page can report, so it is named rather than dropped — on its
-                  own line, because the count above already includes it. */}
-              {mine ? <span>{t("contact.intro.stripWhoOwn")}</span> : null}
-            </>
-          ) : via ? (
-            t("contact.intro.stripDirect")
-          ) : (
-            t("contact.intro.stripNoPath")
-          )
-        }
-      />
-      <ChangeCard change={change} withheld={changeWithheld} locale={locale} />
-      <StatCard
-        narrow="row"
-        label={t("contact.intro.stripHandoff")}
-        value={
-          open
-            ? t(labelFor(HANDOFF_VALUE, open.status))
-            : t(noAskValue(openPending, openUnread))
-        }
-        detail={open ? handoffDetail(open, reader, t) : undefined}
-      />
-    </StatStrip>
-  );
+  return {
+    wayIn: wayInReading(routes, legacyVia, routes.some(own), t, plural, locale),
+    progress: progressReading(
+      changeReading(change, changeWithheld, locale, t),
+      handoffReading(open, openPending, openUnread, reader, t),
+      t,
+    ),
+  };
 }
 
-/**
- * ChangeCard is the strip's own two-line vocabulary for one derived change.
- *
- * `changeSentence` (relationshipchange.ts) keeps writing sentences for the
- * rail and the moments panel, which have room for them. A slot has one line
- * for the verdict and one for what it rests on, and a sentence in a value is
- * the shape this whole reading exists to avoid.
- */
-function ChangeCard({
-  change,
-  withheld,
-  locale,
-}: Readonly<{
-  change: RelationshipChange | undefined;
-  withheld: boolean;
-  locale: Locale;
-}>) {
-  const t = useT();
-  return (
-    <StatCard
-      narrow="row"
-      label={t("contact.intro.stripWhyNow")}
-      value={t(
-        withheld
-          ? "reading.restricted"
-          : change
-            ? labelFor(CHANGE_VALUE, change.kind)
-            : "contact.intro.stripNoMoment",
-      )}
-      detail={change && !withheld ? changeDetail(change, locale, t) : undefined}
-    />
-  );
+function wayInReading(
+  routes: readonly RouteCandidate[],
+  legacyVia: string | undefined,
+  mine: boolean,
+  t: Translate,
+  plural: ReturnType<typeof usePlural>,
+  locale: Locale,
+): ChapterReading {
+  // A name the server sent as whitespace is a name it does not have.
+  const via = legacyVia?.trim() || undefined;
+  if (routes.length === 0) {
+    return via
+      ? {
+          chip: via,
+          answer: t("contact.chapter.wayInAnswer", {
+            routes: via,
+            mix: t("contact.intro.stripDirect"),
+          }),
+        }
+      : {
+          chip: t("contact.intro.stripNoRoutes"),
+          answer: t("contact.intro.stripNoPath"),
+        };
+  }
+  const indirect = routes.filter((r) => r.through_display_name).length;
+  const count = plural("contact.chapter.routes", routes.length, {
+    count: formatNumber(routes.length, locale),
+  });
+  const mix = routeMix(routes.length, indirect, t, plural, locale);
+  const answer = t("contact.chapter.wayInAnswer", { routes: count, mix });
+  return {
+    chip: count,
+    // The reader's own relationship is the strongest way in this page can
+    // report, so it is named rather than folded into the count.
+    answer: mine ? `${answer} ${t("contact.intro.stripWhoOwn")}.` : answer,
+  };
+}
+
+// A split with a zero side ("0 via a contact") counts what is not there, so
+// one kind of route is named as such.
+function routeMix(
+  total: number,
+  indirect: number,
+  t: Translate,
+  plural: ReturnType<typeof usePlural>,
+  locale: Locale,
+): string {
+  if (indirect === 0) {
+    return plural("contact.chapter.allDirect", total);
+  }
+  if (indirect === total) {
+    return plural("contact.chapter.allVia", total);
+  }
+  return t("contact.intro.stripWhoMix", {
+    direct: formatNumber(total - indirect, locale),
+    indirect: formatNumber(indirect, locale),
+  });
+}
+
+type Part = Readonly<{ value: string; detail?: string }>;
+
+function withDetail(part: Part, t: Translate): string {
+  return part.detail
+    ? t("contact.chapter.withDetail", {
+        value: part.value,
+        detail: part.detail,
+      })
+    : part.value;
+}
+
+function progressReading(
+  change: Part,
+  handoff: Part,
+  t: Translate,
+): ChapterReading {
+  return {
+    chip: handoff.value,
+    answer: t("contact.chapter.progressAnswer", {
+      handoff: withDetail(handoff, t),
+      change: withDetail(change, t),
+    }),
+  };
+}
+
+function changeReading(
+  change: RelationshipChange | undefined,
+  withheld: boolean,
+  locale: Locale,
+  t: Translate,
+): Part {
+  return {
+    value: t(
+      withheld
+        ? "reading.restricted"
+        : change
+          ? labelFor(CHANGE_VALUE, change.kind)
+          : "contact.intro.stripNoMoment",
+    ),
+    detail: change && !withheld ? changeDetail(change, locale, t) : undefined,
+  };
+}
+
+function handoffReading(
+  open: IntroRequest | undefined,
+  pending: boolean | undefined,
+  unread: boolean | undefined,
+  reader: Readonly<{ id: string; display_name: string }> | undefined,
+  t: Translate,
+): Part {
+  return open
+    ? {
+        value: t(labelFor(HANDOFF_VALUE, open.status)),
+        detail: handoffDetail(open, reader, t),
+      }
+    : { value: t(noAskValue(pending, unread)) };
 }
 
 // What the change rests on: the span for a reply or a silence, the two bands

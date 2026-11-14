@@ -3,25 +3,22 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, renderHook, waitFor } from "@testing-library/react";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
 import { meFixture } from "../../../testing/mefixture";
 import type { IntroRequest } from "../introrequests";
-import { DecisionStrip } from "./decision";
+import { useNetworkReadings } from "./decision";
 
-// What each slot says when the payload is SHORT of what the slot rests on.
+// What each reading says when the payload is SHORT of what it rests on.
 //
-// The strip is mounted directly rather than through the tab: these are the
-// card's own contract — a value is a non-empty string, a detail is a receipt
-// and never a substituted one — and reading them through the page would mean
-// the fixture had to satisfy a graph, an ask list and a map to prove anything
-// about three cards.
-//
-// The tab's own wiring (which change reaches the strip, and whether the
-// section was withheld) stays in index.test.tsx, where the 360 is.
+// The hook is read directly rather than through the tab: these are the
+// readings' own contract (a value is a non-empty string, a detail is a receipt
+// and never a substituted one), and reading them through the page would mean
+// the fixture had to satisfy a graph, an ask list and a map.
 
 type RouteCandidate = components["schemas"]["ContactGraphRouteCandidate"];
 type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
@@ -68,37 +65,29 @@ function stubSession(session: "answered" | "pending" = "answered") {
   return { answered };
 }
 
-function renderStrip(
-  props: Partial<Parameters<typeof DecisionStrip>[0]> = {},
-): void {
+type Props = Parameters<typeof useNetworkReadings>[0];
+
+function readings(props: Partial<Props> = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <DecisionStrip
-          routes={[]}
-          legacyVia={undefined}
-          change={undefined}
-          changeWithheld={false}
-          open={undefined}
-          {...props}
-        />
-      </LocaleProvider>
-    </QueryClientProvider>,
+      <LocaleProvider initial="en">{children}</LocaleProvider>
+    </QueryClientProvider>
   );
-}
-
-// The card a reading is drawn in, found by the value it drew.
-function cardOf(value: string): HTMLElement {
-  const card = screen
-    .getByText(value, { selector: ".stat-card-value" })
-    .closest(".stat-card");
-  if (!(card instanceof HTMLElement)) {
-    throw new Error(`"${value}" is not drawn in a card`);
-  }
-  return card;
+  return renderHook(
+    () =>
+      useNetworkReadings({
+        routes: [],
+        legacyVia: undefined,
+        change: undefined,
+        changeWithheld: false,
+        open: undefined,
+        ...props,
+      }),
+    { wrapper },
+  ).result;
 }
 
 const route: RouteCandidate = {
@@ -151,62 +140,60 @@ describe("the latest change states no receipt it does not have", () => {
 
   it("states a change with no span without inventing one", () => {
     stubSession();
-    renderStrip({ change: changes.span });
+    const result = readings({ change: changes.span });
 
-    const card = cardOf(en["contact.intro.change.quiet"]);
-    expect(card.querySelector(".stat-card-detail")).toBeNull();
+    expect(result.current.progress.answer).toContain(
+      `${en["contact.intro.change.quiet"]}.`,
+    );
   });
 
   it("states a band move with no bands without naming two", () => {
     stubSession();
-    renderStrip({ change: changes.bands });
+    const result = readings({ change: changes.bands });
 
-    const card = cardOf(en["contact.intro.change.warmed"]);
-    expect(card.querySelector(".stat-card-detail")).toBeNull();
-    expect(screen.queryByText(/→/)).toBeNull();
+    expect(result.current.progress.answer).toContain(
+      `${en["contact.intro.change.warmed"]}.`,
+    );
+    expect(result.current.progress.answer).not.toContain("→");
   });
 
   // The span IS the receipt where it arrived, so the drop above is a real
-  // branch rather than a slot that never carries one.
+  // branch rather than a reading that never carries one.
   it("states the span where the change carries it", () => {
     stubSession();
-    renderStrip({ change: { ...changes.span, days: 62 } });
+    const result = readings({ change: { ...changes.span, days: 62 } });
 
-    const card = cardOf(en["contact.intro.change.quiet"]);
-    expect(card.textContent).toContain(
+    expect(result.current.progress.answer).toContain(
       en["contact.intro.change.quietSub"].replace("{days}", "62"),
     );
   });
 });
 
-// A StatCard value is a non-empty string by contract. A name the server sent
-// as whitespace is a name it does not have, and letting it through draws a
-// slot that reads as a reading which failed to load.
+// A name the server sent as whitespace is a name it does not have, and letting
+// it through reads as a reading which failed to load.
 describe("a name the server sent blank is no name", () => {
   it("reads a blank legacy route name as no way in", () => {
     stubSession();
-    renderStrip({ legacyVia: "   " });
+    const result = readings({ legacyVia: "   " });
 
-    expect(screen.getByText(en["contact.intro.stripNoRoutes"])).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripNoPath"])).toBeTruthy();
+    expect(result.current.wayIn.chip).toBe(en["contact.intro.stripNoRoutes"]);
+    expect(result.current.wayIn.answer).toBe(en["contact.intro.stripNoPath"]);
   });
 
   it("still names a legacy route the server did name", () => {
     stubSession();
-    renderStrip({ legacyVia: "Sofia Meier" });
+    const result = readings({ legacyVia: "Sofia Meier" });
 
-    expect(screen.getByText("Sofia Meier")).toBeTruthy();
-    expect(screen.getByText(en["contact.intro.stripDirect"])).toBeTruthy();
+    expect(result.current.wayIn.chip).toBe("Sofia Meier");
+    expect(result.current.wayIn.answer).toContain(
+      en["contact.intro.stripDirect"],
+    );
   });
 });
 
 // Once the colleague has agreed the move is the REQUESTER's, and where the
 // payload leaves them unnamed the session is the only thing that can name
-// them — which it may do only when the reader IS that requester. Two ways to
-// get this wrong: standing a colleague in while the read is in flight made the
-// slot say someone owed the move and then replace them with another, and
-// signing an ask from a different requester with the reader's own name states
-// a fact about the record that nothing supports.
+// them, which it may do only when the reader IS that requester.
 describe("the handoff names nobody it cannot name yet", () => {
   const mine = ask({
     status: "accepted",
@@ -218,100 +205,90 @@ describe("the handoff names nobody it cannot name yet", () => {
     ...mine,
     requester_user_id: "018f3a1b-0000-7000-8000-0000000000a9",
   });
+  const owner = en["contact.intro.handoffOwner"].replace(
+    "{name}",
+    meFixture({}).user.display_name,
+  );
 
-  it("leaves the owner line off while the session is still being read", () => {
+  it("leaves the owner off while the session is still being read", () => {
     stubSession("pending");
-    renderStrip({ open: mine });
+    const result = readings({ open: mine });
 
-    const card = cardOf(en["contact.intro.stateAccepted"]);
-    expect(card.querySelector(".stat-card-detail")).toBeNull();
-    expect(screen.queryByText(en["contact.intro.ownerColleague"])).toBeNull();
+    expect(result.current.progress.chip).toBe(
+      en["contact.intro.stateAccepted"],
+    );
+    expect(result.current.progress.answer).not.toContain("(");
   });
 
   it("names the reader once the session has answered", async () => {
     stubSession();
-    renderStrip({ open: mine });
+    const result = readings({ open: mine });
 
-    expect(
-      await screen.findByText(
-        en["contact.intro.handoffOwner"].replace(
-          "{name}",
-          meFixture({}).user.display_name,
-        ),
-      ),
-    ).toBeTruthy();
+    await waitFor(() =>
+      expect(result.current.progress.answer).toContain(owner),
+    );
   });
 
   // The ask is somebody else's. The session can still be read, and it still
-  // must not be the answer: an unnamed requester stays unnamed.
-  //
-  // The wait is a route the READER owns, drawn from the same session query, so
-  // the absence below is checked against a strip that has consulted the
-  // session rather than one that has not reached it yet.
+  // must not be the answer. The wait is a route the READER owns, read off the
+  // same session query, so the absence is checked after the session landed.
   it("signs no other requester's ask with the reader's name", async () => {
     stubSession();
-    renderStrip({ open: theirs, routes: [ownRoute] });
-    await screen.findByText(en["contact.intro.stripWhoOwn"]);
+    const result = readings({ open: theirs, routes: [ownRoute] });
+    await waitFor(() =>
+      expect(result.current.wayIn.answer).toContain(
+        en["contact.intro.stripWhoOwn"],
+      ),
+    );
 
-    const card = cardOf(en["contact.intro.stateAccepted"]);
-    expect(card.querySelector(".stat-card-detail")).toBeNull();
-    expect(
-      screen.queryByText(new RegExp(meFixture({}).user.display_name)),
-    ).toBeNull();
+    expect(result.current.progress.answer).not.toContain(
+      meFixture({}).user.display_name,
+    );
   });
 
-  // A settled ask owes nobody anything, so naming an owner there would point
-  // at a colleague who has already done their part.
+  // A settled ask owes nobody anything.
   it("names nobody on an ask that has been answered for good", () => {
     stubSession();
-    renderStrip({ open: ask({ status: "declined" }) });
+    const result = readings({ open: ask({ status: "declined" }) });
 
-    const card = cardOf(en["contact.intro.stateDeclined"]);
-    expect(card.querySelector(".stat-card-detail")).toBeNull();
-  });
-});
-
-// The fold is the PLATE's — `.stat-strip:has(.stat-card-narrow-row)` restyles
-// the whole row — so a strip where only some cards declared it would draw a
-// bordered box among a column of borderless rows.
-describe("every slot on the strip declares the narrow shape", () => {
-  it("leaves no card behind when the row folds", () => {
-    stubSession();
-    renderStrip({ change: { kind: "warmed", at: "2026-08-25T09:00:00Z" } });
-
-    expect(document.querySelectorAll(".stat-card-narrow-row").length).toBe(3);
+    expect(result.current.progress.chip).toBe(
+      en["contact.intro.stateDeclined"],
+    );
+    expect(result.current.progress.answer).not.toContain("(");
   });
 });
 
 describe("the ways in are counted, and the reader is one of them", () => {
-  it("counts every route and names the reader's own on its own line", async () => {
+  it("counts every route and names the reader's own in its own sentence", async () => {
     stubSession();
-    renderStrip({ routes: [route, ownRoute] });
+    const result = readings({ routes: [route, ownRoute] });
 
-    expect(
-      await screen.findByText(en["contact.intro.stripWhoOwn"]),
-    ).toBeTruthy();
-    expect(cardOf("2")).toBeTruthy();
+    await waitFor(() =>
+      expect(result.current.wayIn.answer).toContain(
+        en["contact.intro.stripWhoOwn"],
+      ),
+    );
+    expect(result.current.wayIn.chip).toBe("2 routes");
   });
 });
 
-// An ask list that could not be read is not an empty one, so the handoff slot
-// must not say nothing has started.
+// An ask list that could not be read is not an empty one.
 describe("the handoff over an unread ask list", () => {
   it("says it could not be read instead of not started", () => {
     stubSession();
-    renderStrip({ openUnread: true });
+    const result = readings({ openUnread: true });
 
-    expect(cardOf(en["contact.intro.handoffUnread"])).toBeTruthy();
-    expect(
-      screen.queryByText(en["contact.intro.handoffNotStarted"]),
-    ).toBeNull();
+    expect(result.current.progress.chip).toBe(
+      en["contact.intro.handoffUnread"],
+    );
   });
 
   it("says not started when the list was read and holds no ask", () => {
     stubSession();
-    renderStrip();
+    const result = readings();
 
-    expect(cardOf(en["contact.intro.handoffNotStarted"])).toBeTruthy();
+    expect(result.current.progress.chip).toBe(
+      en["contact.intro.handoffNotStarted"],
+    );
   });
 });

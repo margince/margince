@@ -339,6 +339,7 @@ export function ContactPageV2({
               onAction={runAction}
               onOpenEmail={setOpenEmail}
               onWrite={() => openComposer("")}
+              onResearch={() => setDrawer("research")}
               refusedReasonId={refusedReasonId}
             />
             {/* One drawer over the record. The timeline's rows and the rail's
