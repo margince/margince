@@ -35,6 +35,7 @@ fixture:
         subject: 'Unterschriebene NDA'
         body: |
           Hallo Frau Weber, anbei die unterschriebene NDA als PDF.
+        attachments: [NDA-unterschrieben.pdf]
 expect:
   outcome: accepted
   answer:
