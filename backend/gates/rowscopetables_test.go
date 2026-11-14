@@ -82,6 +82,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	"ActivityDiscoverClause":           {table: "activity"},
 	"ActivityContentClause":            {table: "activity"},
+	"ActivityMessageContentClause":     {table: "activity"},
 	"EnsureActivityVisible":            {table: "activity"},
 	"EnsureActivityVisibleLive":        {table: "activity"},
 	"EnsureActivityContentVisible":     {table: "activity"},
