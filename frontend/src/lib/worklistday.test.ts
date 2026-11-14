@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import {
+  HOME_DAY_STALE_RETRY_MS,
   homeDayWait,
   readWorklistPage,
   untilNextDue,
@@ -48,6 +49,14 @@ describe("the Home day's refresh", () => {
     expect(homeDayWait([page(["2026-10-31T11:00:00Z"])], now)).toBe(5 * 60_000);
     expect(homeDayWait([page(["2026-10-31T08:00:00Z"])], now)).toBe(5 * 60_000);
     expect(homeDayWait([], now)).toBe(5 * 60_000);
+  });
+
+  it("asks again shortly after the server served a kept answer past its freshness", () => {
+    const stale = { ...page(["2026-10-31T11:00:00Z"]), served_stale: true };
+    expect(homeDayWait([stale], now)).toBe(HOME_DAY_STALE_RETRY_MS);
+    expect(homeDayWait([{ ...stale, served_stale: false }], now)).toBe(
+      5 * 60_000,
+    );
   });
 
   it("replaces the minute poll on the reader's own day only", () => {

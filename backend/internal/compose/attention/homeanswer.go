@@ -50,7 +50,11 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 	if err != nil || !home {
 		return fresh(ctx)
 	}
-	return homecache.Serve(ctx, h.home, reader, homecache.Worklist, key, fresh, walkStartedBy)
+	out, stale, err := homecache.Serve(ctx, h.home, reader, homecache.Worklist, key, fresh, walkStartedBy)
+	if stale {
+		out.ServedStale = &stale
+	}
+	return out, err
 }
 
 // homeKey names Home's own question as the service answers it, so the spellings

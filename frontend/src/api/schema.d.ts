@@ -59234,6 +59234,13 @@ export interface components {
              */
             as_of: string;
             /**
+             * @description True when this answer is Home's kept answer past its five-minute freshness,
+             *     served while the server reads it again. It still holds every access rule the
+             *     fresh read would apply. A client asks again a few seconds later for the fresh
+             *     answer. Absent or false means the answer is fresh.
+             */
+            served_stale?: boolean;
+            /**
              * @description Whose work this read answered for.
              * @enum {string}
              */

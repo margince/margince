@@ -127,8 +127,13 @@ const DUE_SLACK_MS = 1_000;
 // next month would then read the day again the moment each read ends.
 const LONGEST_WAIT_MS = 60 * 60_000;
 
+// A kept answer served past its freshness is read again behind it on the
+// server; asking shortly after picks up the fresh one.
+export const HOME_DAY_STALE_RETRY_MS = 3_000;
+
 /** When Home's day is read again: its next due row, or once it is stale. */
 export function homeDayWait(pages: Worklist[], now: number): number {
+  if (pages[0]?.served_stale) return HOME_DAY_STALE_RETRY_MS;
   const due = untilNextDue(pages, now);
   return due === false ? HOME_DAY_FRESH_MS : Math.min(due, HOME_DAY_FRESH_MS);
 }
