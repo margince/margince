@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension/need.go backend/pkg/extension/models.go backend/pkg/extension/objects.go backend/internal/compose/extcapability backend/internal/compose/extneeds.go -->
+<!-- describes: backend/pkg/extension/need.go backend/pkg/extension/models.go backend/pkg/extension/objects.go backend/internal/compose/extcapability backend/internal/compose/extruntime.go -->
 # What an extension can use from the core
 
 An extension can use the core's AI models and its file store, but only after it says so in its declaration. This page is for the author of an extension and for the admin who installs one. It lists the two capability names, the refusals, and where each limit lives in the code.

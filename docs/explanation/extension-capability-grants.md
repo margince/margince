@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/pkg/extension/need.go backend/internal/compose/extcapability backend/internal/compose/extneeds.go backend/api/ai-tasks.yaml -->
+<!-- describes: backend/pkg/extension/need.go backend/internal/compose/extcapability backend/internal/compose/extruntime.go backend/api/ai-tasks.yaml -->
 # Why an extension declares what it uses from the core
 
 An extension uses the core's AI models and file store only when its manifest says so, and the core refuses the rest. This page records that decision and the choices that follow from it. The facts a reader looks up are in [extension-capabilities.md](../reference/extension-capabilities.md).
