@@ -98,8 +98,9 @@ export function useLeadStatusCounts(query: ListQuery) {
   return useQuery({
     queryKey: [...LEAD_STATUS_COUNTS_KEY, filters],
     enabled: terminalCountsWithheldBecause(query) === undefined,
-    queryFn: async (): Promise<Map<string, number> | null> => {
+    queryFn: async ({ signal }): Promise<Map<string, number> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
+        signal,
         params: { path: { report: "leads-by-status" } },
         body: {
           group_by: ["status"],
@@ -149,9 +150,10 @@ export function useTerminalLeads(
     queryKey: [...leadTerminalKey(status), params, dialStatus ?? null],
     enabled: enabled && (!dialStatus || dialStatus === status),
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       return unwrap(
         await api.GET("/leads", {
+          signal,
           params: {
             query: { ...params, limit: 50, cursor: pageParam ?? undefined },
           },

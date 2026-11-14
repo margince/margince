@@ -234,8 +234,9 @@ export function useStageTotals(f: DealFilters, enabled = true) {
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
     enabled: enabled && totalsWithheldBecause(f) === undefined,
-    queryFn: async (): Promise<Map<string, StageTotals> | null> => {
+    queryFn: async ({ signal }): Promise<Map<string, StageTotals> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
+        signal,
         params: { path: { report: "deals-by-stage" } },
         body: {
           group_by: ["stage_id"],

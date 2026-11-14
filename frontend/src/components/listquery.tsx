@@ -144,6 +144,7 @@ export function useListQuery<Row>({
   fetchPage: (
     query: ListQuery,
     cursor: string | null,
+    signal: AbortSignal,
   ) => Promise<ListPage<Row>>;
   initialSort?: string;
   /**
@@ -294,7 +295,7 @@ export function useListQuery<Row>({
   const infinite = useInfiniteQuery({
     queryKey: [key, query],
     enabled: enabled?.(query) ?? true,
-    queryFn: ({ pageParam }) => fetchPage(query, pageParam),
+    queryFn: ({ pageParam, signal }) => fetchPage(query, pageParam, signal),
     initialPageParam: FIRST_PAGE,
     getNextPageParam: (last) =>
       last.page.has_more && last.page.next_cursor

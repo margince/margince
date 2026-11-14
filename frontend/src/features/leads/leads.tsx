@@ -283,9 +283,10 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const leadQuery = useQuery({
     queryKey: leadKey(id),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/leads/{id}", {
+          signal,
           params: { path: { id } },
         }),
       );

@@ -5,7 +5,7 @@
 // entity kind, keyed and cached), as opposed to the components that render
 // them, which stay in entityref.tsx.
 
-import { skipToken, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { leadIdentityName } from "../format/leadname";
 import type { EntityKind } from "../lib/entity";
@@ -123,8 +123,11 @@ const NAME_READERS: Record<
 export function fetchEntityName(
   kind: EntityKind,
   id: string,
+  signal?: AbortSignal,
 ): Promise<string | null> {
-  return NAME_READERS[kind](id).then((reference) => reference?.name ?? null);
+  return NAME_READERS[kind](id, signal).then(
+    (reference) => reference?.name ?? null,
+  );
 }
 
 export async function fetchEntityReference(
@@ -149,7 +152,11 @@ export async function fetchEntityReference(
 export function entityNameQuery(kind: EntityKind, id: string) {
   return {
     queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: () => fetchEntityName(kind, id),
+    queryFn:
+      kind === "company"
+        ? () => fetchEntityName(kind, id)
+        : ({ signal }: { signal: AbortSignal }) =>
+            fetchEntityName(kind, id, signal),
     // References change rarely relative to the pages that render them; a short
     // cache keeps a 360 from re-fetching the same name on every hover/refetch.
     staleTime: 60_000,
@@ -217,7 +224,7 @@ export function useEntityName(
   const query = useQuery({
     ...entityNameQuery(kind, id ?? ""),
     queryKey: [kind, ENTITY_NAME_KEY, id],
-    queryFn: id ? () => fetchEntityName(kind, id) : skipToken,
+    enabled: Boolean(id),
   });
   // The reading travels with the name, because a caller handed only `null`
   // cannot tell a name that is still coming from one that will never come, and

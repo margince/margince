@@ -67,8 +67,13 @@ export function WhichDealChoice({ task }: Readonly<{ task: Activity }>) {
   const deals = useQueries({
     queries: offered.map((id) => ({
       queryKey: ["deal", id],
-      queryFn: async () =>
-        unwrap(await api.GET("/deals/{id}", { params: { path: { id } } })),
+      queryFn: async ({ signal }: { signal: AbortSignal }) =>
+        unwrap(
+          await api.GET("/deals/{id}", {
+            signal,
+            params: { path: { id } },
+          }),
+        ),
     })),
   });
   const file = useFileOnDeal(task.id);

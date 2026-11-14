@@ -16,8 +16,9 @@ export function useEmploymentPages(view: View) {
     queryKey: ["contactEmployments", id, view.employments?.page.next_cursor],
     enabled: Boolean(view.employments?.page.has_more),
     initialPageParam: view.employments?.page.next_cursor ?? "",
-    queryFn: async ({ pageParam }) => {
-      const data = await readEmploymentPage(id, pageParam);
+    queryFn: async ({ pageParam, signal }) => {
+      const data = await readEmploymentPage(id, pageParam, signal);
+      signal.throwIfAborted();
       const companies = new Map(
         await Promise.all(
           [...new Set(data.roles.map((row) => row.company_id))].map(
@@ -29,6 +30,7 @@ export function useEmploymentPages(view: View) {
           ),
         ),
       );
+      signal.throwIfAborted();
       const roles: Employment[] = data.roles.map((row) => ({
         ...row,
         company_name: companies.get(row.company_id),

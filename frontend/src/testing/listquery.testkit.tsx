@@ -55,6 +55,7 @@ export function ListTableHarness({
   fetchPage: (
     query: ListQuery,
     cursor: string | null,
+    signal: AbortSignal,
   ) => Promise<ListPage<Row>>;
   chips?: readonly FilterSpec[];
   action?: ReactNode;
