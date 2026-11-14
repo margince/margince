@@ -43,11 +43,10 @@ import {
 import { changedSinceBrief } from "./brief.changed";
 import {
   ContactMeetingBrief,
-  deferredLoads,
   Quiet,
   WeeklyPage,
   WeekStepper,
-  warm,
+  warmWhenIdle,
 } from "./brief.deferred";
 import { BriefDials } from "./brief.dials";
 import { DoneForYou } from "./brief.doneforyou";
@@ -245,7 +244,8 @@ function PersonalMorning({
       receipt: magic.data,
     });
     for (const mark of marks) markJourney(mark);
-    if (marks.includes("home:useful")) warmWhenIdle();
+    if (marks.includes("home:useful"))
+      warmWhenIdle([loadDetails, loadPane, loadApproval, loadWorklistScreen]);
   }, [state, day, settled, magic.data]);
   return (
     <>
@@ -448,25 +448,6 @@ function ScheduleWithMeetings({
       )}
     </>
   );
-}
-
-// What Home opens on demand is fetched once its day is on screen, so the first
-// click on a task, a meeting or the Worklist does not wait for its code.
-let warmed = false;
-function warmWhenIdle() {
-  if (warmed) return;
-  warmed = true;
-  const all = () =>
-    warm([
-      ...deferredLoads,
-      loadDetails,
-      loadPane,
-      loadApproval,
-      loadWorklistScreen,
-    ]);
-  if (typeof requestIdleCallback === "function")
-    requestIdleCallback(all, { timeout: 5_000 });
-  else setTimeout(all, 0);
 }
 
 const loadDetails = () => import("../worklist/taskdetailmodal");

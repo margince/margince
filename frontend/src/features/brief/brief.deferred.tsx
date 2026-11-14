@@ -27,16 +27,31 @@ const loadMeetingBrief = () => import("./meetingbrief/drawer");
 const loadWeeklyPage = () => import("./brief.weeklypage");
 const loadWeekly = () => import("./brief.weekly");
 
-/** Home's own pieces that load on demand. */
-export const deferredLoads = [loadMeetingBrief, loadWeeklyPage, loadWeekly];
+let warmed = false;
 
-/** Fetches what Home opens on demand, once its day is on screen. */
-export function warm(loads: readonly (() => Promise<unknown>)[]): void {
-  for (const load of loads) {
-    load().catch((error: unknown) =>
-      console.warn("Home could not fetch a piece it opens on demand", error),
-    );
-  }
+/**
+ * Fetches what Home opens on demand, its own pieces and those named here, once
+ * the page is idle. The first click on a task, a meeting or the Worklist then
+ * does not wait for its code.
+ */
+export function warmWhenIdle(loads: readonly (() => Promise<unknown>)[]): void {
+  if (warmed) return;
+  warmed = true;
+  const all = () => {
+    for (const load of [
+      loadMeetingBrief,
+      loadWeeklyPage,
+      loadWeekly,
+      ...loads,
+    ]) {
+      load().catch((error: unknown) =>
+        console.warn("Home could not fetch a piece it opens on demand", error),
+      );
+    }
+  };
+  if (typeof requestIdleCallback === "function")
+    requestIdleCallback(all, { timeout: 5_000 });
+  else setTimeout(all, 0);
 }
 
 export const ContactMeetingBrief = lazy(
