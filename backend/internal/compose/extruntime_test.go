@@ -369,9 +369,7 @@ func (c *countingLane) Complete(context.Context, model.Request) (model.Response,
 	return model.Response{Text: "ok"}, nil
 }
 
-var oneMessage = extension.CompleteRequest{
-	Messages: []extension.Message{{Role: "user", Text: "hello"}}, NoContactData: "a fixed greeting",
-}
+var oneMessage = extension.CompleteRequest{Messages: []extension.Message{{Role: "user", Text: "hi"}}, NoContactData: "a greeting"}
 
 // composeNeeds composes one unit, "summaries", declaring needs, and mints a
 // Runtime for it in a fresh workspace.

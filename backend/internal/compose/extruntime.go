@@ -455,8 +455,7 @@ func (s callSecrets) DeleteUser(ctx context.Context, userID extension.UserID, ke
 	return s.inner.DeleteUser(ctx, userID, key)
 }
 
-// BindExtensionModels records the ModelPath.ExtensionCall lane a unit's Models
-// reaches. A nil lane leaves Models refusing.
+// BindExtensionModels records the lane a unit's Models reaches; nil leaves it refusing.
 func BindExtensionModels(lane completer) {
 	extensionRuntimeDeps.mu.Lock()
 	defer extensionRuntimeDeps.mu.Unlock()
@@ -470,9 +469,8 @@ func BindExtensionObjects(store blobstore.Store) {
 	extensionRuntimeDeps.blob = store
 }
 
-// BindExtensionObjectsFromConfig opens the configured object store and binds it.
-// A role calls it before RecordComposition, which sweeps the objects of a unit
-// the installation no longer composes.
+// BindExtensionObjectsFromConfig opens the configured object store and binds it,
+// before RecordComposition sweeps the objects of a unit no longer composed.
 func BindExtensionObjectsFromConfig(ctx context.Context, settings *config.Config) error {
 	store, err := extcapability.OpenStore(ctx, settings)
 	if err != nil {

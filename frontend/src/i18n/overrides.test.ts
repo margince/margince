@@ -11,7 +11,10 @@ import { de } from "./de";
 vi.mock("@composition/copy", () => ({
   extensionCopy: { en: { "extAcme.title": "Acme" } },
   extensionOverrides: {
-    en: { "nav.contacts": "Customers", "worklist.relationships.optional": "{q}" },
+    en: {
+      "nav.contacts": "Customers",
+      "worklist.relationships.optional": "{q}",
+    },
   },
 }));
 

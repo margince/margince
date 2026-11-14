@@ -588,8 +588,7 @@ func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 	}
 }
 
-// A model call a unit makes leaves a system_log row naming the unit, and a call
-// refused for want of a declaration leaves none.
+// A model call leaves a system_log row naming the unit; a refused call leaves none.
 func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 	e := integration.Setup(t)
 	lane := &countingLane{}
@@ -597,7 +596,6 @@ func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 	ctx := e.Admin()
 	rt := runtimeFor(ctx, "summaries", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: e.Pool, models: lane})
 	defer rt.release()
-
 	const rows = `SELECT count(*) FROM system_log WHERE action = 'extension_model_call' AND detail->>'extension' = 'summaries'`
 	if text, err := rt.Models().Complete(ctx, oneMessage); err != nil || text != "ok" {
 		t.Fatalf("Complete = %q, %v, want the lane's answer", text, err)
@@ -614,9 +612,8 @@ func TestAModelCallNamesTheUnitInTheAuditTrail(t *testing.T) {
 	}
 }
 
-// A unit that leaves the composed set loses its objects. A boot with no store
-// bound deletes nothing, and the next boot with a store deletes them. Another
-// unit's objects stay.
+// A boot with no store bound deletes nothing; the next boot with one deletes the
+// objects of a unit that left, and keeps another unit's.
 func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
@@ -643,26 +640,23 @@ func TestARemovedUnitsObjectsAreSweptByALaterBootIfTheFirstHadNoStore(t *testing
 		}
 		return true
 	}
-
+	observe := func(exts []extension.Extension) {
+		t.Helper()
+		if err := ObserveExtensionInventory(ctx, e.Pool, log, exts); err != nil {
+			t.Fatal(err)
+		}
+	}
 	BindExtensionObjects(store)
 	both := []extension.Extension{{Name: "keeper", Version: "1"}, {Name: "leaver", Version: "1"}}
-	if err := ObserveExtensionInventory(ctx, e.Pool, log, both); err != nil {
-		t.Fatal(err)
-	}
+	observe(both)
 	keeper, leaver := put("keeper"), put("leaver")
-
 	BindExtensionObjects(nil)
-	only := both[:1]
-	if err := ObserveExtensionInventory(ctx, e.Pool, log, only); err != nil {
-		t.Fatal(err)
-	}
+	observe(both[:1])
 	if !present(leaver) {
 		t.Fatal("a boot with no store deleted objects it could not reach")
 	}
 	BindExtensionObjects(store)
-	if err := ObserveExtensionInventory(ctx, e.Pool, log, only); err != nil {
-		t.Fatal(err)
-	}
+	observe(both[:1])
 	if present(leaver) {
 		t.Error("the removed unit's object survived a boot that had the store")
 	}
