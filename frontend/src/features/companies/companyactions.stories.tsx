@@ -4,26 +4,15 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { pipelinesOptions } from "../../lib/pipelines.queries";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../testing/story-utils";
 import { NewDealAction } from "./companyactions";
-
-// The three verbs the company page hands the rep directly, so none of them
-// is a click-through to another screen: open a deal on this account, tag it,
-// or add it to a list. All three share CreateAction's button+modal shape
-// (create.tsx), so the states worth a story are the same shape too: the
-// resting button, the open form, mid-submit, and a failed submit. None of
-// these controls reads a capability (no useCan anywhere in companyactions.tsx
-// or create.tsx) — there is no read-only or permission-denied variant to
-// cover, unlike companyraildetails' Archived story.
-//
-// The session still has to be stated: the grants each story names are the ones
-// its flow actually spends, so the session reads as the rep the story is
-// about.
 
 type Pipeline = components["schemas"]["Pipeline"];
 
@@ -95,18 +84,28 @@ const closedPipeline: Pipeline = {
 function NewDeal({
   pipeline,
   submit,
+  cached = false,
 }: Readonly<{
   pipeline: Pipeline;
+  cached?: boolean;
   submit?: (body: unknown) => Response | Promise<Response>;
 }>) {
+  const client = storyQueryClient();
+  if (cached) {
+    client.setQueryDefaults(pipelinesOptions.queryKey, { staleTime: Infinity });
+    client.setQueryData(pipelinesOptions.queryKey, [pipeline]);
+  }
   installFetchStub({
     // Where the deal may land, and the write that puts it there.
     "GET /me": meRoute({ pipeline: ["read"], deal: ["create"] }),
-    "GET /pipelines": () => jsonResponse({ data: [pipeline], page }),
+    "GET /pipelines": () =>
+      cached
+        ? jsonResponse({ title: "The cached catalog should be reused" }, 500)
+        : jsonResponse({ data: [pipeline], page }),
     ...(submit ? { "POST /deals": submit } : {}),
   });
   return (
-    <StoryProviders>
+    <StoryProviders client={client}>
       <NewDealAction companyId="o-1" companyName="Brandt Automotive GmbH" />
     </StoryProviders>
   );
@@ -115,6 +114,13 @@ function NewDeal({
 // Resting: the button alone, before the rep has asked for anything.
 export const NewDealResting: Story = {
   render: () => <NewDeal pipeline={openPipeline} />,
+};
+
+export const NewDealFromCachedCatalog: Story = {
+  render: () => <NewDeal pipeline={openPipeline} cached />,
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", { name: "New deal" });
+  },
 };
 
 // No open stage anywhere in the default pipeline: the component returns

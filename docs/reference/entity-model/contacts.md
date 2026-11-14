@@ -875,6 +875,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Triggers**
 
 - `bind_requests_on_address_move`: `BEFORE UPDATE OF contact_id FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION bind_requests_on_address_move()`
+- `contact_email_clears_reply_settled`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION contact_email_clears_reply_settled()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "email_type": 20000, "captured_by": 20000, "email_domain_folded": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"email":20000,"email_domain_folded":20000,"email_type":20000,"source":20000}')`

@@ -151,6 +151,13 @@ func (s *Service) OmittingRelationships() *Service {
 	return &omitting
 }
 
+// ShapedForHome is the service on a per-request copy that answers in Home's shape.
+func (s *Service) ShapedForHome() *Service {
+	shaped := *s
+	shaped.homeShape = true
+	return &shaped
+}
+
 // echoAsked tells the client which narrowing and which view this page answers.
 func (s *Service) echoAsked(out *crmcontracts.Worklist, filter string) {
 	if filter != "" {

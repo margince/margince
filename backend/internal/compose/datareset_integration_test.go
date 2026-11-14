@@ -325,6 +325,9 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 // settlementEvidenceShare is the reason for the settlement evidence triggers.
 const settlementEvidenceShare = "the settlement evidence generation, not a guard: it takes a shared advisory lock on the deleted row's conversation keys and refuses no delete. A reset waits only while a settlement verdict holds the same conversation, for that verdict's short transaction"
 
+// replySettledClear is the reason for the triggers that clear the stamp the owed check reads first.
+const replySettledClear = "clears the reply-settled stamps on the deleted row's thread so the stamping job reads them again, and refuses no delete. Its UPDATE skips restricted rows, so the restricted-row guard never fires; the sweep deletes every stamped message too, so no stale stamp survives a reset"
+
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	"raw_capture raw_original_object_retired":  "records retired object keys and refuses no delete; reset preserves stored_object_intent so the cleanup worker can remove their bytes",
 	"activity reopen_deleted_signature_source": "Maintains signature read requests and refuses no delete. Reset removes the contacts and their requests by cascade; TestSweepWorkspaceDataClearsDomainKeepsIdentity proves it with an actual mail source and read watermark.",
@@ -364,7 +367,12 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	"activity_participant settlement_evidence_share":    settlementEvidenceShare,
 	"activity_link settlement_evidence_share":           settlementEvidenceShare,
 	"contact_email settlement_evidence_share":           settlementEvidenceShare,
-	"relationship relationship_last_activity":           "a clock-maintenance trigger, not a guard: it recomputes the employer's last_activity_at and refuses no delete",
+
+	"activity activity_clears_reply_settled":                replySettledClear,
+	"activity_participant participant_clears_reply_settled": replySettledClear,
+	"contact_email contact_email_clears_reply_settled":      replySettledClear,
+
+	"relationship relationship_last_activity": "a clock-maintenance trigger, not a guard: it recomputes the employer's last_activity_at and refuses no delete",
 	// Also not a guard (migration 1787226902): BEFORE DELETE ON company, it
 	// sets deal.partner_company_id and deal.partner_attribution to NULL so a deleted
 	// partner leaves no dangling attribution. It refuses no delete.

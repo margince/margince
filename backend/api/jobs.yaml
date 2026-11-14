@@ -1525,6 +1525,22 @@ kinds:
       arrives with its participants stamped — but it stays periodic because a
       restore or an import can reintroduce unattributed rows.
 
+  # When a same-thread fact settled each inbound message. The database clears a
+  # stamp whenever a write can change it; this pass writes it again.
+  reply_settled_stamp:
+    role: worker
+    fleet: true
+    go_type: ReplySettledStampArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 1m
+    reason: >-
+      Every minute, so new mail is stamped soon after it arrives. A pass is at
+      most replySettledBatchesPerTick (20) batches of replySettledBatch (500)
+      indexed rows, each one locked UPDATE, well inside two minutes. An
+      unstamped message is still read whole, so a late pass costs speed only.
+
 
   # One job, not a dispatcher and a child (ADR-0103 §1): it keeps the
   # dispatcher's kind and cadence and the child's queue, timeout and attempt

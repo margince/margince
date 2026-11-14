@@ -21769,6 +21769,10 @@ paths:
         `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
         source that FAILED is named there too. A day cannot read as clear while something
         that would have filled it never answered.
+
+        `If-None-Match` with the answer's `ETag` answers 304 when the bytes have not
+        changed. The answer is `private, no-cache`: only the reader's own browser keeps it,
+        and it asks again before each use.
       x-mcp-tool: { verb: get_worklist, router: read_workspace, action: worklist, tier: auto_execute, scope: read, served_by: route }
       parameters:
         - name: scope
@@ -21977,12 +21981,38 @@ paths:
             page carries neither `optional_relationships` nor
             `optional_relationships_more_available`. A reconnection the reader pinned
             is still read and still reaches the queue. Nothing else on the page changes.
+        - name: shape
+          in: query
+          schema: { type: string, enum: [queue, home], default: queue }
+          description: |
+            How much of the ranked day the page carries. `queue` is the page of the queue
+            and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+            the day's meeting rows plus every row that comes due in the next five minutes,
+            with no cursor and no rows below the cut. Focus, the
+            summary, `counts[].considered`, `reach[].considered` and the readings are the
+            same in both shapes; `shown` counts the rows this page carries.
       responses:
         '200':
           description: The ranked day.
+          headers:
+            ETag:
+              description: A weak tag of the answer's bytes, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Worklist' }
+        '304':
+          description: The client already holds this answer.
+          headers:
+            ETag:
+              description: The tag the client holds, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -80694,6 +80724,13 @@ components:
             records the reader cannot both write is somebody else's decision, and
             counting it here tells them a contact is waiting on an answer they are not
             able to give.
+        soonest_lead_due:
+          type: string
+          format: date-time
+          description: |
+            When the nearest open task on a lead is due, over every task this read weighed.
+            Absent when no such task has a due time, or when the task lane was read to its
+            bound or could not be read, so an unseen task could be due sooner.
         more_available:
           type: boolean
           description: |

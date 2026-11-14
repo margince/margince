@@ -15,16 +15,7 @@ export function defaultPipelineOf(
   return pipelines.find((each) => each.is_default) ?? pipelines[0];
 }
 
-/**
- * Every pipeline, stages included, in the server's order.
- *
- * ONE key for the plural read, distinct from the single-pipeline reads under
- * `["pipelines", <id>]`: sharing a key would let the cache hold either shape
- * depending on which screen loaded last. A mutation invalidating the
- * `["pipelines"]` prefix still refreshes this entry.
- *
- * `enabled` is for a surface that reads the list only once it is opened.
- */
+// Cache raw pipelines together so list and record readers share the same read.
 export const pipelinesOptions = queryOptions({
   queryKey: ["pipelines", "all"],
   queryFn: async ({ signal }) =>

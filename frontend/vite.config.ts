@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 import {
+  chunkBudgets,
   entryChunks,
   initialEntries,
   preloadEntries,
@@ -147,6 +148,8 @@ export default defineConfig({
     startup.plugin,
     analytics.plugin,
     home.plugin,
+    // Home's chunk is what a cold load on Home waits for.
+    chunkBudgets({ home: 820_000 }),
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.

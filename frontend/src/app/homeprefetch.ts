@@ -11,8 +11,7 @@ import { addressFrom } from "../features/brief/brief.view";
 import { handledForYouOptions } from "../lib/handled";
 import { magicOptions } from "../lib/magic.queries";
 import type { UrlParams } from "../lib/urlstate";
-import { worklistDayOptions } from "../lib/worklistday";
-import { DEFAULT_VIEW } from "../lib/worklistviews";
+import { homeDayOptions } from "../lib/worklistday";
 import { notePrefetched } from "./queryclient";
 
 // Home's morning reads, started with the session probe (App.tsx). The screen
@@ -39,7 +38,7 @@ export function prefetchHome(
       }
     });
   };
-  const day = worklistDayOptions("mine", "all", undefined, DEFAULT_VIEW);
+  const day = homeDayOptions();
   // The returned cleanup belongs to the route. A prefetch has no observer, so a
   // reader who leaves first would leave the day assembling. One is held while the
   // read is in flight, so React Query can abort it; after, it would count as a
