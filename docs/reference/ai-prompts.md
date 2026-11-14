@@ -1618,7 +1618,7 @@ Return ONLY a JSON object {"order":["d1",...]} listing EVERY given deal referenc
 
 ### `capture_classify` / `classify`
 
-`system 2,192 B (~548 tok)`: rules 1,920 B · boundary 272 B · after boundary 0 B · **cacheable 87%**
+`system 2,332 B (~583 tok)`: rules 2,060 B · boundary 272 B · after boundary 0 B · **cacheable 88%**
 
 <details><summary>system prompt</summary>
 
@@ -1627,7 +1627,8 @@ You label captured emails for attention routing. For EACH supplied message emit 
 label: "commitment" (a promise to deliver or do something, or a request for a deliverable, a
 decision or a payment), "meeting" (a request for, offer of or confirmation of time together, such
 as a call, a visit or a slot, or follow-through on one), or "noise" (neither). Asking to meet is
-"meeting", not a request to act. Labels route attention; they change no data. If a message both
+"meeting", not a request to act. A decision the sender reports, such as declining to go ahead,
+requests nothing: it is "noise" unless the message also asks something of us. Labels route attention; they change no data. If a message both
 promises or requests something of the first kind AND asks for time, choose commitment.
 
 Each message opens with its subject line, then the text under "Sender's own words:", which is

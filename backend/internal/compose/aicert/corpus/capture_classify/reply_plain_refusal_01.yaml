@@ -8,8 +8,7 @@ fixture:
     inbound: true
     body: |
       Hi Jana, thank you for the proposal and the time you put into it. We have
-      decided not to go ahead with phase two this year, so please close this on
-      your side.
+      decided not to go ahead with phase two this year.
 
       Best regards,
       Marco
@@ -19,8 +18,8 @@ expect:
     - label: noise
       reply: negative
   rubric: >
-    The customer declines the proposal in plain words and asks us to close
-    it. Nothing is promised or requested of us and no time is proposed, so
+    The customer declines the proposal in plain words. Nothing is promised
+    or requested of us and no time is proposed, so
     the label is "noise". The reply verdict is "negative": the sender says
     no to going ahead. "neutral" or null misses a refusal the owner needs to
     see; "positive" is the worst answer.

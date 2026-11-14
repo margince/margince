@@ -27,7 +27,8 @@ const system = `You label captured emails for attention routing. For EACH suppli
 label: "commitment" (a promise to deliver or do something, or a request for a deliverable, a
 decision or a payment), "meeting" (a request for, offer of or confirmation of time together, such
 as a call, a visit or a slot, or follow-through on one), or "noise" (neither). Asking to meet is
-"meeting", not a request to act. Labels route attention; they change no data. If a message both
+"meeting", not a request to act. A decision the sender reports, such as declining to go ahead,
+requests nothing: it is "noise" unless the message also asks something of us. Labels route attention; they change no data. If a message both
 promises or requests something of the first kind AND asks for time, choose commitment.
 
 Each message opens with its subject line, then the text under "Sender's own words:", which is
