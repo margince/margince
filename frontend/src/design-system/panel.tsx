@@ -62,6 +62,11 @@ export function usePanelEdge(): RefObject<HTMLElement | null> | null {
 const FlatHeads = createContext(false);
 export const FlatPanelHeads = FlatHeads.Provider;
 
+// The level a panel title takes when its caller names none. A frame with its
+// own h2, such as a chapter, sets 3 for every panel inside it.
+const TitleLevel = createContext<2 | 3>(2);
+export const PanelTitleLevel = TitleLevel.Provider;
+
 // The head holds a title and its verbs, never a description; padded text goes
 // in `PanelBody` and edge-to-edge rows in `PanelRow`, as siblings.
 export function Panel({
@@ -147,6 +152,7 @@ export function Panel({
   const titleId = useId();
   const edge = useRef<HTMLElement>(null);
   const sheet = useContext(FlatHeads);
+  const defaultLevel = useContext(TitleLevel);
   const flat = flatHead || (sheet && tone !== "ai");
   return (
     <section
@@ -166,7 +172,7 @@ export function Panel({
               length. */}
             <Heading
               size={flat ? "small" : "medium"}
-              as={TITLE_ELEMENT[titleLevel ?? 2]}
+              as={TITLE_ELEMENT[titleLevel ?? defaultLevel]}
               className="panel-title"
               id={titleId}
               tabIndex={-1}

@@ -1,0 +1,124 @@
+/* Chapters of a long record tab: one interval between them, one anatomy in
+ * each (title, answer, verb, card). */
+.chapters {
+  display: grid;
+  gap: var(--space-10);
+}
+.chapter {
+  display: grid;
+  gap: var(--space-4);
+  scroll-margin-block-start: var(--space-6);
+}
+.chapter:focus {
+  outline: none;
+}
+.chapter:focus-visible {
+  border-radius: var(--r-lg);
+  box-shadow: var(--focus-glow);
+  outline: var(--focus-ring-forced);
+  outline-offset: 2px;
+}
+.chapter-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+.chapter-lead {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+  max-inline-size: 36rem;
+}
+.chapter-answer {
+  margin: 0;
+  color: var(--textSecondary);
+}
+.chapter-action {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.card.chapter-card {
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r-lg);
+}
+
+/* Every part of the card is a section of it, split by hairlines. A panel in
+ * here keeps its head and body and loses its box. */
+.chapter-parts > * + * {
+  border-block-start: 1px solid var(--borderSubtle);
+}
+.chapter-parts > .panel {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.chapter-parts > .panel + .panel {
+  border-block-start: 1px solid var(--borderSubtle);
+}
+
+/* Rows: each panel's name on the left, the rest beside it. */
+.chapter-parts[data-layout="rows"] > .panel {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  column-gap: var(--space-6);
+  align-items: start;
+  padding-block: var(--space-2);
+}
+.chapter-parts[data-layout="rows"] > .panel > .panel-head {
+  grid-column: 1;
+  grid-row: 1 / span 4;
+}
+.chapter-parts[data-layout="rows"] > .panel > :not(.panel-head) {
+  grid-column: 2;
+}
+@container (max-width: 640px) {
+  .chapter-parts[data-layout="rows"] > .panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .chapter-parts[data-layout="rows"] > .panel > :not(.panel-head),
+  .chapter-parts[data-layout="rows"] > .panel > .panel-head {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+.chapter-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.chapter-jump-chip {
+  display: inline-flex;
+  gap: var(--space-2);
+  min-block-size: var(--controlHeight);
+  padding-inline: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: transparent;
+  color: var(--textPrimary);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  align-items: center;
+  cursor: pointer;
+}
+.chapter-jump-chip:hover {
+  background: var(--bgHover);
+}
+.chapter-jump-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-glow);
+}
+.chapter-jump-title {
+  white-space: nowrap;
+}
+.chapter-jump-reading {
+  font-weight: var(--fontWeightRegular);
+  color: var(--textSecondary);
+}

@@ -245,7 +245,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
         />
         <ContactStops contactId={view.contact.id} />
         <StandingExceptions key={view.contact.id} contactId={view.contact.id} />
-        <p>{t("consent.permissionScope")}</p>
+        <p className="panel-intro">{t("consent.permissionScope")}</p>
         <Button
           variant="ghost"
           onClick={() => {
