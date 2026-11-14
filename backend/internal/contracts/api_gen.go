@@ -59032,9 +59032,18 @@ type Project360Commitment struct {
 	AssigneeName *string             `json:"assignee_name"`
 	DueAt        *time.Time          `json:"due_at"`
 
+	// DueHasTime True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time.
+	DueHasTime bool `json:"due_has_time"`
+
+	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
+	DueIntent *IntentTime `json:"due_intent,omitempty"`
+
 	// Overdue Dated and already past at `as_of`.
 	Overdue bool   `json:"overdue"`
 	Subject string `json:"subject"`
+
+	// Version The task row's version, which a write to the task names.
+	Version int64 `json:"version"`
 }
 
 // Project360Company The company the project is for — the two fields a page header needs, read under the company grant and row scope.

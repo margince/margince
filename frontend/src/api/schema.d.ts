@@ -41009,6 +41009,14 @@ export interface components {
             subject: string;
             /** Format: date-time */
             due_at: string | null;
+            /** @description True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time. */
+            due_has_time: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
+            /**
+             * Format: int64
+             * @description The task row's version, which a write to the task names.
+             */
+            version: number;
             /** Format: uuid */
             assignee_id: string | null;
             assignee_name: string | null;
