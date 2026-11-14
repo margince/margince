@@ -19640,6 +19640,7 @@ export const en = {
   "worklist.title.automation_run.failed": "{name} failed",
   "worklist.title.automation_run.blocked": "{name} was blocked",
   "worklist.title.meeting_outcome": "Record the outcome of {name}",
+  "worklist.title.meeting_outcome.read_only": "No outcome yet for {name}",
   "worklist.title.meeting_follow_up": "Follow up on {name}",
   "worklist.title.awaiting_reply": "No reply yet: {name}",
   "worklist.title.bounce": "Bounced: {name}",
@@ -19906,6 +19907,8 @@ export const en = {
     "A colleague asks you to introduce them to a contact. Accept or decline the request.",
   "worklist.ask.meeting_outcome":
     "This meeting is over and nothing records how it went. Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Whoever organized this meeting records how it went, and you cannot change it. Remind them if it matters, then mark it done.",
   "worklist.ask.weekly_commitment":
     "You planned this for the week. Do the work, or move it in your weekly plan.",
   "worklist.ask.awaiting_reply":

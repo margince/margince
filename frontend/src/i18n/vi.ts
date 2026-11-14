@@ -19361,6 +19361,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.title.automation_run.failed": "{name} bị lỗi",
   "worklist.title.automation_run.blocked": "{name} bị chặn",
   "worklist.title.meeting_outcome": "Ghi lại kết quả của {name}",
+  "worklist.title.meeting_outcome.read_only": "Chưa có kết quả cho {name}",
   "worklist.title.meeting_follow_up": "Liên hệ lại sau cuộc họp {name}",
   "worklist.title.awaiting_reply": "Chưa có phản hồi: {name}",
   "worklist.title.bounce": "Bị trả về: {name}",
@@ -19628,6 +19629,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một đồng nghiệp nhờ bạn giới thiệu với một liên hệ. Chấp nhận hoặc từ chối yêu cầu.",
   "worklist.ask.meeting_outcome":
     "Cuộc họp này đã kết thúc và chưa có ghi nhận nào về kết quả. Ghi lại kết quả. Nếu cuộc họp không diễn ra, chọn “Không diễn ra”, hoặc hủy qua lời mời trên lịch.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Người tổ chức cuộc họp sẽ ghi lại kết quả, và bạn không thể thay đổi cuộc họp này. Nhắc họ nếu cần, rồi đánh dấu là xong.",
   "worklist.ask.weekly_commitment":
     "Bạn đã lên kế hoạch việc này cho tuần. Làm xong, hoặc dời trong kế hoạch tuần.",
   "worklist.ask.awaiting_reply":

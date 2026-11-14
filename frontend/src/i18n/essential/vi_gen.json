@@ -2125,6 +2125,7 @@
   "worklist.title.automation_run.failed": "{name} bị lỗi",
   "worklist.title.automation_run.blocked": "{name} bị chặn",
   "worklist.title.meeting_outcome": "Ghi lại kết quả của {name}",
+  "worklist.title.meeting_outcome.read_only": "Chưa có kết quả cho {name}",
   "worklist.title.meeting_follow_up": "Liên hệ lại sau cuộc họp {name}",
   "worklist.title.awaiting_reply": "Chưa có phản hồi: {name}",
   "worklist.title.bounce": "Bị trả về: {name}",

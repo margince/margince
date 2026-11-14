@@ -19865,6 +19865,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.title.automation_run.failed": "{name} ist fehlgeschlagen",
   "worklist.title.automation_run.blocked": "{name} wurde blockiert",
   "worklist.title.meeting_outcome": "Ergebnis von {name} festhalten",
+  "worklist.title.meeting_outcome.read_only": "Noch kein Ergebnis für {name}",
   "worklist.title.meeting_follow_up": "Bei {name} nachfassen",
   "worklist.title.awaiting_reply": "Noch keine Antwort: {name}",
   "worklist.title.bounce": "Unzustellbar: {name}",
@@ -20151,6 +20152,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
   "worklist.ask.meeting_outcome":
     "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest. Fand er nicht statt, wähle „Hat nicht stattgefunden“ oder sag ihn über die Kalendereinladung ab.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Wer den Termin organisiert hat, hält fest, wie er gelaufen ist. Du kannst ihn nicht ändern. Erinnere bei Bedarf daran und markiere diese Erinnerung dann als erledigt.",
   "worklist.ask.weekly_commitment":
     "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
   "worklist.ask.awaiting_reply":
