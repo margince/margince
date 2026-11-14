@@ -304,8 +304,11 @@ func (s *Store) HasPending(ctx context.Context, linkID ids.UUID) (bool, error) {
 	}
 	var pending bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// A withdrawn item that still names its message waits for a rewrite. It
+		// counts, because a withdraw during a post finds that flush running.
 		return tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM chat_post_item
-			WHERE link_id = $1 AND posted_at IS NULL AND withdrawn_at IS NULL)`, linkID).Scan(&pending)
+			WHERE link_id = $1 AND ((posted_at IS NULL AND withdrawn_at IS NULL)
+			   OR (withdrawn_at IS NOT NULL AND message_id IS NOT NULL)))`, linkID).Scan(&pending)
 	})
 	return pending, err
 }

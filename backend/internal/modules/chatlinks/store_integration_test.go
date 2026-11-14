@@ -374,3 +374,34 @@ func TestADealsProjectJoinsItsChannelOnlyWhenTheRepMayEditTheProject(t *testing.
 		t.Fatalf("the project joined a channel its reader may not edit: %+v", state.Link)
 	}
 }
+
+func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
+	e := setupLinks(t)
+	state, err := e.store.Link(e.seat(e.rep, principal.RowScopeOwn), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
+	if err != nil {
+		t.Fatal(err)
+	}
+	activity := ids.NewV7()
+	if err := e.store.RecordEvent(e.system(), Event{EventID: ids.NewV7(), EventType: "activity.captured", EntityType: "activity",
+		EntityID: activity, ActivityID: &activity, Tier: TierImportant, Deals: []ids.UUID{e.deal}}); err != nil {
+		t.Fatal(err)
+	}
+	pending, err := e.store.PendingFor(e.system(), state.Link.ID)
+	if err != nil || len(pending.Items) != 1 {
+		t.Fatalf("pending = %+v, %v", pending, err)
+	}
+	// The post went out; the withdraw lands before the flush records it.
+	if err := e.store.Withdraw(e.system(), activity); err != nil {
+		t.Fatal(err)
+	}
+	if err := e.store.MarkPosted(e.system(), state.Link.ID, pending.Items[0].ID, "m1", []ids.UUID{pending.Items[0].ID}); err != nil {
+		t.Fatal(err)
+	}
+	more, err := e.store.HasPending(e.system(), state.Link.ID)
+	if err != nil || !more {
+		t.Fatalf("after a withdraw during the post HasPending = %v, %v; want the flush to run once more", more, err)
+	}
+	if pending, _ = e.store.PendingFor(e.system(), state.Link.ID); len(pending.Rewrites) != 1 {
+		t.Fatalf("rewrites = %+v, want message m1 rewritten", pending.Rewrites)
+	}
+}
