@@ -4,12 +4,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { QueryLike } from "../design-system/querystates";
 import { unwrap } from "./problem";
-import {
-  briefKey,
-  isLiveWorkRead,
-  magicKey,
-  worklistKey,
-} from "./workkeys";
+import { briefKey, isLiveWorkRead, magicKey, worklistKey } from "./workkeys";
 
 // The approvals query-hook family.
 //

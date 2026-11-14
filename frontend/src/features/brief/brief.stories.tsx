@@ -558,7 +558,6 @@ export const MorningWithMeetings: Story = {
   ]),
 };
 
-
 // ── The panes ───────────────────────────────────────────────────────────────
 
 // The work and the rail each on one pane, folded into one column on a phone.

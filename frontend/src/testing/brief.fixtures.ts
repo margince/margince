@@ -3,10 +3,7 @@ import { REPORTING_FIXTURE_ZONE } from "./reporting.fixtures";
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import type {
-  Deal,
-  MorningBrief,
-} from "../features/brief/brief.queries";
+import type { Deal, MorningBrief } from "../features/brief/brief.queries";
 import { jsonResponse } from "./story-utils";
 
 // The fixtures every Brief story is built from — the whole page in
