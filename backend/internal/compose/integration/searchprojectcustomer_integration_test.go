@@ -156,10 +156,15 @@ func TestSearchFiltersAProjectByAnyReadableLiveCompany(t *testing.T) {
 	f := q.seedProjectCompanies(t)
 	readers := q.projectReaders()
 	filter := func(reader, op string, company ids.UUID) map[ids.UUID]bool {
+		operand := `"value": "` + company.String() + `"`
+		if op == "in" {
+			operand = `"values": ["` + company.String() + `"]`
+		}
 		return idSet(q.run(readers[reader], t, `{"version": "v1", "target": "project",
-			"where": [{"field": "company_id", "op": "`+op+`", "value": "`+company.String()+`"}]}`))
+			"where": [{"field": "company_id", "op": "`+op+`", `+operand+`}]}`))
 	}
 	assertSameIDs(t, "projects with Alpha", filter("all", "eq", f.alpha), f.kessel, f.ventil)
+	assertSameIDs(t, "projects in [Alpha]", filter("all", "in", f.alpha), f.kessel, f.ventil)
 	assertSameIDs(t, "projects with Beta", filter("own", "eq", f.beta), f.turbine, f.pumpe)
 	assertSameIDs(t, "projects with archived Gamma", filter("all", "eq", f.gamma))
 	assertSameIDs(t, "projects with Private, as its owner", filter("rep3", "eq", f.private), f.pumpe)
@@ -170,7 +175,7 @@ func TestSearchFiltersAProjectByAnyReadableLiveCompany(t *testing.T) {
 	assertSameIDs(t, "projects without Private", filter("all", "neq", f.private),
 		f.kessel, f.turbine, f.pumpe, f.ventil)
 	for _, reader := range []string{"no edges", "no companies", "no edges (own)"} {
-		for _, op := range []string{"eq", "neq"} {
+		for _, op := range []string{"eq", "neq", "in"} {
 			for _, company := range []ids.UUID{f.alpha, f.beta, f.private} {
 				assertSameIDs(t, reader+" "+op+" "+company.String(), filter(reader, op, company))
 			}
@@ -198,6 +203,18 @@ func TestSearchHopsBetweenAProjectAndAnyReadableLiveCompany(t *testing.T) {
 	for _, reader := range []string{"no edges", "no edges (own)"} {
 		assertSameIDs(t, reader+": projects reaching Alpha", toCompany(reader, "Alpha Kunde"))
 		assertSameIDs(t, reader+": companies of Turbinenwartung", toProjects(reader, "Turbinenwartung"))
+	}
+	// Without company.read neither hop is in the caller's vocabulary, in
+	// either direction, so the plan is refused rather than answered.
+	for _, doc := range []string{
+		`{"version": "v1", "target": "project", "traverse": {"relation": "company",
+			"where": [{"field": "display_name", "op": "eq", "value": "Alpha Kunde"}]}}`,
+		`{"version": "v1", "target": "company", "traverse": {"relation": "projects",
+			"where": [{"field": "name", "op": "eq", "value": "Turbinenwartung"}]}}`,
+	} {
+		if result, err := q.answer(readers["no companies"], doc); err == nil {
+			t.Errorf("a caller without company.read was answered %v for %s", idSet(result), doc)
+		}
 	}
 }
 

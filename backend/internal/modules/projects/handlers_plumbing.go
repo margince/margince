@@ -65,9 +65,6 @@ func (h Handlers) Store() *Store {
 // restriction".
 const predicateAlways = "true"
 
-// predicateNever is the clause that admits no row.
-const predicateNever = "false"
-
 // edgeBound resolves the edge's read admission and returns the clause bounding
 // WHICH edges, admitting every edge for a caller bounded by nothing. Knowing a
 // project exists does not license learning who sits on it, and the endpoint

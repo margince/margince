@@ -220,29 +220,20 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
 	}
 	if in.CompanyID != nil {
-		// A row masks company_id for a role without the company grant, and the
-		// narrowed page would name it.
-		if err := auth.RefuseUnreadableReferenceFilter(ctx, filterCompanyID, "company"); err != nil {
-			return nil, err
-		}
 		// ANY of the project's live companies, not the legacy anchor column: a
 		// project is work several companies do together, so narrowing the list
-		// to a partner must show the deliveries that partner is on.
-		// A match discloses the project-company pair, which relationship.read
-		// governs, so a caller without it is refused the filter.
-		if err := auth.EdgeReadAdmitted(ctx); err != nil {
-			return nil, err
-		}
+		// to a partner must show the deliveries that partner is on. A match
+		// discloses the project-company pair, so a caller who may not read the
+		// edges is refused the filter, as the company page's project list is.
 		edges, err := auth.ProjectCompanyEdgesSQL(ctx, arg)
 		if err != nil {
 			return nil, err
 		}
-		match := predicateNever
-		if edges.Readable {
-			match = storekit.SQLf("EXISTS (SELECT 1 %s AND %s = project.id AND %s = $%d)",
-				edges.Source, auth.ProjectEdgeProject, auth.ProjectEdgeCompany, arg(*in.CompanyID))
+		if !edges.Readable {
+			return nil, apperrors.ErrPermissionDenied
 		}
-		where = append(where, match)
+		where = append(where, storekit.SQLf("EXISTS (SELECT 1 %s AND %s = project.id AND %s = $%d)",
+			edges.Source, auth.ProjectEdgeProject, auth.ProjectEdgeCompany, arg(*in.CompanyID)))
 	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {
