@@ -59,7 +59,7 @@ func TestAMeetingReportKeepsTheCustomersPromiseOnTheCustomer(t *testing.T) {
 	customer := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	body, source := "Mira: Ines Huber agreed to send the payment by Friday.", "transcript"
 	meeting, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
-		Kind: "meeting", Body: &body, SourceSystem: &source, Source: "manual",
+		Kind: "meeting", Body: &body, SourceSystem: &source, Source: "manual", OccurredAt: heldAnHourAgo(t),
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: customer}},
 	})
 	if err != nil {
@@ -117,7 +117,7 @@ func TestAMeetingReportCannotAssignWorkToTheNamedColleague(t *testing.T) {
 	body := "Mira: Priya Raman agreed to send the pricing by Friday."
 	source := "transcript"
 	meeting, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
-		Kind: "meeting", Body: &body, SourceSystem: &source, Source: "manual",
+		Kind: "meeting", Body: &body, SourceSystem: &source, Source: "manual", OccurredAt: heldAnHourAgo(t),
 		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
 	})
 	if err != nil {

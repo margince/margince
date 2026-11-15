@@ -21,7 +21,7 @@ import (
 func TestHistoricalTaskSurvivesMissingParticipantsAndReassignment(t *testing.T) {
 	e := setupTranscript(t)
 	meeting, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
-		Kind: "meeting", Source: "manual", SourceSystem: new("transcript"), Body: new(transcriptBody),
+		Kind: "meeting", Source: "manual", SourceSystem: new("transcript"), Body: new(transcriptBody), OccurredAt: heldAnHourAgo(t),
 	})
 	if err != nil {
 		t.Fatal(err)
