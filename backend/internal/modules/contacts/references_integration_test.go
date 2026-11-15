@@ -122,12 +122,23 @@ func TestCompanyReferencesRespectPrivateRowScope(t *testing.T) {
 		t.Fatal(err)
 	}
 	other := e.as(e.admin, principal.RowScopeAll)
-	if _, err := e.store.GetCompany(other, id, storekit.IncludeArchived); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("detail=%v", err)
-	}
-	got, err := e.store.CompanyReferences(other, []ids.UUID{id.UUID, ids.NewV7()})
-	if err != nil || len(got) != 0 {
-		t.Fatalf("hidden references=%+v err=%v", got, err)
+	for _, archived := range []bool{false, true} {
+		if archived {
+			if _, err := e.store.ArchiveCompany(owner, id, nil); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := e.store.GetCompany(other, id, storekit.IncludeArchived); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("archived=%v detail=%v", archived, err)
+		}
+		got, err := e.store.CompanyReferences(other, []ids.UUID{id.UUID, ids.NewV7()})
+		if err != nil || len(got) != 0 {
+			t.Fatalf("archived=%v hidden references=%+v err=%v", archived, got, err)
+		}
+		own, err := e.store.CompanyReferences(owner, []ids.UUID{id.UUID})
+		if err != nil || len(own) != 1 || own[0].Archived != archived {
+			t.Fatalf("archived=%v owner references=%+v err=%v", archived, own, err)
+		}
 	}
 }
 

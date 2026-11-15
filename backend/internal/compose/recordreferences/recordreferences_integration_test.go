@@ -175,15 +175,23 @@ func TestRecordReferencesOmitPrivateContactsLikeDetailReads(t *testing.T) {
 		t.Fatal(err)
 	}
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
-	if _, err := fixture.detail(colleague); !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("private detail=%v", err)
-	}
-	got := referenceResponse(t, referenceRequest(colleague, referenceRouter(e), "contact", fixture.id, ids.NewV7()))
-	if len(got) != 0 {
-		t.Fatalf("private references=%+v", got)
-	}
-	if own := referenceResponse(t, referenceRequest(e.Admin(), referenceRouter(e), "contact", fixture.id)); len(own) != 1 {
-		t.Fatalf("owner reference=%+v", own)
+	for _, archived := range []bool{false, true} {
+		if archived {
+			if err := fixture.archive(); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if _, err := fixture.detail(colleague); !errors.Is(err, apperrors.ErrNotFound) {
+			t.Fatalf("archived=%v private detail=%v", archived, err)
+		}
+		got := referenceResponse(t, referenceRequest(colleague, referenceRouter(e), "contact", fixture.id, ids.NewV7()))
+		if len(got) != 0 {
+			t.Fatalf("archived=%v private references=%+v", archived, got)
+		}
+		own := referenceResponse(t, referenceRequest(e.Admin(), referenceRouter(e), "contact", fixture.id))
+		if len(own) != 1 || own[0].Archived != archived {
+			t.Fatalf("archived=%v owner reference=%+v", archived, own)
+		}
 	}
 }
 
