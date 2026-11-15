@@ -291,7 +291,7 @@ func closedSetRefusals(t *testing.T) []setBearingRefusal {
 			what:    "the dimensions of one prebuilt report",
 			members: allowedReportNames(reportSpec.dimensions),
 			refuse: func(token string) error {
-				_, err := (&reportEngine{}).Derive(seatWith("deal"), namedReport,
+				_, err := (&reportEngine{}).Derive(seatWith("deal", "company"), namedReport,
 					derivationQuery{GroupBy: []string{token}})
 				return err
 			},
