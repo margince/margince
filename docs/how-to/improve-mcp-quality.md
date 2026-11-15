@@ -58,7 +58,7 @@ Decide which one from the transcript (section 3) before you change a thing.
 | Cause | What you see | Fixed in |
 |---|---|---|
 | **Harness** | `HARNESS:` stop; every run "called nothing"; degraded search | the lane; see the harness table in the run guide |
-| **Grader** | the final answer is right, but a check said no. A `not` guard reaches back over an earlier part of the sentence. A check knows the key of a field, and the model wrote its label. A pattern has `\\b` for `\b`: `check.py` drops the quotes and reads the rest as written | `e2e/llm/scenarios/*.yaml`, `criteria.yaml` |
+| **Grader** | the final answer is right, but a check said no. A `not` guard reaches back over an earlier part of the sentence. A check knows the key of a field, and the model wrote its label. A pattern has `\\b` for `\b`: `check.py` drops the quotes and reads the rest as written. The check ignores case, so a guard such as `(?! no)` also stops on ` Nora`; write `(?! no\b)`. `\b` sees no edge before `_`, so `\brisk` misses `at_risk`; write `(?:\b\|_)risk`. A check counts a number from one tool, and the model read the right number from another | `e2e/llm/scenarios/*.yaml`, `criteria.yaml` |
 | **Case** | the prompt asks the model to prefer one tool when another gives a right answer too | the prompt of the case; keep its checks |
 | **Path pin** | the answer is right and true, and the run failed only because it used another tool than `must_call` names | the case: drop the pin and check the answer, with `figures_from_results` or `must_end_with` ([add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md)) |
 | **Product: copy** | the model followed a wrong path that looked right, and a tool description or the server instructions pointed it there. Or the copy is false: it says a link moves a record when it adds one, or that a tool only offers when it applies and stores nothing. Or the key sentence sits on a tool the passport hides | `backend/internal/modules/agents/toolcopy_*.go`, `shared/ports/mcp/mcp.go` |
@@ -110,8 +110,21 @@ example in the instructions must not. Make a rule apply only when needed, if it 
 some of the time, for example "when the numbers go into a document". Then
 cases close by, which take the other path for good reason, do not move to the new one.
 
-- The copy of each tool has a token limit: `TestNoSingleToolTakesMoreOfTheWindowThanItsShare`.
-  Make the current words shorter before you add new words.
+- A right answer comes before a short list. Say what each action and each argument does, and
+  what each argument takes. A model that meets an action with no line goes outside the
+  surface for help. It reads its own config, searches the web, or guesses. Every router action
+  gets a line made from its route summary
+  (`TestEveryRouterActionHasALineInItsServedDescription`).
+- The copy of each tool still has a token limit: `TestNoSingleToolTakesMoreOfTheWindowThanItsShare`.
+  When a tool goes over it, put a long list in a document that the description names, as
+  `describe_views` does, or split the tool.
+- A route summary in `backend/api/crm.yaml` reaches the model word for word. Write it for the
+  model: no work tags such as `(DOC-WIRE-2)`, and no `Deprecated:` notes. The fields of a route
+  body reach the model with no description. So a rule about a field goes in the summary, or in
+  the copy of the router.
+- A rule that holds for many tools goes in the server instructions once, as
+  `mcp.OwnershipRule` does for a record someone else holds. Agent runs read those words too, so
+  a change to them puts the `agent_loop` records into "re-check pending".
 - A rule for every tool goes in the server instructions
   (`shared/ports/mcp/mcp.go`). A rule for one tool goes in the
   `Purpose`, `Instead`, `Limits` or `Retain` of that tool.

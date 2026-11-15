@@ -127,8 +127,8 @@ the two runs change in one thing only:
 make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.5-flash
 ```
 
-Certify both the model you run today and the candidate. Then compare their records before you change
-the binding.
+Certify both the model you run today and the candidate, then compare their records task by task. A
+newer model can pass more cases on one task and fewer on others; swap only when no task drops.
 
 The binding has its own endpoint. So an `openai_compatible` candidate needs the same one line, with
 `BASE_URL=` added (see the example in Prerequisites above). A broker slug may end in its own tag,

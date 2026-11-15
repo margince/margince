@@ -2,36 +2,46 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
+  storyQueryClient,
 } from "../testing/story-utils";
 import { EntityRef } from "./entityref";
+import { companyReferenceQuery } from "./entityref.queries";
 
-// EntityRef resolves a record id to its display name and backlinks to the
-// 360, and its unresolved readings are all captured here because they are
-// deliberately NOT the same sentence. A read that answered without a name keeps
-// the id, which on an audit row is the one traceable fact left. A read that
-// FAILED says so: painting the id there would state as settled a question that
-// nothing answered. Neither becomes a link — a name that did not arrive cannot
-// be trusted as a destination. A user reference adds a fourth case: the roster
-// is paged, and one whose walk ran out of pages has said nothing about the id
-// it does not carry, so it reads as a name that did not load rather than as a
-// user who is not in the list.
 const meta: Meta<typeof EntityRef> = {
   title: "Patterns/Entity reference",
   component: EntityRef,
   parameters: { layout: "padded" },
   decorators: [
-    (Story) => {
+    (Story, { args }) => {
+      const client = storyQueryClient();
+      if (args.id === "o-cached") {
+        client.setQueryData(companyReferenceQuery("o-cached").queryKey, {
+          name: "Cached Company",
+          archived: false,
+          logo: null,
+        });
+      }
       installFetchStub({
-        "GET /companies/o-1": () =>
-          jsonResponse({ id: "o-1", display_name: "Brandt Automotive GmbH" }),
-        // Refused rather than missing: a 404 is an answer (the record is gone
-        // or hidden) and keeps the id, while a 403 is the read never arriving.
-        "GET /companies/o-refused": () =>
-          jsonResponse({ title: "permission denied" }, 403),
+        "GET /companies": () => {
+          if (args.id === "o-cached") {
+            return jsonResponse({ title: "Unexpected company read" }, 500);
+          }
+          if (args.id === "o-refused") {
+            return jsonResponse({ title: "permission denied" }, 403);
+          }
+          return jsonResponse({
+            data:
+              args.id === "o-1"
+                ? [{ id: "o-1", display_name: "Brandt Automotive GmbH" }]
+                : [],
+            page: { next_cursor: null, has_more: false },
+          });
+        },
         // A roster that offers another cursor for every page it answers: the
         // walk spends its page budget and still has not reached the end, which
         // is the state the fourth reading exists for.
@@ -42,7 +52,7 @@ const meta: Meta<typeof EntityRef> = {
           }),
       });
       return (
-        <StoryProviders>
+        <StoryProviders client={client}>
           <Story />
         </StoryProviders>
       );
@@ -55,6 +65,24 @@ type Story = StoryObj<typeof EntityRef>;
 
 export const ResolvedBacklink: Story = {
   args: { kind: "company", id: "o-1" },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).findByRole("link", {
+        name: "Brandt Automotive GmbH",
+      }),
+    ).resolves.toBeVisible();
+  },
+};
+
+export const CachedCompanyReference: Story = {
+  args: { kind: "company", id: "o-cached" },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).findByRole("link", {
+        name: "Cached Company",
+      }),
+    ).resolves.toBeVisible();
+  },
 };
 
 export const UnresolvedFallsBackToId: Story = {

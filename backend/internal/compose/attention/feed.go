@@ -151,6 +151,8 @@ type Service struct {
 	// not ask for it, on a per-request copy. A pinned decay row still reads it,
 	// except in a Done check.
 	omitDecay bool
+	// homeShape answers only what Home draws (cut).
+	homeShape bool
 	// pinned is this request's reader's own pins, resolved once by readingPins
 	// onto a copy of the service. Nil on the shared service.
 	pinned map[RowRef]bool

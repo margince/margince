@@ -36,7 +36,8 @@ import { DEFAULT_VIEW } from "../../lib/worklistviews";
 import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
 import {
   useHandledForYou,
-  useWorklist,
+  useHomeDay,
+  type useWorklist,
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
@@ -86,9 +87,8 @@ export function BriefScreen() {
   const t = useT();
   const nowMs = useNow(60_000);
   const me = useMe();
-  // The drawer's default queue, so an open drawer joins this read.
-  const query = useWorklist("mine", "all", undefined, true, DEFAULT_VIEW);
   const [params, setParams] = useUrlParams();
+  const query = useHomeDay(Boolean(params.get(FOCUS_PARAM)));
   const address = addressFrom(params);
   const day = briefDay(query.data?.pages);
   const drawerOpen = params.get("queue") === "1";

@@ -108,7 +108,7 @@ func (e *QueryExecutor) anythingLocated(ctx context.Context, target string) (geo
 		where = append(where, scope)
 	}
 	var located bool
-	err = e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = e.store.db.Read(ctx, func(ctx context.Context, tx pgx.Tx) error {
 		return tx.QueryRow(ctx, fmt.Sprintf(
 			`SELECT EXISTS (SELECT 1 FROM %s t WHERE %s)`, branch.table, strings.Join(where, " AND "),
 		), args...).Scan(&located)

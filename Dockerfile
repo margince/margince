@@ -120,6 +120,9 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
 # run provides.
 FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81 AS web-build
 
+# The composed OpenAPI graph exceeds V8's default heap in this build image.
+ENV NODE_OPTIONS=--max-old-space-size=4096
+
 # The pnpm version is the repository's, not the build day's. `corepack enable`
 # installs the shim and nothing else: with no manifest to read, the shim
 # resolves whatever npm calls latest at build time, so a new pnpm major reaches

@@ -71,6 +71,40 @@ func TestReadViewPublishesEachArgumentsType(t *testing.T) {
 	}
 }
 
+// Each argument names the views that take it, read from the views themselves.
+// A view that gains an argument is named without a hand edit. An argument
+// every view takes names none.
+func TestReadViewNamesTheViewsThatTakeEachArgument(t *testing.T) {
+	descriptions := func(views []ReadView) map[string]string {
+		var schema struct {
+			Properties map[string]struct {
+				Description string `json:"description"`
+			} `json:"properties"`
+		}
+		if err := json.Unmarshal(readView{views: views}.Spec().InputSchema, &schema); err != nil {
+			t.Fatalf("the schema does not decode: %v", err)
+		}
+		out := map[string]string{}
+		for arg, p := range schema.Properties {
+			out[arg] = p.Description
+		}
+		return out
+	}
+	if got := descriptions(viewsOfTwoShapes)["refresh"]; got != "views: company_360" {
+		t.Errorf("refresh is described %q, want it to name company_360", got)
+	}
+	grown := append(slices.Clone(viewsOfTwoShapes), ReadView{
+		Name: "deal_status", Pattern: "/v1/deals/{id}/status", PathParams: []string{"id"},
+		Query: []ViewQuery{{Name: "refresh", Type: "boolean"}},
+	})
+	if got := descriptions(grown)["refresh"]; got != "views: company_360, deal_status" {
+		t.Errorf("after deal_status gained refresh it is described %q, want both views named", got)
+	}
+	if got := descriptions(grown)["cursor"]; got != "" {
+		t.Errorf("cursor, which every view takes, is described %q, want no view list", got)
+	}
+}
+
 // An argument one view takes in its path and another as an integer query is
 // published as the integer on every build. The path view takes that integer.
 func TestReadViewPublishesAPathAndQueryArgumentAsTheTypedOne(t *testing.T) {

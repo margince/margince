@@ -2381,6 +2381,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.owed_verdict": "Kiểm tra thư cần trả lời",
   "systemJob.own_sent_mail_repair": "Sửa thư đã gửi",
   "systemJob.participant_backfill": "Bổ sung bên tham gia thư",
+  "systemJob.reply_settled_stamp": "Ghi nhận trạng thái trả lời thư",
   "systemJob.past_activity_clock_refold": "Cập nhật ngày hoạt động gần nhất",
   "systemJob.private_thread_strip": "Gỡ chuỗi thư riêng tư",
   "systemJob.provider_recovery": "Khôi phục nhà cung cấp bổ sung dữ liệu",

@@ -219,9 +219,10 @@ func (s *Store) ListCompaniesTx(ctx context.Context, tx pgx.Tx, in ListCompanies
 func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 	shared := companyCommonFilters(in)
 	return listPageSpec[crmcontracts.Company]{
-		entity:  companyEntity,
-		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
-		fields:  companyListFields,
+		entity:    companyEntity,
+		firstPage: in.Cursor == nil || *in.Cursor == "",
+		columns:   func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
+		fields:    companyListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)
 			if err != nil {

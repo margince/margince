@@ -428,7 +428,7 @@ func IfNoneMatchHit(r *http.Request, etag string) bool {
 			if candidate == "*" {
 				return true
 			}
-			if strings.TrimPrefix(candidate, "W/") == etag {
+			if strings.TrimPrefix(candidate, "W/") == strings.TrimPrefix(etag, "W/") {
 				return true
 			}
 		}

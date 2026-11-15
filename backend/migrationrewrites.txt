@@ -139,3 +139,4 @@
 1794604800_a_chat_app_caller_holds_a_passport.up.sql | * | the trigger statements change no row; the migration adds two empty columns, a NOT VALID check and a partial index to passport
 1794604800_a_chat_app_caller_holds_a_passport.down.sql | * | runs only on a rollback; the trigger statements restore the earlier bounds and change no row, then the two columns are dropped
 1794604900_the_app_caller_pair_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794654294_an_inbound_message_keeps_when_its_thread_settled_it.up.sql | * | the procedural bodies clear the stamp on one thread's inbound messages when a row of that thread changes, and write the stamps of one locked batch the job read; the migration adds one empty column and changes no existing row

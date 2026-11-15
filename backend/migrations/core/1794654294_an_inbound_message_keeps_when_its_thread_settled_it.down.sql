@@ -1,0 +1,10 @@
+SET LOCAL lock_timeout = '3s';
+DROP TRIGGER IF EXISTS contact_email_clears_reply_settled ON contact_email;
+DROP TRIGGER IF EXISTS participant_clears_reply_settled ON activity_participant;
+DROP TRIGGER IF EXISTS activity_clears_reply_settled ON activity;
+DROP FUNCTION IF EXISTS contact_email_clears_reply_settled();
+DROP FUNCTION IF EXISTS participant_clears_reply_settled();
+DROP FUNCTION IF EXISTS activity_clears_reply_settled();
+DROP FUNCTION IF EXISTS keep_reply_settled(uuid[], timestamptz[]);
+DROP FUNCTION IF EXISTS clear_reply_settled(text[], timestamptz);
+ALTER TABLE activity DROP COLUMN IF EXISTS reply_settled_at;

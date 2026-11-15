@@ -3022,7 +3022,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * What this account needs, as the model last judged it for this reader.
+         * What this company needs, as the model last judged it for this reader.
          * @description The account scan is the model's reading of one account for one reader: what the
          *     exchanges and the pipeline say needs a contact, each finding citing the records it
          *     rests on and quoting the words it read. It is the same advice shape the 360's own
@@ -3042,7 +3042,7 @@ export interface paths {
         get: operations["getCompanyScan"];
         put?: never;
         /**
-         * Make sure this reader's scan of the account is current, reading it again only when the account changed.
+         * Make sure this reader's scan of the company is current, reading it again only when the company changed.
          * @description Opening an account page calls this once. It compares the account as this reader
          *     sees it now — a fingerprint over the composite read, the recent message words, the
          *     prompt and the routing — against the stored scan, and answers in one of three ways:
@@ -3123,7 +3123,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The standing account brief — what this account is, where it stands, and what changed.
+         * The standing company brief — what this company is, where it stands, and what changed.
          * @deprecated
          * @description A short written brief over the same records the 360 serves, cached and reused
          *     until its inputs change.
@@ -3150,7 +3150,7 @@ export interface paths {
         get: operations["getCompanyBrief"];
         put?: never;
         /**
-         * Regenerate this account's brief, ignoring the cached one.
+         * Regenerate this company's brief, ignoring the cached one.
          * @deprecated
          * @description The explicit refresh behind the brief card's "outdated — refresh". It reads and
          *     writes only the cached brief: no record field changes, and nothing is sent.
@@ -3220,7 +3220,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask one of the prepared questions about this account.
+         * Ask one of the prepared questions about this company.
          * @description The company view's "Ask Margince". The question is chosen from a fixed list, not
          *     typed: each prepared question names records the answer must be written from, so
          *     every sentence can be cited and checked. Free-text questions need retrieval that
@@ -7259,7 +7259,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Would this account-started message be allowed, and on what ground.
+         * Would a new message with no thread behind it be allowed, and on what ground.
          * @description The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
          *     with no anchor to derive a category from. It names its own `links`, exactly as the send
          *     it previews does.
@@ -14458,6 +14458,10 @@ export interface paths {
          *     `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
          *     source that FAILED is named there too. A day cannot read as clear while something
          *     that would have filled it never answered.
+         *
+         *     `If-None-Match` with the answer's `ETag` answers 304 when the bytes have not
+         *     changed. The answer is `private, no-cache`: only the reader's own browser keeps it,
+         *     and it asks again before each use.
          */
         get: operations["getWorklist"];
         put?: never;
@@ -19518,7 +19522,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Retire an account while preserving historical attribution.
+         * Retire a member while preserving historical attribution.
          * @description Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
          */
         post: operations["removeMember"];
@@ -24005,7 +24009,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Which accounts your imported network reaches.
+         * Which companies your imported network reaches.
          * @description The account-level payoff of importing an export, and the one answer the ghosts
          *     exist to give: for each company on file, how many of your connections work
          *     there, and how many of those are already contacts.
@@ -24636,7 +24640,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The agreements this account holds, newest first (CONTRACT-WIRE-1).
+         * The agreements this company holds, newest first (CONTRACT-WIRE-1).
          * @description Every contract anchored to this company, whatever its status.
          *
          *     `under_contract` on each row is a DERIVED reading computed from the dates
@@ -42030,7 +42034,10 @@ export interface components {
             contact_id: string;
             /** Format: email */
             attendee_email: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.
+             */
             start: string;
             /** Format: date-time */
             end: string;
@@ -60109,6 +60116,13 @@ export interface components {
              *     able to give.
              */
             review: number;
+            /**
+             * Format: date-time
+             * @description When the nearest open task on a lead is due, over every task this read weighed.
+             *     Absent when no such task has a due time, or when the task lane was read to its
+             *     bound or could not be read, so an unseen task could be due sooner.
+             */
+            soonest_lead_due?: string;
             /**
              * @description True when any source behind any figure here was read to its work bound, so
              *     every number above is a floor. Set once for the strip rather than per reading:
@@ -85647,6 +85661,15 @@ export interface operations {
                  *     is still read and still reaches the queue. Nothing else on the page changes.
                  */
                 relationships?: "include" | "omit";
+                /**
+                 * @description How much of the ranked day the page carries. `queue` is the page of the queue
+                 *     and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+                 *     the day's meeting rows plus every row that comes due in the next five minutes,
+                 *     with no cursor and no rows below the cut. Focus, the
+                 *     summary, `counts[].considered`, `reach[].considered` and the readings are the
+                 *     same in both shapes; `shown` counts the rows this page carries.
+                 */
+                shape?: "queue" | "home";
             };
             header?: never;
             path?: never;
@@ -85657,11 +85680,26 @@ export interface operations {
             /** @description The ranked day. */
             200: {
                 headers: {
+                    /** @description A weak tag of the answer's bytes, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Worklist"];
                 };
+            };
+            /** @description The client already holds this answer. */
+            304: {
+                headers: {
+                    /** @description The tag the client holds, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

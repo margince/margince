@@ -145,6 +145,14 @@ func threadAnswerArm(inbound, later string) answerArm {
 	    AND ` + later}
 }
 
+// ThreadAnsweredAtSQL is when our earliest same-thread reply that reached the
+// inbound row's sender happened, or NULL when none did. It is the thread arm of
+// AnsweredSQL at any instant, so a time it names answers the row from then on.
+func ThreadAnsweredAtSQL(inbound string) string {
+	arm := threadAnswerArm(inbound, answerLater("answer_thread", inbound, "'infinity'::timestamptz"))
+	return "(SELECT min(" + arm.at + ") " + arm.from + ")"
+}
+
 // NormalisedSubjectSQL is a subject with its reply prefixes and outer spaces
 // removed and inner runs of space folded, lower-cased. A forward prefix stays,
 // so "Fwd: Invoice" never equals "Invoice".

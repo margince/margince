@@ -987,7 +987,7 @@ judges "$c44" case44 chases-the-wrong-deal 1 "the judge says NO to: Criterion 1.
 # deal nor Jonas, is the wrong target by another route.
 judges "$c44" case44 drafts-the-one-deal-by-hand 0 "!the judge says NO" "!never called"
 judges "$c44" case44 drafts-koerber-by-hand 1 "called draft_outbound carrying 'Körber'" "!the judge says NO"
-judges "$c44" case44 drafts-another-thread-by-hand 1 "never called draft_outbound carrying" "!the judge says NO"
+judges "$c44" case44 drafts-another-thread-by-hand 1 "called draft_outbound carrying" "!the judge says NO"
 
 # CASE 4 — no judge: criterion 6 is the advice to go through the owner, and the
 # pattern must take it by name or by pronoun after the name, and refuse an

@@ -3,6 +3,7 @@ import type { components } from "../../api/schema";
 export {
   loadedQueue,
   useHandledForYou,
+  useHomeDay,
   useTeamBoard,
   useTeamExceptions,
   useWorklist,

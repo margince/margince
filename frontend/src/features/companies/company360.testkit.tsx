@@ -186,6 +186,7 @@ export function stub(
             {
               id: "pl-1",
               name: "Sales",
+              position: 0,
               is_default: true,
               stages: [
                 {
@@ -194,7 +195,7 @@ export function stub(
                   name: "Qualify",
                   position: 1,
                   semantic: "open",
-                  probability: 10,
+                  win_probability: 10,
                 },
               ],
             },
