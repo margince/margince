@@ -12,7 +12,7 @@ async function openHome(page: Page, height: number) {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await mockApi(page);
   await page.goto("/#/home");
-  await expect(page.locator(".brief-rail > *").first()).toBeVisible();
+  await expect(page.locator(".brief-rail .brief-overview")).toBeVisible();
 }
 
 const cutCards = (page: Page) =>
