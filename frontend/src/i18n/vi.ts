@@ -3270,6 +3270,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
   "rel.current": "Hiện tại",
+  "rel.former": "Trước đây",
   "rel.endedOn": "Đến {when}",
   "rel.remove": "Gỡ",
   "rel.removeConfirm": "Gỡ quan hệ này? Không thể hoàn tác.",
