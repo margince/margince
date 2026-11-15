@@ -4249,6 +4249,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "billing.saveChange": "Änderung speichern",
   "billing.versionUnresolved":
     "Die Änderung wurde nicht gesendet, da der Rechnungskontakt nicht erneut gelesen werden konnte. Bitte lade die Seite neu und versuche es erneut.",
+  "payments.refresh": "Aktualisieren",
+  "payments.title": "Kundenzahlungen",
+  "payments.none": "Keine überfälligen Rechnungen.",
+  "payments.overdueAmount": "{amount} überfällig",
+  "payments.invoices_one": "{count} Rechnung",
+  "payments.invoices_other": "{count} Rechnungen",
+  "payments.customers_one": "{count} Kunde",
+  "payments.customers_other": "{count} Kunden",
+  "payments.oldest_one": "Älteste Rechnung seit 1 Tag überfällig",
+  "payments.oldest_other": "Älteste Rechnung seit {days} Tagen überfällig",
+  "payments.viewInvoices": "Überfällige Rechnungen ansehen",
+  "payments.customer": "Kunde",
+  "payments.openAmount": "Offener Betrag",
+  "payments.stale":
+    "Die Rechnungsdaten können sich seit der letzten Synchronisierung geändert haben.",
+  "payments.syncFailed":
+    "Die Synchronisierung der Buchhaltung ist fehlgeschlagen. Die Beträge stammen aus der letzten erfolgreichen Synchronisierung.",
+  "payments.syncUnavailable":
+    "Rechnungsdaten sind erst nach einer erfolgreichen Synchronisierung der Buchhaltung verfügbar.",
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",

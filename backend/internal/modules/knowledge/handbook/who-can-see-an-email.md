@@ -24,8 +24,9 @@ each file by name and size, with its kind where the file name shows one, marked
 as not kept.
 
 A sender verdict does not apply to a sender you marked as business on the
-Senders page. It does not apply to one you have replied to, or a contact you
-write with.
+Senders page, or to a contact you write with. A reply does not change it: mail
+from a sender judged personal loses its files even after you or a colleague
+answered that sender.
 
 Mail that came in before the verdict loses its files later, once you have
 time to change your view. On a thread held as personal, Margince stops keeping its
@@ -38,7 +39,9 @@ keeps it. It also skips mail a privacy request is about, and mail a colleague
 also imported.
 
 The sweep of personal mail deletes all of the mail from a sender judged
-personal, on the same timing. Marking the sender as business first stops it. The
+personal, on the same timing. Marking the sender as business first stops it, and
+so does filing the mail against a contact. A reply to the sender, by you or a
+colleague, does not keep the mail. The
 sweep also keeps mail under a legal hold or inside the time the law keeps it.
 It keeps mail a privacy request is about, and a colleague's copy of mail they
 imported too.

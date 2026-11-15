@@ -26,6 +26,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/scopesubjects"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -154,7 +155,7 @@ func allowedScopesFor(
 		lens = principal.RowScopeAll
 	}
 
-	me, err := analyticsUserLabel(ctx, tx, p.UserID)
+	me, err := scopesubjects.OwnerLabel(ctx, tx, p.UserID)
 	if err != nil {
 		return nil, err
 	}

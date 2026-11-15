@@ -111,6 +111,44 @@ describe("ActivityFiles", () => {
     expect(read?.query.get("entity_id")).toBe("act-kickoff");
   });
 
+  it("opens a link row, such as a meeting's notes Doc, in a new tab", async () => {
+    stubApi([
+      {
+        ...PRICE_LIST,
+        id: "att-notes",
+        filename: "Kickoff - Notes by Gemini",
+        category: "link",
+        url: "https://docs.google.com/document/d/abc/edit",
+      },
+    ]);
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
+    const link = await screen.findByRole("link", {
+      name: /Notes by Gemini/,
+    });
+    expect(link.getAttribute("href")).toBe(
+      "https://docs.google.com/document/d/abc/edit",
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    expect(link.hasAttribute("download")).toBe(false);
+  });
+
+  it("never turns a link row's non-web address into an href", async () => {
+    stubApi([
+      {
+        ...PRICE_LIST,
+        id: "att-bad",
+        filename: "Agenda",
+        category: "link",
+        url: "javascript:alert(1)",
+      },
+    ]);
+    renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);
+    const link = await screen.findByRole("link", { name: /Agenda/ });
+    expect(link.getAttribute("href")).toBe("/v1/attachments/att-bad");
+    expect(link.hasAttribute("target")).toBe(false);
+  });
+
   it("says so when the activity has no files", async () => {
     stubApi([]);
     renderWithQueryClient(<ActivityFiles activityId="act-kickoff" writable />);

@@ -3337,6 +3337,36 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Relationship strength for a company (max over current employees).
+  /finance/customer-payments:
+    get:
+      tags: [Finance]
+      operationId: getCustomerPayments
+      summary: Overdue customer invoices the reader may see.
+      description: |-
+        Requires finance and company read grants. Company row visibility, including
+        private capture rows and live record shares, is applied before totals,
+        counts, previews and pages. The payment read also requires company ownership,
+        a shared owner team, an explicit read share, or an all-rows grant;
+        workspace-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
+        Only the current accounting connection and its live customer links contribute.
+        Disputed invoices and former customers are excluded from collection prompts.
+        Amounts stay in their invoice currency; totals in different currencies stay separate.
+        Invoice pages are ordered by due date and invoice id, oldest first.
+      parameters:
+        - name: cursor
+          in: query
+          description: Opaque continuation from this response's page.next_cursor.
+          schema: {type: string}
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Scoped customer payment overview and one overdue invoice page.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerPayments'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/finance-summary:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -33046,6 +33076,63 @@ components:
       additionalProperties: false
       properties:
         company_id: {type: string, format: uuid}
+    CustomerPayments:
+      type: object
+      required: [state, access_scope, linked_companies, invoice_count, company_count, totals, customers, data, page]
+      properties:
+        state: {$ref: '#/components/schemas/FinanceSummaryState'}
+        access_scope:
+          type: string
+          description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
+        provider: {type: string}
+        last_synced_at: {type: string, format: date-time}
+        linked_companies:
+          type: integer
+          minimum: 0
+          description: Readable, live linked companies eligible for the payment overview.
+        invoice_count: {type: integer, minimum: 0}
+        company_count: {type: integer, minimum: 0}
+        totals:
+          type: array
+          description: Complete overdue totals for readable companies, each in its own currency.
+          items: {$ref: '#/components/schemas/CustomerPaymentTotal'}
+        customers:
+          type: array
+          maxItems: 3
+          description: Up to three company and currency groups, oldest overdue invoice first.
+          items: {$ref: '#/components/schemas/CustomerPaymentCustomer'}
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/CustomerPaymentInvoice'}
+        page: {$ref: '#/components/schemas/PageInfo'}
+    CustomerPaymentTotal:
+      type: object
+      required: [currency, amount_minor]
+      properties:
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+    CustomerPaymentCustomer:
+      type: object
+      required: [company_id, company_name, currency, amount_minor, invoice_count, oldest_days]
+      properties:
+        company_id: {type: string, format: uuid}
+        company_name: {type: string}
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+        invoice_count: {type: integer, minimum: 1}
+        oldest_days: {type: integer, minimum: 1}
+    CustomerPaymentInvoice:
+      type: object
+      required: [invoice_id, company_id, company_name, currency, open_minor, due_at, days_overdue]
+      properties:
+        invoice_id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        company_name: {type: string}
+        number: {type: [string, 'null']}
+        currency: {type: string}
+        open_minor: {type: integer, format: int64}
+        due_at: {type: string, format: date}
+        days_overdue: {type: integer, minimum: 1}
     CompanyFinanceSummary:
       type: object
       description: |-

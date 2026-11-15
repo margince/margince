@@ -8,7 +8,6 @@ import {
   useId,
   useState,
 } from "react";
-import { ExtensionReports } from "../../components/extensionreports";
 import { PageAsideToggle } from "../../components/pageaside";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
@@ -63,6 +62,7 @@ import {
 } from "./brief.focuslink";
 import { BriefGlance } from "./brief.glance";
 import { homeJourneyMarks } from "./brief.journey";
+import { CustomerPaymentsCard } from "./brief.payments";
 import { useMorningBrief, useWeeklyReview } from "./brief.queries";
 import { BriefQueue, loadWorklistScreen } from "./brief.queue";
 import { BriefReadingsPending, BriefReadingsStrip } from "./brief.readings";
@@ -185,7 +185,7 @@ function BriefBody({
   return <PersonalMorning query={query} queueToggle={queueToggle} />;
 }
 
-// The reports wait for the day's own reads, so their request never competes
+// Customer payments wait for the day's own reads, so their request never competes
 // with the paint Home is measured on. A read that failed has answered too.
 function dayAnswered(
   state: string,
@@ -335,7 +335,7 @@ function PersonalMorning({
                 </Panel>
               </div>
             )}
-            <ExtensionReports
+            <CustomerPaymentsCard
               enabled={dayAnswered(state, [brief, handled, magic])}
             />
           </>
