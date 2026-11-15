@@ -35,15 +35,24 @@ import (
 // given on the calendar, so no reminder task is filed for it.
 var answerableInvitationSQL = "(a.calendar_uid IS NOT NULL AND " + calendarMethodInSQL(calendarmethod.Answerable()) + ")"
 
+// mailNamesMeetingSQL is whether the calendar mail on alias a is about the
+// meeting whose identity key is key. A mail naming one occurrence of a series
+// (RECURRENCE-ID) is about that occurrence only; one naming none is about all.
+func mailNamesMeetingSQL(key string) string {
+	return `(` + meetingUIDOfKeySQL(key) + ` = a.calendar_uid
+	  AND (coalesce(a.calendar_event->>'occurrence', '') = ''
+	       OR ` + key + ` = a.calendar_uid || '/' || (a.calendar_event->>'occurrence')))`
+}
+
 // invitationNeverOwedSQL is a calendar invitation no verdict can make owed. A
 // colleague's invitation waits on nobody's written reply. Neither does one
-// whose event has begun by asOf: every meeting with its UID has begun.
+// whose event has begun by asOf: every meeting it names has begun.
 // Every reader of "owed" applies it, so the deal card, the Worklist and the
 // reminder writer agree.
 func invitationNeverOwedSQL(asOf string) string {
 	meetingOfUID := `FROM activity_identity ai JOIN activity mt ON mt.id = ai.activity_id
 	        WHERE ai.identity_kind = '` + IdentityKindMeeting + `'
-	          AND ` + meetingUIDOfKeySQL("ai.identity_key") + ` = a.calendar_uid
+	          AND ` + mailNamesMeetingSQL("ai.identity_key") + `
 	          AND mt.kind = 'meeting' AND mt.archived_at IS NULL`
 	return `(` + calendarInvitationSQL + ` AND (a.invitation_sender IS NOT NULL
 	 OR (a.calendar_uid IS NOT NULL
@@ -104,7 +113,7 @@ func openInvitationsTx(
 		                ORDER BY p.created_at LIMIT 1) AS response
 		         FROM activity_identity ai JOIN activity mt ON mt.id = ai.activity_id
 		        WHERE ai.identity_kind = '`+IdentityKindMeeting+`'
-		          AND `+meetingUIDOfKeySQL("ai.identity_key")+` = a.calendar_uid
+		          AND `+mailNamesMeetingSQL("ai.identity_key")+`
 		          AND mt.kind = 'meeting' AND mt.archived_at IS NULL AND mt.restricted_at IS NULL
 		        ORDER BY `+ahead+` DESC, CASE WHEN `+ahead+` THEN mt.occurred_at END, mt.occurred_at DESC
 		        LIMIT 1) m ON true

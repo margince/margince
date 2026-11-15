@@ -49,8 +49,12 @@ func (s *Sink) asSentByColleagueTx(
 	}
 	// An invitation a colleague organised stays received mail: whom they
 	// invited is not whom they wrote to, so no stand-in counterparty is picked.
+	// A colleague forwarding someone else's invitation is not its sender, so
+	// a stated organizer must be them.
 	if fields.HasCalendarPart {
-		fields.InvitationFromSeat = colleague
+		if organizer := statedOrganizer(fields); organizer == "" || organizer == foldAddress(cp.Email) {
+			fields.InvitationFromSeat = colleague
+		}
 		rec.Fields = fields
 		return rec, fields, nil
 	}
@@ -236,4 +240,13 @@ func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner 
 		return seat, nil
 	}
 	return ids.Nil, nil
+}
+
+// statedOrganizer is the folded ORGANIZER address the calendar part names, or
+// "" when it names none.
+func statedOrganizer(fields ActivityFields) string {
+	if fields.CalendarEvent == nil {
+		return ""
+	}
+	return foldAddress(fields.CalendarEvent.Organizer)
 }
