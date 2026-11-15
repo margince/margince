@@ -178,5 +178,8 @@ func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg 
 	wake := messageSnoozeLiftedSQL(instant, backContent)
 	reader := arg(readerOrNobody(ctx))
 	disposition := "NOT " + readerSetAsideSQL(fmt.Sprintf("$%d", reader), wake)
-	return append(where, "("+request+")", occurredday.BegunSQL("a", instant), disposition), nil
+	// A colleague's mail is not a customer waiting, as in the Worklist lane,
+	// unless a human took it on as a request.
+	colleague := "(" + acceptedRequestSQL + " OR NOT " + ownDomainSenderSQL("a", arg(in.ownDomains)) + ")"
+	return append(where, "("+request+")", occurredday.BegunSQL("a", instant), disposition, colleague), nil
 }

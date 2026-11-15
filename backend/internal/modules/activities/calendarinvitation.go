@@ -35,6 +35,22 @@ import (
 // given on the calendar, so no reminder task is filed for it.
 var answerableInvitationSQL = "(a.calendar_uid IS NOT NULL AND " + calendarMethodInSQL(calendarmethod.Answerable()) + ")"
 
+// invitationNeverOwedSQL is a calendar invitation no verdict can make owed. A
+// colleague's invitation waits on nobody's written reply. Neither does one
+// whose event has begun by asOf: every meeting with its UID has begun.
+// Every reader of "owed" applies it, so the deal card, the Worklist and the
+// reminder writer agree.
+func invitationNeverOwedSQL(asOf string) string {
+	meetingOfUID := `FROM activity_identity ai JOIN activity mt ON mt.id = ai.activity_id
+	        WHERE ai.identity_kind = '` + IdentityKindMeeting + `'
+	          AND ` + meetingUIDOfKeySQL("ai.identity_key") + ` = a.calendar_uid
+	          AND mt.kind = 'meeting' AND mt.archived_at IS NULL`
+	return `(` + calendarInvitationSQL + ` AND (a.invitation_sender IS NOT NULL
+	 OR (a.calendar_uid IS NOT NULL
+	     AND EXISTS (SELECT 1 ` + meetingOfUID + `)
+	     AND NOT EXISTS (SELECT 1 ` + meetingOfUID + ` AND NOT ` + occurredday.BegunSQL("mt", asOf) + `))))`
+}
+
 // openInvitation is one invitation the reader may still answer.
 type openInvitation struct {
 	uid      string

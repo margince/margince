@@ -123,7 +123,8 @@ var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)
 // The machine arms read the mail's text, so they hold only where that text
 // may be judged. A request a human already took stays reviewable for them.
 func reviewableRequestSQL(asOf string) string {
-	return requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `
+	return requestUnsettledSQL + ` AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL(asOf) + `)
+ AND (` + confirmedRequestSQL + `
  OR (` + storekit.OwedVerdictStandsClause("a") + ` AND a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
    OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
        AND NOT ` + answeredSQL("a", asOf) + `))))`
