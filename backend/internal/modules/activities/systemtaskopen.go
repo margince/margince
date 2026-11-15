@@ -21,11 +21,11 @@ import (
 // KeepOneSystemTaskOnTx reports whether the system already has a task from
 // this source on the record that nobody finished or archived. At most one
 // such task stays open, however often its source writes in. One that left the
-// Worklist because its evidence went stale is pointed at source, the new
-// evidence. It is then current again, and no second task is filed.
-// Every such task counts, whoever can read it, so a change of owner files no
-// second one. The caller serialises it with its own write.
-func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID, source ids.UUID, asOf time.Time) (bool, error) {
+// Worklist because its evidence went stale, or that the owner cannot read, is
+// pointed at source, the new evidence. No second task is filed. Every such
+// task counts, whoever can read it, so a change of owner files no second one.
+// The caller serialises it with its own write.
+func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID, source ids.UUID, asOf time.Time, owner *ids.UUID) (bool, error) {
 	column := linkColumn(entityType)
 	if column == "" {
 		return false, &InvalidLinkTypeError{EntityType: entityType}
@@ -34,6 +34,17 @@ func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityT
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	entityArg, sourceArg := arg(entityID), arg(sourceSystem)
 	current := storekit.CurrentTaskClause("t", asOf, "'[]'::jsonb", arg)
+	if owner != nil {
+		seat, err := auth.SeatPrincipal(ctx, tx, *owner)
+		if err != nil {
+			return false, err
+		}
+		visible, err := auth.ActivityContentClause(principal.WithActor(ctx, seat), "t", arg)
+		if err != nil {
+			return false, err
+		}
+		current = "(" + current + " AND " + visible + ")"
+	}
 	var open ids.UUID
 	var isCurrent bool
 	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT t.id, %s

@@ -86,7 +86,7 @@ func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.L
 	if err != nil || !eligible {
 		return err
 	}
-	open, err := activities.KeepOneSystemTaskOnTx(ctx, tx, provenance.LeadRepliedSource, entityLead, lead.UUID, arrival, w.now())
+	open, err := activities.KeepOneSystemTaskOnTx(ctx, tx, provenance.LeadRepliedSource, entityLead, lead.UUID, arrival, w.now(), owner)
 	if err != nil || open {
 		return err
 	}

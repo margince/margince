@@ -293,8 +293,8 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertLeadAdviceOnWorklist(t, l, now, 1)
-	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 2 {
-		t.Fatalf("unreadable old advice blocked a new readable source: %d", n)
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Fatalf("unreadable old advice blocked a new readable source: %d open asks, want one", n)
 	}
 }
 
