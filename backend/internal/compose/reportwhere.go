@@ -363,8 +363,8 @@ func namedByDerivation(spec reportSpec, plan derivationPlan) referencedColumns {
 // shows. A report names its group-bys and filters; a drill-through also names
 // its output columns, so an explanation cannot out-see the number it explains.
 //
-// A caller without the referenced table's object grant keeps only the rows
-// that name nothing; the row scope alone says nothing about that grant.
+// This is the row-scope obligation only. A reference that also owes the
+// referenced table's object grant declares it in spec.grants (reportgrants.go).
 func referenceScopeClauses(
 	ctx context.Context, spec reportSpec, named referencedColumns, arg func(any) int,
 ) ([]string, error) {
@@ -377,12 +377,6 @@ func referenceScopeClauses(
 			continue
 		}
 		table := spec.referenceScopes[column]
-		// The row scope says nothing about the object grant: a caller who may
-		// not read that table at all keeps only the rows that name nothing.
-		if !auth.ReadGranted(ctx, table) {
-			clauses = append(clauses, column+" IS NULL")
-			continue
-		}
 		scope, err := auth.ScopeClauseFor(ctx, table, "ref", arg)
 		if err != nil {
 			return nil, err

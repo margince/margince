@@ -42,9 +42,11 @@ func reportAvailable(availability corefeatures.Availability, spec reportSpec) bo
 		return false
 	}
 	for _, dependencies := range []map[string]string{spec.referenceScopes, spec.filterScopes, spec.grants} {
-		for _, recordType := range dependencies {
-			if !availability.RecordEnabled(recordType) {
-				return false
+		for _, entry := range dependencies {
+			for _, recordType := range grantObjects(entry) {
+				if !availability.RecordEnabled(recordType) {
+					return false
+				}
 			}
 		}
 	}

@@ -24,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// movedProject is a delivering project whose first customer was taken off:
-// its stored company_id still names old, current is its customer and partner
+// movedProject is a delivering project whose first customer was taken off.
+// Its stored company_id still names old. Current is its customer, and partner
 // works it beside them.
 type movedProject struct {
 	project               ids.ProjectID
@@ -83,8 +83,8 @@ func TestAProjectReportFiltersByAnyLiveCompanyOnTheProject(t *testing.T) {
 }
 
 // The partner filter keeps the project even when its first customer is
-// capture-private to someone else: the customer column's mask is about what the
-// report displays, never about which rows the filter keeps.
+// capture-private to someone else. The customer column's mask governs what the
+// report displays, never which rows the filter keeps.
 func TestAProjectReportFilterIsNotNarrowedByAnUnreadableFirstCustomer(t *testing.T) {
 	e := Setup(t)
 	f := seedMovedProject(t, e)
@@ -96,14 +96,18 @@ func TestAProjectReportFilterIsNotNarrowedByAnUnreadableFirstCustomer(t *testing
 	}
 }
 
-// A seat that may read edges but not companies is never handed a company id.
-func TestAProjectReportGroupsNoCompanyForASeatWithoutCompanyRead(t *testing.T) {
+// A seat that may read edges but not companies is refused the company, so it
+// is never handed a company id.
+func TestAProjectReportRefusesTheCompanyToASeatWithoutCompanyRead(t *testing.T) {
 	e := Setup(t)
-	seedMovedProject(t, e)
-	rows := runPrebuiltReport(e.readerWith("project", "relationship"), t, e, "projects-by-phase", `{"group_by":["company_id"]}`)
-	for _, row := range rows {
-		if id := cell(row, "company_id"); id != "" && id != "<nil>" {
-			t.Errorf("a seat without company.read was grouped under company %s: %v", id, rows)
+	f := seedMovedProject(t, e)
+	reader := e.readerWith("project", "relationship")
+	for _, plan := range []string{
+		`{"group_by":["company_id"]}`,
+		`{"filters":{"company_id":"` + f.current.String() + `"}}`,
+	} {
+		if _, err := tryPrebuiltReport(reader, e, "projects-by-phase", plan); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s without company.read → %v, want ErrPermissionDenied", plan, err)
 		}
 	}
 }

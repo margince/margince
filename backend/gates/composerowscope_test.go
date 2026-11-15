@@ -223,16 +223,15 @@ var rowScopeSpellings = map[string]bool{
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
 	"SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
 	"RelationshipEndpointScope": true, "EnsureRelationshipVisible": true,
-	// EdgeReadScope RETURNS RelationshipEndpointScope's clause — it is that
-	// conjunction with the object gate in front of it — so a read reaching it
-	// applies the endpoint bound as surely as one calling the conjunction
-	// directly. Its absence here was a gap rather than a policy: the first
-	// compose read whose ONLY row bound came through it reported as unscoped,
-	// and the fix a reader would reach for from that message is a SECOND scope
-	// call over a column the conjunction already covers. Adding it does not weaken the census. The two halves are unbundled in
-	// exactly one direction: this list accepts the pair because the pair
-	// includes the row half, while backend/gates/edgereaders_test.go refuses the row
-	// half alone. Neither gate accepts the object half on its own.
+	// EdgeReadScope RETURNS RelationshipEndpointScope's clause with the object
+	// gate in front of it, so a read reaching it applies the endpoint bound as
+	// surely as one calling the conjunction directly. Without it, a compose read
+	// bounded only through it reported as unscoped, and the fix a reader would
+	// reach for is a second scope call over a column already covered.
+	//
+	// Adding it does not weaken the census. This list accepts the pair because
+	// it includes the row half; backend/gates/edgereaders_test.go refuses the
+	// row half alone. Neither gate accepts the object half on its own.
 	"EdgeReadScope": true,
 	// The write-authority family, for the same reason EdgeReadScope is here:
 	// each OPENS with a member of the EnsureVisible family and then narrows

@@ -5,13 +5,10 @@ package compose
 
 // Vocabulary that reads ANOTHER record type than the report's own.
 //
-// The engine's admission gate covers spec.entity — the projects of a project
-// report, the activities of an activity report. A measure that folds the
-// deals under a project, or a dimension that names the project an activity
-// is filed under, reads a second record type, and the caller owes that
-// type's read grant as much as they owe the first. Without this, a seat
-// holding project.read alone would total deal money it could not list, and a
-// seat holding activity.read alone would learn which projects exist.
+// The engine's admission gate covers spec.entity. A measure that folds the
+// deals under a project, or a dimension that names the project an activity is
+// filed under, reads a second record type, and the caller owes that type's
+// read grant as much as they owe the first.
 //
 // A name the caller ASKS for without the grant is refused (403), on the
 // report and on the drill-through alike. A name the caller never asked for is
@@ -22,6 +19,7 @@ import (
 	"context"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -32,15 +30,21 @@ import (
 // spec.grants owes nothing beyond the report's own gate.
 func requireVocabularyGrants(ctx context.Context, spec reportSpec, names []string) error {
 	for _, name := range names {
-		object, ok := spec.grants[name]
-		if !ok {
-			continue
-		}
-		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
-			return err
+		for _, object := range grantObjects(spec.grants[name]) {
+			if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+// grantObjects reads one grants entry: an object, or several joined by commas.
+func grantObjects(entry string) []string {
+	if entry == "" {
+		return nil
+	}
+	return strings.Split(entry, ",")
 }
 
 // grantedNames filters a vocabulary down to the names this caller may be
