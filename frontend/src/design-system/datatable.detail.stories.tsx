@@ -202,8 +202,8 @@ export const RowDetailLateContent: Story = {
     }
   },
 };
-// A tweened ground and a still one compute to the same colour in two notations,
-// so colours are compared as the pixel a canvas paints from them.
+// A tweened ground and a still one can name one colour in two notations.
+// So colours are compared as the pixel a canvas paints from them.
 function painted(color: string): string {
   const pixel = document.createElement("canvas").getContext("2d");
   if (pixel === null) {
