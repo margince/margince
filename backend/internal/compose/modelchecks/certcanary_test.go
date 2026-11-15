@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package modelchecks_test
 
 // The canary gate: no site lets fixture text reach the instruction channel.
 //
@@ -50,19 +50,14 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // canary is the marker planted in every free-text fixture field. It is
 // deliberately unpronounceable and occurs nowhere else in the tree, so a
 // substring match on it can only mean the fixture's own text arrived.
 const canary = "qzvxCANARY7413zjw"
-
-// canaryReply is what the stand-in model answers. A site's validator will
-// mostly refuse it, which costs this gate nothing: refusal happens after the
-// request was already issued, and the request is the whole subject here.
-const canaryReply = "{}"
 
 // codebaseOwnedFixtureKeys names, per site, the top-level fixture keys whose
 // content this build mints rather than receives, with the reason each one is
@@ -84,7 +79,7 @@ func TestNoFixtureTextReachesASystemPrompt(t *testing.T) {
 	}
 	// The corpus lives beside the harness that runs it; this test reads it from
 	// the composition layer's own directory.
-	scenarios, err := aicert.LoadCorpus("aicert/corpus", census)
+	scenarios, err := aicert.LoadCorpus("../aicert/corpus", census)
 	if err != nil {
 		t.Fatalf("loading the corpus: %v", err)
 	}
@@ -157,21 +152,21 @@ func assertNoCanaryInAnySystemPrompt(t *testing.T, census *aitasks.Registry, sc 
 		t.Fatalf("scenario %s: the site refused its own fixture once stamped: %v", sc.Name, err)
 	}
 
-	completer := &recordingCompleter{reply: canaryReply}
+	completer := &testmodel.Recorder{}
 	if _, runErr := prepared.Run(context.Background(), completer); runErr != nil {
 		// A case may refuse the stand-in reply, or stop the loop it drives.
 		// That is its validator working and says nothing about where the
 		// fixture's text went — the requests already issued are what this gate
 		// reads, so the refusal is reported rather than treated as a failure.
 		t.Logf("scenario %s: the case refused the stand-in reply (%v); reading the %d request(s) it had already issued",
-			sc.Name, runErr, len(completer.requests))
+			sc.Name, runErr, len(completer.Requests))
 	}
-	if len(completer.requests) == 0 {
+	if len(completer.Requests) == 0 {
 		t.Fatalf("scenario %s issued no request at all, so nothing about its prompt was measured", sc.Name)
 	}
 
 	reachedTheModel := false
-	for i, req := range completer.requests {
+	for i, req := range completer.Requests {
 		if strings.Contains(req.System, canary) {
 			t.Errorf("scenario %s: request %d interpolates fixture text into its SYSTEM prompt — the instruction channel is this codebase's own voice, and text from a captured mail, a crawled page or a stranger's message belongs in the fenced user turn",
 				sc.Name, i+1)
@@ -187,23 +182,8 @@ func assertNoCanaryInAnySystemPrompt(t *testing.T, census *aitasks.Registry, sc 
 	// data channel, which is what proves the stamping took effect.
 	if planted > 0 && !reachedTheModel {
 		t.Errorf("scenario %s: %d free-text field(s) were stamped, but none of the %d request(s) carries the marker — this scenario proves nothing about where its text goes",
-			sc.Name, planted, len(completer.requests))
+			sc.Name, planted, len(completer.Requests))
 	}
-}
-
-// recordingCompleter is the stand-in model: it keeps every request it is handed
-// and answers the same way each time. The requests are read from HERE rather
-// than from the returned Trace because this is what the site actually sent — a
-// case that under-recorded its own trace would hide exactly the leak this gate
-// exists to find.
-type recordingCompleter struct {
-	requests []model.Request
-	reply    string
-}
-
-func (c *recordingCompleter) Complete(_ context.Context, req model.Request) (model.Response, error) {
-	c.requests = append(c.requests, req)
-	return model.Response{Text: c.reply}, nil
 }
 
 // plantCanary returns a copy of a fixture with the canary appended to every

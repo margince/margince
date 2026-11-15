@@ -72,9 +72,11 @@ var relationshipGate = objectGate{
 	object:              edgeTable,
 	literal:             gatekit.TableReadPattern(edgeTable),
 	objectGateSatisfies: true,
-	gateSeeds:           []string{"EdgeReadScope"},
-	rowHalfSeeds:        []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
-	rowHalfOwners:       []string{"internal/modules/contacts", "internal/platform/auth"},
+	// The two project-company builders take EdgeReadScope themselves and answer
+	// a refused caller with no edge.
+	gateSeeds:     []string{"EdgeReadScope", "ProjectCompanyPredicates", "ProjectCustomerSQL", "ProjectCompanyEdgesSQL"},
+	rowHalfSeeds:  []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
+	rowHalfOwners: []string{"internal/modules/contacts", "internal/platform/auth"},
 }
 
 // predicateEdgeReads: the edge appears only inside a JOIN or EXISTS that
@@ -89,6 +91,7 @@ var relationshipGate = objectGate{
 // Acme" one page at a time, which is a STRONGER disclosure than the count on
 // the account. It carries the gate, and is not in this set.
 var predicateEdgeReads = gatekit.Waive(map[string]string{
+
 	"internal/platform/database/storekit/sharedmailowner.go:SharedMailWorkOwnerSQL":        "the current employment edge only joins a mail sender's contact to its company, so the company owner can be picked as the seat that holds the mail's work. Only that seat id leaves the statement; no edge column or endpoint reaches any reader",
 	"internal/modules/capture/dealrefile.go:RefileCandidatesTx":                            "System-only candidate selection returns activity identities, never relationship endpoints; RefileTx recomputes employment evidence under the capturing seat through mailCompanies and its EdgeReadScope before any filing.",
 	"internal/modules/deals/stagemoveverdict.go:buyerWrote":                                "an existence predicate under the deal row lock: whether a cited mail's sender is a current employee of the deal's company or a stakeholder of the deal. Only a yes or no leaves the query, never an edge column or endpoint",
@@ -223,12 +226,13 @@ var deferredEdgeReads = gatekit.Waive(map[string]string{})
 // calleeGatedEdgeReads: a fragment whose every runner takes the edge gate by a
 // path the census cannot follow, such as a storekit.Field value.
 var calleeGatedEdgeReads = gatekit.Waive(map[string]string{
-	"internal/modules/activities/emailtarget.go:dealContactCandidatesSQL":                "a task's deal stakeholders. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
-	"internal/modules/activities/emailtarget.go:employerCandidatesSQL":                   "the companies a task's contacts work at. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
-	"internal/compose/company360/graphreads.go:readEmployment":                           "CompanyRosterEdgesSQL admits relationship reads and scopes every returned relationship id through the shared roster owner before this join reads the role; no edge outside that admitted set reaches the graph",
-	"internal/modules/contacts/unknownemploymentrepair.go:repairUnknownEmploymentLinkTx": "RepairUnknownEmploymentTx requires the system principal and relationship update before locking an internal repair candidate; the returned row passes updateRelationshipInTx authorization and only its boolean progress leaves the data task",
-	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":            "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
-	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin":     "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
+	"internal/modules/contacts/employmentreplacementundo.go:archiveEmploymentReplacementTx": "Undo selects a replacement identity, then visibleRelationship rechecks its edge scope before any human-edit decision. archiveRelationshipTx enforces write authority and liveness; no edge row is returned.",
+	"internal/modules/activities/emailtarget.go:dealContactCandidatesSQL":                   "a task's deal stakeholders. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
+	"internal/modules/activities/emailtarget.go:employerCandidatesSQL":                      "the companies a task's contacts work at. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
+	"internal/compose/company360/graphreads.go:readEmployment":                              "CompanyRosterEdgesSQL admits relationship reads and scopes every returned relationship id through the shared roster owner before this join reads the role; no edge outside that admitted set reaches the graph",
+	"internal/modules/contacts/unknownemploymentrepair.go:repairUnknownEmploymentLinkTx":    "RepairUnknownEmploymentTx requires the system principal and relationship update before locking an internal repair candidate; the returned row passes updateRelationshipInTx authorization and only its boolean progress leaves the data task",
+	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":               "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
+	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin":        "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
 })
 
 // ruledEdgeReads: a DISCLOSING read the product has ruled needs no edge gate.

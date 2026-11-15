@@ -29205,7 +29205,7 @@ export interface components {
             total: number;
         };
         /** @enum {string} */
-        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "backfill_failed" | "sync_stalled" | "capture_silent";
+        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "notes_grant_missing" | "notes_account_mismatch" | "backfill_failed" | "sync_stalled" | "capture_silent";
         DismissCaptureSilenceRequest: {
             /**
              * Format: date-time
@@ -31639,13 +31639,13 @@ export interface components {
              */
             impact: "unchanged" | "model_changed" | "decision_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
             budget_exempt: boolean;
-            /** @description The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider. */
+            /** @description The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor. */
             decision_first: boolean;
             /**
              * @description Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
              * @enum {string}
              */
-            decision_skip_reason?: "unbound" | "uncertified" | "local_only";
+            decision_skip_reason?: "unbound" | "uncertified";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
             /** @description The task declares a decision form, so a decision model may answer it first and its decision timeout applies. */
             decides?: boolean;
@@ -31975,7 +31975,7 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
+            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
             /**
              * @description What this attempt asked: a chat completion, an embedding, or a decision model.
@@ -42499,6 +42499,11 @@ export interface components {
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
             /**
+             * @description A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+             * @enum {string}
+             */
+            readonly meeting_notes_connection?: "connect" | "notes_grant_missing" | "notes_account_mismatch";
+            /**
              * @description Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
              * @enum {string|null}
              */
@@ -43244,6 +43249,8 @@ export interface components {
             remind_intent?: components["schemas"]["IntentTime"];
             /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
             deal_filing?: components["schemas"]["ActivityDealFiling"];
+            /** @description Optional next step when marking a meeting held. Creates the task in the same transaction, with the meeting as its source and its links and audience inherited. Requires activity create authority. A meeting already held cannot add another task through this outcome write. */
+            follow_up_task?: components["schemas"]["ActivityFollowUpTask"];
             subject?: string | null;
             body?: string | null;
             /** Format: date-time */
@@ -59648,6 +59655,10 @@ export interface components {
          *     the same admission every manager figure on this surface makes.
          */
         HandledForYou: {
+            /** @description The shared completed-change read reached a source bound; counts remain lower bounds. */
+            count_is_floor?: boolean;
+            /** @description Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened. */
+            sources_unavailable?: components["schemas"]["WorklistSourceUnavailable"][];
             /**
              * Format: date-time
              * @description The instant these were read at.
@@ -59729,6 +59740,8 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            /** @description The canonical completed change or group shared with Home, including receipt identities and count bounds. */
+            completed_change?: components["schemas"]["MagicLine"];
             system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**

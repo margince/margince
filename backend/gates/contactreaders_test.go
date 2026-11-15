@@ -137,6 +137,9 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employmentrepair.go:CountUnresolvedEmploymentContacts": "Bounded data-task estimate counts unresolved contacts for operator progress; no contact row or identity is returned.",
+	"internal/modules/contacts/employmentrepair.go:RepairUndatedEmploymentTx":         "System-only bounded repair selects candidate IDs, then HoldWritableLive locks each contact before the shared import writer. IDs stay inside the batch.",
+
 	"internal/modules/privacy/anonymizedsubject.go:subjectStillNamedSQL":          "the missed-receipt sweep asks whether a subject it is about to name in a notice was erased or anonymized, and leaves such subjects out of its read. One boolean per subject leaves it, and it only ever withholds a notice; no contact column reaches any caller",
 	"internal/modules/privacy/sarretainedcopies.go:sarRetainedCopySections":       "Builds subject-bound SELECT queries for AssembleSAR, which requires a human with contact.delete and unbounded row scope. The public notice path uses only its selected read sections under system authority. This builder executes no queries and returns no unrelated contact data.",
 	"internal/modules/privacy/heldrecords.go:heldRecordRule":                      "the system-only audit cleanup and copy retention read only a contact's legal-hold flag (the cleanup under a row lock). Both run as the system; the rule answers a keep decision, never a contact field to an outward caller",
@@ -231,6 +234,8 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/signaturerole.go:roleFromSignatureTitleTx": "Called only by applySignature after contact.update and HoldWritableLive. It reads the persisted title for the gated relationship writer and returns no contact data.",
+
 	"internal/modules/activities/meetingfollowup.go:meetingAttendeesSQL":            "meetingFollowUpsPage supplies addressableContactClause from the reader's contact grant and row scope. The recipient aggregate filters by that predicate before returning any contact id; names and other contact fields are never selected",
 	"internal/modules/consent/suppress.go:anonymizedAddressHashes":                  "the hashes an anonymize kept on a contact, read only by suppressAdmittedTx after auth.EnsureWritable admitted the caller to that contact. They never leave the transaction; the stop rows written from them do, under the same gate",
 	"internal/modules/contacts/technicaladdressrepair.go:technicalCandidatePage":    "one page of contact ids, versions and live addresses for the technical-address correction, never returned to a reader. Its one caller is RetireTechnicalAddressContactsTx, which asks auth.RequireSystem and auth.Require(ctx, \"contact\", delete) first",

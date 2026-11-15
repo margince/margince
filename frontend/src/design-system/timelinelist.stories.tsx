@@ -643,39 +643,32 @@ export const NotesAnAgentLogged: Story = {
 
 export const ThreadSplitIntoParts: Story = {
   render: () => (
-    <ul className="timeline">
-      <ThreadRow
-        zone={ZONE}
-        group={{
-          id: "split-new",
-          kind: "thread",
-          partial: false,
-          olderPart: "split-old",
-          entries: [
-            entry("split-new", "2026-08-14T15:20:00Z", {
-              direction: "inbound",
-              counterparts: "Dana Buyer",
-              body: "Sounds good, see you Thursday.",
-            }),
-          ],
-        }}
-      />
-      <ThreadRow
-        zone={ZONE}
-        group={{
-          id: "split-old",
-          kind: "thread",
-          partial: false,
-          newerPart: "split-new",
-          entries: [
-            entry("split-old", "2026-08-04T09:00:00Z", {
-              direction: "outbound",
-              counterparts: "Dana Buyer",
-              body: "Here is the offer.",
-            }),
-          ],
-        }}
-      />
-    </ul>
+    <GroupedTimelineList
+      zone={ZONE}
+      groups={groupChronology([
+        entry("split-new", "2026-08-20T09:00:00Z", {
+          threadKey: "split-thread",
+          body: "The revised quote is ready.",
+        }),
+        entry("split-task", "2026-08-18T09:00:00Z", {
+          kind: "task",
+          title: "Review the pricing",
+          isDone: true,
+        }),
+        entry("split-meeting", "2026-08-15T09:00:00Z", {
+          kind: "meeting",
+          title: "Pricing review",
+        }),
+        entry("split-old", "2026-08-11T09:00:00Z", {
+          threadKey: "split-thread",
+          body: "Can you update the quote?",
+        }),
+      ])}
+    />
   ),
+};
+
+export const ThreadSplitIntoPartsDark: Story = {
+  ...ThreadSplitIntoParts,
+  globals: { theme: "dark" },
 };

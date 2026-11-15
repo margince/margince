@@ -9,6 +9,7 @@ import { jsonResponse, stubWithSession } from "../testing/story-utils";
 import {
   AddRelationshipAction,
   counterpartyRef,
+  dateRange,
   edgeOptions,
   endpointBody,
   kindLabelFor,
@@ -353,4 +354,13 @@ describe("adding a relationship", () => {
     const posted = await seatMaiAsChampion("Người ủng hộ nội bộ");
     expect(posted[0]).toMatchObject({ role: "Người ủng hộ nội bộ" });
   });
+});
+
+it("uses the shared current-role rule on the company list", () => {
+  const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
+  expect(dateRange(baseRel({ employment_status: "former" }), t)).toBe("Former");
+  expect(dateRange(baseRel({ employment_status: "unknown" }), t)).toBe("");
+  expect(dateRange(baseRel({ employment_status: "current" }), t)).toBe(
+    "Current",
+  );
 });

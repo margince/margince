@@ -12,6 +12,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
@@ -85,6 +86,10 @@ func enumArguments(t *testing.T, call toolRoleCall) map[string][]string {
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func (c toolRoleCall) withKind(args map[string]any, pool *recordPool) map[string]any {
 	args[c.kindArg] = c.kind
+	if c.verb == "list_records" && c.kind == "lead" {
+		// Linked leads add optional reference checks; other calls' rows must not choose this probe's path.
+		args["q"] = pool.fact(pool.take("lead"), "email")
+	}
 	if fields, named := kindFields[c.verb][c.kind]; named {
 		args["fields"] = fields(pool)
 	}
@@ -210,4 +215,50 @@ func callVariants(t *testing.T, seat roleSeat, recorded *toolCheckRecorder, vari
 func baseRow(row string) string {
 	base, _, _ := strings.Cut(row, "[")
 	return base
+}
+
+func TestTheLeadListProbeIgnoresOtherCallsLinkedLeads(t *testing.T) {
+	recorded := newToolCheckRecorder()
+	d := toolRoleApp(t, "lead-list-probe", compose.WithToolChecksRecordedForTest(recorded.note))
+	calls := toolRoleCalls(compose.NewRegistry(nil, compose.SendPath{}).Specs(), routeShapes())
+	list := slices.IndexFunc(calls, func(c toolRoleCall) bool { return c.verb == "list_records" })
+	link := slices.IndexFunc(calls, func(c toolRoleCall) bool { return c.verb == "link_lead_company" })
+	if list < 0 || link < 0 {
+		t.Fatal("the registry lacks the list or company-link call")
+	}
+	takes, err := takesOf([]toolRoleCall{calls[list]}, func() *recordPool { return countingPool(t) })
+	if err != nil || len(takes["list_records"]) != 0 {
+		t.Fatalf("the base list takes record arguments: %v, %v", takes, err)
+	}
+	variant := calls[list]
+	variant.kindArg, variant.kind, variant.kindSeeded = "record_type", "lead", true
+	pool := seedToolRoleRecords(t, d.E, []toolRoleCall{variant, calls[link]}, "")
+	plainID := pool.fresh["lead"][0]
+	args, linkArgs := variant.args(pool), calls[link].args(pool)
+	linkedID, ok := linkArgs["id"].(string)
+	if !ok {
+		t.Fatal("the link fixture names no lead")
+	}
+	human := apptest.SessionUserID(t, d.E)
+	var before []string
+	for _, linked := range []bool{false, true} {
+		if linked {
+			got, _ := callThroughApproval(t, d.E, d.MCP, calls[link].verb, linkArgs)
+			if got.IsError {
+				t.Fatalf("linking the other call's lead: %s", got.Text)
+			}
+		}
+		got := d.MCP.Call(t, variant.verb, args)
+		run, reached := recorded.take(variant.verb, human)
+		if got.IsError || !reached || !strings.Contains(got.Text, plainID) || strings.Contains(got.Text, linkedID) {
+			t.Fatalf("isolated lead list (other linked=%v): %s, recorded=%v", linked, got.Text, reached)
+		}
+		if !slices.Contains(run.Checks, "lead.read") || slices.Contains(run.Checks, "company.read") {
+			t.Fatalf("plain-lead probe measured another lead's reference: %v", run.Checks)
+		}
+		if linked && !slices.Equal(before, run.Checks) {
+			t.Fatalf("linking another lead changed list checks: %v -> %v", before, run.Checks)
+		}
+		before = run.Checks
+	}
 }

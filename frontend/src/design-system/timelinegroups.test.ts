@@ -271,6 +271,35 @@ describe("grouping the account's chronology", () => {
     expect(groups[2]?.kind).toBe("thread");
   });
 
+  it("splits a conversation around intervening activities and links its parts", () => {
+    const entries = [
+      mail("t-new", "Re: Pricing", "2026-07-10T10:00:00Z", {
+        threadKey: "t-1",
+      }),
+      mail("task", "Send quote", "2026-07-05T10:00:00Z", { kind: "task" }),
+      mail("meeting", "Review", "2026-07-02T10:00:00Z", { kind: "meeting" }),
+      mail("t-old", "Pricing", "2026-07-01T10:00:00Z", { threadKey: "t-1" }),
+    ];
+    const firstPage = groupChronology(entries.slice(0, 3), true);
+    expect(firstPage.map((group) => group.id)).toEqual([
+      "t-new",
+      "task",
+      "meeting",
+    ]);
+    const groups = groupChronology(entries, true);
+    expect(
+      groups.map((group) => group.entries.map((entry) => entry.id)),
+    ).toEqual([["t-new"], ["task"], ["meeting"], ["t-old"]]);
+    expect(groups[0].olderPart).toBe("t-old");
+    expect(groups[3].newerPart).toBe("t-new");
+    expect(groups.map((group) => group.partial)).toEqual([
+      false,
+      false,
+      false,
+      true,
+    ]);
+  });
+
   it("does not let one attested message fold an unrelated same-subject reply", () => {
     // List-Unsubscribe is carried by ONE message. A reply that merely shares
     // the subject and the day is not part of the send the sender attested to,

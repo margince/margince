@@ -1,6 +1,6 @@
 import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useLocale, useT } from "../i18n";
 import { Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
@@ -76,6 +76,7 @@ export function GroupedTimelineList({
   // a caller that cannot complete it: a bulk group has no thread to ask for.
   onOpenThread?: (threadKey: string) => void;
 }>) {
+  const anchorPrefix = useId();
   const { locale } = useLocale();
   const repeats = dayRepeats(
     groups.map((group) => group.entries[0]),
@@ -102,6 +103,7 @@ export function GroupedTimelineList({
             zone={zone}
             repeatsDay={repeats[index]}
             onOpenThread={onOpenThread}
+            anchorPrefix={anchorPrefix}
           />
         ) : (
           <BulkGroupRow

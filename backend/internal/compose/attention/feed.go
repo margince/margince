@@ -82,8 +82,9 @@ type Clock func() time.Time
 // Service assembles the feed. Every dependency is an interface a compose seam
 // binds to the owning module, so this package imports no module directly.
 type Service struct {
-	approvals  Approvals
-	duplicates Duplicates
+	handledReceipts Receipts
+	approvals       Approvals
+	duplicates      Duplicates
 	// suggestions is OPTIONAL: an unbound feed shows none (suggestionlane.go).
 	suggestions DealSuggestions
 	// tagSuggestions is OPTIONAL the same way (tagsuggestionlane.go).
@@ -481,20 +482,4 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	lane := interleave(depth, cases, duplicates, approvals, suggestions, tagged)
 	count.approvalsFrom, err = approvalTailStart(lane, staged)
 	return lane, count, err
-}
-
-// done is the receipt lane: what ran without asking, so a rep can see it and
-// challenge it.
-func (s *Service) done(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
-	defer timeStage(ctx, "done_for_you")()
-	since := asOf.Add(-24 * time.Hour)
-	recent, err := s.receipts.Recent(ctx, since, doneCap)
-	if err != nil {
-		return nil, err
-	}
-	items := make([]crmcontracts.AttentionItem, 0, len(recent))
-	for _, receipt := range recent {
-		items = append(items, receiptItem(receipt))
-	}
-	return items, nil
 }

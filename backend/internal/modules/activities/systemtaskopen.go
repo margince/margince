@@ -16,15 +16,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// KeepOneSystemTaskOnTx reports whether the system already has a task from
-// this source on the record that nobody finished or archived. At most one
-// such task stays open, however often its source writes in. One that left the
-// Worklist because its evidence went stale is pointed at source, the new
-// evidence. It is then current again, and no second task is filed.
-// Every such task counts, whoever can read it, so a change of owner files no
-// second one. The caller serialises it with its own write.
+// KeepOneSystemTaskOnTx keeps one open task and refreshes unusable evidence before adoption.
+// The caller serialises arrivals on the record, including owner changes.
 func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID, source ids.UUID, asOf time.Time) (bool, error) {
 	column := linkColumn(entityType)
 	if column == "" {
@@ -33,22 +29,53 @@ func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityT
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	entityArg, sourceArg := arg(entityID), arg(sourceSystem)
-	current := storekit.CurrentTaskClause("t", asOf, "'[]'::jsonb", arg)
 	var open ids.UUID
-	var isCurrent bool
-	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT t.id, %s
+	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT t.id
 		  FROM activity t JOIN activity_link l ON l.activity_id = t.id
 		 WHERE l.%s = $%d AND t.kind = 'task' AND t.source_system = $%d
 		   AND t.is_done = false AND t.archived_at IS NULL
-		 ORDER BY t.created_at DESC, t.id DESC LIMIT 1`, current, column, entityArg, sourceArg),
-		args...).Scan(&open, &isCurrent)
+		 ORDER BY t.created_at DESC, t.id DESC LIMIT 1 FOR UPDATE OF t`, column, entityArg, sourceArg),
+		args...).Scan(&open)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("activities: reading the open %s task on a %s: %w", sourceSystem, entityType, err)
 	}
-	if !isCurrent && source != ids.Nil {
+	if source == ids.Nil {
+		return true, nil
+	}
+	if err := lockTaskAdoption(ctx, tx, open.String()); err != nil {
+		return false, err
+	}
+	args = nil
+	openArg := arg(open)
+	current := storekit.CurrentTaskClause("t", asOf, "'[]'::jsonb", arg)
+	var isCurrent, held bool
+	var prior, owner *ids.UUID
+	query := storekit.SQLf(`SELECT %s, %s, %s, t.assignee_id
+ FROM activity t WHERE t.id=$%d AND t.archived_at IS NULL`, current, storekit.HeldTaskClause("t"), provenance.TaskSourceActivitySQL("t"), openArg)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&isCurrent, &held, &prior, &owner); err != nil {
+		return false, fmt.Errorf("activities: reading the open task's source and adoption: %w", err)
+	}
+	if held {
+		return true, nil
+	}
+	usable := false
+	if prior != nil {
+		usable, err = CurrentLeadEngagementTx(ctx, tx, *prior, owner, asOf)
+		if err != nil {
+			return false, err
+		}
+	}
+	if !isCurrent || !usable {
+		eligible, err := CurrentLeadEngagementTx(ctx, tx, source, owner, asOf)
+		if err != nil {
+			return false, err
+		}
+		if !eligible {
+			return true, nil
+		}
 		if _, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](open), UpdateActivityInput{sourceActivityID: &source, recordedAt: &asOf}); err != nil {
 			return false, fmt.Errorf("activities: pointing the open %s task at its new evidence: %w", sourceSystem, err)
 		}

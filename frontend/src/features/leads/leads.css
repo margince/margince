@@ -91,6 +91,10 @@
   white-space: nowrap;
 }
 
+.lead-company-guidance {
+  display: block;
+}
+
 .lead-company-offer.btn {
   padding-inline: 0;
 }

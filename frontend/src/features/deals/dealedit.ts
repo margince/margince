@@ -3,6 +3,10 @@
 
 import { useState } from "react";
 import type { CreateField } from "../../components/create";
+import {
+  useNoPartnersYet,
+  usePartnerOptions,
+} from "../../components/dealpartnerfields";
 import { useEntityName } from "../../components/entityref";
 import type { RailEdit } from "../../components/railfield";
 import { saveRecordEdit } from "../../components/recordedit";
@@ -23,8 +27,6 @@ import {
   attributedPartner,
   dealEditFields,
   editProjectFields,
-  useNoPartnersYet,
-  usePartnerOptions,
 } from "./deals.fields";
 import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
 

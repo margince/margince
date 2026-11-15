@@ -184,15 +184,8 @@ func edgeImage(raw json.RawMessage) (map[string]any, error) {
 	return image, nil
 }
 
-// edgeFieldsNoPatchCanClear names the fields whose reversal would have to write a
-// NULL, which an edge patch cannot do: every field on the request is an optional
-// pointer coalesced against the column, so a null reads as "not supplied". The
-// write would report success and leave the field standing, which is worse than a
-// refusal — the reader reads the confirmation and stops looking.
-//
-// Judged from the audited PAIR rather than from the live row: the pair is already
-// narrowed to what moved, so a key stated on both sides with a null before and a
-// value after is exactly a field this entry filled in.
+// Judge the changed fields against the owning module's clear policy.
+// An omitted key is not a request to clear anything.
 func edgeFieldsNoPatchCanClear(before, after json.RawMessage) ([]string, error) {
 	beforeImage, err := edgeImage(before)
 	if err != nil {
@@ -204,7 +197,7 @@ func edgeFieldsNoPatchCanClear(before, after json.RawMessage) ([]string, error) 
 	}
 	var unclearable []string
 	for key, was := range beforeImage {
-		if was != nil {
+		if was != nil || contacts.EdgeFieldCanRestoreNull(key) {
 			continue
 		}
 		if now, stated := afterImage[key]; stated && now != nil {

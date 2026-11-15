@@ -10,6 +10,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { LeadCompany } from "./leadcompany";
+import "./leads.css";
 
 // The offer to link the company the server matched, with the rule that matched it.
 
@@ -80,7 +81,6 @@ export const MatchedByName: Story = {
   }),
 };
 
-/** A typed company with no record yet, beside the editable name: qualifying adds it. */
 export const NoRecordYet: Story = {
   render: () => {
     installFetchStub({

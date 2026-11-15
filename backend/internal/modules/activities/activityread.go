@@ -39,7 +39,10 @@ func (s *Store) GetActivity(ctx context.Context, id ids.ActivityID, archived sto
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
 		out, err = readActivityAt(ctx, tx, id, archived, s.now())
-		return err
+		if err != nil {
+			return err
+		}
+		return s.stampMeetingNotesConnection(ctx, tx, &out)
 	})
 	if err != nil {
 		return out, err
@@ -55,6 +58,9 @@ func (s *Store) GetActivityTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	}
 	out, err := readActivityAt(ctx, tx, id, archived, s.now())
 	if err != nil {
+		return out, err
+	}
+	if err := s.stampMeetingNotesConnection(ctx, tx, &out); err != nil {
 		return out, err
 	}
 	return out, withCustomValuesOf(ctx, tx, active.cols, &out)
@@ -459,7 +465,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 			return err
 		}
-		if in.WithOutsideParty {
+		if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 			in.outsideParty = outsidePartyClause(ctx, tx)
 		}
 		where, content, _, args, err := listActivitiesFilter(ctx, in)

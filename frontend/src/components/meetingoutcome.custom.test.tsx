@@ -8,7 +8,11 @@ import { afterEach, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { ToastProvider } from "../design-system/toast";
 import { renderWithQueryClient } from "../testing/queryrender";
-import { installFetchStub, jsonResponse } from "../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../testing/story-utils";
 import { MeetingOutcome } from "./meetingoutcome";
 
 type CustomField = components["schemas"]["CustomField"];
@@ -61,6 +65,7 @@ afterEach(cleanup);
 it("prefills the meeting's fields and sends only the one the reader edited", async () => {
   const patched: Record<string, unknown>[] = [];
   installFetchStub({
+    "GET /me": meRoute({ activity: ["read", "update", "create"] }),
     "GET /custom-fields": () =>
       jsonResponse({ data: FIELDS, page: { has_more: false } }),
     [`GET /activities/${MEETING_ID}`]: () =>

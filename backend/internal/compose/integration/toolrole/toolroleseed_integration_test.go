@@ -134,7 +134,10 @@ func toolRoleSeeders(t *testing.T, e *apptest.AppEnv, owner string, pool *record
 	}
 	create["sdr_handoff"] = func() string { return seedHandoff(sweepSeed{t: t, e: e, pool: pool, create: create}) }
 	create["lead"] = func() string {
-		return post("/v1/leads", owned(integration.AnyMap{"full_name": "Role Sweep", "email": ids.NewV7().String() + "@lead.test", "source": "manual"}))
+		email := ids.NewV7().String() + "@lead.test"
+		id := post("/v1/leads", owned(integration.AnyMap{"full_name": "Role Sweep", "email": email, "source": "manual"}))
+		pool.note(id, "email", email)
+		return id
 	}
 	create["project"] = func() string {
 		return post("/v1/projects", owned(integration.AnyMap{"name": "Role Sweep", "company_id": parentCompany(), "source": "manual"}))

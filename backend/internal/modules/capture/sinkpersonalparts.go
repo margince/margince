@@ -122,7 +122,7 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 		  SELECT 1 FROM capture_pending_counterparty p
 		   WHERE p.owner_id = $1 AND p.email = $2
 		     AND p.status = $3 AND p.kind = $4
-		     AND p.resolved_at IS NOT NULL
+		     AND `+latestResolvedSenderVerdict("p")+`
 		     AND (p.resolved_by_owner OR NOT $5)
 		     AND now() <= p.resolved_at + `+quoteInterval(noiseVerdictReach)+`
 		     AND NOT EXISTS (

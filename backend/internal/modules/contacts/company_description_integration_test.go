@@ -150,12 +150,7 @@ func TestCompanyDescriptionFillsOnlyABlankMergeSurvivor(t *testing.T) {
 	}
 }
 
-// A site read REPLACES a description no contact authored. An agent creating the
-// company from a meeting transcript writes a summary of the meeting into the
-// header, and the crawl that knows what the company actually sells has to be
-// able to correct it — under the old fill-where-blank rule the transcript's
-// sentence won permanently, because whoever wrote first won.
-func TestASiteReadReplacesAnAgentsDescription(t *testing.T) {
+func TestASiteReadKeepsTheOfferSeparateFromTheDescription(t *testing.T) {
 	e := setupDedupe(t)
 	fromTranscript := "Discovery call: they run two shops and plan to internationalise."
 	company, err := e.store.CreateCompany(e.asAgent(), CreateCompanyInput{
@@ -173,14 +168,11 @@ func TestASiteReadReplacesAnAgentsDescription(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reread.Description == nil || *reread.Description != fromSite {
-		t.Fatalf("description after the site read = %v, want the site's %q", reread.Description, fromSite)
+	if reread.Description == nil || *reread.Description != fromTranscript {
+		t.Fatalf("description after the site read = %v, want the existing %q", reread.Description, fromTranscript)
 	}
 }
 
-// The same read leaves a contact's sentence alone. This is the half that makes
-// the replacement above safe, and it is the case the fill-where-blank rule used
-// to cover for free.
 func TestASiteReadLeavesAHumansDescriptionAlone(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -275,8 +267,6 @@ func TestAMergedInDescriptionKeepsItsHumanAuthor(t *testing.T) {
 	}
 }
 
-// Automatic work editing the description does not claim the column. Its stamp
-// names no user, and a site read may correct it.
 func TestAutomaticWorksEditDoesNotClaimTheDescription(t *testing.T) {
 	e := setupDedupe(t)
 	company, err := e.store.CreateCompany(e.as(), CreateCompanyInput{
@@ -300,9 +290,8 @@ func TestAutomaticWorksEditDoesNotClaimTheDescription(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if reread.Description == nil || *reread.Description != fromSite {
-		t.Fatalf("description after the site read = %v, want the site's %q — an agent's edit must not "+
-			"hold the column", reread.Description, fromSite)
+	if reread.Description == nil || *reread.Description != fromAgent {
+		t.Fatalf("description after the site read = %v, want the existing %q", reread.Description, fromAgent)
 	}
 }
 
