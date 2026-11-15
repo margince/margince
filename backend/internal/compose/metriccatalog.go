@@ -154,16 +154,7 @@ func (metricEvaluator) Catalog(ctx context.Context, language textlang.Lang) (crm
 	return out, nil
 }
 
-// SnapshotReads lets one evaluation read each named subject's label, liveness
-// and shared-team check once. The reporting service opens it around the whole
-// evaluation; Evaluate opens its own when called without one.
-func (metricEvaluator) SnapshotReads(ctx context.Context, tx pgx.Tx) (context.Context, func()) {
-	return withReportingPopulationReads(ctx, tx)
-}
-
 func (e metricEvaluator) Evaluate(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, framework crmcontracts.ReportingFramework, at time.Time) (reporting.Evaluation, error) {
-	ctx, releasePopulationReads := e.SnapshotReads(ctx, tx)
-	defer releasePopulationReads()
 	owners, err := readerMeasurableOwners(ctx, tx)
 	if err != nil {
 		return reporting.Evaluation{}, err
