@@ -62,9 +62,9 @@ const contactEmailExpr = `(SELECT ce.email FROM contact_email ce
 var contactEmployerLink = "EXISTS (SELECT 1 FROM relationship rel WHERE rel.contact_id = t.id" +
 	" AND " + employment.CurrentMembershipSQL("rel") + " AND %s)"
 
-// contactEmployerField is withheld until bindEdgeScope admits the caller:
-// an edge discloses a contact and a company as a pair, which neither record's
-// grant covers, so the leaf reads nothing on anybody's behalf by default.
+// contactEmployerField is withheld until bindEdgeScope admits the caller. An
+// edge discloses a contact and a company as a pair, which neither record's
+// grant covers, so by default the leaf reads nothing on anybody's behalf.
 var contactEmployerField = storekit.Field{
 	Expr: "rel.company_id", Type: storekit.FieldID, References: storekit.RefCompany,
 	Link: contactEmployerLink, Withheld: true,
@@ -220,9 +220,9 @@ func maskedForCaller(ctx context.Context, object, field string) bool {
 }
 
 // bindEdgeScope admits a company-naming edge leaf for a caller who may read
-// edges and companies, bounded to the edges they may read on alias — the gate
-// the contact list's employer filter and the project list's company filter
-// take. A caller refused either keeps the field, withheld.
+// edges and companies. It is bounded to the edges they may read on alias, as
+// the contact employer and project company list filters are. A caller refused
+// either keeps the field, withheld.
 func bindEdgeScope(ctx context.Context, field storekit.Field, alias string) storekit.Field {
 	if auth.EdgeReadAdmitted(ctx) != nil || !auth.ReadGranted(ctx, "company") {
 		return field

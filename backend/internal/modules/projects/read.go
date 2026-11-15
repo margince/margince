@@ -220,11 +220,10 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
 	}
 	if in.CompanyID != nil {
-		// ANY of the project's live companies, not the legacy anchor column: a
-		// project is work several companies do together, so narrowing the list
-		// to a partner must show the deliveries that partner is on. A match
-		// discloses the project-company pair, so a caller who may not read the
-		// edges is refused the filter, as the company page's project list is.
+		// Any of the project's live companies, not the legacy anchor column.
+		// Narrowing to a partner shows the deliveries that partner is on. A
+		// match discloses the project-company pair, so a caller who may not
+		// read the edges is refused, as on the company page's project list.
 		edges, err := auth.ProjectCompanyEdgesSQL(ctx, arg)
 		if err != nil {
 			return nil, err
