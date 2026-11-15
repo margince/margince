@@ -657,7 +657,9 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     // So these match the title at the start, not the whole band.
     const opensWith = (title: string) =>
       headings().some((one) => one?.startsWith(title));
-    await waitFor(() => expect(opensWith("How they buy")).toBe(true));
+    await waitFor(() =>
+      expect(opensWith("How they sell and to whom")).toBe(true),
+    );
     expect(opensWith("Company facts")).toBe(true);
     // The roll-up is one of the panes that runs its own read, so it arrives
     // on its own clock rather than with the ones above.

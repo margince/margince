@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { repeatsDescription } from "./companyprofiletab";
+import { emptyReason, repeatsDescription } from "./companyprofiletab";
 
 describe("repeatsDescription", () => {
   const offer = [{ field: "offer_summary", value: "Bearings sold online. " }];
@@ -22,5 +22,26 @@ describe("repeatsDescription", () => {
         "Bearings sold online.",
       ),
     ).toBe(false);
+  });
+});
+
+describe("emptyReason", () => {
+  it("says the website does not state it once a read finished", () => {
+    for (const status of ["ready", "partial", "confirmed"]) {
+      expect(emptyReason(status)).toBe("co.narrative.notOnSite");
+    }
+  });
+
+  it("says the website was not read yet before a read finished", () => {
+    for (const status of [
+      null,
+      undefined,
+      "queued",
+      "reading",
+      "failed",
+      "abandoned",
+    ]) {
+      expect(emptyReason(status)).toBe("co.narrative.notReadYet");
+    }
   });
 });
