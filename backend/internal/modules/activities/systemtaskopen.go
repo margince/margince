@@ -20,8 +20,9 @@ import (
 )
 
 // KeepOneSystemTaskOnTx keeps one open task and refreshes unusable evidence before adoption.
+// An open task nobody holds goes to the record's owner, when it has one.
 // The caller serialises arrivals on the record, including owner changes.
-func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID, source ids.UUID, asOf time.Time) (bool, error) {
+func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID, source ids.UUID, recordOwner *ids.UUID, asOf time.Time) (bool, error) {
 	column := linkColumn(entityType)
 	if column == "" {
 		return false, &InvalidLinkTypeError{EntityType: entityType}
@@ -57,6 +58,13 @@ func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityT
  FROM activity t WHERE t.id=$%d AND t.archived_at IS NULL`, current, storekit.HeldTaskClause("t"), provenance.TaskSourceActivitySQL("t"), openArg)
 	if err := tx.QueryRow(ctx, query, args...).Scan(&isCurrent, &held, &prior, &owner); err != nil {
 		return false, fmt.Errorf("activities: reading the open task's source and adoption: %w", err)
+	}
+	if owner == nil && recordOwner != nil {
+		assignee := ids.From[ids.UserKind](*recordOwner)
+		if _, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](open), UpdateActivityInput{AssigneeID: &assignee}); err != nil {
+			return false, fmt.Errorf("activities: handing the open %s task to the record's owner: %w", sourceSystem, err)
+		}
+		owner = recordOwner
 	}
 	if held {
 		return true, nil

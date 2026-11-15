@@ -265,3 +265,25 @@ func TestAMeetingHeldLongAgoAsksNobodyToQualify(t *testing.T) {
 		t.Errorf("a meeting held over a year ago filed %d qualify task(s)", n)
 	}
 }
+
+// A qualify task filed before its lead had an owner is nobody's. The next held
+// meeting hands it to the owner instead of letting it block their task.
+func TestAnUnassignedQualifyTaskGoesToTheLeadsOwner(t *testing.T) {
+	l := setupLeadMail(t)
+	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
+	legacy := legacyQualificationTasks(t, l, lead, 1)[0]
+	l.e.WsExec(t, `UPDATE activity SET assignee_id = NULL WHERE id = $1`, legacy)
+	now := clocktest.Now(t)
+	writer := newLeadWorkTasks(l.e.DB(), slog.Default())
+	writer.now = func() time.Time { return now }
+	if _, _, err := l.e.Activities.WithLeadQualifyTasks(writer).LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Lead demo"), OccurredAt: new(now.Add(-time.Hour)), MeetingStatus: new("held"),
+		Source: "manual", CounterpartyEmail: "lena@prospect.example",
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Errorf("the owner has %d qualify task(s); the unassigned one should be theirs", n)
+	}
+}
