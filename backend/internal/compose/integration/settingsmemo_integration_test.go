@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 import (
 	"context"
@@ -11,18 +11,17 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A transaction reads a setting's row once, however many readers ask, and a
-// write through the settings store makes the next read see the new value.
+// A transaction reads a setting's row once, however many readers ask. A write
+// through the settings store makes the next read see the new value.
 func TestASettingIsReadOncePerTransactionAndAgainAfterItsWriter(t *testing.T) {
-	e := integration.Setup(t)
-	store := settings.New(e.Pool, settingsRegistry())
+	e := Setup(t)
+	store := settings.New(e.Pool, settings.NewRegistry(identity.Timezone))
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
 		RowScope: principal.RowScopeAll,
@@ -57,8 +56,8 @@ func TestASettingIsReadOncePerTransactionAndAgainAfterItsWriter(t *testing.T) {
 // A writer reads the row again after its lock. A value its transaction
 // remembered from before another writer's commit is not what it writes over.
 func TestASettingWriteIsNotFooledByWhatItsTransactionReadBeforeTheLock(t *testing.T) {
-	e := integration.Setup(t)
-	store := settings.New(e.Pool, settingsRegistry())
+	e := Setup(t)
+	store := settings.New(e.Pool, settings.NewRegistry(identity.Timezone))
 	ctx := e.As(e.AdminUser, nil, principal.Permissions{
 		Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
 		RowScope: principal.RowScopeAll,

@@ -439,30 +439,6 @@ func GetTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, error) {
 	return out, nil
 }
 
-// GetStoredTx is GetTx that also reports whether a row stands behind the
-// value, for a reader whose answer differs when nobody chose one.
-func GetStoredTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, bool, error) {
-	var zero T
-	if err := RequireRead(ctx, e); err != nil {
-		return zero, false, err
-	}
-	// The presence and the value come from one read, so they always agree.
-	raw, stored, err := storedValue(ctx, tx, e.Key(), "")
-	if err != nil {
-		return zero, false, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
-	}
-	if !stored {
-		if raw, err = e.DefaultJSON(); err != nil {
-			return zero, false, err
-		}
-	}
-	var out T
-	if err := json.Unmarshal(raw, &out); err != nil {
-		return zero, false, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
-	}
-	return out, stored, nil
-}
-
 // RequireTx reads a setting inside a transaction the caller already holds, for
 // a caller that needs the VALUE to finish work of its own and cannot afford
 // the second transaction the gated Raw opens.
