@@ -9,23 +9,37 @@ package compose
 // whichever clock the reader judges by. The app and the database keep their
 // own clocks, and they disagree. Here the activities store and the transcript
 // reader run on an injected clock that plays the app host's, an hour away from
-// the database's now() in either direction.
+// the database's now() in either direction. A capture runs on a pool whose
+// now() is moved instead, since the capture time is the process clock.
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// appClock is a clock offset from the database's by shift.
-func appClock(t *testing.T, shift time.Duration) func() time.Time {
+// appClock is a clock shift away from the database's, read once from it, so
+// the skew is exact whatever offset the fixture lane gives the test's clock.
+func appClock(t *testing.T, e *integration.Env, shift time.Duration) func() time.Time {
 	t.Helper()
-	return func() time.Time { return clocktest.Now(t).Add(shift) }
+	var dbNow time.Time
+	if err := e.Pool.QueryRow(context.Background(), `SELECT clock_timestamp()`).Scan(&dbNow); err != nil {
+		t.Fatalf("reading the database clock: %v", err)
+	}
+	read := time.Now()
+	return func() time.Time { return dbNow.Add(shift + time.Since(read)) }
 }
 
 // A meeting logged without a date and read at once is a held meeting, even when
@@ -34,7 +48,7 @@ func appClock(t *testing.T, shift time.Duration) func() time.Time {
 // "meeting not yet held".
 func TestAnUndatedMeetingIsHeldForAReaderWhoseClockIsBehindTheDatabase(t *testing.T) {
 	e := setupTranscript(t)
-	behind := appClock(t, -time.Hour)
+	behind := appClock(t, e.Env, -time.Hour)
 	e.WsExec(t, `UPDATE app_user SET display_name='Priya Raman' WHERE id=$1`, e.Rep2)
 	body, source := "Mira: Priya Raman agreed to send the pricing by Friday.", "transcript"
 	meeting, _, err := e.Activities.WithClock(behind).LogActivity(e.ctx, activities.LogActivityInput{
@@ -63,7 +77,7 @@ func TestAnUndatedMeetingIsHeldForAReaderWhoseClockIsBehindTheDatabase(t *testin
 // even when the app's clock is behind the database's.
 func TestAnUndatedInboundMessageWaitsForAReplyAtOnceWhenTheAppClockIsBehind(t *testing.T) {
 	e := setupTranscript(t)
-	store := e.Activities.WithClock(appClock(t, -time.Hour))
+	store := e.Activities.WithClock(appClock(t, e.Env, -time.Hour))
 	contact := e.SeedContact(t, "Wanda Waiting", &e.Rep1)
 	subject, body := "Contract?", "Where is the contract"
 	mail, _, err := store.LogActivity(e.Admin(), activities.LogActivityInput{
@@ -96,7 +110,7 @@ func TestAnUndatedActivityIsTheLastActivityAtOnceWhenTheAppClockIsAhead(t *testi
 	e := setupTranscript(t)
 	contact := e.SeedContact(t, "Arno Ahead", &e.Rep1)
 	subject := "Call notes"
-	note, _, err := e.Activities.WithClock(appClock(t, time.Hour)).LogActivity(e.Admin(), activities.LogActivityInput{
+	note, _, err := e.Activities.WithClock(appClock(t, e.Env, time.Hour)).LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: &subject, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
 	})
@@ -110,4 +124,62 @@ func TestAnUndatedActivityIsTheLastActivityAtOnceWhenTheAppClockIsAhead(t *testi
 	if read.LastActivityAt == nil || !read.LastActivityAt.Equal(note.OccurredAt) {
 		t.Fatalf("the contact's last activity is %v, want the undated note at %v", read.LastActivityAt, note.OccurredAt)
 	}
+}
+
+// A capture without a usable timestamp has happened for the database's clock
+// and the app's, whichever of the two is ahead, and a replay keeps its time.
+func TestAnUndatedCaptureHasHappenedForTheDatabaseAndTheApp(t *testing.T) {
+	for name, shift := range map[string]time.Duration{"database behind": -time.Hour, "database ahead": time.Hour} {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			pool := shiftedPool(t, shift)
+			sink := undatedCaptureSink(e, pool)
+			ctx := e.ConnectorOwnerCtx(e.Rep1, calendarSystem)
+			first, err := sink.Upsert(ctx, undatedCapture("undated-capture"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			app := time.Now()
+			var db time.Time
+			if err := pool.QueryRow(ctx, `SELECT now()`).Scan(&db); err != nil {
+				t.Fatal(err)
+			}
+			stored := capturedOccurredAt(t, e, first.ID)
+			if stored.After(db) || stored.After(app) {
+				t.Fatalf("the undated capture is dated %v, after the database's now() %v or the app's %v", stored, db, app)
+			}
+			again, err := sink.Upsert(ctx, undatedCapture("undated-capture"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if again.ID != first.ID || !capturedOccurredAt(t, e, again.ID).Equal(stored) {
+				t.Fatalf("the replay landed %v at %v, want %v at %v", again.ID, capturedOccurredAt(t, e, again.ID), first.ID, stored)
+			}
+		})
+	}
+}
+
+func undatedCaptureSink(e *integration.Env, pool *pgxpool.Pool) *capture.Sink {
+	return capture.NewSink(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS)))
+}
+
+// undatedCapture is a calendar event whose provider sent no start time.
+func undatedCapture(event string) connector.NormalizedRecord {
+	return connector.NormalizedRecord{
+		EntityType: "activity", NaturalKey: connector.NaturalKey{SourceSystem: calendarSystem, SourceID: event},
+		Fields: capture.ActivityFields{Kind: "meeting", Subject: "Undated review"},
+		Source: calendarSystem + ":" + event, CapturedBy: "connector:" + calendarSystem,
+		Raw: []byte(`{"id":"` + event + `"}`),
+	}
+}
+
+func capturedOccurredAt(t *testing.T, e *integration.Env, id ids.UUID) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT occurred_at FROM activity WHERE id = $1`, id).Scan(&at)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return at
 }
