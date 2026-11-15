@@ -14,6 +14,7 @@ import { Select } from "../../design-system/select";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { loggedActivityKeys } from "../../lib/activitykeys";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { uploadAttachment } from "../../lib/attachmentupload";
 import { useChannelProviderOptions } from "../../lib/channelproviders";
 import { problemMessageOf, unwrap } from "../../lib/problem";
@@ -87,9 +88,11 @@ function useStartReading(contactId: string, onStored: (id: string) => void) {
       return { attachmentId: stored.id, readingId: reading.id };
     },
     onSettled: () =>
-      queryClient.invalidateQueries({
-        queryKey: ["attachments", "contact", contactId],
-      }),
+      Promise.all(
+        fileListKeys({ entityType: "contact", entityId: contactId }).map(
+          (queryKey) => queryClient.invalidateQueries({ queryKey }),
+        ),
+      ),
   });
 }
 
@@ -102,6 +105,7 @@ export function ContactChatCapture({
   // Known as soon as the bytes are stored, so Discard reaches a screenshot
   // whose reading could not be started.
   const [attachmentId, setAttachmentId] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const start = useStartReading(contactId, setAttachmentId);
   const reading = useChatReading(start.data);
   const discard = useMutation({
@@ -114,7 +118,15 @@ export function ContactChatCapture({
         );
       }
     },
-    onSuccess: onClose,
+    onSuccess: () => {
+      for (const queryKey of fileListKeys(
+        { entityType: "contact", entityId: contactId },
+        "removed",
+      )) {
+        queryClient.invalidateQueries({ queryKey });
+      }
+      onClose();
+    },
   });
   const read = reading.data;
   const finished = read !== undefined && !isLive(read);
@@ -229,10 +241,19 @@ function ChatReview({
           },
         }),
       ),
-    onSuccess: () => {
+    onSuccess: (filed) => {
+      // The screenshot moves from the contact onto the new message, which
+      // the contact's list still shows through the message's link.
       for (const queryKey of [
         ...loggedActivityKeys("message", "contact", contactId),
-        ["attachments", "contact", contactId],
+        ...fileListKeys(
+          { entityType: "contact", entityId: contactId },
+          "moved",
+        ),
+        ...fileListKeys({
+          entityType: "activity",
+          entityId: filed.activity_id,
+        }),
       ]) {
         queryClient.invalidateQueries({ queryKey });
       }

@@ -2,11 +2,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { QueryClient } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { en } from "../i18n/en";
+import {
+  contactFilesKey,
+  dealFilesKey,
+  roomDocumentsKey,
+} from "../lib/attachmentkeys";
 import { routeHash } from "../lib/router";
 import {
   installFetchStub,
@@ -41,7 +47,11 @@ const TASK: Activity = {
   updated_at: "2026-09-08T09:00:00Z",
 };
 
-function show(task: Activity, routes: Parameters<typeof installFetchStub>[0]) {
+function show(
+  task: Activity,
+  routes: Parameters<typeof installFetchStub>[0],
+  client?: QueryClient,
+) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
     "GET /contacts/c-1": () =>
@@ -49,7 +59,7 @@ function show(task: Activity, routes: Parameters<typeof installFetchStub>[0]) {
     ...routes,
   });
   return render(
-    <StoryProviders>
+    <StoryProviders client={client}>
       <TaskNextSteps task={task} />
     </StoryProviders>,
   );
@@ -135,6 +145,41 @@ it("a deal question lists the open deals offered and files the mail on the one p
       replace_existing_of_type: false,
     },
   ]);
+});
+
+it("filing the mail on a deal refreshes the file lists its files now join", async () => {
+  const user = userEvent.setup();
+  const client = new QueryClient();
+  const showing = [
+    dealFilesKey("d-1"),
+    contactFilesKey("c-1"),
+    roomDocumentsKey("room-1"),
+  ];
+  for (const queryKey of showing) client.setQueryData(queryKey, { data: [] });
+  show(
+    {
+      ...TASK,
+      task_type: "decide",
+      source_system: "which_deal",
+      source_activity_id: "mail-1",
+      raw: { offered_deal_ids: ["d-1"] },
+    },
+    {
+      "GET /deals/d-1": () =>
+        jsonResponse({ id: "d-1", name: "Nordwind renewal", status: "open" }),
+      "POST /activities/relink-thread": () => jsonResponse({}),
+    },
+    client,
+  );
+  await user.click(await screen.findByRole("radio", { name: /renewal/ }));
+  await user.click(
+    screen.getByRole("button", { name: en["tasks.whichDeal.file"] }),
+  );
+  await waitFor(() =>
+    expect(
+      showing.map((queryKey) => client.getQueryState(queryKey)?.isInvalidated),
+    ).toEqual([true, true, true]),
+  );
 });
 
 it("a deal question offers no answer until every deal offered has been read", async () => {

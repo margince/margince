@@ -13,6 +13,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { uploadAttachment } from "../../lib/attachmentupload";
 // The installation read every form shares: one query, one key, so the currency
 // this form writes is the same fact the settings screen shows.
@@ -219,9 +220,12 @@ export function ContractForm({
           queryKey: ["project", contract.project_id],
         });
       }
-      queryClient.invalidateQueries({
-        queryKey: ["companyDocuments", companyId],
-      });
+      for (const queryKey of fileListKeys({
+        entityType: "company",
+        entityId: companyId,
+      })) {
+        queryClient.invalidateQueries({ queryKey });
+      }
       // The paper list this form and the contract row both read; without it
       // an upload lands on the server and neither surface shows it.
       queryClient.invalidateQueries({ queryKey: ["contractPaper", companyId] });

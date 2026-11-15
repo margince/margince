@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { companyDocumentsKey } from "../../lib/attachmentkeys";
 import { ANA, BEN, contactCase } from "../../testing/contactcase.fixtures";
 import { PairDecision } from "./worklist.pair";
 
@@ -57,10 +58,12 @@ function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
   };
 }
 
-function draw(item: WorklistItem) {
-  const client = new QueryClient({
+function draw(
+  item: WorklistItem,
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
+  }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -145,6 +148,28 @@ describe("deciding a duplicate pair on the row", () => {
     const body = await bodyOf(fetched);
     expect(body.disposition).toBe("merge");
     expect(body.winner_id).toBe(RIGHT);
+  });
+
+  it("refreshes both companies' document libraries once the merge lands", async () => {
+    stubOk();
+    const client = new QueryClient();
+    for (const id of [LEFT, RIGHT]) {
+      client.setQueryData(companyDocumentsKey(id), { data: [] });
+    }
+    draw(
+      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
+      client,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Keep ACME Gmbh" }),
+    );
+    await vi.waitFor(() =>
+      expect(
+        [LEFT, RIGHT].map(
+          (id) => client.getQueryState(companyDocumentsKey(id))?.isInvalidated,
+        ),
+      ).toEqual([true, true]),
+    );
   });
 
   // The other answer settles the pair for everybody and needs no winner. The
