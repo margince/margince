@@ -4129,6 +4129,25 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "billing.saveChange": "Lưu thay đổi",
   "billing.versionUnresolved":
     "Không thể đọc lại liên hệ thanh toán nên chưa gửi thay đổi. Tải lại trang rồi thử lại.",
+  "payments.refresh": "Làm mới",
+  "payments.title": "Thanh toán của khách hàng",
+  "payments.none": "Không có hóa đơn quá hạn.",
+  "payments.overdueAmount": "Quá hạn {amount}",
+  "payments.invoices_one": "{count} hóa đơn",
+  "payments.invoices_other": "{count} hóa đơn",
+  "payments.customers_one": "{count} khách hàng",
+  "payments.customers_other": "{count} khách hàng",
+  "payments.oldest_one": "Hóa đơn cũ nhất quá hạn 1 ngày",
+  "payments.oldest_other": "Hóa đơn cũ nhất quá hạn {days} ngày",
+  "payments.viewInvoices": "Xem hóa đơn quá hạn",
+  "payments.customer": "Khách hàng",
+  "payments.openAmount": "Chưa thanh toán",
+  "payments.stale":
+    "Dữ liệu hóa đơn có thể đã thay đổi kể từ lần đồng bộ gần nhất.",
+  "payments.syncFailed":
+    "Đồng bộ kế toán không thành công. Số tiền được lấy từ lần đồng bộ thành công gần nhất.",
+  "payments.syncUnavailable":
+    "Dữ liệu hóa đơn sẽ có sau khi đồng bộ kế toán thành công.",
   "finance.title": "Tài chính",
   "finance.titleHistorical": "Tài chính · lịch sử",
   "finance.none": "Chưa ghi nhận gì.",

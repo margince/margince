@@ -7,6 +7,7 @@ import {
   render,
   stubApi,
 } from "../../testing/brief.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { BriefScreen } from "./brief";
 
 afterEach(() => {
@@ -18,12 +19,16 @@ beforeEach(() => {
   globalThis.location.hash = "#/home";
 });
 
-const reportReads = (calls: readonly Call[]) =>
-  calls.filter((call) => call.path.includes("/extension-reports"));
+const paymentReads = (calls: readonly Call[]) =>
+  calls.filter((call) => call.path.includes("/finance/customer-payments"));
 
-it("asks for the extension reports only once the day's own reads have answered", async () => {
+it("asks for customer payments only once the day's own reads have answered", async () => {
   let answerMagic: (response: Response) => void = () => undefined;
   const calls = stubApi({
+    "GET /me": () =>
+      jsonResponse(
+        meFixture({ allow: { company: ["read"], finance: ["read"] } }),
+      ),
     "GET /magic": () =>
       new Promise<Response>((resolve) => {
         answerMagic = resolve;
@@ -33,8 +38,11 @@ it("asks for the extension reports only once the day's own reads have answered",
   await waitFor(() =>
     expect(calls.some((call) => call.path.includes("/worklist"))).toBe(true),
   );
-  expect(reportReads(calls)).toEqual([]);
+  expect(paymentReads(calls)).toEqual([]);
 
   answerMagic(jsonResponse({ title: "Unavailable" }, 503));
-  await waitFor(() => expect(reportReads(calls)).not.toEqual([]));
+  await waitFor(() => expect(paymentReads(calls)).not.toEqual([]));
+  expect(calls.some((call) => call.path.includes("/extension-reports"))).toBe(
+    false,
+  );
 });
