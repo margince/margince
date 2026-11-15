@@ -220,33 +220,45 @@ func TestTheWaitingHorizonRunsBeforeAnyPerMessageSubquery(t *testing.T) {
 // generic plan the Worklist reuses. The probe stands in for the per-message
 // rules, so the times it ran are the messages the page judged. A message at
 // the index's raw bound can still fail its day test, so the bound is loose.
+// The page order must not depend on the planner choosing incremental sorting.
 func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
 	const pageCap = 3
-	eligible := `FROM activity a
-		WHERE a.kind IN ('email', 'message') AND a.direction = 'inbound' AND a.archived_at IS NULL
-		  AND (SELECT count(*) FROM activity_participant probe WHERE probe.activity_id = a.id) >= 0
-		  AND ` + withinWaitingHorizonSQL("$%[1]d::timestamptz", "%[5]d")
-	probed := func(statement string) float64 {
+	eligible := waitingPlanProbeFromSQL
+	probed := func(t *testing.T, statement, incremental, extra string) (float64, float64) {
 		t.Helper()
-		plan := explainOnMailbox(t, "", "SET LOCAL plan_cache_mode = force_generic_plan; SET LOCAL max_parallel_workers_per_gather = 0",
-			"EXPLAIN (ANALYZE, FORMAT JSON) ", fmt.Sprintf(statement, 1, nil, nil, "$2::int", 30), clocktest.Now(t), pageCap)
-		var loops float64
-		plan.walk(func(n planNode) {
-			if n.Alias == "probe" {
-				loops += n.ActualLoops
-			}
-		})
-		return loops
+		args := []any{clocktest.Now(t)}
+		instant := len(args)
+		limit := waitingLimitSQL(func(value any) int {
+			args = append(args, value)
+			return len(args)
+		}, pageCap) + "::int"
+		plan := explainOnMailbox(t, extra, "SET LOCAL plan_cache_mode = force_generic_plan; SET LOCAL max_parallel_workers_per_gather = 0; SET LOCAL enable_incremental_sort = "+incremental,
+			"EXPLAIN (ANALYZE, FORMAT JSON) ", fmt.Sprintf(statement, instant, nil, nil, limit, 30), args...)
+		return waitingPlanWork(plan)
 	}
 	if carried := strings.Count(waitingCappedArmsSQL, waitingEligibleFromSQL); carried != 1 {
 		t.Fatalf("the page carries the eligibility %d times, want once for both arms", carried)
 	}
-	whole := probed(`SELECT a.id ` + eligible + ` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %[4]s`)
+	// An unordered control scan exposes a short fixture even when an index could stop early.
+	whole, _ := probed(t, `SELECT a.id `+eligible+` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %[4]s`, "on",
+		"SET LOCAL enable_indexscan = off; SET LOCAL enable_bitmapscan = off")
 	if whole <= 4*pageCap {
 		t.Fatalf("one scan over the horizon judged %v messages: the mailbox holds too little young mail to show a cap of %d", whole, pageCap)
 	}
-	if split := probed(strings.ReplaceAll(waitingCappedArmsSQL, waitingEligibleFromSQL, eligible)); split > 2*pageCap {
-		t.Errorf("the page judged %v messages for a cap of %d (one scan judges %v): it reads the whole horizon before it sorts", split, pageCap, whole)
+	for _, incremental := range []string{"on", "off"} {
+		for _, fixture := range []struct{ name, extra string }{
+			{"unanalyzed", ""},
+			{"analyzed", "ANALYZE activity, activity_participant"},
+			{"held", waitingPlanHeldMailSQL},
+			{"held_analyzed", waitingPlanHeldMailSQL + "ANALYZE activity, activity_participant"},
+		} {
+			t.Run("incremental_"+incremental+"/"+fixture.name, func(t *testing.T) {
+				split, read := probed(t, strings.ReplaceAll(waitingCappedArmsSQL, waitingEligibleFromSQL, eligible), incremental, fixture.extra)
+				if split > 2*pageCap || read > 2*pageCap {
+					t.Errorf("the page judged %v and read %v messages for cap %d (whole scan %v)", split, read, pageCap, whole)
+				}
+			})
+		}
 	}
 }
 
