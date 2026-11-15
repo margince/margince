@@ -157,10 +157,11 @@ func leadArrivalComponent(arrival contacts.LeadArrival) *systemtext.Component {
 	return component
 }
 
-// repliedTaskInput is the ask to qualify a lead who wrote or booked.
+// repliedTaskInput is the ask to qualify a lead who wrote or booked. One mail
+// or meeting can sit on two leads, so the key names the lead as well.
 func (w leadWorkTasks) repliedTaskInput(lead ids.LeadID, arrival ids.UUID, title string, owner *ids.UUID) activities.LogActivityInput {
 	at := w.now().UTC()
-	source, key := provenance.LeadRepliedSource, arrival.String()
+	source, key := provenance.LeadRepliedSource, arrival.String()+":"+lead.String()
 	return activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Kind: activityKindTask, Subject: &title, OccurredAt: &at,
 		SourceSystem: &source, SourceID: &key, SourceActivityID: &arrival,

@@ -95,11 +95,18 @@ func TestTheRepairKeepsOneOpenQualifyTaskPerLead(t *testing.T) {
 		}
 		tasks = append(tasks, ids.UUID(task.Id))
 	}
+	var scanned []ids.UUID
+	var changed int
 	if err := database.WithWorkspaceTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
-		_, _, err := RetireDuplicateLeadTasksTx(asClassifier(e), tx, source, ids.Nil, 10, requestInstant)
+		var err error
+		scanned, changed, err = RetireDuplicateLeadTasksTx(asClassifier(e), tx, source, ids.Nil, 10, requestInstant)
 		return err
 	}); err != nil {
 		t.Fatal(err)
+	}
+	// The data task rejects a page that changed more than it scanned.
+	if len(scanned) != 1 || changed != 1 {
+		t.Errorf("the repair scanned %d leads and changed %d, want the one lead counted once", len(scanned), changed)
 	}
 	for i, task := range tasks {
 		var archived bool

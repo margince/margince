@@ -95,3 +95,24 @@ func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {
 		t.Errorf("a reply, a new message and a held meeting left %d open asks, want one", n)
 	}
 }
+
+// One meeting held with two leads asks each lead's owner to qualify their own
+// lead, so neither lead loses its ask to the other.
+func TestAMeetingHeldWithTwoLeadsAsksAboutEach(t *testing.T) {
+	l := setupLeadMail(t)
+	first := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
+	second := l.ownedLead(t, "mira@prospect.example", l.e.Rep2)
+	store := l.e.Activities.WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default()))
+	at, held := l.at.Add(-time.Hour), meetingoutcome.Held
+	if _, _, err := store.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Demo"), Source: "manual", OccurredAt: &at, MeetingStatus: &held,
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: first.UUID}, {EntityType: "lead", EntityID: second.UUID}},
+	}); err != nil {
+		t.Fatalf("holding a meeting with both leads: %v", err)
+	}
+	for name, lead := range map[string]ids.LeadID{"first": first, "second": second} {
+		if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+			t.Errorf("the %s lead has %d open asks after the meeting, want one", name, n)
+		}
+	}
+}

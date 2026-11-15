@@ -24,7 +24,7 @@ const duplicateLeadTasksSQL = `FROM activity_link l JOIN activity t ON t.id = l.
 
 // RetireDuplicateLeadTasksTx archives every open system task from source on a
 // lead but the newest, for the page of leads after `after`. A task a human
-// worked stays. It returns the leads it inspected and the tasks it archived.
+// worked stays. It returns the leads it inspected and the leads it changed.
 func RetireDuplicateLeadTasksTx(ctx context.Context, tx pgx.Tx, source string, after ids.UUID, limit int, now time.Time) ([]ids.UUID, int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err
@@ -37,7 +37,7 @@ func RetireDuplicateLeadTasksTx(ctx context.Context, tx pgx.Tx, source string, a
 	if err != nil {
 		return nil, 0, fmt.Errorf("activities: reading leads with duplicate %s tasks: %w", source, err)
 	}
-	retired := 0
+	changed := 0
 	for _, lead := range leads {
 		rows, err := tx.Query(ctx, `SELECT t.id FROM activity t JOIN activity_link l ON l.activity_id = t.id
 			 WHERE l.lead_id = $1 AND t.source_system = $2 AND `+pristineRepairTaskSQL("t")+`
@@ -57,10 +57,12 @@ func RetireDuplicateLeadTasksTx(ctx context.Context, tx pgx.Tx, source string, a
 			if _, err := archiveActivityInTx(ctx, tx, ids.From[ids.ActivityKind](id), nil, archiveOptions{}, now); err != nil {
 				return nil, 0, fmt.Errorf("activities: retiring the duplicate task %s: %w", id, err)
 			}
-			retired++
+		}
+		if len(older) > 0 {
+			changed++
 		}
 	}
-	return leads, retired, nil
+	return leads, changed, nil
 }
 
 // CountLeadsWithDuplicateTasks caps the estimate at the leads the batch would

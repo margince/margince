@@ -34,11 +34,11 @@ func DuplicatesDataTask(now func() time.Time) datatask.Task {
 				if err != nil {
 					return datatask.BatchOut{}, err
 				}
-				leads, retired, err := activities.RetireDuplicateLeadTasksTx(ctx, tx, provenance.LeadRepliedSource, after, in.Limit, now())
+				leads, changed, err := activities.RetireDuplicateLeadTasksTx(ctx, tx, provenance.LeadRepliedSource, after, in.Limit, now())
 				if err != nil {
 					return datatask.BatchOut{}, err
 				}
-				return datatask.AdvanceUUID(in, leads, retired)
+				return datatask.AdvanceUUID(in, leads, changed)
 			},
 		}},
 	}

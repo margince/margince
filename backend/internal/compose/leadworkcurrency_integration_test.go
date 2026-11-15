@@ -40,7 +40,7 @@ func TestLeadReplyAdviceFollowsTheSourceRatherThanTheImport(t *testing.T) {
 	var due *time.Time
 	var source *ids.UUID
 	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT due_at, source_activity_id FROM activity WHERE source_system=$1 AND source_id=$2`, provenance.LeadRepliedSource, inbound.String()).Scan(&due, &source)
+		return tx.QueryRow(context.Background(), `SELECT due_at, source_activity_id FROM activity WHERE source_system=$1 AND source_id=$2`, provenance.LeadRepliedSource, inbound.String()+":"+lead.String()).Scan(&due, &source)
 	}); err != nil {
 		t.Fatal(err)
 	}

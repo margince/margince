@@ -18,9 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
-// qualifyTaskCodes are the templates a qualify task's subject is written from,
-// each with the lead's name as its one label.
-var qualifyTaskCodes = []string{"lead.reply", "lead.booked", "lead.held"}
+// qualifyTaskCodes are the templates a qualify task's subject is written from.
+// lead.reply has no suffix and would take the others' suffix as the name, so it goes last.
+var qualifyTaskCodes = []string{"lead.booked", "lead.held", "lead.reply"}
 
 // qualifyTasksWithoutTextSQL is the qualify tasks written before the subject
 // carried its template, whose subject no human or agent has changed since.

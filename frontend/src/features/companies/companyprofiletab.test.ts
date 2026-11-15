@@ -27,7 +27,7 @@ describe("repeatsDescription", () => {
 
 describe("emptyReason", () => {
   it("says the website does not state it once a read finished", () => {
-    for (const status of ["ready", "partial", "confirmed"]) {
+    for (const status of ["done", "partial"] as const) {
       expect(emptyReason(status)).toBe("co.narrative.notOnSite");
     }
   });
@@ -37,10 +37,11 @@ describe("emptyReason", () => {
       null,
       undefined,
       "queued",
-      "reading",
+      "deferred",
+      "running",
       "failed",
-      "abandoned",
-    ]) {
+      "cancelled",
+    ] as const) {
       expect(emptyReason(status)).toBe("co.narrative.notReadYet");
     }
   });

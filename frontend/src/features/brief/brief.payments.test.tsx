@@ -202,6 +202,54 @@ it("keeps the drawer and its rows when Load more fails, and retries that page", 
   expect(within(drawer).queryByRole("alert")).toBeNull();
 });
 
+it("starts the invoice list over when the accounting connection was replaced", async () => {
+  let firstPages = 0;
+  stubApi({
+    "GET /me": () => jsonResponse(allowed),
+    "GET /finance/customer-payments": (_body, query) => {
+      if (query.has("cursor"))
+        return jsonResponse(
+          {
+            code: "validation_error",
+            title: "Unprocessable",
+            status: 422,
+            details: {
+              errors: [
+                {
+                  field: "cursor",
+                  code: "cursor_param_mismatch",
+                  message: "the accounting source changed; restart the list",
+                },
+              ],
+            },
+          },
+          422,
+        );
+      firstPages++;
+      return jsonResponse(
+        customerPayments({
+          page: { has_more: firstPages === 1, next_cursor: "next" },
+        }),
+      );
+    },
+  });
+  const user = userEvent.setup();
+  render(<CustomerPaymentsCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["payments.viewInvoices"] }),
+  );
+  await user.click(screen.getByRole("button", { name: en["list.loadMore"] }));
+  await waitFor(() => expect(firstPages).toBe(2));
+  const drawer = await screen.findByRole("dialog", {
+    name: en["payments.viewInvoices"],
+  });
+  expect(await within(drawer).findByText("INV-001")).toBeTruthy();
+  await waitFor(() => expect(within(drawer).queryByRole("alert")).toBeNull());
+  expect(
+    within(drawer).queryByRole("button", { name: en["list.loadMore"] }),
+  ).toBeNull();
+});
+
 it("hides every figure when Load more is refused for access", async () => {
   serveTwoPages(() =>
     jsonResponse(
