@@ -318,10 +318,7 @@
     > tbody
     > tr.datatable-open:hover
     + tr.datatable-detail,
-  .table-scroll-fold
-    > .table
-    > tbody
-    > tr.datatable-open[data-detail-hover] {
+  .table-scroll-fold > .table > tbody > tr.datatable-open[data-detail-hover] {
     background: var(--groundHover);
   }
 }
