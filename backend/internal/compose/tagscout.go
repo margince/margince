@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -108,7 +109,7 @@ func tagScoutDrafts(found []tagScoutRow) []collections.TagSuggestionDraft {
 func tagScoutCitable(a string) string {
 	return a + `.kind IN ('email', 'meeting', 'note', 'call')
 	     AND ` + a + `.archived_at IS NULL AND ` + auth.ActivityExternalEvidenceClause(a) + `
-	     AND ` + a + `.capture_label IS DISTINCT FROM 'noise'`
+	     AND ` + capturekind.SQL(a+".capture_label") + ` IS DISTINCT FROM 'other'`
 }
 
 // tagScoutSQL is the pass's one read. It pairs each suggestible tag's phrases

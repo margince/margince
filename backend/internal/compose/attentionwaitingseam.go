@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -153,7 +154,7 @@ func (w attentionWaiting) asWaitingCustomers(
 			AsksNothing:       row.OwedVerdict == activities.OwedVerdictInformsUs,
 			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
 			ActionUnconfirmed: row.OwedVerdict == "",
-			NonBuyer:          row.CaptureLabel == "noise" || (!row.HasOpenDeal && supplier),
+			NonBuyer:          row.CaptureLabel == capturekind.Other || (!row.HasOpenDeal && supplier),
 			DirectRecipients:  row.DirectRecipients,
 			OwnerID:           row.OwnerID,
 			OwnerKnown:        row.OwnerKnown,

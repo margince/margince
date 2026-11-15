@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -214,7 +215,7 @@ func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]
 	assertString(t, "a.direction", stringOf(got.Direction))
 	assertString(t, "a.meeting_status", stringOf(got.MeetingStatus))
 	assertString(t, "a.call_outcome", stringOf(got.CallOutcome))
-	assertString(t, "a.capture_label", stringOf(got.CaptureLabel))
+	assertString(t, capturekind.SQL("a.capture_label"), stringOf(got.CaptureLabel))
 	assertString(t, "a.audience", stringOf(got.Audience))
 	// Served for mail only, and the sentinel row's kind is not mail.
 	if got.BodyCompleteness != nil {

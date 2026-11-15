@@ -21,6 +21,9 @@ type deferredTx struct {
 	// scopes numbers the savepoints, so an abandoned lane rolls back to its own
 	// even while an inner lane's release is still pending.
 	scopes int
+	// timeout is the statement_timeout the session holds once pending runs,
+	// nil while nothing has said (deferredtimeout.go).
+	timeout *string
 }
 
 // deferredStatement is one queued statement. scan reads its row; without one
@@ -34,7 +37,9 @@ type deferredStatement struct {
 	scan      func(pgx.Row) error
 	opens     bool
 	savepoint bool
-	scope     *deferredScope
+	// restores names the lane budget a timeout restore undoes.
+	restores string
+	scope    *deferredScope
 }
 
 // deferredScope is one bracket of session statements. sent turns true once
@@ -172,6 +177,7 @@ func carries(args []any) bool {
 }
 
 func (d *deferredTx) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
+	d.forgetTimeout(sql)
 	if !d.rides(args) {
 		if err := d.flush(ctx); err != nil {
 			return pgconn.CommandTag{}, err
@@ -191,6 +197,7 @@ func (d *deferredTx) Exec(ctx context.Context, sql string, args ...any) (pgconn.
 
 //nolint:ireturn // pgx.Rows is the driver's interface.
 func (d *deferredTx) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
+	d.forgetTimeout(sql)
 	if !d.rides(args) {
 		if err := d.flush(ctx); err != nil {
 			return nil, err
@@ -219,6 +226,9 @@ func (d *deferredTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.
 
 //nolint:ireturn // pgx.BatchResults is the driver's interface.
 func (d *deferredTx) SendBatch(ctx context.Context, b *pgx.Batch) pgx.BatchResults {
+	for _, queued := range b.QueuedQueries {
+		d.forgetTimeout(queued.SQL)
+	}
 	if !d.rides(nil) {
 		if err := d.flush(ctx); err != nil {
 			return failedBatch{err: err}

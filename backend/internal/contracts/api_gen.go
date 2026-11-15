@@ -299,7 +299,7 @@ func (e ActivityCallOutcome) Valid() bool {
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
 	ActivityCaptureLabelMeeting    ActivityCaptureLabel = "meeting"
-	ActivityCaptureLabelNoise      ActivityCaptureLabel = "noise"
+	ActivityCaptureLabelOther      ActivityCaptureLabel = "other"
 )
 
 // Valid indicates whether the value is a known member of the ActivityCaptureLabel enum.
@@ -309,7 +309,7 @@ func (e ActivityCaptureLabel) Valid() bool {
 		return true
 	case ActivityCaptureLabelMeeting:
 		return true
-	case ActivityCaptureLabelNoise:
+	case ActivityCaptureLabelOther:
 		return true
 	default:
 		return false
@@ -31663,6 +31663,33 @@ func (e ListRecordLinksParamsRecordType) Valid() bool {
 	}
 }
 
+// Defines values for ReadRecordReferencesParamsKind.
+const (
+	ReadRecordReferencesParamsKindCompany ReadRecordReferencesParamsKind = "company"
+	ReadRecordReferencesParamsKindContact ReadRecordReferencesParamsKind = "contact"
+	ReadRecordReferencesParamsKindDeal    ReadRecordReferencesParamsKind = "deal"
+	ReadRecordReferencesParamsKindLead    ReadRecordReferencesParamsKind = "lead"
+	ReadRecordReferencesParamsKindProject ReadRecordReferencesParamsKind = "project"
+)
+
+// Valid indicates whether the value is a known member of the ReadRecordReferencesParamsKind enum.
+func (e ReadRecordReferencesParamsKind) Valid() bool {
+	switch e {
+	case ReadRecordReferencesParamsKindCompany:
+		return true
+	case ReadRecordReferencesParamsKindContact:
+		return true
+	case ReadRecordReferencesParamsKindDeal:
+		return true
+	case ReadRecordReferencesParamsKindLead:
+		return true
+	case ReadRecordReferencesParamsKindProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListRelationshipsParamsKind.
 const (
 	ListRelationshipsParamsKindBillingContact     ListRelationshipsParamsKind = "billing_contact"
@@ -32446,7 +32473,7 @@ type Activity struct {
 	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
 	CanShareInternal *bool `json:"can_share_internal,omitempty"`
 
-	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
@@ -32614,7 +32641,7 @@ type ActivityAutomaticKind string
 // ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 type ActivityCallOutcome string
 
-// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 type ActivityCaptureLabel string
 
 // ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
@@ -56913,7 +56940,9 @@ type MorningDigest struct {
 		Classify         *struct {
 			Commitments *int `json:"commitments,omitempty"`
 			Meetings    *int `json:"meetings,omitempty"`
-			Noise       *int `json:"noise,omitempty"`
+
+			// Other Neither a commitment nor a meeting; says nothing about importance.
+			Other *int `json:"other,omitempty"`
 		} `json:"classify,omitempty"`
 
 		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.
@@ -60605,6 +60634,21 @@ type RecordQualifyingEventRequest struct {
 // records the product already holds, and a hand-written one would be a second, unbacked
 // answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
+
+// RecordReference defines model for RecordReference.
+type RecordReference struct {
+	Archived bool               `json:"archived"`
+	Id       openapi_types.UUID `json:"id"`
+
+	// Logo Company logo URL; omitted for other kinds.
+	Logo *string `json:"logo,omitempty"`
+	Name *string `json:"name"`
+}
+
+// RecordReferenceListResponse defines model for RecordReferenceListResponse.
+type RecordReferenceListResponse struct {
+	Data []RecordReference `json:"data"`
+}
 
 // RecordRole One administered responsibility a colleague or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own.
 type RecordRole struct {
@@ -79357,6 +79401,15 @@ type UpdateRecordRoleParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// ReadRecordReferencesParams defines parameters for ReadRecordReferences.
+type ReadRecordReferencesParams struct {
+	Kind ReadRecordReferencesParamsKind `form:"kind" json:"kind"`
+	Id   []openapi_types.UUID           `form:"id" json:"id"`
+}
+
+// ReadRecordReferencesParamsKind defines parameters for ReadRecordReferences.
+type ReadRecordReferencesParamsKind string
 
 // GetRecordContextParams defines parameters for GetRecordContext.
 type GetRecordContextParams struct {
@@ -98291,6 +98344,9 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
+	// Read names and archive state for a bounded set of records.
+	// (GET /records/references)
+	ReadRecordReferences(w http.ResponseWriter, r *http.Request, params ReadRecordReferencesParams)
 	// The lists one record is on that this caller may find.
 	// (GET /records/{entity_type}/{entity_id}/lists)
 	GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -104288,6 +104344,12 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read names and archive state for a bounded set of records.
+// (GET /records/references)
+func (_ Unimplemented) ReadRecordReferences(w http.ResponseWriter, r *http.Request, params ReadRecordReferencesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -144889,6 +144951,60 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ReadRecordReferences operation middleware
+func (siw *ServerInterfaceWrapper) ReadRecordReferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReadRecordReferencesParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "id", r.URL.Query(), &params.Id, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReadRecordReferences(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecordLists operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordLists(w http.ResponseWriter, r *http.Request) {
 
@@ -156607,6 +156723,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/references", wrapper.ReadRecordReferences)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/lists", wrapper.GetRecordLists)

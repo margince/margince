@@ -25,6 +25,7 @@ type UpdateActivityInput struct {
 	DealFiling         *crmcontracts.ActivityDealFiling
 	recordedAt         *time.Time
 	sourceActivityID   *ids.UUID
+	recordsMeeting     bool
 	calendarSettlement bool
 	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone

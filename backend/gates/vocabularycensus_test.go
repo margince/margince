@@ -48,6 +48,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 )
 
 // vocabularyCatalog is the schema the migrations build, committed and held
@@ -322,7 +323,7 @@ func TestEveryColumnNamedGoTypeHoldsItsColumnsCheck(t *testing.T) {
 			"would read green over a tree it no longer sees", len(named))
 	}
 	for _, col := range slices.Sorted(maps.Keys(named)) {
-		want := vocabularies[col]
+		want := readVocabulary(col, vocabularies[col])
 		var drifted []string
 		for _, key := range named[col] {
 			if setKey(typed[key]) != setKey(want) {
@@ -520,4 +521,16 @@ func TestNoVocabularyCheckHidesFromTheCensus(t *testing.T) {
 		t.Fatalf("only %d unread value-list CHECKs remain; lower unreadArrayCheckCeiling to %d",
 			len(unread), len(unread))
 	}
+}
+
+func readVocabulary(column string, stored []string) []string {
+	if column != "activity.capture_label" {
+		return stored
+	}
+	// Restricted legacy labels cannot be rewritten; compare the real reader's values.
+	values := slices.Clone(stored)
+	for i, value := range values {
+		values[i] = capturekind.Canonical(value)
+	}
+	return asSet(values)
 }

@@ -6,7 +6,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-88 columns · primary key `(id)` · referenced by 46 foreign keys
+88 columns · primary key `(id)` · referenced by 47 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -122,7 +122,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_calendar_method_check`: `CHECK ((calendar_method = ANY (ARRAY['PUBLISH', 'REQUEST', 'REPLY', 'ADD', 'CANCEL', 'REFRESH', 'COUNTER', 'DECLINECOUNTER'])))`
 - `activity_call_outcome_check`: `CHECK (((call_outcome IS NULL) OR (call_outcome = ANY (ARRAY['reached', 'not_reached', 'voicemail', 'call_back_later', 'put_through']))))`
 - `activity_call_outcome_kind_check`: `CHECK (((call_outcome IS NULL) OR (kind = 'call')))`
-- `activity_capture_label_check`: `CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment', 'meeting', 'noise']))))`
+- `activity_capture_label_check`: `CHECK ((capture_label = ANY (ARRAY['commitment', 'meeting', 'other', 'noise'])))`
 - `activity_capture_label_stamped`: `CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))`
 - `activity_colleague_mail_is_outbound`: `CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound')))`
 - `activity_day_holds_no_host_slot`: `CHECK (((occurred_precision = 'instant') OR (NOT claims_host_slot)))`

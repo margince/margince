@@ -61,7 +61,7 @@ type DigestReview struct {
 type DigestClassify struct {
 	Commitments int `json:"commitments"`
 	Meetings    int `json:"meetings"`
-	Noise       int `json:"noise"`
+	Other       int `json:"other"`
 }
 
 // DigestConnRow is one connector's health line.

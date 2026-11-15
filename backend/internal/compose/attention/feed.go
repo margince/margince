@@ -437,11 +437,11 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 		return nil, laneCount{}, err
 	}
 	query := s.approvalQuery(depth)
-	staged, err := s.approvals.ListWire(ctx, query)
+	staged, complete, err := s.approvals.ListWire(ctx, query)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	openStaged, err := s.approvals.CountPending(ctx, query)
+	openStaged, err := s.pendingApprovals(ctx, query, len(staged), complete)
 	if err != nil {
 		return nil, laneCount{}, err
 	}

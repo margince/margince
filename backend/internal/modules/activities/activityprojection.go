@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -165,7 +166,7 @@ var activityProjection = []activityColumn{
 	{"a.updated_at", func(s *activityScan) any { return &s.a.UpdatedAt }},
 	{"a.archived_at", func(s *activityScan) any { return &s.a.ArchivedAt }},
 	{"a.thread_key", func(s *activityScan) any { return &s.threadKey }},
-	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
+	{capturekind.SQL("a.capture_label"), func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
 	{"a.body_completeness", func(s *activityScan) any { return &s.bodyCompleteness }},
 	{"a.origin", func(s *activityScan) any { return &s.origin }},

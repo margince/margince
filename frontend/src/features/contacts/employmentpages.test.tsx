@@ -44,7 +44,7 @@ it.each([
         // A company the reader may not see is left out of the name read.
         return Response.json({
           data: visible
-            ? [{ id: "company", display_name: "Earlier Company" }]
+            ? [{ id: "company", name: "Earlier Company", archived: false }]
             : [],
           next_cursor: null,
         });

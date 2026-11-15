@@ -11,6 +11,7 @@ package activities
 
 import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -111,6 +112,6 @@ const machineSenderSQL = `EXISTS (
 func capturedReplyAdmissionSQL(classifying, reviewingInformational, accepted string) string {
 	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR ` + heldRequestSQL() + `
  OR (` + storekit.AutomaticRequestIntentClause("a") + `) OR (
-   a.capture_label IS DISTINCT FROM 'noise'
+   ` + capturekind.SQL("a.capture_label") + ` IS DISTINCT FROM 'other'
    AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR ` + accepted + `)))`
 }

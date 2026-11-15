@@ -19710,6 +19710,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/records/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read names and archive state for a bounded set of records.
+         * @description Requires the selected record kind's read grant. A denied object is 403.
+         *     Missing and row-hidden ids are omitted without distinguishing them.
+         *     Includes readable archived records and the company anchor. Results are
+         *     unique and follow the first occurrence of each requested id. This is not
+         *     a page: there is no cursor or total. The input bound applies before deduplication.
+         *     Lead names fall back to email when the full name is blank. Company logos
+         *     use the same revision URL as the company detail read.
+         */
+        get: operations["readRecordReferences"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/names": {
         parameters: {
             query?: never;
@@ -30823,7 +30849,8 @@ export interface components {
                 classify?: {
                     commitments?: number;
                     meetings?: number;
-                    noise?: number;
+                    /** @description Neither a commitment nor a meeting; says nothing about importance. */
+                    other?: number;
                 };
             };
             connectors: {
@@ -42362,10 +42389,10 @@ export interface components {
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**
-             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
              * @enum {string|null}
              */
-            readonly capture_label?: null | "commitment" | "meeting" | "noise";
+            readonly capture_label?: null | "commitment" | "meeting" | "other";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
@@ -48532,6 +48559,17 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        RecordReference: {
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            archived: boolean;
+            /** @description Company logo URL; omitted for other kinds. */
+            logo?: string | null;
+        };
+        RecordReferenceListResponse: {
+            data: components["schemas"]["RecordReference"][];
         };
         /** @description A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them. */
         SeatName: {
@@ -92334,6 +92372,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    readRecordReferences: {
+        parameters: {
+            query: {
+                kind: "contact" | "company" | "lead" | "deal" | "project";
+                id: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The readable references, or an empty data array. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordReferenceListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

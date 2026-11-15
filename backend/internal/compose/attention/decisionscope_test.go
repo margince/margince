@@ -73,7 +73,7 @@ func TestSuggestionReadsReceiveTheScopeOwners(t *testing.T) {
 		{"all", TasksVisible, nil, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			suggestions := &stubSuggestions{rows: suggestionRows(2)}
+			suggestions := &stubSuggestions{rows: suggestionRows(2), open: 40}
 			service := decisionsService(stubApprovals{}, stubDuplicates{}).WithDealSuggestions(suggestions)
 			service.taskScope, service.taskOwner, service.noticeOwners = tc.scope, named, tc.team
 			_, count, err := service.decisionsToDepth(reader, needsYouPage)
@@ -85,8 +85,8 @@ func TestSuggestionReadsReceiveTheScopeOwners(t *testing.T) {
 					t.Fatalf("the %s read was narrowed to %+v, want %+v", read, seen, tc.owners)
 				}
 			}
-			if count.suggestions == nil || *count.suggestions != 2 {
-				t.Fatalf("suggestion count = %v, want 2", count.suggestions)
+			if count.suggestions == nil || *count.suggestions != 40 {
+				t.Fatalf("suggestion count = %v, want 40", count.suggestions)
 			}
 		})
 	}

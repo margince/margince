@@ -210,7 +210,7 @@ Leads, deals and projects have their own page. It says how to create, qualify an
 ## Archiving, restoring and deleting records
 
 ### How do I archive a contact, company, deal or project?
-To archive a record in Margince, open it and choose **More actions**. Then choose the archive entry: **Archive** on a contact or company, **Archive deal** on a deal, **Archive project** on a project. You need your role's right to delete that kind of record. A User has it only on a contact, company or deal they own, and only if they created it or were given it. Without the right, the archive entry is greyed out with the reason.
+To archive a record, open **More actions** and choose **Archive**, **Archive deal** or **Archive project**. Archiving needs a full seat and a delete right over records within your write scope or write shares. With edit rights alone, you can also archive a contact, company or deal you own. This exception excludes ownership you took yourself after creation. Projects always need the delete right, even when you own them. A refused archive entry is greyed out with the reason.
 
 Confirm the box. For contacts and companies it reads "Archive this record? You can bring it back from its history." You can archive many contacts, companies or deals at once with **Archive** in the list's bar for many records. A lead is not archived; disqualify it instead.
 
@@ -253,13 +253,13 @@ Also called: timeline, activity log, customer history, interaction history, newe
 
 ### How do I log a note, call or meeting on a record?
 To log an activity in Margince, open the contact, company, lead or deal and choose **Log activity** in its header.
-1. Pick the **Type**: Note, Task, Call or Meeting.
+1. Pick the **Type**: Note, Task, Call, Meeting or Message. **Message** records a chat, such as a WhatsApp conversation. Pick its **Chat app** too. **Message** shows only when your installation knows a chat app.
 2. Set the **Date** (or **Due date** for a task), and the **Assignee** for a task. A task can also take a **Time (optional)**, such as the hour you agreed to call back. Its reminder comes due at that hour. Without a time, a task is due at the end of its day.
 3. For a call or meeting, add the contacts who took part under **Other attendees**, or **Attendees** on a company. Add colleagues who took part under **Colleagues who attended**. A call also takes an **Outcome**, such as **Reached** or **Not reached**, and then needs no subject. Only **Reached** and **Put through** count as contact.
-4. Enter a **Subject** (optional for calls) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a call or meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).
+4. Enter a **Subject** (optional for calls and messages) and the **Details**. **Details** keeps its format, such as lists, headings and links. You can paste it from a document or as markdown. If you enter a call or meeting transcript, tick **This text is a transcript**. The text then stays plain, and you can paste it or use **Or upload a file** (`.txt` only).
 5. Add any files under **Attach files**, then choose **Log**. A call or meeting shows in the History of each contact you named, and of their companies.
 Without permission you see "You do not have permission to log activities on this record." A contact you can open only through a **Read** share refuses **Log activity**, **Add task** and **Book a meeting**. Ask its owner to share it at **Write**.
-Also called: add a note, record a call, write a comment.
+Also called: add a note, record a call, write a comment, log a WhatsApp chat.
 
 ### How do I read a whole note, call or meeting from a contact's Overview?
 To read a whole note, call or meeting from a contact's **Overview** in Margince, choose **View** beside the entry in the **What was said** card. The whole entry opens beside the page, and closing it goes back to the card. An email opens from its subject, and an entry you may not read has no **View**.

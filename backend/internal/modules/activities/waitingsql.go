@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
@@ -146,7 +147,7 @@ var waitingSelectSQL = `
 	       -- An asks_us that does not stand reads as unjudged.
 	       CASE WHEN coalesce(` + storekit.AsksUsClause("a") + `, false) THEN '` + OwedVerdictAsksUs + `'
 	            WHEN a.owed_verdict = '` + OwedVerdictInformsUs + `' THEN '` + OwedVerdictInformsUs + `'
-	            ELSE '' END, coalesce(a.capture_label, ''),
+	            ELSE '' END, coalesce(` + capturekind.SQL("a.capture_label") + `, ''),
 	       -- Whether every header recipient names somebody OTHER than the
 	       -- reader — a thread they can see because it reached their mailbox,
 	       -- addressed to a colleague.
