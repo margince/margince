@@ -7,6 +7,7 @@ package integration
 
 import (
 	"context"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -88,14 +89,12 @@ func seedOpenTask(t *testing.T, e *Env) {
 	}
 }
 
-// The stages of one worklist read account for every statement the pool's
-// tracer saw for it, and the read opens its snapshot once.
-func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
-	e := Setup(t)
-	seedOpenTask(t, e)
-	at := clocktest.Now(t).UTC()
+// meteredAttention is the attention service on a pool of its own whose
+// protocol round trips are counted, with idle pings and retirement off so
+// only request work is measured.
+func meteredAttention(t *testing.T, e *Env, at time.Time) (*attention.Service, *atomic.Int64) {
+	t.Helper()
 	cfg := e.Pool.Config()
-	// Count request work without idle pings or connection retirement.
 	cfg.ShouldPing = func(context.Context, pgxpool.ShouldPingParams) bool { return false }
 	cfg.MaxConnLifetime = 0
 	cfg.MaxConnIdleTime = time.Hour
@@ -109,7 +108,15 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(pool.Close)
-	service := compose.NewAttentionService(pool, approvals.NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))), func() time.Time { return at })
+	return compose.NewAttentionService(pool, approvals.NewService(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.WS))), func() time.Time { return at }), trips
+}
+
+// The stages of one worklist read account for every statement the pool's
+// tracer saw for it, and the read opens its snapshot once.
+func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
+	e := Setup(t)
+	seedOpenTask(t, e)
+	service, trips := meteredAttention(t, e, clocktest.Now(t).UTC())
 	read := func(ctx context.Context) error {
 		_, err := service.Worklist(ctx, "mine", "all", ids.UUID{}, 0, "")
 		return err
@@ -163,6 +170,41 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 	}
 	if delta.clipped != 0 {
 		t.Errorf("%d stage runs took less time than their pgx calls; a read's calls run one after another", delta.clipped)
+	}
+}
+
+// Home's read, as the browser asks for it, within its statement and round-trip
+// ceilings. Lower them in the diff that removes statements or exchanges.
+const (
+	homeStatementBudget = 152
+	homeRoundTripBudget = 70
+)
+
+func TestHomesReadStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
+	e := Setup(t)
+	seedOpenTask(t, e)
+	service, trips := meteredAttention(t, e, clocktest.Now(t).UTC())
+	home := service.OmittingRelationships().ShapedForHome()
+	read := func(ctx context.Context) error {
+		_, err := home.WorklistView(ctx, "today", "mine", "all", ids.UUID{}, 100, "")
+		return err
+	}
+	if err := read(e.Admin()); err != nil {
+		t.Fatal(err)
+	}
+
+	beforeTrips := trips.Load()
+	delta, seen := meterRead(e.Admin(), t, read)
+	roundTrips := trips.Load() - beforeTrips
+	t.Logf("home statements=%d exchanges=%d round trips=%d", seen.Statements, seen.Exchanges, roundTrips)
+	if seen.Statements == 0 || delta.statements != seen.Statements {
+		t.Fatalf("the stages counted %d statements, the pool's tracer saw %d", delta.statements, seen.Statements)
+	}
+	if seen.Statements > homeStatementBudget {
+		t.Errorf("Home's read sent %d statements, budget %d", seen.Statements, homeStatementBudget)
+	}
+	if roundTrips < seen.Exchanges || roundTrips > homeRoundTripBudget {
+		t.Errorf("Home's read used %d protocol round trips for %d pgx calls, budget %d", roundTrips, seen.Exchanges, homeRoundTripBudget)
 	}
 }
 
