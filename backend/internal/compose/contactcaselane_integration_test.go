@@ -41,6 +41,9 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 	if err != nil || all != 2 {
 		t.Errorf("all cases = %d (%v), want 2", all, err)
 	}
+	if page, total, err := lane.OpenCases(c.e.Admin(), attention.CaseQuery{Scope: attention.CaseScopeAll, Limit: 1}); err != nil || len(page) != 1 || total != 2 {
+		t.Errorf("a page of 1 from 2 cases is %d cases of total %d (%v); want 1 of 2", len(page), total, err)
+	}
 
 	pairs := attentionDuplicates{store: c.store}
 	listed, err := pairs.OpenCandidates(c.e.Admin(), 50)

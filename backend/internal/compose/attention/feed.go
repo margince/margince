@@ -441,11 +441,9 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	openStaged := len(staged)
-	if !complete {
-		if openStaged, err = s.approvals.CountPending(ctx, query); err != nil {
-			return nil, laneCount{}, err
-		}
+	openStaged, err := s.pendingApprovals(ctx, query, len(staged), complete)
+	if err != nil {
+		return nil, laneCount{}, err
 	}
 
 	named, err := s.namePairs(ctx, pairs)

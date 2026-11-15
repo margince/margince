@@ -672,6 +672,11 @@ func TestOwnerScopeNarrowsTheSuggestionCountWithTheList(t *testing.T) {
 		if seamOpen, err := seam.CountOpen(e.signalReader(), tc.owners); err != nil || seamOpen != len(tc.want) || len(page) != len(tc.want) {
 			t.Errorf("%s: the Worklist listed %d and counted %d (err %v), want %d", name, len(page), seamOpen, err, len(tc.want))
 		}
+		if len(tc.want) > 1 {
+			if short, complete, err := seam.OpenSuggestions(e.signalReader(), tc.owners, len(tc.want)-1); err != nil || complete || len(short) != len(tc.want)-1 {
+				t.Errorf("%s: a page one short of %d is %d rows, complete %v (%v); want incomplete", name, len(tc.want), len(short), complete, err)
+			}
+		}
 		for _, company := range tc.want {
 			if !companies[company] {
 				t.Errorf("%s: the suggestion for %v is missing from %v", name, company, got)
