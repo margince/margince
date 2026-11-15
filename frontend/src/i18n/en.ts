@@ -18240,7 +18240,7 @@ export const en = {
   "contact.intro.unavailable": "Not available",
   "contact.network.momentsTitle": "What changed",
   "contact.network.momentsSub":
-    "Changes in this relationship, from the messages.",
+    "Changes read from the messages, and earlier intro requests.",
   "contact.network.noMoments": "No recent changes in this relationship.",
   "contact.change.repliedAfterGap": "They replied after {days} quiet days.",
   "contact.change.wentQuiet": "No activity for {days} days.",

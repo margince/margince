@@ -17943,7 +17943,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.declined": "Đã từ chối trước đó",
   "contact.intro.unavailable": "Không khả dụng",
   "contact.network.momentsTitle": "Những gì đã thay đổi",
-  "contact.network.momentsSub": "Thay đổi trong quan hệ này, lấy từ tin nhắn.",
+  "contact.network.momentsSub":
+    "Thay đổi lấy từ tin nhắn và các yêu cầu giới thiệu trước đây.",
   "contact.network.noMoments": "Chưa có thay đổi gần đây trong quan hệ này.",
   "contact.change.repliedAfterGap": "Họ đã trả lời sau {days} ngày im lặng.",
   "contact.change.wentQuiet": "Không có hoạt động trong {days} ngày.",

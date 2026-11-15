@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// What changed about this relationship lately, and which change is a reason to
-// act today.
+// What changed about this relationship lately, which change is a reason to
+// act today, and the earlier asks about the contact, all on one dated line.
 
 import type { components } from "../../../api/schema";
 import { Badge } from "../../../design-system/atoms";
@@ -11,7 +11,15 @@ import { SurfaceState } from "../../../design-system/surfacestate";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useViewerZone } from "../../../lib/viewerzone";
+import { AskLine, askSettledAt } from "../introasks";
+import type { IntroRequest } from "../introrequests";
 import { changeSentence } from "../relationshipchange";
+
+type Change = components["schemas"]["ContactRelationshipChange"];
+
+type Moment =
+  | Readonly<{ kind: "change"; at: string; change: Change; latest: boolean }>
+  | Readonly<{ kind: "ask"; at: string; ask: IntroRequest }>;
 
 type RelationshipMoments = Pick<
   components["schemas"]["Contact360"],
@@ -44,34 +52,66 @@ export function latestChange(view: RelationshipMoments | undefined): Readonly<{
 }
 
 /**
- * MomentsPanel is what changed about this relationship lately.
+ * timeline puts the changes and the settled asks on one line, newest first.
+ * The head change keeps its flag, because the strip's "why now" reads it.
+ */
+function timeline(
+  changes: readonly Change[],
+  asks: readonly IntroRequest[],
+): Moment[] {
+  const moments: Moment[] = [
+    ...changes.map((change, index) => ({
+      kind: "change" as const,
+      at: change.at,
+      change,
+      latest: index === 0,
+    })),
+    ...asks.map((ask) => ({
+      kind: "ask" as const,
+      at: askSettledAt(ask),
+      ask,
+    })),
+  ];
+  return moments.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+}
+
+/**
+ * MomentsPanel is what moved in this relationship lately, earlier asks
+ * included.
  *
- * It is the difference between a picture of a network and a live one: a map
- * says who is there, a moment says what moved. The sentences are the 360's
- * own, so one derived change does not get two sets of words.
+ * A map says who is there, a moment says what moved. The change sentences are
+ * the 360's own, so one derived change does not get two sets of words.
  */
 export function MomentsPanel({
   view,
-}: Readonly<{ view: RelationshipMoments }>) {
+  asks = [],
+}: Readonly<{
+  view: RelationshipMoments;
+  // Settled asks only: an open one keeps its verbs in the asks panel above.
+  asks?: readonly IntroRequest[];
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
-  const changes = view.relationship_changes ?? [];
-  // The section is withholdable. A reader without the grant is served no
-  // changes, and "nothing has moved" would be a fact the page does not have.
+  // The changes section is withholdable. A reader without the grant is served
+  // none, and "nothing has moved" would be a fact the page does not have.
   const withheld = (view.sections_omitted ?? []).some(
     (section) => section === "relationship_changes",
   );
-  const state = withheld
-    ? ("withheld" as const)
-    : changes.length === 0
-      ? ("empty" as const)
-      : ("ready" as const);
+  const moments = timeline(
+    withheld ? [] : (view.relationship_changes ?? []),
+    asks,
+  );
+  const state =
+    moments.length > 0
+      ? ("ready" as const)
+      : withheld
+        ? ("withheld" as const)
+        : ("empty" as const);
   return (
     <Panel title={t("contact.network.momentsTitle")}>
-      {/* Where the movements are read FROM, which is what makes them evidence
-          rather than a summary — too long for the head's one line, and the
-          half that would truncate is the half naming the source. */}
+      {/* Where the movements are read from, which makes them evidence rather
+          than a summary. */}
       <PanelBody>
         <p className="t-sub">{t("contact.network.momentsSub")}</p>
       </PanelBody>
@@ -82,26 +122,47 @@ export function MomentsPanel({
           loadingLabel={t("contact.network.title")}
         >
           <ol className="pn-moments">
-            {changes.map((change, index) => (
-              <li key={`${change.kind}-${change.at}`} className="pn-moment">
-                <time className="pn-moment-when t-caption" dateTime={change.at}>
-                  {formatDate(change.at, locale, readerZone)}
+            {moments.map((moment) => (
+              <li
+                key={
+                  moment.kind === "ask"
+                    ? `ask-${moment.ask.id}`
+                    : `${moment.change.kind}-${moment.at}`
+                }
+                className="pn-moment"
+              >
+                <time className="pn-moment-when t-caption" dateTime={moment.at}>
+                  {formatDate(moment.at, locale, readerZone)}
                 </time>
                 <p>
-                  {changeSentence(change, t)}
-                  {/* The head is what the strip's "why now" slot was read
-                      from, and is flagged here so the two agree on which
-                      change that was. */}
-                  {index === 0 ? (
-                    <Badge tone="accent">
-                      {t("contact.intro.stripWhyNow")}
-                    </Badge>
-                  ) : null}
+                  {moment.kind === "ask" ? (
+                    <AskLine ask={moment.ask} />
+                  ) : (
+                    <>
+                      {changeSentence(moment.change, t)}
+                      {moment.latest ? (
+                        <Badge tone="accent">
+                          {t("contact.intro.stripWhyNow")}
+                        </Badge>
+                      ) : null}
+                    </>
+                  )}
                 </p>
               </li>
             ))}
           </ol>
         </SurfaceState>
+        {/* Asks drawn while changes are withheld must not read as the whole
+            story, so the refusal still shows under them. */}
+        {withheld && moments.length > 0 ? (
+          <SurfaceState
+            state="withheld"
+            emptyLabel={t("contact.network.noMoments")}
+            loadingLabel={t("contact.network.title")}
+          >
+            {null}
+          </SurfaceState>
+        ) : null}
       </PanelBody>
     </Panel>
   );

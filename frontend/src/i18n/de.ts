@@ -18432,7 +18432,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.unavailable": "Nicht verfügbar",
   "contact.network.momentsTitle": "Was sich geändert hat",
   "contact.network.momentsSub":
-    "Veränderungen in dieser Beziehung, aus den Nachrichten.",
+    "Veränderungen aus den Nachrichten und frühere Vorstellungen.",
   "contact.network.noMoments": "Keine neuen Veränderungen in dieser Beziehung.",
   "contact.change.repliedAfterGap":
     "Der Kontakt hat nach {days} ruhigen Tagen geantwortet.",

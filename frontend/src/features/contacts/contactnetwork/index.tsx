@@ -27,7 +27,7 @@ import { useViewerId } from "../../../lib/session";
 import { mapLabels } from "../../companies/companycontacts/summary";
 import { useContactGraph } from "../contactgraph";
 import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
-import { IntroAsksPanel } from "../introasks";
+import { IntroAsksPanel, isOpenAsk } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
 import { RecordIntroductionButton } from "../recordintroduction";
@@ -159,6 +159,7 @@ function NetworkChapters({
   );
 
   const read = readGraph(data, asks.data ?? [], focus);
+  const settledAsks = (asks.data ?? []).filter((ask) => !isOpenAsk(ask));
   // The newest change and whether the section was refused: a refused section
   // reading as "nothing new" is a claim made out of a permission.
   const moved = latestChange(view);
@@ -316,8 +317,8 @@ function NetworkChapters({
         >
           <RelayPanel ask={read.open} />
           <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
-          {/* What moved lately closes the tab. */}
-          {view ? <MomentsPanel view={view} /> : null}
+          {/* What moved lately, earlier asks among it, closes the tab. */}
+          {view ? <MomentsPanel view={view} asks={settledAsks} /> : null}
         </Chapter>
 
         {asking ? (
@@ -358,7 +359,7 @@ function readGraph(
     lead: routes[0],
     // The ask in flight. Only one route per colleague can be open at a time,
     // and the newest is the one this page is about.
-    open: asks.find((a) => OPEN.has(a.status)),
+    open: asks.find(isOpenAsk),
     // The card shows what the lead panel does NOT: the other routes when there
     // are some, and the legacy singular `route` when a server that predates the
     // candidate list is answering — which the panel cannot draw at all.
@@ -397,5 +398,3 @@ function readGraph(
     focused: nodes.some((n) => n.id === focus) ? focus : null,
   };
 }
-
-const OPEN = new Set(["requested", "accepted", "name_drop_approved"]);
