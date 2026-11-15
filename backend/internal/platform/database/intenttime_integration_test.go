@@ -101,8 +101,8 @@ WITH listed AS (SELECT name FROM pg_timezone_names),
   SELECT name FROM listed UNION SELECT lower(name) FROM listed UNION SELECT upper(name) FROM listed
   UNION SELECT abbrev FROM pg_timezone_abbrevs
   UNION SELECT unnest(ARRAY['', 'Foo', 'UTC+3', 'EST5', 'ABC/X5', '<+03>-3', '+01:00', 'Europe/Nowhere', 'Local']))
-SELECT name, public.named_time_zone(name) FROM spelled
-WHERE public.named_time_zone(name) IS DISTINCT FROM (name IN (SELECT name FROM listed))`)
+SELECT name, named FROM (SELECT name, public.named_time_zone(name) AS named FROM spelled) answered
+WHERE named IS DISTINCT FROM (name IN (SELECT name FROM listed))`)
 		if err != nil {
 			t.Fatal(err)
 		}
