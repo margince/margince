@@ -4,7 +4,7 @@ import { emptyReason, repeatsDescription } from "./companyprofiletab";
 describe("repeatsDescription", () => {
   const offer = [{ field: "offer_summary", value: "Bearings sold online. " }];
 
-  it("hides the offer row that repeats the description", () => {
+  it("detects when the description repeats the offer", () => {
     expect(
       repeatsDescription("offer_summary", offer, "Bearings sold online."),
     ).toBe(true);

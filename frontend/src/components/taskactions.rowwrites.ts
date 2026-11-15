@@ -77,6 +77,7 @@ export type MeetingOutcomeWrite = {
   // later one wins with no warning.
   version: number | undefined;
   status: "held" | "no_show" | "canceled";
+  followUpTask?: components["schemas"]["ActivityFollowUpTask"];
   dealFiling?: components["schemas"]["ActivityDealFiling"];
   // Each sent only when given, so an answer alone never touches the notes.
   subject?: string;
@@ -107,6 +108,7 @@ export async function writeMeetingOutcome(
       },
       body: {
         meeting_status: input.status,
+        ...(input.followUpTask ? { follow_up_task: input.followUpTask } : {}),
         ...(input.dealFiling ? { deal_filing: input.dealFiling } : {}),
         ...(input.subject === undefined ? {} : { subject: input.subject }),
         ...(input.body === undefined ? {} : { body: input.body }),
@@ -119,12 +121,7 @@ export async function writeMeetingOutcome(
   );
 }
 
-// holdsRefresh keeps a successful write from refreshing at once, for a caller
-// that asks something more first and refreshes when that is answered.
-export function useMeetingOutcome(
-  invalidateKeys: readonly QueryKey[],
-  holdsRefresh?: (input: MeetingOutcomeWrite) => boolean,
-) {
+export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();
   const reread = (id: string) => {
@@ -137,9 +134,7 @@ export function useMeetingOutcome(
   };
   return useMutation({
     mutationFn: (input: MeetingOutcomeWrite) => writeMeetingOutcome(input, t),
-    onSuccess: (_data, input) => {
-      if (!holdsRefresh?.(input)) reread(input.id);
-    },
+    onSuccess: (_data, input) => reread(input.id),
     // A retry must carry the version the meeting holds now, not the one refused.
     onError: (error, input) => {
       if (isVersionSkewOf(error)) reread(input.id);

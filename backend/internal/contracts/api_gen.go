@@ -33883,7 +33883,7 @@ type AiCall struct {
 type AiCallAttempt struct {
 	Attempt int `json:"attempt"`
 
-	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
+	// AttemptReason Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.
 	AttemptReason string `json:"attempt_reason"`
 
 	// DecisionChoice The label a decision attempt was answered with, whether or not it stood; absent on every other kind and on a decision attempt that got no answer.
@@ -34157,7 +34157,7 @@ type AiFeatureRoute struct {
 	Decides           *bool             `json:"decides,omitempty"`
 	DecisionCandidate *AiRouteCandidate `json:"decision_candidate,omitempty"`
 
-	// DecisionFirst The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.
+	// DecisionFirst The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor.
 	DecisionFirst bool `json:"decision_first"`
 
 	// DecisionSkipReason Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
@@ -67447,7 +67447,8 @@ type UpdateActivityRequest struct {
 	DueHasTime *bool `json:"due_has_time,omitempty"`
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
-	DueIntent *IntentTime `json:"due_intent,omitempty"`
+	DueIntent    *IntentTime           `json:"due_intent,omitempty"`
+	FollowUpTask *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// IsDone Completing a task writes one audit row + an `activity.updated` event carrying the `is_done` delta (events.md §5.5 — there is no separate `task.*` family).
 	IsDone *bool `json:"is_done,omitempty"`
@@ -93234,6 +93235,14 @@ func (a *UpdateActivityRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "due_intent")
 	}
 
+	if raw, found := object["follow_up_task"]; found {
+		err = json.Unmarshal(raw, &a.FollowUpTask)
+		if err != nil {
+			return fmt.Errorf("error reading 'follow_up_task': %w", err)
+		}
+		delete(object, "follow_up_task")
+	}
+
 	if raw, found := object["is_done"]; found {
 		err = json.Unmarshal(raw, &a.IsDone)
 		if err != nil {
@@ -93378,6 +93387,13 @@ func (a UpdateActivityRequest) MarshalJSON() ([]byte, error) {
 		object["due_intent"], err = json.Marshal(a.DueIntent)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'due_intent': %w", err)
+		}
+	}
+
+	if a.FollowUpTask != nil {
+		object["follow_up_task"], err = json.Marshal(a.FollowUpTask)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'follow_up_task': %w", err)
 		}
 	}
 

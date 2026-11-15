@@ -45391,10 +45391,10 @@ components:
         effective_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
         impact: { type: string, enum: [unchanged, model_changed, decision_changed, fallback_changed, budget_blocked, unconfigured], x-extensible-enum: true, x-go-type: string, description: 'How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.' }
         budget_exempt: { type: boolean }
-        decision_first: { type: boolean, description: 'The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.' }
+        decision_first: { type: boolean, description: 'The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor.' }
         decision_skip_reason:
           type: string
-          enum: [unbound, uncertified, local_only]
+          enum: [unbound, uncertified]
           x-extensible-enum: true
           x-go-type: string
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
@@ -45740,7 +45740,7 @@ components:
       properties:
         attempt: { type: integer }
         is_terminal: { type: boolean }
-        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
+        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
         kind: { type: string, enum: [completion, embedding, decision], x-extensible-enum: true, x-go-type: string, description: 'What this attempt asked: a chat completion, an embedding, or a decision model.' }
         tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
         provider: { type: string }
@@ -59832,6 +59832,13 @@ components:
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
+        follow_up_task:
+          $ref: '#/components/schemas/ActivityFollowUpTask'
+          description: >-
+            Optional next step when marking a meeting held. Creates the task in the same
+            transaction, with the meeting as its source and its links and audience inherited.
+            Requires activity create authority. A meeting already held cannot add another
+            task through this outcome write.
         subject: { type: [string, 'null'], maxLength: 20000 }
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }

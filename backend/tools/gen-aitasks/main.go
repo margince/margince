@@ -208,7 +208,6 @@ type taskDef struct {
 	Status         string             `yaml:"status"`
 	Sites          []siteDef          `yaml:"sites"`
 	NoPayload      bool               `yaml:"no_payload"`
-	LocalOnly      bool               `yaml:"local_only"`
 	Decision       bool               `yaml:"decision"`
 	CompanyContext *companyContextDef `yaml:"company_context"`
 	CostUnit       string             `yaml:"cost_unit"`

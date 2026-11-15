@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// "Held" and "Mark as canceled" write the status from the card. "Add notes"
-// opens a dialog that PATCHES the existing meeting, because a second activity
-// would leave the original unanswered.
-
-import { type QueryKey, useQueryClient } from "@tanstack/react-query";
+import type { QueryKey } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { useCanWrite, useCanWriteRecord } from "../lib/capability";
+import { useCanWriteRecord } from "../lib/capability";
 import { problemFieldErrorsOf } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
-import { MeetingNextStep } from "./meetingnextstep";
 import { MeetingOutcomeDialog } from "./meetingoutcome.dialog";
 import { useMeetingOutcome } from "./taskactions";
 
@@ -44,14 +39,7 @@ export function RecordMeetingOutcome({
   );
 }
 
-/**
- * MeetingOutcome is the row's answer to How did it go? It happened (held), it
- * did not happen (canceled), or the reader says more about what came of it.
- *
- * "It happened" is the commonest answer and a fact with nothing to add, so it writes
- * at once, as Cancel does. "Add notes" opens the dialog, which also offers
- * No-show and moves the date.
- */
+/** The shared outcome controls for the Worklist and meeting panel. */
 export function MeetingOutcome({
   id,
   version,
@@ -70,32 +58,15 @@ export function MeetingOutcome({
 }>) {
   const t = useT();
   const toast = useToast();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState<"held" | "notes" | undefined>();
   // An invitation can arrive after the row was read, so its refusal hides Cancel too.
   const [refusedAsManaged, setRefusedAsManaged] = useState(false);
-  // Marking it held asks for the next step at once, of a reader who may file
-  // one. The lists showing this meeting refresh only once that is answered:
-  // the refresh drops the answered meeting, and this control with it.
-  const [askNext, setAskNext] = useState(false);
-  const mayFile = useCanWrite("activity", "create");
-  const queryClient = useQueryClient();
-  const refresh = () => {
-    for (const queryKey of [...invalidateKeys, ["activity", id]]) {
-      queryClient.invalidateQueries({ queryKey });
-    }
-  };
-  const asksNext = (status: string) => status === "held" && mayFile;
-  const record = useMeetingOutcome(invalidateKeys, (input) =>
-    asksNext(input.status),
-  );
+  const record = useMeetingOutcome(invalidateKeys);
   const answer = (status: "held" | "canceled") =>
     record.mutate(
       { id, version, status },
       {
-        onSuccess: () => {
-          toast.show(t("worklist.verb.meetingOutcomeRecorded"));
-          if (asksNext(status)) setAskNext(true);
-        },
+        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
         // A refused write leaves the row as it was, which looks like a
         // click that did nothing.
         onError: (error) => {
@@ -126,7 +97,7 @@ export function MeetingOutcome({
             ? t("worklist.verb.meetingHeldFor", { subject: title })
             : undefined
         }
-        onClick={() => answer("held")}
+        onClick={() => setOpen("held")}
       >
         {t("worklist.verb.meetingHeld")}
       </Button>
@@ -137,7 +108,7 @@ export function MeetingOutcome({
             ? t("worklist.verb.meetingAddNotesFor", { subject: title })
             : undefined
         }
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen("notes")}
       >
         {t("worklist.verb.meetingAddNotes")}
       </Button>
@@ -158,20 +129,9 @@ export function MeetingOutcome({
         <MeetingOutcomeDialog
           id={id}
           title={title}
-          onClose={() => setOpen(false)}
-          onSaved={(status) =>
-            asksNext(status) ? setAskNext(true) : refresh()
-          }
-        />
-      )}
-      {askNext && (
-        <MeetingNextStep
-          meetingId={id}
-          invalidateKeys={[]}
-          onClose={() => {
-            setAskNext(false);
-            refresh();
-          }}
+          invalidateKeys={invalidateKeys}
+          outcomeOnly={open === "held"}
+          onClose={() => setOpen(undefined)}
         />
       )}
     </>

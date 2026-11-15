@@ -2105,8 +2105,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "aiAdmin.decisionSkip.uncertified":
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
-  "aiAdmin.decisionSkip.local_only":
-    "Entscheidungsmodell nicht genutzt: Diese Aktivität nutzt nur einen lokalen Anbieter für Entscheidungen.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -15666,8 +15664,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eingabe zu groß für das Entscheidungsmodell",
   "aicalls.reason.decision_uncertified":
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
-  "aicalls.reason.decision_local_only":
-    "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
@@ -20743,6 +20739,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.meetingSkipNextStep": "Nächsten Schritt überspringen",
+  "worklist.verb.meetingNextStep": "Wie geht es weiter?",
   "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
@@ -20750,11 +20748,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
-  "meeting.nextStep.title": "Was ist der nächste Schritt?",
-  "meeting.nextStep.add": "Aufgabe anlegen",
-  "meeting.nextStep.skip": "Überspringen",
-  "meeting.nextStep.subject": "Nächster Schritt",
-  "meeting.nextStep.due": "Fällig",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
@@ -21224,7 +21217,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
   "lead.company.addedOnQualify":
-    "Noch kein Unternehmenseintrag. Beim Qualifizieren kannst du ihn anlegen.",
+    "Noch kein Unternehmen verknüpft. Beim Qualifizieren wird es verknüpft oder angelegt.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.company.matchedByDomain": "Gleiche Website-Domain",

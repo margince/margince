@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package companyprofiles registers bounded corrections to company profiles.
+package companyprofiles
 
 import (
 	"context"
@@ -18,11 +19,11 @@ import (
 // companyIndustryRequiredMigration is the migration the industry column mapping reads from.
 const companyIndustryRequiredMigration = "core/1792799323"
 
-// companyIndustryDataTask gives every company that holds industry text the code
+// IndustryTask gives every company that holds industry text the code
 // the text names. Text that names no code leaves the industry empty and is kept
 // in the description. The mapping is a fixed table and nothing is deleted, so
 // the task runs without an operator's review.
-func companyIndustryDataTask() datatask.Task {
+func IndustryTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792811260_company_industry_codes", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1792811260_company_industry_codes"), Requires: []string{companyIndustryRequiredMigration},

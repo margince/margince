@@ -49,16 +49,20 @@ func lockIdentityClaimTx(ctx context.Context, tx pgx.Tx, id, user ids.UUID) erro
 	return storekit.LockSeatAddressClaims(ctx, tx, value)
 }
 
-// lockPendingChecksTx takes the check lock of the address a ledger row asks
-// about, before a transition writes the row (contacts/lockorder.go).
+// Ledger transitions hold the address check and sender decision locks before
+// writing, so a reviewed verdict cannot race destruction of its sender's mail.
 func lockPendingChecksTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	var email string
-	err := tx.QueryRow(ctx, `SELECT email FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&email)
+	var owner ids.UUID
+	err := tx.QueryRow(ctx, `SELECT email, owner_id FROM capture_pending_counterparty WHERE id = $1`, id).Scan(&email, &owner)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}
 	if err != nil {
 		return fmt.Errorf("capture: reading the address a ledger transition is about: %w", err)
 	}
-	return storekit.LockSeatAddressChecks(ctx, tx, email)
+	if err := storekit.LockSeatAddressChecks(ctx, tx, email); err != nil {
+		return err
+	}
+	return lockSenderDecisionTx(ctx, tx, owner, email)
 }

@@ -2016,8 +2016,6 @@ export const en = {
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
-  "aiAdmin.decisionSkip.local_only":
-    "Decision model not used: this activity takes only a local decision provider.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -15574,8 +15572,6 @@ export const en = {
     "Input too large for the decision model",
   "aicalls.reason.decision_uncertified":
     "Decision model not certified for this task",
-  "aicalls.reason.decision_local_only":
-    "Task is local-only and the decision model is not",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
@@ -20486,6 +20482,8 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
+  "worklist.verb.meetingSkipNextStep": "Skip next step",
+  "worklist.verb.meetingNextStep": "What is the next step?",
   "worklist.verb.meetingHowDidItGo": "How did it go?",
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
@@ -20493,11 +20491,6 @@ export const en = {
   "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
-  "meeting.nextStep.title": "What is the next step?",
-  "meeting.nextStep.add": "Add task",
-  "meeting.nextStep.skip": "Skip",
-  "meeting.nextStep.subject": "Next step",
-  "meeting.nextStep.due": "Due",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "No-show",
   "worklist.verb.meetingCanceled": "Did not happen",
@@ -20974,7 +20967,7 @@ export const en = {
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
   "lead.company.addedOnQualify":
-    "No company record yet. You can add it when you qualify this lead.",
+    "No company linked yet. Qualifying links or creates it.",
   "lead.company.linkOnQualify":
     "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.company.matchedByDomain": "Same website domain",

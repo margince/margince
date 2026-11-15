@@ -237,6 +237,29 @@ func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertCurrentLeadAdvice(t, l, lead, now, 1)
+	retainedSource := l.e.WsScalar(t, `SELECT coalesce(source_activity_id::text, '') || ':' || source_id
+ FROM activity WHERE id=@id`, pgx.NamedArgs{"id": taskID})
+	next, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "email", Subject: new("New qualification source"), Direction: new("inbound"),
+		OccurredAt: new(l.at.Add(time.Minute)), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+		return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, ids.UUID(next.Id))
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Fatalf("new mail duplicated the adopted task: %d", n)
+	}
+	if got := l.e.WsScalar(t, `SELECT coalesce(source_activity_id::text, '') || ':' || source_id
+ FROM activity WHERE id=@id`, pgx.NamedArgs{"id": taskID}); got != retainedSource {
+		t.Fatalf("adopted task source changed from %q to %q", retainedSource, got)
+	}
+	assertCurrentLeadAdvice(t, l, lead, now, 1)
 }
 
 func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
@@ -262,6 +285,8 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	if before.NextTaskSubject == nil {
 		t.Fatal("fixture has no visible lead task before narrowing")
 	}
+	originalTask := l.e.WsScalar(t, `SELECT a.id::text FROM activity a JOIN activity_link l ON l.activity_id=a.id
+ WHERE l.lead_id=@lead AND a.source_system=@source`, pgx.NamedArgs{"lead": lead, "source": provenance.LeadRepliedSource})
 	if _, err := l.e.Activities.SetAudience(l.e.Admin(), sourceID, activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: l.e.AdminUser}}}); err != nil {
 		t.Fatal(err)
 	}
@@ -282,7 +307,32 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	if card.NextTaskSubject != nil {
 		t.Fatal("lead summary exposed a task derived from private source mail")
 	}
-	next, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{Kind: "email", Subject: new("New shared qualification source"), Direction: new("inbound"), OccurredAt: new(l.at.Add(time.Minute)), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}}})
+	owner := ids.From[ids.UserKind](l.e.AdminUser)
+	if _, err := l.e.Contacts.UpdateLead(l.e.Admin(), lead, contacts.UpdateLeadInput{OwnerID: &owner}); err != nil {
+		t.Fatal(err)
+	}
+	private, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{Kind: "email", Subject: new("New owner's private source"), Direction: new("inbound"), OccurredAt: new(l.at.Add(time.Minute)), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateID := ids.From[ids.ActivityKind](ids.UUID(private.Id))
+	if _, err := l.e.Activities.SetAudience(l.e.Admin(), privateID, activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: l.e.AdminUser}}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, privateID.UUID) }); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id=a.id
+ WHERE l.lead_id=@lead AND a.source_system=@source AND NOT a.is_done AND a.archived_at IS NULL`,
+		pgx.NamedArgs{"lead": lead, "source": provenance.LeadRepliedSource}); n != 1 {
+		t.Fatalf("owner change left %d open qualification tasks, want one", n)
+	}
+	if got := l.e.WsScalar(t, `SELECT id::text || ':' || assignee_id::text || ':' || source_activity_id::text FROM activity WHERE id=@id`,
+		pgx.NamedArgs{"id": ids.MustParse(originalTask)}); got != originalTask+":"+l.e.Rep2.String()+":"+sourceID.String() {
+		t.Fatalf("unreadable replacement changed the existing task: %q", got)
+	}
+	assertLeadAdviceOnWorklist(t, l, now, 0)
+	next, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{Kind: "email", Subject: new("New shared qualification source"), Direction: new("inbound"), OccurredAt: new(l.at.Add(2 * time.Minute)), Source: "manual", Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -291,7 +341,11 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	}
 	assertLeadAdviceOnWorklist(t, l, now, 1)
 	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
-		t.Fatalf("unreadable old advice blocked a new readable source: %d open asks, want one", n)
+		t.Fatalf("source refresh left %d qualification tasks, want one", n)
+	}
+	if got := l.e.WsScalar(t, `SELECT id::text || ':' || source_activity_id::text FROM activity WHERE id=@id`,
+		pgx.NamedArgs{"id": ids.MustParse(originalTask)}); got != originalTask+":"+next.Id.String() {
+		t.Fatalf("refreshed task = %q, want the original task on its new shared source", got)
 	}
 }
 
