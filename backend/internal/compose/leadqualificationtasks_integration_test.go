@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -206,5 +207,83 @@ func TestLegacyQualificationTextDistinguishesAnUnnamedLeadFromAName(t *testing.T
 				t.Fatalf("named=%t: display=%+v, want %q", named, row.SystemDisplay, expected)
 			}
 		})
+	}
+}
+
+// A lead nobody owns has nobody to ask. Once someone owns it, the next held
+// meeting asks them.
+func TestAnOwnerlessLeadGetsNoQualifyTaskUntilSomeoneOwnsIt(t *testing.T) {
+	l := setupLeadMail(t)
+	lead := l.lead(t, "lena@prospect.example")
+	now := clocktest.Now(t)
+	writer := newLeadWorkTasks(l.e.DB(), slog.Default())
+	writer.now = func() time.Time { return now }
+	store := l.e.Activities.WithLeadQualifyTasks(writer)
+	held := func() {
+		t.Helper()
+		if _, _, err := store.LogActivity(l.e.Admin(), activities.LogActivityInput{
+			Kind: "meeting", Subject: new("Lead demo"), OccurredAt: new(now.Add(-time.Hour)), MeetingStatus: new("held"),
+			Source: "manual", CounterpartyEmail: "lena@prospect.example",
+			Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	held()
+	if n := l.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id
+		WHERE al.lead_id = $1 AND a.kind = 'task' AND a.source_system = $2 AND NOT a.is_done`, lead, provenance.LeadRepliedSource); n != 0 {
+		t.Fatalf("a lead nobody owns got %d qualify task(s), which no Worklist shows", n)
+	}
+
+	owner := ids.From[ids.UserKind](l.e.Rep2)
+	if _, err := l.e.Contacts.UpdateLead(l.e.Admin(), lead, contacts.UpdateLeadInput{OwnerID: &owner}); err != nil {
+		t.Fatalf("assigning the lead: %v", err)
+	}
+	held()
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Errorf("the new owner has %d qualify task(s) after the next held meeting, want 1", n)
+	}
+}
+
+// A held meeting is current engagement only inside the waiting horizon, as mail
+// is. Marking a meeting from more than a year ago held asks nobody to qualify.
+func TestAMeetingHeldLongAgoAsksNobodyToQualify(t *testing.T) {
+	l := setupLeadMail(t)
+	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
+	now := clocktest.Now(t)
+	writer := newLeadWorkTasks(l.e.DB(), slog.Default())
+	writer.now = func() time.Time { return now }
+	store := l.e.Activities.WithLeadQualifyTasks(writer)
+	if _, _, err := store.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Old demo"), OccurredAt: new(now.AddDate(-1, 0, -1)), MeetingStatus: new("held"),
+		Source: "manual", CounterpartyEmail: "lena@prospect.example",
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 0 {
+		t.Errorf("a meeting held over a year ago filed %d qualify task(s)", n)
+	}
+}
+
+// A qualify task filed before its lead had an owner is nobody's. The next held
+// meeting hands it to the owner instead of letting it block their task.
+func TestAnUnassignedQualifyTaskGoesToTheLeadsOwner(t *testing.T) {
+	l := setupLeadMail(t)
+	lead := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
+	legacy := legacyQualificationTasks(t, l, lead, 1)[0]
+	l.e.WsExec(t, `UPDATE activity SET assignee_id = NULL WHERE id = $1`, legacy)
+	now := clocktest.Now(t)
+	writer := newLeadWorkTasks(l.e.DB(), slog.Default())
+	writer.now = func() time.Time { return now }
+	if _, _, err := l.e.Activities.WithLeadQualifyTasks(writer).LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Lead demo"), OccurredAt: new(now.Add(-time.Hour)), MeetingStatus: new("held"),
+		Source: "manual", CounterpartyEmail: "lena@prospect.example",
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Errorf("the owner has %d qualify task(s); the unassigned one should be theirs", n)
 	}
 }

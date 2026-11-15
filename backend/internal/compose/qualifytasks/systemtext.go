@@ -21,7 +21,7 @@ import (
 func SystemTextDataTask() datatask.Task {
 	sources := slices.DeleteFunc(storekit.TaskSourceFamilies(), func(source string) bool { return source == provenance.LeadRepliedSource })
 	return datatask.Task{
-		ID: "core/1794739855_system_task_text", Version: 1,
+		ID: "core/1794739855_system_task_text", Version: 2,
 		Title: systemtext.Literal("datatask.title.core.1794739855_system_task_text"), Requires: []string{"core/1794283985"},
 		Steps: []datatask.Step{{
 			Name: "restore_task_instructions", Limit: 100, MinLimit: 1, Audit: datatask.AuditPolicy{PerRecord: true},
