@@ -11,6 +11,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -202,6 +203,29 @@ func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
 	if named == 0 {
 		t.Fatal("no report names a company, so this test swept nothing")
 	}
+	// The admin's schema lists every catalog report, whatever its record grant.
+	reader := e.readerWith(everything[:len(everything)-1]...)
+	ran := 0
+	for key := range compose.AnalyticsSchemaFor(e.Admin()).Entities {
+		if _, err := tryPrebuiltReport(e.Admin(), e, key, ""); err != nil {
+			t.Fatalf("%s default plan as admin: %v", key, err)
+		}
+		columns, refused := defaultPlanColumns(reader, t, e, key)
+		if !refused {
+			ran++
+		}
+		for _, field := range columns {
+			if strings.HasSuffix(field, "company_id") {
+				t.Errorf("%s's default plan hands %s to a seat without company.read", key, field)
+			}
+		}
+	}
+	if ran == 0 {
+		t.Fatal("every default plan was refused, so this test inspected nothing")
+	}
+	if _, refused := defaultPlanColumns(reader, t, e, "open-deals-per-company"); !refused {
+		t.Error("open-deals-per-company ran its company grouping for a seat without company.read")
+	}
 	for _, plan := range []string{`{"group_by":["partner_company_id"]}`, `{"group_by":["company_id"]}`} {
 		if _, err := tryPrebuiltReport(e.readerWith(everything[:len(everything)-1]...), e, "deals-by-stage", plan); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("deals-by-stage %s without company.read → %v, want ErrPermissionDenied", plan, err)
@@ -261,4 +285,28 @@ func TestALockedDeliveryReadHoldsTheAccountsEdges(t *testing.T) {
 	if err := e.Contacts.RemoveProjectCompany(admin, f.project, f.partner); err != nil {
 		t.Errorf("taking the partner off after the decision committed: %v", err)
 	}
+}
+
+// defaultPlanColumns runs a catalog report with no plan of its own and
+// returns the effective group-by, or refused when the seat may not run it.
+func defaultPlanColumns(ctx context.Context, t *testing.T, e *Env, report string) (groupBy []string, refused bool) {
+	t.Helper()
+	out, err := compose.NewRegistry(e.Pool, compose.SendPath{}).Invoke(ctx, "run_report", []byte(`{"report":"`+report+`"}`))
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil, true
+	}
+	if err != nil {
+		t.Fatalf("%s default plan: %v", report, err)
+	}
+	var envelope struct {
+		Data struct {
+			Plan struct {
+				GroupBy []string `json:"group_by"`
+			} `json:"plan"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &envelope); err != nil {
+		t.Fatalf("decoding %s: %v", report, err)
+	}
+	return envelope.Data.Plan.GroupBy, false
 }
