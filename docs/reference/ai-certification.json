@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 60,
-    "sites_best_current": 55,
+    "sites_best_current": 56,
     "sites_best_partial": 0,
-    "sites_best_stale": 5,
+    "sites_best_stale": 4,
     "sites_absent": 0,
     "scenarios": 329,
     "records": 397,
@@ -11146,13 +11146,13 @@
         "env": "cloud_frontier"
       },
       "sites": 1,
-      "sites_current": 0,
+      "sites_current": 1,
       "sites_partial": 0,
-      "sites_stale": 1,
+      "sites_stale": 0,
       "runs": 96,
       "passed": 96,
       "reliability": 1,
-      "slowest_p95_ms": 7304,
+      "slowest_p95_ms": 5109,
       "bands": {
         "certified": 1,
         "supported_degraded": 0,
@@ -30475,8 +30475,17 @@
       "key": "transcript_propose/next_steps",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "gemini",
+          "model": "gemini-3.6-flash",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "reliability": 1,
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "a_meeting_that_promised_nothing",
@@ -30848,73 +30857,22 @@
             "model": "gemini-3.6-flash",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "scenarios_measured": 0,
+          "scenarios_measured": 32,
           "scenarios_total": 32,
           "runs": 96,
           "passed": 96,
           "reliability": 1,
-          "latency_p50_ms": 4484,
-          "latency_p95_ms": 7304,
+          "latency_p50_ms": 2247,
+          "latency_p95_ms": 5109,
           "reported": {
             "accepted": 96,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "32 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_meeting_that_promised_nothing, a_speaker_tries_to_write_the_record, copied_contact_is_not_a_recipient, customer_promises_data_in_the_meeting, firm_promises_take_the_available_slots, meeting_speaker_reports_customer_promise and 26 more",
-          "stale_cause": {
-            "prompt_changed": [
-              "a_meeting_that_promised_nothing",
-              "a_speaker_tries_to_write_the_record",
-              "copied_contact_is_not_a_recipient",
-              "customer_promises_data_in_the_meeting",
-              "firm_promises_take_the_available_slots",
-              "meeting_speaker_reports_customer_promise",
-              "named_third_party_promiser",
-              "one_side_promises_revised_pricing",
-              "shared_deliverable_named_recipients",
-              "tentative_intro_within_a_week",
-              "tentative_promise_with_a_day",
-              "transcript_completed_attachment_is_not_a_new_promise_de",
-              "transcript_completed_attachment_is_not_a_new_promise_en",
-              "transcript_completed_attachment_is_not_a_new_promise_vi",
-              "transcript_conditional_commitment_preserves_its_meaning_de",
-              "transcript_conditional_commitment_preserves_its_meaning_en",
-              "transcript_conditional_commitment_preserves_its_meaning_vi",
-              "transcript_future_attachment_is_a_current_promise_de",
-              "transcript_future_attachment_is_a_current_promise_en",
-              "transcript_future_attachment_is_a_current_promise_vi",
-              "transcript_meeting_summary_cites_its_lines_de",
-              "transcript_optional_commitment_preserves_its_meaning_de",
-              "transcript_optional_commitment_preserves_its_meaning_en",
-              "transcript_optional_commitment_preserves_its_meaning_vi",
-              "transcript_range_commitment_preserves_its_meaning_de",
-              "transcript_range_commitment_preserves_its_meaning_en",
-              "transcript_range_commitment_preserves_its_meaning_vi",
-              "transcript_request_creates_no_work",
-              "transcript_same_named_promiser_unresolved",
-              "transcript_unclear_creates_no_work",
-              "we_might_follow_up_some_time",
-              "we_promise_the_integration_spec_by_a_day"
-            ],
-            "grader_changed": [
-              "copied_contact_is_not_a_recipient",
-              "customer_promises_data_in_the_meeting",
-              "firm_promises_take_the_available_slots",
-              "meeting_speaker_reports_customer_promise",
-              "named_third_party_promiser",
-              "one_side_promises_revised_pricing",
-              "shared_deliverable_named_recipients",
-              "transcript_future_attachment_is_a_current_promise_de",
-              "transcript_future_attachment_is_a_current_promise_en",
-              "transcript_future_attachment_is_a_current_promise_vi",
-              "transcript_meeting_summary_cites_its_lines_de",
-              "transcript_same_named_promiser_unresolved",
-              "we_promise_the_integration_spec_by_a_day"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
