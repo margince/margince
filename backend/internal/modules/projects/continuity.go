@@ -32,13 +32,25 @@ func CompanyDeliveryTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lo
 	if scope == "" {
 		scope = "TRUE"
 	}
+	// The company's projects are the ones it is on now, by a live edge: the
+	// stored company_id keeps naming a company taken off the project.
+	edges, err := auth.ProjectCompanyEdgesSQL(ctx, arg)
+	if err != nil {
+		return false, false, err
+	}
+	if !edges.Readable {
+		// No edge is readable, so no project is this company's to count.
+		return false, true, nil
+	}
+	onProject := storekit.SQLf("p.id IN (SELECT %s %s AND %s = $%d)",
+		auth.ProjectEdgeProject, edges.Source, auth.ProjectEdgeCompany, companyPos)
 	from := "project"
 	if lock {
 		// Name the scope and continuity columns so custom-field DDL cannot change the locked row shape.
-		from = storekit.SQLf("(SELECT id, company_id, owner_id, phase, archived_at FROM project WHERE company_id = $%d ORDER BY id FOR UPDATE)", companyPos)
+		from = "(SELECT id, company_id, owner_id, phase, archived_at FROM project p WHERE " + onProject + " ORDER BY id FOR UPDATE)"
 	}
 	query := storekit.SQLf(`SELECT coalesce(bool_or(p.phase = $%d AND %s), false), coalesce(bool_and(%s), true)
- FROM %s p WHERE p.company_id = $%d AND p.archived_at IS NULL`, phasePos, scope, scope, from, companyPos)
+ FROM %s p WHERE %s AND p.archived_at IS NULL`, phasePos, scope, scope, from, onProject)
 	if err := tx.QueryRow(ctx, query, args...).Scan(&active, &complete); err != nil {
 		return false, false, fmt.Errorf("read account delivery continuity: %w", err)
 	}

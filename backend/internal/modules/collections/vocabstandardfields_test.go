@@ -100,6 +100,26 @@ func TestTheEmployerLeafTakesTheEdgeGate(t *testing.T) {
 	}
 }
 
+func TestTheProjectCompanyLeafTakesTheEdgeGate(t *testing.T) {
+	if sql, _ := compileLeaf(maskedCtx(), t, &Store{}, projectEntity, companyIDField, storekit.OpEq, employerID); sql != "FALSE" {
+		t.Errorf("a reader refused relationship:read got %q, want the project company leaf withheld", sql)
+	}
+	with := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{
+				"project": {Read: true}, "company": {Read: true}, "relationship": {Read: true},
+			},
+			RowScope: principal.RowScopeOwn,
+		},
+	})
+	sql, _ := compileLeaf(with, t, &Store{}, projectEntity, companyIDField, storekit.OpEq, employerID)
+	if !strings.Contains(sql, "FROM relationship c") || !strings.Contains(sql, "FROM company ep") ||
+		!strings.Contains(sql, "edge_company.archived_at IS NULL") {
+		t.Errorf("the project company leaf compiled to %q, want live edges bounded by their endpoints' scope", sql)
+	}
+}
+
 func TestAnEmailOperandIsFoldedToTheStoredCase(t *testing.T) {
 	engine, _, err := (&Store{}).SegmentEngine(readerCtx(), "lead")
 	if err != nil {

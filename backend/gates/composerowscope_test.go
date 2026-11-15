@@ -74,6 +74,7 @@ const (
 
 // unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	"internal/compose:withProjectCompany": "a project report's company filter: the edge's company_id is compared with the bound company inside an EXISTS and never selected, and filterScopes read-gates the bound company before it binds",
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
 	// collections.RecordTagSuggestionTx, never to a reader. A user sees the
@@ -228,9 +229,7 @@ var rowScopeSpellings = map[string]bool{
 	// directly. Its absence here was a gap rather than a policy: the first
 	// compose read whose ONLY row bound came through it reported as unscoped,
 	// and the fix a reader would reach for from that message is a SECOND scope
-	// call over a column the conjunction already covers.
-	//
-	// Adding it does not weaken the census. The two halves are unbundled in
+	// call over a column the conjunction already covers. Adding it does not weaken the census. The two halves are unbundled in
 	// exactly one direction: this list accepts the pair because the pair
 	// includes the row half, while backend/gates/edgereaders_test.go refuses the row
 	// half alone. Neither gate accepts the object half on its own.
