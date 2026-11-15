@@ -22,7 +22,7 @@ import (
 )
 
 // databaseClockPlus is the database's own clock moved by shift, read on every
-// call, so the skew is exact and no reading depends on this process's clock.
+// call. The skew is exact, and no reading depends on this process's clock.
 func databaseClockPlus(t *testing.T, e *sendEnv, shift time.Duration) func() time.Time {
 	t.Helper()
 	return func() time.Time {

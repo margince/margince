@@ -18,7 +18,7 @@ import (
 )
 
 // A mail the provider sent without a timestamp lands no later than the
-// database's now(), and a replay of it keeps the time it landed with.
+// database's now(). A replay keeps the time it landed with.
 func TestAnUndatedCaptureKeepsItsTimeOnReplay(t *testing.T) {
 	ctx, db := ownDomainWorkspace(t)
 	ws, _ := principal.WorkspaceID(ctx)

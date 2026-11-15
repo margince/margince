@@ -55,7 +55,7 @@ func TestAnUndatedCaptureIsDatedByBothClocksOrNotAtAll(t *testing.T) {
 }
 
 // clockShiftedTx is an owner transaction whose now() is the real one plus
-// shift, through a now() of its own ahead of pg_catalog's on its search path.
+// shift. Its own now() sits ahead of pg_catalog's on its search path.
 // Rolling back drops the schema with it.
 func clockShiftedTx(t *testing.T, shift time.Duration) pgx.Tx {
 	t.Helper()
