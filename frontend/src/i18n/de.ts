@@ -21197,6 +21197,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
+  "lead.company.addedOnQualify":
+    "Noch kein Unternehmenseintrag. Beim Qualifizieren kannst du ihn anlegen.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.company.matchedByDomain": "Gleiche Website-Domain",

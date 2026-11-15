@@ -179,6 +179,43 @@ describe("LeadCompany", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
+  it("says beside the typed name that qualifying adds the company", () => {
+    stubServer();
+    render(<LeadCompany lead={lead} nameShown />);
+    expect(
+      screen.getByText(
+        "No company record yet. You can add it when you qualify this lead.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says nothing about adding a company to a lead that can no longer be qualified", () => {
+    stubServer();
+    for (const over of [
+      { status: "promoted" as const },
+      { archived_at: "2026-09-01T00:00:00Z" },
+      { writable: false },
+    ]) {
+      cleanup();
+      render(<LeadCompany lead={{ ...lead, ...over }} nameShown />);
+      expect(
+        screen.queryByText(
+          "No company record yet. You can add it when you qualify this lead.",
+        ),
+      ).toBeNull();
+    }
+  });
+
+  it("says nothing about a missing record once a company matches", () => {
+    stubServer();
+    render(<LeadCompany lead={{ ...lead, company_match: match }} nameShown />);
+    expect(
+      screen.queryByText(
+        "No company record yet. You can add it when you qualify this lead.",
+      ),
+    ).toBeNull();
+  });
+
   it("offers no link to a reader who may not change the lead", () => {
     stubServer();
     render(
