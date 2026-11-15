@@ -114,6 +114,66 @@ func TestContactChildBatchUsesOneExchangeForFourReads(t *testing.T) {
 	}
 }
 
+// TestContactChildBatchKeepsChildrenWithTheirOwnContact gives two contacts
+// their own children and sends the batch as the transaction's first statement.
+// That first send carries the deferred transaction setup in the same batch.
+func TestContactChildBatchKeepsChildrenWithTheirOwnContact(t *testing.T) {
+	e, ctx, id, empty := childBatchFixture(t)
+	other := secondChildContact(ctx, t, e)
+	rows := []crmcontracts.Contact{
+		{Id: openapi_types.UUID(other.UUID)}, {Id: openapi_types.UUID(id.UUID)}, {Id: openapi_types.UUID(empty.UUID)},
+	}
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		idx := map[openapi_types.UUID]*crmcontracts.Contact{}
+		for i := range rows {
+			idx[rows[i].Id] = &rows[i]
+		}
+		return attachContactChannels(ctx, tx, idx, []ids.UUID{other.UUID, id.UUID, empty.UUID})
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertChildBatchValues(t, rows[1])
+	assertChildBatchEmpty(t, rows[2])
+	o := rows[0]
+	if o.Emails == nil || len(*o.Emails) != 1 || string((*o.Emails)[0].Email) != "other@child-batch.test" ||
+		o.PrimaryEmail == nil || string(*o.PrimaryEmail) != "other@child-batch.test" {
+		t.Fatal("second contact's email went missing or picked up another contact's rows")
+	}
+	if o.Phones == nil || len(*o.Phones) != 1 || (*o.Phones)[0].Phone != "+493099999999" {
+		t.Fatal("second contact's phone went missing or picked up another contact's rows")
+	}
+	if o.Social == nil || len(*o.Social) != 1 || (*o.Social)["github"] != "other-contact" || o.LinkedinUrl != nil {
+		t.Fatal("second contact's social map went missing or picked up another contact's rows")
+	}
+	if o.Reachability == nil || len(*o.Reachability) != 1 || !(*o.Reachability)[0].Reachable {
+		t.Fatal("second contact's live channel must stay reachable and separate from the blocked one")
+	}
+}
+
+func secondChildContact(ctx context.Context, t *testing.T, e *privacyEnv) ids.ContactID {
+	t.Helper()
+	made, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Second child owner", Source: "manual",
+		Emails: []ContactEmailInput{{Email: "other@child-batch.test", EmailType: "work", IsPrimary: true}},
+		Phones: []ContactPhoneInput{{Phone: "+493099999999", PhoneType: "work"}},
+		Social: map[string]any{"github": "other-contact"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.ContactKind](ids.UUID(made.Id))
+	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "child-batch-other"}
+	err = e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := ResolveOrCreateChannelIdentity(ctx, tx, id, ci)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 func TestContactChildBatchReachesStoreReadsAndReplaceSetEchoes(t *testing.T) {
 	e, ctx, id, empty := childBatchFixture(t)
 	got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
