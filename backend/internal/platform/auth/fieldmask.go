@@ -153,60 +153,6 @@ func rowWriteSubset(ctx context.Context, tx pgx.Tx, p principal.Principal, table
 	return out, rows.Err()
 }
 
-// StampWritable answers, for a page of rows of one shareable table, which of
-// them the caller may CHANGE — the boolean the contract's `writable` carries —
-// in ONE statement for the whole page.
-//
-// It is WritableSubset plus the id-collection and write-back loop that five
-// record types would otherwise each spell, and it exists for that reason alone.
-// The authority question is WritableSubset's and must never grow a second
-// answer here: this walks a page, it does not decide anything.
-//
-// What it produces is what a CLIENT is told, never what the server enforces.
-// EnsureWritable is the authority and stays the only gate a mutation passes; a
-// caller that ignored this flag and sent the write anyway is refused exactly as
-// before.
-// It returns the subset it computed, so a caller that needs the same answer for
-// something else — the field masks conditioned on write authority are the case —
-// reads it rather than asking the database the same question twice. The RETURN
-// is the authority answer and the FLAG is the edit affordance, and they differ
-// on an archived row: reading the return for an affordance offers an edit every
-// mutation refuses, reading the flag for a mask hides an owner's own figure the
-// moment they archive the record.
-func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
-	rows []T, id func(T) ids.UUID, set func(*T, bool),
-) (map[ids.UUID]bool, error) {
-	if len(rows) == 0 {
-		return map[ids.UUID]bool{}, nil
-	}
-	rowIDs := make([]ids.UUID, 0, len(rows))
-	for _, row := range rows {
-		rowIDs = append(rowIDs, id(row))
-	}
-	writable, err := WritableSubset(ctx, tx, table, rowIDs)
-	if err != nil {
-		return nil, err
-	}
-	// An ARCHIVED row is nobody's to change, whatever their authority over it,
-	// so the flag says no. The answer this returns keeps it: a mask applies to
-	// a record the caller may still READ, and archiving is not a withdrawal of
-	// authority over the row.
-	archived, err := archivedAmong(ctx, tx, table, writable)
-	if err != nil {
-		return nil, err
-	}
-	p, err := rbacActor(ctx)
-	if err != nil {
-		return nil, err
-	}
-	seat := seatAdmitsWrites(p)
-	for i := range rows {
-		rowID := id(rows[i])
-		set(&rows[i], liveEdit(seat, writable, archived, rowID))
-	}
-	return writable, nil
-}
-
 // sqlNoRow is the clause that admits nothing, for an arm that is closed to
 // this caller outright.
 const sqlNoRow = "FALSE"
