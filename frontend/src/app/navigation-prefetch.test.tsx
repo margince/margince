@@ -331,18 +331,30 @@ describe("navigation intent on the rail's Contacts link", () => {
     expect(server.asked).toHaveLength(0);
   });
 
-  it("does not serve a list warmed under one row scope after the same user's row scope changes", async () => {
+  it("keys the warmed list by the reader scope", () => {
+    expect(contactsArrivalOptions(READER_SCOPE).queryKey[1]).toBe(READER_SCOPE);
+  });
+
+  it("does not hand a screen rows read under the same user's old row scope", async () => {
     const server = contactsServer();
     const client = signedIn();
-    navigationPrefetch(client).intend("contacts");
-    await waitFor(() => expect(server.asked).toHaveLength(1));
-    server.answerAll();
-    await waitFor(() =>
-      expect(
-        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey),
-      ).toBeDefined(),
-    );
-
+    // Read by an earlier visit, not by the prefetch, so nothing drops it on a
+    // principal change but its key.
+    client.setQueryData(contactsArrivalOptions(READER_SCOPE).queryKey, {
+      pages: [
+        {
+          data: [
+            {
+              ...anna,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        },
+      ],
+      pageParams: [null],
+    });
     const narrowed = meFixture({
       allow: { contact: ["read"], deal: ["read"] },
       rowScope: "own",
@@ -350,15 +362,11 @@ describe("navigation intent on the rail's Contacts link", () => {
     act(() => {
       client.setQueryData(sessionOptions.queryKey, narrowed);
     });
+
     renderWith(client, <ContactsScreen />);
 
-    await waitFor(() => expect(server.asked).toHaveLength(2));
+    await waitFor(() => expect(server.asked).toHaveLength(1));
     expect(screen.queryByText("Anna Weber")).toBeNull();
-    const own = healthScope(narrowed) ?? "";
-    expect(own).not.toBe(READER_SCOPE);
-    expect(
-      client.getQueryState(contactsArrivalOptions(own).queryKey)?.fetchStatus,
-    ).toBe("fetching");
   });
 });
 

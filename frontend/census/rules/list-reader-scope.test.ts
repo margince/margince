@@ -41,6 +41,20 @@ export function useRows() {
     ).toHaveLength(1);
   });
 
+  it("reports an imperative read through the client", () => {
+    expect(
+      planted(`export function page(client, cursor) {
+  return client.fetchQuery({
+    queryKey: ["deals", cursor],
+    queryFn: () => api.GET("/deals", { params: { query: { cursor } } }),
+  });
+}
+`),
+    ).toEqual([
+      "src/features/planted.tsx:2: fetchQuery reads a record collection under a key with no reader scope",
+    ]);
+  });
+
   it("passes a read keyed by the reader scope", () => {
     expect(
       planted(`export function useOptions() {

@@ -34,7 +34,21 @@ const QUERY_CALLS = new Set([
   "useSuspenseQuery",
   "queryOptions",
   "infiniteQueryOptions",
+  "fetchQuery",
+  "fetchInfiniteQuery",
+  "prefetchQuery",
+  "prefetchInfiniteQuery",
+  "ensureQueryData",
+  "ensureInfiniteQueryData",
 ]);
+
+/** The name a call is made by: `useQuery(…)` or `client.fetchQuery(…)`. */
+function calledName(call: ts.CallExpression): string | undefined {
+  const callee = call.expression;
+  if (ts.isIdentifier(callee)) return callee.text;
+  if (ts.isPropertyAccessExpression(callee)) return callee.name.text;
+  return undefined;
+}
 
 const COLLECTION = new RegExp(
   `"(?:${COLLECTIONS.map((path) => path.replace(/[-/]/g, "\\$&")).join("|")})"`,
@@ -71,17 +85,14 @@ export function unscopedListReads(file: CensusFile): string[] {
     COLLECTION.test(text) || readers.some((call) => call.test(text));
   const findings: string[] = [];
   const visit = (node: ts.Node) => {
-    if (
-      ts.isCallExpression(node) &&
-      ts.isIdentifier(node.expression) &&
-      QUERY_CALLS.has(node.expression.text)
-    ) {
+    const name = ts.isCallExpression(node) ? calledName(node) : undefined;
+    if (ts.isCallExpression(node) && name && QUERY_CALLS.has(name)) {
       const text = node.getText(source);
       if (reads(text) && !/\breaderScope\b/.test(text)) {
         const line =
           source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
         findings.push(
-          `${file.rel}:${line}: ${node.expression.text} reads a record collection under a key with no reader scope`,
+          `${file.rel}:${line}: ${name} reads a record collection under a key with no reader scope`,
         );
       }
     }

@@ -25,6 +25,7 @@ import {
   uploadAttachment,
 } from "../../lib/attachmentupload";
 import { useCanWrite } from "../../lib/capability";
+import { useHealthScope } from "../../lib/healthscope";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
@@ -195,10 +196,11 @@ export function AddDocumentDialog({
   // Built on every anchor, called only from the deal picker — which only the
   // account branch below renders. A hook cannot be conditional, and an
   // uncalled callback asks nothing.
+  const readerScope = useHealthScope();
   const fetchDealPage = useCallback(
     (cursor: string | null) =>
       queryClient.fetchQuery({
-        queryKey: ["dealsForCompany", anchor.id, cursor],
+        queryKey: ["dealsForCompany", anchor.id, readerScope ?? "", cursor],
         staleTime: DEAL_PAGE_FRESH_MS,
         queryFn: async (): Promise<DealPage> => {
           return unwrap(
@@ -214,7 +216,7 @@ export function AddDocumentDialog({
           );
         },
       }),
-    [anchor.id, queryClient],
+    [anchor.id, queryClient, readerScope],
   );
 
   // Kept on `fetchDealPage` alone. RecordPicker reads a new `searchTargets`
