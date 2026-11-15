@@ -22,7 +22,7 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 	lane := attentionContactCases{store: c.store}
 	for recipient, want := range map[ids.UUID][]ids.UUID{c.e.Rep2: shared, c.e.Rep3: theirs} {
 		q := attention.CaseQuery{Scope: attention.CaseScopeMine, Recipient: recipient, Limit: 10}
-		cases, err := lane.OpenCases(c.e.Admin(), q)
+		cases, total, err := lane.OpenCases(c.e.Admin(), q)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -30,7 +30,7 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(cases) != 1 || count != 1 || len(cases[0].Face.Members) != len(want) {
+		if len(cases) != 1 || count != 1 || total != count || len(cases[0].Face.Members) != len(want) {
 			t.Errorf("recipient %s: %d cases, count %d, want the one case of %d", recipient, len(cases), count, len(want))
 		}
 		if len(cases) == 1 && !slices.Contains(cases[0].Owners, recipient) {

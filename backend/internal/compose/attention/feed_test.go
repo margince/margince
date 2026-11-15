@@ -31,8 +31,8 @@ type stubApprovals struct {
 	err     error
 }
 
-func (s stubApprovals) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.Approval, error) {
-	return s.rows, s.err
+func (s stubApprovals) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.Approval, bool, error) {
+	return s.rows, s.pending <= len(s.rows), s.err
 }
 
 func (s stubApprovals) CountPending(context.Context, ApprovalQuery) (int, error) {

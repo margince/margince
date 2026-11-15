@@ -665,9 +665,9 @@ func TestOwnerScopeNarrowsTheSuggestionCountWithTheList(t *testing.T) {
 			t.Errorf("%s: listed %d and counted %d, want %d", name, len(got), open, len(tc.want))
 		}
 		seam := attentionDealSuggestions{store: e.Deals}
-		page, err := seam.OpenSuggestions(e.signalReader(), tc.owners, 100)
-		if err != nil {
-			t.Fatalf("the Worklist listing for %s: %v", name, err)
+		page, complete, err := seam.OpenSuggestions(e.signalReader(), tc.owners, 100)
+		if err != nil || !complete {
+			t.Fatalf("the Worklist listing for %s: complete %v, %v", name, complete, err)
 		}
 		if seamOpen, err := seam.CountOpen(e.signalReader(), tc.owners); err != nil || seamOpen != len(tc.want) || len(page) != len(tc.want) {
 			t.Errorf("%s: the Worklist listed %d and counted %d (err %v), want %d", name, len(page), seamOpen, err, len(tc.want))

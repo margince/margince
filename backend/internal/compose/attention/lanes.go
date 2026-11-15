@@ -22,9 +22,10 @@ import (
 // Approvals is the staged-proposal queue, read through its owning service.
 // CountPending is separate because the lane is bounded and the count is not: a
 // reader with forty decisions is told forty, then shown the nine worth a sitting.
+// ListWire says whether its page holds every pending row, which is then the count.
 type Approvals interface {
 	PendingInScope(ctx context.Context, in ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error)
-	ListWire(ctx context.Context, in ApprovalQuery) ([]crmcontracts.Approval, error)
+	ListWire(ctx context.Context, in ApprovalQuery) (rows []crmcontracts.Approval, complete bool, err error)
 	CountPending(ctx context.Context, in ApprovalQuery) (int, error)
 }
 

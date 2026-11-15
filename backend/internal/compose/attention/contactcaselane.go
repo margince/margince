@@ -39,7 +39,7 @@ type CaseQuery struct {
 
 // ContactCases is the contacts module's case read, under the reader's scope.
 type ContactCases interface {
-	OpenCases(ctx context.Context, q CaseQuery) ([]ContactCase, error)
+	OpenCases(ctx context.Context, q CaseQuery) (page []ContactCase, total int, err error)
 	CountCases(ctx context.Context, q CaseQuery) (int, error)
 }
 
@@ -85,15 +85,11 @@ func (s *Service) openContactCases(ctx context.Context, depth int) ([]crmcontrac
 	if err != nil {
 		return nil, 0, err
 	}
-	cases, err := s.contactCases.OpenCases(ctx, q)
+	cases, count, err := s.contactCases.OpenCases(ctx, q)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		// A reader who may not read contacts has no case to review.
 		return nil, 0, nil
 	}
-	if err != nil {
-		return nil, 0, err
-	}
-	count, err := s.contactCases.CountCases(ctx, q)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -46,9 +46,11 @@ import (
 // surface reads, so the feed shows what the inbox shows.
 type attentionApprovals struct{ svc *approvals.Service }
 
-func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQuery) ([]crmcontracts.Approval, error) {
-	rows, _, err := a.svc.ListWire(ctx, approvalListInput(in))
-	return rows, err
+// ListWire's page is complete when the inbox has no row after it. The page and
+// CountPending judge the same filters, scope, decidability and expiry.
+func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQuery) ([]crmcontracts.Approval, bool, error) {
+	rows, page, err := a.svc.ListWire(ctx, approvalListInput(in))
+	return rows, !page.HasMore, err
 }
 
 func approvalListInput(in attention.ApprovalQuery) approvals.ListInput {
