@@ -105,8 +105,9 @@ func companyByDomain(ctx context.Context, tx pgx.Tx, domain string) (ids.Company
 // installation's own correspondence.
 //
 // No first_observed_at: a provider answer is no message, and the purchase
-// date would cut off all the contact's mail from before it.
-func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.UUID, companyID ids.CompanyID, providerName string) (ids.UUID, bool, error) {
+// date would cut off all the contact's mail from before it. The bought title is
+// the role, as the company's contact list reads it; empty stays NULL.
+func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.UUID, companyID ids.CompanyID, providerName, title string) (ids.UUID, bool, error) {
 	subject := ids.ContactID{UUID: contactID}
 	// The edge hangs off the contact, so an archive in flight must not be
 	// outrun — the same reason the capture path's edge takes it. The hand-off
@@ -121,14 +122,14 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by)
-		SELECT 'employment', $1, $2, true, $3, $4
+		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by, role)
+		SELECT 'employment', $1, $2, true, $3, $4, NULLIF(btrim($5), '')
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
 			WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
-		contactID, companyID, providerName, connectorCapturedBy(providerName)).Scan(&edgeID)
+		contactID, companyID, providerName, connectorCapturedBy(providerName), title).Scan(&edgeID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Either guard skipped it: the contact already has a current employer,
 		// or this exact edge exists. Nothing written, so nothing audited.
@@ -137,7 +138,7 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 	if err != nil {
 		return ids.UUID{}, false, fmt.Errorf("contacts: linking a contact to a bought employer: %w", err)
 	}
-	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, companyID, relationshipOriginProvider); err != nil {
+	if err := auditCapturedEmployment(ctx, tx, edgeID, subject, companyID, relationshipOriginProvider, title); err != nil {
 		return ids.UUID{}, false, err
 	}
 	if err := fileEmployerTwins(ctx, tx, subject, connectorCapturedBy(providerName)); err != nil {

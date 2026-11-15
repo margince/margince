@@ -42,12 +42,8 @@ func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
 		if err != nil || got != c.want {
 			t.Errorf("bundleTaskSubject(%d) in %s = %q (%v), want %q", c.findings, c.lang, got, err, c.want)
 		}
-		// An English task written before it carried its descriptor is recognised,
-		// so the system-text repair gives it one and it reads in every language.
-		if c.lang != textlang.English {
-			continue
-		}
-		if recovered, err := systemtext.RecoverCanonicalText(c.want); err != nil || recovered == nil {
+		// An English task stored before its descriptor is recognised, so the repair gives it one.
+		if recovered, err := systemtext.RecoverCanonicalText(c.want); c.lang == textlang.English && (err != nil || recovered == nil) {
 			t.Errorf("the stored subject %q is not recognised as catalog text (%v)", c.want, err)
 		}
 	}
