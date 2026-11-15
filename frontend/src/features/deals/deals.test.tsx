@@ -264,14 +264,22 @@ describe("mapDealUpdate", () => {
     expect(body.amount_minor).toBe(1_000_000);
   });
 
-  // Naming a currency on a deal with no figure is half a money value, and the
-  // server's own pair refusal says so better than an amount this form invents.
-  it("invents no figure when a currency is named on an unpriced deal", () => {
+  it("keeps an unpriced deal without a currency", () => {
     const bare = { ...untouched, amount: "", currency: "" };
+    expect(mapDealUpdate({ ...bare, currency: "EUR" }, bare)).toEqual({});
+  });
 
-    const body = mapDealUpdate({ ...bare, currency: "EUR" }, bare);
-
-    expect(Object.keys(body)).toEqual(["currency"]);
+  it("clears the currency with the last figure", () => {
+    const priced = {
+      ...untouched,
+      amount: "100",
+      expected_arr: "",
+      currency: "EUR",
+    };
+    expect(mapDealUpdate({ ...priced, amount: "" }, priced)).toEqual({
+      amount_minor: null,
+      currency: null,
+    });
   });
 
   it("moves the claim alone when the partner stays put", () => {

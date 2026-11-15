@@ -466,7 +466,7 @@ it("the task table says decision model first, and why another feature skips it",
             ...feature,
             task: "deep_read_triage",
             display_name: "Triage a site",
-            decision_skip_reason: "local_only",
+            decision_skip_reason: "unbound",
           },
         ]}
       />
@@ -485,7 +485,7 @@ it("the task table says decision model first, and why another feature skips it",
   );
   // A feature the lane does not serve says why, in its own details.
   expect(await openTaskDetails(user, "Triage a site")).toHaveTextContent(
-    "Decision model not used: this activity takes only a local decision provider.",
+    "Decision model not used: none is bound.",
   );
 });
 

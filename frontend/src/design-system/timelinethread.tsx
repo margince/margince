@@ -1,7 +1,8 @@
 import { Lock, Send } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { formatNumber } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import { reveal } from "../lib/reveal";
 import { Avatar, Button } from "./atoms";
 import { attachmentCount, EmailFiles, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
@@ -302,15 +303,19 @@ export function ThreadRow({
   zone,
   repeatsDay,
   onOpenThread,
+  anchorPrefix,
 }: Readonly<{
   group: TimelineGroup;
   zone: string;
   repeatsDay?: boolean;
   onOpenThread?: (threadKey: string) => void;
+  anchorPrefix?: string;
 }>) {
   const { locale } = useLocale();
   const t = useT();
   const [allOpen, setAllOpen] = useState(false);
+  const ownPrefix = useId();
+  const prefix = anchorPrefix ?? ownPrefix;
   const [newest] = group.entries;
   if (newest === undefined) {
     return null;
@@ -334,9 +339,15 @@ export function ThreadRow({
   // The subject, from a member whose words the reader may read. A withheld
   // member's title is the kind it was, not the subject it had. A thread
   // every member of which is withheld says so where its subject would go.
-  const subject = group.entries.find((entry) => !entry.withheld)?.title;
+  const subject = (group.threadEntries ?? group.entries).find(
+    (entry) => !entry.withheld,
+  )?.title;
   return (
-    <li className={sideClass(newest)} id={`tl-${group.id}`}>
+    <li
+      id={`${prefix}-${group.id}`}
+      className={sideClass(newest)}
+      tabIndex={-1}
+    >
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}
@@ -400,17 +411,7 @@ export function ThreadRow({
             <EmailFiles summaries={memberSummaries(group.entries)} />
           )}
           <ProvenanceTag provenance={newest.provenance} />
-          {/* A button, not a fragment link: the router owns the URL hash. */}
-          {group.newerPart && (
-            <Button variant="ghost" onClick={() => showPart(group.newerPart)}>
-              {t("timeline.group.newerPart")}
-            </Button>
-          )}
-          {group.olderPart && (
-            <Button variant="ghost" onClick={() => showPart(group.olderPart)}>
-              {t("timeline.group.olderPart")}
-            </Button>
-          )}
+          <ThreadContinuation group={group} prefix={prefix} />
           {/* A thread cut by the page edge can be completed when the page
                 passed a handler; where it cannot, the notice still stands,
                 because rendering neither would present the cut as the whole
@@ -436,9 +437,23 @@ export function ThreadRow({
   );
 }
 
-// showPart scrolls the other part of a split thread into view.
-function showPart(id: string | undefined): void {
-  if (id) {
-    document.getElementById(`tl-${id}`)?.scrollIntoView({ block: "center" });
-  }
+function ThreadContinuation({
+  group,
+  prefix,
+}: Readonly<{ group: TimelineGroup; prefix: string }>) {
+  const t = useT();
+  return (
+    <>
+      {group.newerPart && (
+        <Button variant="link" onClick={reveal(`${prefix}-${group.newerPart}`)}>
+          {t("timeline.group.newerPart")}
+        </Button>
+      )}
+      {group.olderPart && (
+        <Button variant="link" onClick={reveal(`${prefix}-${group.olderPart}`)}>
+          {t("timeline.group.olderPart")}
+        </Button>
+      )}
+    </>
+  );
 }

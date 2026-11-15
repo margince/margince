@@ -48,6 +48,8 @@ const wantMinimumShareableWriters = 15
 // merely inconvenient: where the probe is simply a no-op today it was added
 // instead, because a no-op costs nothing and closes the drift.
 var writesWithoutARowProbe = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:ClearSiteOfferDuplicatesTx":          "the system-only company profile correction selects rows by stored duplicate values and provenance, not caller identity; a row-scope write probe would leave stale mirrors outside that identity’s scope. Each company is locked and audited through the ordinary company update tail",
+	"internal/modules/contacts:clearSiteOfferDuplicate":             "the locked per-company step of ClearSiteOfferDuplicatesTx, reachable only from that system-only correction; it preserves user-authored fields and writes through the ordinary company audit and event tail",
 	"internal/modules/privacy:purgeAnonymizedContactJudgments":      "the retention contact anonymization clears derived judgments inside the transaction that selected and anonymized the contact; a reader-specific write grant would prevent completing that accepted privacy action",
 	"internal/modules/privacy:EraseUntoldLeadTx":                    "deletes a website lead whose Art. 14 notice could not be given, on the transaction that learned so: the bounce report, or the accept that could not stage the notice. Nobody asks for this row; the failed notice decides it, and a lead is unowned on capture, so a write probe would refuse every one of them and keep the lead untold",
 	"internal/modules/privacy:deleteLeadRecordsTx":                  "the lead-row half of EraseUntoldLeadTx, split for length; reached only from it and decided the same way",

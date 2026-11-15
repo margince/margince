@@ -31,7 +31,6 @@ const (
 	attemptReasonDecisionOffEnum       = "decision_off_enum"
 	attemptReasonDecisionStateTooLarge = "decision_state_too_large"
 	attemptReasonDecisionUncertified   = "decision_uncertified"
-	attemptReasonDecisionLocalOnly     = "decision_local_only"
 )
 
 // decisionAttemptReasons lists the reasons a decision attempt hands the walk
@@ -39,7 +38,7 @@ const (
 // constants.
 var decisionAttemptReasons = []string{
 	attemptReasonDecisionBelowFloor, attemptReasonDecisionError, attemptReasonDecisionOffEnum,
-	attemptReasonDecisionStateTooLarge, attemptReasonDecisionUncertified, attemptReasonDecisionLocalOnly,
+	attemptReasonDecisionStateTooLarge, attemptReasonDecisionUncertified,
 }
 
 func isDecisionFallbackReason(reason string) bool {
@@ -56,7 +55,6 @@ const DecisionCallTimeout = 15 * time.Second
 const (
 	DecisionSkipUnbound     = "unbound"
 	DecisionSkipUncertified = "uncertified"
-	DecisionSkipLocalOnly   = "local_only"
 )
 
 // DecisionVerdict is a site's reading of one decision answer.

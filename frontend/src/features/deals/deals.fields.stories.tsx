@@ -12,6 +12,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { DealPartner } from "./dealpartner";
 import { DealDetails } from "./deals.details";
 
 // The partner picker on a deal's details asks /partners only for a reader who
@@ -124,4 +125,21 @@ export const NoCompanyRead: Story = {
     );
     await expect(partnerReads.count).toBe(0);
   },
+};
+
+export const NoPartnerAssigned: Story = {
+  beforeEach: () => routePartners({ deal: ["read"], company: ["read"] }),
+  render: () => (
+    <StoryProviders>
+      <DealPartner deal={deal} />
+    </StoryProviders>
+  ),
+};
+export const PartnerWithheld: Story = {
+  beforeEach: () => routePartners({ deal: ["read"] }),
+  render: () => (
+    <StoryProviders>
+      <DealPartner deal={{ ...deal, masked_fields: ["partner_company_id"] }} />
+    </StoryProviders>
+  ),
 };

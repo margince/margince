@@ -322,15 +322,10 @@ jobs:
       # package that reads as a finding about the tree.
       - name: Fetch what only the tagged tests import
         run: make -C backend fetch-test-deps
-      # Every step that needs the network has finished by here.
-      # The offset comes from BACKEND_CLOCK_SKEW rather than being spelled again.
-      # The restore below is the copy that matters: raising the skew here and
-      # leaving a literal there hands the runner back with its clock in the
-      # past, which is the poisoning that step exists to prevent.
-      - name: Move the runner's clock forward
-        run: ./scripts/clock-drift-host.sh move "${BACKEND_CLOCK_SKEW##*:}"
+      # Keep the clock jump, suites and recovery in one shell: the runner's
+      # control-plane credentials must be valid before it starts another step.
       - name: The backend suites at the moved clock
-        run: make backend-clock-drift
+        run: ./scripts/clock-drift-host.sh run "${BACKEND_CLOCK_SKEW##*:}"
       # The clock goes back even when the suites failed. A runner handed back to
       # the pool 200 days ahead poisons whatever runs on it next, and that
       # failure would surface in someone else's lane with nothing to point at.

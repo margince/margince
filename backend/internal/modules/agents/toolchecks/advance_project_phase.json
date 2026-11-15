@@ -1,7 +1,6 @@
 {
   "verb": "advance_project_phase",
   "checks": [
-    "company.read",
     "project.update",
     "relationship.read"
   ],

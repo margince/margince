@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
@@ -157,7 +158,7 @@ func TestGateProfileParaphraseOverlapIsWarningOnly(t *testing.T) {
 func TestGateProfileRefusesUnknownIdsAndBadConfidence(t *testing.T) {
 	idx := profileFixtureIndex()
 	reply := `{"fields":[
-		{"f":"industry","v":"Robotics","e":"s99","c":0.9},
+		{"f":"industry","v":"manufacturing","e":"s99","c":0.9},
 		{"f":"usp","v":"In-house engineering","e":"s0","c":1.7}]}`
 	fields, dropped := gateProfile(reply, idx)
 	if len(fields) != 0 {
@@ -265,5 +266,24 @@ func TestThreeLegalPagesCostAtMostOneCommercialPage(t *testing.T) {
 	// routinely a privacy policy naming no address at all.
 	if corpus(1)[crmcontracts.SiteReadPageKindImpressum] != 1 {
 		t.Error("a site with one legal page must still get it")
+	}
+}
+
+func TestProfileUsesTheIndustryCatalog(t *testing.T) {
+	idx := profileFixtureIndex()
+	for _, code := range contacts.IndustryCodes() {
+		if !strings.Contains(profileRequest(idx).System, code+": ") {
+			t.Errorf("prompt omits industry %s", code)
+		}
+	}
+	for _, value := range []string{"hospitality_tourism", "Hospitality and Tourism", "restaurant", "casual dining restaurant"} {
+		fields, _ := gateProfile(fmt.Sprintf(`{"fields":[{"f":"industry","v":%q,"e":"s0","c":0.9}]}`, value), idx)
+		if (len(fields) == 1) != (value != "casual dining restaurant") {
+			t.Errorf("industry %q: got %v", value, fields)
+		}
+		if len(fields) == 1 && fields[0].Value != "hospitality_tourism" {
+			t.Errorf("industry %q stored %q", value, fields[0].Value)
+		}
+
 	}
 }

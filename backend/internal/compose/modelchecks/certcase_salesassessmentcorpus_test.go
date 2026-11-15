@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package modelchecks_test
 
 import (
 	"context"
@@ -25,7 +25,7 @@ func (a *askedInput) Complete(_ context.Context, req model.Request) (model.Respo
 }
 
 func TestTheUncoveredDealScenarioGradesTheReadingTheFigures(t *testing.T) {
-	prepared := preparedCorpusCase(t, "aicert/corpus/report_interpret/sales_assessment_names_the_deal_no_decision_covers_01.yaml")
+	prepared := preparedCorpusCase(t, "../aicert/corpus/report_interpret/sales_assessment_names_the_deal_no_decision_covers_01.yaml")
 	var asked askedInput
 	if _, err := prepared.Run(context.Background(), &asked); err != nil {
 		t.Fatalf("running the case: %v", err)
