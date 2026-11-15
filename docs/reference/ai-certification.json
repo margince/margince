@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 60,
-    "sites_best_current": 58,
+    "sites_best_current": 57,
     "sites_best_partial": 0,
-    "sites_best_stale": 2,
+    "sites_best_stale": 3,
     "sites_absent": 0,
     "scenarios": 329,
     "records": 397,
@@ -522,7 +522,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -532,7 +532,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 27,
@@ -1721,7 +1721,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1731,7 +1731,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -3918,7 +3918,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -3928,7 +3928,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 27,
@@ -8407,7 +8407,7 @@
       "ready": 43,
       "usable_with_care": 16,
       "not_reliable_yet": 1,
-      "recheck_pending": 2,
+      "recheck_pending": 3,
       "models": [
         {
           "binding": {
@@ -8416,9 +8416,9 @@
             "env": "cloud_frontier"
           },
           "sites": 53,
-          "sites_current": 51,
+          "sites_current": 50,
           "sites_partial": 0,
-          "sites_stale": 2,
+          "sites_stale": 3,
           "runs": 1197,
           "passed": 1181,
           "reliability": 0.9866332497911445,
@@ -8875,7 +8875,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 27,
           "passed": 27,
           "records": 1
@@ -9322,7 +9322,7 @@
       "ready": 37,
       "usable_with_care": 11,
       "not_reliable_yet": 6,
-      "recheck_pending": 24,
+      "recheck_pending": 25,
       "models": [
         {
           "binding": {
@@ -9371,9 +9371,9 @@
             "env": "cloud_frontier"
           },
           "sites": 51,
-          "sites_current": 43,
+          "sites_current": 42,
           "sites_partial": 0,
-          "sites_stale": 8,
+          "sites_stale": 9,
           "runs": 1353,
           "passed": 1264,
           "reliability": 0.934220251293422,
@@ -9745,7 +9745,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 27,
           "passed": 27,
           "records": 2
@@ -11065,9 +11065,9 @@
         "env": "cloud_frontier"
       },
       "sites": 56,
-      "sites_current": 51,
+      "sites_current": 50,
       "sites_partial": 0,
-      "sites_stale": 5,
+      "sites_stale": 6,
       "runs": 1356,
       "passed": 1323,
       "reliability": 0.9756637168141593,
@@ -11126,9 +11126,9 @@
         "env": "cloud_frontier"
       },
       "sites": 57,
-      "sites_current": 46,
+      "sites_current": 45,
       "sites_partial": 0,
-      "sites_stale": 11,
+      "sites_stale": 12,
       "runs": 1407,
       "passed": 1336,
       "reliability": 0.9495380241648899,
@@ -11228,9 +11228,9 @@
         "env": "cloud_frontier"
       },
       "sites": 53,
-      "sites_current": 40,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 13,
+      "sites_stale": 14,
       "runs": 1398,
       "passed": 1373,
       "reliability": 0.9821173104434907,
@@ -11388,9 +11388,9 @@
         "env": "cloud_frontier"
       },
       "sites": 55,
-      "sites_current": 46,
+      "sites_current": 45,
       "sites_partial": 0,
-      "sites_stale": 9,
+      "sites_stale": 10,
       "runs": 1713,
       "passed": 1581,
       "reliability": 0.9229422066549913,
@@ -11408,9 +11408,9 @@
         "env": "cloud_frontier"
       },
       "sites": 53,
-      "sites_current": 40,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 13,
+      "sites_stale": 14,
       "runs": 1380,
       "passed": 1370,
       "reliability": 0.9927536231884058,
@@ -22027,17 +22027,8 @@
       "key": "owed_verdict/owed",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "reliability": 1,
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "a_declined_invitation_that_asks_for_another_day_waits_on_us",
@@ -22101,9 +22092,9 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -22116,7 +22107,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_declined_invitation_that_asks_for_another_day_waits_on_us",
+              "a_declined_invitation_waits_on_nobody",
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "intent_is_separate_from_sales_direction_de",
+              "intent_is_separate_from_sales_direction_en",
+              "intent_is_separate_from_sales_direction_vi",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -22124,9 +22128,9 @@
             "model": "gemini-3.5-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "not_supported",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 24,
@@ -22139,7 +22143,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_declined_invitation_that_asks_for_another_day_waits_on_us",
+              "a_declined_invitation_waits_on_nobody",
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "intent_is_separate_from_sales_direction_de",
+              "intent_is_separate_from_sales_direction_en",
+              "intent_is_separate_from_sales_direction_vi",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -22180,9 +22197,9 @@
             "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -22195,7 +22212,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_declined_invitation_that_asks_for_another_day_waits_on_us",
+              "a_declined_invitation_waits_on_nobody",
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "intent_is_separate_from_sales_direction_de",
+              "intent_is_separate_from_sales_direction_en",
+              "intent_is_separate_from_sales_direction_vi",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -22302,9 +22332,9 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -22317,7 +22347,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_declined_invitation_that_asks_for_another_day_waits_on_us",
+              "a_declined_invitation_waits_on_nobody",
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "intent_is_separate_from_sales_direction_de",
+              "intent_is_separate_from_sales_direction_en",
+              "intent_is_separate_from_sales_direction_vi",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         },
         {
           "binding": {
@@ -22325,9 +22368,9 @@
             "model": "qwen/qwen3.8-27b",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -22340,7 +22383,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (the prompt this build sends): a_declined_invitation_that_asks_for_another_day_waits_on_us, a_declined_invitation_waits_on_nobody, a_direct_question_asks_us_and_a_report_does_not, a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not, an_invitation_asks_nothing_a_calendar_reply_cannot_settle, intent_is_separate_from_sales_direction_de and 3 more",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_declined_invitation_that_asks_for_another_day_waits_on_us",
+              "a_declined_invitation_waits_on_nobody",
+              "a_direct_question_asks_us_and_a_report_does_not",
+              "a_plain_text_time_proposal_waits_on_us_and_an_invitation_does_not",
+              "an_invitation_asks_nothing_a_calendar_reply_cannot_settle",
+              "intent_is_separate_from_sales_direction_de",
+              "intent_is_separate_from_sales_direction_en",
+              "intent_is_separate_from_sales_direction_vi",
+              "the_recipient_line_separates_a_request_from_a_copy"
+            ]
+          }
         }
       ]
     },

@@ -325,8 +325,17 @@ func (s *Store) logActivityAndReadTranscript(
 	if err := s.readTranscriptOnLanding(ctx, tx, out, created); err != nil {
 		return out, created, err
 	}
+	if created {
+		if err := s.askLeadsToQualifyTx(ctx, tx, out); err != nil {
+			return out, created, err
+		}
+	}
 	if in.recordsMeeting != nil && created && in.recordedMeetingWritable && owesOutcome(recorded) {
-		if err := markRecordedMeetingHeld(ctx, tx, recorded, out, in); err != nil {
+		marked, err := markRecordedMeetingHeld(ctx, tx, recorded, out, in)
+		if err != nil {
+			return out, created, err
+		}
+		if err := s.askLeadsToQualifyTx(ctx, tx, marked); err != nil {
 			return out, created, err
 		}
 	}

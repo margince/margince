@@ -136,9 +136,11 @@ type Store struct {
 	invitationAttention InvitationAttention
 }
 
-// LeadQualifyTasks writes the follow-up for a booking filed on a lead.
+// LeadQualifyTasks writes the follow-up for a booking or a held meeting filed
+// on a lead.
 type LeadQualifyTasks interface {
 	FileLeadBookingTx(context.Context, pgx.Tx, ids.LeadID, ids.UUID) error
+	FileLeadMeetingHeldTx(context.Context, pgx.Tx, ids.LeadID, ids.UUID) error
 }
 
 // WithLeadQualifyTasks wires the booking follow-up writer.

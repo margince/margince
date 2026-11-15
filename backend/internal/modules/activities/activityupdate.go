@@ -87,6 +87,9 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		if err == nil {
 			out, err = s.fileUpdatedActivity(ctx, tx, out, in)
 		}
+		if err == nil && in.MeetingStatus != nil {
+			err = s.askLeadsToQualifyTx(ctx, tx, out)
+		}
 		return err
 	})
 	if err != nil {

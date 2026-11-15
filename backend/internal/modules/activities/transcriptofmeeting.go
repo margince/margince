@@ -109,21 +109,22 @@ func owesOutcome(meeting crmcontracts.Activity) bool {
 // meeting already on a deal keeps that deal.
 func markRecordedMeetingHeld(
 	ctx context.Context, tx pgx.Tx, meeting, transcript crmcontracts.Activity, in LogActivityInput,
-) error {
+) (crmcontracts.Activity, error) {
 	held := meetingoutcome.Held
 	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
-	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{MeetingStatus: &held, recordedAt: in.recordedAt}); err != nil {
-		return err
+	marked, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{MeetingStatus: &held, recordedAt: in.recordedAt})
+	if err != nil {
+		return crmcontracts.Activity{}, err
 	}
 	missing := slices.DeleteFunc(slices.Clone(filingKinds), func(kind string) bool {
 		return len(linksOfKinds(meeting, []string{kind})) > 0
 	})
 	for _, link := range linksOfKinds(transcript, missing) {
 		if _, err := RelinkActivityInTx(ctx, tx, id, RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
-			return err
+			return crmcontracts.Activity{}, err
 		}
 	}
-	return nil
+	return marked, nil
 }
 
 func linksOfKinds(activity crmcontracts.Activity, kinds []string) []ActivityLinkInput {
