@@ -192,9 +192,9 @@ func answered(node any) any {
 }
 
 // answeredUnder walks a schema under the currency an enclosing object passes
-// down, by the rule the surface's walk follows. A declared currency may be
-// absent from an answer, so a declared own currency never stops the
-// inheritance here: the schema admits every display the answer can carry.
+// down, by the rule the surface's walk follows. Only a required own currency
+// stops the inheritance: an optional one may be absent from an answer, and
+// the schema admits every display the answer can carry.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
 func answeredUnder(node any, inherited string) any {
@@ -204,12 +204,16 @@ func answeredUnder(node any, inherited string) any {
 		withDisplays(props, inherited)
 		delete(v, nullableMarker)
 		delete(v, humanOnlyMarker)
-		below := values.CurrencyBelow(declared(props, values.ConvertedCurrency), "", inherited)
-		for _, member := range props {
-			answeredUnder(member, below)
-		}
+		below := values.CurrencyBelow(declared(props, values.ConvertedCurrency), required(v, values.AmountCurrency), inherited)
 		for key, member := range v {
-			if key != "properties" || props == nil {
+			switch {
+			case key == "properties" && props != nil:
+				for _, property := range props {
+					answeredUnder(property, below)
+				}
+			case key == "additionalProperties":
+				answeredUnder(member, below)
+			default:
 				answeredUnder(member, inherited)
 			}
 		}
@@ -229,6 +233,17 @@ func declared(props map[string]any, member string) string {
 		return ""
 	}
 	return member
+}
+
+// required is member when schema lists it as required, else empty.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func required(schema map[string]any, member string) string {
+	listed, _ := schema["required"].([]any)
+	if slices.Contains(listed, any(member)) {
+		return member
+	}
+	return ""
 }
 
 // withDisplays declares the `<name>_display` member the tool surface writes

@@ -396,6 +396,21 @@ func TestAClosedAnswerAdmitsTheReadableFigureUnderAnEnclosingBaseCurrency(t *tes
                   type: object
                   additionalProperties: false
                   properties: { weighted_minor: { type: integer } }
+              by_region:
+                type: object
+                additionalProperties:
+                  type: object
+                  additionalProperties: false
+                  properties: { region_minor: { type: integer } }
+              row:
+                type: object
+                required: [currency]
+                properties:
+                  currency: { type: string }
+                  child:
+                    type: object
+                    additionalProperties: false
+                    properties: { owned_minor: { type: integer } }
           loose:
             type: object
             additionalProperties: false
@@ -407,13 +422,15 @@ func TestAClosedAnswerAdmitsTheReadableFigureUnderAnEnclosingBaseCurrency(t *tes
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{`"open_display":{"type":"string"}`, `"weighted_display":{"type":"string"}`} {
+	for _, want := range []string{`"open_display":{"type":"string"}`, `"weighted_display":{"type":"string"}`, `"region_display":{"type":"string"}`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("answer schema %s does not admit %s under the enclosing base_currency", got, want)
 		}
 	}
-	if strings.Contains(got, "stray_display") {
-		t.Errorf("answer schema %s admits a display where no currency is in scope", got)
+	for _, refused := range []string{"stray_display", "owned_display"} {
+		if strings.Contains(got, refused) {
+			t.Errorf("answer schema %s admits %s where no currency is in scope", got, refused)
+		}
 	}
 }
 
