@@ -155,9 +155,9 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   Sign-in forms, closed drawers and other `Analytics` sections load when opened.
 
   `frontend/src/app/navigation-prefetch.ts` starts the first read of `Contacts`
-  or `Deals` when a mouse pointer rests on the sidebar link, or keyboard focus
-  lands on it. It uses the same query options the screen mounts, so the screen
-  finds that read and does not ask again. It reads only for a current session
+  or `Deals` when a pointer rests on the sidebar link, or focus lands on it.
+  It uses the same query options as the screen, so the screen finds that read
+  and does not ask again. It reads only for a current session
   that grants the object, and only into an empty cache entry. It cancels the
   read when the pointer or focus leaves the link before a click. When the
   signed-in user or their grants change, it drops the entries it filled.

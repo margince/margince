@@ -103,8 +103,8 @@ function rail(client: QueryClient) {
   return screen.getByRole("link", { name: "Contacts" });
 }
 
-// Rests a mouse pointer on the link for `restMs` and moves it away, on the
-// hover clock, then hands the real clock back for the reads to settle.
+// Rests a mouse pointer on the link for `restMs` on the hover clock. Then the
+// real clock comes back, so the reads can settle.
 function pointAt(link: HTMLElement, restMs: number, leave = false) {
   takeHoverClock();
   armHoverIntent();

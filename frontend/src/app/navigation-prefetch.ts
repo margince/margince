@@ -66,9 +66,9 @@ function readsTarget(me: Me, target: PrefetchTarget): boolean {
 }
 
 /**
- * One owner of navigation-intent reads per QueryClient. At most one target is
- * warmed at a time, each read mounts under the exact options its screen uses,
- * and every entry it creates is dropped when the signed-in principal changes.
+ * One owner of navigation-intent reads per QueryClient. It warms one target at
+ * a time, under the exact options its screen mounts. A change of signed-in
+ * principal drops every entry it created.
  */
 export class NavigationPrefetch {
   readonly #client: QueryClient;
@@ -172,9 +172,9 @@ export class NavigationPrefetch {
       );
   }
 
-  // Holds one observer on a read the cache does not yet hold, so leaving the
-  // link can abort it, and lets go as soon as it settles. A populated entry,
-  // fresh or stale, is left to the screen's own mount.
+  // One observer holds a read the cache lacks, so leaving the link can abort
+  // it. It lets go once the read settles. A populated entry is left to the
+  // screen's own mount, fresh or stale.
   #warm<Data>(
     target: PrefetchTarget,
     queryKey: QueryKey,

@@ -55,8 +55,8 @@ export async function fetchContactsPage(
 }
 
 /**
- * The first read of the Contacts list a bare `#/contacts` link opens: the same
- * key and request the mounted list makes before the reader turns a dial.
+ * The first read a bare `#/contacts` link opens. The mounted list makes the
+ * same request under the same key before the reader turns a dial.
  */
 export function contactsArrivalOptions() {
   const query = listQueryFromParams(

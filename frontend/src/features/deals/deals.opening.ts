@@ -16,9 +16,8 @@ type Pipeline = components["schemas"]["Pipeline"];
 type Stage = components["schemas"]["Stage"];
 
 /**
- * The deal list's opening state. The list reads its own fixed page (the board
- * is capped and documented as such), so perPage is the shape's default, not a
- * dial the footer offers.
+ * The deal list's opening state. The list reads its own fixed page, so
+ * perPage is the shape's default and not a dial the footer offers.
  */
 export const DEAL_LIST_OPENING: ListQuery = {
   q: "",

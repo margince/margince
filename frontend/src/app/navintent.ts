@@ -9,6 +9,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { useHoverIntent } from "../design-system/hoverintent";
 import { opensElsewhere } from "../lib/linkclick";
 import { routeHash } from "../lib/router";
 import { type NavLevelEntry, type NavTrailLevel, navEntryHref } from "./nav";
@@ -32,7 +33,7 @@ function targetOf(
  * The rail row's navigation intent: a settled mouse pointer or a visible
  * keyboard focus warms the destination's first read, and leaving releases it.
  */
-export function useNavigationIntent(
+function useNavigationIntent(
   level: NavTrailLevel,
   entry: NavLevelEntry,
   active: boolean,
@@ -65,6 +66,57 @@ export function useNavigationIntent(
     onClick: (event: MouseEvent) => {
       if (target && event.button === 0 && !opensElsewhere(event))
         navigationPrefetch(client).follow(target);
+    },
+  };
+}
+
+/**
+ * A rail row's pointer, focus and click handlers: the row's tooltip and its
+ * navigation intent, composed so neither replaces the other.
+ */
+export function useRowIntent({
+  level,
+  entry,
+  active,
+  raiseTip,
+  closeTip,
+  select,
+}: Readonly<{
+  level: NavTrailLevel;
+  entry: NavLevelEntry;
+  active: boolean;
+  raiseTip: (by: "pointer" | "focus") => void;
+  closeTip: () => void;
+  select: () => void;
+}>) {
+  const intent = useNavigationIntent(level, entry, active);
+  // The rail's tips wait for the pointer to settle like every other popover.
+  // A rail crossed on the way to the work column fired one tip per row it
+  // passed, which read as the rail flickering rather than as a page answering.
+  const hover = useHoverIntent(() => {
+    raiseTip("pointer");
+    intent.onSettledPointer();
+  }, closeTip);
+  return {
+    onPointerEnter: (event: PointerEvent) => {
+      intent.onPointerEnter(event);
+      hover.onPointerEnter();
+    },
+    onPointerLeave: () => {
+      hover.onPointerLeave();
+      intent.onLeave();
+    },
+    onFocus: (event: FocusEvent) => {
+      raiseTip("focus");
+      intent.onFocus(event);
+    },
+    onBlur: () => {
+      closeTip();
+      intent.onLeave();
+    },
+    onClick: (event: MouseEvent) => {
+      intent.onClick(event);
+      select();
     },
   };
 }

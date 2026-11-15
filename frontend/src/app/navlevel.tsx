@@ -32,7 +32,7 @@ import {
   railTrail,
   walkUpTarget,
 } from "./nav";
-import { useNavigationIntent } from "./navintent";
+import { useRowIntent } from "./navintent";
 import { type TipState, useRowTip } from "./navrowtip";
 
 // ONE navigation level, whatever its depth. The rail's ten destinations and the
@@ -237,43 +237,21 @@ function NavLevelRow({
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
   const tip = useRowTip(state, { key, level, id: entry.id, label });
-  // The rail's tips wait for the pointer to settle like every other popover.
-  // A rail crossed on the way to the work column fired one tip per row it
-  // passed, which read as the rail flickering rather than as a page answering.
-  const intent = useNavigationIntent(level, entry, active);
-  const hover = useHoverIntent(
-    () => {
-      tip.raise("pointer");
-      intent.onSettledPointer();
-    },
-    () => state.onTip(null),
-  );
+  const handlers = useRowIntent({
+    level,
+    entry,
+    active,
+    raiseTip: tip.raise,
+    closeTip: () => state.onTip(null),
+    select: () => onSelect(entry),
+  });
   return (
     <AppLink
       className={active ? "navitem t-body active" : "navitem t-body"}
       href={navEntryHref(level.path, entry)}
       aria-label={label}
       aria-current={active ? currentClaim(level) : undefined}
-      onPointerEnter={(event) => {
-        intent.onPointerEnter(event);
-        hover.onPointerEnter();
-      }}
-      onPointerLeave={() => {
-        hover.onPointerLeave();
-        intent.onLeave();
-      }}
-      onFocus={(event) => {
-        tip.raise("focus");
-        intent.onFocus(event);
-      }}
-      onBlur={() => {
-        state.onTip(null);
-        intent.onLeave();
-      }}
-      onClick={(event) => {
-        intent.onClick(event);
-        onSelect(entry);
-      }}
+      {...handlers}
     >
       <entry.icon aria-hidden />
       {/* The label stays mounted and fades, so the transition is continuous
