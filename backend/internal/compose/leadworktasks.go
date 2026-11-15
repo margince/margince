@@ -79,6 +79,11 @@ func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.L
 	if err != nil {
 		return fmt.Errorf("compose: reading the lead for its qualify task: %w", err)
 	}
+	// A lead nobody owns has nobody to ask: an unassigned task reaches no
+	// Worklist and would stand in for the one its owner needs later.
+	if owner == nil {
+		return nil
+	}
 	if err := storekit.LockWriteIdentity(ctx, tx, provenance.LeadRepliedSource, lead.String()); err != nil {
 		return err
 	}
