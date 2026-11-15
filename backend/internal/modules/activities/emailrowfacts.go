@@ -56,11 +56,9 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	// against, and a privacy label that guesses must guess DOWN: overstating
 	// the audience makes a reader more careful than they need to be, and
 	// understating it makes them less.
-	reach, err := auth.ActivitiesReachingEverySeat(ctx, tx, emailIDs)
-	if err != nil {
+	if err := withEverySeatReach(ctx, tx, page); err != nil {
 		return err
 	}
-	applyEverySeatReach(page, reach)
 	if err := withCalendarInvitations(ctx, tx, page, asOf); err != nil {
 		return err
 	}
@@ -81,19 +79,28 @@ func applyCounterparties(page []crmcontracts.Activity, parties map[ids.UUID]emai
 	}
 }
 
-// applyEverySeatReach widens `team` to `workspace` on the rows a stranger can
-// reach. Only that word is touched: participants, selected and withheld are
-// narrower answers that a workspace-wide filing does not change.
-func applyEverySeatReach(page []crmcontracts.Activity, reach map[ids.UUID]bool) {
+// withEverySeatReach asks only about Team badges; other audiences cannot widen.
+func withEverySeatReach(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+	var wanted []ids.UUID
+	var summaries []*crmcontracts.EmailSummary
 	for i := range page {
 		summary := page[i].EmailSummary
 		if summary == nil || summary.DisplayStatus != crmcontracts.EmailAccessStatusTeam {
 			continue
 		}
+		wanted = append(wanted, ids.UUID(page[i].Id))
+		summaries = append(summaries, summary)
+	}
+	reach, err := auth.ActivitiesReachingEverySeat(ctx, tx, wanted)
+	if err != nil {
+		return err
+	}
+	for _, summary := range summaries {
 		if reach[ids.UUID(summary.ActivityId)] {
 			summary.DisplayStatus = crmcontracts.EmailAccessStatusWorkspace
 		}
 	}
+	return nil
 }
 
 // messageIDsOf is the chat messages on a page the reader may read. A withheld
