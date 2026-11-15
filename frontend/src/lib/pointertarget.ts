@@ -2,17 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /**
- * Marks the one element the pointer is over with `data-pointer-over`.
- *
- * app.css lights the scrollbar of that element only. The rule used to be
- * `*:hover:not(:has(:hover))`. Chromium recomputes the style of every element
- * on each hover change while any `:has()` holds `:hover`. On a board column of
- * 500 cards a pointer resting on the column cost hundreds of milliseconds per
- * scrolled frame.
- *
- * A `pointerover` event targets the deepest element under the pointer, which
- * is the element that rule picked out. Moving one attribute restyles two
- * elements, the old target and the new one.
+ * Marks the deepest element under the pointer with `data-pointer-over`, so
+ * app.css can light that one scrollbar without `:has(:hover)`. Chromium
+ * restyles every element on each hover change while any `:has()` holds
+ * `:hover`. Moving this attribute restyles two elements.
  */
 
 export const POINTER_OVER_ATTRIBUTE = "data-pointer-over";
