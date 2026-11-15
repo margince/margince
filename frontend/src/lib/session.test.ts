@@ -4,6 +4,7 @@ import { act, cleanup, renderHook } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { resetToSignedOut, useMe } from "./session";
 import { STORAGE_KEYS } from "./storage";
 
@@ -40,12 +41,10 @@ describe("signing out", () => {
 
 describe("a different seat signing in", () => {
   type Me = components["schemas"]["MeResponse"];
-  const seat = (id: string, authorization: string[] = ["contacts:read"]) =>
-    ({
-      user: { id },
-      workspace_name: "Demo",
-      authorization,
-    }) as unknown as Me;
+  const seat = (id: string, allow: GrantSpec = { contact: ["read"] }): Me => {
+    const me = meFixture({ allow });
+    return { ...me, user: { ...me.user, id } };
+  };
 
   function signedIn(client: QueryClient, me: Me) {
     client.setQueryData(["me"], me);
@@ -71,7 +70,7 @@ describe("a different seat signing in", () => {
     const client = new QueryClient();
     const view = signedIn(client, seat("seat-a"));
     client.setQueryData(["contact", "name", "c1"], "Own name");
-    act(() => client.setQueryData(["me"], seat("seat-a", ["deals:read"])));
+    act(() => client.setQueryData(["me"], seat("seat-a", { deal: ["read"] })));
     view.rerender();
     expect(client.getQueryData(["contact", "name", "c1"])).toBe("Own name");
   });
