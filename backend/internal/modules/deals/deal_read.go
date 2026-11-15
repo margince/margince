@@ -258,7 +258,12 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 	}
 	return storekit.RunListPageTx(ctx, tx, pre, dealTable, dealColumns, active.cols, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Deal) error { return finishDealPage(ctx, tx, page) })
+		func(tx pgx.Tx, page []crmcontracts.Deal) error {
+			if in.FactsOnly {
+				return maskDeals(ctx, tx, page)
+			}
+			return finishDealPage(ctx, tx, page)
+		})
 }
 
 // dealListQuery is the half of a deal list both entry points share: the sort
