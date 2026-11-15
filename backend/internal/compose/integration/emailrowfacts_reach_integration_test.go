@@ -29,7 +29,7 @@ func TestEmailAudienceReachSkipsOneStatementForNonTeamPages(t *testing.T) {
 		if _, err := e.Activities.SetAudience(author, id, input); err != nil {
 			t.Fatal(err)
 		}
-		rows, cost := audienceTimeline(t, e, author, contact)
+		rows, cost := audienceTimeline(author, t, e, contact)
 		if len(rows) != 1 || rows[0].EmailSummary == nil {
 			t.Fatalf("timeline=%+v", rows)
 		}
@@ -70,7 +70,7 @@ func TestMixedEmailAudienceBadgesMatchPresentation(t *testing.T) {
 		want[id.UUID] = crmcontracts.EmailAccessStatus(audience)
 	}
 	for readerIndex, reader := range []context.Context{author, colleague} {
-		rows, _ := audienceTimeline(t, e, reader, contact)
+		rows, _ := audienceTimeline(reader, t, e, contact)
 		if len(rows) != len(want) {
 			t.Fatalf("timeline has %d rows, want %d", len(rows), len(want))
 		}
@@ -96,7 +96,7 @@ func TestMixedEmailAudienceBadgesMatchPresentation(t *testing.T) {
 	}
 }
 
-func audienceTimeline(t *testing.T, e *Env, reader context.Context, contact ids.UUID) ([]crmcontracts.Activity, int64) {
+func audienceTimeline(reader context.Context, t *testing.T, e *Env, contact ids.UUID) ([]crmcontracts.Activity, int64) {
 	t.Helper()
 	ctx, meter := database.WithStatementMeter(reader)
 	rows, _, err := e.Activities.ListActivities(ctx, activities.ListActivitiesInput{

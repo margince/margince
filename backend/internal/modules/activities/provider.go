@@ -44,6 +44,13 @@ func (p *Provider) WithTranscriptEnqueue(enqueue TranscriptReadEnqueue) *Provide
 	return p
 }
 
+// WithLeadQualifyTasks lets a meeting this seam marks held ask to qualify its
+// lead, as the REST path does.
+func (p *Provider) WithLeadQualifyTasks(tasks LeadQualifyTasks) *Provider {
+	p.store = p.store.WithLeadQualifyTasks(tasks)
+	return p
+}
+
 func ref(t datasource.EntityType, id openapi_types.UUID) datasource.EntityRef {
 	return datasource.EntityRef{Type: t, ID: ids.UUID(id)}
 }

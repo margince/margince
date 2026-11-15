@@ -183,9 +183,10 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 		offset = parsed
 	}
 	limit = max(1, min(limit, 100))
+	week := evidenceWeek(frame, group)
 	matched := 0
 	for _, fact := range facts {
-		if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(frame, fact, group) {
+		if fact.Metric != metric || fact.ContextID != contextID || !evidenceGroup(fact, group, week) {
 			continue
 		}
 		if through != nil && (fact.At() == nil || !fact.At().Before(*through)) {
@@ -201,29 +202,32 @@ func evidencePage(frame crmcontracts.ReportingContext, facts []Fact, metric crmc
 			out.Truncated = true
 			break
 		}
-		row := fact.Row
-		if fact.EvidenceAt != nil {
-			row.OccurredAt = fact.EvidenceAt
-		}
-		if fact.OwnerLabel != "" && !fact.OwnerWithheld && !row.Restricted {
-			row.OwnerLabel = &fact.OwnerLabel
-		}
-		if fact.StageLabel != "" && !row.Restricted {
-			row.StageLabel = &fact.StageLabel
-		}
-		if fact.OwnerWithheld || row.Restricted {
-			row.OwnerId = nil
-			row.OwnerLabel = nil
-		}
-		if row.Restricted {
-			row.StageLabel = nil
-		}
-		out.Rows = append(out.Rows, row)
+		out.Rows = append(out.Rows, evidenceRow(fact))
 	}
 	return out, nil
 }
 
-func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string) bool {
+// evidenceRow shows one fact as a row, withholding what the reader may not
+// see. It copies the labels, so the scan over the facts allocates nothing.
+func evidenceRow(fact Fact) crmcontracts.ReportingEvidenceRow {
+	row := fact.Row
+	if fact.EvidenceAt != nil {
+		row.OccurredAt = fact.EvidenceAt
+	}
+	if fact.OwnerWithheld || row.Restricted {
+		row.OwnerId, row.OwnerLabel = nil, nil
+	} else if owner := fact.OwnerLabel; owner != "" {
+		row.OwnerLabel = &owner
+	}
+	if row.Restricted {
+		row.StageLabel = nil
+	} else if stage := fact.StageLabel; stage != "" {
+		row.StageLabel = &stage
+	}
+	return row
+}
+
+func evidenceGroup(fact Fact, group string, week evidenceWeekSpan) bool {
 	if group == "" {
 		return true
 	}
@@ -236,18 +240,40 @@ func evidenceGroup(frame crmcontracts.ReportingContext, fact Fact, group string)
 		return fact.StageID == after || fact.GroupKey == group
 	}
 	if strings.HasPrefix(group, "week:") && fact.At() != nil {
-		zone, err := time.LoadLocation(frame.Timezone)
-		if err != nil {
-			return false
-		}
-		start, err := time.ParseInLocation(time.DateOnly, strings.TrimPrefix(group, "week:"), zone)
-		if err != nil {
-			return false
-		}
-		days := 7 - (int(start.Weekday())+6)%7
-		return !fact.At().Before(start) && fact.At().Before(start.AddDate(0, 0, days))
+		return week.valid && !fact.At().Before(week.start) && fact.At().Before(week.end)
 	}
 	return fact.GroupKey == group
+}
+
+// evidenceWeekSpan is the local calendar span a "week:" group names. A group
+// that is not a week, or names a bad date or zone, has no valid span.
+type evidenceWeekSpan struct {
+	start, end time.Time
+	valid      bool
+}
+
+// evidenceWeek reads the week a group names once per page, not once per fact:
+// loading the zone reads its rules from disk.
+func evidenceWeek(frame crmcontracts.ReportingContext, group string) evidenceWeekSpan {
+	date, weekly := strings.CutPrefix(group, "week:")
+	if !weekly {
+		return evidenceWeekSpan{}
+	}
+	zone, err := time.LoadLocation(frame.Timezone)
+	if err != nil {
+		return evidenceWeekSpan{}
+	}
+	start, err := time.ParseInLocation(time.DateOnly, date, zone)
+	if err != nil {
+		return evidenceWeekSpan{}
+	}
+	return evidenceWeekSpan{start: start, end: WeekEnd(start), valid: true}
+}
+
+// WeekEnd is the local midnight of the Monday after start, so a week a period
+// opens midweek is short. Weekly charts and their evidence both cut weeks here.
+func WeekEnd(start time.Time) time.Time {
+	return start.AddDate(0, 0, 7-(int(start.Weekday())+6)%7)
 }
 
 func (s *Service) checkedEvaluation(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, expectation EvidenceExpectation) (Evaluation, error) {

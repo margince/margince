@@ -9,15 +9,14 @@ package compose
 // is made, and the lead's owner is asked to qualify them, once at a time.
 
 import (
-	"context"
+	"log/slog"
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -76,25 +75,23 @@ func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {
 		t.Error("a reply converted the lead; only somebody working the lead converts it")
 	}
 
-	// The owner works the ask. Mail we send next asks nothing; their next
-	// message asks again.
-	var asked ids.UUID
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT a.id FROM activity a
-			JOIN activity_link al ON al.activity_id = a.id
-			WHERE al.lead_id = $1 AND a.source_system = $2`, lead, provenance.LeadRepliedSource).Scan(&asked)
-	}); err != nil {
-		t.Fatalf("reading the ask: %v", err)
-	}
-	if _, err := l.e.Activities.CompleteTask(l.e.Admin(), ids.From[ids.ActivityKind](asked), l.at); err != nil {
-		t.Fatalf("completing the ask: %v", err)
-	}
+	// The owner answers without closing the ask, the lead writes again, and a
+	// meeting with them is held: the one ask stays the only one.
 	l.mail(t, owedMail{from: l.seat, to: address, subject: "Re: Our offer", inReplyTo: offer, at: l.at.Add(3 * time.Minute)}, true)
-	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 0 {
-		t.Errorf("our own mail to a lead who wrote before opened %d asks, want none", n)
-	}
 	l.mail(t, owedMail{from: address, to: l.seat, subject: "Re: Our offer", inReplyTo: offer, at: l.at.Add(4 * time.Minute)}, true)
+	store := l.e.Activities.WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default()))
+	at, held := l.at.Add(-time.Hour), meetingoutcome.Held
+	meeting, _, err := store.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Demo"), Source: "manual",
+		OccurredAt: &at, Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+	})
+	if err == nil {
+		_, err = store.UpdateActivity(l.e.Admin(), ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), activities.UpdateActivityInput{MeetingStatus: &held})
+	}
+	if err != nil {
+		t.Fatalf("holding a meeting with the lead: %v", err)
+	}
 	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
-		t.Errorf("their next message after the ask was worked opened %d asks, want one", n)
+		t.Errorf("a reply, a new message and a held meeting left %d open asks, want one", n)
 	}
 }
