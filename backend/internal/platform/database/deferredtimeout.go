@@ -3,14 +3,17 @@
 
 package database
 
-import "github.com/jackc/pgx/v5"
+import (
+	"slices"
+
+	"github.com/jackc/pgx/v5"
+)
 
 // A deferred snapshot tracks the statement_timeout its session will hold once
-// the pending statements run. A lane then reads the page's timeout only when
-// nothing has told the snapshot what it is, and sets its budget only when a
-// different one is in force. A lane that closes on a budget the next lane
-// opens with leaves that budget in place: the restore and the set between them
-// cancel out, so neither is sent.
+// the pending statements run. A lane reads the page's timeout only when the
+// snapshot does not know it. It sets its budget only when another is in force.
+// When the next lane opens on the same budget, the restore and the set between
+// them cancel out, so neither is sent.
 
 // laneTimeout is what a lane changed about the statement timeout, so closing it
 // or rolling it back puts the right value back.
@@ -76,8 +79,8 @@ func restoreTarget(restore deferredStatement) *string {
 	return &target
 }
 
-// returnTimeout is the timeout after a lane was dropped or rolled back: the one
-// it found, and the restore it held back goes into the queue again.
+// returnTimeout is the timeout after a lane was dropped or rolled back. It is
+// the one the lane found, and a restore the lane held back is queued again.
 func (d *deferredTx) returnTimeout(lane *laneTimeout) {
 	d.timeout = nil
 	if lane.known {
@@ -92,8 +95,7 @@ func (d *deferredTx) returnTimeout(lane *laneTimeout) {
 // heldRestore takes the last pending timeout statement out of the queue when
 // it restores from budget, and answers it.
 func (d *deferredTx) heldRestore(budget string) *deferredStatement {
-	for i := len(d.pending) - 1; i >= 0; i-- {
-		statement := d.pending[i]
+	for i, statement := range slices.Backward(d.pending) {
 		if statement.sql != boundStatementSQL {
 			continue
 		}

@@ -34,8 +34,8 @@ func laneSeeing(ctx context.Context, t *testing.T, tx pgx.Tx, budget time.Durati
 	})
 }
 
-// Two lanes in a row on one budget send no timeout statement between them,
-// each still runs under its budget, and the page's timeout is back after them.
+// Two lanes in a row on one budget send no timeout statement between them.
+// Each still runs under its budget, and the page's timeout is back after them.
 func TestAdjacentLanesOnOneBudgetSendNoTimeoutStatementsBetweenThem(t *testing.T) {
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		page := statementTimeout(ctx, t, tx)
@@ -63,8 +63,8 @@ func TestAdjacentLanesOnOneBudgetSendNoTimeoutStatementsBetweenThem(t *testing.T
 	})
 }
 
-// A lane on another budget, a lane that fails, and a lane that sends nothing
-// each leave the timeout as the next statement must find it.
+// A lane leaves the timeout as the next statement must find it, whether it ran
+// on another budget, failed, or sent nothing.
 func TestALaneLeavesTheTimeoutTheNextStatementExpects(t *testing.T) {
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		page := statementTimeout(ctx, t, tx)
@@ -136,6 +136,39 @@ func TestALanePutsBackTheTimeoutItFound(t *testing.T) {
 		}
 		if after := statementTimeout(ctx, t, tx); after != "3s" {
 			t.Errorf("after the lane the timeout is %q, want the bound 3s", after)
+		}
+	})
+}
+
+// The outer lane here took over the restore of the lane before it. An inner
+// lane that fails leaves the outer budget, and then the page's timeout.
+func TestAFailedInnerLaneKeepsTheRestoreItsOuterLaneHolds(t *testing.T) {
+	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
+		page := statementTimeout(ctx, t, tx)
+		var first string
+		if err := laneSeeing(ctx, t, tx, time.Second, &first); err != nil {
+			t.Fatal(err)
+		}
+		failed := errors.New("the inner lane gave up")
+		var afterInner string
+		if err := database.WithDegradableRead(ctx, time.Second, func(ctx context.Context) error {
+			selectOne(ctx, t, tx)
+			if err := database.WithDegradableRead(ctx, 2*time.Second, func(ctx context.Context) error {
+				selectOne(ctx, t, tx)
+				return failed
+			}); !errors.Is(err, failed) {
+				t.Errorf("the inner lane answered %v", err)
+			}
+			afterInner = statementTimeout(ctx, t, tx)
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if afterInner != "1s" {
+			t.Errorf("after the failed inner lane the outer lane runs under %q, want 1s", afterInner)
+		}
+		if after := statementTimeout(ctx, t, tx); after != page {
+			t.Errorf("after the outer lane the timeout is %q, want %q", after, page)
 		}
 	})
 }
