@@ -13,8 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// StampRecordAffordances shares row authority between edit and archive flags.
-// Its return keeps archived update authority for field masks; it authorizes no mutation.
+// StampRecordAffordances stamps the edit and archive flags of contacts,
+// companies and deals, the records with an owner archive rule. Both flags read
+// one row authority answer and one fresh archive state. Its return keeps
+// archived update authority for field masks; it authorizes no mutation.
 func StampRecordAffordances[T any](ctx context.Context, tx pgx.Tx, rule ArchiveRule,
 	rows []T, id func(T) ids.UUID, setWritable, setArchivable func(*T, bool),
 ) (map[ids.UUID]bool, error) {
@@ -23,52 +25,87 @@ func StampRecordAffordances[T any](ctx context.Context, tx pgx.Tx, rule ArchiveR
 	default:
 		return nil, fmt.Errorf("auth: no owner archive affordances for %q", rule.table)
 	}
+	return stampAffordances(ctx, tx, rule.table, &archiveStamp[T]{rule: rule, set: setArchivable}, rows, id, setWritable)
+}
+
+// StampWritable stamps only the edit flag, through StampRecordAffordances' code.
+// Leads and projects have no owner archive rule and no archive flag on the wire.
+// The deal-room preview reads only the deal's edit flag.
+func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
+	rows []T, id func(T) ids.UUID, set func(*T, bool),
+) (map[ids.UUID]bool, error) {
+	return stampAffordances[T](ctx, tx, table, nil, rows, id, set)
+}
+
+// archiveStamp is the archive half of a stamp: the record's rule and where
+// its flag goes. Nil for a record that carries no archive flag.
+type archiveStamp[T any] struct {
+	rule ArchiveRule
+	set  func(*T, bool)
+}
+
+// stampAffordances is the one walk both stamps take. Row authority and the
+// archive state are read once for the page and shared by both flags. The
+// returned map is the raw update authority: an archived row stays in it, so an
+// owner's masked figures stay readable after an archive.
+func stampAffordances[T any](ctx context.Context, tx pgx.Tx, table string, archive *archiveStamp[T],
+	rows []T, id func(T) ids.UUID, setWritable func(*T, bool),
+) (map[ids.UUID]bool, error) {
+	if !shareableTables[table] {
+		return nil, fmt.Errorf("auth: %q is not a shareable table", table)
+	}
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return nil, err
 	}
-	update := make(map[ids.UUID]bool, len(rows))
-	canUpdate := hasUpdateGrant(p, rule.table)
-	canArchive, canDelete := archiveAdmission(ctx, p, rule)
-	if !canUpdate && !canArchive {
-		for i := range rows {
-			setWritable(&rows[i], false)
-			setArchivable(&rows[i], false)
-		}
-		return update, nil
+	canUpdate := hasUpdateGrant(p, table)
+	canArchive, canDelete := false, false
+	if archive != nil {
+		canArchive, canDelete = archiveAdmission(ctx, p, archive.rule)
 	}
-	named := make([]ids.UUID, len(rows))
-	for i := range rows {
-		named[i] = id(rows[i])
-	}
-	authority, err := rowWriteSubset(ctx, tx, p, rule.table, named)
-	if err != nil {
-		return nil, err
-	}
-	// A previously selected ArchivedAt may predate a concurrent archive.
-	archived, err := archivedAmong(ctx, tx, rule.table, authority)
-	if err != nil {
-		return nil, err
-	}
-	live := maps.Clone(authority)
-	excludeArchived(live, archived)
-	if canUpdate {
-		update = authority
-	}
-	archivable := map[ids.UUID]bool{}
-	if canArchive {
-		archivable, err = archivableFromLive(ctx, tx, rule, live, canDelete)
-		if err != nil {
+	named := pageRowIDs(rows, id)
+	authority, archived := map[ids.UUID]bool{}, map[ids.UUID]bool{}
+	if canUpdate || canArchive {
+		if authority, err = rowWriteSubset(ctx, tx, p, table, named); err != nil {
 			return nil, err
 		}
+		// Read fresh: a previously selected ArchivedAt may predate a concurrent archive.
+		if archived, err = archivedAmong(ctx, tx, table, authority); err != nil {
+			return nil, err
+		}
+	}
+	update := map[ids.UUID]bool{}
+	if canUpdate {
+		update = authority
 	}
 	// The seat ceiling limits actions only; masks read the role's row authority.
 	seat := seatAdmitsWrites(p)
 	for i, rowID := range named {
 		setWritable(&rows[i], liveEdit(seat, update, archived, rowID))
-		setArchivable(&rows[i], archivable[rowID])
+	}
+	if archive == nil {
+		return update, nil
+	}
+	archivable := map[ids.UUID]bool{}
+	if canArchive {
+		live := maps.Clone(authority)
+		excludeArchived(live, archived)
+		if archivable, err = archivableFromLive(ctx, tx, archive.rule, live, canDelete); err != nil {
+			return nil, err
+		}
+	}
+	for i, rowID := range named {
+		archive.set(&rows[i], archivable[rowID])
 	}
 	return update, nil
+}
+
+func pageRowIDs[T any](rows []T, id func(T) ids.UUID) []ids.UUID {
+	named := make([]ids.UUID, len(rows))
+	for i := range rows {
+		named[i] = id(rows[i])
+	}
+	return named
 }
 
 // liveEdit is the edit flag every record carries: a writing seat, row

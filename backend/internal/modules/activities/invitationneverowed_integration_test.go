@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -171,5 +174,134 @@ func TestTheRequestPassRetiresRemindersForHeldAndOwnDomainInvitations(t *testing
 		if open != 0 {
 			t.Errorf("%s: %d reminders stay open, want 0", name, open)
 		}
+	}
+}
+
+// The settlement pass judges whether our reply answered a request. An
+// invitation for a meeting already held asked for an RSVP, never for words, so
+// there is nothing to judge.
+func TestTheSettlementPassJudgesNoInvitationThatIsNeverOwed(t *testing.T) {
+	e := setupLoad(t)
+	held := invitationAsking(t, e)
+	meetingWithUID(t, e, held, requestInstant.Add(-24*time.Hour))
+	ahead := invitationAsking(t, e)
+	meetingWithUID(t, e, ahead, requestInstant.Add(72*time.Hour))
+	for _, invitation := range []ids.UUID{held, ahead} {
+		replyTo(t, e, invitation, "Thanks, see you there.", requestInstant.Add(time.Hour))
+	}
+
+	candidates := repliedIDs(t, e, requestInstant.Add(2*time.Hour))
+	if _, offered := candidates[held]; offered {
+		t.Error("the settlement pass offers an invitation for a meeting already held")
+	}
+	if _, offered := candidates[ahead]; !offered {
+		t.Error("an outside invitation for a meeting ahead is no longer offered, so the case above proves nothing")
+	}
+}
+
+// The response rate counts replies to customers waiting on a written answer.
+// An answer to an invitation that is never owed one is not such a reply.
+func TestTheResponseRateCountsNoAnswerToANeverOwedInvitation(t *testing.T) {
+	e := setupLoad(t)
+	from, to := requestInstant.Add(-24*time.Hour), requestInstant.Add(24*time.Hour)
+	before, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	held := invitationAsking(t, e)
+	meetingWithUID(t, e, held, requestInstant.Add(-24*time.Hour))
+	replyTo(t, e, held, "Thanks, see you there.", requestInstant.Add(time.Hour))
+
+	after, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Answered != before.Answered {
+		t.Errorf("an answer to an invitation for a held meeting moved the answered count %d → %d", before.Answered, after.Answered)
+	}
+	request := seedEmailRequest(t, e, "Angebot", "commitment", OwedVerdictAsksUs)
+	replyTo(t, e, request, "Anbei das Angebot.", requestInstant.Add(time.Hour))
+	control, err := metricsStore(e).ResponseWindow(e.as(), from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if control.Answered != after.Answered+1 {
+		t.Errorf("an answered request moved the count %d → %d, so the case above proves nothing", after.Answered, control.Answered)
+	}
+}
+
+// A company finding that cites an invitation for a held meeting says no question
+// is waiting: SettledCitations reads it as settled, as the Worklist does.
+func TestACitedInvitationForAHeldMeetingIsSettled(t *testing.T) {
+	e := setupLoad(t)
+	held := invitationAsking(t, e)
+	meetingWithUID(t, e, held, requestInstant.Add(-24*time.Hour))
+	ahead := invitationAsking(t, e)
+	meetingWithUID(t, e, ahead, requestInstant.Add(72*time.Hour))
+
+	var settled map[ids.UUID]bool
+	reader := e.asSeat(e.rep)
+	if err := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)).Tx(reader, func(tx pgx.Tx) error {
+		var err error
+		settled, err = SettledCitations(reader, tx, []ids.UUID{held, ahead}, nil, requestInstant.Add(time.Hour))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !settled[held] {
+		t.Error("an invitation for a held meeting still reads as a question waiting for an answer")
+	}
+	if settled[ahead] {
+		t.Error("an outside invitation for a meeting ahead reads as settled, so the case above proves nothing")
+	}
+}
+
+// A weekly meeting is one UID and many occurrences. An invitation for an
+// occurrence already held is never owed a reply, though later ones lie ahead.
+func TestAnInvitationForAHeldOccurrenceOfASeriesIsNeverOwed(t *testing.T) {
+	e := setupLoad(t)
+	uid := "weekly-" + ids.NewV7().String() + "@google.com"
+	held, ahead := requestInstant.Add(-24*time.Hour).UTC(), requestInstant.Add(6*24*time.Hour).UTC()
+	for _, starts := range []time.Time{held, ahead} {
+		meeting := ids.NewV7()
+		e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+			VALUES ($1, 'meeting', 'Weekly', $2, 'seed', 'system')`, meeting, starts)
+		e.exec(t, `INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
+			VALUES ('meeting', $1, $2, 'seed')`, MeetingIdentityKey(uid, starts.Format(time.RFC3339)), meeting)
+	}
+	forHeld, forAhead := invitationAsking(t, e), invitationAsking(t, e)
+	for invitation, starts := range map[ids.UUID]time.Time{forHeld: held, forAhead: ahead} {
+		e.exec(t, `UPDATE activity SET calendar_uid = $2, calendar_event = jsonb_build_object('occurrence', $3::text) WHERE id = $1`,
+			invitation, uid, starts.Format(time.RFC3339))
+	}
+	if owedNow(t, e, forHeld) {
+		t.Error("an invitation for a held occurrence is owed a reply because a later occurrence exists")
+	}
+	if _, open := openInvitationsFor(t, e, e.rep, forHeld)[forHeld]; open {
+		t.Error("the held occurrence's invitation still offers an RSVP because a later occurrence exists")
+	}
+	if current, _ := offeredOnTheRecord(t, e, forAhead); !current {
+		t.Error("an outside invitation for an occurrence ahead is no longer a request, so the case above proves nothing")
+	}
+}
+
+// An all-day series names its occurrence by date: the mail writes 20260912 and
+// the meeting's key holds that day's midnight in UTC. The two still meet.
+func TestAnInvitationForAHeldAllDayOccurrenceIsNeverOwed(t *testing.T) {
+	e := setupLoad(t)
+	uid := "offsite-" + ids.NewV7().String() + "@google.com"
+	held, ahead := requestInstant.AddDate(0, 0, -1), requestInstant.AddDate(0, 0, 6)
+	for _, day := range []time.Time{held, ahead} {
+		meeting := ids.NewV7()
+		e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, occurred_precision, source, captured_by)
+			VALUES ($1, 'meeting', 'Offsite', $2, 'day', 'seed', 'system')`, meeting, day.Truncate(24*time.Hour))
+		e.exec(t, `INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
+			VALUES ('meeting', $1, $2, 'seed')`, MeetingIdentityKey(uid, day.Format(time.DateOnly)), meeting)
+	}
+	forHeld := invitationAsking(t, e)
+	e.exec(t, `UPDATE activity SET calendar_uid = $2, calendar_event = jsonb_build_object('occurrence', $3::text) WHERE id = $1`,
+		forHeld, uid, held.Format("20060102"))
+	if owedNow(t, e, forHeld) {
+		t.Error("an invitation for a held all-day occurrence is owed a reply")
 	}
 }

@@ -21,7 +21,7 @@ import (
 // by this reader. The Worklist shows them as one card, so setting the card
 // aside sets them aside too; otherwise the next one would surface as a fresh
 // card the moment this one went. Empty for a card that is not a request.
-func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) ([]ids.ActivityID, error) {
+func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID, asOf time.Time) ([]ids.ActivityID, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	content, err := auth.ActivityContentClause(ctx, "a", arg)
@@ -29,6 +29,7 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 		return nil, err
 	}
 	cardID := arg(card)
+	neverOwed := invitationNeverOwedSQL(fmt.Sprintf("$%d::timestamptz", arg(asOf)))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT a.id FROM activity a
 		  JOIN activity card ON card.id = $%[1]d AND `+storekit.AsksUsClause("card")+`
@@ -37,6 +38,7 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 		   AND (a.occurred_at, a.id) < (card.occurred_at, card.id)
 		   AND `+storekit.AsksUsClause("a")+`
 		   AND `+requestOpenSQL+`
+		   AND (`+acceptedRequestSQL+` OR NOT `+neverOwed+`)
 		   AND %[2]s`, cardID, content), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the requests a card stands for: %w", err)
@@ -49,7 +51,7 @@ func earlierRequestsOnCard(ctx context.Context, tx pgx.Tx, card ids.ActivityID) 
 func (s *Store) setOnEarlierRequests(
 	ctx context.Context, tx pgx.Tx, card ids.ActivityID, write func(ids.ActivityID) error,
 ) error {
-	earlier, err := earlierRequestsOnCard(ctx, tx, card)
+	earlier, err := earlierRequestsOnCard(ctx, tx, card, s.now())
 	if err != nil {
 		return err
 	}
