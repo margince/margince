@@ -7,12 +7,9 @@ package contacts
 
 // One company read, one as-of date.
 //
-// The read asks the rollup twice — once for the open-deal count on the row,
-// once for the pipeline total in the computed fields — and both take a date to
-// convert at. Sampled separately they can straddle UTC midnight, and the page
-// then shows a count from one day beside a total from the next: the same
-// unreproducible disagreement binding the date was meant to end, one level
-// further down.
+// The open-deal count and the pipeline total both come from the rollup at a
+// date to convert at. A second clock sample inside the read could straddle UTC
+// midnight, and the page would then show figures from two FX days.
 //
 // The clock advances a full day per call here, so a second sample cannot be
 // mistaken for the first.
