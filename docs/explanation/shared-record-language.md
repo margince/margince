@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/shared/kernel/systemtext backend/internal/modules/identity/readerlanguage.go backend/internal/compose/readerrendering backend/internal/compose/companybrief/service.go backend/internal/shared/kernel/langcopy/langcopy.go backend/internal/shared/ports/baselanguage/baselanguage.go backend/internal/modules/identity/baselanguage.go backend/internal/shared/kernel/dealrole/words.go backend/internal/shared/kernel/owedwork/duecopy.go -->
+<!-- describes: backend/internal/compose/dealstatus/presentation.go backend/internal/shared/kernel/systemtext backend/internal/modules/identity/readerlanguage.go backend/internal/compose/readerrendering backend/internal/compose/companybrief/service.go backend/internal/shared/kernel/langcopy/langcopy.go backend/internal/shared/ports/baselanguage/baselanguage.go backend/internal/modules/identity/baselanguage.go backend/internal/shared/kernel/dealrole/words.go backend/internal/shared/kernel/owedwork/duecopy.go -->
 # Language in shared explanations
 
 A shared record needs a stable explanation. A reader changing their interface language must not
@@ -73,6 +73,9 @@ invalidates presentation reads when its locale changes; the Home cache separates
 Notices render again for their email or digest recipient, preserving the same notice and dedupe
 identity. Public booking and record pages choose an explicit supported locale before browser
 language preferences. Saved custom titles and quoted names remain their source text.
+
+The deal status card keeps its model summary in the base language. Its fixed reason and proposed task
+render in the reader's language from the same decision facts. The cache and decision identity keep their canonical values.
 
 ## Text for one reader
 

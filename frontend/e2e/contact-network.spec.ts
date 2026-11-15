@@ -31,14 +31,14 @@ test.skip(
  * Open the tab and wait for the graph read to settle.
  *
  * The tab is a composite of two independent reads, so `networkidle` can land
- * while the strip is still drawing. Anchoring on the stat strip means every
+ * while the chips are still drawing. Anchoring on the jump chips means every
  * assertion below describes a rendered page rather than a racing one.
  */
 async function openNetwork(page: Page) {
   await page.goto(`/#/contacts/${CONTACT_ID}/network`, {
     waitUntil: "networkidle",
   });
-  await expect(page.locator(".stat-strip").first()).toBeVisible();
+  await expect(page.locator(".chapter-jump").first()).toBeVisible();
 }
 
 test.describe("Network tab — page shape", () => {
@@ -47,14 +47,14 @@ test.describe("Network tab — page shape", () => {
     await openNetwork(page);
   });
 
-  test("leads with the three readings, then the recommended route", async ({
+  test("leads with a chip per chapter, then the recommended route", async ({
     page,
   }) => {
-    const strip = page.locator(".stat-strip").first();
-    await expect(strip).toBeVisible();
-    // Three readings: best path, why now, who owns the next move. Fewer means
-    // a card failed to render rather than that this record lacks the fact.
-    await expect(strip.locator(".stat-card")).toHaveCount(3);
+    // Way in, who knows them, progress. Fewer means a chapter failed to
+    // render rather than that this record lacks the fact.
+    await expect(
+      page.locator(".chapter-jump").first().locator(".chapter-jump-chip"),
+    ).toHaveCount(3);
 
     // The page has one lead. A second would ask the reader which
     // recommendation to believe.
@@ -68,15 +68,13 @@ test.describe("Network tab — page shape", () => {
     await expect(page.locator(".pn-ring, .pn-node, .pn-edge")).toHaveCount(0);
   });
 
-  test("puts the handoff beside the decision, not under it", async ({
-    page,
-  }) => {
-    await expect(page.locator(".pn-work-grid")).toBeVisible();
-    await expect(page.locator(".pn-main-column")).toBeVisible();
-    await expect(page.locator(".pn-side-column")).toBeVisible();
-    // The four-step relay lives in the side column and is an ordered list, so
-    // a screen reader hears "step 2 of 4" rather than a row of circles.
-    await expect(page.locator(".pn-side-column ol.pn-relay li")).toHaveCount(4);
+  test("reads as three chapters, the handoff in the last", async ({ page }) => {
+    await expect(page.locator(".pn-stack .chapter")).toHaveCount(3);
+    // The four-step relay is an ordered list, so a screen reader hears
+    // "step 2 of 4" rather than a row of circles.
+    await expect(
+      page.locator(".pn-stack .chapter").last().locator("ol.pn-relay li"),
+    ).toHaveCount(4);
   });
 
   /**
@@ -168,68 +166,39 @@ test.describe("Network tab — visual weight", () => {
    * paint anywhere — so this reads the painted geometry.
    */
   test("the answer is above the picture", async ({ page }) => {
-    const strip = await page.locator(".stat-strip").first().boundingBox();
+    const answer = await page.locator(".chapter-answer").first().boundingBox();
     const lead = await page
       .locator(".panel:has(.pn-verdict)")
       .first()
       .boundingBox();
     const map = await page.locator(".rmap").first().boundingBox();
-    expect(strip).not.toBeNull();
-    expect(lead).not.toBeNull();
-    expect(map).not.toBeNull();
-    if (!strip || !lead || !map) {
-      throw new Error("the answer, readings and map need visible boxes");
+    if (!answer || !lead || !map) {
+      throw new Error("the answer, lead and map need visible boxes");
     }
-    expect(lead.y).toBeLessThan(strip.y);
-    expect(strip.y).toBeLessThan(map.y);
+    expect(answer.y).toBeLessThan(lead.y);
     expect(lead.y).toBeLessThan(map.y);
   });
 
-  // The context rail changes available space without changing the viewport.
-  test("the network columns fit the available record width", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1920, height: 900 });
-    await page
-      .getByRole("button", {
-        name: "Seitenleiste einklappen",
-        exact: true,
-      })
-      .click();
-    await expect(page.locator(".pn-work-grid")).toBeVisible();
-    const available = await page.locator(".pn-stack").evaluate((element) => ({
-      width: element.getBoundingClientRect().width,
-      fold:
-        56 *
-        Number.parseFloat(getComputedStyle(document.documentElement).fontSize),
-    }));
-    const main = await page.locator(".pn-main-column").boundingBox();
-    const side = await page.locator(".pn-side-column").boundingBox();
-    expect(main).not.toBeNull();
-    expect(side).not.toBeNull();
-    if (!main || !side) {
-      throw new Error("both network columns need visible boxes");
-    }
-    if (available.width > available.fold) {
-      expect(side.x).toBeGreaterThan(main.x + main.width - 1);
-      expect(Math.abs(side.y - main.y)).toBeLessThan(40);
-    } else {
-      expect(side.y).toBeGreaterThanOrEqual(main.y + main.height);
-      expect(Math.abs(side.x - main.x)).toBeLessThan(1);
-    }
-  });
-
-  /** Below the fold breakpoint the two columns stack rather than crush. */
-  test("the columns stack on a narrow window", async ({ page }) => {
-    await page.setViewportSize({ width: 900, height: 900 });
-    await expect(page.locator(".pn-work-grid")).toBeVisible();
-    const main = await page.locator(".pn-main-column").boundingBox();
-    const side = await page.locator(".pn-side-column").boundingBox();
-    if (!main || !side) {
-      throw new Error("both network columns need visible boxes");
-    }
-    expect(side.y).toBeGreaterThan(main.y);
-  });
+  // One column at every width: the chapters keep their order rather than
+  // folding into a grid that pushes the handoff beside the map.
+  for (const width of [900, 1920]) {
+    test(`the chapters stack in order at ${width}px`, async ({ page }) => {
+      await page.setViewportSize({ width, height: 900 });
+      const boxes = await page
+        .locator(".pn-stack .chapter")
+        .evaluateAll((chapters) =>
+          chapters.map((c) => {
+            const box = c.getBoundingClientRect();
+            return { top: box.top, bottom: box.bottom };
+          }),
+        );
+      expect(boxes).toHaveLength(3);
+      // Each starts below the one before ends, so two never share a row.
+      for (let i = 1; i < boxes.length; i++) {
+        expect(boxes[i].top).toBeGreaterThanOrEqual(boxes[i - 1].bottom);
+      }
+    });
+  }
 
   /** Nothing may push the page sideways. */
   test("the page does not scroll horizontally", async ({ page }) => {

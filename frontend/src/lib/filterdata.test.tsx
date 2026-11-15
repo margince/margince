@@ -7,6 +7,7 @@ import { cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en, type MessageKey } from "../i18n/en";
+import { meFixture } from "../testing/mefixture";
 import {
   fieldLabel,
   groupFields,
@@ -57,6 +58,7 @@ function harness() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={client}>{children}</QueryClientProvider>
   );
@@ -209,6 +211,7 @@ describe("paging the preview", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
     const wrapper = ({ children }: { children: ReactNode }) => (
       <QueryClientProvider client={client}>{children}</QueryClientProvider>
     );

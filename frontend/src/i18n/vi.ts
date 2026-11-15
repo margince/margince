@@ -3267,8 +3267,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Vai trò",
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
-  "rel.current": "Hiện tại",
   "rel.former": "Trước đây",
+  "rel.current": "Hiện tại",
   "rel.endedOn": "Đến {when}",
   "rel.remove": "Gỡ",
   "rel.removeConfirm": "Gỡ quan hệ này? Không thể hoàn tác.",
@@ -5056,6 +5056,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.needsAction": "Chưa trả lời",
   "meeting.attendeesMore_one": "và {count} khách khác",
   "meeting.attendeesMore_other": "và {count} khách khác",
+  "meeting.invitation.invited": "{count} người được mời",
+  "meeting.invitation.accepted": "{count} chấp nhận",
+  "meeting.invitation.declined": "{count} từ chối",
+  "meeting.invitation.tentative": "{count} có thể tham gia",
   "activity.detail.guestsLeftOut_one":
     "và {count} khách khác không được liệt kê",
   "activity.detail.guestsLeftOut_other":
@@ -17732,7 +17736,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.network.captureGapsFailed":
     "Không đọc được những đồng nghiệp nào trong các cuộc trao đổi với liên hệ này chưa kết nối hộp thư.",
   "contact.graph.noDirect": "Chưa ai trong công ty trao đổi với liên hệ này.",
-  "contact.graph.sideColumn": "Giới thiệu và thay đổi",
   "contact.graph.recordWorksWith": "Theo hồ sơ: làm việc cùng {name}",
   "contact.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "contact.graph.withColleague": "với {name}",
@@ -17779,7 +17782,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.lastYesterday": "Hôm qua",
   "contact.intro.lastDays": "{days} ngày trước",
   "contact.intro.lastNever": "Không có trong 90 ngày",
-  "contact.intro.stripWho": "Hướng tiếp cận",
   "contact.intro.stripWhoMix":
     "{direct} trực tiếp · {indirect} qua một liên hệ",
   "contact.intro.stripWhoOwn": "Gồm cả quan hệ của chính bạn",
@@ -17798,14 +17800,37 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.warmed": "Ấm hơn",
   "contact.intro.change.cooled": "Nguội hơn",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Yêu cầu giới thiệu",
   "contact.intro.handoffNotStarted": "Chưa bắt đầu",
   "contact.intro.handoffUnread": "Không đọc được",
   "contact.intro.handoffOwner": "Tiếp theo: {name}",
   "contact.intro.ownerColleague": "một đồng nghiệp",
   "contact.intro.ownerNobody": "không ai",
   "contact.intro.relayTitle": "Trạng thái giới thiệu",
-  "contact.intro.stripLabel": "Số liệu mạng lưới",
+  "contact.chapter.jump": "Trong thẻ này",
+  "contact.chapter.wayIn": "Cách tiếp cận",
+  "contact.chapter.whoAnswer":
+    "Ai trong nhóm của bạn và ở công ty đang trao đổi với {name}, và thường xuyên ra sao.",
+  "contact.chapter.progress": "Tiến độ",
+  "contact.chapter.routes_one": "{count} cách",
+  "contact.chapter.routes_other": "{count} cách",
+  "contact.chapter.allDirect_one": "trực tiếp",
+  "contact.chapter.allDirect_other": "trực tiếp",
+  "contact.chapter.allVia_one": "qua liên hệ",
+  "contact.chapter.allVia_other": "qua liên hệ",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Yêu cầu giới thiệu: {handoff}. Thay đổi gần nhất: {change}.",
+  "contact.chapter.toCheck": "Cần kiểm tra",
+  "contact.chapter.toCheckAnswer":
+    "Những gì Margince đọc được từ thư và trang của họ. Hãy xác nhận, sửa hoặc bỏ qua từng mục.",
+  "contact.chapter.sources": "Nguồn",
+  "contact.chapter.sourcesAnswer":
+    "Mỗi nguồn nói gì. Không có gì ở đây ghi đè lên dữ liệu đồng nghiệp đã nhập.",
+  "contact.chapter.recordKeeping": "Lưu trữ hồ sơ",
+  "contact.chapter.recordKeepingAnswer":
+    "Các trường, quyền liên lạc và thiết lập của liên hệ này.",
+  "contact.chapter.researchAction": "Tìm hiểu từ nguồn công khai",
   "contact.intro.mapTitle": "Ai quen {name}",
   "contact.intro.stepRoute": "Chọn hướng",
   "contact.intro.stepRoutePick": "chọn người để nhờ",
@@ -17943,7 +17968,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.declined": "Đã từ chối trước đó",
   "contact.intro.unavailable": "Không khả dụng",
   "contact.network.momentsTitle": "Những gì đã thay đổi",
-  "contact.network.momentsSub": "Thay đổi trong quan hệ này, lấy từ tin nhắn.",
+  "contact.network.momentsSub":
+    "Thay đổi lấy từ tin nhắn và các yêu cầu giới thiệu trước đây.",
   "contact.network.noMoments": "Chưa có thay đổi gần đây trong quan hệ này.",
   "contact.change.repliedAfterGap": "Họ đã trả lời sau {days} ngày im lặng.",
   "contact.change.wentQuiet": "Không có hoạt động trong {days} ngày.",
@@ -20867,6 +20893,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.decided_kind": "Đã quyết định mà không hỏi: {kind}",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
+  "activity.notes.connectHint":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp để đọc.",
+  "activity.notes.otherAccount":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp bằng cùng tài khoản Google với lịch của bạn.",
+  "captureConcern.notesGrant": "Không thể đọc ghi chú cuộc họp",
+  "captureConcern.notesAccount":
+    "Ghi chú cuộc họp cần cùng tài khoản Google với lịch",
   "captureConcern.reauth": "Cần kết nối lại",
   "captureConcern.error": "Lỗi kết nối",
   "captureConcern.failing": "Đồng bộ gặp lỗi",

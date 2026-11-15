@@ -583,9 +583,9 @@ func TestEveryLaneSerialisesAsAListRatherThanNull(t *testing.T) {
 			t.Errorf("%s is absent from the wire, and the contract requires it", lane)
 			continue
 		}
-		if string(drawn) != "[]" {
-			t.Errorf("%s serialises as %s — a client that iterates the array the schema "+
-				"promised breaks on it", lane, drawn)
+		var entries []json.RawMessage
+		if err := json.Unmarshal(drawn, &entries); err != nil || entries == nil {
+			t.Errorf("%s must be an array, got %s: %v", lane, drawn, err)
 		}
 	}
 }

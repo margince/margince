@@ -37,7 +37,7 @@ func (d attentionReceiptDetails) Describe(ctx context.Context, receipts []attent
 	}
 	records := make([]magic.ReceiptRecord, 0, len(receipts))
 	for _, receipt := range receipts {
-		if receipt.TargetType != "" && !receipt.TargetID.IsZero() {
+		if receipt.TargetType != "" && !receipt.TargetID.IsZero() && (receipt.CompletedChange == nil || (receipt.CompletedChange.Count == nil && (receipt.CompletedChange.ReceiptIds == nil || len(*receipt.CompletedChange.ReceiptIds) <= 1))) {
 			records = append(records, magic.ReceiptRecord{
 				ReceiptID: receipt.ID, EntityType: receipt.TargetType, EntityID: receipt.TargetID,
 			})

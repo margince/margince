@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/companyprofiles"
 	"github.com/margince/margince/backend/internal/compose/credentialrepair"
 	"github.com/margince/margince/backend/internal/compose/customerlinks"
+	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -139,5 +141,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))),
 	}
 }

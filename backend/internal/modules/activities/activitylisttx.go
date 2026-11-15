@@ -26,7 +26,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if in.WithOutsideParty {
+	if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 		in.outsideParty = outsidePartyClause(ctx, tx)
 	}
 	limit := storekit.ClampLimit(in.Limit)
@@ -81,17 +81,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		}
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
-	switch {
-	case in.FactsOnly:
-		err = WithEmailRowFacts(ctx, tx, activities, listClock(in))
-	case in.LinkedFactsOnly:
-		if err = WithEmailRowFacts(ctx, tx, activities, listClock(in)); err == nil {
-			err = AttachLinks(ctx, tx, activities)
-		}
-	default:
-		err = FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in))
-	}
-	if err != nil {
+	if err := finishListedRows(ctx, tx, in, activities); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	copies := make([]SeatCopies, len(activities))
@@ -168,4 +158,23 @@ func orWallClock(at *time.Time) time.Time {
 		return *at
 	}
 	return time.Now()
+}
+
+// finishListedRows fills a listed page with what the read asked for.
+func finishListedRows(ctx context.Context, tx pgx.Tx, in ListActivitiesInput, activities []crmcontracts.Activity) error {
+	var err error
+	switch {
+	case in.FactsOnly:
+		err = WithEmailRowFacts(ctx, tx, activities, listClock(in))
+	case in.LinkedFactsOnly:
+		if err = WithEmailRowFacts(ctx, tx, activities, listClock(in)); err == nil {
+			err = AttachLinks(ctx, tx, activities)
+		}
+	default:
+		err = FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in))
+	}
+	if err != nil || !in.foldsInvitations() {
+		return err
+	}
+	return WithInvitationSummaries(ctx, tx, activities)
 }

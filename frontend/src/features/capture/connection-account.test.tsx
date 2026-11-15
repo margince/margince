@@ -392,7 +392,11 @@ describe("the meeting notes", () => {
     renderAccount([
       gmail,
       gcal,
-      { ...gdocs, scopes: ["https://www.googleapis.com/auth/userinfo.email"] },
+      {
+        ...gdocs,
+        scopes: ["https://www.googleapis.com/auth/userinfo.email"],
+        concern: "notes_grant_missing",
+      },
     ]);
     const notes = await screen.findByTestId("connector-gdocs");
 
@@ -414,7 +418,11 @@ describe("the meeting notes", () => {
     renderAccount([
       gmail,
       gcal,
-      { ...gdocs, account_label: "other@example.de" },
+      {
+        ...gdocs,
+        account_label: "other@example.de",
+        concern: "notes_account_mismatch",
+      },
     ]);
     const notes = await screen.findByTestId("connector-gdocs");
     expect(

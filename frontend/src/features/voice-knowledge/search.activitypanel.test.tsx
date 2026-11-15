@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { SearchScreen } from "./search";
 
 // A meeting, call, note or task found by search opens in a panel over the
@@ -29,6 +30,7 @@ const render = (ui: ReactNode) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>

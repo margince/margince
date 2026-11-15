@@ -29205,7 +29205,7 @@ export interface components {
             total: number;
         };
         /** @enum {string} */
-        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "backfill_failed" | "sync_stalled" | "capture_silent";
+        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "notes_grant_missing" | "notes_account_mismatch" | "backfill_failed" | "sync_stalled" | "capture_silent";
         DismissCaptureSilenceRequest: {
             /**
              * Format: date-time
@@ -42348,6 +42348,14 @@ export interface components {
             contact_id?: string;
             response: components["schemas"]["MeetingResponse"];
         };
+        /** @description The calendar invitation mail of one meeting, folded onto it in History: how many were invited and how many answered each way. */
+        MeetingInvitationSummary: {
+            /** @description The colleagues and contacts on the meeting. */
+            invited: number;
+            accepted: number;
+            declined: number;
+            tentative: number;
+        };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
          *     **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
@@ -42441,6 +42449,8 @@ export interface components {
             readonly guests?: components["schemas"]["MeetingGuest"][];
             /** @description Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`. */
             readonly attendee_responses?: components["schemas"]["MeetingAttendeeResponse"][];
+            /** @description Meeting only, on a record's History read with `collapse_copies`: who a calendar meeting invited and how they answered. That read folds the event's invitation mail, updates, cancellations and answers onto the meeting instead of listing them as mail rows, when you may open both. Absent when `content_state` is `withheld`. */
+            readonly invitation?: components["schemas"]["MeetingInvitationSummary"];
             /** @description Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`. */
             readonly guests_left_out?: number;
             /**
@@ -42498,6 +42508,11 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
+            /**
+             * @description A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+             * @enum {string}
+             */
+            readonly meeting_notes_connection?: "connect" | "notes_grant_missing" | "notes_account_mismatch";
             /**
              * @description Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
              * @enum {string|null}
@@ -59650,6 +59665,10 @@ export interface components {
          *     the same admission every manager figure on this surface makes.
          */
         HandledForYou: {
+            /** @description The shared completed-change read reached a source bound; counts remain lower bounds. */
+            count_is_floor?: boolean;
+            /** @description Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened. */
+            sources_unavailable?: components["schemas"]["WorklistSourceUnavailable"][];
             /**
              * Format: date-time
              * @description The instant these were read at.
@@ -59731,6 +59750,8 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            /** @description The canonical completed change or group shared with Home, including receipt identities and count bounds. */
+            completed_change?: components["schemas"]["MagicLine"];
             system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**
@@ -72083,7 +72104,7 @@ export interface operations {
                 waiting_reply?: boolean;
                 /** @description Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out. */
                 reminder_due?: boolean;
-                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. */
+                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. With `entity_type` and `entity_id`, a calendar invitation, update, cancellation or answer whose meeting is on the same page set is folded onto that meeting's `invitation`. */
                 collapse_copies?: boolean;
             };
             header?: never;

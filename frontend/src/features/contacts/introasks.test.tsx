@@ -105,17 +105,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("renders a name-drop as a name-drop and never as an introduction", async () => {
-  mockFetch([ask({ status: "name_dropped" })]);
-  renderCard();
-
-  await waitFor(() => {
-    expect(screen.getByText(en["contact.intro.stateNameDropped"])).toBeTruthy();
-  });
-  // The one sentence this card must never show for a name-drop.
-  expect(screen.queryByText(en["contact.intro.stateIntroduced"])).toBeNull();
-});
-
 it("offers the answer only to the colleague being asked", async () => {
   mockFetch([ask()]);
   renderCard();
@@ -216,24 +205,32 @@ it("lets only the requester withdraw a still-open ask, from any open status", as
   expect(screen.queryByText(en["contact.intro.withdrawAction"])).toBeNull();
 });
 
-const SETTLED_STATE_LABEL = {
-  declined: en["contact.intro.stateDeclined"],
-  introduced: en["contact.intro.stateIntroduced"],
-  name_dropped: en["contact.intro.stateNameDropped"],
-  expired: en["contact.intro.stateExpired"],
-} as const;
-
-it("offers no withdraw once the ask is settled — declined, introduced, or expired", async () => {
-  for (const status of Object.keys(
-    SETTLED_STATE_LABEL,
-  ) as (keyof typeof SETTLED_STATE_LABEL)[]) {
+// A settled ask carries no verb, so it leaves this card for the Progress
+// timeline. An open ask beside it proves the read has landed.
+it("leaves every settled ask to the timeline, with no verb on this card", async () => {
+  for (const status of [
+    "declined",
+    "suggest_other",
+    "introduced",
+    "name_dropped",
+    "replied",
+    "expired",
+    "cancelled",
+  ]) {
     cleanup();
-    mockFetch([ask({ status })], "u-requester");
+    mockFetch(
+      [
+        ask({ id: "ir-open", status: "accepted", internal_reason: "open one" }),
+        ask({ id: "ir-done", status, internal_reason: "settled one" }),
+      ],
+      "u-requester",
+    );
     renderCard();
-    await waitFor(() => {
-      expect(screen.getByText(SETTLED_STATE_LABEL[status])).toBeTruthy();
-    });
-    expect(screen.queryByText(en["contact.intro.withdrawAction"])).toBeNull();
+    await screen.findByText("open one");
+    expect(screen.queryByText("settled one")).toBeNull();
+    expect(
+      screen.getAllByText(en["contact.intro.withdrawAction"]),
+    ).toHaveLength(1);
   }
 });
 
@@ -363,29 +360,6 @@ it("keeps a failed outcome on the row it belongs to, not the next row acted on",
 // An introduction recorded after the fact has no reason and no deadline. The
 // card says how it was made and marks it as recorded, and offers neither an
 // answer nor a withdraw, because nobody asked.
-it("renders a recorded introduction without a reason or any verb", async () => {
-  mockFetch([
-    ask({
-      origin: "recorded",
-      recorded_channel: "in_person",
-      status: "introduced",
-      internal_reason: null,
-      due_at: null,
-      introduced_at: "2026-08-30T00:00:00Z",
-      requester_user_id: "u-requester",
-      introducer_user_id: VIEWER,
-    }),
-  ]);
-  renderCard();
-
-  await waitFor(() => {
-    expect(screen.getByText(en["contact.intro.recordedBadge"])).toBeTruthy();
-  });
-  expect(screen.getByText(/Face to face/)).toBeTruthy();
-  expect(screen.queryByText(en["contact.intro.answerAction"])).toBeNull();
-  expect(screen.queryByText(en["contact.intro.withdrawAction"])).toBeNull();
-});
-
 // A failed read keeps the card: no card at all would read as no asks.
 it("says the asks could not be read and reads them again on retry", async () => {
   let reads = 0;

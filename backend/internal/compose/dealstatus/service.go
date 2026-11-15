@@ -193,69 +193,6 @@ func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
 }
 
 // Card and timeline share the same scoped source read.
-func (s *Service) cardAndTimeline(
-	ctx context.Context, dealID ids.DealID, policy cardReadPolicy,
-) (crmcontracts.DealStatusCard, []crmcontracts.Activity, error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	// Gathered FIRST, and under the caller's row scope: a deal they cannot
-	// read refuses here, before any cache is consulted.
-	f, err := s.gather(ctx, dealID)
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	mv, err := assessMove(f, decideMove(f))
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.cacheLanguage())
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
-	if verdict.serve {
-		card := verdict.card
-		card.MailCoverage = f.mailCoverage
-		if current, ok := unansweredInbound(f); ok {
-			card.RequestBasis = requestBasis(f, current, basisCurrentRequest)
-		}
-		if card.Next != nil {
-			next := *card.Next
-			next.Basis = mv.Basis
-			next.MailCoverage = f.mailCoverage
-			next.Recommendation, next.Arguments = mv.Recommendation, mv.Arguments
-			card.Next = &next
-		}
-		return card, factActivities(f), nil
-	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly && mayWriteTheCard(ctx))
-	if !mayWriteTheCard(ctx) {
-		return card, factActivities(f), nil
-	}
-	if laneFailed {
-		// The lane was wired and did not answer: a timeout, a budget, an
-		// unparseable reply. The reader gets the floor, which is a working
-		// card — but storing it under the CURRENT fingerprint would make one
-		// transient outage permanent, because a matching fingerprint is served
-		// without ever asking again. The card would stand until some unrelated
-		// fact moved.
-		return card, factActivities(f), nil
-	}
-	if err := s.save(ctx, userID, dealID, stored{
-		Access:      accessForCard(f, in, mv),
-		Fingerprint: fingerprint,
-		GeneratedAt: card.GeneratedAt,
-		GeneratedBy: card.GeneratedBy,
-		Card:        card,
-	}); err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	return card, factActivities(f), nil
-}
-
 // cacheVerdict says what to do with the stored card.
 type cacheVerdict struct {
 	// card is served as-is when serve is true: the facts have not moved.

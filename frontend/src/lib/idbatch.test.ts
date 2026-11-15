@@ -194,6 +194,19 @@ it("asks no further page and answers no caller once the session ends", async () 
   expect(await next).toBe("Name d");
 });
 
+it("aborts a batch asked before a sign-out and opens a new one after it", async () => {
+  const reader = heldReader();
+  const read = idBatcher(100, reader.read);
+  const before = read("old").catch((error: unknown) => error);
+  endIdBatches();
+  const after = read("new");
+  await vi.waitFor(() => expect(reader.opened).toHaveLength(1));
+  reader.opened[0]?.finish();
+  expect(await before).toMatchObject({ name: "AbortError" });
+  expect(await after).toBe("Name new");
+  expect(reader.read.mock.calls).toEqual([[["new"]]]);
+});
+
 it("merges pages in page order whichever page answers first", async () => {
   const opened: {
     page: readonly string[];

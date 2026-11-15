@@ -8,14 +8,12 @@ package magic
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -119,32 +117,17 @@ func (s *Service) Read(
 		NotShown:           []crmcontracts.MagicNotShown{},
 		SourcesUnavailable: []crmcontracts.WorklistSourceUnavailable{},
 	}
-	// One snapshot: the images loaded after the arms see the access the arms
-	// were gated by, so no revocation can land between the two.
-	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-			return s.drawDone(ctx, tx, from, limit, &receipt)
-		})
-	})
+
+	completed, err := s.CompletedChanges(ctx, from, time.Time{}, limit)
 	if err != nil {
-		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
+		return crmcontracts.MagicReceipt{}, err
 	}
-	// THE OTHER THREE LANES READ OUTSIDE THAT TRANSACTION, and must.
-	//
-	// Each reaches its module through a seam that opens its own connection. Run
-	// inside the page's transaction they would hold one while acquiring a
-	// second, which at concurrency equal to the pool size is every request
-	// holding what the next one waits for. Only the done lane needs the page's
-	// snapshot, because only its undo judge reads the records its lines name.
+	receipt.Done, receipt.NotShown, receipt.NotShownCountWithheld = completed.Lines, completed.NotShown, &completed.CountWithheld
+	receipt.DoneIsFloor = &completed.Floor
+	receipt.SourcesUnavailable = append(receipt.SourcesUnavailable, completed.Unavailable...)
 	if err := s.gatherSeamLanes(ctx, &receipt, from, limit); err != nil {
-		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
+		return crmcontracts.MagicReceipt{}, err
 	}
-	decided, floor, err := s.decidedDone(ctx, receipt.Done, from, limit)
-	if err != nil {
-		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
-	}
-	receipt.Done = mergeNewestFirst(receipt.Done, decided, limit)
-	receipt.DoneIsFloor = &floor
 	cut := cutLanes(receipt, limit)
 	receipt.CutAtLimit = &cut
 	// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the

@@ -14,8 +14,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -110,6 +114,64 @@ func TestDismissSilenceHandlerPreservesItsErrorContract(t *testing.T) {
 			connectorHandlers{registry: b.registry}.DismissConnectorSilence(rec, req, crmcontracts.CaptureProviderGmail)
 			if rec.Code != tc.want {
 				t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestMeetingNotesHealthAgreesForTheOwnerAndTheFleet(t *testing.T) {
+	b := setupBackfillWire(t)
+	at := clocktest.Now(t)
+	b.registry.SetClock(func() time.Time { return at })
+	e := b.env
+	e.WsExec(t, `INSERT INTO capture_connection(provider,user_id,status,account_label,provider_scopes)
+ VALUES ('gcal',$1,'connected','alex@example.org','{}'), ('gdocs',$1,'connected','alex@example.org','{}')
+ ON CONFLICT (user_id,provider) DO UPDATE
+ SET status='connected', account_label=EXCLUDED.account_label, provider_scopes=EXCLUDED.provider_scopes`, e.Rep1)
+	for _, tc := range []struct {
+		name, label, want string
+		scopes            []string
+	}{
+		{"scope missing", "alex@example.org", capture.ConcernNotesGrantMissing, []string{}},
+		{"account differs", "blair@example.org", capture.ConcernNotesAccountMismatch, []string{"https://www.googleapis.com/auth/documents.readonly"}},
+		{"ready", "alex@example.org", "", []string{"https://www.googleapis.com/auth/documents.readonly"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e.WsExec(t, `UPDATE capture_connection SET account_label=$2, provider_scopes=$3 WHERE provider='gdocs' AND user_id=$1`, e.Rep1, tc.label, tc.scopes)
+			views, err := b.registry.Connections(b.human)
+			if err != nil {
+				t.Fatal(err)
+			}
+			found := false
+			for _, view := range views {
+				if view.Provider == "gdocs" {
+					found = true
+					if view.Concern != tc.want {
+						t.Fatalf("owner concern=%q, want %q", view.Concern, tc.want)
+					}
+				}
+			}
+			if !found {
+				t.Fatal("notes connection missing")
+			}
+			err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				fleet, err := capture.FleetConcernsTx(e.Admin(), tx, at)
+				if err != nil {
+					return err
+				}
+				got := ""
+				for _, row := range fleet {
+					if row.Connection.Provider == "gdocs" && row.UserID != nil && *row.UserID == e.Rep1 {
+						got = row.Connection.Concern
+					}
+				}
+				if got != tc.want {
+					t.Fatalf("fleet concern=%q, want %q", got, tc.want)
+				}
+				return nil
+			})
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

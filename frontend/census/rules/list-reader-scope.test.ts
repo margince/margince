@@ -11,51 +11,54 @@ const planted = (text: string, name = "planted.tsx") =>
     { path: join(srcDir, "features", name), area: "src", text },
   ]);
 
+const NO_KEY =
+  "src/features/planted.tsx:3: useQuery reads a record collection, but its key carries no reader scope";
+const NO_WAIT =
+  "src/features/planted.tsx:3: useQuery reads a record collection, but it does not wait for the reader scope";
+
 describe("the list-reader-scope rule", () => {
-  it("reports a list read whose key carries no reader scope", () => {
+  it("reports a list read with neither a scoped key nor a wait", () => {
     expect(
       planted(`export function useOptions() {
+  const readerScope = useHealthScope();
   return useQuery({
     queryKey: ["companies", "options"],
     queryFn: () => api.GET("/companies", {}),
   });
 }
 `),
-    ).toEqual([
-      "src/features/planted.tsx:2: useQuery reads a record collection under a key with no reader scope",
-    ]);
+    ).toEqual([NO_KEY, NO_WAIT]);
   });
 
-  it("follows a read into a function of the same file", () => {
+  it("reports a scoped key whose read does not wait for the scope", () => {
     expect(
-      planted(`async function readPage(cursor) {
-  return api.GET("/deals", { params: { query: { cursor } } });
-}
-export function useRows() {
-  return useInfiniteQuery({
-    queryKey: ["deals"],
-    queryFn: ({ pageParam }) => readPage(pageParam),
+      planted(`function useProjectPage(companyId, enabled) {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["projects", "open", companyId, readerScope ?? ""],
+    queryFn: () => api.GET("/projects", {}),
+    enabled,
   });
 }
 `),
-    ).toHaveLength(1);
+    ).toEqual([NO_WAIT]);
   });
 
-  it("reports an imperative read through the client", () => {
+  it("reports a wait whose key carries no scope", () => {
     expect(
-      planted(`export function page(client, cursor) {
-  return client.fetchQuery({
-    queryKey: ["deals", cursor],
-    queryFn: () => api.GET("/deals", { params: { query: { cursor } } }),
+      planted(`export function useOptions() {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["companies"],
+    enabled: readerScope !== undefined,
+    queryFn: () => api.GET("/companies", {}),
   });
 }
 `),
-    ).toEqual([
-      "src/features/planted.tsx:2: fetchQuery reads a record collection under a key with no reader scope",
-    ]);
+    ).toEqual([NO_KEY]);
   });
 
-  it("passes a read keyed by the reader scope", () => {
+  it("passes a scoped key that waits through enabled or skipToken", () => {
     expect(
       planted(`export function useOptions() {
   const readerScope = useHealthScope();
@@ -65,17 +68,204 @@ export function useRows() {
     queryFn: () => api.GET("/companies", {}),
   });
 }
+export function useOthers() {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["deals", readerScope ?? ""],
+    queryFn: readerScope === undefined ? skipToken : () => api.GET("/deals", {}),
+  });
+}
 `),
     ).toEqual([]);
   });
 
-  it("does not judge a read of one record", () => {
+  it("follows helpers through more than one step", () => {
     expect(
-      planted(`export function useCompany(id) {
+      planted(`async function readOne(cursor) {
+  return api.GET("/deals", { params: { query: { cursor } } });
+}
+const readPage = (cursor) => readOne(cursor);
+export function useRows() {
+  return useInfiniteQuery({
+    queryKey: ["deals"],
+    queryFn: ({ pageParam }) => readPage(pageParam),
+  });
+}
+`),
+    ).toHaveLength(2);
+  });
+
+  it("resolves a path read out of a table", () => {
+    expect(
+      planted(`const GROUPS = { contact: { path: "/contacts" } };
+export function useTagged(kind) {
+  const group = GROUPS[kind];
+  return useQuery({
+    queryKey: ["tag-records", kind],
+    queryFn: () => api.GET(group.path, {}),
+  });
+}
+`),
+    ).toHaveLength(2);
+  });
+
+  it("does not follow a name declared in another function", () => {
+    expect(
+      planted(`function other() {
+  const data = api.GET("/contacts", {});
+  return data;
+}
+export function useMine(id) {
   return useQuery({
     queryKey: ["company", id],
-    queryFn: () => api.GET("/companies/{id}", { params: { path: { id } } }),
+    queryFn: async () => (await api.GET("/companies/{id}", {})).data,
   });
+}
+`),
+    ).toEqual([]);
+  });
+
+  it("reports an imperative read's key but leaves its wait to the caller", () => {
+    expect(
+      planted(`export function page(client, cursor) {
+  return client.fetchQuery({
+    queryKey: ["deals", cursor],
+    queryFn: () => api.GET("/deals", { params: { query: { cursor } } }),
+  });
+}
+`),
+    ).toEqual([
+      "src/features/planted.tsx:2: fetchQuery reads a record collection, but its key carries no reader scope",
+    ]);
+  });
+
+  it("judges a key spread in from options built elsewhere in the file", () => {
+    expect(
+      planted(`const options = {
+  queryKey: ["contacts"],
+  queryFn: () => api.GET("/contacts", {}),
+};
+export function useRows() {
+  const readerScope = useHealthScope();
+  return useQuery({ ...options, enabled: readerScope !== undefined });
+}
+`),
+    ).toEqual([
+      "src/features/planted.tsx:7: useQuery reads a record collection, but its key carries no reader scope",
+    ]);
+  });
+
+  it("does not take the scope's name in a string for the scope", () => {
+    expect(
+      planted(`export function useRows() {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["contacts", "readerScope"],
+    enabled: readerScope !== undefined,
+    queryFn: () => api.GET("/contacts", {}),
+  });
+}
+`),
+    ).toEqual([NO_KEY]);
+  });
+
+  it("does not take a read that runs only without a scope for a wait", () => {
+    expect(
+      planted(`export function useRows() {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["contacts", readerScope ?? ""],
+    enabled: readerScope === undefined,
+    queryFn: () => api.GET("/contacts", {}),
+  });
+}
+`),
+    ).toEqual([NO_WAIT]);
+  });
+
+  it("takes only a scope read from useHealthScope for the scope", () => {
+    expect(
+      planted(`export function useRows() {
+  const readerScope = "fixed";
+  return useQuery({
+    queryKey: ["contacts", readerScope],
+    enabled: readerScope !== undefined,
+    queryFn: () => api.GET("/contacts", {}),
+  });
+}
+`),
+    ).toEqual([NO_KEY, NO_WAIT]);
+  });
+
+  it("does not take a wait another condition can skip", () => {
+    expect(
+      planted(`export function useRows(always, paused) {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["contacts", readerScope ?? ""],
+    enabled: always || readerScope !== undefined,
+    queryFn: () => api.GET("/contacts", {}),
+  });
+}
+export function useOthers(paused) {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["deals", readerScope ?? ""],
+    queryFn:
+      readerScope === undefined && paused ? skipToken : () => api.GET("/deals", {}),
+  });
+}
+`),
+    ).toEqual([
+      NO_WAIT,
+      "src/features/planted.tsx:11: useQuery reads a record collection, but it does not wait for the reader scope",
+    ]);
+  });
+
+  it("judges every entry of useQueries", () => {
+    expect(
+      planted(`export function useRows(ids) {
+  const readerScope = useHealthScope();
+  return useQueries({
+    queries: [
+      {
+        queryKey: ["contacts", readerScope ?? ""],
+        enabled: readerScope !== undefined,
+        queryFn: () => api.GET("/contacts", {}),
+      },
+      {
+        queryKey: ["companies", readerScope ?? ""],
+        queryFn: () => api.GET("/companies", {}),
+      },
+    ],
+  });
+}
+`),
+    ).toEqual([
+      "src/features/planted.tsx:3: useQueries reads a record collection, but it does not wait for the reader scope",
+    ]);
+  });
+
+  it("resolves a destructured path", () => {
+    expect(
+      planted(`const GROUPS = { contact: { path: "/contacts" } };
+export function useRows() {
+  const { path } = GROUPS.contact;
+  return useQuery({
+    queryKey: ["tagged"],
+    queryFn: () => api.GET(path, {}),
+  });
+}
+`),
+    ).toHaveLength(2);
+  });
+
+  it("lets an inner name shadow an outer one", () => {
+    expect(
+      planted(`const path = "/contacts";
+export function useSession() {
+  const path = "/me";
+  return useQuery({ queryKey: ["me"], queryFn: () => api.GET(path, {}) });
 }
 `),
     ).toEqual([]);

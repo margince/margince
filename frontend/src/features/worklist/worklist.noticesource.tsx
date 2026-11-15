@@ -135,6 +135,7 @@ function SourceDrawer({
         activity={read.data}
       />
       <OpenActivityDrawer
+        activityIsLive
         activityId={answered && !email ? activityId : null}
         zone={zone}
         onClose={onClose}

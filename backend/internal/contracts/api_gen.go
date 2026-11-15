@@ -433,6 +433,27 @@ func (e ActivityLanguage) Valid() bool {
 	}
 }
 
+// Defines values for ActivityMeetingNotesConnection.
+const (
+	ActivityMeetingNotesConnectionConnect              ActivityMeetingNotesConnection = "connect"
+	ActivityMeetingNotesConnectionNotesAccountMismatch ActivityMeetingNotesConnection = "notes_account_mismatch"
+	ActivityMeetingNotesConnectionNotesGrantMissing    ActivityMeetingNotesConnection = "notes_grant_missing"
+)
+
+// Valid indicates whether the value is a known member of the ActivityMeetingNotesConnection enum.
+func (e ActivityMeetingNotesConnection) Valid() bool {
+	switch e {
+	case ActivityMeetingNotesConnectionConnect:
+		return true
+	case ActivityMeetingNotesConnectionNotesAccountMismatch:
+		return true
+	case ActivityMeetingNotesConnectionNotesGrantMissing:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityMeetingStatus.
 const (
 	ActivityMeetingStatusBooked   ActivityMeetingStatus = "booked"
@@ -4596,12 +4617,14 @@ func (e CaptureAwaitingAddressState) Valid() bool {
 
 // Defines values for CaptureConcernKind.
 const (
-	CaptureConcernKindBackfillFailed  CaptureConcernKind = "backfill_failed"
-	CaptureConcernKindCaptureSilent   CaptureConcernKind = "capture_silent"
-	CaptureConcernKindConnectionError CaptureConcernKind = "connection_error"
-	CaptureConcernKindReauthRequired  CaptureConcernKind = "reauth_required"
-	CaptureConcernKindSyncFailing     CaptureConcernKind = "sync_failing"
-	CaptureConcernKindSyncStalled     CaptureConcernKind = "sync_stalled"
+	CaptureConcernKindBackfillFailed       CaptureConcernKind = "backfill_failed"
+	CaptureConcernKindCaptureSilent        CaptureConcernKind = "capture_silent"
+	CaptureConcernKindConnectionError      CaptureConcernKind = "connection_error"
+	CaptureConcernKindNotesAccountMismatch CaptureConcernKind = "notes_account_mismatch"
+	CaptureConcernKindNotesGrantMissing    CaptureConcernKind = "notes_grant_missing"
+	CaptureConcernKindReauthRequired       CaptureConcernKind = "reauth_required"
+	CaptureConcernKindSyncFailing          CaptureConcernKind = "sync_failing"
+	CaptureConcernKindSyncStalled          CaptureConcernKind = "sync_stalled"
 )
 
 // Valid indicates whether the value is a known member of the CaptureConcernKind enum.
@@ -4612,6 +4635,10 @@ func (e CaptureConcernKind) Valid() bool {
 	case CaptureConcernKindCaptureSilent:
 		return true
 	case CaptureConcernKindConnectionError:
+		return true
+	case CaptureConcernKindNotesAccountMismatch:
+		return true
+	case CaptureConcernKindNotesGrantMissing:
 		return true
 	case CaptureConcernKindReauthRequired:
 		return true
@@ -32549,6 +32576,9 @@ type Activity struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
+	// Invitation Meeting only, on a record's History read with `collapse_copies`: who a calendar meeting invited and how they answered. That read folds the event's invitation mail, updates, cancellations and answers onto the meeting instead of listing them as mail rows, when you may open both. Absent when `content_state` is `withheld`.
+	Invitation *MeetingInvitationSummary `json:"invitation,omitempty"`
+
 	// InvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
 	InvitationStatus *ActivityInvitationStatus `json:"invitation_status,omitempty"`
 
@@ -32566,6 +32596,9 @@ type Activity struct {
 
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
+
+	// MeetingNotesConnection A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+	MeetingNotesConnection *ActivityMeetingNotesConnection `json:"meeting_notes_connection,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
@@ -32660,6 +32693,9 @@ type ActivityKind string
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
+
+// ActivityMeetingNotesConnection A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+type ActivityMeetingNotesConnection string
 
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string
@@ -51045,6 +51081,9 @@ type HandledForYou struct {
 	// AsOf The instant these were read at.
 	AsOf time.Time `json:"as_of"`
 
+	// CountIsFloor The shared completed-change read reached a source bound; counts remain lower bounds.
+	CountIsFloor *bool `json:"count_is_floor,omitempty"`
+
 	// NextCursor Where the next page starts, present when `truncated` is true and the window can be read further. Paging stops after the first 5,000 receipts of a window. Absent on older responses, which a client reads as a list it cannot continue.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
@@ -51053,6 +51092,9 @@ type HandledForYou struct {
 
 	// Since Where the window starts: the same instant the Done for you lane on `/magic` starts at, so both surfaces read one window. Absent on older responses.
 	Since *time.Time `json:"since,omitempty"`
+
+	// SourcesUnavailable Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened.
+	SourcesUnavailable *[]WorklistSourceUnavailable `json:"sources_unavailable,omitempty"`
 
 	// Truncated True when more was done than was read. The list is a floor, not a total.
 	Truncated bool `json:"truncated"`
@@ -56355,6 +56397,16 @@ type MeetingInvitationRequest struct {
 	VideoCall *bool `json:"video_call,omitempty"`
 }
 
+// MeetingInvitationSummary The calendar invitation mail of one meeting, folded onto it in History: how many were invited and how many answered each way.
+type MeetingInvitationSummary struct {
+	Accepted int `json:"accepted" minimum:"0"`
+	Declined int `json:"declined" minimum:"0"`
+
+	// Invited The colleagues and contacts on the meeting.
+	Invited   int `json:"invited" minimum:"0"`
+	Tentative int `json:"tentative" minimum:"0"`
+}
+
 // MeetingOtherParticipant One attendee of a meeting who is not a contact.
 type MeetingOtherParticipant struct {
 	Kind MeetingOtherParticipantKind `json:"kind"`
@@ -60167,6 +60219,15 @@ type Receipt struct {
 
 	// CloseDateChange Recorded close-date correction values, formatted at the presentation edge.
 	CloseDateChange *CloseDateChange `json:"close_date_change,omitempty"`
+
+	// CompletedChange One thing the machinery did, needs, could not finish, or is watching.
+	//
+	// EVERY LINE IS ATTRIBUTABLE. `actor` names who acted and on whose behalf; a change
+	// with no author a reader can name is the spookiness this surface exists to remove.
+	// `actor.label` is that name as a reader reads it ("Mail filing", "Retention"), and
+	// `reason` says why the machinery did it ("the sender's address belongs to this
+	// contact"). Both are keys with values, for the reason `summary` is.
+	CompletedChange *MagicLine `json:"completed_change,omitempty"`
 
 	// CustomerQuote The customer's own words the change rests on, where the act recorded them, masked with the amount they state. Kept apart from `reason`, which is Margince's reading and never a quote.
 	CustomerQuote *string `json:"customer_quote,omitempty"`
@@ -72890,7 +72951,7 @@ type ListActivitiesParams struct {
 	// ReminderDue Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out.
 	ReminderDue *bool `form:"reminder_due,omitempty" json:"reminder_due,omitempty"`
 
-	// CollapseCopies Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row.
+	// CollapseCopies Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. With `entity_type` and `entity_id`, a calendar invitation, update, cancellation or answer whose meeting is on the same page set is folded onto that meeting's `invitation`.
 	CollapseCopies *bool `form:"collapse_copies,omitempty" json:"collapse_copies,omitempty"`
 }
 
@@ -82793,6 +82854,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "imported_from")
 	}
 
+	if raw, found := object["invitation"]; found {
+		err = json.Unmarshal(raw, &a.Invitation)
+		if err != nil {
+			return fmt.Errorf("error reading 'invitation': %w", err)
+		}
+		delete(object, "invitation")
+	}
+
 	if raw, found := object["invitation_status"]; found {
 		err = json.Unmarshal(raw, &a.InvitationStatus)
 		if err != nil {
@@ -82839,6 +82908,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'meeting_intent': %w", err)
 		}
 		delete(object, "meeting_intent")
+	}
+
+	if raw, found := object["meeting_notes_connection"]; found {
+		err = json.Unmarshal(raw, &a.MeetingNotesConnection)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_notes_connection': %w", err)
+		}
+		delete(object, "meeting_notes_connection")
 	}
 
 	if raw, found := object["meeting_status"]; found {
@@ -83325,6 +83402,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Invitation != nil {
+		object["invitation"], err = json.Marshal(a.Invitation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'invitation': %w", err)
+		}
+	}
+
 	if a.InvitationStatus != nil {
 		object["invitation_status"], err = json.Marshal(a.InvitationStatus)
 		if err != nil {
@@ -83362,6 +83446,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
+	if a.MeetingNotesConnection != nil {
+		object["meeting_notes_connection"], err = json.Marshal(a.MeetingNotesConnection)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_notes_connection': %w", err)
 		}
 	}
 

@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration_test
 
 // The subject-key rung reads on the CALLER'S transaction, and the proof is a
 // pool with one connection in it.
