@@ -143,17 +143,6 @@ function useServiceWords(kind: ServiceKind) {
   };
 }
 
-/** The notes are read only for meetings in the calendar of the same Google
- *  account, so notes connected with another account say they will read none. */
-export function notesAccountDiffers(
-  notes: CaptureConnection,
-  calendar: CaptureConnection | null,
-): boolean {
-  const own = notes.account_label?.trim().toLowerCase();
-  const cal = calendar?.account_label?.trim().toLowerCase();
-  return Boolean(own && cal && own !== cal);
-}
-
 function NotesAccountMismatch({
   notes,
   calendar,
@@ -162,7 +151,7 @@ function NotesAccountMismatch({
   calendar: CaptureConnection | null;
 }>) {
   const t = useT();
-  if (!calendar || !notesAccountDiffers(notes, calendar)) return null;
+  if (!calendar || notes.concern !== "notes_account_mismatch") return null;
   return (
     <p className="t-caption" data-testid="connector-notes-other-account">
       {t("connectors.notes.otherAccount", {

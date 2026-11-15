@@ -163,9 +163,7 @@ func colleagueParticipantSQL(provedIdentities, contactScope string) string {
 // Unknown guests keep a meeting in the customer lane; known resources cannot establish an outside party.
 // Contact evidence is scoped to the reader.
 var outsidePartySQL = `((NOT EXISTS (SELECT 1 FROM activity_participant roster
-     WHERE roster.activity_id = a.id AND roster.address IS NOT NULL)
- AND NOT EXISTS (SELECT 1 FROM activity_participant ap
-     WHERE ap.activity_id = a.id AND %[1]s))
+     WHERE roster.activity_id = a.id AND roster.user_id IS NULL))
  OR EXISTS (SELECT 1 FROM activity_participant ap
      WHERE ap.activity_id = a.id AND ap.user_id IS NULL AND NOT %[1]s AND NOT %[2]s
        AND NOT EXISTS (SELECT 1 FROM relationship emp

@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration_test
 
 // The cohort repair files a synced meeting under an attendee who became a
 // contact later. These are its boundaries. A member's re-filing stands, and

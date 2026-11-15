@@ -25,9 +25,10 @@ type ConnectionView struct {
 	// A missing provider grant is unknown, not an empty scope.
 	ProviderScopes []string
 	// AccountLabel is display text, never an identity or routing key.
-	AccountLabel *string
-	MailPosture  string
-	ContextTag   *ContextTag
+	AccountLabel         *string
+	CalendarAccountLabel *string
+	MailPosture          string
+	ContextTag           *ContextTag
 	// Attempts include failures; success stamps only completed pulls.
 	LastSyncedAt   *time.Time
 	LastSuccessAt  *time.Time

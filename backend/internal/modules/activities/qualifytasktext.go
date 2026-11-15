@@ -6,7 +6,6 @@ package activities
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -15,17 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
-
-// qualifyTaskCodes are the templates a qualify task's subject is written from,
-// each with the lead's name as its one label.
-var qualifyTaskCodes = []string{"lead.reply", "lead.booked", "lead.held"}
 
 // qualifyTasksWithoutTextSQL is the qualify tasks written before the subject
 // carried its template, whose subject no human or agent has changed since.
-const qualifyTasksWithoutTextSQL = `FROM activity t WHERE t.kind = 'task' AND t.source_system = $1
-   AND t.system_text IS NULL AND t.subject IS NOT NULL AND t.archived_at IS NULL AND t.restricted_at IS NULL
+var qualifyTasksWithoutTextSQL = `FROM activity t WHERE t.kind = 'task' AND t.source_system = $1
+   AND t.system_text IS NULL AND t.subject IS NOT NULL AND t.archived_at IS NULL AND t.restricted_at IS NULL AND ` + SystemMintedExpr("t") + `
    AND NOT EXISTS (SELECT 1 FROM audit_log edit WHERE edit.entity_type = 'activity' AND edit.entity_id = t.id
      AND edit.action <> 'create' AND edit.actor_type IN ('human', 'agent') AND edit.after ? 'subject')`
 
@@ -57,37 +51,23 @@ func DescribeQualifyTaskTextTx(ctx context.Context, tx pgx.Tx, after ids.UUID, l
 	scanned, described := make([]ids.UUID, 0, len(page)), 0
 	for _, one := range page {
 		scanned = append(scanned, one.id)
-		message := qualifySubjectText(one.subject)
-		if message == nil {
+		subject, err := systemtext.RecoverCanonicalText(one.subject)
+		if err != nil {
+			return nil, 0, err
+		}
+		message := &systemtext.Message{Subject: subject}
+		if subject == nil {
 			continue
 		}
-		// The read locked the row, so a decline is only counted as not described.
-		tag, err := tx.Exec(ctx, `UPDATE activity SET system_text = $2 WHERE id = $1 AND version = $3 AND archived_at IS NULL`,
-			one.id, message, one.version)
+		applied, err := RestoreTaskSystemTextTx(ctx, tx, LegacySystemTask{ID: one.id, Subject: one.subject, Version: one.version}, message)
 		if err != nil {
-			return nil, 0, fmt.Errorf("activities: describing a qualify task's subject: %w", err)
+			return nil, 0, err
 		}
-		if tag.RowsAffected() == 1 {
+		if applied {
 			described++
 		}
 	}
 	return scanned, described, nil
-}
-
-// qualifySubjectText is the bound template that renders subject, or nil.
-func qualifySubjectText(subject string) *systemtext.Message {
-	for _, code := range qualifyTaskCodes {
-		prefix, suffix, ok := strings.Cut(systemtext.Copy(code, textlang.English), "%s")
-		if !ok || !strings.HasPrefix(subject, prefix) || !strings.HasSuffix(subject, suffix) || len(subject) <= len(prefix)+len(suffix) {
-			continue
-		}
-		name := subject[len(prefix) : len(subject)-len(suffix)]
-		bound, err := systemtext.Bind(&systemtext.Message{Version: 1, Subject: systemtext.Sentence(code, systemtext.Label(name))}, subject, "")
-		if err == nil && bound != nil && bound.Subject != nil {
-			return bound
-		}
-	}
-	return nil
 }
 
 // CountQualifyTasksWithoutText caps the estimate at the tasks the batch reads.

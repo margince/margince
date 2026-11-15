@@ -20,7 +20,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -612,5 +614,46 @@ func TestNotesCanLandWithoutAuthorityToChangeTheMeeting(t *testing.T) {
 	}
 	if got := countRows(t, e, `SELECT count(*) FROM activity WHERE id = '`+meeting.String()+`' AND meeting_status='held'`); got != 0 {
 		t.Fatal("capture changed the meeting without its update grant")
+	}
+}
+
+func TestMeetingNotesHintEndsWhenTheDocumentBecomesATranscript(t *testing.T) {
+	env := newCaptureEnv(t)
+	meeting, _, _ := meetingWithNotes(t, env)
+	e := env.e
+	store := activities.NewStore(e.DB()).WithClock(func() time.Time { return captureNow }).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{})
+	reader := notesWriter(t, e, e.Rep1)
+	id := ids.From[ids.ActivityKind](meeting)
+	read := func(want string) {
+		t.Helper()
+		row, err := store.GetActivity(reader, id, storekit.LiveOnly)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := ""
+		if row.MeetingNotesConnection != nil {
+			got = string(*row.MeetingNotesConnection)
+		}
+		if got != want {
+			t.Fatalf("notes connection hint=%q, want %q", got, want)
+		}
+	}
+	read("connect")
+	_, syncNotes := connectNotes(t, env, &docsFeed{}, captureOwner, &queuedReadings{})
+	read("")
+	syncNotes()
+	if _, err := e.Owner.Exec(context.Background(), `UPDATE capture_connection SET status='disconnected' WHERE provider='gdocs' AND user_id=@owner`, pgx.NamedArgs{"owner": e.Rep1}); err != nil {
+		t.Fatal(err)
+	}
+	read("")
+	row, err := store.WithClock(func() time.Time { return captureNow.AddDate(0, 0, 15) }).GetActivity(reader, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.MeetingNotesConnection != nil {
+		t.Fatalf("expired meeting has hint %v", *row.MeetingNotesConnection)
+	}
+	if row.Kind != crmcontracts.ActivityKindMeeting {
+		t.Fatal("meeting no longer readable")
 	}
 }

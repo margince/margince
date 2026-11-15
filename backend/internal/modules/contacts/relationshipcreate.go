@@ -52,6 +52,7 @@ type CreateRelationshipInput struct {
 	StartedAt        *time.Time
 	EndedAt          *time.Time
 	Source           string
+	Evidence         map[string]any
 }
 
 // CreateRelationship writes one edge in a transaction of its own.
@@ -182,7 +183,7 @@ func writeRelationshipInTx(
 	if out, err = insertRelationshipRow(ctx, tx, in, capturedBy); err != nil {
 		return out, mapRelationshipConstraint(err, in.Kind)
 	}
-	if err := emitRelationshipChange(ctx, tx, "create", nil, out); err != nil {
+	if err := emitRelationshipChangeWithEvidence(ctx, tx, "create", nil, out, in.Evidence); err != nil {
 		return out, err
 	}
 	if in.Kind == employmentKind && in.ContactID != nil {

@@ -29205,7 +29205,7 @@ export interface components {
             total: number;
         };
         /** @enum {string} */
-        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "backfill_failed" | "sync_stalled" | "capture_silent";
+        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "notes_grant_missing" | "notes_account_mismatch" | "backfill_failed" | "sync_stalled" | "capture_silent";
         DismissCaptureSilenceRequest: {
             /**
              * Format: date-time
@@ -42498,6 +42498,11 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
+            /**
+             * @description A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+             * @enum {string}
+             */
+            readonly meeting_notes_connection?: "connect" | "notes_grant_missing" | "notes_account_mismatch";
             /**
              * @description Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
              * @enum {string|null}
@@ -59650,6 +59655,10 @@ export interface components {
          *     the same admission every manager figure on this surface makes.
          */
         HandledForYou: {
+            /** @description The shared completed-change read reached a source bound; counts remain lower bounds. */
+            count_is_floor?: boolean;
+            /** @description Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened. */
+            sources_unavailable?: components["schemas"]["WorklistSourceUnavailable"][];
             /**
              * Format: date-time
              * @description The instant these were read at.
@@ -59731,6 +59740,8 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            /** @description The canonical completed change or group shared with Home, including receipt identities and count bounds. */
+            completed_change?: components["schemas"]["MagicLine"];
             system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**

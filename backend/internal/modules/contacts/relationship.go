@@ -13,7 +13,6 @@ package contacts
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -21,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -250,17 +248,20 @@ func scanRelationshipWithPrior(r pgx.Row, prior **string, inserted *bool) (relat
 }
 
 type UpdateRelationshipInput struct {
-	ClearRole        bool
-	ClearStartedAt   bool
-	ClearEndedAt     bool
-	EmploymentStatus *string
-	StartedPrecision *string
-	EndedPrecision   *string
-	Role             *string
-	IsCurrentPrimary *bool
-	StartedAt        *time.Time
-	EndedAt          *time.Time
-	IfVersion        *int64
+	ClearRole             bool
+	ClearStartedAt        bool
+	ClearEndedAt          bool
+	ClearEmploymentStatus bool
+	ClearStartedPrecision bool
+	ClearEndedPrecision   bool
+	EmploymentStatus      *string
+	StartedPrecision      *string
+	EndedPrecision        *string
+	Role                  *string
+	IsCurrentPrimary      *bool
+	StartedAt             *time.Time
+	EndedAt               *time.Time
+	IfVersion             *int64
 	// Evidence lands on the audit row as context ABOUT the write, never as a
 	// field image. The reversal path names the entry it put back there.
 	Evidence map[string]any
@@ -319,7 +320,7 @@ func (s *Store) updateRelationshipInTx(
 	// Promoting the row straight back would overrule them. Whether the end
 	// date has arrived is the statement's own question. An employment ending
 	// next month keeps the slot, and the promotion finds nothing to do.
-	if out.Kind == employmentKind && out.ContactID != nil && (in.EndedAt != nil || in.EmploymentStatus != nil) {
+	if out.Kind == employmentKind && out.ContactID != nil && (in.EndedAt != nil || in.EmploymentStatus != nil || in.ClearEmploymentStatus) {
 		if err := promoteLoneSurvivingEmployment(ctx, tx, *out.ContactID); err != nil {
 			return out, err
 		}
@@ -329,7 +330,7 @@ func (s *Store) updateRelationshipInTx(
 		return out, err
 	}
 	if out.Kind == employmentKind && out.ContactID != nil &&
-		(in.IsCurrentPrimary != nil || in.EndedAt != nil || in.EmploymentStatus != nil) {
+		(in.IsCurrentPrimary != nil || in.EndedAt != nil || in.EmploymentStatus != nil || in.ClearEmploymentStatus) {
 		return out, fileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
 	}
 	return out, nil
@@ -375,75 +376,12 @@ func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion 
 
 // archiveRelationship is the archive carrying audit evidence — the reversal path
 // names the entry it put back, and every other caller records none.
-func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID, ifVersion *int64,
-	evidence map[string]any,
-) (relationshipRow, error) {
-	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
-		return relationshipRow{}, err
-	}
+func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID, ifVersion *int64, evidence map[string]any) (relationshipRow, error) {
 	var out relationshipRow
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		// The per-contact employment lock, FIRST — before any row this path
-		// touches, which is the order create and update take it in. Two writers
-		// taking the same pair in opposite orders is a deadlock.
-		//
-		// This path used to take none, because it freed the current-primary slot
-		// and never decided anything from a read of it. It decides now: retiring
-		// the primary edge promotes the survivor when exactly one remains, and a
-		// create landing between that read and its write would leave two
-		// employments and one arbitrary primary.
-		if err := lockContactForEmployment(ctx, tx, id); err != nil {
-			return err
-		}
-		current, err := s.visibleRelationship(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		// The same re-statement as the update path, and it matters more here:
-		// archiving through this surface would take a company off a project
-		// with no last-company check at all.
-		if err := refuseGenericProjectCompany(current.Kind); err != nil {
-			return err
-		}
-		// Same rule as create: removing an edge is editing its anchor, and it
-		// owes the row half for the same reason the other two verbs do.
-		anchorObject, _ := relationshipAnchor(current.Kind)
-		if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-			return err
-		}
-		if err := ensureRelationshipAnchorWritable(ctx, tx, current.Kind, current.endpoints()); err != nil {
-			return err
-		}
-		p := storekit.NewPatch()
-		p.Set("archived_at", nil, time.Now().UTC())
-		if err := p.ApplyGuarded(ctx, tx, "relationship", id, ifVersion); err != nil {
-			return err
-		}
-		row := tx.QueryRow(ctx, `SELECT `+relationshipColumns+` FROM relationship WHERE id = $1`, id)
-		if out, err = scanRelationship(row); errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		} else if err != nil {
-			return err
-		}
-		// The archived edge no longer holds the flag, and the contact may still
-		// work somewhere. Same call as the patch path, and the same reason for
-		// making it: the statement asks whether there is anything to promote.
-		if out.Kind == employmentKind && out.ContactID != nil {
-			if err := promoteLoneSurvivingEmployment(ctx, tx, *out.ContactID); err != nil {
-				return err
-			}
-		}
-		if err := emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, out, evidence); err != nil {
-			return err
-		}
-		if out.Kind != employmentKind || out.ContactID == nil {
-			return nil
-		}
-		capturedBy, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return err
-		}
-		return fileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
+		var err error
+		out, err = s.archiveRelationshipTx(ctx, tx, id, ifVersion, evidence)
+		return err
 	})
 	return out, err
 }

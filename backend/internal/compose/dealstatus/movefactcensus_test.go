@@ -39,11 +39,13 @@ func TestEveryFactTheMoveReadsIsRepresentedByItsBasis(t *testing.T) {
 	for field := range moveFactFields(sources, "assessMove") {
 		chosen[field] = true
 	}
-	// Private capture observations qualify wording without changing acceptance or dismissals.
-	if !chosen["mailCoverage"] {
-		t.Fatal("the private-overlay exception no longer matches a fact")
+	// Private capture and reader wording do not change acceptance or dismissals.
+	for _, overlay := range []string{"mailCoverage", "say"} {
+		if !chosen[overlay] {
+			t.Fatalf("the display-overlay exception no longer matches facts.%s", overlay)
+		}
+		delete(chosen, overlay)
 	}
-	delete(chosen, "mailCoverage")
 	fingerprinted := moveFactFields(sources, "moveBasisFingerprint")
 	if len(chosen) == 0 || len(fingerprinted) == 0 {
 		t.Fatal("the census did not reach the production choice and basis")

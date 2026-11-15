@@ -23,8 +23,6 @@ Also called: account, client or customer for a company.
 
 ## What connects to what
 
-Margince asks for fewer links between records than most CRM products.
-
 | Link | Required? |
 |---|---|
 | Contact → Company | **Optional.** It is a job link, with a role and dates. |
@@ -98,6 +96,8 @@ Also called: unresolved employer, imported job history.
 Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart. The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
 
 A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none. Margince reads a contact's job title from the signature in their newest mail, and from up to two older mails when that one states none. An older mail only fills an empty title, and mail Margince could not read in full or newsletter mail is never used.
+
+A title read from a signature also fills the current main job's role when it is empty or set by Margince. A role a colleague set stays as it is. A newer role with a start date at the same company ends an older current role with no date. **Undo** restores the older role while nobody has edited the new one.
 
 A contact also holds an owner, a consent record for each purpose, a relationship strength and when they were last active. If they started as a lead, it holds a link back to that lead. **Communication permissions** names the fact on record for each purpose, such as **Recent business contact recorded** or **Marketing opt-out recorded**. It is not permission for every message: each one is checked when it is sent. Open **Manage consent and proof history** to read the recorded proof, its source and date.
 

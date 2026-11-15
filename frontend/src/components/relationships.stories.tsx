@@ -10,7 +10,8 @@ import {
   stubWithSession,
 } from "../testing/story-utils";
 import { RelationshipsTab } from "./relationshiprows";
-import { AddRelationshipAction } from "./relationships";
+import { AddRelationshipAction, type Relationship } from "./relationships";
+import { dateRange } from "./relationships.edges";
 
 // RelationshipsTab reads GET /relationships?contact_id=… (there is no
 // GET /relationships/{id} in the contract — every row is hydrated straight
@@ -342,5 +343,26 @@ export const ClosedDealSearch: Story = {
         name: "Renewal paperwork Won",
       }),
     ).toBeVisible();
+  },
+};
+
+export const CurrentAndFormerEmployment: Story = {
+  render: () => {
+    const current: Relationship = { ...employmentRel, kind: "employment" };
+    const former: Relationship = {
+      ...current,
+      id: "rel-former",
+      employment_status: "former",
+    };
+    return (
+      <StoryProviders>
+        <dl>
+          <dt>Current role</dt>
+          <dd>{dateRange(current, (key) => translate("en", key))}</dd>
+          <dt>Former role</dt>
+          <dd>{dateRange(former, (key) => translate("en", key))}</dd>
+        </dl>
+      </StoryProviders>
+    );
   },
 };
