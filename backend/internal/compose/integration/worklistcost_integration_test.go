@@ -178,8 +178,8 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
 const (
-	homeStatementBudget = 152
-	homeRoundTripBudget = 70
+	homeReadStatementCeiling = 152
+	homeReadRoundTripCeiling = 70
 )
 
 // homeStages are the stages Home's read runs. A lane that stops running lowers
@@ -212,11 +212,11 @@ func TestHomesReadStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 	if seen.Statements == 0 || delta.statements != seen.Statements {
 		t.Fatalf("the stages counted %d statements, the pool's tracer saw %d", delta.statements, seen.Statements)
 	}
-	if seen.Statements > homeStatementBudget {
-		t.Errorf("Home's read sent %d statements, budget %d", seen.Statements, homeStatementBudget)
+	if seen.Statements > homeReadStatementCeiling {
+		t.Errorf("Home's read sent %d statements, budget %d", seen.Statements, homeReadStatementCeiling)
 	}
-	if roundTrips < seen.Exchanges || roundTrips > homeRoundTripBudget {
-		t.Errorf("Home's read used %d protocol round trips for %d pgx calls, budget %d", roundTrips, seen.Exchanges, homeRoundTripBudget)
+	if roundTrips < seen.Exchanges || roundTrips > homeReadRoundTripCeiling {
+		t.Errorf("Home's read used %d protocol round trips for %d pgx calls, budget %d", roundTrips, seen.Exchanges, homeReadRoundTripCeiling)
 	}
 	ran := map[string]bool{}
 	for key := range delta.runs {
