@@ -48,8 +48,8 @@ func normalisedSubject(column string) string        { return storekit.Normalised
 //
 // Whether a human took the request is read once per message, as req.accepted.
 // Each rule asks it, and every copy of that EXISTS was its own subplan. The
-// rules sit inside OR groups, which Postgres runs as subplans in any case.
-// OFFSET 0 keeps the select from being folded back into each reference.
+// rules sit inside `OR` groups, which Postgres runs as subplans in any case.
+// `OFFSET 0` keeps the select from being folded back into each reference.
 func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
 	return `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)

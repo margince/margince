@@ -5,9 +5,9 @@
 
 package activities
 
-// owedSQL reads whether a human took the request once per message. The rules
-// it reads it into must admit exactly the messages they admit with the EXISTS
-// written into every rule, over a matrix of everything those rules read.
+// owedSQL reads whether a human took the request once per message. Its rules
+// must admit the same messages as with the EXISTS written into every rule.
+// The matrix below varies everything those rules read.
 
 import (
 	"context"
@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // seedOwedMatrix writes one inbound message per combination of verdict, taken
@@ -93,7 +95,7 @@ func TestOwedReadsATakenRequestOnceAndAdmitsWhatEveryRuleReadingItAdmits(t *test
 			t.Errorf("rolling back the owed matrix: %v", err)
 		}
 	}()
-	base := time.Now().Add(-2 * time.Hour).Truncate(time.Second)
+	base := clocktest.Now(t).Add(-2 * time.Hour).Truncate(time.Second)
 	seedOwedMatrix(ctx, t, tx, base)
 	const asOf = "$1::timestamptz"
 
