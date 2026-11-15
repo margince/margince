@@ -37,12 +37,8 @@ import (
 // leadRepliedActor is the system principal the qualify task is written as.
 const leadRepliedActor = "system:lead-replied"
 
-// The task titles. A lead's name fills the first verb.
-var (
-	leadRepliedSubject    = systemtext.Copy("lead.reply", textlang.English)
-	leadBookedSubject     = systemtext.Copy("lead.booked", textlang.English)
-	leadForContactSubject = systemtext.Copy("lead.existing_contact", textlang.English)
-)
+// leadForContactSubject is the arrival task's title; a lead's name fills it.
+var leadForContactSubject = systemtext.Copy("lead.existing_contact", textlang.English)
 
 // leadWorkTasks writes both tasks. One writer, so a reply and a booking ask the
 // lead's owner the same question.
@@ -59,15 +55,20 @@ func newLeadWorkTasks(db *database.DB, log *slog.Logger) leadWorkTasks {
 // FileLeadReplyTx files the qualify task in the transaction that files the
 // inbound message on the lead.
 func (w leadWorkTasks) FileLeadReplyTx(ctx context.Context, tx pgx.Tx, lead ids.LeadID, arrival ids.UUID) error {
-	return w.askToQualifyTx(principal.SystemActing(ctx, leadRepliedActor), tx, lead, arrival, leadRepliedSubject)
+	return w.askToQualifyTx(principal.SystemActing(ctx, leadRepliedActor), tx, lead, arrival, "lead.reply")
 }
 
 // FileLeadBookingTx files the qualify task in the booking transaction.
 func (w leadWorkTasks) FileLeadBookingTx(ctx context.Context, tx pgx.Tx, lead ids.LeadID, arrival ids.UUID) error {
-	return w.askToQualifyTx(principal.SystemActing(ctx, leadRepliedActor), tx, lead, arrival, leadBookedSubject)
+	return w.askToQualifyTx(principal.SystemActing(ctx, leadRepliedActor), tx, lead, arrival, "lead.booked")
 }
 
-func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.LeadID, arrival ids.UUID, subject string) error {
+// FileLeadMeetingHeldTx files the qualify task as a meeting with the lead is held.
+func (w leadWorkTasks) FileLeadMeetingHeldTx(ctx context.Context, tx pgx.Tx, lead ids.LeadID, meeting ids.UUID) error {
+	return w.askToQualifyTx(principal.SystemActing(ctx, leadRepliedActor), tx, lead, meeting, "lead.held")
+}
+
+func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.LeadID, arrival ids.UUID, code string) error {
 	var name string
 	var email *string
 	var owner *ids.UUID
@@ -85,7 +86,7 @@ func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.L
 	if err != nil || !eligible {
 		return err
 	}
-	open, err := activities.OpenSystemTaskOnTx(ctx, tx, provenance.LeadRepliedSource, entityLead, lead.UUID, w.now(), owner)
+	open, err := activities.KeepOneSystemTaskOnTx(ctx, tx, provenance.LeadRepliedSource, entityLead, lead.UUID, arrival, w.now())
 	if err != nil || open {
 		return err
 	}
@@ -97,12 +98,8 @@ func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.L
 		name = systemtext.Literal("lead.unnamed")
 		nameArgument = systemtext.MessageArgument("lead.unnamed")
 	}
-	title := fmt.Sprintf(subject, strings.TrimSpace(name))
+	title := fmt.Sprintf(systemtext.Copy(code, textlang.English), strings.TrimSpace(name))
 	in := w.repliedTaskInput(lead, arrival, title, owner)
-	code := "lead.reply"
-	if subject == leadBookedSubject {
-		code = "lead.booked"
-	}
 	in.SystemText = &systemtext.Message{Version: 1, Subject: systemtext.Sentence(code, nameArgument)}
 	return w.logSystemTaskTx(ctx, tx, in)
 }
