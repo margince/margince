@@ -246,9 +246,9 @@ func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner 
 	return ids.Nil, nil
 }
 
-// organisedByTx reports whether the seat organised the invitation: the part
-// names no organizer, or names the seat's login or a mailbox the provider
-// proved is theirs (calendarSeatMatch's rule). A declared alias never counts.
+// organisedByTx reports whether the seat organised the invitation. The part
+// names no organizer, or names the seat's login or a mailbox proved theirs
+// (calendarSeatMatch's rule). A declared alias never counts.
 func organisedByTx(ctx context.Context, tx pgx.Tx, organizer string, seat ids.UUID) (bool, error) {
 	if organizer == "" {
 		return true, nil
