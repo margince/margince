@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/snapshotreads"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -79,6 +80,10 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
+	// The metrics, the targets and the owner names resolve the same named
+	// subjects; their live-subject reads are answered once in this snapshot.
+	ctx, release := snapshotreads.Open(ctx, tx)
+	defer release()
 	out, err := s.evaluator.Evaluate(ctx, tx, selection, framework, at)
 	if err != nil {
 		return Evaluation{}, err
