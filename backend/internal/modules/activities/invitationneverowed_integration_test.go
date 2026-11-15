@@ -255,3 +255,53 @@ func TestACitedInvitationForAHeldMeetingIsSettled(t *testing.T) {
 		t.Error("an outside invitation for a meeting ahead reads as settled, so the case above proves nothing")
 	}
 }
+
+// A weekly meeting is one UID and many occurrences. An invitation for an
+// occurrence already held is never owed a reply, though later ones lie ahead.
+func TestAnInvitationForAHeldOccurrenceOfASeriesIsNeverOwed(t *testing.T) {
+	e := setupLoad(t)
+	uid := "weekly-" + ids.NewV7().String() + "@google.com"
+	held, ahead := requestInstant.Add(-24*time.Hour).UTC(), requestInstant.Add(6*24*time.Hour).UTC()
+	for _, starts := range []time.Time{held, ahead} {
+		meeting := ids.NewV7()
+		e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+			VALUES ($1, 'meeting', 'Weekly', $2, 'seed', 'system')`, meeting, starts)
+		e.exec(t, `INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
+			VALUES ('meeting', $1, $2, 'seed')`, MeetingIdentityKey(uid, starts.Format(time.RFC3339)), meeting)
+	}
+	forHeld, forAhead := invitationAsking(t, e), invitationAsking(t, e)
+	for invitation, starts := range map[ids.UUID]time.Time{forHeld: held, forAhead: ahead} {
+		e.exec(t, `UPDATE activity SET calendar_uid = $2, calendar_event = jsonb_build_object('occurrence', $3::text) WHERE id = $1`,
+			invitation, uid, starts.Format(time.RFC3339))
+	}
+	if owedNow(t, e, forHeld) {
+		t.Error("an invitation for a held occurrence is owed a reply because a later occurrence exists")
+	}
+	if _, open := openInvitationsFor(t, e, e.rep, forHeld)[forHeld]; open {
+		t.Error("the held occurrence's invitation still offers an RSVP because a later occurrence exists")
+	}
+	if current, _ := offeredOnTheRecord(t, e, forAhead); !current {
+		t.Error("an outside invitation for an occurrence ahead is no longer a request, so the case above proves nothing")
+	}
+}
+
+// An all-day series names its occurrence by date: the mail writes 20260912 and
+// the meeting's key holds that day's midnight in UTC. The two still meet.
+func TestAnInvitationForAHeldAllDayOccurrenceIsNeverOwed(t *testing.T) {
+	e := setupLoad(t)
+	uid := "offsite-" + ids.NewV7().String() + "@google.com"
+	held, ahead := requestInstant.AddDate(0, 0, -1), requestInstant.AddDate(0, 0, 6)
+	for _, day := range []time.Time{held, ahead} {
+		meeting := ids.NewV7()
+		e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, occurred_precision, source, captured_by)
+			VALUES ($1, 'meeting', 'Offsite', $2, 'day', 'seed', 'system')`, meeting, day.Truncate(24*time.Hour))
+		e.exec(t, `INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
+			VALUES ('meeting', $1, $2, 'seed')`, MeetingIdentityKey(uid, day.Format(time.DateOnly)), meeting)
+	}
+	forHeld := invitationAsking(t, e)
+	e.exec(t, `UPDATE activity SET calendar_uid = $2, calendar_event = jsonb_build_object('occurrence', $3::text) WHERE id = $1`,
+		forHeld, uid, held.Format("20060102"))
+	if owedNow(t, e, forHeld) {
+		t.Error("an invitation for a held all-day occurrence is owed a reply")
+	}
+}
