@@ -2,9 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package meetingprofile is what a transcript reading says about how the
-// company on the other side sells: its ideal customer, its customers' pains,
-// what triggers a purchase, the objections it meets and how it sells. It holds
-// the reply's part that carries it and the check it must pass.
+// company on the other side sells to its own customers. It holds the reply's
+// part that carries it and the check it must pass.
 //
 // It rides the reading's one model call. A part that fails the check is
 // dropped, so it never fails the reading.

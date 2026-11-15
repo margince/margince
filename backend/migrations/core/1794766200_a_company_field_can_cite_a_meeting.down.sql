@@ -6,5 +6,5 @@ DROP FUNCTION IF EXISTS company_profile_field_cites_only_a_meeting();
 ALTER TABLE company_profile_field DROP CONSTRAINT IF EXISTS company_profile_meeting_evidence;
 ALTER TABLE company_profile_field DROP CONSTRAINT company_profile_field_source_check;
 ALTER TABLE company_profile_field ADD CONSTRAINT company_profile_field_source_check
-  CHECK (source IN ('human', 'agent', 'site_read', 'connector', 'migration'));
+  CHECK (source IN ('human', 'agent', 'site_read', 'connector', 'migration')) NOT VALID;
 ALTER TABLE company_profile_field DROP COLUMN IF EXISTS source_activity_id;

@@ -30,13 +30,10 @@ type MeetingProfileField struct {
 	Confidence float64
 }
 
-// ApplyMeetingProfileTx makes the fields one transcript stated the fields it
-// stands for: it writes each company's stated fields and removes the values an
-// earlier reading of the same transcript wrote and this one no longer states.
-// It never replaces a value a person or an agent wrote, and never writes onto
-// our own company. Only a transcript the whole workspace may read fills a
-// field: a profile field has the company's readers, and a meeting kept to its
-// participants must not reach them through one.
+// ApplyMeetingProfileTx writes the fields one transcript states. It removes
+// what an earlier reading of it wrote and this one no longer states. A person's
+// or agent's value and our own company are never written. Only a transcript the
+// whole workspace may read fills a field, since the company's readers see it.
 func ApplyMeetingProfileTx(
 	ctx context.Context, tx pgx.Tx, transcript ids.ActivityID, stated map[ids.CompanyID][]MeetingProfileField,
 ) error {

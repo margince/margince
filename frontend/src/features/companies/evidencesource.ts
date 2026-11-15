@@ -21,8 +21,8 @@ export type EvidenceBearingRow = Readonly<{
    * same updated_at if nothing changed, and only this tells them apart.
    */
   retrieved_at?: string | null;
-  // A value read from a meeting names the meeting's date; every reader of the
-  // field may see it, while the meeting itself keeps its own audience.
+  // A value read from a meeting names the meeting's date for every reader.
+  // The meeting itself keeps its own audience.
   source?: string;
   source_occurred_at?: string | null;
 }>;
