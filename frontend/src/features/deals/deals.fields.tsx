@@ -9,6 +9,7 @@ import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
 import { useCan } from "../../lib/capability";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import type { Project } from "../projects/projects.form";
 import {
@@ -57,9 +58,10 @@ const ATTRIBUTION_OPTIONS: { value: string; label: MessageKey }[] = [
 // company.read is asked nothing.
 function usePartners() {
   const readsCompanies = useCan("company", "read");
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["partners", "options"],
-    enabled: readsCompanies,
+    queryKey: ["partners", "options", readerScope ?? ""],
+    enabled: readsCompanies && readerScope !== undefined,
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/partners", {
@@ -92,6 +94,7 @@ export function usePartnerOptions(
   companies: { id: string; display_name: string }[],
 ): { value: string; label: string }[] {
   const readsCompanies = useCan("company", "read");
+  const readerScope = useHealthScope();
   const partners = usePartners();
   // The names come from a read of the partner companies rather than from
   // whatever page of companies the screen happens to hold.
@@ -103,8 +106,8 @@ export function usePartnerOptions(
   // filter has no such fallback: a partner it cannot name is one nobody can
   // narrow by.
   const names = useQuery({
-    queryKey: ["partners", "names"],
-    enabled: readsCompanies,
+    queryKey: ["partners", "names", readerScope ?? ""],
+    enabled: readsCompanies && readerScope !== undefined,
     staleTime: 60_000,
     queryFn: async () => {
       // relationship_type=partner reads the same set from the other side, so
@@ -146,13 +149,15 @@ const COMPANY_ID_BATCH = 100;
 function usePartnerCompaniesById(
   ids: readonly string[],
 ): { id: string; display_name: string }[] {
+  const readerScope = useHealthScope();
   const batches: string[][] = [];
   for (let at = 0; at < ids.length; at += COMPANY_ID_BATCH) {
     batches.push(ids.slice(at, at + COMPANY_ID_BATCH));
   }
   const reads = useQueries({
     queries: batches.map((batch) => ({
-      queryKey: ["partners", "names", "by-id", batch],
+      queryKey: ["partners", "names", "by-id", readerScope ?? "", batch],
+      enabled: readerScope !== undefined,
       staleTime: 60_000,
       queryFn: async () =>
         unwrap(

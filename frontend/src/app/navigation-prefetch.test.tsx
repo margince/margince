@@ -24,6 +24,7 @@ import {
   stages,
   stubBackend,
 } from "../features/deals/deals.testkit";
+import { healthScope } from "../lib/healthscopekey";
 import { pipelinesOptions } from "../lib/pipelines.queries";
 import { sessionOptions } from "../lib/session";
 import { meFixture } from "../testing/mefixture";
@@ -46,6 +47,8 @@ const READER = meFixture({
   allow: { contact: ["read"], deal: ["read"] },
   rowScope: "all",
 });
+
+const READER_SCOPE = healthScope(READER) ?? "";
 
 const OTHER_READER = {
   ...READER,
@@ -172,7 +175,8 @@ describe("navigation intent on the rail's Contacts link", () => {
     server.answerAll();
     await waitFor(() =>
       expect(
-        client.getQueryData(contactsArrivalOptions().queryKey)?.pages,
+        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey)
+          ?.pages,
       ).toHaveLength(1),
     );
 
@@ -190,7 +194,7 @@ describe("navigation intent on the rail's Contacts link", () => {
     await act(() => Promise.resolve());
     expect(server.asked).toHaveLength(0);
     expect(
-      client.getQueryState(contactsArrivalOptions().queryKey),
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
     ).toBeUndefined();
   });
 
@@ -254,14 +258,14 @@ describe("navigation intent on the rail's Contacts link", () => {
     server.answerAll();
     await waitFor(() =>
       expect(
-        client.getQueryData(contactsArrivalOptions().queryKey),
+        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey),
       ).toBeDefined(),
     );
 
     client.setQueryData(sessionOptions.queryKey, OTHER_READER);
 
     expect(
-      client.getQueryState(contactsArrivalOptions().queryKey),
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
     ).toBeUndefined();
     renderWith(client, <ContactsScreen />);
     await waitFor(() => expect(server.asked).toHaveLength(2));
@@ -299,7 +303,7 @@ describe("navigation intent on the rail's Contacts link", () => {
     await waitFor(() => expect(server.asked[0]?.signal.aborted).toBe(true));
     server.answerAll();
     expect(
-      client.getQueryState(contactsArrivalOptions().queryKey),
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
     ).toBeUndefined();
   });
 
@@ -315,6 +319,46 @@ describe("navigation intent on the rail's Contacts link", () => {
 
     await act(() => Promise.resolve());
     expect(server.asked).toHaveLength(0);
+  });
+
+  it("starts nothing before the session names the reader", async () => {
+    const server = contactsServer();
+    const client = createQueryClient();
+
+    navigationPrefetch(client).intend("contacts");
+
+    await act(() => Promise.resolve());
+    expect(server.asked).toHaveLength(0);
+  });
+
+  it("does not serve a list warmed under one row scope after the same user's row scope changes", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("contacts");
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    server.answerAll();
+    await waitFor(() =>
+      expect(
+        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey),
+      ).toBeDefined(),
+    );
+
+    const narrowed = meFixture({
+      allow: { contact: ["read"], deal: ["read"] },
+      rowScope: "own",
+    });
+    act(() => {
+      client.setQueryData(sessionOptions.queryKey, narrowed);
+    });
+    renderWith(client, <ContactsScreen />);
+
+    await waitFor(() => expect(server.asked).toHaveLength(2));
+    expect(screen.queryByText("Anna Weber")).toBeNull();
+    const own = healthScope(narrowed) ?? "";
+    expect(own).not.toBe(READER_SCOPE);
+    expect(
+      client.getQueryState(contactsArrivalOptions(own).queryKey)?.fetchStatus,
+    ).toBe("fetching");
   });
 });
 
@@ -389,15 +433,19 @@ describe("navigation intent toward Deals", () => {
         .map((stage) => ({ ...stage, pipeline_id: id })),
     });
 
-    const options = dealsArrivalColumnOptions([
-      pipeline("first", false),
-      pipeline("declared", true),
-    ]);
+    const options = dealsArrivalColumnOptions(
+      [pipeline("first", false), pipeline("declared", true)],
+      READER_SCOPE,
+    );
 
-    expect(options?.queryKey[2].pipelineId).toBe("declared");
-    expect(options?.queryKey[4]).toBe("s1");
+    expect(options?.queryKey[2]).toBe(READER_SCOPE);
+    expect(options?.queryKey[3].pipelineId).toBe("declared");
+    expect(options?.queryKey[5]).toBe("s1");
     expect(
-      dealsArrivalColumnOptions([{ ...pipeline("bare", true), stages: [] }]),
+      dealsArrivalColumnOptions(
+        [{ ...pipeline("bare", true), stages: [] }],
+        READER_SCOPE,
+      ),
     ).toBeUndefined();
   });
 });

@@ -20,6 +20,7 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useHealthScope } from "../../lib/healthscope";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
@@ -68,9 +69,9 @@ export function isTerminalContractStatus(status: Contract["status"]): boolean {
 // `open`: a renewal is usually recorded after the opportunity that won it has
 // already closed, so filtering to `open` would hide the one deal a renewal is
 // most often actually tied to.
-function dealsForCompany(companyId: string) {
+function dealsForCompany(companyId: string, readerScope: string) {
   return {
-    queryKey: ["companyDeals", companyId],
+    queryKey: ["companyDeals", companyId, readerScope],
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/deals", {
@@ -107,9 +108,10 @@ export function ContractRenewModal({
   // picker, which can only be filled by listing that company's deals, says why
   // it is not there rather than showing an empty list that reads as "no deals".
   const anchor = contract.company_id;
+  const readerScope = useHealthScope();
   const deals = useQuery({
-    ...dealsForCompany(anchor ?? ""),
-    enabled: open && anchor != null,
+    ...dealsForCompany(anchor ?? "", readerScope ?? ""),
+    enabled: open && anchor != null && readerScope !== undefined,
   });
 
   // Re-seed when a different row's renewal opens, or the form keeps the

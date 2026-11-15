@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useLocale } from "../i18n";
+import { useHealthScope } from "../lib/healthscope";
 import { translatedLabel } from "../lib/labeltranslation";
 import { unwrap } from "../lib/problem";
 import { useMemberFilterOptions } from "./assigneepicker";
@@ -117,9 +118,11 @@ export function useReferenceOptions(reference: Reference | undefined) {
   const members = useMemberFilterOptions(kind === "user");
   const roster = useRoster("team", kind === "team");
   const rosterPartial = useRosterPartial("team", kind === "team");
+  const readerScope = useHealthScope();
   const query = useQuery({
-    queryKey: ["filter-reference", reference, locale],
-    enabled: boundedReference(reference) && kind === null,
+    queryKey: ["filter-reference", reference, locale, readerScope ?? ""],
+    enabled:
+      boundedReference(reference) && kind === null && readerScope !== undefined,
     // Configuration changes rarely and a builder reads it on every clause, so a
     // minute of staleness saves a request per keystroke-adjacent render.
     staleTime: 60_000,
