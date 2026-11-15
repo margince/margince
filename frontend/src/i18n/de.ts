@@ -3899,6 +3899,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
   "timeline.group.mayContinue": "Möglicherweise gibt es frühere Nachrichten",
+  "timeline.group.newerPart": "Spätere Nachrichten weiter oben",
+  "timeline.group.olderPart": "Frühere Nachrichten weiter unten",
   "timeline.group.kind": "Thread",
   "timeline.group.earlier_other": "{count} frühere Nachrichten anzeigen",
   "timeline.group.earlier_one": "{count} frühere Nachricht anzeigen",

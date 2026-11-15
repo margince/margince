@@ -3784,6 +3784,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Đóng",
   "timeline.group.openThread": "Xem toàn bộ chuỗi thư",
   "timeline.group.mayContinue": "Có thể còn tin nhắn trước đó",
+  "timeline.group.newerPart": "Tin nhắn sau ở phía trên",
+  "timeline.group.olderPart": "Tin nhắn trước ở phía dưới",
   "timeline.group.kind": "Chuỗi thư",
   "timeline.group.earlier_other": "Hiển thị {count} tin nhắn trước đó",
   "timeline.group.earlier_one": "Hiển thị {count} tin nhắn trước đó",

@@ -32,6 +32,12 @@ export type TimelineGroup = {
   entries: TimelineEntry[];
   /** This group may continue past what the page holds. */
   partial: boolean;
+  /**
+   * A thread splits where other activity falls between its messages. These
+   * name the part just above (newer) and just below (older), when there is one.
+   */
+  newerPart?: string;
+  olderPart?: string;
 };
 
 type EmailSummary = components["schemas"]["EmailSummary"];
