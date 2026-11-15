@@ -89,9 +89,9 @@ func seedOpenTask(t *testing.T, e *Env) {
 	}
 }
 
-// meteredAttention is the attention service on a pool of its own whose
-// protocol round trips are counted, with idle pings and retirement off so
-// only request work is measured.
+// meteredAttention is the attention service on a pool of its own that counts
+// protocol round trips. Idle pings and retirement are off, so only request
+// work is measured.
 func meteredAttention(t *testing.T, e *Env, at time.Time) (*attention.Service, *atomic.Int64) {
 	t.Helper()
 	cfg := e.Pool.Config()
