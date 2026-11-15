@@ -195,9 +195,14 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	if err != nil {
 		return nil, err
 	}
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return nil, err
+	}
+	seat := seatAdmitsWrites(p)
 	for i := range rows {
 		rowID := id(rows[i])
-		set(&rows[i], writable[rowID] && !archived[rowID])
+		set(&rows[i], seat && writable[rowID] && !archived[rowID])
 	}
 	return writable, nil
 }

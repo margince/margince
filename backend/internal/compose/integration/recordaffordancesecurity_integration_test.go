@@ -70,7 +70,11 @@ func TestRecordAffordancesKeepArchivedUpdateAuthorityForMasks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	requireRecordAffordances(t, readSeat.Writable, readSeat.Archivable, expectedRecordActions{writable: true})
+	// A read seat is offered no action, but reads what a full seat of its role reads.
+	requireRecordAffordances(t, readSeat.Writable, readSeat.Archivable, expectedRecordActions{})
+	if readSeat.AmountMinor == nil || *readSeat.AmountMinor != amount || readSeat.MaskedFields != nil {
+		t.Fatal("the seat ceiling changed what the read seat may read")
+	}
 	deleteOnly := asTeam1Member(e, e.Rep1, recordAffordancePerms(recordWriteGrants{deleteGrant: true}))
 	if _, err := e.Deals.ArchiveDeal(deleteOnly, id, nil); err != nil {
 		t.Fatal(err)
