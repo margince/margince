@@ -511,8 +511,10 @@ test-db-up: composition ## (Re)build the migrated margince_test template the par
 mcp-inaccessible:
 	@sed '/^$$/d; s/^/WARN mcp: declared, but no tools\/list, router or internal AI task reaches: /' internal/compose/testdata/inaccessible-tools.txt
 
+# Export the literal filter so make cannot consume its regex anchors.
+test-it: export TEST_RUN_PATTERN := $(value RUN)
 test-it: composition ## Run ONE integration package (optionally RUN=Regex) on a throwaway clone: make test-it DIR=backend/internal/modules/contacts [RUN=TestName]
-	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$(RUN)"
+	@$(GOWORK_COMPOSED) bash ../scripts/test-integration-one.sh "$(DIR)" "$$TEST_RUN_PATTERN"
 
 # The MCP role sweep: every tool and action as every seeded role. Its test
 # carries `integration && rolesweep`, so no merge gate runs it; scheduled.yml

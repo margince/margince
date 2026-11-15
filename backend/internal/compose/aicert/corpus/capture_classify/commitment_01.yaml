@@ -20,7 +20,7 @@ expect:
     exactly what "commitment" is for.
     "commitment" scores high. "meeting" scores low — nothing here asks for or
     offers time with anybody, and reading a delivery date as a scheduling request
-    is the confusion this label pair exists to keep apart. "noise" scores lowest:
+    is the confusion this label pair exists to keep apart. "other" scores lowest:
     a promise with a date is the single most actionable thing a mailbox can
     contain, and dropping it is how a commitment silently stops being tracked.
     Then score the confidence as a real judgement rather than a formality: this

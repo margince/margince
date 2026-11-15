@@ -67,6 +67,9 @@ type SignatureField struct {
 type SignatureApplyResult struct {
 	Applied int // fields (one per phone number) this statement was newer than
 	Skipped int // fields answered later than this, unreadable, or ruled on by a human
+	// SourceLimited is set when the source mail was narrowed, archived or
+	// erased before the fields could land.
+	SourceLimited bool
 }
 
 // ApplySignatureFields lands one contact's gated signature fields in one
@@ -179,6 +182,7 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		}
 		if sourceLimited {
 			res.Skipped += len(fields)
+			res.SourceLimited = true
 			return nil
 		}
 		// The corrections, re-read INSIDE this transaction. The caller supplies
@@ -427,59 +431,6 @@ func revokeSignatureEvidence(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 		WHERE contact_id = $1 AND field = $2 AND source = $3`,
 		contactID, field, enrichSource); err != nil {
 		return fmt.Errorf("contacts: withdrawing unapplied signature evidence (%s): %w", field, err)
-	}
-	return nil
-}
-
-// MarkSignatureRead advances the read watermark to THIS mail, whatever the read
-// yielded. It is what stops a contact whose signature states nothing the pass
-// wants from being re-read — and re-billed — every night: they return as a
-// candidate only when mail NEWER than the watermark arrives.
-//
-// The watermark is the message's own occurred_at and it only moves forward
-// (GREATEST): a cursor that could rewind would reopen the contact as soon as the
-// mail it names is archived, or whenever two workers finished out of order.
-//
-// Bookkeeping, not a domain mutation, so it carries no audit or outbox row — the
-// same posture as the capture auto-enrich cursor. Deliberately outside the apply
-// transaction too: losing the watermark after a successful apply costs one
-// repeated read whose evidence rows are all first-verdict-wins inserts, so the
-// repeat changes nothing.
-//
-// historyDepth is how many of the contact's newest readable mails the pass may
-// read per new mail. The legacy repair reopens only watermarks without one.
-func (s *Store) MarkSignatureRead(ctx context.Context, contactID ids.ContactID, activityID ids.UUID, historyDepth int, version SignatureWork) error {
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// occurred_at is read from the activity rather than taken from the
-		// caller: the watermark and the candidate query must compare the same
-		// number, and only one of them can be the row itself.
-		generation, snapshot := version.Generation, version.Snapshot
-		args := []any{contactID, activityID, historyDepth, generation, snapshot}
-		tag, err := tx.Exec(ctx, fmt.Sprintf(`
-            INSERT INTO contact_signature_enrich_state AS st (contact_id, activity_id, last_activity_at, history_depth,read_snapshot)
-            SELECT $%[1]d, a.id, a.occurred_at, $%[3]d,NULLIF($%[5]d::text,'')::pg_snapshot FROM activity a
-			 WHERE a.id = $%[2]d AND a.restricted_at IS NULL
-			ON CONFLICT (contact_id) DO UPDATE
-			SET activity_id = CASE WHEN `+signatureAfterWatermarkSQL("EXCLUDED.last_activity_at", "EXCLUDED.activity_id")+` THEN EXCLUDED.activity_id ELSE st.activity_id END,
-			    last_activity_at = GREATEST(st.last_activity_at,
-			                                EXCLUDED.last_activity_at),
-			    history_depth = EXCLUDED.history_depth,
-			    attempted_at = now(),
-                read_snapshot=COALESCE(EXCLUDED.read_snapshot,st.read_snapshot)
-            WHERE st.requested_generation<=$%[4]d::bigint`, len(args)-4, len(args)-3, len(args)-2, len(args)-1, len(args)), args...)
-		if err != nil {
-			return err
-		}
-		if tag.RowsAffected() == 0 {
-			// The activity is gone (erased, archived away) between the candidate
-			// query and here. Nothing to watermark against; the next pass reads
-			// whatever mail this contact has now.
-			return nil
-		}
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("contacts: recording the signature read: %w", err)
 	}
 	return nil
 }

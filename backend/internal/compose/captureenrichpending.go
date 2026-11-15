@@ -39,13 +39,14 @@ func (e *CaptureEnricher) RunPendingWorkspace(ctx context.Context) (bool, error)
 	advanced := 0
 	for _, request := range work {
 		var readErr error
+		progressed := true
 		if candidate, ok := byContact[request.ContactID]; ok {
-			readErr = e.enrichOne(ctx, candidate, enabled)
+			progressed, readErr = e.enrichOne(ctx, candidate, enabled)
 			request.Snapshot = candidate.Snapshot
 		}
 		retryAfter := time.Duration(0)
-		if readErr != nil {
-			retryAfter = 15 * time.Minute
+		if readErr != nil || !progressed {
+			retryAfter = contacts.SignatureRetryDelay
 			if until, ok := ai.DeferredUntil(readErr); ok {
 				retryAfter = min(retryAfter, max(time.Second, until.Sub(e.now())))
 			}
@@ -59,7 +60,7 @@ func (e *CaptureEnricher) RunPendingWorkspace(ctx context.Context) (bool, error)
 				return false, river.JobSnooze(retryAfter)
 			}
 			e.log.WarnContext(ctx, "signature enrich: contact read deferred", "contact", request.ContactID.String(), "err", readErr)
-		} else {
+		} else if progressed {
 			advanced++
 		}
 	}

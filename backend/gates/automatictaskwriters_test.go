@@ -111,6 +111,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/scheduling_invitation.go:insertInvitation":        {writesNoTask},
 	"modules/activities/scheduling_proposal.go:CreateProposal":            {writesNoTask},
 	"modules/activities/outboundmessage.go:activity":                      {writesNoTask},
+	"modules/activities/meetingnotesrepair.go:connectMeetingNotesTx":      {writesNoTask},
 	"modules/activities/meetingnotes.go:LandMeetingNotesTx":               {writesNoTask},
 }
 

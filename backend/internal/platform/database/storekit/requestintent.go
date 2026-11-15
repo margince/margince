@@ -3,7 +3,10 @@
 
 package storekit
 
-import "github.com/margince/margince/backend/internal/shared/kernel/provenance"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
 
 // HumanReviewedOwedClause recognizes the explicit classification review writer.
 func HumanReviewedOwedClause(alias string) string {
@@ -29,5 +32,5 @@ func AsksUsClause(alias string) string {
 
 // AutomaticRequestIntentClause excludes pending or withdrawn judgments from personal work.
 func AutomaticRequestIntentClause(alias string) string {
-	return AsksUsClause(alias) + ` AND (` + alias + `.capture_label IS DISTINCT FROM 'noise' OR ` + HumanReviewedOwedClause(alias) + `)`
+	return AsksUsClause(alias) + ` AND (` + capturekind.SQL(alias+".capture_label") + ` IS DISTINCT FROM 'other' OR ` + HumanReviewedOwedClause(alias) + `)`
 }

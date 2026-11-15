@@ -3,7 +3,10 @@
 
 package costestimate
 
-import "github.com/margince/margince/backend/internal/modules/ai"
+import (
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/salutation"
+)
 
 // The work-shape floor: the cold-start estimate used when a workspace has no
 // ai_call history to measure a real per-unit cost from. First connect has
@@ -26,8 +29,8 @@ const (
 	// amortized across ten messages.
 	classifyBatchSize = 10
 	// signatureLineCount mirrors compose/captureenrich.go's §2.9 input pin: the
-	// trailing non-quoted signature lines fed to the per-contact enrich prompt.
-	signatureLineCount = 15
+	// signature window lines fed to the per-contact enrich prompt.
+	signatureLineCount = salutation.SignatureLineCount
 
 	// charsPerToken is the ~4-chars-per-token rule of thumb for the GPT/Gemini
 	// family tokenizers this repo's cloud tiers run on — the labeled
