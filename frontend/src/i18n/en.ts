@@ -20493,6 +20493,11 @@ export const en = {
   "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
+  "meeting.nextStep.title": "What is the next step?",
+  "meeting.nextStep.add": "Add task",
+  "meeting.nextStep.skip": "Skip",
+  "meeting.nextStep.subject": "Next step",
+  "meeting.nextStep.due": "Due",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "No-show",
   "worklist.verb.meetingCanceled": "Did not happen",
