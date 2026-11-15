@@ -91,8 +91,7 @@ export function useRowIntent({
 }>) {
   const intent = useNavigationIntent(level, entry, active);
   // The rail's tips wait for the pointer to settle like every other popover.
-  // A rail crossed on the way to the work column fired one tip per row it
-  // passed, which read as the rail flickering rather than as a page answering.
+  // Otherwise a pointer crossing the rail raises one tip per row it passes.
   const hover = useHoverIntent(() => {
     raiseTip("pointer");
     intent.onSettledPointer();
