@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package qualifyduplicates retires the extra open "Review qualification"
-// tasks a lead collected before one open task per lead was the rule.
-package qualifyduplicates
+// Package qualifytasks repairs the "Review qualification" tasks written before
+// today's rules: extra open ones on a lead, and subjects fixed in English.
+package qualifytasks
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 
 // DataTask keeps the newest open qualify task on each lead, retiring the rest
 // as of now.
-func DataTask(now func() time.Time) datatask.Task {
+func DuplicatesDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1794740089_one_open_qualify_task_per_lead", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1794740089_one_open_qualify_task_per_lead"),

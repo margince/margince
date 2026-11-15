@@ -92,3 +92,19 @@ func actionLinks(move crmcontracts.DealStatusCardMove) map[string]any {
 	delete(args, "subject")
 	return args
 }
+
+// The Next box speaks the reader's language over an English installation, and
+// its dismissal identity stays the one an English reader sees.
+func TestTheNextBoxFollowsTheReadersLanguage(t *testing.T) {
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, lang: "en",
+		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Send the offer"}}}
+	english := decideMove(f)
+	f.say = string(textlang.Vietnamese)
+	vietnamese := decideMove(f)
+	if vietnamese.Reason == english.Reason {
+		t.Fatalf("a Vietnamese reader read the English reason %q", english.Reason)
+	}
+	if vietnamese.Action != english.Action || !reflect.DeepEqual(vietnamese.Fingerprint, english.Fingerprint) {
+		t.Fatal("the reader's language changed the action or its dismissal identity")
+	}
+}
