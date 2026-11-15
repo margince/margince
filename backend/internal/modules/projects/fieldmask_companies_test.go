@@ -29,8 +29,11 @@ func TestFillingNoCompaniesPreservesTheAnchorMaskAndWriteFlag(t *testing.T) {
 		if got.CompanyId != nil || got.Companies == nil || len(*got.Companies) != 0 {
 			t.Errorf("company_id = %v, companies = %v, want null and an empty list", got.CompanyId, got.Companies)
 		}
-		if !reflect.DeepEqual(got.MaskedFields, p.MaskedFields) || !reflect.DeepEqual(got.Writable, p.Writable) {
-			t.Fatal("filling the empty company list changed the mask or writable flag")
+		if got.MaskedFields == nil || !reflect.DeepEqual(*got.MaskedFields, []string{"company_id"}) {
+			t.Errorf("masked_fields = %v, want only company_id", got.MaskedFields)
+		}
+		if got.Writable == nil || *got.Writable != writable {
+			t.Errorf("writable = %v, want %v", got.Writable, writable)
 		}
 	}
 }
