@@ -59,7 +59,7 @@ func (e *forecastEnv) reportReaderCtx() context.Context {
 		Type: principal.PrincipalHuman, ID: "human:reader", UserID: ids.NewV7(),
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"deal": {Read: true}, "forecast": {Read: true},
+				"deal": {Read: true}, "forecast": {Read: true}, "company": {Read: true},
 				"installation_settings": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,
@@ -489,7 +489,7 @@ func (e *forecastEnv) ownLensRepCtx(user ids.UUID) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:rep", UserID: user,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"deal": {Read: true}, "forecast": {Read: true},
+				"deal": {Read: true}, "forecast": {Read: true}, "company": {Read: true},
 				"installation_settings": {Read: true},
 			},
 			RowScope: principal.RowScopeOwn,
@@ -635,7 +635,7 @@ func (e *forecastEnv) wideLensCtx(user ids.UUID) context.Context {
 		Type: principal.PrincipalHuman, ID: "human:lead", UserID: user,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"deal": {Read: true}, "forecast": {Read: true},
+				"deal": {Read: true}, "forecast": {Read: true}, "company": {Read: true},
 				"installation_settings": {Read: true},
 			},
 			RowScope: principal.RowScopeAll,

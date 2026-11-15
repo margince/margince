@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/projectexport"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -179,8 +178,8 @@ func TestDeliveryContinuityCountsOnlyTheCompaniesOnAProject(t *testing.T) {
 	}
 }
 
-// No report field that names a company reaches a seat without company.read:
-// the row scope of a referenced column never stands in for its object grant.
+// No report field that names a company reaches a seat without company.read.
+// The row scope of a referenced column never stands in for its object grant.
 // Read over the whole published vocabulary, so a new report or column cannot
 // skip it.
 func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
@@ -203,14 +202,6 @@ func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
 	if named == 0 {
 		t.Fatal("no report names a company, so this test swept nothing")
 	}
-	pipeline, open, _ := DealFixture(t, e)
-	company := e.SeedCompany(t, "Partner Report Co", nil)
-	companyID := companyIDOf(company)
-	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Partnered", PipelineID: pipeline, StageID: open, PartnerCompanyID: &companyID, Source: "manual",
-	}); err != nil {
-		t.Fatal(err)
-	}
 	for _, plan := range []string{`{"group_by":["partner_company_id"]}`, `{"group_by":["company_id"]}`} {
 		if _, err := tryPrebuiltReport(e.readerWith(everything[:len(everything)-1]...), e, "deals-by-stage", plan); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("deals-by-stage %s without company.read → %v, want ErrPermissionDenied", plan, err)
@@ -219,7 +210,7 @@ func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
 }
 
 // A locked delivery read holds the account's edge set still until the
-// decision commits: neither taking a company off a project nor putting it on
+// decision commits. Neither taking a company off a project nor putting it on
 // another can change the fact under it.
 func TestALockedDeliveryReadHoldsTheAccountsEdges(t *testing.T) {
 	e := Setup(t)

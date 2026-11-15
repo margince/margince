@@ -46,6 +46,9 @@ func referencedTables(spec reportSpec, name string) (out []string) {
 			out = append(out, table)
 		}
 	}
+	if table, gated := spec.filterScopes[name]; gated {
+		out = append(out, table)
+	}
 	return out
 }
 

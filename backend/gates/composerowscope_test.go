@@ -223,11 +223,10 @@ var rowScopeSpellings = map[string]bool{
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
 	"SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
 	"RelationshipEndpointScope": true, "EnsureRelationshipVisible": true,
-	// EdgeReadScope RETURNS RelationshipEndpointScope's clause with the object
-	// gate in front of it, so a read reaching it applies the endpoint bound as
-	// surely as one calling the conjunction directly. Without it, a compose read
-	// bounded only through it reported as unscoped, and the fix a reader would
-	// reach for is a second scope call over a column already covered.
+	// EdgeReadScope returns RelationshipEndpointScope's clause behind the
+	// object gate. A read reaching it applies the endpoint bound as surely as
+	// one calling the conjunction directly. Without this entry such a read
+	// reported as unscoped, inviting a second scope call over a covered column.
 	//
 	// Adding it does not weaken the census. This list accepts the pair because
 	// it includes the row half; backend/gates/edgereaders_test.go refuses the
