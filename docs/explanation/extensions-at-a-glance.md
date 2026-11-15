@@ -112,8 +112,8 @@ Every field of `Extension` that brings something to the core.
 | `CompanyTypes` | Company types this unit adds beside core's own. |
 | `RecordKinds` | Kinds of record this unit adds beside core's own, stored as `ext:<unit>:<kind>`. |
 | `LinkTypes` | Ways this unit says two core records relate, stored as `ext:<unit>:<type>`. |
-| `ReportCounts` | Named numbers this unit adds to Reports and Home. |
-| `ReportBreakdowns` | Counts split by one field, added to Reports and Home. |
+| `ReportCounts` | Named numbers this unit adds to Reports. |
+| `ReportBreakdowns` | Counts split by one field, added to Reports. |
 | `SignalTypes` | Kinds of signal this unit adds beside core's own, each with an evidence layout declared as data. |
 | `FinanceSources` | Accounting systems this unit can read into the core's finance mirror. |
 | `Secrets` | Secret keys the unit declares it will use, by name and scope. |

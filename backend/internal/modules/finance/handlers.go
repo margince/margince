@@ -41,3 +41,13 @@ func (h Handlers) GetCompanyFinanceSummary(
 	}
 	httperr.WriteJSON(w, http.StatusOK, summary)
 }
+
+// GetCustomerPayments keeps Home and agent reads on the same scoped store path.
+func (h Handlers) GetCustomerPayments(w http.ResponseWriter, r *http.Request, params crmcontracts.GetCustomerPaymentsParams) {
+	summary, err := h.store.CustomerPayments(r.Context(), params.Cursor, params.Limit)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, summary)
+}

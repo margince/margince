@@ -46779,6 +46779,70 @@ type CustomFieldLiveLists struct {
 	UnseenCount int `json:"unseen_count"`
 }
 
+// CustomerPaymentCustomer defines model for CustomerPaymentCustomer.
+type CustomerPaymentCustomer struct {
+	AmountMinor  int64              `json:"amount_minor"`
+	CompanyId    openapi_types.UUID `json:"company_id"`
+	CompanyName  string             `json:"company_name"`
+	Currency     string             `json:"currency"`
+	InvoiceCount int                `json:"invoice_count" minimum:"1"`
+	OldestDays   int                `json:"oldest_days" minimum:"1"`
+}
+
+// CustomerPaymentInvoice defines model for CustomerPaymentInvoice.
+type CustomerPaymentInvoice struct {
+	CompanyId   openapi_types.UUID `json:"company_id"`
+	CompanyName string             `json:"company_name"`
+	Currency    string             `json:"currency"`
+	DaysOverdue int                `json:"days_overdue" minimum:"1"`
+	DueAt       openapi_types.Date `json:"due_at"`
+	InvoiceId   openapi_types.UUID `json:"invoice_id"`
+	Number      *string            `json:"number,omitempty"`
+	OpenMinor   int64              `json:"open_minor"`
+}
+
+// CustomerPaymentTotal defines model for CustomerPaymentTotal.
+type CustomerPaymentTotal struct {
+	AmountMinor int64  `json:"amount_minor"`
+	Currency    string `json:"currency"`
+}
+
+// CustomerPayments defines model for CustomerPayments.
+type CustomerPayments struct {
+	// AccessScope Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
+	AccessScope  string `json:"access_scope"`
+	CompanyCount int    `json:"company_count" minimum:"0"`
+
+	// Customers Up to three company and currency groups, oldest overdue invoice first.
+	Customers    []CustomerPaymentCustomer `json:"customers"`
+	Data         []CustomerPaymentInvoice  `json:"data"`
+	InvoiceCount int                       `json:"invoice_count" minimum:"0"`
+	LastSyncedAt *time.Time                `json:"last_synced_at,omitempty"`
+
+	// LinkedCompanies Readable, live linked companies eligible for the payment overview.
+	LinkedCompanies int      `json:"linked_companies" minimum:"0"`
+	Page            PageInfo `json:"page"`
+	Provider        *string  `json:"provider,omitempty"`
+
+	// State Why the figures are what they are — the six cases a company page must keep
+	// apart, because five of them look identical if you only render the numbers.
+	//
+	// `no_connection` — no accounting source is configured for this installation.
+	// `unmapped` — a source is connected, but nobody has said which of its
+	// customers this company is. The figures are absent, and the fix is a
+	// mapping rather than a sync.
+	// `syncing` — the first pass has not finished; figures may be partial.
+	// `connected` — the figures are current.
+	// `stale` — the last sync succeeded, but long enough ago that the reader
+	// should see the date beside the number.
+	// `error` — the last attempt failed. What is shown is the last good answer,
+	// and the reader is told it is not current.
+	State FinanceSummaryState `json:"state"`
+
+	// Totals Complete overdue totals for readable companies, each in its own currency.
+	Totals []CustomerPaymentTotal `json:"totals"`
+}
+
 // DataCompleteness How much of what the band needs is actually present — with BOTH counts. "4 of 9"
 // and "4 of 40" are different claims and must never render identically (DOSS-AC-12).
 type DataCompleteness struct {
@@ -76957,6 +77021,15 @@ type GetFilterVocabularyParams struct {
 	Resource FilterResource `form:"resource" json:"resource"`
 }
 
+// GetCustomerPaymentsParams defines parameters for GetCustomerPayments.
+type GetCustomerPaymentsParams struct {
+	// Cursor Opaque continuation from this response's page.next_cursor.
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
+	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
+}
+
 // ListFinanceSourceCustomersParams defines parameters for ListFinanceSourceCustomers.
 type ListFinanceSourceCustomersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -97321,7 +97394,7 @@ type ServerInterface interface {
 	// What installed extensions add to one core record's History.
 	// (GET /extension-history)
 	ListExtensionHistory(w http.ResponseWriter, r *http.Request, params ListExtensionHistoryParams)
-	// The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+	// The counts and breakdowns installed extensions add to Reports, answered for this caller.
 	// (GET /extension-reports)
 	ListExtensionReports(w http.ResponseWriter, r *http.Request)
 	// List the composed extension units and what each contributes. Read-only; needs the extension_access read grant.
@@ -97345,6 +97418,9 @@ type ServerInterface interface {
 	// Read what a new filter clause may name on one record type (LVS-EXT-8).
 	// (GET /filters/vocabulary)
 	GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams)
+	// Overdue customer invoices the reader may see.
+	// (GET /finance/customer-payments)
+	GetCustomerPayments(w http.ResponseWriter, r *http.Request, params GetCustomerPaymentsParams)
 	// Open a mirrored invoice's own PDF, fetched from the accounting source.
 	// (GET /finance/invoices/{id}/pdf)
 	DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request, id Id)
@@ -102301,7 +102377,7 @@ func (_ Unimplemented) ListExtensionHistory(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+// The counts and breakdowns installed extensions add to Reports, answered for this caller.
 // (GET /extension-reports)
 func (_ Unimplemented) ListExtensionReports(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -102346,6 +102422,12 @@ func (_ Unimplemented) ProposeFilter(w http.ResponseWriter, r *http.Request) {
 // Read what a new filter clause may name on one record type (LVS-EXT-8).
 // (GET /filters/vocabulary)
 func (_ Unimplemented) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params GetFilterVocabularyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Overdue customer invoices the reader may see.
+// (GET /finance/customer-payments)
+func (_ Unimplemented) GetCustomerPayments(w http.ResponseWriter, r *http.Request, params GetCustomerPaymentsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -131644,6 +131726,60 @@ func (siw *ServerInterfaceWrapper) GetFilterVocabulary(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// GetCustomerPayments operation middleware
+func (siw *ServerInterfaceWrapper) GetCustomerPayments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCustomerPaymentsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCustomerPayments(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DownloadFinanceInvoicePdf operation middleware
 func (siw *ServerInterfaceWrapper) DownloadFinanceInvoicePdf(w http.ResponseWriter, r *http.Request) {
 
@@ -155724,6 +155860,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/filters/vocabulary", wrapper.GetFilterVocabulary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/finance/customer-payments", wrapper.GetCustomerPayments)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/finance/invoices/{id}/pdf", wrapper.DownloadFinanceInvoicePdf)
