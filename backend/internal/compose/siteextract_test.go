@@ -355,7 +355,7 @@ func (f growingProfileFake) Complete(ctx context.Context, req model.Request) (mo
 				`{"f":"usp","v":"Audit 20","e":"s0","c":0.9}]}`}, nil
 		}
 		// The early pass sees only the first pages, and grounds `industry`.
-		return model.Response{Text: `{"fields":[{"f":"industry","v":"Audit 00","e":"s0","c":0.9}]}`}, nil
+		return model.Response{Text: `{"fields":[{"f":"industry","v":"legal_professional_services","e":"s0","c":0.9}]}`}, nil
 	}
 	return f.laneFake.Complete(ctx, req)
 }
@@ -457,7 +457,7 @@ func (f budgetDeferringFake) Complete(ctx context.Context, req model.Request) (m
 		if f.calls.Add(1) == 1 {
 			return model.Response{}, &ai.BudgetDeferralError{}
 		}
-		return model.Response{Text: `{"fields":[{"f":"industry","v":"Audit 00","e":"s0","c":0.9}]}`}, nil
+		return model.Response{Text: `{"fields":[{"f":"industry","v":"legal_professional_services","e":"s0","c":0.9}]}`}, nil
 	}
 	return f.laneFake.Complete(ctx, req)
 }
@@ -536,7 +536,7 @@ func (f failThenAnswerFake) Complete(ctx context.Context, req model.Request) (mo
 		if f.calls.Add(1) == 1 {
 			return model.Response{}, errors.New("provider unavailable")
 		}
-		return model.Response{Text: `{"fields":[{"f":"industry","v":"Audit 00","e":"s0","c":0.9}]}`}, nil
+		return model.Response{Text: `{"fields":[{"f":"industry","v":"legal_professional_services","e":"s0","c":0.9}]}`}, nil
 	}
 	return f.laneFake.Complete(ctx, req)
 }

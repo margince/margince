@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/calendarevent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -271,6 +272,28 @@ func TestAColleaguesInvitationIsCreditedToTheColleague(t *testing.T) {
 	}
 	if sender := invitationSenderOf(ctx, t, db, "invite-unauth"); sender != nil {
 		t.Errorf("an unauthenticated invitation credited seat %v; a sender types From", sender)
+	}
+
+	// A colleague forwarding a customer's invitation is not its organizer.
+	forwarded := colleagueCopy("invite-forwarded", "sam@acme.com")
+	theirs := fields
+	theirs.CalendarEvent = &calendarevent.Event{Organizer: "buyer@customer.test"}
+	forwarded.Fields = theirs
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, forwarded)); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	if sender := invitationSenderOf(ctx, t, db, "invite-forwarded"); sender != nil {
+		t.Errorf("a forwarded customer invitation credited seat %v as its sender", sender)
+	}
+	organised := colleagueCopy("invite-organised", "sam@acme.com")
+	own := fields
+	own.CalendarEvent = &calendarevent.Event{Organizer: "Sam@Acme.com"}
+	organised.Fields = own
+	if _, err := capture.NewSink(db).Upsert(capturedAs(ctx, ws, seat, organised)); err != nil {
+		t.Fatalf("Upsert: %v", err)
+	}
+	if sender := invitationSenderOf(ctx, t, db, "invite-organised"); sender == nil || *sender != colleague {
+		t.Errorf("an invitation the colleague organised credits %v, want %v", sender, colleague)
 	}
 }
 

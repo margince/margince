@@ -16,55 +16,104 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// KeepOneSystemTaskOnTx reports whether the system already has a task from
-// this source on the record that nobody finished or archived. At most one
-// such task stays open, however often its source writes in. One that left the
-// Worklist because its evidence went stale, or that the owner cannot read, is
-// pointed at source, the new evidence. No second task is filed. Every such
-// task counts, whoever can read it, so a change of owner files no second one.
-// The caller serialises it with its own write.
-func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID, source ids.UUID, asOf time.Time, owner *ids.UUID) (bool, error) {
+// KeepOneSystemTaskOnTx keeps one open task and refreshes unusable evidence before adoption.
+// An open task nobody holds goes to the record's owner, when it has one.
+// The caller serialises arrivals on the record, including owner changes.
+func KeepOneSystemTaskOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID, source ids.UUID, recordOwner *ids.UUID, asOf time.Time) (bool, error) {
+	open, found, err := lockOpenSystemTask(ctx, tx, sourceSystem, entityType, entityID)
+	if err != nil || !found {
+		return false, err
+	}
+	if source == ids.Nil {
+		return true, nil
+	}
+	if err := lockTaskAdoption(ctx, tx, open.String()); err != nil {
+		return false, err
+	}
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	openArg := arg(open)
+	current := storekit.CurrentTaskClause("t", asOf, "'[]'::jsonb", arg)
+	var isCurrent, held bool
+	var prior, owner *ids.UUID
+	query := storekit.SQLf(`SELECT %s, %s, %s, t.assignee_id
+ FROM activity t WHERE t.id=$%d AND t.archived_at IS NULL`, current, storekit.HeldTaskClause("t"), provenance.TaskSourceActivitySQL("t"), openArg)
+	if err := tx.QueryRow(ctx, query, args...).Scan(&isCurrent, &held, &prior, &owner); err != nil {
+		return false, fmt.Errorf("activities: reading the open task's source and adoption: %w", err)
+	}
+	if owner == nil && recordOwner != nil {
+		if err := handTaskToOwner(ctx, tx, open, *recordOwner, sourceSystem); err != nil {
+			return false, err
+		}
+		owner = recordOwner
+	}
+	if held {
+		return true, nil
+	}
+	usable := false
+	if prior != nil {
+		usable, err = CurrentLeadEngagementTx(ctx, tx, *prior, owner, asOf)
+		if err != nil {
+			return false, err
+		}
+	}
+	if !isCurrent || !usable {
+		if err := repointTaskEvidence(ctx, tx, open, source, owner, asOf, sourceSystem); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+// repointTaskEvidence points an open task at the new source when that source
+// is usable for the task's assignee, and leaves the task alone otherwise.
+func repointTaskEvidence(ctx context.Context, tx pgx.Tx, task, source ids.UUID, owner *ids.UUID, asOf time.Time, sourceSystem string) error {
+	eligible, err := CurrentLeadEngagementTx(ctx, tx, source, owner, asOf)
+	if err != nil || !eligible {
+		return err
+	}
+	if _, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](task), UpdateActivityInput{sourceActivityID: &source, recordedAt: &asOf}); err != nil {
+		return fmt.Errorf("activities: pointing the open %s task at its new evidence: %w", sourceSystem, err)
+	}
+	return nil
+}
+
+// lockOpenSystemTask finds the newest open task from this source on the
+// record and locks its row, so a second arrival waits for the first.
+func lockOpenSystemTask(ctx context.Context, tx pgx.Tx, sourceSystem, entityType string, entityID ids.UUID) (ids.UUID, bool, error) {
 	column := linkColumn(entityType)
 	if column == "" {
-		return false, &InvalidLinkTypeError{EntityType: entityType}
+		return ids.Nil, false, &InvalidLinkTypeError{EntityType: entityType}
 	}
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	entityArg, sourceArg := arg(entityID), arg(sourceSystem)
-	current := storekit.CurrentTaskClause("t", asOf, "'[]'::jsonb", arg)
-	if owner != nil {
-		seat, err := auth.SeatPrincipal(ctx, tx, *owner)
-		if err != nil {
-			return false, err
-		}
-		visible, err := auth.ActivityContentClause(principal.WithActor(ctx, seat), "t", arg)
-		if err != nil {
-			return false, err
-		}
-		current = "(" + current + " AND " + visible + ")"
-	}
 	var open ids.UUID
-	var isCurrent bool
-	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT t.id, %s
+	err := tx.QueryRow(ctx, storekit.SQLf(`SELECT t.id
 		  FROM activity t JOIN activity_link l ON l.activity_id = t.id
 		 WHERE l.%s = $%d AND t.kind = 'task' AND t.source_system = $%d
 		   AND t.is_done = false AND t.archived_at IS NULL
-		 ORDER BY t.created_at DESC, t.id DESC LIMIT 1`, current, column, entityArg, sourceArg),
-		args...).Scan(&open, &isCurrent)
+		 ORDER BY t.created_at DESC, t.id DESC LIMIT 1 FOR UPDATE OF t`, column, entityArg, sourceArg),
+		args...).Scan(&open)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
+		return ids.Nil, false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("activities: reading the open %s task on a %s: %w", sourceSystem, entityType, err)
+		return ids.Nil, false, fmt.Errorf("activities: reading the open %s task on a %s: %w", sourceSystem, entityType, err)
 	}
-	if !isCurrent && source != ids.Nil {
-		if _, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](open), UpdateActivityInput{sourceActivityID: &source, recordedAt: &asOf}); err != nil {
-			return false, fmt.Errorf("activities: pointing the open %s task at its new evidence: %w", sourceSystem, err)
-		}
+	return open, true, nil
+}
+
+// handTaskToOwner assigns an open task nobody holds to the record's owner.
+func handTaskToOwner(ctx context.Context, tx pgx.Tx, task, recordOwner ids.UUID, sourceSystem string) error {
+	assignee := ids.From[ids.UserKind](recordOwner)
+	if _, err := updateActivityInTx(ctx, tx, ids.From[ids.ActivityKind](task), UpdateActivityInput{AssigneeID: &assignee}); err != nil {
+		return fmt.Errorf("activities: handing the open %s task to the record's owner: %w", sourceSystem, err)
 	}
-	return true, nil
+	return nil
 }
 
 // CurrentLeadEngagementTx applies source admission and the prospective assignee's access.

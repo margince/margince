@@ -2105,8 +2105,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "aiAdmin.decisionSkip.uncertified":
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
-  "aiAdmin.decisionSkip.local_only":
-    "Entscheidungsmodell nicht genutzt: Diese Aktivität nutzt nur einen lokalen Anbieter für Entscheidungen.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -3361,8 +3359,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Rolle",
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
-  "rel.current": "Aktuell",
   "rel.former": "Früher",
+  "rel.current": "Aktuell",
   "rel.endedOn": "Bis {when}",
   "rel.remove": "Entfernen",
   "rel.removeConfirm":
@@ -5194,6 +5192,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.needsAction": "Keine Antwort",
   "meeting.attendeesMore_one": "und {count} weiterer Gast",
   "meeting.attendeesMore_other": "und {count} weitere Gäste",
+  "meeting.invitation.invited_one": "{count} eingeladen",
+  "meeting.invitation.invited_other": "{count} eingeladen",
+  "meeting.invitation.accepted_one": "{count} zugesagt",
+  "meeting.invitation.accepted_other": "{count} zugesagt",
+  "meeting.invitation.declined_one": "{count} abgesagt",
+  "meeting.invitation.declined_other": "{count} abgesagt",
+  "meeting.invitation.tentative_one": "{count} vielleicht",
+  "meeting.invitation.tentative_other": "{count} vielleicht",
   "activity.detail.guestsLeftOut_one":
     "und {count} weiterer Gast, nicht aufgeführt",
   "activity.detail.guestsLeftOut_other":
@@ -15666,8 +15672,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eingabe zu groß für das Entscheidungsmodell",
   "aicalls.reason.decision_uncertified":
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
-  "aicalls.reason.decision_local_only":
-    "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
@@ -20743,6 +20747,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.meetingSkipNextStep": "Nächsten Schritt überspringen",
+  "worklist.verb.meetingNextStep": "Wie geht es weiter?",
   "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
@@ -20750,11 +20756,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
-  "meeting.nextStep.title": "Was ist der nächste Schritt?",
-  "meeting.nextStep.add": "Aufgabe anlegen",
-  "meeting.nextStep.skip": "Überspringen",
-  "meeting.nextStep.subject": "Nächster Schritt",
-  "meeting.nextStep.due": "Fällig",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
@@ -21224,7 +21225,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
   "lead.company.addedOnQualify":
-    "Noch kein Unternehmenseintrag. Beim Qualifizieren kannst du ihn anlegen.",
+    "Noch kein Unternehmen verknüpft. Beim Qualifizieren wird es verknüpft oder angelegt.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.company.matchedByDomain": "Gleiche Website-Domain",
@@ -21458,6 +21459,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "activity.notes.connectHint":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen, um sie zu lesen.",
+  "activity.notes.otherAccount":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen mit dem Google-Konto deines Kalenders.",
+  "captureConcern.notesGrant":
+    "Besprechungsnotizen können nicht gelesen werden",
+  "captureConcern.notesAccount":
+    "Besprechungsnotizen benötigen dasselbe Google-Konto wie der Kalender",
   "captureConcern.reauth": "Erneute Verbindung erforderlich",
   "captureConcern.error": "Verbindungsfehler",
   "captureConcern.failing": "Synchronisierung schlägt fehl",

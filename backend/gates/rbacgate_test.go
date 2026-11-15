@@ -768,12 +768,13 @@ var authDecisionVerbs = []string{"Require", "Ensure", "Admit", "Hold"}
 // about the ROW rather than about the caller, so the sentinel heuristic would
 // keep proposing them.
 var authNotDecisions = map[string]string{
-	"MasksAnyRowOf":   "answers a BOOLEAN about the caller's role and returns no error of its own. The refusal is the caller's: deals turns it into a parse error on a sort over a withheld column",
-	"VisibleSubset":   "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
-	"WritableSubset":  "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
-	"LockSubjectLive": "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
-	"RefuseRow":       "relays a refusal the store already decided on a rule the record holds, and records it; it reads no grant and decides nothing",
-	"StampWritable":   "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
+	"MasksAnyRowOf":            "answers a BOOLEAN about the caller's role and returns no error of its own. The refusal is the caller's: deals turns it into a parse error on a sort over a withheld column",
+	"VisibleSubset":            "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
+	"WritableSubset":           "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
+	"LockSubjectLive":          "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
+	"RefuseRow":                "relays a refusal the store already decided on a rule the record holds, and records it; it reads no grant and decides nothing",
+	"ProjectCompanyPredicates": "answers a caller without relationship.read with EdgesRead false rather than an error, so its callers withhold the company section. It refuses nobody; the ErrPermissionDenied it reads is EdgeReadScope's, turned into that omission",
+	"StampWritable":            "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
 }
 
 // gatekit:fixture the decisions whose names do not carry a refusal verb, each

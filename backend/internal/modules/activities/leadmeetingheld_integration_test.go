@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
@@ -57,11 +58,21 @@ func TestMarkingAMeetingHeldAsksItsLeadToBeQualified(t *testing.T) {
 		t.Fatalf("logging the meeting asked to qualify %d leads, want none until it is held", len(asks.asked))
 	}
 	held := meetingoutcome.Held
-	if _, err := store.UpdateActivity(writer, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), UpdateActivityInput{MeetingStatus: &held}); err != nil {
+	if _, err := store.UpdateActivity(writer, ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), UpdateActivityInput{
+		MeetingStatus: &held, FollowUpTask: &crmcontracts.ActivityFollowUpTask{Subject: "Send the quote"},
+	}); err != nil {
 		t.Fatal(err)
 	}
 	if asks.asked[lead] != ids.UUID(meeting.Id) {
 		t.Errorf("marking the meeting held asked %v, want the lead asked after this meeting", asks.asked)
+	}
+	source := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
+	tasks, _, err := store.ListActivities(writer, ListActivitiesInput{SourceActivityID: &source})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tasks) != 1 || tasks[0].Subject == nil || *tasks[0].Subject != "Send the quote" {
+		t.Fatalf("held meeting lost its chosen next step: %+v", tasks)
 	}
 	// A meeting logged already held asks too.
 	logged, _, err := store.LogActivity(writer, LogActivityInput{
@@ -105,8 +116,8 @@ func TestTheRepairKeepsOneOpenQualifyTaskPerLead(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The data task rejects a page that changed more than it scanned.
-	if len(scanned) != 1 || changed != 1 {
-		t.Errorf("the repair scanned %d leads and changed %d, want the one lead counted once", len(scanned), changed)
+	if len(scanned) != 2 || changed != 2 {
+		t.Errorf("the repair scanned %d tasks and changed %d, want the two older tasks", len(scanned), changed)
 	}
 	for i, task := range tasks {
 		var archived bool

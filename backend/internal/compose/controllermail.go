@@ -125,6 +125,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		LinkID:           in.LinkID,
 		FromAddress:      q.from,
 		InlineLogoKey:    mail.logoKey,
+		StagedAt:         in.StagedAt,
 	}, q.templates)
 	if err != nil {
 		return ids.UUID{}, err

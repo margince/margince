@@ -1715,7 +1715,7 @@ model, real network).
 ### Decision models
 
 A decision model answers a site's closed question first. The site's LLM ladder
-answers instead whenever the lane may not be asked (a local-only task), fails,
+answers instead whenever the lane is unbound, fails,
 or answers below the site's own floor. A decision record comes from a
 `make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified
 per site with no judge: `certified` means no answer the site kept was wrong in

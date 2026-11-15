@@ -28,6 +28,21 @@ export function useHealthScope() {
 }
 
 /**
+ * A `placeholderData` that keeps the last answer on screen while the next one
+ * loads. It never carries rows across a change of reader scope. The key must
+ * end with the scope.
+ */
+export function previousOfScope(readerScope: string | undefined) {
+  return <Data>(
+    previous: Data | undefined,
+    previousQuery: { queryKey: readonly unknown[] } | undefined,
+  ): Data | undefined =>
+    readerScope !== undefined && previousQuery?.queryKey.at(-1) === readerScope
+      ? previous
+      : undefined;
+}
+
+/**
  * The reader scope of the cached session, without asking /me and without
  * needing a QueryClient. For code that must drop what it holds when the scope
  * changes, but must not gate on a session it may never have.

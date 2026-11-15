@@ -9,6 +9,7 @@ const (
 	employmentFormer       = "former"
 	employmentUnknown      = "unknown"
 	employmentLinked       = "linked"
+	employmentNeedsReview  = "needs_review"
 	employmentApply        = "apply"
 	employmentResolve      = "resolve"
 	employmentActionField  = "action"

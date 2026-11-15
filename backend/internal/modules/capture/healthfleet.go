@@ -40,7 +40,7 @@ func FleetConcernsTx(ctx context.Context, tx pgx.Tx, now time.Time) ([]FleetConc
 	rows, err := tx.Query(ctx, `SELECT c.user_id, u.display_name, c.id, c.provider, c.status,
   c.account_label, c.connected_at, c.silence_dismissed_since,
   s.last_delivery_at, s.last_success_at, s.last_error_class, s.failing_since,
-  b.status, b.completed_at
+  b.status, b.completed_at, c.provider_scopes, `+notesCalendarAccountSQL+`
  FROM capture_connection c LEFT JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
  LEFT JOIN capture_sync_state s ON s.connection_id = c.id
  LEFT JOIN LATERAL (SELECT status, completed_at FROM capture_backfill WHERE connection_id = c.id ORDER BY created_at DESC, id DESC LIMIT 1) b ON true
@@ -57,7 +57,7 @@ func FleetConcernsTx(ctx context.Context, tx pgx.Tx, now time.Time) ([]FleetConc
 		v := &row.Connection
 		if err := rows.Scan(&row.UserID, &row.DisplayName, &v.ID, &v.Provider, &v.Status,
 			&v.AccountLabel, &v.ConnectedAt, &v.SilenceDismissedSince, &v.LastDeliveryAt, &v.LastSuccessAt,
-			&v.LastErrorClass, &v.FailingSince, &status, &completed); err != nil {
+			&v.LastErrorClass, &v.FailingSince, &status, &completed, &v.ProviderScopes, &v.CalendarAccountLabel); err != nil {
 			return nil, err
 		}
 		row.Shared = row.UserID == nil

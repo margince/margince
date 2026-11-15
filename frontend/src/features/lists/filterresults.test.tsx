@@ -440,6 +440,7 @@ describe("a column that points at another record", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
     return render(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">

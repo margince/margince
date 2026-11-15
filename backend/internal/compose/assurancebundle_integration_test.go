@@ -78,7 +78,7 @@ func TestTheNightlyPassBundlesADealsFindingsIntoOneTask(t *testing.T) {
 	// agrees. What does not agree is the subject line: it takes the size of the
 	// group its task was minted for. Grouped by subject it says three; grouped
 	// by finding it says one, on a task that then collects two more.
-	want := bundleTaskSubject(textlang.English, task.findings)
+	want := bundleSubjectIn(t, textlang.English, task.findings)
 	if task.subject != want {
 		t.Errorf("the task carrying %d findings is titled %q, want %q — the subject "+
 			"line is written from the group the task was minted for, so a wrong "+
@@ -136,8 +136,8 @@ func TestTheBundledTaskReadsInItsAssigneesLanguage(t *testing.T) {
 	if len(tasks) != 1 {
 		t.Fatalf("want 1 task, got %d", len(tasks))
 	}
-	want := bundleTaskSubject(textlang.Vietnamese, tasks[0].findings)
-	if tasks[0].subject != want || want == bundleTaskSubject(textlang.English, tasks[0].findings) {
+	want := bundleSubjectIn(t, textlang.Vietnamese, tasks[0].findings)
+	if tasks[0].subject != want || want == bundleSubjectIn(t, textlang.English, tasks[0].findings) {
 		t.Errorf("the task for a Vietnamese reader is titled %q, want %q", tasks[0].subject, want)
 	}
 }
@@ -178,7 +178,7 @@ func TestATaskWhoseOwnerSeatIsGoneLandsUnassigned(t *testing.T) {
 	if len(tasks) != 1 || tasks[0].assignee != nil {
 		t.Fatalf("after the owner's seat went, the open tasks are %+v, want one unassigned", tasks)
 	}
-	if want := bundleTaskSubject(textlang.English, tasks[0].findings); tasks[0].subject != want {
+	if want := bundleSubjectIn(t, textlang.English, tasks[0].findings); tasks[0].subject != want {
 		t.Errorf("the unassigned task is titled %q, want the base language's %q", tasks[0].subject, want)
 	}
 }
@@ -736,4 +736,14 @@ func TestAnArchivedTaskIsNotAdoptedAndTheNightMintsAfresh(t *testing.T) {
 		t.Error("the pass adopted a task somebody had archived — it is gone from every live " +
 			"read, so the findings would hang off a row nobody can open")
 	}
+}
+
+// bundleSubjectIn is the task's subject as a reader of lang reads it.
+func bundleSubjectIn(t *testing.T, lang textlang.Lang, findings int) string {
+	t.Helper()
+	line, err := bundleTaskSubject(findings).Render(lang)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return line
 }

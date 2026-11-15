@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, StoryProviders } from "../../testing/story-utils";
@@ -191,4 +192,52 @@ export const CouldNotBeRead: Story = {
     frame(async () =>
       jsonResponse({ title: "The receipts could not be read" }, 502),
     ),
+};
+
+export const UnavailableCompletedSource: Story = {
+  render: () =>
+    frame(async () =>
+      jsonResponse({
+        as_of: "2026-11-15T09:00:00Z",
+        truncated: false,
+        receipts: [],
+        sources_unavailable: [{ source: "approval", reason: "withheld" }],
+      }),
+    ),
+};
+
+export const DirectAutomaticChangeGroup: Story = {
+  render: () =>
+    frame(async () =>
+      jsonResponse({
+        as_of: "2026-11-15T09:00:00Z",
+        truncated: false,
+        receipts: [
+          {
+            id: "11111111-1111-7111-8111-111111111111",
+            kind: "magic.action.create_contact",
+            summary: "",
+            occurred_at: "2026-11-15T08:00:00Z",
+            completed_change: {
+              id: "11111111-1111-7111-8111-111111111111",
+              lane: "done",
+              occurred_at: "2026-11-15T08:00:00Z",
+              summary: { key: "magic.action.create_contact" },
+              actor: { type: "system", id: "capture" },
+              count: 3,
+              count_is_floor: true,
+            },
+          },
+        ],
+      }),
+    ),
+  play: async ({ canvasElement }) => {
+    const page = within(canvasElement);
+    await userEvent.click(
+      await page.findByText("Show recent changes", { exact: true }),
+    );
+    await expect(
+      await page.findByText("Created contact — at least 3 records"),
+    ).toBeVisible();
+  },
 };

@@ -239,6 +239,24 @@ describe("the value at rest", () => {
     expect(screen.queryByText("Add industry")).toBeNull();
   });
 
+  it("tells a viewer why an empty field is empty, when the field knows", () => {
+    renderText({
+      value: "",
+      canEdit: false,
+      emptyText: "Not on their website",
+    });
+    expect(screen.getByText("Not on their website")).toBeInTheDocument();
+    expect(screen.queryByText(en["field.unset"])).toBeNull();
+    cleanup();
+    renderText({
+      value: "Banks",
+      canEdit: false,
+      emptyText: "Not on their website",
+    });
+    expect(screen.getByText("Banks")).toBeInTheDocument();
+    expect(screen.queryByText("Not on their website")).toBeNull();
+  });
+
   it("keeps a linked value's own action, and edits from the bubble", async () => {
     const user = userEvent.setup();
     renderText({

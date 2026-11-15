@@ -13,6 +13,7 @@ package capture
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -117,7 +118,7 @@ func PersonalPurgeScope(seatCol string) string {
 // request: both call sites pass a compile-time literal.
 func personalPurgeDue(seatCol string) string {
 	return `p.status = 'noise' AND p.kind = 'personal'
-		   AND p.resolved_at IS NOT NULL
+		   AND ` + latestResolvedSenderVerdict("p") + `
 		   AND ` + PersonalPurgeDeadline("$1", "$2") + ` <= now()
 		   AND ` + PersonalPurgeScope(seatCol)
 }
@@ -159,7 +160,7 @@ func personalPurgeDue(seatCol string) string {
 // filter, because an owner told their mail is gone must not find it still
 // there.
 func SelectPersonalPurgeTx(
-	ctx context.Context, tx pgx.Tx, user ids.UUID, windows PersonalPurgeWindows, floor StatutoryFloor, limit int,
+	ctx context.Context, tx pgx.Tx, user ids.UUID, windows PersonalPurgeWindows, floor StatutoryFloor, limit int, activities ...ids.UUID,
 ) (PurgeSubject, error) {
 	var subject PurgeSubject
 	if user == ids.Nil || limit <= 0 {
@@ -173,6 +174,11 @@ func SelectPersonalPurgeTx(
 	// contributes a variable number of arguments ahead of it.
 	args = append(args, limit)
 	limitAt := "$" + strconv.Itoa(len(args))
+	selected := ""
+	if len(activities) > 0 {
+		args = append(args, activities)
+		selected = " AND a.id = ANY($" + strconv.Itoa(len(args)) + ")"
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT a.id,
 		       `+withheldReason(shielded, floor.shieldedAs())+` AS withheld,
@@ -181,7 +187,7 @@ func SelectPersonalPurgeTx(
 		  JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $3
 		  JOIN capture_pending_counterparty p
 		    ON p.email = a.counterparty_email AND p.owner_id = $3
-		 WHERE `+personalPurgeDue("$3")+`
+		 WHERE `+personalPurgeDue("$3")+selected+`
 		 ORDER BY a.id
 		 LIMIT `+limitAt, args...)
 	if err != nil {
@@ -247,4 +253,24 @@ func SeatsWithPersonalMailDueTx(
 		return nil, fmt.Errorf("capture: listing seats with personal mail due: %w", err)
 	}
 	return out, nil
+}
+
+// LockPersonalPurgeSenderTx takes the sender locks before the activity lock.
+// The final selector runs after that lock and keeps these until commit.
+func LockPersonalPurgeSenderTx(ctx context.Context, tx pgx.Tx, user, activity ids.UUID) error {
+	var address string
+	err := tx.QueryRow(ctx, `SELECT coalesce(counterparty_email, '') FROM activity WHERE id = @id AND restricted_at IS NULL`, pgx.NamedArgs{"id": activity}).Scan(&address)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("capture: reading a personal purge sender: %w", err)
+	}
+	if address == "" {
+		return nil
+	}
+	if err := storekit.LockSeatAddressChecks(ctx, tx, address); err != nil {
+		return err
+	}
+	return lockSenderDecisionTx(ctx, tx, user, address)
 }

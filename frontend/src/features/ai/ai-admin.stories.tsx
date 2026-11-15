@@ -162,7 +162,7 @@ const mixedFeatures = [
     ...feature,
     task: "site_triage",
     display_name: "Triage a site",
-    decision_skip_reason: "local_only" as const,
+    decision_skip_reason: "unbound" as const,
   },
   {
     ...feature,

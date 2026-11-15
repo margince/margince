@@ -34,7 +34,6 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 		Tasks map[string]struct {
 			Ladder    []string `yaml:"ladder"`
 			NoPayload bool     `yaml:"no_payload"`
-			LocalOnly bool     `yaml:"local_only"`
 			Decision  bool     `yaml:"decision"`
 		} `yaml:"tasks"`
 	}
@@ -75,11 +74,7 @@ func TestTheEgressPageMatchesTheTaskContract(t *testing.T) {
 			t.Errorf("the egress page says prompt-not-retained=%v for %q; the contract says %v. "+
 				"Run make gen", got, name, def.NoPayload)
 		}
-		if got := cellSaysYes(row, 5); got != def.LocalOnly {
-			t.Errorf("the egress page says local-only-enforced=%v for %q; the contract says %v. "+
-				"Run make gen", got, name, def.LocalOnly)
-		}
-		if got := egressCell(row, 6) != "none"; got != def.Decision {
+		if got := egressCell(row, 5) != "none"; got != def.Decision {
 			t.Errorf("the egress page says a decision model may read %q's text=%v; the contract "+
 				"declares decision=%v. Run make gen", name, got, def.Decision)
 		}

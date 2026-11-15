@@ -178,7 +178,11 @@ export function LeadCompany({
 
 function NoCompanyRecordYet(): ReactNode {
   const t = useT();
-  return <span className="t-caption"> {t("lead.company.addedOnQualify")}</span>;
+  return (
+    <span className="lead-company-guidance t-caption">
+      {t("lead.company.addedOnQualify")}
+    </span>
+  );
 }
 
 // The facts are the company record's and never written through the lead, so

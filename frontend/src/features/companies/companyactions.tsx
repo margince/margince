@@ -3,10 +3,11 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
 import { currencyField } from "../../components/currencyfield";
-import { toMinorUnits } from "../../format/minorunits";
+import { useDealCreateFields } from "../../components/dealcreatefields";
+import { useOwnerPicker } from "../../components/recordowners";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { currencyBeside } from "../../lib/dealcurrency";
+import { mapDealCreate } from "../../lib/dealcreate";
 import { translatedPipeline } from "../../lib/labeltranslation";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import {
@@ -44,6 +45,8 @@ export function NewDealAction({
   const { locale } = useLocale();
   const target = useQuery({ ...pipelinesOptions, select: defaultPipelineOf });
   const leading = useLeadingCurrencies();
+  const owner = useOwnerPicker(null);
+  const optionalFields = useDealCreateFields(t, owner);
   const pipeline = target.data && translatedPipeline(target.data, locale);
   const open =
     pipeline?.stages?.filter((stage) => stage.semantic === "open") ?? [];
@@ -71,6 +74,7 @@ export function NewDealAction({
       required: true,
       options: open.map((stage) => ({ value: stage.id, label: stage.name })),
     },
+    ...optionalFields,
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
   ];
 
@@ -79,23 +83,14 @@ export function NewDealAction({
     _rows: unknown,
     idempotencyKey: string,
   ) => {
-    const amount = values.amount?.trim();
-    const currency = values.currency || leading[0];
     return unwrap(
       await api.POST("/deals", {
         params: { header: { "Idempotency-Key": idempotencyKey } },
-        body: {
-          name: (values.name ?? "").trim(),
-          pipeline_id: pipeline.id,
-          stage_id: values.stage_id ?? "",
-          // The form takes major units; the wire is minor units.
-          amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
-          currency: currencyBeside(currency, amount),
-          company_id: companyId,
-          project_id: projectId ?? null,
-          expected_close_date: values.expected_close_date || null,
-          source: "manual",
-        },
+        body: mapDealCreate(
+          { ...values, company_id: companyId, project_id: projectId ?? "" },
+          pipeline.id,
+          leading[0],
+        ),
       }),
       t,
     );

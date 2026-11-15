@@ -11,7 +11,6 @@ import {
   healthBadge,
   isConnectedAtAll,
   isUnhealthy,
-  missingMeetingNotesGrant,
   missingSendGrant,
   needsReconnect,
   serviceBadge,
@@ -299,7 +298,10 @@ describe("accountHealth", () => {
       accountHealth({
         mail: service("gmail"),
         calendar: service("gcal"),
-        notes: service("gdocs", { scopes: ["email"] }),
+        notes: service("gdocs", {
+          scopes: ["email"],
+          concern: "notes_grant_missing",
+        }),
       }),
     ).toBe("needs_attention");
   });
@@ -333,13 +335,13 @@ describe("a service's one badge and one reason", () => {
   });
 
   it("names meeting notes Google was refused the Docs for", () => {
-    const notes = service("gdocs", { scopes: ["email"] });
+    const notes = service("gdocs", {
+      scopes: ["email"],
+      concern: "notes_grant_missing",
+    });
     expect(serviceBadge(notes).label).toBe("connectors.cannotReadNotes");
     expect(serviceReason(notes)).toBe("connectors.reconnectToReadNotes");
     expect(needsReconnect(notes)).toBe(true);
-    expect(missingMeetingNotesGrant(service("gcal", { scopes: [] }))).toBe(
-      false,
-    );
   });
 
   it("lets a refused grant outrank a narrow one, and says why", () => {

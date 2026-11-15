@@ -190,10 +190,11 @@ func idArg[K ids.EntityKind](u *openapi_types.UUID) *ids.ID[K] {
 // over the tool surface, which is the whole point of the seam.
 func activityUpdateInput(req crmcontracts.UpdateActivityRequest, ifVersion *int64) UpdateActivityInput {
 	return UpdateActivityInput{
-		DealFiling: req.DealFiling,
-		Subject:    req.Subject,
-		Body:       req.Body,
-		OccurredAt: req.OccurredAt,
+		FollowUpTask: req.FollowUpTask,
+		DealFiling:   req.DealFiling,
+		Subject:      req.Subject,
+		Body:         req.Body,
+		OccurredAt:   req.OccurredAt,
 		// Checked by the store, which also decides what a new time alone means.
 		OccurredPrecision: (*string)(req.OccurredPrecision),
 		DueAt:             req.DueAt,

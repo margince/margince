@@ -16,7 +16,9 @@ function withCachedList(rows: { id: string; full_name: string }[]): Decorator {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    client.setQueryData(["contacts", {}], { pages: [{ data: rows }] });
+    client.setQueryData(["contacts", "story-reader", {}], {
+      pages: [{ data: rows }],
+    });
     return (
       <QueryClientProvider client={client}>
         <Story />

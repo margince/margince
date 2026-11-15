@@ -49,8 +49,16 @@ func (s *Sink) asSentByColleagueTx(
 	}
 	// An invitation a colleague organised stays received mail: whom they
 	// invited is not whom they wrote to, so no stand-in counterparty is picked.
+	// A colleague forwarding someone else's invitation is not its sender, so
+	// a stated organizer must be them.
 	if fields.HasCalendarPart {
-		fields.InvitationFromSeat = colleague
+		organised, err := organisedByTx(ctx, tx, statedOrganizer(fields), colleague)
+		if err != nil {
+			return rec, fields, err
+		}
+		if organised {
+			fields.InvitationFromSeat = colleague
+		}
 		rec.Fields = fields
 		return rec, fields, nil
 	}
@@ -236,4 +244,37 @@ func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner 
 		return seat, nil
 	}
 	return ids.Nil, nil
+}
+
+// organisedByTx reports whether the seat organised the invitation. The part
+// names no organizer, or names the seat's login or a mailbox proved theirs
+// (calendarSeatMatch's rule). A declared alias never counts.
+func organisedByTx(ctx context.Context, tx pgx.Tx, organizer string, seat ids.UUID) (bool, error) {
+	if organizer == "" {
+		return true, nil
+	}
+	login, err := colleagueTx(ctx, tx, organizer)
+	if err != nil || login == seat {
+		return login == seat, err
+	}
+	args := []any{seat.String(), organizer}
+	bind := func(v any) int { args = append(args, v); return len(args) }
+	identities, err := storekit.ProvedMailSeatIdentitiesSQL(ctx, tx, bind)
+	if err != nil {
+		return false, err
+	}
+	var proved bool
+	if err := tx.QueryRow(ctx, `SELECT coalesce((`+identities+` -> $1::text) ? $2, false)`, args...).Scan(&proved); err != nil {
+		return false, fmt.Errorf("capture: reading whether the seat organised the invitation: %w", err)
+	}
+	return proved, nil
+}
+
+// statedOrganizer is the folded ORGANIZER address the calendar part names, or
+// "" when it names none.
+func statedOrganizer(fields ActivityFields) string {
+	if fields.CalendarEvent == nil {
+		return ""
+	}
+	return foldAddress(fields.CalendarEvent.Organizer)
 }

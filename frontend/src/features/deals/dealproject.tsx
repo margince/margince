@@ -77,7 +77,7 @@ function useProjectPage(
       );
       return data.data;
     },
-    enabled,
+    enabled: enabled && readerScope !== undefined,
     staleTime: 60_000,
   });
   return (projects.data ?? []).filter((project) => project.phase !== "closed");

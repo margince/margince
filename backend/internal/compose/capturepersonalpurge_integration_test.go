@@ -253,6 +253,11 @@ func TestMailArrivingLongAfterTheVerdictIsNotDestroyedByIt(t *testing.T) {
 // whether the engine writes it.
 func resolvePersonal(t *testing.T, e *integration.Env, from string, activityID, owner ids.UUID, byOwner bool) {
 	t.Helper()
+	resolveSenderAs(t, e, from, activityID, owner, byOwner, capture.PendingStatusNoise, capture.KindPersonal)
+}
+
+func resolveSenderAs(t *testing.T, e *integration.Env, from string, activityID, owner ids.UUID, byOwner bool, status, kind string) {
+	t.Helper()
 	store := capture.NewPendingStore(InstallationDB(e.Pool))
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
@@ -278,7 +283,7 @@ func resolvePersonal(t *testing.T, e *integration.Env, from string, activityID, 
 	}
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		won, err := store.ResolveAs(e.Admin(), tx, row,
-			capture.PendingStatusNoise, capture.KindPersonal, "test", byOwner,
+			status, kind, "test", byOwner,
 			capture.VerdictMeasurement{})
 		if err != nil {
 			return err
@@ -329,7 +334,7 @@ func agePersonalMail(t *testing.T, e *integration.Env, activityID ids.UUID, from
 			return err
 		}
 		_, err := tx.Exec(context.Background(),
-			`UPDATE capture_pending_counterparty SET resolved_at = now() - $2::interval WHERE email = $1`,
+			`UPDATE capture_pending_counterparty SET resolved_at = now() - $2::interval WHERE email = $1 AND resolved_at IS NOT NULL`,
 			from, age.String())
 		return err
 	}); err != nil {

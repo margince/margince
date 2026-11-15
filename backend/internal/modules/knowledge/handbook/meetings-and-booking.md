@@ -44,8 +44,11 @@ A move to a new start clears **It happened** or **No-show**, so the meeting asks
 Also called: reschedule, change the time, postpone a meeting.
 
 ### How do I record what came of a meeting?
-A meeting that took place takes one press: **It happened** on its Worklist row, under
-**How did it go?**. A customer meeting that has started with no outcome also shows **It happened**
+For a meeting that took place, press **It happened** on its Worklist row, under
+**How did it go?**. The dialog asks **What is the next step?**. Add a follow-up task with its
+subject and due date, then press **Log**. Or press **Skip next step** to record the outcome alone.
+
+A customer meeting that has started with no outcome also shows **It happened**
 and **Add notes** on the timeline. The **Meetings** tab of the contact or company shows them too. To say more, or to record a
 no-show, press **Add notes**:
 1. Pick **It happened** or **No-show** and write what was said. Change any of your company's own fields

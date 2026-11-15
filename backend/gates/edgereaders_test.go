@@ -72,9 +72,11 @@ var relationshipGate = objectGate{
 	object:              edgeTable,
 	literal:             gatekit.TableReadPattern(edgeTable),
 	objectGateSatisfies: true,
-	gateSeeds:           []string{"EdgeReadScope"},
-	rowHalfSeeds:        []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
-	rowHalfOwners:       []string{"internal/modules/contacts", "internal/platform/auth"},
+	// The two project-company builders take EdgeReadScope themselves and answer
+	// a refused caller with no edge.
+	gateSeeds:     []string{"EdgeReadScope", "ProjectCompanyPredicates", "ProjectCustomerSQL", "ProjectCompanyEdgesSQL"},
+	rowHalfSeeds:  []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
+	rowHalfOwners: []string{"internal/modules/contacts", "internal/platform/auth"},
 }
 
 // predicateEdgeReads: the edge appears only inside a JOIN or EXISTS that
@@ -143,6 +145,8 @@ var predicateEdgeReads = gatekit.Waive(map[string]string{
 // than the disclosure this change fixes: the sweep's correctness depends on
 // seeing every edge, and it runs as the system principal precisely so it does.
 var lifecycleEdgeReads = gatekit.Waive(map[string]string{
+	"internal/compose/dealscoutbuyer.go:unlinkedCommercialMatter":                       "the Deal Scout's system pass: whether a cited activity already sits on a live project of the signal's resolved company. It runs as the system principal and must see every edge; nothing of the edge is selected",
+	"internal/modules/projects/continuity.go:CompanyDeliveryTx":                         "whether an account still has delivery decides if ending the account is blocked, a fact about the account rather than about the caller. The edges are read whole so a narrower seat can never unblock it; only booleans leave, and the projects counted stay under the caller's project scope",
 	"internal/modules/contacts/mergeprimaryrepair.go":                                   "the merge-dropped-primary data task pages every live contact with an employment edge as the system principal, because a repair that saw only one caller's edges would leave contacts without the employer a merge took. Edge ids go only to the audited promotion under the contact's employment lock, and the estimate returns one count. The cost is a system-wide read with no per-caller gate",
 	"internal/modules/contacts/mergeprimaryslot.go:archiveDuplicatesKeepingPrimarySlot": "the merge writer reads which kept edge inherits an archived duplicate's primary slot, under the merge's write grants and both records' row locks. Only edge ids leave the read, and they go to mergeEdgeWrite, which audits and emits each promotion",
 	"internal/modules/contacts/dedupecompanyevidence.go:readCompanyEvidence":            "the second-fact check of the company dedupe name lane asks whether one contact is employed at both companies now. One boolean per rival leaves it, deciding whether a review pair is filed or kept; no edge, endpoint or pair reaches any caller. Callers are those of fuzzyCompany and the system-only nightly re-check",
@@ -223,12 +227,13 @@ var deferredEdgeReads = gatekit.Waive(map[string]string{})
 // calleeGatedEdgeReads: a fragment whose every runner takes the edge gate by a
 // path the census cannot follow, such as a storekit.Field value.
 var calleeGatedEdgeReads = gatekit.Waive(map[string]string{
-	"internal/modules/activities/emailtarget.go:dealContactCandidatesSQL":                "a task's deal stakeholders. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
-	"internal/modules/activities/emailtarget.go:employerCandidatesSQL":                   "the companies a task's contacts work at. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
-	"internal/compose/company360/graphreads.go:readEmployment":                           "CompanyRosterEdgesSQL admits relationship reads and scopes every returned relationship id through the shared roster owner before this join reads the role; no edge outside that admitted set reaches the graph",
-	"internal/modules/contacts/unknownemploymentrepair.go:repairUnknownEmploymentLinkTx": "RepairUnknownEmploymentTx requires the system principal and relationship update before locking an internal repair candidate; the returned row passes updateRelationshipInTx authorization and only its boolean progress leaves the data task",
-	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":            "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
-	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin":     "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
+	"internal/modules/contacts/employmentreplacementundo.go:archiveEmploymentReplacementTx": "Undo selects a replacement identity, then visibleRelationship rechecks its edge scope before any human-edit decision. archiveRelationshipTx enforces write authority and liveness; no edge row is returned.",
+	"internal/modules/activities/emailtarget.go:dealContactCandidatesSQL":                   "a task's deal stakeholders. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
+	"internal/modules/activities/emailtarget.go:employerCandidatesSQL":                      "the companies a task's contacts work at. linkedCandidates renders auth.EdgeReadScope for the relationship alias its candidateQuery names, and reads none when the edge read is refused",
+	"internal/compose/company360/graphreads.go:readEmployment":                              "CompanyRosterEdgesSQL admits relationship reads and scopes every returned relationship id through the shared roster owner before this join reads the role; no edge outside that admitted set reaches the graph",
+	"internal/modules/contacts/unknownemploymentrepair.go:repairUnknownEmploymentLinkTx":    "RepairUnknownEmploymentTx requires the system principal and relationship update before locking an internal repair candidate; the returned row passes updateRelationshipInTx authorization and only its boolean progress leaves the data task",
+	"internal/modules/collections/vocabstandardfields.go:contactEmployerLink":               "the contact list's employer filter leaf. It travels inside contactEmployerField, which is Withheld until bindEmployerScope asks auth.EdgeReadAdmitted and fills its scope with auth.EdgeReadScope",
+	"internal/modules/contacts/linkedinmatchfields.go:linkedInCurrentEmploymentJoin":        "the current employment joined as `cur` for the LinkedIn review. Its one runner is suggestedMatches, which asks auth.Require(ctx, \"contact\", read); cur.id reaches a card only when linkedInOfferColumns' employerScope (auth.EdgeReadScope) admits that edge",
 })
 
 // ruledEdgeReads: a DISCLOSING read the product has ruled needs no edge gate.

@@ -34,6 +34,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -48,6 +49,17 @@ func lockSubjectSuppressions(ctx context.Context, tx pgx.Tx, subject ids.UUID) e
 		return nil
 	}
 	return lockStopKey(ctx, tx, subject.String())
+}
+
+// stopLockInstantTx reads the database clock once the caller holds a subject's
+// stop lock. now() is when the transaction began, which can precede a writer
+// that took the lock first; stamps read here follow the lock order instead.
+func stopLockInstantTx(ctx context.Context, tx pgx.Tx) (time.Time, error) {
+	var at time.Time
+	if err := tx.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&at); err != nil {
+		return time.Time{}, fmt.Errorf("consent: reading the instant the stop lock was held: %w", err)
+	}
+	return at, nil
 }
 
 // lockStopKey is the lock over a key that is not a record id.

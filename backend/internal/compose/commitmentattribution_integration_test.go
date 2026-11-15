@@ -8,8 +8,10 @@ package compose
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -60,7 +62,8 @@ func TestAMeetingReportKeepsTheCustomersPromiseOnTheCustomer(t *testing.T) {
 	body, source := "Mira: Ines Huber agreed to send the payment by Friday.", "transcript"
 	meeting, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Body: &body, SourceSystem: &source, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: customer}},
+		OccurredAt: new(clocktest.Now(t).Add(-time.Hour)),
+		Links:      []activities.ActivityLinkInput{{EntityType: "contact", EntityID: customer}},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -118,6 +121,7 @@ func TestAMeetingReportCannotAssignWorkToTheNamedColleague(t *testing.T) {
 	source := "transcript"
 	meeting, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Body: &body, SourceSystem: &source, Source: "manual",
+		OccurredAt:      new(clocktest.Now(t).Add(-time.Hour)),
 		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
 	})
 	if err != nil {

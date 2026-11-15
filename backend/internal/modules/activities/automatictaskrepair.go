@@ -136,7 +136,7 @@ func (s *Store) RepairAutomaticTaskTx(ctx context.Context, tx pgx.Tx, task HomeR
 		return err
 	}
 	evidence := map[string]any{
-		"automatic_task_repair": "1", ruleVersionEvidenceKey: ruleVersion,
+		automaticTaskRepairEvidence: "1", ruleVersionEvidenceKey: ruleVersion,
 		"before_version": task.Version, "after_version": nextVersion,
 	}
 	audit, err := storekit.AuditWithEvidence(ctx, tx, "update", "activity", task.ID.UUID, before, after, evidence)

@@ -30,9 +30,12 @@ func (e *SearchEnv) seedProjects(t *testing.T, phase string, owner *ids.UUID, n 
 	companyID = e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
 		VALUES ($1, 'Project Company', 'manual', 'human:x')`)
 	for i := range n {
-		e.SeedID(t, `INSERT INTO project (id, name, company_id, owner_id, phase, source, captured_by)
+		project := e.SeedID(t, `INSERT INTO project (id, name, company_id, owner_id, phase, source, captured_by)
 			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`,
 			fmt.Sprintf("%s Rollout %d", phase, i), companyID, owner, phase)
+		// The customer edge the real writer always creates beside the anchor.
+		e.SeedID(t, `INSERT INTO relationship (id, kind, project_id, company_id, role, source, captured_by)
+			VALUES ($1, 'project_company', $2, $3, 'customer', 'manual', 'human:x')`, project, companyID)
 	}
 	return companyID
 }
@@ -49,6 +52,16 @@ func (e *SearchEnv) projectReader(user *ids.UUID, team *ids.UUID, scope principa
 // its own owner (platform/auth rowscope.go).
 func (e *SearchEnv) companyReader(user *ids.UUID, team *ids.UUID, scope principal.RowScope) context.Context {
 	return e.scopedReaderOf("company", user, team, scope)
+}
+
+// edgeReader reads projects, companies and the edges between them.
+func (e *SearchEnv) edgeReader(scope principal.RowScope) context.Context {
+	return principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{
+			"project": {Read: true}, "company": {Read: true}, "relationship": {Read: true}, objInstallSettings: {Read: true},
+		}, RowScope: scope},
+	})
 }
 
 func (e *SearchEnv) scopedReaderOf(object string, user *ids.UUID, team *ids.UUID, scope principal.RowScope) context.Context {
@@ -112,11 +125,21 @@ func TestAdHocProjectReportCountsUnderRowScope(t *testing.T) {
 		t.Fatalf("ad-hoc project rows = %+v, want one 'delivering' row counting 2", res.Rows)
 	}
 
-	// A descriptor field may filter as well as group.
-	res, err = provider.RunReport(e.projectReader(nil, nil, principal.RowScopeAll), datasource.ReportPlan{
+	// A descriptor field may filter as well as group. A project's company is
+	// an edge, so filtering by it owes the edge and the company grant.
+	res, err = provider.RunReport(e.edgeReader(principal.RowScopeAll), datasource.ReportPlan{
 		Entity: datasource.EntityProject, GroupBy: []string{"phase"},
 		Filter: map[string]string{"company_id": companyID.String()},
 	})
+	if err == nil {
+		_, refused := provider.RunReport(e.projectReader(nil, nil, principal.RowScopeAll), datasource.ReportPlan{
+			Entity: datasource.EntityProject, GroupBy: []string{"phase"},
+			Filter: map[string]string{"company_id": companyID.String()},
+		})
+		if !errors.Is(refused, apperrors.ErrPermissionDenied) {
+			t.Errorf("filtering by company without the edge and company grants → %v, want permission denied", refused)
+		}
+	}
 	if err != nil {
 		t.Fatalf("filtered project plan: %v", err)
 	}

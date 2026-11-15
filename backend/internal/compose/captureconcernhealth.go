@@ -27,7 +27,7 @@ func captureConcernCounts(ctx context.Context, tx pgx.Tx, now time.Time) (map[st
 
 func captureConcernCondition(kind string) crmcontracts.HealthSourceCondition {
 	switch kind {
-	case "reauth_required":
+	case "reauth_required", "notes_grant_missing", "notes_account_mismatch":
 		return healthWaitingHuman
 	case "capture_silent":
 		return healthUnverified

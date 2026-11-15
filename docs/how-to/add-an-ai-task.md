@@ -307,8 +307,7 @@ Write the question to the guide for decision models. Do not copy the prompt:
       There is no second floor; below it, the ladder answers.
 - [ ] Do not break one question into several small ones and join their confidence. We measured that here,
       and it is not safe.
-- [ ] The text of a `local_only` task never reaches a decision model in the cloud. That is a rule of the router,
-      so the site needs no field of its own for where data goes.
+
 
 ## Notes
 

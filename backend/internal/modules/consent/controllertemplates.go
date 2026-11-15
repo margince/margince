@@ -86,6 +86,8 @@ type ConfirmationSend struct {
 	DueAt     *time.Time
 	MessageID string
 	Rendered  Rendered
+	// StagedAt, when set, is the delivery's created_at (comms.StageControllerInput.StagedAt).
+	StagedAt time.Time
 }
 
 // ConfirmationSender stages a controller message on the caller's transaction.
