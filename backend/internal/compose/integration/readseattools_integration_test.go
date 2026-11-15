@@ -13,28 +13,27 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// The stores admit a read seat's write, so each door that reaches them must
-// refuse it first. A passport lent by a read-seat member runs no write tool and
-// no write route, on any record kind; the same passport writes once the member
-// holds a full seat again.
+// The stores admit a read seat's write, so each door must refuse it first.
+// A passport lent by a read-seat member runs no write tool and no write route.
+// The same passport writes once the member holds a full seat again.
 func TestAPassportLentByAReadSeatRunsNoWrite(t *testing.T) {
 	d := newTwoDoors(t, "seat-tools", "read", "write")
 	e := d.e
 	e.DescribeCompany(t)
 	seeded := apptest.DiscoverSeededPipeline(t, e)
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Seat Tools", "source": "manual"})
+	contact := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"})
+	lead := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat-tools@lead.test", "source": "manual"})
+	project := createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"})
 	records := []struct {
 		recordType, route, id string
 		fields                AnyMap
 		archives              bool
 	}{
-		{"contact", "/v1/contacts/", createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"}),
-			AnyMap{"title": "Renamed"}, true},
+		{"contact", "/v1/contacts/", contact, AnyMap{"title": "Renamed"}, true},
 		{"deal", "/v1/deals/", apptest.CreateOpenDeal(t, e, seeded), AnyMap{"name": "Renamed"}, true},
-		{"lead", "/v1/leads/", createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat-tools@lead.test", "source": "manual"}),
-			AnyMap{"full_name": "Renamed"}, false},
-		{"project", "/v1/projects/", createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"}),
-			AnyMap{"name": "Renamed"}, true},
+		{"lead", "/v1/leads/", lead, AnyMap{"full_name": "Renamed"}, false},
+		{"project", "/v1/projects/", project, AnyMap{"name": "Renamed"}, true},
 	}
 
 	e.SetWorkspaceSeat(t, "read")
