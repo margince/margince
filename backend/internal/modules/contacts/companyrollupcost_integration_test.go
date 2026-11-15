@@ -68,7 +68,10 @@ func TestCompanyPipelineFieldsShareOneRollupRead(t *testing.T) {
 						if ids.UUID(company.Id) == companies[0] {
 							wantContacts = 1
 						}
-						assertRollupCountFields(t, company, contactGrants == 3, pipelineGrants == 3, route != "list", wantContacts)
+						assertRollupCountFields(t, company, rollupCountWant{
+							contactsVisible: contactGrants == 3, pipelineVisible: pipelineGrants == 3,
+							detail: route != "list", contacts: wantContacts,
+						})
 					}
 				}
 			})
@@ -136,16 +139,26 @@ func readRollupCountCompanies(ctx context.Context, store *Store, route string, c
 	return []crmcontracts.Company{company}, err
 }
 
-func assertRollupCountFields(t *testing.T, company crmcontracts.Company, contactsVisible, pipelineVisible, detail bool, wantContacts int) {
+// rollupCountWant is what one company read should show: which counts the
+// grants admit, whether the read is a detail read, and the contact count.
+type rollupCountWant struct {
+	contactsVisible bool
+	pipelineVisible bool
+	detail          bool
+	contacts        int
+}
+
+func assertRollupCountFields(t *testing.T, company crmcontracts.Company, want rollupCountWant) {
 	t.Helper()
-	if contactsVisible {
+	wantContacts := want.contacts
+	if want.contactsVisible {
 		if company.ContactCount == nil || *company.ContactCount != wantContacts {
 			t.Fatalf("contact_count = %v, want %d", company.ContactCount, wantContacts)
 		}
 	} else if company.ContactCount != nil {
 		t.Fatalf("contact_count must be absent without both grants: %v", company.ContactCount)
 	}
-	if !pipelineVisible {
+	if !want.pipelineVisible {
 		if company.OpenDealCount != nil || company.ComputedFields != nil {
 			t.Fatalf("pipeline fields must be absent without both grants: %+v", company)
 		}
@@ -154,7 +167,7 @@ func assertRollupCountFields(t *testing.T, company crmcontracts.Company, contact
 	if company.OpenDealCount == nil || *company.OpenDealCount != 0 {
 		t.Fatalf("an empty pipeline must count zero: %v", company.OpenDealCount)
 	}
-	if !detail {
+	if !want.detail {
 		if company.ComputedFields != nil {
 			t.Fatal("a company list must not acquire computed fields")
 		}

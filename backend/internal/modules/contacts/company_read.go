@@ -77,9 +77,9 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-	// Sampled ONCE for this read. The open-deal count and the computed
-	// pipeline total come from the same rollup row, read at this date, so a
-	// response never pairs a count from one FX day with a total from the next.
+	// Sampled once for this read. The open-deal count and the pipeline total
+	// come from one rollup row read at this date. A response never pairs a
+	// count from one FX day with a total from the next.
 	asOf := rollupAsOf()
 	// The contact count, on the single read too, so the page a list row opens
 	// into agrees with the row. Attached here rather than in readCompany: a

@@ -63,19 +63,11 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	return fillOpenDealCounts(ctx, tx, idx, companyIDs, asOf)
 }
 
-// fillContactCounts counts distinct current employees to live contacts
-// the caller may see. The company end needs no predicate of its own:
-// every company in idx already passed the caller's row visibility check.
-//
-// It owns its grant check, so the list and the single read cannot gate the
-// count differently. A role that may not read contacts gets no contact count.
-//
-// The count also needs the EDGE grant beside the contact one, because the
-// number is a fact about the employment pairs and not about either end.
-// "How many contacts work at Acme" is what relationship.read governs. A count
-// that answered without it would be a counting oracle over edges the role is
-// refused on every other surface. Absent, again: zero would be a wrong number
-// on screen rather than a withheld one.
+// fillContactCounts counts distinct current employees to live contacts the
+// caller may see. It owns its grant check, so the list and the single read
+// gate alike. The count needs relationship.read beside contact.read, because
+// it is a fact about employment edges. Without both grants it stays absent,
+// so the count never reveals edges the role is refused elsewhere.
 func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Company, companyIDs []ids.UUID) error {
 	if len(companyIDs) == 0 || !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "relationship") {
 		return nil
@@ -86,9 +78,8 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 	}
 	args := []any{companyIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	// The grant check above admitted the object; the helper bounds which edges
-	// and contacts are counted, so a count never includes an edge whose
-	// endpoint the caller cannot reach.
+	// The helper bounds which edges and contacts are counted. A count never
+	// includes an edge whose endpoint the caller cannot reach.
 	from, err := countedEmploymentFrom(ctx, "rel.company_id = ANY($1)", arg)
 	if err != nil {
 		return err
