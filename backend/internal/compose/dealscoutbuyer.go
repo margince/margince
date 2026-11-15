@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 )
@@ -38,7 +39,8 @@ func unlinkedCommercialMatter(signal string) string {
  LEFT JOIN deal linked_deal ON linked_deal.id = linked.deal_id AND linked_deal.archived_at IS NULL
   AND linked_deal.company_id = ` + signal + `.resolved_company_id
  LEFT JOIN project linked_project ON linked_project.id = linked.project_id AND linked_project.archived_at IS NULL
-  AND linked_project.company_id = ` + signal + `.resolved_company_id
+  AND EXISTS (SELECT 1 FROM relationship linked_edge WHERE linked_edge.kind = '` + auth.ProjectCompanyKind + `' AND linked_edge.project_id = linked_project.id
+   AND linked_edge.archived_at IS NULL AND linked_edge.company_id = ` + signal + `.resolved_company_id)
  WHERE linked_cite->>'source_type' = 'activity'
  AND (linked_deal.id IS NOT NULL OR linked_project.id IS NOT NULL))`
 }

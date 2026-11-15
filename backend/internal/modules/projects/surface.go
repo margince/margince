@@ -103,7 +103,7 @@ func (s *Store) ListProjectsForCompanyTx(ctx context.Context, tx pgx.Tx, company
 		  LEFT JOIN app_user u ON u.id = p.owner_id AND `+workforce.LiveMemberSQL("u")+`
 		 WHERE EXISTS (
 		           SELECT 1 FROM relationship c
-		            WHERE c.kind = 'project_company' AND c.project_id = p.id
+		            WHERE c.kind = '`+auth.ProjectCompanyKind+`' AND c.project_id = p.id
 		              AND c.company_id = $%d AND c.archived_at IS NULL
 		              AND (`+edge+`))
 		   AND p.archived_at IS NULL AND (%s)
@@ -174,7 +174,7 @@ func (s *Store) ListProjectsForContactTx(ctx context.Context, tx pgx.Tx, contact
 		             WHERE e.kind = 'employment' AND e.contact_id = $%[1]d
 		               AND EXISTS (
 		                   SELECT 1 FROM relationship c
-		                    WHERE c.kind = 'project_company' AND c.project_id = p.id
+		                    WHERE c.kind = '`+auth.ProjectCompanyKind+`' AND c.project_id = p.id
 		                      AND c.company_id = e.company_id AND c.archived_at IS NULL)
 		               AND `+employment.CurrentPrimarySQL("e")+`
 		               AND e.archived_at IS NULL

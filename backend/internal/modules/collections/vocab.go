@@ -11,6 +11,7 @@ import (
 	"maps"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/winprobability"
 )
@@ -161,13 +162,19 @@ const customerLink = "EXISTS (SELECT 1 FROM company o WHERE o.id = t.company_id 
 // working it. A Link rather than a scalar expression precisely because a
 // project has several: a subquery picking one would answer "no" for a filter
 // naming the partner on a project the partner is genuinely on.
+//
+// Withheld until bindEdgeScope admits the caller, as contactEmployerField is:
+// an edge discloses a project and a company as a pair.
 func projectCompanyField() storekit.Field {
 	return storekit.Field{
 		Expr:       "c.company_id",
 		Type:       storekit.FieldID,
 		References: storekit.RefCompany,
 		ReadsLink:  true,
-		Link: "EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'" +
+		Withheld:   true,
+		Link: "EXISTS (SELECT 1 FROM relationship c" +
+			" JOIN company edge_company ON edge_company.id = c.company_id AND edge_company.archived_at IS NULL" +
+			" WHERE c.kind = '" + auth.ProjectCompanyKind + "'" +
 			" AND c.project_id = t.id AND c.archived_at IS NULL AND %s)",
 	}
 }

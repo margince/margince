@@ -327,8 +327,8 @@ func TestAnAnswerNamesTheCompaniesItGroupsBy(t *testing.T) {
 	}
 }
 
-// A saved run opened by a reader who may not read companies answers and opens
-// its cells, naming the deals and none of the companies.
+// A saved run grouped by company is refused to a reader who may not read
+// companies. So is its cell, because the group keys are company ids.
 func TestANarrowerReaderOfARunIsNotHandedTheCompanyNames(t *testing.T) {
 	e := setupForecast(t)
 	company := e.seedCompanyDeals(t, "Contoso", 6).String()
@@ -345,27 +345,13 @@ func TestANarrowerReaderOfARunIsNotHandedTheCompanyNames(t *testing.T) {
 	narrow := e.wideLensCtx(e.Rep1)
 	read := httptest.NewRecorder()
 	routes.GetReportRun(read, analyticsRequest(narrow, http.MethodGet, "/analytics/runs/x", ""), *asked.RunId)
-	var run crmcontracts.ReportRun
-	if err := json.Unmarshal(read.Body.Bytes(), &run); err != nil || read.Code != http.StatusOK {
-		t.Fatalf("the narrower reader's read answered %d %s", read.Code, read.Body.String())
+	if read.Code == http.StatusOK {
+		t.Errorf("a reader without the company grant read a run grouped by company: %s", read.Body.String())
 	}
-	if run.Answer.Labels != nil {
-		t.Errorf("a reader without the company grant was handed company names: %v", *run.Answer.Labels)
-	}
-
 	cell := httptest.NewRecorder()
 	routes.ExplainReportRunCell(cell, analyticsRequest(narrow, http.MethodPost, "/analytics/runs/x/cells/explain",
 		`{"group":["`+company+`"]}`), *asked.RunId)
-	out := explainBody(t, cell)
-	if out.Labels != nil {
-		t.Errorf("the cell handed a reader without the company grant company names: %v", *out.Labels)
-	}
-	if len(out.Rows) != 6 {
-		t.Fatalf("the cell opened to %d records, want 6", len(out.Rows))
-	}
-	for _, row := range out.Rows {
-		if row[derivationLabelColumn] != "Contoso deal" {
-			t.Errorf("deal %v is labelled %v, want its name", row["id"], row[derivationLabelColumn])
-		}
+	if cell.Code == http.StatusOK {
+		t.Errorf("a reader without the company grant opened a cell keyed by a company: %s", cell.Body.String())
 	}
 }
