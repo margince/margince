@@ -49,15 +49,15 @@ func (q *queryEnv) writer() context.Context {
 
 func (q *queryEnv) seedProjectCompanies(t *testing.T) projectCompanyFixture {
 	t.Helper()
-	company := func(name string, owner ids.UUID, visibility string) ids.UUID {
-		return q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
-			VALUES ($1, $2, $3, $4, 'manual', 'human:x')`, owner, name, visibility)
+	company := func(name string, owner ids.UUID) ids.UUID {
+		return q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
+			VALUES ($1, $2, $3, 'manual', 'human:x')`, owner, name)
 	}
 	var f projectCompanyFixture
-	f.alpha = company("Alpha Kunde", q.Rep1, "workspace")
-	f.beta = company("Beta Kunde", q.Rep1, "workspace")
-	f.gamma = company("Gamma Kunde", q.Rep1, "workspace")
-	f.private = company("Privat Kunde", q.Rep3, "workspace")
+	f.alpha = company("Alpha Kunde", q.Rep1)
+	f.beta = company("Beta Kunde", q.Rep1)
+	f.gamma = company("Gamma Kunde", q.Rep1)
+	f.private = company("Privat Kunde", q.Rep3)
 
 	store := compose.ProjectsStore(q.Pool)
 	edges := contacts.NewStore(q.DB())

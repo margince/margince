@@ -115,12 +115,12 @@ const (
 )
 
 // ProjectCompanyEdges is the readable live project-company edges, as a
-// FROM-and-WHERE a caller extends with its own correlation.
+// from-and-where clause a caller extends with its own correlation.
 type ProjectCompanyEdges struct {
 	// Readable is false without relationship.read or company.read. No edge
 	// is then readable, and Source must not be used.
 	Readable bool
-	// Source starts at FROM and ends inside WHERE, so a caller appends
+	// Source runs from the from clause into the where clause. A caller appends
 	// `AND <ProjectEdgeProject or ProjectEdgeCompany> = <its own reference>`.
 	Source string
 }
