@@ -174,11 +174,23 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 }
 
 // Home's read, as the browser asks for it, within its statement and round-trip
-// ceilings. Lower them in the diff that removes statements or exchanges.
+// ceilings. Lower them in the diff that removes statements or exchanges. The
+// read is the assembly a cache miss pays; the cache's own lookup and store are
+// outside it.
 const (
 	homeStatementBudget = 152
 	homeRoundTripBudget = 70
 )
+
+// homeStages are the stages Home's read runs. A lane that stops running lowers
+// both counts, so the ceilings alone would pass it; this list fails it.
+var homeStages = []string{
+	"ai_work_health", "at_risk", "automation_health", "awaiting", "booking_health", "bounces",
+	"capture_health", "deal_moves", "did_not_run", "domain_questions", "dsr", "introductions",
+	"meeting_horizon", "meetings", "meetings_unreported", "needs_you", "notice_case", "notices",
+	attention.OutsideStages, "plan", "planned", "rank", "row_names", "subject_labels",
+	"this_morning", "undelivered", "waiting_customers",
+}
 
 func TestHomesReadStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 	e := Setup(t)
@@ -205,6 +217,19 @@ func TestHomesReadStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 	}
 	if roundTrips < seen.Exchanges || roundTrips > homeRoundTripBudget {
 		t.Errorf("Home's read used %d protocol round trips for %d pgx calls, budget %d", roundTrips, seen.Exchanges, homeRoundTripBudget)
+	}
+	ran := map[string]bool{}
+	for key := range delta.runs {
+		ran[key.Stage] = true
+	}
+	for _, stage := range homeStages {
+		if !ran[stage] {
+			t.Errorf("Home's read ran no %s stage; a lane that stops running would pass the ceilings", stage)
+		}
+		delete(ran, stage)
+	}
+	for stage := range ran {
+		t.Errorf("Home's read ran stage %s, which homeStages does not name", stage)
 	}
 }
 
