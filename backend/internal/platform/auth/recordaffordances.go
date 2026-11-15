@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // StampRecordAffordances stamps the edit and archive flags of contacts,
@@ -55,9 +54,6 @@ func stampAffordances[T any](ctx context.Context, tx pgx.Tx, table string, archi
 	if !shareableTables[table] {
 		return nil, fmt.Errorf("auth: %q is not a shareable table", table)
 	}
-	if len(rows) == 0 {
-		return map[ids.UUID]bool{}, nil
-	}
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return nil, err
@@ -67,13 +63,16 @@ func stampAffordances[T any](ctx context.Context, tx pgx.Tx, table string, archi
 	if archive != nil {
 		canArchive, canDelete = archiveAdmission(ctx, p, archive.rule)
 	}
-	named := make([]ids.UUID, len(rows))
-	for i := range rows {
-		named[i] = id(rows[i])
-	}
-	authority, archived, err := pageAuthority(ctx, tx, p, table, named, canUpdate || canArchive)
-	if err != nil {
-		return nil, err
+	named := pageRowIDs(rows, id)
+	authority, archived := map[ids.UUID]bool{}, map[ids.UUID]bool{}
+	if canUpdate || canArchive {
+		if authority, err = rowWriteSubset(ctx, tx, p, table, named); err != nil {
+			return nil, err
+		}
+		// Read fresh: a previously selected ArchivedAt may predate a concurrent archive.
+		if archived, err = archivedAmong(ctx, tx, table, authority); err != nil {
+			return nil, err
+		}
 	}
 	update := map[ids.UUID]bool{}
 	if canUpdate {
@@ -101,24 +100,12 @@ func stampAffordances[T any](ctx context.Context, tx pgx.Tx, table string, archi
 	return update, nil
 }
 
-// pageAuthority reads the rows the caller could write and which of those are
-// archived, unless no grant could use the answer. The archive state is read
-// fresh: a previously selected ArchivedAt may predate a concurrent archive.
-func pageAuthority(ctx context.Context, tx pgx.Tx, p principal.Principal, table string,
-	named []ids.UUID, wanted bool,
-) (authority, archived map[ids.UUID]bool, err error) {
-	if !wanted {
-		return map[ids.UUID]bool{}, map[ids.UUID]bool{}, nil
+func pageRowIDs[T any](rows []T, id func(T) ids.UUID) []ids.UUID {
+	named := make([]ids.UUID, len(rows))
+	for i := range rows {
+		named[i] = id(rows[i])
 	}
-	authority, err = rowWriteSubset(ctx, tx, p, table, named)
-	if err != nil {
-		return nil, nil, err
-	}
-	archived, err = archivedAmong(ctx, tx, table, authority)
-	if err != nil {
-		return nil, nil, err
-	}
-	return authority, archived, nil
+	return named
 }
 
 // liveEdit is the edit flag every record carries: a writing seat, row

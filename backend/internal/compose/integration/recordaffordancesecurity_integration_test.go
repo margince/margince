@@ -189,4 +189,17 @@ func TestRecordAffordancesEmptyPageKeepsANonNilMaskMap(t *testing.T) {
 	if raw == nil || len(raw) != 0 {
 		t.Fatalf("empty mask authority = %v, want a non-nil empty map", raw)
 	}
+	// An empty page still needs an actor, on both stamps.
+	nobody := principal.WithWorkspaceID(context.Background(), e.WS)
+	if _, err := auth.StampRecordAffordances(nobody, nil, auth.DealArchive, rows,
+		func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
+		func(d *crmcontracts.Deal, may bool) { d.Writable = &may },
+		func(d *crmcontracts.Deal, may bool) { d.Archivable = &may }); err == nil {
+		t.Error("an empty deal page was stamped without an actor")
+	}
+	if _, err := auth.StampWritable(nobody, nil, objLead, []crmcontracts.Lead{},
+		func(l crmcontracts.Lead) ids.UUID { return ids.UUID(l.Id) },
+		func(l *crmcontracts.Lead, may bool) { l.Writable = &may }); err == nil {
+		t.Error("an empty lead page was stamped without an actor")
+	}
 }
