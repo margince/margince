@@ -171,8 +171,8 @@ func TestEvidenceRowsKeepTheirOwnLabels(t *testing.T) {
 	}
 }
 
-// A late page skips most facts, so its cost must not grow with them: one zone
-// lookup per page, and no allocation for a fact the page does not return.
+// A late page skips most facts, so its cost must not grow with them. It looks
+// up the zone once and allocates nothing for a fact it does not return.
 func TestALateWeeklyEvidencePageAllocatesOnlyForItsRows(t *testing.T) {
 	frame := crmcontracts.ReportingContext{Timezone: "Europe/Berlin"}
 	allocs := func(count int) float64 {
