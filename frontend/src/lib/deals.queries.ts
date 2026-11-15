@@ -225,15 +225,20 @@ export function totalsRefusedBecause(
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
 export function useStageTotals(f: DealFilters, enabled = true) {
+  const reportFilters = dealsByStageReportFilters(f);
+  const withheld = totalsWithheldBecause(f);
   return useQuery({
     // Under ["deals"], so the one invalidation every deal mutation fires
     // refreshes the column headers along with the cards. Keyed apart, a moved
     // card would sit under a header still counting it in the stage it left.
-    queryKey: ["deals", "by-stage-totals", f],
+    // Keyed by the request body, not the whole filter set. A table sort then
+    // reuses the board's fresh totals on return, since sort never reaches it.
+    // A withheld key is never read, so it never holds a total.
+    queryKey: ["deals", "by-stage-totals", reportFilters, withheld ?? null],
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: enabled && totalsWithheldBecause(f) === undefined,
+    enabled: enabled && withheld === undefined,
     queryFn: async ({ signal }): Promise<Map<string, StageTotals> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
         signal,
@@ -250,7 +255,7 @@ export function useStageTotals(f: DealFilters, enabled = true) {
             },
             { fn: "count", field: "amount_base_minor", as: "priced_deals" },
           ],
-          filters: dealsByStageReportFilters(f),
+          filters: reportFilters,
         },
       });
       if (error) {
