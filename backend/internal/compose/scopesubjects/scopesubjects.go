@@ -68,7 +68,7 @@ func OwnerLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 
 // TeamLabel names a live team for the reader and refuses an archived one as
 // absent. A team archived after the request was written is not a population
-// any more, and answering over it would report a set that no longer exists.
+// any more. An answer over it would report a set that no longer exists.
 func TeamLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	return snapshotreads.Read(ctx, tx, key{kind: "team", id: id}, func() (string, error) {
 		var label string
