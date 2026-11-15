@@ -86,7 +86,7 @@
   contain: inline-size;
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
-.table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
+.table > tbody > tr.datatable-open[data-detail-hover] > td {
   background: var(--groundHover);
 }
 /* A detail spans every column, so in a pinned table that scrolls it outgrows
@@ -321,7 +321,7 @@
   .table-scroll-fold
     > .table
     > tbody
-    > tr.datatable-open:has(+ tr.datatable-detail:hover) {
+    > tr.datatable-open[data-detail-hover] {
     background: var(--groundHover);
   }
 }

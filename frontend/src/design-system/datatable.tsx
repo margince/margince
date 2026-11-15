@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Fragment, type ReactNode, useId, useRef, useState } from "react";
+import {
+  Fragment,
+  type PointerEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { opensRow } from "../lib/linkclick";
 import { TableScroll } from "./atoms";
 import { ExpanderChevron } from "./disclosure";
@@ -245,10 +253,23 @@ function DetailRow({
   render: () => ReactNode;
 }>) {
   const box = useRef<HTMLDivElement>(null);
+  const row = useRef<HTMLTableRowElement>(null);
   useFocusHandBack(id, open);
   const shown = useFold(box, open, detailEnds);
+  useEffect(() => {
+    if (!open) {
+      markOpener(row.current, false);
+    }
+  }, [open]);
   return (
-    <tr className="datatable-detail" role={role("row")} hidden={!shown}>
+    <tr
+      ref={row}
+      className="datatable-detail"
+      role={role("row")}
+      hidden={!shown}
+      onPointerEnter={hoverOpener}
+      onPointerLeave={hoverOpener}
+    >
       <td colSpan={span} id={id} role={role("cell")}>
         <div ref={box} className="datatable-detail-fold">
           <div className="datatable-detail-body" inert={shown && !open}>
@@ -258,6 +279,19 @@ function DetailRow({
       </td>
     </tr>
   );
+}
+
+// The row a detail belongs to takes its hover ground while the pointer is on
+// the detail. Not `tr:has(+ tr:hover)`: Chromium restyles the whole document
+// on every hover change while any `:has()` holds `:hover`.
+const OPENER_HOVER = "data-detail-hover";
+
+function markOpener(detail: HTMLTableRowElement | null, hovered: boolean) {
+  detail?.previousElementSibling?.toggleAttribute(OPENER_HOVER, hovered);
+}
+
+function hoverOpener(event: PointerEvent<HTMLTableRowElement>) {
+  markOpener(event.currentTarget, event.type === "pointerenter");
 }
 
 const detailEnds: FoldEnds = (box) => ({

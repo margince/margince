@@ -19,6 +19,7 @@ import {
   reportError,
   startInstruments,
 } from "./lib/instruments";
+import { startPointerTarget } from "./lib/pointertarget";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
 import { SPA_RELEASE } from "./lib/release";
 import { restoreReturnRoute } from "./lib/returnroute";
@@ -38,6 +39,8 @@ import "./app.css";
 // only while it is open — a tab nobody opened the menu in would otherwise stay
 // deaf to the switch.
 startTheme();
+// app.css lights the scrollbar of the element this marks.
+startPointerTarget();
 
 // Before the first render reads the address: a provider sign-in lands bare.
 restoreReturnRoute();
