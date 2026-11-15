@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -142,7 +143,7 @@ func (said transcriptCopy) transcriptWithheldReason(outcome CommitmentOutcome) s
 }
 
 func transcriptPromiserSpoke(step proposedStep, lines []string, parties []commitmentParty) bool {
-	promiser, found := referencedPromiser(step.PromiserRef, parties)
+	promiser, found := commitmentparty.Referenced(step.PromiserRef, parties)
 	if !found || strings.TrimSpace(promiser.Name) == "" {
 		return false
 	}

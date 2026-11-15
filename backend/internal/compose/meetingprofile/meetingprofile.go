@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -122,10 +123,6 @@ func Read(raw json.RawMessage, lineCount int) ([]Entry, string) {
 	return entries, ""
 }
 
-// Speaker resolves a reply's speaker_ref to the outside contact it names, or
-// reports false for a colleague, an unverified party or no match.
-type Speaker func(ref string) (ids.UUID, bool)
-
 // Apply writes what a transcript states about how the companies on the other
 // side sell. Each value is said by a verified outside participant and lands on
 // that contact's current employer. A refused reply leaves the earlier
@@ -133,14 +130,14 @@ type Speaker func(ref string) (ids.UUID, bool)
 // so the reading still counts.
 func Apply(
 	ctx context.Context, tx pgx.Tx, log *slog.Logger, raw json.RawMessage, lineCount int,
-	transcript ids.ActivityID, speaker Speaker,
+	transcript ids.ActivityID, parties []commitmentparty.Party,
 ) error {
 	entries, fault := Read(raw, lineCount)
 	if fault != "" {
 		log.WarnContext(ctx, "meeting company profile refused", "reason", fault)
 		return nil
 	}
-	stated, err := statedByCompany(ctx, tx, entries, speaker)
+	stated, err := statedByCompany(ctx, tx, entries, parties)
 	if err == nil {
 		err = contacts.ApplyMeetingProfileTx(ctx, tx, transcript, stated)
 	}
@@ -155,12 +152,13 @@ func Apply(
 // who said each one. An entry whose speaker is a colleague, unverified, or
 // employed nowhere today is left out.
 func statedByCompany(
-	ctx context.Context, tx pgx.Tx, entries []Entry, speaker Speaker,
+	ctx context.Context, tx pgx.Tx, entries []Entry, parties []commitmentparty.Party,
 ) (map[ids.CompanyID][]contacts.MeetingProfileField, error) {
+	refs := commitmentparty.Refs(parties)
 	said := map[int]ids.UUID{}
 	var contactIDs []ids.UUID
 	for i, entry := range entries {
-		if contact, ok := speaker(entry.SpeakerRef); ok {
+		if contact, ok := commitmentparty.Outside(refs, entry.SpeakerRef, parties); ok {
 			said[i] = contact
 			contactIDs = append(contactIDs, contact)
 		}

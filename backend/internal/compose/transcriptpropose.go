@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/compose/meetingprofile"
 	"github.com/margince/margince/backend/internal/compose/promiseband"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -125,11 +126,11 @@ func (p transcriptPayload) asRead(parties []commitmentParty) transcriptPayload {
 	if p.Proposals == nil {
 		return p
 	}
-	refs := commitmentPartyRefs(parties)
+	refs := commitmentparty.Refs(parties)
 	steps := slices.Clone(*p.Proposals)
 	for i := range steps {
-		steps[i].PromiserRef = partyKey(refs, steps[i].PromiserRef)
-		steps[i].RecipientRefs = partyKeys(refs, steps[i].RecipientRefs)
+		steps[i].PromiserRef = commitmentparty.Key(refs, steps[i].PromiserRef)
+		steps[i].RecipientRefs = commitmentparty.Keys(refs, steps[i].RecipientRefs)
 	}
 	p.Proposals = &steps
 	return p
@@ -157,7 +158,7 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	prompt.WriteString(fence.Wrap(commitmentPartyHeader+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentPartyRefs(parties))) + "\n")
+	prompt.WriteString(fence.Wrap(commitmentPartyHeader+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentparty.Refs(parties))) + "\n")
 	prompt.WriteString("One meeting transcript, in order (untrusted). Each line is numbered:\n")
 	for i, line := range lines {
 		prompt.WriteString(fence.WrapAttr("line", strconv.Itoa(i+1), line) + "\n")
@@ -267,7 +268,7 @@ func validateTranscriptPayload(payload transcriptPayload, lines []string, partie
 			return msg
 		}
 		if step.PromiserRef != "" {
-			if _, found := referencedPromiser(step.PromiserRef, parties); !found {
+			if _, found := commitmentparty.Referenced(step.PromiserRef, parties); !found {
 				return "a proposal names a promiser outside the verified meeting participants"
 			}
 		}

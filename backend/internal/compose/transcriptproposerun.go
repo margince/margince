@@ -103,7 +103,7 @@ func (p *TranscriptProposer) stageAndFinish(
 			}
 			facts := staged.facts(len(kept))
 			transcriptsummary.Onto(ctx, p.log, facts, reply.Summary, len(reading.Lines))
-			if err := meetingprofile.Apply(ctx, tx, p.log, reply.CompanyProfile, len(reading.Lines), activityID, outsideSpeaker(parties)); err != nil {
+			if err := meetingprofile.Apply(ctx, tx, p.log, reply.CompanyProfile, len(reading.Lines), activityID, parties); err != nil {
 				return activities.TranscriptReadOutcome{}, err
 			}
 			return activities.TranscriptReadOutcome{
@@ -236,16 +236,4 @@ func (p *TranscriptProposer) stage(
 		}
 	}
 	return out, nil
-}
-
-// outsideSpeaker resolves a reply's participant reference to its outside contact.
-func outsideSpeaker(parties []commitmentParty) meetingprofile.Speaker {
-	refs := commitmentPartyRefs(parties)
-	return func(ref string) (ids.UUID, bool) {
-		party, found := referencedPromiser(partyKey(refs, ref), parties)
-		if !found || party.Contact == nil || party.Seat != nil {
-			return ids.UUID{}, false
-		}
-		return *party.Contact, true
-	}
 }

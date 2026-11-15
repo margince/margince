@@ -10,12 +10,12 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/meetingprofile"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -85,13 +85,13 @@ func (m *meeting) read(t *testing.T, entries ...saidBy) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	speaker := func(ref string) (ids.UUID, bool) {
-		id, err := ids.Parse(strings.TrimPrefix(ref, "contact:"))
-		return id, err == nil
+	var parties []commitmentparty.Party
+	for _, entry := range entries {
+		parties = append(parties, commitmentparty.Party{Ref: "contact:" + entry.speaker.String(), Contact: &entry.speaker})
 	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := database.WithWorkspaceTx(m.e.Admin(), m.e.Pool, func(tx pgx.Tx) error {
-		return meetingprofile.Apply(m.e.Admin(), tx, quiet, raw, 1, m.transcript, speaker)
+		return meetingprofile.Apply(m.e.Admin(), tx, quiet, raw, 1, m.transcript, parties)
 	}); err != nil {
 		t.Fatalf("applying the reading: %v", err)
 	}
