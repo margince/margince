@@ -12,8 +12,8 @@ import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { roomBriefKey } from "./dealroombrief.key";
-import { roomDocumentsKey } from "./dealroomdocuments.key";
 import "./dealroomdocuments.css";
+import { dealFilesKey, roomDocumentsKey } from "../../lib/attachmentkeys";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the
 // buyer gets to read, under which of the four fixed groups. The board that
@@ -67,7 +67,7 @@ export function AddDocument({
   // The deal's Files area — uploads and the files its emails carried, hidden
   // ones excluded — is what a room may share; the server refuses anything else.
   const files = useQuery({
-    queryKey: ["deal-documents", room.deal_id, false],
+    queryKey: [...dealFilesKey(room.deal_id), false],
     enabled: refusal === undefined,
     queryFn: async () => {
       return unwrap(

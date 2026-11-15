@@ -8,6 +8,7 @@ import type { components } from "../../api/schema";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import {
   asksWhy,
   type CommunicationContext,
@@ -284,6 +285,9 @@ export function useComposeSend({
     const changed = [
       ...entityTimelineKeys(entityType, entityId),
       ...(dealId ? entityTimelineKeys("deal", dealId) : []),
+      // The sent message carries copies of its files. Its id is not held
+      // here, so every message's lists refresh.
+      ...(files.length > 0 ? fileListKeys({ entityType: "activity" }) : []),
     ];
     for (const queryKey of changed) {
       queryClient.invalidateQueries({ queryKey });
