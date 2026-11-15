@@ -136,6 +136,7 @@ function ProfileInputRow({
         field={field}
         label={t(labelFor(ROW_LABELS, input))}
         placeholderKey={emptyReason(latestRead.data?.status)}
+        emptyKey={emptyReason(latestRead.data?.status)}
         canEdit={edit.canEdit}
         readOnlyReason={edit.reason}
         multiline

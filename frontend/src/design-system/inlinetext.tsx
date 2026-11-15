@@ -12,16 +12,18 @@ import "./inlinechoice.css";
 
 // The field for a reader who cannot edit it. `placeholder` is written for
 // someone about to press it ("Add legal name"), so it never stands in here:
-// a suggested value does, muted, and failing that `field.unset`.
+// a suggested value does, muted, then `emptyText`, and failing that `field.unset`.
 function ReadOnlyText({
   value,
   display,
   suggested,
+  emptyText,
   readOnlyReason,
 }: Readonly<{
   value: string;
   display?: string;
   suggested?: string;
+  emptyText?: string;
   readOnlyReason?: string;
 }>) {
   const t = useT();
@@ -32,7 +34,11 @@ function ReadOnlyText({
       }
       title={readOnlyReason}
     >
-      {(value && display) || value || suggested || t("field.unset")}
+      {(value && display) ||
+        value ||
+        suggested ||
+        emptyText ||
+        t("field.unset")}
     </span>
   );
 }
@@ -104,6 +110,7 @@ export function InlineText({
   link,
   placeholder,
   suggested,
+  emptyText,
   maxLength,
   multiline,
   type,
@@ -127,6 +134,9 @@ export function InlineText({
   // A value the record carries elsewhere (a contact's title at their employer),
   // shown muted until one is written here, since "Unset" would deny it.
   suggested?: string;
+  // Why the field is empty, for a reader who cannot fill it ("Not on their
+  // website"). Absent, an empty field reads "Unset".
+  emptyText?: string;
   maxLength?: number;
   type?: TextKind;
   step?: string;
@@ -173,6 +183,7 @@ export function InlineText({
             value={value}
             display={display}
             suggested={suggested}
+            emptyText={emptyText}
             readOnlyReason={readOnlyReason}
           />
         ),

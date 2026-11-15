@@ -64,6 +64,8 @@ type SidecarFieldProps = Readonly<{
   // individually, so it passes none and its rows read as they always have.
   icon?: ReactNode;
   placeholderKey: MessageKey;
+  // Why an empty field is empty, shown to a reader who cannot fill it.
+  emptyKey?: MessageKey;
   canEdit: boolean;
   readOnlyReason: string | undefined;
   multiline?: boolean;
@@ -80,6 +82,7 @@ export function SidecarFieldValue({
   labelKey,
   label: labelText,
   placeholderKey,
+  emptyKey,
   canEdit,
   readOnlyReason,
   multiline,
@@ -136,6 +139,7 @@ export function SidecarFieldValue({
         label={label}
         value={current?.value ?? ""}
         placeholder={t(placeholderKey)}
+        emptyText={emptyKey ? t(emptyKey) : undefined}
         multiline={multiline}
         canEdit={canEdit && fieldsLoaded}
         readOnlyReason={readOnlyReason}
