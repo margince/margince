@@ -31,7 +31,7 @@ records, so a row changes only when a maintainer merges it.
 | `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s | 109 ms | within budget | 2026-11-14 |
 | `PERF-6` | Cold start (single binary) | < 2 s | 849 ms | within budget | 2026-11-14 |
 | `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 112 ms | inconclusive: measured on the smb tier; the SLO binds at mid_market | 2026-11-13 |
-| `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 4598 ms | over budget (#4912) | 2026-11-14 |
+| `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 4598 ms | over budget (#10779) | 2026-11-14 |
 | `PERF-9` | Analytics screen | < 300 ms | 144 ms | within budget | 2026-11-14 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 936 ms | within budget | 2026-11-14 |
 | `PERF-11` | System health compact overview | < 750 ms | 251 ms | within budget | 2026-11-01 |
@@ -119,7 +119,7 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 | `app_shell_notices` | manager | 2.1 ms | 2.5 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
 | `worklist` | manager | 2.8 ms | 5.4 ms | 1000 ms | 30 | within budget |  |
 | `worklist_handled` | manager | 27.2 ms | 37.7 ms | 1000 ms | 30 | within budget |  |
-| `worklist_team` | manager | 4554 ms | 4598 ms | 1000 ms | 30 | over budget (#4912) |  |
+| `worklist_team` | manager | 4554 ms | 4598 ms | 1000 ms | 30 | over budget (#10779) |  |
 | `home_brief` | manager | 3.7 ms | 5.4 ms | 1000 ms | 30 | within budget | empty on the seeded corpus |
 | `home_worklist` | manager | 2.2 ms | 2.4 ms | 1000 ms | 30 | within budget |  |
 | `home_handled` | manager | 26.9 ms | 29.3 ms | 1000 ms | 30 | within budget |  |
@@ -174,7 +174,7 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 
 ### Known-issue entries that could be removed
 
-- row home_worklist is at or under 80% of its budget for every seat: remove the row for #4912
+- row home_worklist is at or under 80% of its budget for every seat: remove the row for #10779
 
 ## System health
 
