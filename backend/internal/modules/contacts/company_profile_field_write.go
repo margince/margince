@@ -477,7 +477,7 @@ func readProfileFieldWire(
 		args...,
 	).Scan(&rowID, &fieldV, &pf.Value, &srcV, &pf.CapturedBy, &pf.EvidenceSnippet, &pf.SourceUrl,
 		&pf.Confidence, &pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy, &pf.UpdatedAt, &pf.Version,
-		&pf.SourceActivityId, &pf.SourceOccurredAt)
+		&pf.SourceActivityId, &pf.SourceOccurredAt, &pf.SourceOccurredPrecision)
 	if err != nil {
 		return pf, fmt.Errorf("re-read company profile field: %w", err)
 	}

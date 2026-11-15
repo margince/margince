@@ -71944,6 +71944,10 @@ components:
           format: date-time
           readOnly: true
           description: With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
+        source_occurred_precision:
+          readOnly: true
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How precisely `source_occurred_at` is known; `day` for an all-day meeting.
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }

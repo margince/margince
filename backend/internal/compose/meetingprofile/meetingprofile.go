@@ -11,13 +11,21 @@ package meetingprofile
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"slices"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -112,4 +120,68 @@ func Read(raw json.RawMessage, lineCount int) ([]Entry, string) {
 		seen[[2]string{entry.SpeakerRef, entry.Field}] = true
 	}
 	return entries, ""
+}
+
+// Speaker resolves a reply's speaker_ref to the outside contact it names, or
+// reports false for a colleague, an unverified party or no match.
+type Speaker func(ref string) (ids.UUID, bool)
+
+// Apply writes what a transcript states about how the companies on the other
+// side sell. Each value is said by a verified outside participant and lands on
+// that contact's current employer. A refused reply leaves the earlier
+// reading's values standing. A profile the reader may not update is skipped,
+// so the reading still counts.
+func Apply(
+	ctx context.Context, tx pgx.Tx, log *slog.Logger, raw json.RawMessage, lineCount int,
+	transcript ids.ActivityID, speaker Speaker,
+) error {
+	entries, fault := Read(raw, lineCount)
+	if fault != "" {
+		log.WarnContext(ctx, "meeting company profile refused", "reason", fault)
+		return nil
+	}
+	stated, err := statedByCompany(ctx, tx, entries, speaker)
+	if err == nil {
+		err = contacts.ApplyMeetingProfileTx(ctx, tx, transcript, stated)
+	}
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		log.InfoContext(ctx, "meeting company profile skipped", "reason", err)
+		return nil
+	}
+	return err
+}
+
+// statedByCompany groups the entries by the employer of the outside contact
+// who said each one. An entry whose speaker is a colleague, unverified, or
+// employed nowhere today is left out.
+func statedByCompany(
+	ctx context.Context, tx pgx.Tx, entries []Entry, speaker Speaker,
+) (map[ids.CompanyID][]contacts.MeetingProfileField, error) {
+	said := map[int]ids.UUID{}
+	var contactIDs []ids.UUID
+	for i, entry := range entries {
+		if contact, ok := speaker(entry.SpeakerRef); ok {
+			said[i] = contact
+			contactIDs = append(contactIDs, contact)
+		}
+	}
+	stated := map[ids.CompanyID][]contacts.MeetingProfileField{}
+	if len(contactIDs) == 0 {
+		return stated, nil
+	}
+	employers, err := contacts.CurrentEmployersTx(ctx, tx, contactIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i, contact := range said {
+		employer, employed := employers[contact]
+		if !employed {
+			continue
+		}
+		company := ids.From[ids.CompanyKind](ids.UUID(employer.CompanyId))
+		stated[company] = append(stated[company], contacts.MeetingProfileField{
+			Field: entries[i].Field, Value: entries[i].Value, Confidence: entries[i].Confidence,
+		})
+	}
+	return stated, nil
 }

@@ -155,7 +155,7 @@ func readCompanyProfileFieldsTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID
 		if err := rows.Scan(&rowID, &field, &pf.Value, &source, &pf.CapturedBy,
 			&pf.EvidenceSnippet, &pf.SourceUrl, &pf.Confidence,
 			&pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy,
-			&pf.UpdatedAt, &pf.Version, &pf.SourceActivityId, &pf.SourceOccurredAt); err != nil {
+			&pf.UpdatedAt, &pf.Version, &pf.SourceActivityId, &pf.SourceOccurredAt, &pf.SourceOccurredPrecision); err != nil {
 			return nil, fmt.Errorf("scan company profile field: %w", err)
 		}
 		// The row's own identity, so a dossier sentence written from this

@@ -42324,9 +42324,12 @@ type CompanyProfileField struct {
 
 	// SourceOccurredAt With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
 	SourceOccurredAt *time.Time `json:"source_occurred_at,omitempty"`
-	SourceUrl        *string    `json:"source_url,omitempty"`
-	UpdatedAt        time.Time  `json:"updated_at"`
-	Value            string     `json:"value"`
+
+	// SourceOccurredPrecision How precisely `source_occurred_at` is known; `day` for an all-day meeting.
+	SourceOccurredPrecision *OccurredPrecision `json:"source_occurred_precision,omitempty"`
+	SourceUrl               *string            `json:"source_url,omitempty"`
+	UpdatedAt               time.Time          `json:"updated_at"`
+	Value                   string             `json:"value"`
 
 	// VerifiedAt When a human last confirmed this claim. Paired with verified_by — a verification without an actor describes a confirmation nobody made.
 	VerifiedAt *time.Time `json:"verified_at,omitempty"`

@@ -180,12 +180,12 @@ func recordMeetingProfile(ctx context.Context, tx pgx.Tx, company ids.CompanyID,
 }
 
 // profileFieldCitationSQL selects a field's cited meeting for this reader: its
-// id only when they may read the meeting, its date always. The caller joins
+// id only when they may read the meeting, its date and precision always. The caller joins
 // `activity cited ON cited.id = f.source_activity_id`.
 func profileFieldCitationSQL(ctx context.Context, arg func(any) int) (string, error) {
 	readable, err := auth.ActivityContentClause(ctx, "cited", arg)
 	if err != nil {
 		return "", err
 	}
-	return `CASE WHEN cited.id IS NOT NULL AND (` + readable + `) THEN cited.id END, cited.occurred_at`, nil
+	return `CASE WHEN cited.id IS NOT NULL AND (` + readable + `) THEN cited.id END, cited.occurred_at, cited.occurred_precision`, nil
 }
