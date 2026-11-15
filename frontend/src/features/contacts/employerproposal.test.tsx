@@ -17,6 +17,7 @@ import type { components } from "../../api/schema";
 import { RecordDetails } from "../../design-system/recorddetails";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { useContact360 } from "./contact360";
 import { useContactAboutSections } from "./contactdetails";
@@ -116,6 +117,10 @@ function stubApi({
         const linked = sent.some((write) => write.path === "/relationships");
         return json(linked ? employedView() : contactView());
       }
+      const names = companyNamesAnswer(url.href, {
+        "7c4b2e90-1d3a-4f58-b6e2-9a0c5d8f1e23": "Nordlicht Logistik AG",
+      });
+      if (request.method === "GET" && names) return names;
       if (url.pathname.endsWith("/employer")) return employer();
       if (
         url.pathname.endsWith("/companies/7c4b2e90-1d3a-4f58-b6e2-9a0c5d8f1e23")

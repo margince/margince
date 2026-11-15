@@ -280,6 +280,9 @@ var queryEnumTable = map[string][]queryEnum{
 	"GET /v1/record-links": {
 		{Name: "record_type", Values: []string{"deal", "company", "contact"}, Array: false, Explode: true},
 	},
+	"GET /v1/records/references": {
+		{Name: "kind", Values: []string{"contact", "company", "lead", "deal", "project"}, Array: false, Explode: true},
+	},
 	"GET /v1/relationships": {
 		{Name: "kind", Values: []string{"employment", "deal_stakeholder", "project_stakeholder", "project_company", "partner_of", "referred_by", "co_sell_with", "works_with", "billing_contact"}, Array: false, Explode: true},
 	},
