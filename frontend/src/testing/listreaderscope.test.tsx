@@ -3,6 +3,8 @@ import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type ListPage, useListQuery } from "../components/listquery";
 import { listOpening } from "../components/listquery.options";
+import { useStageColumns } from "../features/deals/dealboard.queries";
+import { useProjectsOfCompany } from "../features/deals/dealproject";
 import { useTerminalLeads } from "../features/leads/leadboard.queries";
 import { type DealFilters, useDeals } from "../lib/deals.queries";
 import { useMe } from "../lib/session";
@@ -40,6 +42,8 @@ const deals: DealFilters = {
   filters: {},
 };
 
+const STAGES = ["stage"];
+
 // Each list kind through its real hook. `rows` reads the ids it shows.
 const kinds = [
   {
@@ -75,6 +79,18 @@ const kinds = [
           true,
         ).data?.pages ?? []
       ).flatMap((p) => p.data.map((lead) => lead.id)),
+  },
+  {
+    kind: "a deal board stage column (useStageColumns)",
+    path: "/v1/deals",
+    useRows: (): string[] =>
+      useStageColumns(deals, STAGES).deals.map((deal) => deal.id),
+  },
+  {
+    kind: "a company's open projects (useProjectsOfCompany)",
+    path: "/v1/projects",
+    useRows: (): string[] =>
+      useProjectsOfCompany("company").map((project) => project.id),
   },
 ] as const;
 
@@ -139,16 +155,18 @@ describe.each(kinds)("$kind", ({ path, useRows }) => {
     },
   );
 
-  it("reads nothing before /me names the reader", async () => {
-    reads = holdReads((url) => url.pathname === path);
+  it("reads nothing while /me has not named the reader", async () => {
+    reads = holdReads(
+      (url) => url.pathname === path || url.pathname === "/v1/me",
+    );
     const { client, wrapper } = cancellationClient();
     client.removeQueries({ queryKey: ["me"] });
-    vi.mocked(globalThis.fetch).mockImplementation(
-      () => new Promise<Response>(() => {}),
-    );
     renderHook(() => useRows(), { wrapper });
 
+    await waitFor(() => expect(reads.length).toBeGreaterThan(0));
     await act(() => Promise.resolve());
-    expect(reads).toHaveLength(0);
+    expect(reads.map((read) => new URL(read.request.url).pathname)).toEqual([
+      "/v1/me",
+    ]);
   });
 });

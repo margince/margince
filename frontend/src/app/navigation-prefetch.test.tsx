@@ -331,6 +331,29 @@ describe("navigation intent on the rail's Contacts link", () => {
     expect(server.asked).toHaveLength(0);
   });
 
+  it("reads a shown list once under the new row scope, not again under the old", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("contacts");
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    server.answerAll();
+    renderWith(client, <ContactsScreen />);
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+
+    act(() => {
+      client.setQueryData(
+        sessionOptions.queryKey,
+        meFixture({ allow: { contact: ["read"], deal: ["read"] } }),
+      );
+    });
+
+    await waitFor(() => expect(screen.queryByText("Anna Weber")).toBeNull());
+    await waitFor(() => expect(server.asked).toHaveLength(2));
+    server.answerAll();
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+    expect(server.asked).toHaveLength(2);
+  });
+
   it("keys the warmed list by the reader scope", () => {
     expect(contactsArrivalOptions(READER_SCOPE).queryKey[1]).toBe(READER_SCOPE);
   });

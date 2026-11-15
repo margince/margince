@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { TagResultScreen } from "./tagresult";
@@ -60,6 +61,12 @@ const leads = [{ id: "l-1", full_name: "Jonas Weber" }];
 export const RecordsInEveryGroup: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({
         contacts: 2,
         companies: 2,
@@ -84,6 +91,12 @@ export const RecordsInEveryGroup: Story = {
 export const NothingCarriesIt: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({
         contacts: 0,
         companies: 0,
@@ -106,6 +119,12 @@ export const NothingCarriesIt: Story = {
 export const RowsStillLoading: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({
         contacts: 2,
         companies: 2,
