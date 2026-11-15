@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
@@ -381,6 +382,22 @@ describe("a column that points at another record", () => {
     const fetchMock = vi.fn(async (request: Request) => {
       const url = new URL(request.url);
       const path = url.pathname;
+      if (path === "/v1/records/references") {
+        const kind = url.searchParams.get("kind");
+        if (kind === "company" && companiesFail)
+          return jsonResponse({ title: "Server error" }, 500);
+        return jsonResponse({
+          data: url.searchParams.getAll("id").flatMap((id) => {
+            const name =
+              kind === "company" && id === "c-1"
+                ? "Brandt GmbH"
+                : kind === "project" && id === "p-1"
+                  ? "Rollout"
+                  : undefined;
+            return name === undefined ? [] : [{ id, name, archived: false }];
+          }),
+        });
+      }
       if (path.endsWith("/companies") && companiesFail) {
         return jsonResponse({ title: "Server error" }, 500);
       }
@@ -414,12 +431,6 @@ describe("a column that points at another record", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     return fetchMock;
-  }
-
-  function pathsAsked(fetchMock: ReturnType<typeof stubWorkspace>) {
-    return fetchMock.mock.calls.map(
-      ([request]) => new URL(request.url).pathname,
-    );
   }
 
   function renderDeals(rows: readonly Record<string, unknown>[]) {
@@ -484,11 +495,19 @@ describe("a column that points at another record", () => {
     );
 
     expect(await screen.findAllByText("Brandt GmbH")).toHaveLength(2);
-    const companyReads = pathsAsked(fetchMock).filter((path) =>
-      path.includes("/companies"),
-    );
+    const companyReads = fetchMock.mock.calls
+      .map(([request]) => new URL(request.url))
+      .filter(
+        (url) =>
+          url.pathname === "/v1/records/references" &&
+          url.searchParams.get("kind") === "company",
+      );
     expect(companyReads).toHaveLength(1);
-    expect(companyReads[0]).toMatch(/\/companies$/);
+    expect(companyReads[0]?.searchParams.getAll("id").sort(stable)).toEqual([
+      "c-1",
+      "c-2",
+      "c-3",
+    ]);
   });
 
   it("says a reference is gone rather than printing an id nobody can read", async () => {

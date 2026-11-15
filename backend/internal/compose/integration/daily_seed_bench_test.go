@@ -220,6 +220,7 @@ func loadDailyCorpus(t *testing.T, e *apptest.AppEnv, seats Seats, scale float64
 	s.timed("activity_link", s.links)
 	s.analyze("activity_link", "contact", "deal", "company", "relationship")
 	s.timed("last_activity_at", s.moveLastActivity)
+	s.timed("reply_settled_at", func() { stampSeededMail(t, e) })
 	s.timed("vacuum analyze", func() {
 		s.exec("vacuum", `VACUUM ANALYZE company, company_domain, contact, contact_email, relationship, deal,
 		      lead, project, activity, capture_import, activity_participant, activity_link,

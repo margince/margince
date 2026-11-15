@@ -55,10 +55,20 @@ export function useMe(enabled = true) {
   const client = useQueryClient();
   const query = useQuery({ ...sessionOptions, enabled });
   const scope = healthScope(query.data);
+  // The last signed-in principal, kept across a signed-out gap: an expired
+  // session that ends in another seat's sign-in reuses this QueryClient.
   const previousScope = useRef(scope);
+  const previousUser = useRef(query.data?.user?.id);
   useEffect(() => {
+    if (scope === undefined) return;
     const previous = previousScope.current;
-    if (previous !== undefined && previous !== scope)
+    const user = query.data?.user?.id;
+    if (previousUser.current !== undefined && previousUser.current !== user)
+      // Most record caches are keyed by record, not by reader.
+      client.removeQueries({
+        predicate: (entry) => entry.queryKey[0] !== "me",
+      });
+    else if (previous !== undefined && previous !== scope)
       client.removeQueries({
         predicate: (entry) =>
           entry.queryKey.includes(previous) ||
@@ -66,7 +76,8 @@ export function useMe(enabled = true) {
           entry.queryKey[0] === "scheduling-profile",
       });
     previousScope.current = scope;
-  }, [client, scope]);
+    previousUser.current = user;
+  }, [client, scope, query.data?.user?.id]);
   return query;
 }
 

@@ -74,7 +74,9 @@ it("lets company enrichment finish for another observer after the employment pag
   employment.unmount();
   expect(held[1]?.request.signal.aborted).toBe(false);
   await act(async () => {
-    held[1]?.answer({ data: [{ id: "company", display_name: "Employer" }] });
+    held[1]?.answer({
+      data: [{ id: "company", name: "Employer", archived: false }],
+    });
   });
   await waitFor(() => expect(name.result.current.name).toBe("Employer"));
   expect(held).toHaveLength(2);

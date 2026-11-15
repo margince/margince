@@ -79,7 +79,13 @@ const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
 
 // confirmedRequestSQL is a request a human took, or one whose asks_us verdict
 // stands (storekit.AsksUsClause).
-var confirmedRequestSQL = storekit.AsksUsClause("a") + ` OR ` + acceptedRequestSQL
+var confirmedRequestSQL = confirmedRequestOf(acceptedRequestSQL)
+
+// confirmedRequestOf is confirmedRequestSQL over accepted, a boolean that says
+// a human took the request.
+func confirmedRequestOf(accepted string) string {
+	return storekit.AsksUsClause("a") + ` OR ` + accepted
+}
 
 var outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
@@ -100,9 +106,13 @@ func calendarMethodInSQL(methods []string) string {
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it.
-var requestIntentSQL = confirmedRequestSQL + `
+var requestIntentSQL = requestIntentOf(acceptedRequestSQL)
+
+func requestIntentOf(accepted string) string {
+	return confirmedRequestOf(accepted) + `
  OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting')
      AND NOT ` + calendarCopySQL + `)`
+}
 
 var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
 

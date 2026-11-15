@@ -27,7 +27,7 @@ const meta: Meta<typeof EntityRef> = {
         });
       }
       installFetchStub({
-        "GET /companies": () => {
+        "GET /records/references": () => {
           if (args.id === "o-cached") {
             return jsonResponse({ title: "Unexpected company read" }, 500);
           }
@@ -37,9 +37,25 @@ const meta: Meta<typeof EntityRef> = {
           return jsonResponse({
             data:
               args.id === "o-1"
-                ? [{ id: "o-1", display_name: "Brandt Automotive GmbH" }]
-                : [],
-            page: { next_cursor: null, has_more: false },
+                ? [
+                    {
+                      id: "o-1",
+                      name: "Brandt Automotive GmbH",
+                      archived: false,
+                      logo: null,
+                    },
+                  ]
+                : args.id === "ct-1"
+                  ? [{ id: "ct-1", name: "Anna Weber", archived: true }]
+                  : args.id === "l-email"
+                    ? [
+                        {
+                          id: "l-email",
+                          name: "lead@example.com",
+                          archived: false,
+                        },
+                      ]
+                    : [],
           });
         },
         // A roster that offers another cursor for every page it answers: the
@@ -102,5 +118,23 @@ export const RecordCardDestination: Story = {
     kind: "deal",
     id: "01a00000-0000-7000-8000-000000000001",
     name: "Example renewal · 海",
+  },
+};
+
+export const ArchivedContactReference: Story = {
+  args: { kind: "contact", id: "ct-1" },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).findByRole("link", { name: "Anna Weber" }),
+    ).resolves.toBeVisible();
+  },
+};
+
+export const LeadReferenceWithEmailName: Story = {
+  args: { kind: "lead", id: "l-email" },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).findByRole("link", { name: "lead@example.com" }),
+    ).resolves.toBeVisible();
   },
 };
