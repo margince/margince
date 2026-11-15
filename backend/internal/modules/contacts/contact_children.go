@@ -347,12 +347,9 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 	if err := attachContactEmployers(ctx, tx, idx, contactIDs); err != nil {
 		return err
 	}
-	if err := storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
+	return storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) }); err != nil {
-		return err
-	}
-	return nil
+		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) })
 }
 
 func attachContactPhones(phoneRows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {

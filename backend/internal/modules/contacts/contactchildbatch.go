@@ -18,8 +18,8 @@ import (
 // transaction, so they cost one round trip instead of four.
 //
 // The ids come from a page the caller already authorised; this adds no row check.
-// Each Query callback owns its rows, and Close drains every result and reports
-// the first error, so a failed read never leaves results open on the connection.
+// Each Query callback owns its rows. Close drains every result and reports the
+// first error. A failed read therefore leaves no result open on the connection.
 func attachContactChannels(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
 	if len(contactIDs) == 0 {
 		return nil
