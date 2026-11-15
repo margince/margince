@@ -36,7 +36,7 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 	_, ended := preciseEmploymentDate(e.Ended)
 	matched, state := matchEmploymentEpisode(relationships, e, started, ended)
 	mayEnd := false
-	if state == "needs_review" && started != nil && e.validDateRange() && undatedEndAt(relationships, *started) {
+	if state == string(VCardNeedsReview) && started != nil && e.validDateRange() && undatedEndAt(relationships, *started) {
 		if mayEnd, err = mayEndUndatedTx(ctx, tx, relationships); err != nil {
 			return nil, "", err
 		}
@@ -199,7 +199,7 @@ func undatedEndAt(relationships []relationshipRow, start time.Time) bool {
 // set any such row's status or dates. Otherwise the pair stays for review.
 func mayEndUndatedTx(ctx context.Context, tx pgx.Tx, relationships []relationshipRow) (bool, error) {
 	if auth.Require(ctx, "relationship", principal.ActionUpdate) != nil {
-		return false, nil
+		return false, nil //nolint:nilerr // a refused permission answers "may not end them", it is not a failure
 	}
 	for _, r := range relationships {
 		if !undatedCurrentEmployment(r) {

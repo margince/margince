@@ -26,7 +26,7 @@ func (s *Store) roleFromSignatureTitleTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fields []SignatureField, applied []string,
 ) error {
 	if !slices.Contains(applied, fieldTitle) || auth.Require(ctx, "relationship", principal.ActionUpdate) != nil {
-		return nil
+		return nil //nolint:nilerr // a signature without relationship:update leaves the role alone, it is not a failure
 	}
 	idx := slices.IndexFunc(fields, func(f SignatureField) bool { return f.Name == fieldTitle })
 	if idx < 0 {
