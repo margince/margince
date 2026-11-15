@@ -52329,7 +52329,7 @@ export interface components {
             key: string;
             value: string;
             /** @enum {string} */
-            source: "human" | "agent" | "site_read" | "connector" | "migration";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "meeting";
             readonly captured_by: string;
             /** Format: uri */
             source_url?: string | null;
@@ -52396,7 +52396,7 @@ export interface components {
             classification: "new" | "machine_change" | "human_conflict" | "unchanged";
             current_value: string | null;
             /** @enum {string|null} */
-            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
+            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | "meeting" | null;
             proposed_value: string;
         };
         CompanySiteReadResolution: {

@@ -50146,7 +50146,7 @@ components:
       properties:
         key: {type: string}
         value: {type: string}
-        source: {type: string, enum: [human, agent, site_read, connector, migration]}
+        source: {type: string, enum: [human, agent, site_read, connector, migration, meeting]}
         captured_by: {type: string, readOnly: true}
         source_url: {type: [string, 'null'], format: uri}
         confidence: {type: [number, 'null'], minimum: 0, maximum: 1}
@@ -50204,7 +50204,7 @@ components:
         value_kind: {type: string, enum: [profile_field, fact]}
         classification: {type: string, enum: [new, machine_change, human_conflict, unchanged]}
         current_value: {type: [string, 'null']}
-        current_source: {type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, null]}
+        current_source: {type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, meeting, null]}
         proposed_value: {type: string}
     CompanySiteReadResolution:
       type: object

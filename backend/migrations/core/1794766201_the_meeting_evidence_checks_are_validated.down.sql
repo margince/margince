@@ -7,4 +7,5 @@ ALTER TABLE company_profile_field
         CHECK (source IN ('human', 'agent', 'site_read', 'connector', 'migration', 'meeting')) NOT VALID,
     DROP CONSTRAINT company_profile_meeting_evidence,
     ADD CONSTRAINT company_profile_meeting_evidence
-        CHECK (source <> 'meeting' OR (confidence IS NOT NULL AND coalesce(evidence_snippet, '') = '')) NOT VALID;
+        CHECK (source <> 'meeting' OR (source_activity_id IS NOT NULL AND confidence IS NOT NULL
+               AND coalesce(evidence_snippet, '') = '')) NOT VALID;

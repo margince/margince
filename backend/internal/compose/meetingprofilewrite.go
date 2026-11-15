@@ -16,10 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// applyMeetingProfile writes what a transcript states about how the company
-// on the other side sells onto that company's profile. The company is the one
-// current employer of the meeting's outside contacts; with none, or several,
-// the reading cannot say whose profile it describes, so it writes nothing.
+// applyMeetingProfile writes what a transcript states about how the companies
+// on the other side sell. Each value is said by a verified outside participant
+// and lands on that contact's current employer; a value no such speaker says
+// lands nowhere. A refused reply leaves the earlier reading's values standing.
 // A profile the reader may not update is skipped and the reading still counts.
 func (p *TranscriptProposer) applyMeetingProfile(
 	ctx context.Context, tx pgx.Tx, raw json.RawMessage, lineCount int,
@@ -30,61 +30,51 @@ func (p *TranscriptProposer) applyMeetingProfile(
 		p.log.WarnContext(ctx, "meeting company profile refused", "reason", fault)
 		return nil
 	}
-	if len(entries) == 0 {
-		return nil
+	stated, err := statedByCompany(ctx, tx, entries, parties)
+	if err == nil {
+		err = contacts.ApplyMeetingProfileTx(ctx, tx, transcript, stated)
 	}
-	company, found, err := meetingCompany(ctx, tx, parties)
-	if err != nil || !found {
-		return skippedProfile(err)
-	}
-	fields := make([]contacts.MeetingProfileField, 0, len(entries))
-	for _, entry := range entries {
-		fields = append(fields, contacts.MeetingProfileField{Field: entry.Field, Value: entry.Value, Confidence: entry.Confidence})
-	}
-	if _, err := contacts.ApplyMeetingProfileTx(ctx, tx, company, transcript, fields); err != nil {
-		if skipped := skippedProfile(err); skipped == nil {
-			p.log.InfoContext(ctx, "meeting company profile skipped", "reason", err)
-			return nil
-		}
-		return err
-	}
-	return nil
-}
-
-// meetingCompany is the one current employer of the meeting's outside
-// contacts, if there is exactly one.
-func meetingCompany(ctx context.Context, tx pgx.Tx, parties []commitmentParty) (ids.CompanyID, bool, error) {
-	var outside []ids.UUID
-	for _, party := range parties {
-		if party.Contact != nil && party.Seat == nil {
-			outside = append(outside, *party.Contact)
-		}
-	}
-	if len(outside) == 0 {
-		return ids.CompanyID{}, false, nil
-	}
-	employers, err := contacts.CurrentEmployersTx(ctx, tx, outside)
-	if err != nil {
-		return ids.CompanyID{}, false, err
-	}
-	companies := map[ids.UUID]bool{}
-	for _, employer := range employers {
-		companies[ids.UUID(employer.CompanyId)] = true
-	}
-	if len(companies) != 1 {
-		return ids.CompanyID{}, false, nil
-	}
-	for company := range companies {
-		return ids.From[ids.CompanyKind](company), true, nil
-	}
-	return ids.CompanyID{}, false, nil
-}
-
-// skippedProfile is nil for a refusal that only means this reader may not see
-// or change the company; any other fault is the reading's to retry.
-func skippedProfile(err error) error {
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		p.log.InfoContext(ctx, "meeting company profile skipped", "reason", err)
 		return nil
 	}
 	return err
+}
+
+// statedByCompany groups the entries by the employer of the outside contact
+// who said each one. An entry whose speaker is a colleague, unverified, or
+// employed nowhere today is left out.
+func statedByCompany(
+	ctx context.Context, tx pgx.Tx, entries []meetingprofile.Entry, parties []commitmentParty,
+) (map[ids.CompanyID][]contacts.MeetingProfileField, error) {
+	refs := commitmentPartyRefs(parties)
+	speakers := map[int]ids.UUID{}
+	var contactIDs []ids.UUID
+	for i, entry := range entries {
+		party, found := referencedPromiser(partyKey(refs, entry.SpeakerRef), parties)
+		if found && party.Contact != nil && party.Seat == nil {
+			speakers[i] = *party.Contact
+			contactIDs = append(contactIDs, *party.Contact)
+		}
+	}
+	stated := map[ids.CompanyID][]contacts.MeetingProfileField{}
+	if len(contactIDs) == 0 {
+		return stated, nil
+	}
+	employers, err := contacts.CurrentEmployersTx(ctx, tx, contactIDs)
+	if err != nil {
+		return nil, err
+	}
+	for i, contact := range speakers {
+		employer, employed := employers[contact]
+		if !employed {
+			continue
+		}
+		company := ids.From[ids.CompanyKind](ids.UUID(employer.CompanyId))
+		entry := entries[i]
+		stated[company] = append(stated[company], contacts.MeetingProfileField{
+			Field: entry.Field, Value: entry.Value, Confidence: entry.Confidence,
+		})
+	}
+	return stated, nil
 }

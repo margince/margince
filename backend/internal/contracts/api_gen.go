@@ -6291,6 +6291,7 @@ const (
 	CompanyContextItemSourceAgent     CompanyContextItemSource = "agent"
 	CompanyContextItemSourceConnector CompanyContextItemSource = "connector"
 	CompanyContextItemSourceHuman     CompanyContextItemSource = "human"
+	CompanyContextItemSourceMeeting   CompanyContextItemSource = "meeting"
 	CompanyContextItemSourceMigration CompanyContextItemSource = "migration"
 	CompanyContextItemSourceSiteRead  CompanyContextItemSource = "site_read"
 )
@@ -6303,6 +6304,8 @@ func (e CompanyContextItemSource) Valid() bool {
 	case CompanyContextItemSourceConnector:
 		return true
 	case CompanyContextItemSourceHuman:
+		return true
+	case CompanyContextItemSourceMeeting:
 		return true
 	case CompanyContextItemSourceMigration:
 		return true
@@ -7119,6 +7122,7 @@ const (
 	CompanySiteReadComparisonCurrentSourceAgent           CompanySiteReadComparisonCurrentSource = "agent"
 	CompanySiteReadComparisonCurrentSourceConnector       CompanySiteReadComparisonCurrentSource = "connector"
 	CompanySiteReadComparisonCurrentSourceHuman           CompanySiteReadComparisonCurrentSource = "human"
+	CompanySiteReadComparisonCurrentSourceMeeting         CompanySiteReadComparisonCurrentSource = "meeting"
 	CompanySiteReadComparisonCurrentSourceMigration       CompanySiteReadComparisonCurrentSource = "migration"
 	CompanySiteReadComparisonCurrentSourceSiteRead        CompanySiteReadComparisonCurrentSource = "site_read"
 	CompanySiteReadComparisonCurrentSourceTechnicalLookup CompanySiteReadComparisonCurrentSource = "technical_lookup"
@@ -7132,6 +7136,8 @@ func (e CompanySiteReadComparisonCurrentSource) Valid() bool {
 	case CompanySiteReadComparisonCurrentSourceConnector:
 		return true
 	case CompanySiteReadComparisonCurrentSourceHuman:
+		return true
+	case CompanySiteReadComparisonCurrentSourceMeeting:
 		return true
 	case CompanySiteReadComparisonCurrentSourceMigration:
 		return true

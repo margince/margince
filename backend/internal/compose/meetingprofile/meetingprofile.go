@@ -43,6 +43,9 @@ var Fields = []string{
 
 // Entry is one field the meeting states.
 type Entry struct {
+	// SpeakerRef is the verified participant reference of the outside speaker
+	// who says it; the company is theirs.
+	SpeakerRef  string  `json:"speaker_ref"`
 	Field       string  `json:"field"`
 	Value       string  `json:"value"`
 	SourceLines []int   `json:"source_lines"`
@@ -53,8 +56,10 @@ type Entry struct {
 // named Key among the fields of the reply.
 func Instruction() string {
 	return fmt.Sprintf(`"%s" lists what the meeting states about how the OTHER company — the customer `+
-		`or prospect we met, never us — sells to its OWN customers. Each entry is {"field", "value", `+
-		`"source_lines", "confidence"}, at most one per field. "field" is one of: icp (whom it sells to), `+
+		`or prospect we met, never us — sells to its OWN customers. Each entry is {"speaker_ref", "field", "value", `+
+		`"source_lines", "confidence"}, at most one per field and speaker. "speaker_ref" is the verified `+
+		`participant reference of the outside speaker who says it; leave the entry out when no verified `+
+		`outside participant says it. "field" is one of: icp (whom it sells to), `+
 		`customer_pains (problems that bring its customers to it), desired_outcomes (what its customers want `+
 		`to achieve), buying_center (who evaluates, buys or approves when its customers buy), buying_intents `+
 		`(what signals that its customers want to buy), common_objections (objections its customers raise), `+
@@ -68,11 +73,12 @@ func Instruction() string {
 // Schema is the profile's shape in the reply's response schema.
 func Schema() schema.Node {
 	return schema.Array(schema.Object(map[string]schema.Node{
+		"speaker_ref":  schema.String(),
 		"field":        schema.String(),
 		"value":        schema.String(),
 		"source_lines": schema.Array(schema.Integer()),
 		"confidence":   schema.Number(),
-	}, "field", "value", "source_lines", "confidence"))
+	}, "speaker_ref", "field", "value", "source_lines", "confidence"))
 }
 
 // Read decodes the profile from the reply and checks it against a transcript
@@ -85,15 +91,15 @@ func Read(raw json.RawMessage, lineCount int) ([]Entry, string) {
 	if err := json.Unmarshal(raw, &entries); err != nil {
 		return nil, "the company profile is not the required JSON shape"
 	}
-	seen := map[string]bool{}
+	seen := map[[2]string]bool{}
 	for i := range entries {
 		entry := &entries[i]
 		entry.Value = strings.TrimSpace(entry.Value)
 		switch {
 		case !slices.Contains(Fields, entry.Field):
 			return nil, fmt.Sprintf("the company profile names the field %.40q, which a meeting may not fill", entry.Field)
-		case seen[entry.Field]:
-			return nil, fmt.Sprintf("the company profile states %s twice", entry.Field)
+		case seen[[2]string{entry.SpeakerRef, entry.Field}]:
+			return nil, fmt.Sprintf("the company profile states %s twice for one speaker", entry.Field)
 		case entry.Value == "":
 			return nil, fmt.Sprintf("the company profile's %s is empty", entry.Field)
 		case len([]rune(entry.Value)) > MaxValue:
@@ -104,7 +110,7 @@ func Read(raw json.RawMessage, lineCount int) ([]Entry, string) {
 		if msg := activities.TranscriptCitationFault(entry.SourceLines, lineCount, activities.MaxTranscriptCitedLines); msg != "" {
 			return nil, fmt.Sprintf("the company profile's %s %s", entry.Field, msg)
 		}
-		seen[entry.Field] = true
+		seen[[2]string{entry.SpeakerRef, entry.Field}] = true
 	}
 	return entries, ""
 }
