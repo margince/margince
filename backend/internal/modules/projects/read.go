@@ -145,14 +145,12 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 	return phaseRank("project"), nil
 }
 
-// orderByReadableCompany orders by the name of the project's first customer
-// edge, the company company_id names, and by NOTHING where the row masks it.
+// orderByReadableCompany orders by the name of the company company_id names,
+// and by nothing where the row masks it.
 //
-// Ordering by a value is reading it, so it takes the bounds the row's
-// company_id takes: relationship.read and the edge scope for the pair,
-// company.read and the company row scope for the name. A first customer
-// outside them answers NULL, which the ORDER BY puts last, rather than letting
-// a later visible customer stand in for it.
+// Ordering by a value is reading it, so it takes the same bounds as the row's
+// company_id. A withheld first customer answers NULL and sorts last; a later
+// visible customer never stands in for it.
 func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
 	if !auth.ReadGranted(ctx, "company") || auth.Require(ctx, "relationship", principal.ActionRead) != nil {
 		// Ordered by nothing: every row sits in the tail and the page falls

@@ -37,9 +37,9 @@ type ProjectCompanies func(
 	ctx context.Context, tx pgx.Tx, projectID ids.ProjectID,
 ) ([]CompanyOnProject, error)
 
-// ProjectCustomers answers each project's first customer edge for one page:
-// absent for a project with no customer, nil for a customer this caller may
-// not read. edgesRead is false when the caller may not read company edges.
+// ProjectCustomers answers each project's first customer edge for one page.
+// A project with no customer is absent, and a customer this caller may not
+// read is nil. edgesRead is false when the caller may not read company edges.
 type ProjectCustomers func(
 	ctx context.Context, tx pgx.Tx, projectIDs []ids.ProjectID,
 ) (customers map[ids.ProjectID]*ids.CompanyID, edgesRead bool, err error)

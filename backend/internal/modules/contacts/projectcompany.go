@@ -121,13 +121,13 @@ func CompaniesOnProjectTx(
 	return out, nil
 }
 
-// sqlNeverVisible admits no company, for a caller who holds no company.read:
-// the edge is still read, so the caller learns a customer exists but not which.
+// sqlNeverVisible admits no company, for a caller without company.read. The
+// edge is still read, so the caller learns a customer exists but not which.
 const sqlNeverVisible = "false"
 
 // projectCompanyRead is what one caller may learn from a project's company
-// edges: whether it may read the edges and the companies at all, and the
-// predicates that bound each.
+// edges. It says whether the edges and companies are readable at all, and
+// holds the predicates that bound each.
 type projectCompanyRead struct {
 	edges, companies bool
 	edge, scope      string
@@ -136,15 +136,10 @@ type projectCompanyRead struct {
 // projectCompanyPredicates bounds every read of a project's company edges, so
 // the company list and a project's company_id answer from one rule.
 func projectCompanyPredicates(ctx context.Context, arg func(any) int) (projectCompanyRead, error) {
-	// Reading an edge discloses its endpoints AS A PAIR — that this project and
-	// this company are working together — which is what relationship.read
-	// governs; the endpoints' own grants do not cover it.
-	//
-	// A caller without that grant gets the section withheld rather than a
-	// refusal. This read is one section of a project, and refusing it would
-	// refuse the project: a seat that may read a project but holds no
-	// relationship grant would lose the record entirely over a section it was
-	// never entitled to.
+	// An edge discloses that this project and this company work together.
+	// relationship.read governs that pair, and the endpoints' grants do not.
+	// Without it the section is withheld, not refused, so the project itself
+	// still reads.
 	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return projectCompanyRead{}, nil
@@ -158,14 +153,9 @@ func projectCompanyPredicates(ctx context.Context, arg func(any) int) (projectCo
 	if edge == "" {
 		edge = sqlAlwaysVisible
 	}
-	// And the company itself is a row-scoped record, so one the caller may not
-	// open is omitted rather than named.
-	//
-	// BOTH halves, because the row half alone answers WHICH companies and never
-	// whether this caller may read companies at all: under row_scope=all it
-	// admits every row, so a seat holding relationship.read and project.update
-	// and no company grant would be handed display names it is refused on every
-	// other surface.
+	// The company is row-scoped too, so one the caller may not open is omitted.
+	// The object grant is checked first: under row_scope=all the row scope
+	// admits every company, even for a seat without company.read.
 	if !auth.ReadGranted(ctx, "company") {
 		return projectCompanyRead{edges: true, edge: edge, scope: sqlNeverVisible}, nil
 	}
