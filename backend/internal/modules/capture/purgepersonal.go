@@ -87,13 +87,9 @@ func PersonalPurgeScope(seatCol string) string {
 		   AND NOT EXISTS (
 		     SELECT 1 FROM activity_link l
 		      WHERE l.activity_id = a.id AND l.contact_id IS NOT NULL)
-		   -- Writing to an address is the T1 signal that they are a real
-		   -- counterparty, and it is the recovery path: reply to a wrongly
-		   -- judged sender and this sweep lets go.
-		   AND NOT EXISTS (
-		     SELECT 1 FROM activity c
-		      WHERE c.counterparty_email = p.email
-		        AND c.direction = 'outbound' AND c.counterparty_outbound_attested)
+		   -- A reply does not save personal mail: one answer to a doctor, by
+		   -- the seat or a colleague, must not keep it forever. A wrongly judged
+		   -- sender is recovered by a contact link or a business override.
 		   -- The forward bound. counterparty_email comes off an unauthenticated
 		   -- From header, so without this one forged message judged personal
 		   -- destroys every later mail the REAL owner of that address sends —
@@ -156,7 +152,7 @@ func personalPurgeDue(seatCol string) string {
 // Personal mail is the opposite kind of thing and carries no such header, so
 // requiring it here would refuse every message this sweep exists for. The
 // evidence that replaces it is the scope above — inbound, connector-captured,
-// unlinked, never written to, inside the verdict's reach — plus a window four
+// unlinked, inside the verdict's reach — plus a window four
 // times longer when no human confirmed the verdict.
 //
 // Read-only, and shaped like SelectPurgeSubjectTx so a preview and the sweep

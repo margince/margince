@@ -193,9 +193,7 @@ func TestTheOwnersOwnRepliesSurviveAPersonalPurge(t *testing.T) {
 	inbound := seedPurgeableMail(t, e, "mama@familie.example", "Sonntag Essen?", e.Rep1)
 	reply := seedOutboundMail(t, e, "mama@familie.example", "Ja, gerne")
 	addImporter(t, e, reply, e.Rep1)
-	// Unattested, so this test asks about the DIRECTION clause alone. An
-	// attested reply is refused by the corresponds-with-them clause too, and a
-	// test that could not tell the two apart would pass with either one gone.
+	// Unattested, so this test asks about the DIRECTION clause alone.
 	unattest(t, e, reply)
 	resolvePersonal(t, e, "mama@familie.example", inbound, e.Rep1, false)
 	agePersonalMail(t, e, inbound, "mama@familie.example", 31*24*time.Hour)
@@ -207,25 +205,21 @@ func TestTheOwnersOwnRepliesSurviveAPersonalPurge(t *testing.T) {
 	}
 }
 
-func TestMailTheContactRepliedToSurvivesAPersonalPurge(t *testing.T) {
-	// Writing to an address is the T1 signal that they are a real counterparty,
-	// and it is the documented recovery: reply to a wrongly judged sender and
-	// the sweep lets go. Without it a wrong verdict has no way back, because a
-	// personal verdict hides nothing and so surfaces nothing to object to.
+func TestAReplyDoesNotKeepPersonalMailButAContactLinkDoes(t *testing.T) {
+	// A reply carries no seat, so it stands for any colleague's; a contact link keeps mail.
 	e := integration.Setup(t)
-	mail := seedPurgeableMail(t, e, "steuer@kanzlei.example", "Jahresabschluss", e.Rep1)
-	resolvePersonal(t, e, "steuer@kanzlei.example", mail, e.Rep1, false)
-	agePersonalMail(t, e, mail, "steuer@kanzlei.example", 31*24*time.Hour)
-	// The owner writes back, which is what a contact does on noticing the record
-	// is wrong. seedOutboundMail marks it attested, as the capture path does.
-	seedOutboundMail(t, e, "steuer@kanzlei.example", "anbei die Unterlagen")
+	replied := seedPurgeableMail(t, e, "doctor@praxis.example", "Krankmeldung", e.Rep1)
+	filed := seedPurgeableMail(t, e, "doctor@praxis.example", "Befund", e.Rep1)
+	resolvePersonal(t, e, "doctor@praxis.example", replied, e.Rep1, false)
+	agePersonalMail(t, e, replied, "doctor@praxis.example", 31*24*time.Hour)
+	ageOneActivity(t, e, filed, 31*24*time.Hour)
+	seedOutboundMail(t, e, "doctor@praxis.example", "danke")
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+		filed, e.SeedContact(t, "Praxis", &e.Rep1))
 
-	if n := sweepPersonal(t, e); n != 0 {
-		t.Fatalf("destroyed %d messages, want 0 — the workspace corresponds with this address", n)
-	}
-	if body := activityBody(t, e, mail); body == "" {
-		t.Fatal("mail was destroyed from an address the workspace had written to, " +
-			"so the reply-to-recover escape does not work")
+	sweepPersonal(t, e)
+	if activityBody(t, e, replied) != "" || activityBody(t, e, filed) == "" {
+		t.Fatal("want the replied-to personal mail destroyed and the contact-filed one kept")
 	}
 }
 
@@ -298,8 +292,8 @@ func resolvePersonal(t *testing.T, e *integration.Env, from string, activityID, 
 	}
 }
 
-// unattest clears the outbound-correspondence flag, isolating the direction
-// clause from the sibling clause that would otherwise also save the row.
+// unattest clears the outbound-correspondence flag, so the row is saved by
+// its direction alone and not by NOT counterparty_outbound_attested.
 func unattest(t *testing.T, e *integration.Env, activityID ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

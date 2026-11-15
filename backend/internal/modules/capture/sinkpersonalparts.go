@@ -83,7 +83,7 @@ func storedMessageIsPrivateTx(ctx context.Context, tx pgx.Tx, activity ids.Activ
 //
 // It asks the sender-scoped half of PersonalPurgeScope (purgepersonal.go): the
 // seat's own verdict, inbound mail only, inside noiseVerdictReach, and no
-// `business` override and no attested reply to the address. It also refuses an
+// `business` override. It also refuses an
 // address a correspondence contact holds, because unlike the purge it acts at
 // once and leaves no window to correct a forged verdict. The purge's other
 // clauses are about a stored row — a hold, a contact filing — and no row exists
@@ -115,6 +115,7 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 	// address a personal verdict. A contact the workspace corresponds with at
 	// that address outranks it, as it does for noiseMailScope. So does
 	// authenticated Google meeting mail, unless the seat itself chose personal.
+	// A reply to the address does not, as in PersonalPurgeScope.
 	var personal bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -124,11 +125,6 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 		     AND p.resolved_at IS NOT NULL
 		     AND (p.resolved_by_owner OR NOT $5)
 		     AND now() <= p.resolved_at + `+quoteInterval(noiseVerdictReach)+`
-		     AND NOT EXISTS (
-		       SELECT 1 FROM activity c
-		        WHERE c.counterparty_email = $2
-		          AND c.direction = 'outbound' AND c.counterparty_outbound_attested
-		          AND c.archived_at IS NULL)
 		     AND NOT EXISTS (
 		       SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
 		        WHERE pe.email = $2 AND pr.archived_at IS NULL AND pe.archived_at IS NULL
