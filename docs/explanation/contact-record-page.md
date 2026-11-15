@@ -7,8 +7,8 @@ The Overview tab puts recorded context and real work first. A new contact must n
 ## While the record opens
 
 A direct open shows the confirmed contact name and title as soon as the contact read returns.
-The title keeps its provider provenance. Before that response, navigation from a list can show
-its cached name. The loading sentence remains until the 360 sections are ready; record actions
+The title keeps its provider provenance. Before that response, an open from a list can show
+its cached name. The loading sentence stays until the 360 sections are ready; record actions
 and section counts wait for those sections. A refused read does not supply an opening identity.
 Archived records keep their separate read-only page.
 
