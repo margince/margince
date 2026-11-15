@@ -202,6 +202,45 @@ export const RowDetailLateContent: Story = {
     }
   },
 };
+// The open row takes the hover ground while the pointer is on its detail, so
+// the two read as one record. It loses it on leave and on close.
+export const RowDetailHover: Story = {
+  render: () => <RunsPanel />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const toggle = await canvas.findByRole("button", {
+      name: "Show the run of Welcome new leads",
+    });
+    await userEvent.click(toggle);
+    const opener = toggle.closest("tr");
+    const detail = (await canvas.findByText("Sent 3 emails")).closest("tr");
+    if (opener === null || detail === null) {
+      throw new Error("the table drew no open row with its detail");
+    }
+    const probe = document.createElement("span");
+    probe.style.background = "var(--groundHover)";
+    canvasElement.append(probe);
+    const hoverGround = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    const grounded = () =>
+      [opener, ...Array.from(opener.cells)].some(
+        (part) => getComputedStyle(part).backgroundColor === hoverGround,
+      );
+
+    await expect(grounded()).toBe(false);
+    await userEvent.hover(detail);
+    await expect(grounded()).toBe(true);
+    await userEvent.unhover(detail);
+    await expect(grounded()).toBe(false);
+    await userEvent.hover(detail);
+    await userEvent.click(toggle);
+    await waitFor(() => expect(grounded()).toBe(false));
+  },
+};
+export const RowDetailHoverDark: Story = {
+  ...RowDetailHover,
+  globals: { theme: "dark" },
+};
 export const RowDetailDark: Story = {
   ...RowDetail,
   globals: { theme: "dark" },

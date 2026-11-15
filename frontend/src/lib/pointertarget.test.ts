@@ -5,21 +5,34 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { POINTER_OVER_ATTRIBUTE, startPointerTarget } from "./pointertarget";
 
+const MOUSE = 1;
+const TOUCH = 2;
+
 const marked = () =>
   Array.from(document.querySelectorAll(`[${POINTER_OVER_ATTRIBUTE}]`)).map(
     (element) => element.id,
   );
 
-function enter(target: Element) {
-  target.dispatchEvent(new Event("pointerover", { bubbles: true }));
+function element(id: string): Element {
+  const found = document.getElementById(id);
+  if (found === null) throw new Error(`the fixture drew no #${id}`);
+  return found;
 }
 
-function leaveWindow(from: Element) {
-  const event = new MouseEvent("pointerout", {
-    bubbles: true,
-    relatedTarget: null,
-  });
-  from.dispatchEvent(event);
+function enter(target: Element, pointerId = MOUSE) {
+  target.dispatchEvent(
+    new PointerEvent("pointerover", { bubbles: true, pointerId }),
+  );
+}
+
+function leave(from: Element, to: Element | null, pointerId = MOUSE) {
+  from.dispatchEvent(
+    new PointerEvent("pointerout", {
+      bubbles: true,
+      pointerId,
+      relatedTarget: to,
+    }),
+  );
 }
 
 describe("startPointerTarget", () => {
@@ -33,35 +46,43 @@ describe("startPointerTarget", () => {
     document.body.innerHTML =
       '<div id="board"><section id="stage"><a id="card">x</a></section></div>';
     stop = startPointerTarget();
-    const stage = document.getElementById("stage");
-    const card = document.getElementById("card");
-    if (!stage || !card) throw new Error("fixture did not render");
 
-    enter(card);
+    enter(element("card"));
     expect(marked()).toEqual(["card"]);
-    enter(stage);
+    enter(element("stage"));
     expect(marked()).toEqual(["stage"]);
   });
 
   it("clears the mark when the pointer leaves the window, and when stopped", () => {
     document.body.innerHTML = '<div id="pane"><p id="line">x</p></div>';
     stop = startPointerTarget();
-    const pane = document.getElementById("pane");
-    const line = document.getElementById("line");
-    if (!pane || !line) throw new Error("fixture did not render");
 
-    enter(line);
-    line.dispatchEvent(
-      new MouseEvent("pointerout", { bubbles: true, relatedTarget: pane }),
-    );
+    enter(element("line"));
+    leave(element("line"), element("pane"));
     expect(marked()).toEqual(["line"]);
-    leaveWindow(line);
+    leave(element("line"), null);
     expect(marked()).toEqual([]);
 
-    enter(pane);
+    enter(element("pane"));
     stop();
     expect(marked()).toEqual([]);
-    enter(line);
+    enter(element("line"));
     expect(marked()).toEqual([]);
+  });
+
+  it("keeps a resting mouse's mark when a touch comes and goes", () => {
+    document.body.innerHTML =
+      '<div id="list"><p id="row">x</p></div><p id="other">y</p>';
+    stop = startPointerTarget();
+
+    enter(element("list"), MOUSE);
+    enter(element("list"), TOUCH);
+    leave(element("list"), null, TOUCH);
+    expect(marked()).toEqual(["list"]);
+
+    enter(element("other"), TOUCH);
+    expect(marked()).toEqual(["list", "other"]);
+    leave(element("other"), null, TOUCH);
+    expect(marked()).toEqual(["list"]);
   });
 });

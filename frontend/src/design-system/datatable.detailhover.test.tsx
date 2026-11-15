@@ -48,3 +48,19 @@ it("gives an open row its hover ground while the pointer is on its detail", asyn
   await user.click(screen.getByRole("button", { name: "Show Triage" }));
   expect(row.hasAttribute("data-detail-hover")).toBe(false);
 });
+
+it("keeps the ground while a second pointer on the detail lifts away", async () => {
+  const user = userEvent.setup();
+  render(<CallLog />);
+  await user.click(screen.getByText("Triage"));
+  const row = screen.getByTestId("call-a");
+  const detail = screen.getByText("Two attempts").closest("tr");
+  if (detail === null) throw new Error("the detail drew no row");
+
+  fireEvent.pointerEnter(detail, { pointerId: 1 });
+  fireEvent.pointerEnter(detail, { pointerId: 2 });
+  fireEvent.pointerLeave(detail, { pointerId: 2 });
+  expect(row.hasAttribute("data-detail-hover")).toBe(true);
+  fireEvent.pointerLeave(detail, { pointerId: 1 });
+  expect(row.hasAttribute("data-detail-hover")).toBe(false);
+});

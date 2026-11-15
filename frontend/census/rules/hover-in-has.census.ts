@@ -9,16 +9,19 @@
 import { functionCall, rulesOfText } from "../../scripts/lib/css-rules";
 import type { CensusFile, CensusRule } from "../tree";
 
-/** Each `:has(...)` call in a selector whose argument names `:hover`. */
+/**
+ * Each `:has(...)` call in a selector whose argument names `:hover`. CSS
+ * pseudo-class names ignore case, so `:HAS(.x:HOVER)` counts too.
+ */
 export function hoverInHas(selector: string): string[] {
+  const lower = selector.toLowerCase();
   const found: string[] = [];
-  for (let at = selector.indexOf(":has("); at >= 0; ) {
-    const call = functionCall(selector.slice(at + 1));
-    const text = selector.slice(at, at + 1 + (call?.end ?? 0));
+  for (let at = lower.indexOf(":has("); at >= 0; ) {
+    const call = functionCall(lower.slice(at + 1));
     if (call?.args.some((arg) => arg.includes(":hover"))) {
-      found.push(text);
+      found.push(selector.slice(at, at + 1 + call.end));
     }
-    at = selector.indexOf(":has(", at + 1);
+    at = lower.indexOf(":has(", at + 1);
   }
   return found;
 }

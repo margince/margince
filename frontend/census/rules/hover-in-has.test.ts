@@ -15,6 +15,8 @@ describe("the hover-in-has rule", () => {
     expect(hoverInHas(".a:has(.b:is(:focus, :hover))")).toEqual([
       ":has(.b:is(:focus, :hover))",
     ]);
+    expect(hoverInHas(":HAS(:HOVER)")).toEqual([":HAS(:HOVER)"]);
+    expect(hoverInHas(".a:Has(.x:hOvEr) .b")).toEqual([":Has(.x:hOvEr)"]);
     expect(hoverInHas(".card:has(.open):hover .arrow")).toEqual([]);
     expect(hoverInHas("[data-pointer-over]:hover")).toEqual([]);
   });

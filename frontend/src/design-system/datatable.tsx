@@ -3,7 +3,6 @@
 
 import {
   Fragment,
-  type PointerEvent,
   type ReactNode,
   useEffect,
   useId,
@@ -11,6 +10,7 @@ import {
   useState,
 } from "react";
 import { opensRow } from "../lib/linkclick";
+import { pointerMarks } from "../lib/pointertarget";
 import { TableScroll } from "./atoms";
 import { ExpanderChevron } from "./disclosure";
 import { type FoldEnds, useFocusHandBack, useFold } from "./fold";
@@ -253,22 +253,25 @@ function DetailRow({
   render: () => ReactNode;
 }>) {
   const box = useRef<HTMLDivElement>(null);
-  const row = useRef<HTMLTableRowElement>(null);
+  const [opener] = useState(() => pointerMarks(OPENER_HOVER));
   useFocusHandBack(id, open);
   const shown = useFold(box, open, detailEnds);
+  // A detail that closes or unmounts under the pointer gets no pointerleave.
   useEffect(() => {
     if (!open) {
-      markOpener(row.current, false);
+      opener.clear();
     }
-  }, [open]);
+    return opener.clear;
+  }, [open, opener]);
   return (
     <tr
-      ref={row}
       className="datatable-detail"
       role={role("row")}
       hidden={!shown}
-      onPointerEnter={hoverOpener}
-      onPointerLeave={hoverOpener}
+      onPointerEnter={(event) =>
+        opener.move(event.pointerId, event.currentTarget.previousElementSibling)
+      }
+      onPointerLeave={(event) => opener.move(event.pointerId, null)}
     >
       <td colSpan={span} id={id} role={role("cell")}>
         <div ref={box} className="datatable-detail-fold">
@@ -285,14 +288,6 @@ function DetailRow({
 // the detail. Not `tr:has(+ tr:hover)`: Chromium restyles the whole document
 // on every hover change while any `:has()` holds `:hover`.
 const OPENER_HOVER = "data-detail-hover";
-
-function markOpener(detail: HTMLTableRowElement | null, hovered: boolean) {
-  detail?.previousElementSibling?.toggleAttribute(OPENER_HOVER, hovered);
-}
-
-function hoverOpener(event: PointerEvent<HTMLTableRowElement>) {
-  markOpener(event.currentTarget, event.type === "pointerenter");
-}
 
 const detailEnds: FoldEnds = (box) => ({
   shut: 0,
