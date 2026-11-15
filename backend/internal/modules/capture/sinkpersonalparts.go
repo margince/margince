@@ -83,9 +83,9 @@ func storedMessageIsPrivateTx(ctx context.Context, tx pgx.Tx, activity ids.Activ
 //
 // It asks the sender-scoped half of PersonalPurgeScope (purgepersonal.go): the
 // seat's own verdict, inbound mail only, inside noiseVerdictReach, and no
-// `business` override. It also refuses an
-// address a correspondence contact holds, because unlike the purge it acts at
-// once and leaves no window to correct a forged verdict. The purge's other
+// `business` override. It also refuses an address a correspondence contact
+// holds. Unlike the purge it acts at once, so no window is left to correct a
+// forged verdict. The purge's other
 // clauses are about a stored row — a hold, a contact filing — and no row exists
 // yet. Spelled here rather than shared because that scope is a SQL fragment
 // over a stored activity `a`, and this message is not one.

@@ -151,9 +151,8 @@ func personalPurgeDue(seatCol string) string {
 // That is List-Unsubscribe corroboration, which is evidence a message is BULK.
 // Personal mail is the opposite kind of thing and carries no such header, so
 // requiring it here would refuse every message this sweep exists for. The
-// evidence that replaces it is the scope above — inbound, connector-captured,
-// unlinked, inside the verdict's reach — plus a window four
-// times longer when no human confirmed the verdict.
+// scope above replaces it: inbound, connector-captured, unlinked, and inside
+// the verdict's reach. A verdict no human confirmed also waits four times as long.
 //
 // Read-only, and shaped like SelectPurgeSubjectTx so a preview and the sweep
 // itself get the same answer: the statutory shield is a COLUMN rather than a
