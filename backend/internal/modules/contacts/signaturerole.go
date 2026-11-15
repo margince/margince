@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,8 +26,16 @@ import (
 func (s *Store) roleFromSignatureTitleTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fields []SignatureField, applied []string,
 ) error {
-	if !slices.Contains(applied, fieldTitle) || auth.Require(ctx, "relationship", principal.ActionUpdate) != nil {
-		return nil //nolint:nilerr // a signature without relationship:update leaves the role alone, it is not a failure
+	if !slices.Contains(applied, fieldTitle) {
+		return nil
+	}
+	// A seat that may not edit relationships keeps the title it got; the role
+	// is left alone, not refused.
+	if err := auth.Require(ctx, "relationship", principal.ActionUpdate); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil
+		}
+		return err
 	}
 	idx := slices.IndexFunc(fields, func(f SignatureField) bool { return f.Name == fieldTitle })
 	if idx < 0 {

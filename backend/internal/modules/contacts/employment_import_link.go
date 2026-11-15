@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -36,7 +37,7 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 	_, ended := preciseEmploymentDate(e.Ended)
 	matched, state := matchEmploymentEpisode(relationships, e, started, ended)
 	mayEnd := false
-	if state == string(VCardNeedsReview) && started != nil && e.validDateRange() && undatedEndAt(relationships, *started) {
+	if state == employmentNeedsReview && started != nil && e.validDateRange() && undatedEndAt(relationships, *started) {
 		if mayEnd, err = mayEndUndatedTx(ctx, tx, relationships); err != nil {
 			return nil, "", err
 		}
@@ -53,7 +54,7 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 		return matched, state, nil
 	}
 	if !e.validDateRange() {
-		return nil, "needs_review", nil
+		return nil, employmentNeedsReview, nil
 	}
 	primary := false
 	primaryChoice := &primary
@@ -149,7 +150,7 @@ func matchEmploymentEpisode(relationships []relationshipRow, e employmentEvidenc
 		}
 	}
 	if competingCurrent {
-		return nil, "needs_review"
+		return nil, employmentNeedsReview
 	}
 	return nil, ""
 }
@@ -198,8 +199,11 @@ func undatedEndAt(relationships []relationshipRow, start time.Time) bool {
 // rows itself. The caller must hold relationship:update, and no user may have
 // set any such row's status or dates. Otherwise the pair stays for review.
 func mayEndUndatedTx(ctx context.Context, tx pgx.Tx, relationships []relationshipRow) (bool, error) {
-	if auth.Require(ctx, "relationship", principal.ActionUpdate) != nil {
-		return false, nil //nolint:nilerr // a refused permission answers "may not end them", it is not a failure
+	if err := auth.Require(ctx, "relationship", principal.ActionUpdate); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return false, nil
+		}
+		return false, err
 	}
 	for _, r := range relationships {
 		if !undatedCurrentEmployment(r) {
