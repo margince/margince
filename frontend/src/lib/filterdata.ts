@@ -8,15 +8,11 @@
 // are about when not to ask — a tree mid-edit is not worth a round trip, and a
 // vocabulary is worth exactly one per record type.
 
-import {
-  keepPreviousData,
-  useInfiniteQuery,
-  useQuery,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { useHealthScope } from "./healthscope";
+import { previousOfScope, useHealthScope } from "./healthscope";
 import { historyFieldLabelKey } from "./historyfieldlabels";
 import { unwrap } from "./problem";
 import {
@@ -104,7 +100,7 @@ export function useFilterPreview(resource: FilterResource, tree: Node) {
     // A count that flickers to a spinner on every keystroke is harder to read
     // than one that lags: the previous answer stays on screen while the next is
     // in flight, and the caller shows staleness rather than absence.
-    placeholderData: keepPreviousData,
+    placeholderData: previousOfScope(readerScope),
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }): Promise<FilterPreview> => {
       return unwrap(

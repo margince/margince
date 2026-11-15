@@ -54,7 +54,6 @@ const KEYED_CALLS = new Set([
 const COLLECTION = new RegExp(
   `"(?:${COLLECTIONS.map((path) => path.replace(/[-/]/g, "\\$&")).join("|")})"`,
 );
-const SCOPE = /\breaderScope\b/;
 
 /** The name a call is made by: `useQuery(…)` or `client.fetchQuery(…)`. */
 function calledName(call: ts.CallExpression): string | undefined {
@@ -64,91 +63,210 @@ function calledName(call: ts.CallExpression): string | undefined {
   return undefined;
 }
 
+/** Each name a declaration binds, destructured names included. */
+function boundNames(name: ts.BindingName): string[] {
+  if (ts.isIdentifier(name)) return [name.text];
+  return name.elements.flatMap((element) =>
+    ts.isOmittedExpression(element) ? [] : boundNames(element.name),
+  );
+}
+
 /**
- * The functions and variables in scope at `node`, by name, with their text:
- * the statements of every enclosing block and of the module.
+ * The declaration each name refers to at `node`: the nearest enclosing one,
+ * so an inner name shadows an outer one. A parameter binds with no known value.
  */
-function declarationsInScope(
-  node: ts.Node,
-  source: ts.SourceFile,
-): Map<string, string[]> {
-  const declared = new Map<string, string[]>();
-  const add = (name: string, text: string) =>
-    declared.set(name, [...(declared.get(name) ?? []), text]);
+function declarationsInScope(node: ts.Node): Map<string, ts.Node | null> {
+  const declared = new Map<string, ts.Node | null>();
+  const bind = (name: string, value: ts.Node | null) => {
+    if (!declared.has(name)) declared.set(name, value);
+  };
   for (let at: ts.Node | undefined = node; at; at = at.parent) {
+    if (ts.isFunctionLike(at))
+      for (const parameter of at.parameters)
+        for (const name of boundNames(parameter.name)) bind(name, null);
     if (!ts.isBlock(at) && !ts.isSourceFile(at)) continue;
     for (const statement of at.statements) {
       if (ts.isFunctionDeclaration(statement) && statement.name)
-        add(statement.name.text, statement.getText(source));
+        bind(statement.name.text, statement);
       if (ts.isVariableStatement(statement))
         for (const variable of statement.declarationList.declarations)
-          if (ts.isIdentifier(variable.name))
-            add(variable.name.text, variable.getText(source));
+          for (const name of boundNames(variable.name)) bind(name, variable);
     }
   }
   return declared;
 }
 
-/** Whether `text` reaches a collection path through the file's own names. */
-function readsCollection(
-  text: string,
-  declared: Map<string, string[]>,
-  seen: Set<string> = new Set(),
-): boolean {
-  if (COLLECTION.test(text)) return true;
-  for (const word of new Set(text.match(/\b[A-Za-z_$][\w$]*\b/g) ?? [])) {
-    if (seen.has(word)) continue;
-    const bodies = declared.get(word);
-    if (!bodies) continue;
-    seen.add(word);
-    if (bodies.some((body) => readsCollection(body, declared, seen)))
-      return true;
-  }
-  return false;
+/** Whether `name` names a member (`group.path`, `{ path: … }`), not a binding. */
+function isMemberName(name: ts.Identifier): boolean {
+  const parent = name.parent;
+  return (
+    (ts.isPropertyAccessExpression(parent) && parent.name === name) ||
+    (ts.isPropertyAssignment(parent) && parent.name === name)
+  );
 }
 
-/** The text of each `name:` property in object literals under `node`. */
-function propertyTexts(
+/** Whether `node` reaches a collection path through the names in its scope. */
+function readsCollection(
   node: ts.Node,
-  name: string,
   source: ts.SourceFile,
-): string[] {
-  const found: string[] = [];
+  seen: Set<ts.Node> = new Set(),
+): boolean {
+  if (COLLECTION.test(node.getText(source))) return true;
+  const declared = declarationsInScope(node);
+  let reached = false;
   const visit = (child: ts.Node) => {
-    if (
-      ts.isPropertyAssignment(child) &&
-      (ts.isIdentifier(child.name) || ts.isStringLiteral(child.name)) &&
-      child.name.text === name
-    )
-      found.push(child.initializer.getText(source));
+    if (reached) return;
+    if (ts.isIdentifier(child) && !isMemberName(child)) {
+      const target = declared.get(child.text);
+      if (target && !seen.has(target)) {
+        seen.add(target);
+        reached = readsCollection(target, source, seen);
+      }
+    }
     ts.forEachChild(child, visit);
   };
   visit(node);
-  return found;
+  return reached;
+}
+
+/** `useHealthScope()`, or `useHealthScope() ?? fallback`. */
+function callsHealthScope(value: ts.Expression): boolean {
+  if (
+    ts.isBinaryExpression(value) &&
+    value.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+  )
+    return callsHealthScope(value.left);
+  return (
+    ts.isCallExpression(value) &&
+    ts.isIdentifier(value.expression) &&
+    value.expression.text === "useHealthScope"
+  );
+}
+
+/**
+ * Whether `node` reads `readerScope` bound to `useHealthScope()`, or a
+ * `readerScope` parameter a builder's caller passes in.
+ */
+function readsScope(node: ts.Node): boolean {
+  if (ts.isIdentifier(node) && node.text === "readerScope") {
+    const target = declarationsInScope(node).get("readerScope");
+    return (
+      target === null ||
+      (target !== undefined &&
+        ts.isVariableDeclaration(target) &&
+        target.initializer !== undefined &&
+        callsHealthScope(target.initializer))
+    );
+  }
+  return ts.forEachChild(node, readsScope) ?? false;
+}
+
+/**
+ * Whether `node` cannot hold unless the scope compares by `operator` to
+ * unknown. That is the comparison itself, or a chain that needs it: `&&` for a
+ * wait, `||` for the condition of a `skipToken`.
+ */
+function requiresScope(node: ts.Expression, operator: ts.SyntaxKind): boolean {
+  const unknown = (side: ts.Expression) =>
+    (ts.isIdentifier(side) && side.text === "undefined") ||
+    (ts.isStringLiteral(side) && side.text === "");
+  if (ts.isParenthesizedExpression(node))
+    return requiresScope(node.expression, operator);
+  if (!ts.isBinaryExpression(node)) return false;
+  const chain =
+    operator === ts.SyntaxKind.ExclamationEqualsEqualsToken
+      ? ts.SyntaxKind.AmpersandAmpersandToken
+      : ts.SyntaxKind.BarBarToken;
+  if (node.operatorToken.kind === chain)
+    return (
+      requiresScope(node.left, operator) || requiresScope(node.right, operator)
+    );
+  return (
+    node.operatorToken.kind === operator &&
+    ((readsScope(node.left) && unknown(node.right)) ||
+      (readsScope(node.right) && unknown(node.left)))
+  );
+}
+
+function property(
+  options: ts.ObjectLiteralExpression,
+  name: string,
+): ts.Expression | undefined {
+  for (const member of options.properties)
+    if (
+      ts.isPropertyAssignment(member) &&
+      (ts.isIdentifier(member.name) || ts.isStringLiteral(member.name)) &&
+      member.name.text === name
+    )
+      return member.initializer;
+  return undefined;
+}
+
+/** The options objects a call passes: one, or each entry of `useQueries`. */
+function optionsOf(call: ts.CallExpression, name: string): ts.Expression[] {
+  if (name !== "useQueries") return call.arguments.slice(0, 1);
+  const entries: ts.Expression[] = [];
+  const visit = (child: ts.Node) => {
+    if (
+      ts.isObjectLiteralExpression(child) &&
+      (property(child, "queryKey") ||
+        child.properties.some(ts.isSpreadAssignment))
+    )
+      entries.push(child);
+    else ts.forEachChild(child, visit);
+  };
+  visit(call);
+  return entries;
+}
+
+/**
+ * Whether the key of `options` reads the scope. A spread of a builder call
+ * must pass the scope in; a spread of a name is judged at its declaration.
+ */
+function keyReadsScope(options: ts.Expression): boolean {
+  if (ts.isCallExpression(options)) return options.arguments.some(readsScope);
+  if (ts.isIdentifier(options)) {
+    const target = declarationsInScope(options).get(options.text);
+    return target != null && ts.isVariableDeclaration(target)
+      ? target.initializer !== undefined && keyReadsScope(target.initializer)
+      : false;
+  }
+  if (!ts.isObjectLiteralExpression(options)) return false;
+  const key = property(options, "queryKey");
+  if (key) return readsScope(key);
+  return options.properties.some(
+    (member) =>
+      ts.isSpreadAssignment(member) && keyReadsScope(member.expression),
+  );
+}
+
+/** Whether a hook's `options` hold the read until the scope is known. */
+function hookWaits(options: ts.Expression): boolean {
+  if (!ts.isObjectLiteralExpression(options)) return false;
+  const enabled = property(options, "enabled");
+  if (
+    enabled &&
+    requiresScope(enabled, ts.SyntaxKind.ExclamationEqualsEqualsToken)
+  )
+    return true;
+  const queryFn = property(options, "queryFn");
+  return (
+    queryFn !== undefined &&
+    ts.isConditionalExpression(queryFn) &&
+    ts.isIdentifier(queryFn.whenTrue) &&
+    queryFn.whenTrue.text === "skipToken" &&
+    requiresScope(queryFn.condition, ts.SyntaxKind.EqualsEqualsEqualsToken)
+  );
 }
 
 /** What is wrong with one query call that reads a collection, if anything. */
-function callFindings(
-  call: ts.CallExpression,
-  name: string,
-  source: ts.SourceFile,
-): string[] {
+function callFindings(call: ts.CallExpression, name: string): string[] {
+  const options = optionsOf(call, name);
   const findings: string[] = [];
-  // A key spread in from a same-file helper is judged where it is built.
-  const keys = propertyTexts(call, "queryKey", source);
-  const spread = call.getText(source).includes("...");
-  if (keys.some((key) => !SCOPE.test(key)) || (keys.length === 0 && !spread))
+  if (options.length === 0 || !options.every(keyReadsScope))
     findings.push("its key carries no reader scope");
-  if (HOOK_CALLS.has(name)) {
-    const gates = [
-      ...propertyTexts(call, "enabled", source),
-      ...propertyTexts(call, "queryFn", source).filter((fn) =>
-        fn.includes("skipToken"),
-      ),
-    ];
-    if (!gates.some((gate) => SCOPE.test(gate)))
-      findings.push("it does not wait for the reader scope");
-  }
+  if (HOOK_CALLS.has(name) && !(options.length > 0 && options.every(hookWaits)))
+    findings.push("it does not wait for the reader scope");
   return findings;
 }
 
@@ -163,11 +281,11 @@ export function unscopedListReads(file: CensusFile): string[] {
       ts.isCallExpression(node) &&
       name &&
       (HOOK_CALLS.has(name) || KEYED_CALLS.has(name)) &&
-      readsCollection(node.getText(source), declarationsInScope(node, source))
+      readsCollection(node, source)
     ) {
       const line =
         source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1;
-      for (const finding of callFindings(node, name, source))
+      for (const finding of callFindings(node, name))
         findings.push(
           `${file.rel}:${line}: ${name} reads a record collection, but ${finding}`,
         );

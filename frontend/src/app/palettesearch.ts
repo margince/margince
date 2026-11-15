@@ -6,7 +6,7 @@
 // one kind of hit from crowding out the rest. None of that is what a command
 // palette IS, and all of it is what `palette.tsx` was mostly made of.
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useSettledValue } from "../design-system/debouncedsearch";
@@ -14,7 +14,7 @@ import { activityDay } from "../format/activitywhen";
 import { foldForSearch } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { SCREEN_ENTITY } from "../lib/entity";
-import { useHealthScope } from "../lib/healthscope";
+import { previousOfScope, useHealthScope } from "../lib/healthscope";
 import {
   problemFieldErrors,
   problemMessageOf,
@@ -92,7 +92,7 @@ export function useSearchCommands(query: string): SearchArm {
     enabled: enabled && readerScope !== undefined,
     // The last answer stands while the next is asked: an empty list between
     // two answers reads as "no matches" for a word that has some.
-    placeholderData: keepPreviousData,
+    placeholderData: previousOfScope(readerScope),
     queryFn: async ({ signal }) => {
       const { data, error } = await api.GET("/search", {
         // So a keystroke the reader has typed past stops costing the server a
