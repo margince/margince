@@ -54,6 +54,9 @@ var companyGate = objectGate{
 	object:              companyTable,
 	literal:             gatekit.TableReadPattern(companyTable),
 	objectGateSatisfies: true,
+	// The project-company builders ask auth.ReadGranted for company and admit
+	// no company without it.
+	gateSeeds: []string{"ProjectCompanyPredicates", "ProjectCustomerSQL"},
 }
 
 // predicateCompanyReads: the company table appears only inside a JOIN or EXISTS

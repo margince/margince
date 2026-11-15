@@ -72,9 +72,11 @@ var relationshipGate = objectGate{
 	object:              edgeTable,
 	literal:             gatekit.TableReadPattern(edgeTable),
 	objectGateSatisfies: true,
-	gateSeeds:           []string{"EdgeReadScope"},
-	rowHalfSeeds:        []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
-	rowHalfOwners:       []string{"internal/modules/contacts", "internal/platform/auth"},
+	// The two project-company builders take EdgeReadScope themselves and answer
+	// a refused caller with no edge.
+	gateSeeds:     []string{"EdgeReadScope", "ProjectCompanyPredicates", "ProjectCustomerSQL"},
+	rowHalfSeeds:  []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
+	rowHalfOwners: []string{"internal/modules/contacts", "internal/platform/auth"},
 }
 
 // predicateEdgeReads: the edge appears only inside a JOIN or EXISTS that

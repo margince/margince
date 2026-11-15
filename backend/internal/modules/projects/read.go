@@ -152,30 +152,12 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 // company_id. A withheld first customer answers NULL and sorts last; a later
 // visible customer never stands in for it.
 func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, "company") || auth.Require(ctx, "relationship", principal.ActionRead) != nil {
-		// Ordered by nothing: every row sits in the tail and the page falls
-		// back to its tie-breaker.
-		return "NULL::text", nil
-	}
-	edge, err := edgeBound(ctx, "customer_edge", arg)
+	customer, err := auth.ProjectCustomerSQL(ctx, "project.id", arg)
 	if err != nil {
 		return "", err
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "company_sort", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		scope = predicateAlways
-	}
-	return `(SELECT CASE WHEN (` + edge + `) AND (` + scope + `) THEN company_sort.display_name END
-	           FROM relationship customer_edge
-	           JOIN company company_sort ON company_sort.id = customer_edge.company_id
-	          WHERE customer_edge.kind = 'project_company' AND customer_edge.project_id = project.id
-	            AND customer_edge.role = '` + CompanyRoleCustomer + `'
-	            AND customer_edge.archived_at IS NULL AND company_sort.archived_at IS NULL
-	          ORDER BY customer_edge.created_at, customer_edge.id
-	          LIMIT 1)`, nil
+	return `(SELECT company_sort.display_name FROM company company_sort
+	          WHERE company_sort.id = ` + customer.Readable + `)`, nil
 }
 
 // ListProjects answers one page under the caller's row scope.

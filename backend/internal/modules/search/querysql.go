@@ -199,7 +199,11 @@ func (c *planCompiler) lateralHop(ctx context.Context, plan ValidatedPlan, bindi
 	if err != nil || !admitted {
 		return "", "", nil, false, err
 	}
-	where := []string{"h.archived_at IS NULL", c.edgeCondition(*hop)}
+	edge, err := c.edgeCondition(ctx, *hop, plan.Target.Target)
+	if err != nil {
+		return "", "", nil, false, err
+	}
+	where := []string{"h.archived_at IS NULL", edge}
 	// The hop carries the SAME discovery narrowing the target does. A
 	// traversal selects the hop record by its attributes, which is discovery
 	// by any other name — so a plan asking for "deals at a company in
@@ -229,15 +233,18 @@ func (c *planCompiler) lateralHop(ctx context.Context, plan ValidatedPlan, bindi
 // edgeCondition joins the two records on the reference the relation was
 // derived from, in whichever of the three ways declares it: the target's own
 // column, the referring record's, or a table between them.
-func (c *planCompiler) edgeCondition(hop hopBinding) string {
+//
+// root is the record type t stands for, which a forward hop refers FROM.
+func (c *planCompiler) edgeCondition(ctx context.Context, hop hopBinding, root string) (string, error) {
 	if hop.relation.Join != nil {
-		return joinEdgeCondition(*hop.relation.Join)
+		return joinEdgeCondition(*hop.relation.Join), nil
 	}
-	column := sanitize(hop.column)
 	if hop.forward {
-		return "h.id = t." + column
+		reference, err := referenceExpr(ctx, root, hop.column, "t", c.arg)
+		return "h.id = " + reference, err
 	}
-	return "h." + column + " = t.id"
+	reference, err := referenceExpr(ctx, hop.relation.Target, hop.column, "h", c.arg)
+	return reference + " = t.id", err
 }
 
 // predicates renders one where-list, reporting a refusal per clause it cannot
@@ -290,6 +297,13 @@ func (c *planCompiler) predicates(
 		if refusal != nil {
 			refusals = append(refusals, *refusal)
 			continue
+		}
+		if vocab.Target == entityProject && field.Name == projectCustomerColumn {
+			customer, err := referenceExpr(ctx, vocab.Target, field.Name, alias, c.arg)
+			if err != nil {
+				return nil, nil, err
+			}
+			expr = customer
 		}
 		fragment, refusal := c.clause(expr, at, field, clause)
 		if refusal != nil {

@@ -90,11 +90,11 @@ func CompaniesOnProjectTx(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectPos := arg(projectID)
-	read, err := projectCompanyPredicates(ctx, arg)
-	if err != nil || !read.edges || !read.companies {
+	bounds, err := auth.ProjectCompanyPredicates(ctx, "r", "o", arg)
+	if err != nil || !bounds.CompaniesRead {
 		return nil, err
 	}
-	edge, scope := read.edge, read.scope
+	edge, scope := bounds.Edge, bounds.Company
 	rows, err := tx.Query(ctx, storekit.SQLf(`
 		SELECT r.company_id, o.display_name, coalesce(r.role, '')
 		  FROM relationship r
@@ -121,54 +121,6 @@ func CompaniesOnProjectTx(
 	return out, nil
 }
 
-// sqlNeverVisible admits no company, for a caller without company.read. The
-// edge is still read, so the caller learns a customer exists but not which.
-const sqlNeverVisible = "false"
-
-// projectCompanyRead is what one caller may learn from a project's company
-// edges. It says whether the edges and companies are readable at all, and
-// holds the predicates that bound each.
-type projectCompanyRead struct {
-	edges, companies bool
-	edge, scope      string
-}
-
-// projectCompanyPredicates bounds every read of a project's company edges, so
-// the company list and a project's company_id answer from one rule.
-func projectCompanyPredicates(ctx context.Context, arg func(any) int) (projectCompanyRead, error) {
-	// An edge discloses that this project and this company work together.
-	// relationship.read governs that pair, and the endpoints' grants do not.
-	// Without it the section is withheld, not refused, so the project itself
-	// still reads.
-	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return projectCompanyRead{}, nil
-		}
-		return projectCompanyRead{}, err
-	}
-	edge, err := auth.EdgeReadScope(ctx, "r", arg)
-	if err != nil {
-		return projectCompanyRead{}, err
-	}
-	if edge == "" {
-		edge = sqlAlwaysVisible
-	}
-	// The company is row-scoped too, so one the caller may not open is omitted.
-	// The object grant is checked first: under row_scope=all the row scope
-	// admits every company, even for a seat without company.read.
-	if !auth.ReadGranted(ctx, "company") {
-		return projectCompanyRead{edges: true, edge: edge, scope: sqlNeverVisible}, nil
-	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
-	if err != nil {
-		return projectCompanyRead{}, err
-	}
-	if scope == "" {
-		scope = sqlAlwaysVisible
-	}
-	return projectCompanyRead{edges: true, companies: true, edge: edge, scope: scope}, nil
-}
-
 // FirstCustomersOnProjectsTx answers each project's first live customer edge,
 // in attach order, in one statement for the whole page.
 //
@@ -182,8 +134,8 @@ func FirstCustomersOnProjectsTx(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	projectsPos := arg(projectIDs)
-	read, err := projectCompanyPredicates(ctx, arg)
-	if err != nil || !read.edges {
+	customer, err := auth.ProjectCustomerSQL(ctx, "p.id", arg)
+	if err != nil || !customer.EdgesRead {
 		return nil, false, err
 	}
 	customers = make(map[ids.ProjectID]*ids.CompanyID, len(projectIDs))
@@ -191,17 +143,8 @@ func FirstCustomersOnProjectsTx(
 		return customers, true, nil
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT project_id, CASE WHEN readable THEN company_id END
-		  FROM (
-		    SELECT DISTINCT ON (r.project_id) r.project_id, r.company_id,
-		           ((%s) AND (%s)) AS readable
-		      FROM relationship r
-		      JOIN company o ON o.id = r.company_id
-		     WHERE r.kind = '`+ProjectCompanyKind+`' AND r.project_id = ANY($%d)
-		       AND r.role = '`+projectCompanyDefaultRole+`'
-		       AND r.archived_at IS NULL AND o.archived_at IS NULL
-		     ORDER BY r.project_id, r.created_at, r.id
-		  ) first_customer`, read.edge, read.scope, projectsPos), args...)
+		SELECT p.id, %s, %s FROM unnest($%d::uuid[]) AS p(id)`,
+		customer.Readable, customer.Present, projectsPos), args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)
 	}
@@ -209,10 +152,13 @@ func FirstCustomersOnProjectsTx(
 	for rows.Next() {
 		var project ids.ProjectID
 		var company *ids.CompanyID
-		if err := rows.Scan(&project, &company); err != nil {
+		var present bool
+		if err := rows.Scan(&project, &company, &present); err != nil {
 			return nil, false, fmt.Errorf("read one project's first customer: %w", err)
 		}
-		customers[project] = company
+		if present {
+			customers[project] = company
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)

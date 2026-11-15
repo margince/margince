@@ -104,6 +104,8 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureRelationshipVisible": {endpoints: true},
 	"EdgeReadScope":             {endpoints: true},
 	"RelationshipVisibleSubset": {endpoints: true},
+	"ProjectCompanyPredicates":  {endpoints: true},
+	"ProjectCustomerSQL":        {endpoints: true},
 }
 
 // scopeSpelling is one spelling's table: fixed, read off an argument, or the

@@ -1,0 +1,110 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package auth
+
+// A project's companies are relationship edges, and a project's company_id is
+// its first customer edge. Every surface that lists, names, sorts or searches
+// by those companies reads them through the two functions here, so a pair one
+// surface withholds is withheld on every other.
+
+import (
+	"context"
+	"errors"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+)
+
+// The edge kind and role a project's customer is stored under.
+const (
+	projectCompanyKind = "project_company"
+	projectCustomer    = "customer"
+)
+
+// The predicates a bound answers with when it admits every row or none.
+const (
+	sqlAdmitAll  = "true"
+	sqlAdmitNone = "false"
+)
+
+// ProjectCompanyBounds is what one caller may learn from a project's company
+// edges. A predicate is set whenever its flag holds, and never empty.
+type ProjectCompanyBounds struct {
+	// EdgesRead is false without relationship.read: no edge may be read.
+	EdgesRead bool
+	// CompaniesRead is false without company.read. The edges may still be
+	// read, so a caller can learn a customer exists but not which.
+	CompaniesRead bool
+	Edge, Company string
+}
+
+// ProjectCompanyPredicates bounds a read of project company edges on
+// edgeAlias joined to company on companyAlias.
+//
+// An edge discloses that a project and a company work together, which
+// relationship.read governs and the endpoints' grants do not. The company is
+// row-scoped as well, and its object grant is checked first: under
+// row_scope=all the row scope admits every company, even for a seat without
+// company.read.
+func ProjectCompanyPredicates(
+	ctx context.Context, edgeAlias, companyAlias string, arg func(any) int,
+) (ProjectCompanyBounds, error) {
+	edge, err := EdgeReadScope(ctx, edgeAlias, arg)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return ProjectCompanyBounds{}, nil
+	}
+	if err != nil {
+		return ProjectCompanyBounds{}, err
+	}
+	if edge == "" {
+		edge = sqlAdmitAll
+	}
+	if !ReadGranted(ctx, tableCompany) {
+		return ProjectCompanyBounds{EdgesRead: true, Edge: edge, Company: sqlAdmitNone}, nil
+	}
+	company, err := ScopeClauseFor(ctx, tableCompany, companyAlias, arg)
+	if err != nil {
+		return ProjectCompanyBounds{}, err
+	}
+	if company == "" {
+		company = sqlAdmitAll
+	}
+	return ProjectCompanyBounds{EdgesRead: true, CompaniesRead: true, Edge: edge, Company: company}, nil
+}
+
+// ProjectCustomer is the SQL for one project's company_id, as one caller may
+// read it.
+type ProjectCustomer struct {
+	// EdgesRead is false without relationship.read. Readable is then a NULL
+	// and Present must not be used: nothing about the customer is known.
+	EdgesRead bool
+	// Readable is a uuid expression: the first live customer edge's company
+	// when this caller may read it, NULL otherwise.
+	Readable string
+	// Present is a boolean expression: the project has a live customer edge.
+	Present string
+}
+
+// ProjectCustomerSQL renders the first-customer expressions for the project
+// whose id is projectRef, a column reference of the caller's statement.
+//
+// A withheld customer is NULL in SQL, so its id never leaves the database. A
+// later visible customer never stands in for it.
+func ProjectCustomerSQL(ctx context.Context, projectRef string, arg func(any) int) (ProjectCustomer, error) {
+	bounds, err := ProjectCompanyPredicates(ctx, "customer_edge", "customer_company", arg)
+	if err != nil || !bounds.EdgesRead {
+		return ProjectCustomer{Readable: "NULL::uuid"}, err
+	}
+	live := `FROM relationship customer_edge
+		  JOIN company customer_company ON customer_company.id = customer_edge.company_id
+		 WHERE customer_edge.kind = '` + projectCompanyKind + `' AND customer_edge.project_id = ` + projectRef + `
+		   AND customer_edge.role = '` + projectCustomer + `'
+		   AND customer_edge.archived_at IS NULL AND customer_company.archived_at IS NULL`
+	return ProjectCustomer{
+		EdgesRead: true,
+		Readable: `(SELECT CASE WHEN (` + bounds.Edge + `) AND (` + bounds.Company + `)
+		         THEN customer_edge.company_id END ` + live + `
+		 ORDER BY customer_edge.created_at, customer_edge.id LIMIT 1)`,
+		Present: `EXISTS (SELECT 1 ` + live + `)`,
+	}, nil
+}
