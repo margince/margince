@@ -1,4 +1,6 @@
 /** @vitest-environment happy-dom */
+
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
   cleanup,
@@ -11,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
+import { meFixture } from "../testing/mefixture";
 import { Field } from "./atoms";
 import { RecordPicker, type RecordPickerCandidate } from "./recordpicker";
 
@@ -514,4 +517,45 @@ describe("RecordPicker", () => {
     });
     expect(colleague.getAttribute("placeholder")).toBe("Find a colleague");
   });
+});
+
+describe("RecordPicker under a changing reader scope", () => {
+  it.each([
+    { from: "own", to: "all" },
+    { from: "all", to: "own" },
+  ] as const)(
+    "drops candidates read under the old row scope ($from to $to) and asks again",
+    async ({ from, to }) => {
+      const client = new QueryClient();
+      client.setQueryData(["me"], meFixture({ rowScope: from }));
+      const searchTargets = vi
+        .fn()
+        .mockResolvedValueOnce([candidates[0]])
+        .mockResolvedValueOnce([candidates[1]]);
+      rtlRender(
+        <QueryClientProvider client={client}>
+          <RecordPicker
+            label="Search…"
+            searchTargets={searchTargets}
+            onPick={() => {}}
+          />
+        </QueryClientProvider>,
+      );
+      const user = userEvent.setup();
+      await user.type(screen.getByRole("searchbox"), "a");
+      expect(
+        await screen.findByRole("button", { name: "Anna Weber" }),
+      ).toBeTruthy();
+
+      act(() => {
+        client.setQueryData(["me"], meFixture({ rowScope: to }));
+      });
+
+      expect(screen.queryByRole("button", { name: "Anna Weber" })).toBeNull();
+      expect(
+        await screen.findByRole("button", { name: "Otto Fischer" }),
+      ).toBeTruthy();
+      expect(searchTargets).toHaveBeenCalledTimes(2);
+    },
+  );
 });

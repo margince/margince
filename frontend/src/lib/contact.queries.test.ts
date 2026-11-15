@@ -13,15 +13,16 @@ import {
 
 describe("the contacts around a contact", () => {
   it("asks nothing until the contact is known", () => {
-    expect(relatedContactsQuery(undefined).queryFn).toBe(skipToken);
+    expect(relatedContactsQuery(undefined, "reader").queryFn).toBe(skipToken);
   });
 
   it("keeps each contact's circle under its own key", () => {
-    expect(relatedContactsQuery("p-1").queryKey).toEqual([
+    expect(relatedContactsQuery("p-1", "reader").queryKey).toEqual([
       "contactsRelatedTo",
       "p-1",
+      "reader",
     ]);
-    expect(relatedContactsQuery("p-1").queryFn).not.toBe(skipToken);
+    expect(relatedContactsQuery("p-1", "reader").queryFn).not.toBe(skipToken);
   });
 });
 

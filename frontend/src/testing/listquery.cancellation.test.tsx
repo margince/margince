@@ -10,6 +10,7 @@ import {
 } from "../components/listquery";
 import { fetchLeadsPage } from "../features/leads/leads.list";
 import { cancellationClient, holdReads } from "./cancellation";
+import { meFixture } from "./mefixture";
 
 afterEach(() => {
   cleanup();
@@ -21,6 +22,7 @@ it("aborts an abandoned list read and does not cache its late answer", async () 
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   const signals: AbortSignal[] = [];
   let release!: (page: ListPage<{ id: string }>) => void;
   const fetchPage = vi.fn(

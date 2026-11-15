@@ -30,6 +30,7 @@ import {
   totalsRefusedBecause,
   totalsWithheldBecause,
 } from "../../lib/deals.queries";
+import { useHealthScope } from "../../lib/healthscope";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
@@ -220,6 +221,24 @@ function DealCreateAction({
   );
 }
 
+// The board names its cards' companies from this page, and a reader without
+// company.read is refused it.
+function useBoardCompanies() {
+  const readsCompanies = useCan("company", "read");
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["companies", readerScope ?? ""],
+    enabled: readsCompanies && readerScope !== undefined,
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/companies", {
+          params: { query: { limit: 50 } },
+        }),
+      );
+    },
+  });
+}
+
 export function DealsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
@@ -245,20 +264,7 @@ export function DealsScreen({
     refusedDials,
   } = useDealScreenDials({ pipelines: pipelinesQuery.data });
   const stages = effectivePipeline?.stages ?? [];
-  // The board names its cards' companies from this page, and a reader without
-  // company.read is refused it.
-  const readsCompanies = useCan("company", "read");
-  const companiesQuery = useQuery({
-    queryKey: ["companies"],
-    enabled: readsCompanies,
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/companies", {
-          params: { query: { limit: 50 } },
-        }),
-      );
-    },
-  });
+  const companiesQuery = useBoardCompanies();
 
   const partnerOptions = usePartnerOptions(companiesQuery.data?.data ?? []);
   // The channel catalog for the filter chip. Shared cache with the edit form's
