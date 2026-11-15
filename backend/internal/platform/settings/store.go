@@ -87,9 +87,14 @@ func (s *Store) RawStored(ctx context.Context, key string) (json.RawMessage, boo
 	// resolved principal — a settings read with no workspace bound is a caller
 	// that has not authenticated, which the gate above should be judging.
 	var raw json.RawMessage
+	var found bool
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`, key).Scan(&raw)
+		raw, found, err = storedValue(ctx, tx, key, "")
+		return err
 	})
+	if err == nil && !found {
+		err = pgx.ErrNoRows
+	}
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		// Unset is not missing: the registered default IS the value until a
@@ -305,13 +310,12 @@ func readTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T], lock string) (T,
 	if err := RequireRead(ctx, e); err != nil {
 		return zero, err
 	}
-	var raw json.RawMessage
-	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`+lock, e.Key()).Scan(&raw)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return zero, UnsetValue{Setting: e.Key()}
-	}
+	raw, found, err := storedValue(ctx, tx, e.Key(), lock)
 	if err != nil {
 		return zero, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
+	}
+	if !found {
+		return zero, UnsetValue{Setting: e.Key()}
 	}
 	var out T
 	if err := json.Unmarshal(raw, &out); err != nil {
@@ -394,13 +398,12 @@ func hasRow(ctx context.Context, tx pgx.Tx, key string) (bool, error) {
 // declared default so the audit row's "before" is the value that was actually
 // in effect — not an empty stand-in that would misreport the first change.
 func currentJSON(ctx context.Context, tx pgx.Tx, def Definition) (json.RawMessage, error) {
-	var raw json.RawMessage
-	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`, def.Key()).Scan(&raw)
+	raw, found, err := storedValue(ctx, tx, def.Key(), "")
 	switch {
-	case errors.Is(err, pgx.ErrNoRows):
-		return def.DefaultJSON()
 	case err != nil:
 		return nil, fmt.Errorf("settings: reading %s before write: %w", def.Key(), err)
+	case !found:
+		return def.DefaultJSON()
 	}
 	return raw, nil
 }
