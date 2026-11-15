@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -37,8 +38,17 @@ func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
 		{textlang.German, 2, "2 Angaben zur Prognose müssen geprüft werden"},
 		{textlang.Vietnamese, 3, "3 đầu vào dự báo cần xem lại"},
 	} {
-		if got := bundleTaskSubject(c.lang, c.findings); got != c.want {
-			t.Errorf("bundleTaskSubject(%s, %d) = %q, want %q", c.lang, c.findings, got, c.want)
+		got, err := bundleTaskSubject(c.findings).Render(c.lang)
+		if err != nil || got != c.want {
+			t.Errorf("bundleTaskSubject(%d) in %s = %q (%v), want %q", c.findings, c.lang, got, err, c.want)
+		}
+		// An English task written before it carried its descriptor is recognised,
+		// so the system-text repair gives it one and it reads in every language.
+		if c.lang != textlang.English {
+			continue
+		}
+		if recovered, err := systemtext.RecoverCanonicalText(c.want); err != nil || recovered == nil {
+			t.Errorf("the stored subject %q is not recognised as catalog text (%v)", c.want, err)
 		}
 	}
 }
