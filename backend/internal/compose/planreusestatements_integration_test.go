@@ -326,7 +326,7 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 // the seams that reuse their plans.
 func readSuggestionLanes(ctx context.Context, db *database.DB) error {
 	dealSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}
-	if _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
+	if _, _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
 		return err
 	}
 	if _, err := dealSuggestions.CountOpen(ctx, nil); err != nil {
