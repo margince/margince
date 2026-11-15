@@ -556,7 +556,8 @@
    the sheet split by hairlines, not boxes inside a box. Overview is always the
    strip's first tab (lib/recordtaborder.ts), so a first tab not pressed means
    another body is open. Toned panels keep their box: the tone is what they
-   say. Here, with the head band's other shapes, so the band has one sheet. */
+   say. A chapter's card draws its own parts (chapter.css). Here, with the head
+   band's other shapes, so the band has one sheet. */
 .record-split-sheet:has(
     > .record-split-tabs .recordtabs-tab:first-child[aria-pressed="false"]
   )
@@ -569,7 +570,8 @@
     .panel-success,
     .panel-warning,
     .panel-danger,
-    .panel-discovery
+    .panel-discovery,
+    .chapter-parts > .panel
   ) {
   margin-inline: calc(-1 * var(--padPanel));
   border: 0;
@@ -590,7 +592,8 @@
     .panel-success,
     .panel-warning,
     .panel-danger,
-    .panel-discovery
+    .panel-discovery,
+    .chapter-parts > .panel
   )
   > .panel-head {
   min-block-size: 0;
@@ -609,7 +612,8 @@
   .panel-success,
   .panel-warning,
   .panel-danger,
-  .panel-discovery
+  .panel-discovery,
+  .chapter-parts > .panel
 ):first-child:is(
   .record-split-feed > *,
   .record-split-feed > :first-child > *

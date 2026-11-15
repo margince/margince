@@ -8,10 +8,9 @@ import {
 import { providerCompletedProfile } from "./contactprovider.fixtures";
 import { ContactResearchTab } from "./contactresearch";
 
-// The Research tab's own gallery: the two halves it stacks (the bought
-// provider snapshot and the enrichment evidence sidecar), the tab-wide empty
-// state that collapses them into one line rather than two blank panels, and
-// the provider half withheld for lack of a grant.
+// The Research tab's own gallery. Its three chapters are what to check, what
+// each source says, and the record's own keeping. It also shows the tab with
+// nothing to check, and the provider half withheld for lack of a grant.
 
 const meta: Meta<typeof ContactResearchTab> = {
   title: "Records/Contact 360/Research tab",
@@ -64,7 +63,7 @@ function researchTab(view: View) {
   installFetchStub({ "GET /me": meRoute({ contact: ["read"] }) });
   return (
     <StoryProviders>
-      <ContactResearchTab view={view} />
+      <ContactResearchTab view={view} onResearch={() => undefined} />
     </StoryProviders>
   );
 }
