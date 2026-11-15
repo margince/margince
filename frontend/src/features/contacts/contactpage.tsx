@@ -17,7 +17,12 @@ import {
 } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { useRecordWriteRefusal } from "../../lib/capability";
-import { contactPageState, contactQuery } from "../../lib/contact.queries";
+import {
+  archivedContactRow,
+  contactPageState,
+  contactQuery,
+  openingIdentity,
+} from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
 import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
@@ -182,17 +187,20 @@ export function ContactPageV2({
     readOnlyReasonId,
   });
 
-  if (record.data?.archived_at) {
+  const archived = archivedContactRow(record);
+  if (archived) {
     return (
       <ArchivedContactPage
-        contact={record.data}
+        contact={archived}
         band={band}
         refusedReasonId={readOnlyReasonId}
       />
     );
   }
   const reads = contactPageState(record, view);
-  if (reads === "opening") return <ContactOpening id={id} />;
+  if (reads === "opening") {
+    return <ContactOpening id={id} {...openingIdentity(record, view)} />;
+  }
   if (reads === "notOpened" || !view.data) {
     return <div className="wrap">{t("contact.page.notOpened")}</div>;
   }
