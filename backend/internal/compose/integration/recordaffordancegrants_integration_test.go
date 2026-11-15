@@ -8,22 +8,20 @@ package integration
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sharedRecords are records Rep3 owns and has shared with Rep1 for writing.
@@ -36,16 +34,16 @@ type sharedRecords struct {
 	project ids.ProjectID
 }
 
-func seedSharedRecords(t *testing.T, e *Env) sharedRecords {
+func seedSharedRecords(t *testing.T, e *Env, pipeline ids.PipelineID, open ids.StageID) sharedRecords {
 	t.Helper()
-	pipeline, open, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Shared company", &e.Rep3)
 	out := sharedRecords{
 		contact: ids.From[ids.ContactKind](e.SeedContact(t, "Shared contact", &e.Rep3)),
 		company: ids.From[ids.CompanyKind](company),
 		deal:    ids.From[ids.DealKind](e.SeedDeal(t, "Shared deal", pipeline, open, &e.Rep3)),
 		lead:    seedLead(t, e, "Shared lead", "shared-lead@prospect.test", &e.Rep3),
-		project: seedProject(e.Admin(), t, e, "Shared project", company, &e.Rep3).ID,
+		// A live project blocks its company's archive, so it sits on another company.
+		project: seedProject(e.Admin(), t, e, "Shared project", e.SeedCompany(t, "Project customer", nil), &e.Rep3).ID,
 	}
 	for _, record := range []struct {
 		kind string
@@ -68,7 +66,8 @@ func TestRecordAffordancesOnASharedRecordFollowTheObjectGrants(t *testing.T) {
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	e.Contacts.SetClock(func() time.Time { return now })
 	e.Deals.SetClock(func() time.Time { return now })
-	shared := seedSharedRecords(t, e)
+	pipeline, open, _ := DealFixture(t, e)
+	shared := seedSharedRecords(t, e, pipeline, open)
 	for _, grants := range []recordWriteGrants{{}, {update: true}, {deleteGrant: true}, {update: true, deleteGrant: true}} {
 		ctx := asTeam1Member(e, e.Rep1, recordAffordancePerms(grants))
 		want := expectedRecordActions{writable: grants.update, archivable: grants.deleteGrant}
@@ -125,60 +124,58 @@ func requireSharedArchiveRefused(ctx context.Context, t *testing.T, e *Env, shar
 	}
 }
 
-// A read seat holding the rep's full grants is offered no action on any
-// record, and every mutation it tries is refused.
-func TestRecordAffordancesReadSeatIsOfferedNoActionAndRefusedEveryMutation(t *testing.T) {
-	e := Setup(t)
-	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
-	e.Contacts.SetClock(func() time.Time { return now })
-	e.Deals.SetClock(func() time.Time { return now })
-	pipeline, open, _ := DealFixture(t, e)
-	company := e.SeedCompany(t, "Seat company", &e.Rep1)
-	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Seat deal", pipeline, open, &e.Rep1))
-	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Seat contact", &e.Rep1))
-	lead := seedLead(t, e, "Seat lead", "seat-lead@prospect.test", &e.Rep1)
-	project := seedProject(e.Admin(), t, e, "Seat project", company, &e.Rep1).ID
-	full := asTeam1Member(e, e.Rep1, recordAffordancePerms(recordWriteGrants{update: true, deleteGrant: true}))
-	readSeat := OnSeat(full, principal.SeatRead)
-
-	gotDeal, err := e.Deals.GetDeal(readSeat, deal, storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
+// A read seat is offered no edit or archive on any record, and the server
+// refuses each such mutation it tries. The same records on a full seat offer
+// both, so the flags and the refusals come from the seat.
+func TestARecordOnAReadSeatOffersNoActionAndRefusesEachMutation(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Seat Actions", "seat-actions@fable.test", "Admin")
+	e.DescribeCompany(t)
+	seeded := apptest.DiscoverSeededPipeline(t, e)
+	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Seat Works", "source": "manual"})
+	records := []struct {
+		path       string
+		archivable bool
+		archive    bool
+		rename     AnyMap
+	}{
+		{"/v1/contacts/" + createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"}),
+			true, true, AnyMap{"title": "Renamed"}},
+		{"/v1/deals/" + apptest.CreateOpenDeal(t, e, seeded), true, true, AnyMap{"name": "Renamed"}},
+		{"/v1/leads/" + createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat@lead.test", "source": "manual"}),
+			false, false, AnyMap{"full_name": "Renamed"}},
+		{"/v1/projects/" + createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"}),
+			false, true, AnyMap{"name": "Renamed"}},
 	}
-	requireRecordAffordances(t, gotDeal.Writable, gotDeal.Archivable, expectedRecordActions{})
-	gotContact, err := e.Contacts.GetContact(readSeat, contact, storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	requireRecordAffordances(t, gotContact.Writable, gotContact.Archivable, expectedRecordActions{})
-	gotLead, err := e.Contacts.GetLead(readSeat, lead, storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	requireWritable(t, gotLead.Writable, false)
-	gotProject, err := e.Projects.GetProject(readSeat, project, storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	requireWritable(t, gotProject.Writable, false)
-
-	name := "Renamed by a read seat"
-	mutations := map[string]error{}
-	_, mutations["deal update"] = e.Deals.UpdateDeal(readSeat, deal, deals.UpdateDealInput{Name: &name})
-	_, mutations["deal archive"] = e.Deals.ArchiveDeal(readSeat, deal, nil)
-	_, mutations["contact update"] = e.Contacts.UpdateContact(readSeat, contact, contacts.UpdateContactInput{FullName: &name})
-	_, mutations["contact archive"] = e.Contacts.ArchiveContact(readSeat, contact, nil)
-	_, mutations["lead update"] = e.Contacts.UpdateLead(readSeat, lead, contacts.UpdateLeadInput{FullName: &name})
-	_, mutations["project update"] = e.Projects.UpdateProject(readSeat, project, projects.UpdateProjectInput{Name: &name})
-	_, mutations["project archive"] = e.Projects.ArchiveProject(readSeat, project, nil)
-	for what, err := range mutations {
-		if !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("read seat %s = %v, want permission denied", what, err)
+	for _, seat := range []string{"full", "read"} {
+		e.SetWorkspaceSeat(t, seat)
+		for _, record := range records {
+			var got struct {
+				Writable   *bool `json:"writable"`
+				Archivable *bool `json:"archivable"`
+			}
+			if status := e.Call(t, "GET", record.path, nil, nil, &got); status != http.StatusOK {
+				t.Fatalf("%s seat GET %s = %d", seat, record.path, status)
+			}
+			offered := seat == "full"
+			if got.Writable == nil || *got.Writable != offered {
+				t.Errorf("%s seat %s writable = %v, want %t", seat, record.path, got.Writable, offered)
+			}
+			if record.archivable && (got.Archivable == nil || *got.Archivable != offered) {
+				t.Errorf("%s seat %s archivable = %v, want %t", seat, record.path, got.Archivable, offered)
+			}
 		}
 	}
-	// The same grants on a full seat may do it, so the refusal is the seat's.
-	if _, err := e.Contacts.UpdateLead(full, lead, contacts.UpdateLeadInput{FullName: &name}); err != nil {
-		t.Fatalf("full seat lead update = %v, want allowed", err)
+	for _, record := range records {
+		if status, code := callForCode(t, e, "PATCH", record.path, record.rename); status != http.StatusForbidden || code != "seat_tier_insufficient" {
+			t.Errorf("read seat PATCH %s = %d %q, want 403 seat_tier_insufficient", record.path, status, code)
+		}
+		if !record.archive {
+			continue
+		}
+		if status, code := callForCode(t, e, "DELETE", record.path, nil); status != http.StatusForbidden || code != "seat_tier_insufficient" {
+			t.Errorf("read seat DELETE %s = %d %q, want 403 seat_tier_insufficient", record.path, status, code)
+		}
 	}
 }
 
@@ -233,7 +230,7 @@ func TestArchivedLeadsAndProjectsOfferNoEdit(t *testing.T) {
 func TestRecordAffordanceStampsReadAuthorityOnce(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
-	shared := seedSharedRecords(t, e)
+	shared := seedSharedRecords(t, e, pipeline, open)
 	own := e.SeedDeal(t, "Own deal", pipeline, open, &e.Rep1)
 	ownLead := seedLead(t, e, "Own lead", "own-lead@prospect.test", &e.Rep1)
 	cases := []struct {

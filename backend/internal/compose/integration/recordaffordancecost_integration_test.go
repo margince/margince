@@ -29,7 +29,8 @@ func TestRecordAffordancesShareAuthorityOnStoreReads(t *testing.T) {
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Authority company", &e.Rep1))
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Authority deal", pipeline, open, &e.Rep1))
 	lead := seedLead(t, e, "Authority lead", "authority-lead@prospect.test", &e.Rep1)
-	project := seedProject(e.Admin(), t, e, "Authority project", company.UUID, &e.Rep1).ID
+	// A live project blocks its company's archive, so it sits on another company.
+	project := seedProject(e.Admin(), t, e, "Authority project", e.SeedCompany(t, "Project customer", nil), &e.Rep1).ID
 	// want holds the absolute statement counts for delete-only and update+delete.
 	// A second authority read on either path changes them.
 	cases := []struct {
@@ -152,9 +153,9 @@ var recordReadCost = struct {
 	contact, company, deal, contactPage, companyPage, dealPage [2]int64
 	lead, project, leadPage, projectPage                       [2]int64
 }{
-	contact: [2]int64{0, 0}, company: [2]int64{0, 0}, deal: [2]int64{0, 0},
-	contactPage: [2]int64{0, 0}, companyPage: [2]int64{0, 0}, dealPage: [2]int64{0, 0},
-	lead: [2]int64{0, 0}, project: [2]int64{0, 0}, leadPage: [2]int64{0, 0}, projectPage: [2]int64{0, 0},
+	contact: [2]int64{15, 15}, company: [2]int64{12, 12}, deal: [2]int64{8, 8},
+	contactPage: [2]int64{12, 12}, companyPage: [2]int64{11, 11}, dealPage: [2]int64{7, 7},
+	lead: [2]int64{6, 8}, project: [2]int64{5, 7}, leadPage: [2]int64{7, 9}, projectPage: [2]int64{4, 6},
 }
 
 type recordWriteGrants struct {
