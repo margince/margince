@@ -56,6 +56,14 @@ export function relatedContactsQuery(contactId: string | undefined) {
   });
 }
 
+// The archived page needs the row's own answer. A failed re-read keeps the old
+// row in the cache, and that old row must not open a page after a refusal.
+export function archivedContactRow<T extends { archived_at?: string | null }>(
+  record: Readonly<{ isError: boolean; data?: T }>,
+): T | undefined {
+  return !record.isError && record.data?.archived_at ? record.data : undefined;
+}
+
 // A 360 refused while the row is re-read may be an archive the row will report.
 // So the contact page waits for the row before it calls itself unopened.
 export function contactPageState(
@@ -66,8 +74,9 @@ export function contactPageState(
   }>,
   view: Readonly<{ isLoading: boolean; isError: boolean }>,
 ): "opening" | "notOpened" | "ready" {
+  if (record.isError) return "notOpened";
   if (record.isPending || view.isLoading) return "opening";
-  if (record.isError || (view.isError && !record.isFetching)) {
+  if (view.isError && !record.isFetching) {
     return "notOpened";
   }
   return "ready";

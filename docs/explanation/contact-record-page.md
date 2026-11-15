@@ -1,8 +1,16 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/components/contactcase.entry.tsx frontend/src/design-system/timelineentry.tsx frontend/src/design-system/verbvolume.tsx -->
+<!-- describes: backend/internal/compose/contact360 frontend/src/features/contacts/contactpage.tsx frontend/src/features/contacts/contactopening.tsx frontend/src/features/contacts/contactoverview.tsx frontend/src/features/contacts/contacttoday.tsx frontend/src/features/contacts/contactsourcereview.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/features/contacts/contactconsentpanel.tsx frontend/src/features/contacts/contactstanding.ts frontend/src/components/latestinbound.tsx backend/internal/modules/activities/latestinbound.go frontend/src/components/contactcase.entry.tsx frontend/src/design-system/timelineentry.tsx frontend/src/design-system/verbvolume.tsx -->
 # The contact record page
 
 The Overview tab puts recorded context and real work first. A new contact must not look like an old relationship that is now silent.
+
+## While the record opens
+
+A direct open shows the confirmed contact name and title as soon as the contact read returns.
+The title keeps its provider provenance. Before that response, navigation from a list can show
+its cached name. The loading sentence remains until the 360 sections are ready; record actions
+and section counts wait for those sections. A refused read does not supply an opening identity.
+Archived records keep their separate read-only page.
 
 ## Reading order
 
