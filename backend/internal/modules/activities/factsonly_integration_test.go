@@ -56,3 +56,31 @@ func TestAFactsOnlyReadKeepsTheMailFactsAndReadsNoAffordances(t *testing.T) {
 		}
 	}
 }
+
+// A LinkedFactsOnly read is the facts read with each row's links, which a task
+// row is drawn from. The links agree with the full read's.
+func TestALinkedFactsReadKeepsTheLinksAndReadsNoAffordances(t *testing.T) {
+	e := setupPromises(t)
+	note := e.seedLinkedNote(t, e.rep)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	wanted := []ids.ActivityID{ids.From[ids.ActivityKind](note)}
+
+	full, _, err := store.ListActivities(e.asEditor(), ListActivitiesInput{IDs: wanted})
+	if err != nil {
+		t.Fatal(err)
+	}
+	linked, _, err := store.ListActivities(e.asEditor(), ListActivitiesInput{IDs: wanted, LinkedFactsOnly: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(full) != 1 || len(linked) != 1 {
+		t.Fatalf("read %d rows in full and %d linked, want the seeded note each time", len(full), len(linked))
+	}
+	if full[0].Links == nil || len(*full[0].Links) == 0 || !reflect.DeepEqual(full[0].Links, linked[0].Links) {
+		t.Errorf("the links differ: full %+v, linked %+v; want the note's link in both", full[0].Links, linked[0].Links)
+	}
+	if linked[0].Writable != nil || linked[0].Archivable != nil || linked[0].CreatedBy != nil {
+		t.Errorf("the linked read stamped what a screen draws: writable=%v archivable=%v created_by=%v",
+			linked[0].Writable, linked[0].Archivable, linked[0].CreatedBy)
+	}
+}
