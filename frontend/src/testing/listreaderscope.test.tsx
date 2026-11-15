@@ -1,12 +1,15 @@
 /** @vitest-environment happy-dom */
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useSearchCommands } from "../app/palettesearch";
 import { type ListPage, useListQuery } from "../components/listquery";
 import { listOpening } from "../components/listquery.options";
 import { useStageColumns } from "../features/deals/dealboard.queries";
 import { useProjectsOfCompany } from "../features/deals/dealproject";
 import { useTerminalLeads } from "../features/leads/leadboard.queries";
 import { type DealFilters, useDeals } from "../lib/deals.queries";
+import { useFilterPreview } from "../lib/filterdata";
+import { newGroup, newLeaf } from "../lib/segmentpredicate";
 import { useMe } from "../lib/session";
 import { cancellationClient, type HeldRead, holdReads } from "./cancellation";
 import { meFixture } from "./mefixture";
@@ -43,6 +46,14 @@ const deals: DealFilters = {
 };
 
 const STAGES = ["stage"];
+const FILTER = newGroup("and", [newLeaf("full_name", "contains", "ann")]);
+
+type ListKind = Readonly<{
+  kind: string;
+  path: string;
+  useRows: () => string[];
+  answer?: (ids: readonly string[]) => unknown;
+}>;
 
 // Each list kind through its real hook. `rows` reads the ids it shows.
 const kinds = [
@@ -81,6 +92,35 @@ const kinds = [
       ).flatMap((p) => p.data.map((lead) => lead.id)),
   },
   {
+    kind: "the filter preview (useFilterPreview)",
+    path: "/v1/filters/preview",
+    useRows: (): string[] =>
+      (useFilterPreview("contact", FILTER).data?.rows ?? []).map((row) =>
+        String(row.id),
+      ),
+    answer: (ids: readonly string[]) => ({
+      resource: "contact",
+      match_count: ids.length,
+      columns: ["id"],
+      rows: ids.map((id) => ({ id })),
+      has_more: false,
+      next_cursor: null,
+    }),
+  },
+  {
+    kind: "the palette's record search (useSearchCommands)",
+    path: "/v1/search",
+    useRows: (): string[] =>
+      useSearchCommands("acme")
+        .commands.map((command) => command.label)
+        .filter((label) => label.startsWith("hit-"))
+        .map((label) => label.slice("hit-".length)),
+    answer: (ids: readonly string[]) => ({
+      data: ids.map((id) => ({ type: "contact", id, title: `hit-${id}` })),
+      page: { has_more: false, next_cursor: null },
+    }),
+  },
+  {
     kind: "a deal board stage column (useStageColumns)",
     path: "/v1/deals",
     useRows: (): string[] =>
@@ -92,14 +132,14 @@ const kinds = [
     useRows: (): string[] =>
       useProjectsOfCompany("company").map((project) => project.id),
   },
-] as const;
+] satisfies readonly ListKind[];
 
 const directions = [
   { from: "own", to: "all" },
   { from: "all", to: "own" },
 ] as const satisfies readonly { from: Scope; to: Scope }[];
 
-describe.each(kinds)("$kind", ({ path, useRows }) => {
+describe.each<ListKind>(kinds)("$kind", ({ path, useRows, answer = page }) => {
   function signedIn(scope: Scope) {
     reads = holdReads((url) => url.pathname === path);
     const { client, wrapper } = cancellationClient();
@@ -119,7 +159,7 @@ describe.each(kinds)("$kind", ({ path, useRows }) => {
         { wrapper },
       );
       await waitFor(() => expect(reads).toHaveLength(1));
-      await act(async () => reads[0]?.answer(page(["old"])));
+      await act(async () => reads[0]?.answer(answer(["old"])));
       await waitFor(() => expect(view.result.current).toEqual(["old"]));
 
       await act(async () => {
@@ -128,7 +168,7 @@ describe.each(kinds)("$kind", ({ path, useRows }) => {
 
       await waitFor(() => expect(reads).toHaveLength(2));
       expect(view.result.current).toEqual([]);
-      await act(async () => reads[1]?.answer(page(["new"])));
+      await act(async () => reads[1]?.answer(answer(["new"])));
       await waitFor(() => expect(view.result.current).toEqual(["new"]));
     },
   );
@@ -139,7 +179,7 @@ describe.each(kinds)("$kind", ({ path, useRows }) => {
       const { client, wrapper } = signedIn(from);
       const first = renderHook(() => useRows(), { wrapper });
       await waitFor(() => expect(reads).toHaveLength(1));
-      await act(async () => reads[0]?.answer(page(["old"])));
+      await act(async () => reads[0]?.answer(answer(["old"])));
       await waitFor(() => expect(first.result.current).toEqual(["old"]));
       first.unmount();
 
@@ -150,7 +190,7 @@ describe.each(kinds)("$kind", ({ path, useRows }) => {
 
       await waitFor(() => expect(reads).toHaveLength(2));
       expect(again.result.current).toEqual([]);
-      await act(async () => reads[1]?.answer(page(["new"])));
+      await act(async () => reads[1]?.answer(answer(["new"])));
       await waitFor(() => expect(again.result.current).toEqual(["new"]));
     },
   );
