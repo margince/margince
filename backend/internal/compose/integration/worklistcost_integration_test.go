@@ -178,7 +178,7 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
 const (
-	homeReadStatementCeiling = 152
+	homeReadStatementCeiling = 99
 	homeReadRoundTripCeiling = 70
 )
 
