@@ -5,11 +5,13 @@ package capture
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -24,11 +26,27 @@ func settledFields(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 			return fields, err
 		}
 	}
-	fields.OccurredAt = defaultOccurredAt(fields.OccurredAt)
+	if fields.OccurredAt, err = settledOccurredAt(ctx, tx, fields.OccurredAt); err != nil {
+		return fields, err
+	}
 	fields.DurationSeconds = StorableDuration(fields.DurationSeconds)
 	fields.Subject = textbounds.Fit("public.activity.subject", fields.Subject)
 	fields.judged, err = judgeEnvelopeTx(ctx, tx, rec, fields)
 	return fields, err
+}
+
+// settledOccurredAt is the provider's instant, or for a payload without a
+// usable one, the capture time held to the database's now() (UndatedSQL).
+func settledOccurredAt(ctx context.Context, tx pgx.Tx, occurredAt time.Time) (time.Time, error) {
+	fallback := defaultOccurredAt(occurredAt)
+	if fallback.Equal(occurredAt) {
+		return occurredAt, nil
+	}
+	var settled time.Time
+	if err := tx.QueryRow(ctx, `SELECT `+occurredday.UndatedSQL("$1"), fallback).Scan(&settled); err != nil {
+		return time.Time{}, fmt.Errorf("capture: dating an undated activity: %w", err)
+	}
+	return settled.UTC(), nil
 }
 
 // defaultOccurredAt fills a provider payload that carried no timestamp.
