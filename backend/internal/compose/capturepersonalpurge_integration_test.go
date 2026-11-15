@@ -207,25 +207,37 @@ func TestTheOwnersOwnRepliesSurviveAPersonalPurge(t *testing.T) {
 	}
 }
 
-func TestMailTheContactRepliedToSurvivesAPersonalPurge(t *testing.T) {
-	// Writing to an address is the T1 signal that they are a real counterparty,
-	// and it is the documented recovery: reply to a wrongly judged sender and
-	// the sweep lets go. Without it a wrong verdict has no way back, because a
-	// personal verdict hides nothing and so surfaces nothing to object to.
+func TestAReplyDoesNotKeepPersonalMailPastItsWindow(t *testing.T) {
+	// Employees are promised their private mail is deleted. Attested outbound
+	// mail to the sender carries no seat, so this one reply stands for the
+	// owner's own answer and a colleague's alike.
+	e := integration.Setup(t)
+	mail := seedPurgeableMail(t, e, "doctor@praxis.example", "Krankmeldung", e.Rep1)
+	resolvePersonal(t, e, "doctor@praxis.example", mail, e.Rep1, false)
+	agePersonalMail(t, e, mail, "doctor@praxis.example", 31*24*time.Hour)
+	seedOutboundMail(t, e, "doctor@praxis.example", "danke")
+
+	sweepPersonal(t, e)
+	if body := activityBody(t, e, mail); body != "" {
+		t.Fatal("personal mail outlived its window because somebody replied to the sender")
+	}
+}
+
+func TestPersonalMailFiledAgainstAContactSurvivesItsWindow(t *testing.T) {
+	// A contact link is the way back for a wrongly judged sender once a reply
+	// no longer is one.
 	e := integration.Setup(t)
 	mail := seedPurgeableMail(t, e, "steuer@kanzlei.example", "Jahresabschluss", e.Rep1)
 	resolvePersonal(t, e, "steuer@kanzlei.example", mail, e.Rep1, false)
 	agePersonalMail(t, e, mail, "steuer@kanzlei.example", 31*24*time.Hour)
-	// The owner writes back, which is what a contact does on noticing the record
-	// is wrong. seedOutboundMail marks it attested, as the capture path does.
-	seedOutboundMail(t, e, "steuer@kanzlei.example", "anbei die Unterlagen")
+	contact := e.SeedContact(t, "Kanzlei Steuer", &e.Rep1)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, mail, contact)
 
 	if n := sweepPersonal(t, e); n != 0 {
-		t.Fatalf("destroyed %d messages, want 0 — the workspace corresponds with this address", n)
+		t.Fatalf("destroyed %d messages, want 0: the mail is filed against a contact", n)
 	}
 	if body := activityBody(t, e, mail); body == "" {
-		t.Fatal("mail was destroyed from an address the workspace had written to, " +
-			"so the reply-to-recover escape does not work")
+		t.Fatal("personal mail filed against a contact was destroyed")
 	}
 }
 

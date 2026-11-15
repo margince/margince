@@ -115,6 +115,7 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 	// address a personal verdict. A contact the workspace corresponds with at
 	// that address outranks it, as it does for noiseMailScope. So does
 	// authenticated Google meeting mail, unless the seat itself chose personal.
+	// A reply to the address does not, as in PersonalPurgeScope.
 	var personal bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -124,11 +125,6 @@ func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender
 		     AND p.resolved_at IS NOT NULL
 		     AND (p.resolved_by_owner OR NOT $5)
 		     AND now() <= p.resolved_at + `+quoteInterval(noiseVerdictReach)+`
-		     AND NOT EXISTS (
-		       SELECT 1 FROM activity c
-		        WHERE c.counterparty_email = $2
-		          AND c.direction = 'outbound' AND c.counterparty_outbound_attested
-		          AND c.archived_at IS NULL)
 		     AND NOT EXISTS (
 		       SELECT 1 FROM contact_email pe JOIN contact pr ON pr.id = pe.contact_id
 		        WHERE pe.email = $2 AND pr.archived_at IS NULL AND pe.archived_at IS NULL
