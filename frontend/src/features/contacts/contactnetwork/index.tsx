@@ -318,7 +318,7 @@ function NetworkChapters({
           <RelayPanel ask={read.open} />
           <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
           {/* What moved lately, earlier asks among it, closes the tab. */}
-          {view ? <MomentsPanel view={view} asks={settledAsks} /> : null}
+          <MomentsPanel view={view} asks={settledAsks} />
         </Chapter>
 
         {asking ? (

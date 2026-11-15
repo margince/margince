@@ -86,7 +86,9 @@ export function MomentsPanel({
   view,
   asks = [],
 }: Readonly<{
-  view: RelationshipMoments;
+  // Absent while the 360 is not in hand: the asks still show, and the
+  // changes are left unsaid rather than reported as none.
+  view: RelationshipMoments | undefined;
   // Settled asks only: an open one keeps its verbs in the asks panel above.
   asks?: readonly IntroRequest[];
 }>) {
@@ -95,13 +97,16 @@ export function MomentsPanel({
   const readerZone = useViewerZone();
   // The changes section is withholdable. A reader without the grant is served
   // none, and "nothing has moved" would be a fact the page does not have.
-  const withheld = (view.sections_omitted ?? []).some(
+  const withheld = (view?.sections_omitted ?? []).some(
     (section) => section === "relationship_changes",
   );
   const moments = timeline(
-    withheld ? [] : (view.relationship_changes ?? []),
+    withheld ? [] : (view?.relationship_changes ?? []),
     asks,
   );
+  if (!view && moments.length === 0) {
+    return null;
+  }
   const state =
     moments.length > 0
       ? ("ready" as const)

@@ -53,7 +53,7 @@ const moved: Moments = {
   ],
 };
 
-function renderTimeline(view: Moments, asks: IntroRequest[]) {
+function renderTimeline(view: Moments | undefined, asks: IntroRequest[]) {
   render(
     <StoryProviders>
       <MomentsPanel view={view} asks={asks} />
@@ -128,6 +128,13 @@ describe("the Progress timeline", () => {
     expect(rowTexts()).toHaveLength(1);
     expect(screen.getByText("Hidden for your role")).toBeTruthy();
     expect(screen.queryByText(en["contact.network.noMoments"])).toBeNull();
+  });
+
+  it("shows earlier asks before the 360 arrives, without calling the changes empty", () => {
+    renderTimeline(undefined, [ask()]);
+    expect(rowTexts()).toHaveLength(1);
+    expect(screen.queryByText(en["contact.network.noMoments"])).toBeNull();
+    expect(screen.queryByText("Hidden for your role")).toBeNull();
   });
 
   it("says nothing has moved only when there is neither a change nor an ask", () => {
