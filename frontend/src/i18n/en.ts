@@ -4177,6 +4177,7 @@ export const en = {
     "Some sections could not be loaded, so this page may be incomplete.",
   "evidence.explain": "Where “{value}” came from",
   "evidence.explainBeside": "{label}: where “{value}” came from",
+  "evidence.fromMeeting": "From a meeting on {date}",
   "evidence.fullHistory": "Full history",
   "co.section.unavailable":
     "Some data did not load, so this section may be incomplete.",

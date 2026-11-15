@@ -1,8 +1,8 @@
 import type { EvidenceMarkSource } from "../../design-system/evidencemark";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { confidenceLevel } from "../../design-system/trust";
-import { formatDateTime } from "../../format/format";
-import type { Locale } from "../../i18n";
+import { formatDate, formatDateTime } from "../../format/format";
+import { type Locale, translate } from "../../i18n";
 
 /**
  * A row carrying its own provenance: a profile field, a fact, a technical
@@ -21,6 +21,10 @@ export type EvidenceBearingRow = Readonly<{
    * same updated_at if nothing changed, and only this tells them apart.
    */
   retrieved_at?: string | null;
+  // A value read from a meeting names the meeting's date; every reader of the
+  // field may see it, while the meeting itself keeps its own audience.
+  source?: string;
+  source_occurred_at?: string | null;
 }>;
 
 /**
@@ -52,6 +56,12 @@ export function derivedSource(
     provenance,
     confidence: confidenceLevel(row.confidence) ?? undefined,
     snippet: row.evidence_snippet,
+    origin:
+      row.source === "meeting" && row.source_occurred_at
+        ? translate(locale, "evidence.fromMeeting", {
+            date: formatDate(row.source_occurred_at, locale, recordZone),
+          })
+        : undefined,
     sourceUrl: row.source_url,
     at: observed ? formatDateTime(observed, locale, recordZone) : undefined,
   };

@@ -6837,6 +6837,7 @@ const (
 	CompanyProfileFieldSourceAgent           CompanyProfileFieldSource = "agent"
 	CompanyProfileFieldSourceConnector       CompanyProfileFieldSource = "connector"
 	CompanyProfileFieldSourceHuman           CompanyProfileFieldSource = "human"
+	CompanyProfileFieldSourceMeeting         CompanyProfileFieldSource = "meeting"
 	CompanyProfileFieldSourceMigration       CompanyProfileFieldSource = "migration"
 	CompanyProfileFieldSourceSiteRead        CompanyProfileFieldSource = "site_read"
 	CompanyProfileFieldSourceTechnicalLookup CompanyProfileFieldSource = "technical_lookup"
@@ -6850,6 +6851,8 @@ func (e CompanyProfileFieldSource) Valid() bool {
 	case CompanyProfileFieldSourceConnector:
 		return true
 	case CompanyProfileFieldSourceHuman:
+		return true
+	case CompanyProfileFieldSourceMeeting:
 		return true
 	case CompanyProfileFieldSourceMigration:
 		return true
@@ -42309,9 +42312,15 @@ type CompanyProfileField struct {
 	// RetrievedAt When the source was last read. Distinct from captured_at, which is when we first recorded the claim.
 	RetrievedAt *time.Time                `json:"retrieved_at,omitempty"`
 	Source      CompanyProfileFieldSource `json:"source"`
-	SourceUrl   *string                   `json:"source_url,omitempty"`
-	UpdatedAt   time.Time                 `json:"updated_at"`
-	Value       string                    `json:"value"`
+
+	// SourceActivityId With `source` `meeting`: the transcript or meeting notes the value was read from, when you may read them. Null for a reader the meeting's audience leaves out; they still see `source_occurred_at`. A meeting value stores no quote, so `evidence_snippet` is empty.
+	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
+
+	// SourceOccurredAt With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
+	SourceOccurredAt *time.Time `json:"source_occurred_at,omitempty"`
+	SourceUrl        *string    `json:"source_url,omitempty"`
+	UpdatedAt        time.Time  `json:"updated_at"`
+	Value            string     `json:"value"`
 
 	// VerifiedAt When a human last confirmed this claim. Paired with verified_by — a verification without an actor describes a confirmation nobody made.
 	VerifiedAt *time.Time `json:"verified_at,omitempty"`

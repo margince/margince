@@ -128,14 +128,20 @@ func readCompanyProfileFieldsTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID
 	if err := ensureCompanyReadable(ctx, tx, id); err != nil {
 		return nil, err
 	}
+	args := []any{id}
+	citation, err := profileFieldCitationSQL(ctx, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
-		SELECT id, field, value, source, captured_by,
-		       evidence_snippet, source_url, confidence, retrieved_at,
-		       verified_at, verified_by, updated_at, version
-		  FROM company_profile_field
-		 WHERE company_id = $1
-		 ORDER BY field`,
-		id)
+		SELECT f.id, f.field, f.value, f.source, f.captured_by,
+		       f.evidence_snippet, f.source_url, f.confidence, f.retrieved_at,
+		       f.verified_at, f.verified_by, f.updated_at, f.version, `+citation+`
+		  FROM company_profile_field f
+		  LEFT JOIN activity cited ON cited.id = f.source_activity_id
+		 WHERE f.company_id = $1
+		 ORDER BY f.field`,
+		args...)
 	if err != nil {
 		return nil, fmt.Errorf("list company profile fields: %w", err)
 	}
@@ -149,7 +155,7 @@ func readCompanyProfileFieldsTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID
 		if err := rows.Scan(&rowID, &field, &pf.Value, &source, &pf.CapturedBy,
 			&pf.EvidenceSnippet, &pf.SourceUrl, &pf.Confidence,
 			&pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy,
-			&pf.UpdatedAt, &pf.Version); err != nil {
+			&pf.UpdatedAt, &pf.Version, &pf.SourceActivityId, &pf.SourceOccurredAt); err != nil {
 			return nil, fmt.Errorf("scan company profile field: %w", err)
 		}
 		// The row's own identity, so a dossier sentence written from this

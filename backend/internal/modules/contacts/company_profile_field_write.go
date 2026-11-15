@@ -462,14 +462,22 @@ func readProfileFieldWire(
 		rowID        ids.UUID
 		fieldV, srcV string
 	)
-	err := tx.QueryRow(ctx, `
-		SELECT id, field, value, source, captured_by, evidence_snippet, source_url, confidence,
-		       retrieved_at, verified_at, verified_by, updated_at, version
-		  FROM company_profile_field
-		 WHERE company_id = $1 AND field = $2`,
-		companyID, field,
+	args := []any{companyID, field}
+	citation, err := profileFieldCitationSQL(ctx, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return pf, err
+	}
+	err = tx.QueryRow(ctx, `
+		SELECT f.id, f.field, f.value, f.source, f.captured_by, f.evidence_snippet,
+		       f.source_url, f.confidence, f.retrieved_at, f.verified_at, f.verified_by,
+		       f.updated_at, f.version, `+citation+`
+		  FROM company_profile_field f
+		  LEFT JOIN activity cited ON cited.id = f.source_activity_id
+		 WHERE f.company_id = $1 AND f.field = $2`,
+		args...,
 	).Scan(&rowID, &fieldV, &pf.Value, &srcV, &pf.CapturedBy, &pf.EvidenceSnippet, &pf.SourceUrl,
-		&pf.Confidence, &pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy, &pf.UpdatedAt, &pf.Version)
+		&pf.Confidence, &pf.RetrievedAt, &pf.VerifiedAt, &pf.VerifiedBy, &pf.UpdatedAt, &pf.Version,
+		&pf.SourceActivityId, &pf.SourceOccurredAt)
 	if err != nil {
 		return pf, fmt.Errorf("re-read company profile field: %w", err)
 	}
