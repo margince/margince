@@ -3362,6 +3362,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
   "rel.current": "Aktuell",
+  "rel.former": "Früher",
   "rel.endedOn": "Bis {when}",
   "rel.remove": "Entfernen",
   "rel.removeConfirm":

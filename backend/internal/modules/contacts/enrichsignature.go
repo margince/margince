@@ -201,6 +201,9 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		if len(appliedFields) == 0 {
 			return nil
 		}
+		if err := s.roleFromSignatureTitleTx(ctx, tx, contactID, fields, appliedFields); err != nil {
+			return err
+		}
 		before, after := signatureImages(appliedFields)
 		// The write shape: the enrichment is a contact mutation, so the
 		// audit row and the contact.updated outbox event ride this commit.
@@ -368,8 +371,8 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, contactID id
 	if value == "" {
 		return observedSkipped, nil
 	}
-	// The contact's own dated statement, applied by the writer both this pass
-	// and the card import share, which records the evidence row that keeps the
+	// The contact's own dated statement, applied by the writer this pass shares
+	// with the card import. That writer records the evidence row, which keeps the
 	// value auditable back to the verbatim signature line.
 	outcome, err := applyObservedField(ctx, tx, contactID, observedField{
 		Field: f.Name, Value: value, Evidence: f.Evidence, SourceRef: sourceRef,

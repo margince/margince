@@ -3267,6 +3267,7 @@ export const en = {
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
   "rel.current": "Current",
+  "rel.former": "Former",
   "rel.endedOn": "Until {when}",
   "rel.remove": "Remove",
   "rel.removeConfirm": "Remove this relationship? There is no undo.",
