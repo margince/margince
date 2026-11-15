@@ -188,30 +188,57 @@ const nullableMarker = "x-nullable"
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
 func answered(node any) any {
+	return answeredUnder(node, "")
+}
+
+// answeredUnder walks a schema under the currency an enclosing object passes
+// down, by the rule the surface's walk follows. A declared currency may be
+// absent from an answer, so a declared own currency never stops the
+// inheritance here: the schema admits every display the answer can carry.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func answeredUnder(node any, inherited string) any {
 	switch v := node.(type) {
 	case map[string]any:
 		props, _ := v["properties"].(map[string]any)
-		withDisplays(props)
+		withDisplays(props, inherited)
 		delete(v, nullableMarker)
 		delete(v, humanOnlyMarker)
-		for _, member := range v {
-			answered(member)
+		below := values.CurrencyBelow(declared(props, values.ConvertedCurrency), "", inherited)
+		for _, member := range props {
+			answeredUnder(member, below)
+		}
+		for key, member := range v {
+			if key != "properties" || props == nil {
+				answeredUnder(member, inherited)
+			}
 		}
 	case []any:
 		for _, member := range v {
-			answered(member)
+			answeredUnder(member, inherited)
 		}
 	}
 	return node
 }
 
-// withDisplays declares the `<name>_display` member the tool surface writes
-// beside each `<name>_minor` of an object that names its currency. It reads the
-// rule the surface writes it by, so a closed answer admits it.
+// declared is member when props declares it, else empty.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func withDisplays(props map[string]any) {
-	if !slices.ContainsFunc(values.AmountCurrencyMembers(), func(member string) bool { return props[member] != nil }) {
+func declared(props map[string]any, member string) string {
+	if props[member] == nil {
+		return ""
+	}
+	return member
+}
+
+// withDisplays declares the `<name>_display` member the tool surface writes
+// beside each `<name>_minor` of an object that names its currency or sits
+// under an enclosing base_currency. It reads the rule the surface writes it
+// by, so a closed answer admits it.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func withDisplays(props map[string]any, inherited string) {
+	if inherited == "" && !slices.ContainsFunc(values.AmountCurrencyMembers(), func(member string) bool { return props[member] != nil }) {
 		return
 	}
 	for name := range props {

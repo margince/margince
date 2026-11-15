@@ -367,6 +367,56 @@ func TestAClosedAnswerAdmitsTheReadableFigureBesideAnAmount(t *testing.T) {
 	}
 }
 
+func TestAClosedAnswerAdmitsTheReadableFigureUnderAnEnclosingBaseCurrency(t *testing.T) {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(`
+'200':
+  content:
+    application/json:
+      schema:
+        type: object
+        additionalProperties: false
+        properties:
+          readings:
+            type: object
+            additionalProperties: false
+            properties:
+              base_currency: { type: string }
+              by_source:
+                type: object
+                additionalProperties: false
+                properties:
+                  human:
+                    type: object
+                    additionalProperties: false
+                    properties: { open_minor: { type: integer } }
+              rows:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: false
+                  properties: { weighted_minor: { type: integer } }
+          loose:
+            type: object
+            additionalProperties: false
+            properties: { stray_minor: { type: integer } }
+`), &node); err != nil {
+		t.Fatal(err)
+	}
+	got, err := answerSchema(*node.Content[0], nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{`"open_display":{"type":"string"}`, `"weighted_display":{"type":"string"}`} {
+		if !strings.Contains(got, want) {
+			t.Errorf("answer schema %s does not admit %s under the enclosing base_currency", got, want)
+		}
+	}
+	if strings.Contains(got, "stray_display") {
+		t.Errorf("answer schema %s admits a display where no currency is in scope", got)
+	}
+}
+
 func TestADeprecatedOperationsVerbSaysSoInItsSummary(t *testing.T) {
 	var paths map[string]map[string]yaml.Node
 	if err := yaml.Unmarshal([]byte(`

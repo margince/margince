@@ -32,3 +32,18 @@ func DisplayMemberOf(member string) (string, bool) {
 	}
 	return base + "_display", true
 }
+
+// CurrencyBelow is the currency an object passes down to the objects it holds,
+// given its base_currency, its own currency and the one it inherited. Only a
+// converted currency passes down: a row's own currency describes that row and
+// not its parts, so below it nothing is inherited.
+func CurrencyBelow(converted, own, inherited string) string {
+	switch {
+	case converted != "":
+		return converted
+	case own != "":
+		return ""
+	default:
+		return inherited
+	}
+}
