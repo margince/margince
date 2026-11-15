@@ -56,11 +56,9 @@ func WithEmailRowFacts(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activ
 	// against, and a privacy label that guesses must guess DOWN: overstating
 	// the audience makes a reader more careful than they need to be, and
 	// understating it makes them less.
-	reach, err := auth.ActivitiesReachingEverySeat(ctx, tx, emailIDs)
-	if err != nil {
+	if err := withEverySeatReach(ctx, tx, page); err != nil {
 		return err
 	}
-	applyEverySeatReach(page, reach)
 	if err := withCalendarInvitations(ctx, tx, page, asOf); err != nil {
 		return err
 	}
@@ -81,19 +79,42 @@ func applyCounterparties(page []crmcontracts.Activity, parties map[ids.UUID]emai
 	}
 }
 
-// applyEverySeatReach widens `team` to `workspace` on the rows a stranger can
-// reach. Only that word is touched: participants, selected and withheld are
-// narrower answers that a workspace-wide filing does not change.
-func applyEverySeatReach(page []crmcontracts.Activity, reach map[ids.UUID]bool) {
+// withEverySeatReach asks only about Team badges; other audiences cannot widen.
+func withEverySeatReach(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
+	rows := teamBadgeRows(page)
+	wanted := make([]ids.UUID, len(rows))
+	for i, row := range rows {
+		wanted[i] = row.id
+	}
+	reach, err := auth.ActivitiesReachingEverySeat(ctx, tx, wanted)
+	if err != nil {
+		return err
+	}
+	for _, row := range rows {
+		if reach[row.id] {
+			row.summary.DisplayStatus = crmcontracts.EmailAccessStatusWorkspace
+		}
+	}
+	return nil
+}
+
+// teamBadgeRow pairs the ID asked about with the badge that answer widens, so
+// the question and the widening cannot name two different rows.
+type teamBadgeRow struct {
+	id      ids.UUID
+	summary *crmcontracts.EmailSummary
+}
+
+func teamBadgeRows(page []crmcontracts.Activity) []teamBadgeRow {
+	var rows []teamBadgeRow
 	for i := range page {
 		summary := page[i].EmailSummary
 		if summary == nil || summary.DisplayStatus != crmcontracts.EmailAccessStatusTeam {
 			continue
 		}
-		if reach[ids.UUID(summary.ActivityId)] {
-			summary.DisplayStatus = crmcontracts.EmailAccessStatusWorkspace
-		}
+		rows = append(rows, teamBadgeRow{id: ids.UUID(page[i].Id), summary: summary})
 	}
+	return rows
 }
 
 // messageIDsOf is the chat messages on a page the reader may read. A withheld
