@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package commitmentparty is the verified participants of one conversation, as
-// a model reads them: each named by a short ref, and each ref read back to the
-// participant it names.
+// Package commitmentparty is the verified participants of one conversation as
+// a model reads them. Each is named by a short ref, read back to its participant.
 package commitmentparty
 
 import (

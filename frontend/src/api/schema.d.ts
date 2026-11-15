@@ -52240,6 +52240,8 @@ export interface components {
              * @description With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
              */
             readonly source_occurred_at?: string | null;
+            /** @description How precisely `source_occurred_at` is known; `day` for an all-day meeting. */
+            readonly source_occurred_precision?: components["schemas"]["OccurredPrecision"];
             evidence_snippet?: string | null;
             /** Format: uri */
             source_url?: string | null;
