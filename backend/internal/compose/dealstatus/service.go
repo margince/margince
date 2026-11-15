@@ -114,11 +114,11 @@ type facts struct {
 	seats []Seat
 	now   time.Time
 	loc   *time.Location
-	// lang is the installation's base language, which the card is written in.
-	// A status card is filed on the deal and read by anyone who opens it, so it
-	// takes the shared language rather than the reader's — the same rule that
-	// separates a record from a piece of correspondence.
+	// lang is the installation's base language, which the model writes the
+	// card's summary in: one summary is shared by everyone who opens the deal.
 	lang string
+	// say words the Next box's fixed sentences for the reader; empty means lang.
+	say string
 }
 
 // Get returns the deal's status card, writing it when no current one is
@@ -211,7 +211,7 @@ func (s *Service) cardAndTimeline(
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
 	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.lang)
+	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.cacheLanguage())
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
