@@ -5152,7 +5152,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `owed_verdict` / `owed`
 
-`system 3,282 B (~820 tok)`: rules 3,010 B · boundary 272 B · after boundary 0 B · **cacheable 91%**
+`system 3,442 B (~860 tok)`: rules 3,170 B · boundary 272 B · after boundary 0 B · **cacheable 92%**
 
 <details><summary>system prompt</summary>
 
@@ -5170,7 +5170,8 @@ To line is somebody else — a partner firm's project lead, or a shared inbox su
 the reader among the Cc recipients only is informs_us even when its text asks for something, because it asks them; it
 is asks_us only when the text names the copied reader as the one to act. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
-answer.
+answer. The invitation's own text asks nothing of that kind: the event details, an agenda, and the
+calendar's "Reply for" or RSVP lines are answered from the calendar.
 A message that is a reply to a calendar invitation (an attendee accepting, declining or proposing
 another time through their calendar) is informs_us unless its own words ask the recipient side
 something new: the calendar has already recorded the answer.
