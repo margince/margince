@@ -19,12 +19,14 @@ import { searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   type AttachmentParent,
   uploadAttachment,
 } from "../../lib/attachmentupload";
 import { useCanWrite } from "../../lib/capability";
+import { useHealthScope } from "../../lib/healthscope";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
@@ -35,7 +37,7 @@ import {
   DEAL_SEARCH_REACH,
   walkAccountDeals,
 } from "./adddocument.dealsearch";
-import { staleAfterUpload, uploadRefusal } from "./adddocument.upload";
+import { uploadRefusal } from "./adddocument.upload";
 
 // Adding a document to the record the dialog was opened from — an account's
 // document library, or a contact's.
@@ -195,10 +197,11 @@ export function AddDocumentDialog({
   // Built on every anchor, called only from the deal picker — which only the
   // account branch below renders. A hook cannot be conditional, and an
   // uncalled callback asks nothing.
+  const readerScope = useHealthScope();
   const fetchDealPage = useCallback(
     (cursor: string | null) =>
       queryClient.fetchQuery({
-        queryKey: ["dealsForCompany", anchor.id, cursor],
+        queryKey: ["dealsForCompany", anchor.id, readerScope ?? "", cursor],
         staleTime: DEAL_PAGE_FRESH_MS,
         queryFn: async (): Promise<DealPage> => {
           return unwrap(
@@ -214,7 +217,7 @@ export function AddDocumentDialog({
           );
         },
       }),
-    [anchor.id, queryClient],
+    [anchor.id, queryClient, readerScope],
   );
 
   // Kept on `fetchDealPage` alone. RecordPicker reads a new `searchTargets`
@@ -260,15 +263,17 @@ export function AddDocumentDialog({
       // not be read: a document whose id we never learned has nowhere to send
       // its metadata, which the partial-success arm below reports as such.
       const id = stored?.id;
+      // The stored row names the company the server filed it under.
+      const home = { ...submitted.parent, companyId: stored?.company_id };
       const patch = metadataFor(submitted);
       if (Object.keys(patch).length === 0) {
-        return { filed: true };
+        return { filed: true, home };
       }
       if (id === undefined) {
         // Stored, but we never learned which row — so there is nothing to
         // address the metadata request to. Partial, for the same reason a
         // refused PATCH is partial: the document exists either way.
-        return { filed: false };
+        return { filed: false, home };
       }
       // EVERY way the second call can fail is a partial success, not a
       // failure — a refusal, a dropped connection, a parse error alike. Once
@@ -281,13 +286,13 @@ export function AddDocumentDialog({
           params: { path: { id } },
           body: patch,
         });
-        return { filed: !error };
+        return { filed: !error, home };
       } catch {
-        return { filed: false };
+        return { filed: false, home };
       }
     },
     onSuccess: async (result) => {
-      for (const queryKey of staleAfterUpload(anchor)) {
+      for (const queryKey of fileListKeys(result.home)) {
         await queryClient.invalidateQueries({ queryKey });
       }
       if (result.filed) {

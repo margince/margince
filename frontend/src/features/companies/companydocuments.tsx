@@ -27,6 +27,7 @@ import { DocumentExtractionPanel } from "../voice-knowledge/documentextraction";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { companyDocumentsKey } from "../../lib/attachmentkeys";
 
 // The account's documents: the offers, legal files and loose paper a rep goes
 // looking for before a call.
@@ -156,7 +157,7 @@ export function CompanyDocumentsCard({
   // made from a request that never asked about the other kinds. The account's
   // library is a page of rows, not a feed.
   const query = useQuery({
-    queryKey: ["companyDocuments", companyId],
+    queryKey: companyDocumentsKey(companyId),
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/companies/{id}/documents", {

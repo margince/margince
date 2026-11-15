@@ -10,6 +10,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { FieldGuard } from "../../design-system/rbac";
 import { formatMoney } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 
 // The deals this partner brought us, on the partner's own company page.
@@ -55,8 +56,10 @@ async function fetchPartnerDeals(companyId: string): Promise<Deal[]> {
 export function PartnerDeals({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const readerScope = useHealthScope();
   const query = useQuery({
-    queryKey: ["partner-deals", companyId],
+    queryKey: ["partner-deals", companyId, readerScope ?? ""],
+    enabled: readerScope !== undefined,
     queryFn: () => fetchPartnerDeals(companyId),
   });
 

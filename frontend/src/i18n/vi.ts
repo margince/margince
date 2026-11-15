@@ -20201,6 +20201,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingWhatHappened": "Điều đã diễn ra",
   "worklist.verb.meetingBodyHint":
     "Nội dung trao đổi và bước tiếp theo. Có thể sửa ghi chú từ lịch tại đây.",
+  "meeting.nextStep.title": "Bước tiếp theo là gì?",
+  "meeting.nextStep.add": "Thêm việc cần làm",
+  "meeting.nextStep.skip": "Bỏ qua",
+  "meeting.nextStep.subject": "Bước tiếp theo",
+  "meeting.nextStep.due": "Hạn",
   "worklist.verb.meetingHeld": "Đã diễn ra",
   "worklist.verb.meetingNoShow": "Vắng mặt",
   "worklist.verb.meetingCanceled": "Không diễn ra",
@@ -20644,6 +20649,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkTitle": "Liên kết lead này với {name}?",
   "lead.company.linkConfirm": "Liên kết công ty",
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
+  "lead.company.addedOnQualify":
+    "Chưa có hồ sơ công ty. Bạn có thể tạo hồ sơ khi xác nhận đủ điều kiện.",
   "lead.company.linkOnQualify":
     "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
   "lead.company.matchedByDomain": "Cùng tên miền trang web",

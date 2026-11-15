@@ -6,6 +6,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import {
+  contactDocuments,
+  PROBED_CONTACT_ID,
+} from "../../testing/contactdocuments";
 import { ContactChatCapture } from "./contactchatcapture";
 
 type Reading = components["schemas"]["AttachmentExtraction"];
@@ -57,7 +61,10 @@ type Sent = { method: string; path: string; body: unknown };
 
 // Answers the capture's requests by method and path, and records each one, so
 // a test can say which writes happened and in what words.
-function stubServer(reading: Reading) {
+function stubServer(
+  reading: Reading,
+  docs?: ReturnType<typeof contactDocuments>,
+) {
   const sent: Sent[] = [];
   vi.stubGlobal(
     "fetch",
@@ -66,7 +73,10 @@ function stubServer(reading: Reading) {
         input instanceof Request
           ? input
           : new Request(new URL(input, "http://localhost"), init);
-      const { pathname } = new URL(request.url);
+      const url = new URL(request.url);
+      const contactList = docs?.answer(request.method, url);
+      if (contactList) return contactList;
+      const { pathname } = url;
       const text = request.headers.get("content-type")?.includes("json")
         ? await request.text()
         : "";
@@ -89,6 +99,7 @@ function stubServer(reading: Reading) {
         });
       }
       if (request.method === "POST" && pathname === "/v1/attachments") {
+        docs?.becomes(2);
         return json(
           {
             id: "att-1",
@@ -117,6 +128,7 @@ function stubServer(reading: Reading) {
         return json({ activity_id: "act-1" });
       }
       if (request.method === "DELETE" && pathname === "/v1/attachments/att-1") {
+        docs?.becomes(1);
         return new Response(null, { status: 204 });
       }
       return json({ title: "unexpected" }, 500);
@@ -125,15 +137,16 @@ function stubServer(reading: Reading) {
   return sent;
 }
 
-function show(onClose = vi.fn()) {
+function show(onClose = vi.fn(), docs?: ReturnType<typeof contactDocuments>) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
+        {docs?.strip}
         <ContactChatCapture
-          contactId="c-1"
+          contactId={docs ? PROBED_CONTACT_ID : "c-1"}
           contactName="Lena Hoffmann"
           onClose={onClose}
         />
@@ -267,5 +280,18 @@ describe("capturing a chat from a screenshot", () => {
     expect(filings(sent)[0]?.body).toMatchObject({
       confirm_other_counterparty: true,
     });
+  });
+
+  it("counts the stored screenshot on the contact's Documents tab until it is discarded", async () => {
+    const docs = contactDocuments(1);
+    stubServer(DONE, docs);
+    show(vi.fn(), docs);
+    await docs.shows(1);
+    const user = await pickScreenshot();
+    await docs.shows(2);
+    await user.click(
+      await screen.findByRole("button", { name: en["chatCapture.discard"] }),
+    );
+    await docs.shows(1);
   });
 });

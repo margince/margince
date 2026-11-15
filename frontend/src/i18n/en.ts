@@ -20472,6 +20472,11 @@ export const en = {
   "worklist.verb.meetingWhatHappened": "What happened",
   "worklist.verb.meetingBodyHint":
     "Discussion and next steps. Calendar notes can be edited here.",
+  "meeting.nextStep.title": "What is the next step?",
+  "meeting.nextStep.add": "Add task",
+  "meeting.nextStep.skip": "Skip",
+  "meeting.nextStep.subject": "Next step",
+  "meeting.nextStep.due": "Due",
   "worklist.verb.meetingHeld": "It happened",
   "worklist.verb.meetingNoShow": "No-show",
   "worklist.verb.meetingCanceled": "Did not happen",
@@ -20947,6 +20952,8 @@ export const en = {
   "lead.company.linkTitle": "Link this lead to {name}?",
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
+  "lead.company.addedOnQualify":
+    "No company record yet. You can add it when you qualify this lead.",
   "lead.company.linkOnQualify":
     "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.company.matchedByDomain": "Same website domain",

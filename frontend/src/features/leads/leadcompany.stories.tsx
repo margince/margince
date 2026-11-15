@@ -79,3 +79,23 @@ export const MatchedByName: Story = {
     },
   }),
 };
+
+/** A typed company with no record yet, beside the editable name: qualifying adds it. */
+export const NoRecordYet: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["rep"],
+            allow: { lead: ["read", "update"], company: ["read"] },
+          }),
+        ),
+    });
+    return (
+      <StoryProviders>
+        <LeadCompany lead={{ ...lead, company_match: undefined }} nameShown />
+      </StoryProviders>
+    );
+  },
+};

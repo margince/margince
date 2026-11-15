@@ -29,6 +29,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
+import { meFixture } from "../../testing/mefixture";
 import { day, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
@@ -97,6 +98,14 @@ function stubWithMeetingRead(
       const request = input instanceof Request ? input : undefined;
       const url = String(request ? request.url : input);
       const method = String(request?.method ?? init?.method ?? "GET");
+      if (url.split("?")[0].endsWith("/me")) {
+        return new Response(
+          JSON.stringify(
+            meFixture({ allow: { activity: ["read", "update", "create"] } }),
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
       if (/\/activities\/[^/]+$/.test(url.split("?")[0])) {
         if (method === "PATCH") {
           // openapi-fetch hands the stub a Request, not (url, init), so the
@@ -244,7 +253,7 @@ describe("a meeting that owes an answer", () => {
     );
   });
 
-  it("records a held meeting from the card, with no dialog in the way", async () => {
+  it("records a held meeting from the card, and asks only for the next step", async () => {
     const sent: unknown[] = [];
     const preconditions: (string | null)[] = [];
     stubWithMeetingRead(sent, 200, CAPTURED_MEETING, preconditions);
@@ -259,7 +268,9 @@ describe("a meeting that owes an answer", () => {
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "held" }]);
     expect(preconditions).toEqual(["3"]);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      await screen.findByRole("dialog", { name: "What is the next step?" }),
+    ).toBeTruthy();
   });
 
   it("records a cancellation from the card, with no dialog in the way", async () => {
