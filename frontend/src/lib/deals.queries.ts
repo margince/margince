@@ -14,6 +14,7 @@ import {
   rangeQueryParams,
   WIN_PROBABILITY_DIAL,
 } from "./dealranges";
+import { useHealthScope } from "./healthscope";
 import { translatedPipeline } from "./labeltranslation";
 import { defaultPipelineOf, pipelinesOptions } from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
@@ -225,6 +226,9 @@ export function totalsRefusedBecause(
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
 export function useStageTotals(f: DealFilters, enabled = true) {
+  // The reader's grants decide what the report counts, so a changed grant must
+  // never reuse totals counted under the old one.
+  const scope = useHealthScope();
   const reportFilters = dealsByStageReportFilters(f);
   const withheld = totalsWithheldBecause(f);
   return useQuery({
@@ -234,11 +238,17 @@ export function useStageTotals(f: DealFilters, enabled = true) {
     // Keyed by the request body, not the whole filter set. A table sort then
     // reuses the board's fresh totals on return, since sort never reaches it.
     // A withheld key is never read, so it never holds a total.
-    queryKey: ["deals", "by-stage-totals", reportFilters, withheld ?? null],
+    queryKey: [
+      "deals",
+      "by-stage-totals",
+      scope,
+      reportFilters,
+      withheld ?? null,
+    ],
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: enabled && withheld === undefined,
+    enabled: enabled && scope !== undefined && withheld === undefined,
     queryFn: async ({ signal }): Promise<Map<string, StageTotals> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
         signal,

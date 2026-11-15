@@ -158,3 +158,55 @@ it("does not hand one user's totals to the next user", async () => {
   view.unmount();
   client.clear();
 });
+
+it.each([
+  { from: "own", to: "all" },
+  { from: "all", to: "own" },
+] as const)(
+  "reads again when the same user's row scope goes from $from to $to",
+  async ({ from, to }) => {
+    holdTotals();
+    const { client, wrapper } = cancellationClient();
+    client.setQueryData(["me"], meFixture({ rowScope: from }));
+    const view = renderHook(
+      () => {
+        useMe();
+        return useStageTotals(board);
+      },
+      { wrapper },
+    );
+    await waitFor(() => expect(reads).toHaveLength(1));
+    await act(async () => reads[0]?.answer(report(7)));
+    await waitFor(() =>
+      expect(view.result.current.data?.get("stage")?.count).toBe(7),
+    );
+    await act(async () => {
+      client.setQueryData(["me"], meFixture({ rowScope: to }));
+    });
+    await waitFor(() => expect(reads).toHaveLength(2));
+    expect(view.result.current.data).toBeUndefined();
+    await act(async () => reads[1]?.answer(report(3)));
+    await waitFor(() =>
+      expect(view.result.current.data?.get("stage")?.count).toBe(3),
+    );
+    view.unmount();
+    client.clear();
+  },
+);
+
+it("drops a cached refusal when the same user's grants change", async () => {
+  holdTotals();
+  const { client, wrapper } = cancellationClient();
+  client.setQueryData(["me"], meFixture({ rowScope: "own" }));
+  const view = renderHook(() => useStageTotals(board), { wrapper });
+  await waitFor(() => expect(reads).toHaveLength(1));
+  await act(async () => reads[0]?.answer({ detail: "refused" }, 403));
+  await waitFor(() => expect(view.result.current.data).toBeNull());
+  await act(async () => {
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+  });
+  await waitFor(() => expect(reads).toHaveLength(2));
+  expect(view.result.current.data).toBeUndefined();
+  view.unmount();
+  client.clear();
+});
