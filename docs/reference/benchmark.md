@@ -40,7 +40,7 @@ How a case is chosen and added: [design-a-bench-case.md](../how-to/design-a-benc
 | Moment | Rep | Manager | In plain words |
 |---|---|---|---|
 | Opening the app | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
-| The Worklist | 🟢 Under a quarter of a second | 🟡 About 4.6 seconds | Slower than we promise: we are working on it ([#4912](https://github.com/margince/margince/issues/4912)). We promise under 1 second. |
+| The Worklist | 🟢 Under a quarter of a second | 🟡 About 4.6 seconds | Slower than we promise: we are working on it ([#10779](https://github.com/margince/margince/issues/10779)). We promise under 1 second. |
 | Home | 🟢 Under a quarter of a second | 🟢 Under a quarter of a second | Fast. |
 
 The first open after a restart is slower, because nothing is warmed up yet:

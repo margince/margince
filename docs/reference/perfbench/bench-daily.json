@@ -907,7 +907,7 @@
       "seat": "manager",
       "flow": "worklist",
       "verdict": "over budget",
-      "known_issue": 4912
+      "known_issue": 10779
     },
     {
       "id": "PERF-8",
@@ -1552,7 +1552,7 @@
     "expired_approvals": 240
   },
   "advisories": [
-    "row home_worklist is at or under 80% of its budget for every seat: remove the row for #4912"
+    "row home_worklist is at or under 80% of its budget for every seat: remove the row for #10779"
   ],
   "strict_home": [
     {
