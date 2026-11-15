@@ -28,8 +28,8 @@ type key struct {
 
 // SharesATeam asks whether one user is a live member of any of these teams.
 //
-// The membership read is what makes a team manager's owner scope safe: without
-// it a manager could name any user id in the installation and measure them.
+// The membership read makes a team manager's owner scope safe. Without it a
+// manager could name any user id in the installation and measure them.
 func SharesATeam(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.UUID) (bool, error) {
 	if len(teams) == 0 {
 		return false, nil
@@ -48,13 +48,7 @@ func SharesATeam(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.UUID
 	})
 }
 
-// OwnerLabel and TeamLabel name a population for the reader.
-//
-// Both refuse an archived subject as absent rather than labelling it. A scope
-// resolved against a team that was archived after the request was written is
-// not a population any more. Answering over it would report a set the
-// installation no longer has.
-
+// OwnerLabel names a live owner for the reader and refuses any other as absent.
 func OwnerLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	return snapshotreads.Read(ctx, tx, key{kind: "owner", id: id}, func() (string, error) {
 		var label string
@@ -72,6 +66,9 @@ func OwnerLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	})
 }
 
+// TeamLabel names a live team for the reader and refuses an archived one as
+// absent. A team archived after the request was written is not a population
+// any more, and answering over it would report a set that no longer exists.
 func TeamLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	return snapshotreads.Read(ctx, tx, key{kind: "team", id: id}, func() (string, error) {
 		var label string
