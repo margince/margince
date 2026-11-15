@@ -3,9 +3,9 @@
 
 //go:build integration
 
-// Package reportingsubjects holds the tests that one reporting evaluation reads
-// each named team or owner once, and that this changes no answer and admits no
-// subject or reader it did not admit before.
+// Package reportingsubjects tests that one reporting evaluation reads each
+// named team or owner once. The answers stay the same, and no subject or
+// reader is admitted that was refused before.
 package reportingsubjects
 
 import (
@@ -78,8 +78,8 @@ func (c *subjectReads) reset() map[string]int {
 	return was
 }
 
-// world is the harness with a pool whose statements are counted, an open deal
-// owned by Rep1 in Team1, and a reader who may measure every owner.
+// world is the harness with a pool whose statements are counted. It holds an
+// open deal owned by Rep1 in Team1 and a reader who may measure every owner.
 type world struct {
 	e      *integration.Env
 	pool   *pgxpool.Pool
@@ -156,9 +156,8 @@ func (w world) evaluate(t *testing.T, level pgx.TxIsoLevel, selection crmcontrac
 }
 
 // A named team is resolved by the context, by every metric under its own
-// savepoint and by the targets. In one snapshot it is read once, and the
-// evaluation answers exactly what an evaluation that reads it every time does,
-// evaluation key included.
+// savepoint and by the targets. In one snapshot it is read once. The answer,
+// evaluation key included, equals that of an evaluation that reads it each time.
 func TestANamedTeamIsReadOnceAcrossAnEvaluation(t *testing.T) {
 	w := newWorld(t)
 	for _, scope := range []struct {
@@ -192,9 +191,8 @@ func TestANamedTeamIsReadOnceAcrossAnEvaluation(t *testing.T) {
 	}
 }
 
-// Every evaluation starts with nothing remembered, so a team archived, an owner
-// deactivated after an earlier evaluation, or a team that never existed, is
-// refused as before.
+// Every evaluation starts with nothing remembered. A team archived or an owner
+// deactivated after an earlier evaluation is refused, as is an unknown team.
 func TestAnEvaluationRefusesSubjectsThatLeftSinceTheLastOne(t *testing.T) {
 	w := newWorld(t)
 	team, owner := w.selection("team", &w.e.Team2), w.selection("owner", &w.e.Rep3)
@@ -218,17 +216,18 @@ func TestAnEvaluationRefusesSubjectsThatLeftSinceTheLastOne(t *testing.T) {
 	}
 }
 
-// What a snapshot remembers is a fact about a subject, never a decision about a
-// reader: each resolution still runs the reader's own rule, and a membership is
-// remembered only for the exact team set it was asked for.
+// A snapshot remembers facts about subjects, never a decision about a reader.
+// Each resolution still runs the reader's own rule. A membership is remembered
+// only for the team set it was asked for.
 func TestARememberedSubjectAdmitsNoOtherReader(t *testing.T) {
 	w := newWorld(t)
 	actor, _ := principal.Actor(w.reader)
-	actor.Permissions.RowScope = principal.RowScopeTeam
+	team := principal.Permissions{RowScope: principal.RowScopeTeam, Objects: actor.Permissions.Objects}
+	own := principal.Permissions{RowScope: principal.RowScopeOwn, Objects: actor.Permissions.Objects}
 	requested := compose.RequestedScope{Kind: compose.ScopeKindOwner, ID: &w.e.Rep3}
-	as := func(ctx context.Context, rowScope principal.RowScope, teams ...ids.UUID) context.Context {
+	as := func(ctx context.Context, perms principal.Permissions, teams ...ids.UUID) context.Context {
 		a := actor
-		a.Permissions.RowScope, a.TeamIDs = rowScope, teams
+		a.Permissions, a.TeamIDs = perms, teams
 		return principal.WithActor(ctx, a)
 	}
 	err := compose.InstallationDB(w.pool).TxIsolated(w.reader, pgx.RepeatableRead, func(tx pgx.Tx) error {
@@ -236,20 +235,20 @@ func TestARememberedSubjectAdmitsNoOtherReader(t *testing.T) {
 		defer release()
 		w.reads.reset()
 		for _, teams := range [][]ids.UUID{{w.e.Team2, w.e.Team1, w.e.Team2}, {w.e.Team1, w.e.Team2}} {
-			if _, err := compose.ResolveAnalyticsScope(as(ctx, principal.RowScopeTeam, teams...), tx, requested); err != nil {
+			if _, err := compose.ResolveAnalyticsScope(as(ctx, team, teams...), tx, requested); err != nil {
 				return err
 			}
 		}
 		if reads := w.reads.reset(); reads["membership"] != 1 || reads["owner"] != 1 {
 			t.Fatalf("the same team set in another order read again: %v", reads)
 		}
-		if _, err := compose.ResolveAnalyticsScope(as(ctx, principal.RowScopeOwn, w.e.Team2), tx, requested); !errors.Is(err, apperrors.ErrNotFound) {
+		if _, err := compose.ResolveAnalyticsScope(as(ctx, own, w.e.Team2), tx, requested); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Fatalf("a reader limited to their own records measured a colleague: %v", err)
 		}
-		if _, err := compose.ResolveAnalyticsScope(as(ctx, principal.RowScopeTeam, w.e.Team1), tx, requested); !errors.Is(err, apperrors.ErrNotFound) {
+		if _, err := compose.ResolveAnalyticsScope(as(ctx, team, w.e.Team1), tx, requested); !errors.Is(err, apperrors.ErrNotFound) {
 			t.Fatalf("a reader outside the colleague's team measured them: %v", err)
 		}
-		if _, err := compose.ResolveAnalyticsScope(auth.WithIndividualPerformance(as(ctx, principal.RowScopeTeam, w.e.Team2), false), tx, requested); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		if _, err := compose.ResolveAnalyticsScope(auth.WithIndividualPerformance(as(ctx, team, w.e.Team2), false), tx, requested); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Fatalf("a remembered subject passed the individual-performance switch: %v", err)
 		}
 		return nil

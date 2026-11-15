@@ -42,7 +42,11 @@ func inTx(t *testing.T, p *pgxpool.Pool, level pgx.TxIsoLevel, fn func(pgx.Tx)) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil {
+			t.Errorf("rolling back the read-only transaction: %v", err)
+		}
+	}()
 	fn(tx)
 }
 

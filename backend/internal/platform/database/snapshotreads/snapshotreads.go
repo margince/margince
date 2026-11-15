@@ -23,8 +23,8 @@
 // It is for reads of rows the unit of work does not write. A caller that
 // writes what it remembers must not open one.
 //
-// database.Remember does not fit: it is keyed by the pgx.Tx value, so each
-// metric's savepoint misses it, and it lasts the whole transaction under any
+// database.Remember does not fit. It is keyed by the pgx.Tx value, so each
+// metric's savepoint misses it. It lasts the whole transaction under any
 // isolation, so every writer of users and teams would have to call Forget.
 package snapshotreads
 
@@ -50,8 +50,8 @@ type memo struct {
 type memoKey struct{}
 
 // Open starts a memo for one unit of work on tx. A context that already holds
-// an open memo on the same connection keeps it, and the returned release then
-// leaves it to the caller that opened it.
+// an open memo on the same connection keeps it. Its release is then left to
+// the caller that opened it.
 func Open(ctx context.Context, tx pgx.Tx) (context.Context, func()) {
 	if open, ok := ctx.Value(memoKey{}).(*memo); ok && open.usableOn(tx) {
 		return ctx, func() {}
@@ -68,10 +68,8 @@ func (m *memo) usableOn(tx pgx.Tx) bool {
 }
 
 // Read answers the remembered value for key, or runs read and remembers its
-// value when it succeeds. Key must be comparable; a caller's own key type keeps
-// its entries apart from every other caller's. Without a usable memo, Read
-// just runs read.
-func Read[V any](ctx context.Context, tx pgx.Tx, key any, read func() (V, error)) (V, error) {
+// value when it succeeds. Without a usable memo, Read just runs read.
+func Read[K comparable, V any](ctx context.Context, tx pgx.Tx, key K, read func() (V, error)) (V, error) {
 	m, ok := ctx.Value(memoKey{}).(*memo)
 	if !ok || ctx.Err() != nil || !m.usableOn(tx) {
 		return read()
