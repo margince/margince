@@ -39,6 +39,7 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 	t.Helper()
 	e := setupPromises(t)
 	ctx := context.Background()
+	vacuumMailboxTables(ctx, t, e.owner)
 	tx, err := e.owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -72,6 +73,17 @@ func pinNeverAnalyzed(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	t.Helper()
 	if _, err := tx.Exec(ctx, "UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// vacuumMailboxTables returns the tables seedMailbox fills to the pages their
+// live rows need. A rolled-back seed leaves dead tuples, so the next seed adds pages.
+// A never-analyzed table's row estimate follows its page count.
+// Without this, a plan depends on how many seeds ran before it.
+func vacuumMailboxTables(ctx context.Context, t *testing.T, owner *pgx.Conn) {
+	t.Helper()
+	if _, err := owner.Exec(ctx, "VACUUM contact, contact_email, activity, activity_participant, activity_link"); err != nil {
+		t.Fatalf("vacuuming the mailbox tables: %v", err)
 	}
 }
 
@@ -224,7 +236,7 @@ func TestTheWaitingHorizonRunsBeforeAnyPerMessageSubquery(t *testing.T) {
 func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
 	const pageCap = 3
 	eligible := waitingPlanProbeFromSQL
-	probed := func(t *testing.T, statement, incremental, extra string) (float64, float64) {
+	probed := func(t *testing.T, statement, incremental, extra string) (float64, float64, string) {
 		t.Helper()
 		args := []any{clocktest.Now(t)}
 		instant := len(args)
@@ -234,13 +246,14 @@ func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
 		}, pageCap) + "::int"
 		plan := explainOnMailbox(t, extra, "SET LOCAL plan_cache_mode = force_generic_plan; SET LOCAL max_parallel_workers_per_gather = 0; SET LOCAL enable_incremental_sort = "+incremental,
 			"EXPLAIN (ANALYZE, FORMAT JSON) ", fmt.Sprintf(statement, instant, nil, nil, limit, 30), args...)
-		return waitingPlanWork(plan)
+		judged, read := waitingPlanWork(plan)
+		return judged, read, activityPaths(plan)
 	}
 	if carried := strings.Count(waitingCappedArmsSQL, waitingEligibleFromSQL); carried != 1 {
 		t.Fatalf("the page carries the eligibility %d times, want once for both arms", carried)
 	}
 	// An unordered control scan exposes a short fixture even when an index could stop early.
-	whole, _ := probed(t, `SELECT a.id `+eligible+` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %[4]s`, "on",
+	whole, _, _ := probed(t, `SELECT a.id `+eligible+` ORDER BY a.occurred_at DESC, a.id DESC LIMIT %[4]s`, "on",
 		"SET LOCAL enable_indexscan = off; SET LOCAL enable_bitmapscan = off")
 	if whole <= 4*pageCap {
 		t.Fatalf("one scan over the horizon judged %v messages: the mailbox holds too little young mail to show a cap of %d", whole, pageCap)
@@ -253,9 +266,9 @@ func TestThePageScanJudgesNoMoreYoungMailThanItsCap(t *testing.T) {
 			{"held_analyzed", waitingPlanHeldMailSQL + "ANALYZE activity, activity_participant"},
 		} {
 			t.Run("incremental_"+incremental+"/"+fixture.name, func(t *testing.T) {
-				split, read := probed(t, strings.ReplaceAll(waitingCappedArmsSQL, waitingEligibleFromSQL, eligible), incremental, fixture.extra)
+				split, read, paths := probed(t, strings.ReplaceAll(waitingCappedArmsSQL, waitingEligibleFromSQL, eligible), incremental, fixture.extra)
 				if split > 2*pageCap || read > 2*pageCap {
-					t.Errorf("the page judged %v and read %v messages for cap %d (whole scan %v)", split, read, pageCap, whole)
+					t.Errorf("the page judged %v and read %v messages for cap %d (whole scan %v); it read activity by %s", split, read, pageCap, whole, paths)
 				}
 			})
 		}

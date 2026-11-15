@@ -29,6 +29,7 @@ func storedHorizonTx(t *testing.T) (context.Context, pgx.Tx, *Store) {
 	t.Helper()
 	e := setupPromises(t)
 	ctx := context.Background()
+	vacuumMailboxTables(ctx, t, e.owner)
 	tx, err := e.owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
