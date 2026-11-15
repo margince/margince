@@ -29,7 +29,7 @@ export function useHealthScope() {
 
 /**
  * A `placeholderData` that keeps the last answer on screen while the next one
- * loads, but never carries rows across a change of reader scope. The key must
+ * loads. It never carries rows across a change of reader scope. The key must
  * end with the scope.
  */
 export function previousOfScope(readerScope: string | undefined) {

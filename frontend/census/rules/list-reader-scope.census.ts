@@ -162,9 +162,9 @@ function readsScope(node: ts.Node): boolean {
 }
 
 /**
- * Whether `node` holds only when the scope's state is `operator` to unknown:
- * the comparison itself, or a chain that needs it (`&&` for a wait, `||` for
- * the condition of a `skipToken`).
+ * Whether `node` cannot hold unless the scope compares by `operator` to
+ * unknown. That is the comparison itself, or a chain that needs it: `&&` for a
+ * wait, `||` for the condition of a `skipToken`.
  */
 function requiresScope(node: ts.Expression, operator: ts.SyntaxKind): boolean {
   const unknown = (side: ts.Expression) =>
