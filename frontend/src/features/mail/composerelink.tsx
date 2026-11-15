@@ -11,6 +11,7 @@ import {
 } from "../../design-system/recordpicker";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { type RelinkKind, useRecordTargets } from "../../lib/recordtargets";
 
@@ -150,8 +151,15 @@ export function RelinkModal({
         }),
       );
     },
-    onSuccess: () => {
-      for (const queryKey of entityTimelineKeys(entityType, entityId)) {
+    onSuccess: (_moved, { activityId }) => {
+      // The message's files move with its links.
+      for (const queryKey of [
+        ...entityTimelineKeys(entityType, entityId),
+        ...fileListKeys(
+          { entityType: "activity", entityId: activityId },
+          "moved",
+        ),
+      ]) {
         queryClient.invalidateQueries({ queryKey });
       }
       // A relink is exactly the write that changes where a reply files, and the
