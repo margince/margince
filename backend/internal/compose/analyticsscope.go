@@ -410,6 +410,15 @@ func sharesATeamWith(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.
 	if len(teams) == 0 {
 		return false, nil
 	}
+	key := reportingPopulationKey{kind: "membership", subject: user, teams: reportingPopulationTeams(teams)}
+	fact, err := readReportingPopulationFact(ctx, tx, key, func() (reportingPopulationFact, error) {
+		member, err := readSharesATeamWith(ctx, tx, teams, user)
+		return reportingPopulationFact{member: member}, err
+	})
+	return fact.member, err
+}
+
+func readSharesATeamWith(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.UUID) (bool, error) {
 	var shares bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (
 		SELECT 1 FROM team_membership tm
@@ -461,6 +470,14 @@ func labelScope(ctx context.Context, tx pgx.Tx, resolved *ResolvedScope) error {
 // installation no longer has.
 
 func analyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
+	fact, err := readReportingPopulationFact(ctx, tx, reportingPopulationKey{kind: ScopeKindOwner, subject: id}, func() (reportingPopulationFact, error) {
+		label, err := readAnalyticsUserLabel(ctx, tx, id)
+		return reportingPopulationFact{label: label}, err
+	})
+	return fact.label, err
+}
+
+func readAnalyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	var label string
 	err := tx.QueryRow(ctx,
 		`SELECT display_name FROM app_user WHERE id = $1 AND `+identity.LiveMemberSQL(""), id).Scan(&label)
@@ -476,6 +493,14 @@ func analyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, er
 }
 
 func analyticsTeamLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
+	fact, err := readReportingPopulationFact(ctx, tx, reportingPopulationKey{kind: ScopeKindTeam, subject: id}, func() (reportingPopulationFact, error) {
+		label, err := readAnalyticsTeamLabel(ctx, tx, id)
+		return reportingPopulationFact{label: label}, err
+	})
+	return fact.label, err
+}
+
+func readAnalyticsTeamLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	var label string
 	err := tx.QueryRow(ctx,
 		`SELECT name FROM team WHERE id = $1 AND archived_at IS NULL`, id).Scan(&label)

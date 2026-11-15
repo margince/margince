@@ -79,6 +79,11 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	if err := s.validateSelection(ctx, selection); err != nil {
 		return Evaluation{}, err
 	}
+	if reads, ok := s.evaluator.(snapshotReads); ok {
+		var release func()
+		ctx, release = reads.SnapshotReads(ctx, tx)
+		defer release()
+	}
 	out, err := s.evaluator.Evaluate(ctx, tx, selection, framework, at)
 	if err != nil {
 		return Evaluation{}, err
@@ -91,6 +96,15 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	}
 	out.Result.EvaluationKey, err = evaluationKey(out)
 	return out, err
+}
+
+// snapshotReads is an evaluator that can reuse its live-subject reads (a named
+// team's or owner's label and liveness, a shared-team check) for the rest of
+// one evaluation: the metrics, the targets and the owner names. The reads are
+// facts of the transaction's snapshot, never an authorization decision, and
+// they end with the evaluation.
+type snapshotReads interface {
+	SnapshotReads(context.Context, pgx.Tx) (context.Context, func())
 }
 
 // EvaluateReport pins the requested definition revision before evaluation.
