@@ -18,7 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
-	"github.com/margince/margince/backend/internal/compose/qualifyduplicates"
+	"github.com/margince/margince/backend/internal/compose/qualifytasks"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
@@ -136,6 +136,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
 		customerlinks.DataTask(),
-		qualifyduplicates.DataTask(now),
+		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 	}
 }

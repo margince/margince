@@ -112,11 +112,17 @@ const mailCopyGroupReader = "renders a FROM over the caller's candidates and rea
 
 const credentialRepairReader = "the credential repair, which reads every mail because a password stored in a members-only thread is stored in clear just the same. An audience test here would leave the credential in the rows the repair exists to reach, and no principal is served: the task runs as the system and returns no row to a caller. Statutory holds ARE refused, by the restricted_at predicate in the same statement"
 
+// qualifyTaskTextReader is the system repair that stamps display metadata on
+// qualify tasks. It returns no row to any reader and changes no visible text.
+const qualifyTaskTextReader = "a system data task adds display metadata to qualify tasks; it shows no row to anyone and leaves the subject unchanged"
+
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
 	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":             mailCopyGroupReader,
 	"internal/compose/credentialrepair/credentialrepair.go:estimateMaskableMailText": credentialRepairReader,
 	"internal/compose/credentialrepair/credentialrepair.go:maskMailTextBatch":        credentialRepairReader,
 	"internal/modules/activities/credentialrepair.go:MaskStoredMailTextTx":           credentialRepairReader,
+	"internal/modules/activities/qualifytasktext.go:DescribeQualifyTaskTextTx":       qualifyTaskTextReader,
+	"internal/modules/activities/qualifytasktext.go:CountQualifyTasksWithoutText":    qualifyTaskTextReader,
 
 	"internal/modules/activities/messageidentity.go:absorbEcho":      "Reconciles a transport-authorized sent row with its exact provider-proven capture, including a held copy from another mailbox. The query returns only the duplicate id inside the send transaction. Requiring the audience being reconciled would leave the proved duplicate; content is not returned. Provider account identity or a complete, unmasked identical filed copy is required, and partial copies are refused.",
 	"internal/modules/activities/mailcopies.go:CountMailCopies":      "System-only repair compares proven message identities across audiences. It preserves holds and attachment authority, skips unsafe references and discloses no content to users.",

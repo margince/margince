@@ -4,6 +4,7 @@
 package dealstatus
 
 import (
+	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -103,7 +104,7 @@ func moveBasisFingerprint(f facts) (string, error) {
 		LastContact: activityStamp(last), Current: requestStamp(f.currentRequests), Review: requestStamp(f.requests),
 		Tasks: moveTask(f), Meeting: f.nextMeeting,
 		FollowUp: moveFollowUp(f), Seats: moveSeats(f),
-		Day: elapsed.CalendarDay(f.now, f.loc).Format(time.DateOnly), Zone: f.loc.String(), Lang: f.lang,
+		Day: elapsed.CalendarDay(f.now, f.loc).Format(time.DateOnly), Zone: f.loc.String(), Lang: cmp.Or(f.say, f.lang),
 		Policy: ProjectionVersion,
 	})
 	if err != nil {
