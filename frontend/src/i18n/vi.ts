@@ -5056,10 +5056,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.needsAction": "Chưa trả lời",
   "meeting.attendeesMore_one": "và {count} khách khác",
   "meeting.attendeesMore_other": "và {count} khách khác",
-  "meeting.invitation.invited": "{count} người được mời",
-  "meeting.invitation.accepted": "{count} chấp nhận",
-  "meeting.invitation.declined": "{count} từ chối",
-  "meeting.invitation.tentative": "{count} có thể tham gia",
+  "meeting.invitation.invited_one": "{count} khách được mời",
+  "meeting.invitation.invited_other": "{count} khách được mời",
+  "meeting.invitation.accepted_one": "{count} chấp nhận",
+  "meeting.invitation.accepted_other": "{count} chấp nhận",
+  "meeting.invitation.declined_one": "{count} từ chối",
+  "meeting.invitation.declined_other": "{count} từ chối",
+  "meeting.invitation.tentative_one": "{count} có thể tham gia",
+  "meeting.invitation.tentative_other": "{count} có thể tham gia",
   "activity.detail.guestsLeftOut_one":
     "và {count} khách khác không được liệt kê",
   "activity.detail.guestsLeftOut_other":

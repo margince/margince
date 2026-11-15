@@ -5,29 +5,30 @@
 // and how they answered, in place of one mail row per copy.
 
 import type { components } from "../api/schema";
-import type { Translator } from "../i18n";
+import { type Locale, translatePlural } from "../i18n";
 
 type Activity = components["schemas"]["Activity"];
 
 /** "3 invited · 1 accepted · 1 declined"; undefined without a folded invitation. */
 export function meetingInvitationLabel(
   activity: Pick<Activity, "invitation">,
-  t: Translator | undefined,
+  locale: Locale | undefined,
 ): string | undefined {
   const invitation = activity.invitation;
-  if (!t || !invitation) {
+  if (!locale || !invitation) {
     return undefined;
   }
-  const parts = [
-    t("meeting.invitation.invited", { count: String(invitation.invited) }),
-  ];
+  const said = (
+    base: "invited" | "accepted" | "declined" | "tentative",
+    count: number,
+  ) =>
+    translatePlural(locale, `meeting.invitation.${base}`, count, {
+      count: String(count),
+    });
+  const parts = [said("invited", invitation.invited)];
   for (const answer of ["accepted", "declined", "tentative"] as const) {
     if (invitation[answer] > 0) {
-      parts.push(
-        t(`meeting.invitation.${answer}`, {
-          count: String(invitation[answer]),
-        }),
-      );
+      parts.push(said(answer, invitation[answer]));
     }
   }
   return parts.join(" · ");

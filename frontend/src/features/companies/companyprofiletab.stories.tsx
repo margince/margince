@@ -70,7 +70,7 @@ function frame(
             read_id: "read-profile",
             company_id: COMPANY,
             seed_url: "https://brandt.example",
-            status: "ready",
+            status: "done",
             status_detail: null,
             pages: [],
             skipped: [],
