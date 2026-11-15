@@ -255,6 +255,7 @@ var rowScopeSpellings = map[string]bool{
 	// projection whose references pass through it is bounded row by row.
 	// It counts at function granularity, as EnsureVisible and VisibleTo do.
 	"VisibleSubset": true, "PassingSubset": true, "ActivityContentSubset": true, "SignalVisibleLiveSubset": true, "RelationshipVisibleSubset": true,
+	"ProjectCompanyPredicates": true, "ProjectCustomerSQL": true, "ProjectCompanyEdgesSQL": true, // company scope
 }
 
 // referenceSite is one SQL select list in the compose tier that names a
