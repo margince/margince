@@ -49,8 +49,11 @@ func seedSharedRecords(t *testing.T, e *Env, pipeline ids.PipelineID, open ids.S
 		kind string
 		id   ids.UUID
 	}{
-		{objContact, out.contact.UUID}, {objCompany, out.company.UUID}, {objDeal, out.deal.UUID},
-		{objLead, out.lead.UUID}, {objProject, out.project.UUID},
+		{objContact, out.contact.UUID},
+		{objCompany, out.company.UUID},
+		{objDeal, out.deal.UUID},
+		{objLead, out.lead.UUID},
+		{objProject, out.project.UUID},
 	} {
 		e.WsExec(t, `INSERT INTO record_grant (record_type, record_id, subject_type, subject_id, access, granted_by)
 			VALUES ($1, $2, 'user', $3, 'write', $4)`, record.kind, record.id, e.Rep1, e.Rep3)
@@ -139,13 +142,30 @@ func TestARecordOnAReadSeatOffersNoActionAndRefusesEachMutation(t *testing.T) {
 		archive    bool
 		rename     AnyMap
 	}{
-		{"/v1/contacts/" + createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"}),
-			true, true, AnyMap{"title": "Renamed"}},
-		{"/v1/deals/" + apptest.CreateOpenDeal(t, e, seeded), true, true, AnyMap{"name": "Renamed"}},
-		{"/v1/leads/" + createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat@lead.test", "source": "manual"}),
-			false, false, AnyMap{"full_name": "Renamed"}},
-		{"/v1/projects/" + createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"}),
-			false, true, AnyMap{"name": "Renamed"}},
+		{
+			path:       "/v1/contacts/" + createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"}),
+			archivable: true,
+			archive:    true,
+			rename:     AnyMap{"title": "Renamed"},
+		},
+		{
+			path:       "/v1/deals/" + apptest.CreateOpenDeal(t, e, seeded),
+			archivable: true,
+			archive:    true,
+			rename:     AnyMap{"name": "Renamed"},
+		},
+		{
+			path:       "/v1/leads/" + createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat@lead.test", "source": "manual"}),
+			archivable: false,
+			archive:    false,
+			rename:     AnyMap{"full_name": "Renamed"},
+		},
+		{
+			path:       "/v1/projects/" + createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"}),
+			archivable: false,
+			archive:    true,
+			rename:     AnyMap{"name": "Renamed"},
+		},
 	}
 	for _, seat := range []string{"full", "read"} {
 		e.SetWorkspaceSeat(t, seat)
