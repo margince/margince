@@ -13,10 +13,10 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -62,7 +62,7 @@ func (e *sendEnv) tracedStore(t *testing.T) (*Store, *projectionTrace) {
 	cfg := e.pool.Config()
 	cfg.ConnConfig.Tracer = trace
 	cfg.MaxConns, cfg.MinConns = 2, 0
-	pool, err := pgxpool.NewWithConfig(context.Background(), cfg)
+	pool, err := testdb.OwnPoolFromConfig(context.Background(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
