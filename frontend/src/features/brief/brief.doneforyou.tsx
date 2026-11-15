@@ -25,15 +25,19 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import type { Receipt } from "../../lib/handled";
 import { useHandledForYou } from "../../lib/handled";
-import { useMagic } from "../../lib/magic.queries";
+import { type MagicLine, useMagic } from "../../lib/magic.queries";
+import { doneLinesApart, lineSentence } from "../../lib/magiccopy";
 import {
   type MarginceChangeBundle,
   type MarginceChangeSummary,
   usePendingMarginceChanges,
 } from "../../lib/marginchanges";
+import { receiptHeadline } from "../../lib/receiptcopy";
 import { useRememberedUndoRun } from "../../lib/undorun";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { worklistHistoryHref } from "../../lib/worklistrouting";
 import { DealCard } from "./brief.doneforyou.deal";
@@ -50,8 +54,8 @@ export const DONE_PREVIEW_DEALS = 5;
 export function DoneForYou({
   completed,
 }: Readonly<{
-  /** The small changes; `alone` when no deal card stands above them. */
-  completed: (alone: boolean) => ReactNode;
+  /** The small changes, collapsed until the reader asks for them. */
+  completed: () => ReactNode;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -102,6 +106,14 @@ export function DoneForYou({
           {t("brief.done.history")}
         </AppLink>
       </div>
+      <DonePreview
+        receipts={
+          state === "ready" ? groups.flatMap((group) => group.receipts) : []
+        }
+        lines={
+          state !== "failed" && magic.isSuccess ? rowsOf(magic.data.done) : []
+        }
+      />
       {state !== "empty" && (
         <SurfaceState
           state={state}
@@ -122,7 +134,7 @@ export function DoneForYou({
           />
         </SurfaceState>
       )}
-      {completed(state === "empty")}
+      {completed()}
       {state === "ready" && (
         <div className="brief-done-foot">
           <AllChanges
@@ -313,10 +325,7 @@ function undoableBundles(
   });
 }
 
-/**
- * The changed deals as cards, one open at a time: the first until the reader
- * opens another.
- */
+/** The changed deals as previews, with one open at a time. */
 function DealChangeList({
   groups,
   pending,
@@ -331,8 +340,7 @@ function DealChangeList({
   pick?: (dealId: string) => ComponentProps<typeof DealCard>["pick"];
 }>) {
   const t = useT();
-  const [chosen, choose] = useState<string | null | undefined>(undefined);
-  const openId = chosen === undefined ? groups[0]?.dealId : chosen;
+  const [openId, choose] = useState<string | null>(null);
   return (
     <ul className="brief-done-deals" aria-label={t("brief.done.dealsLabel")}>
       {groups.map((group) => (
@@ -363,4 +371,35 @@ function changedSince(
       .sort(stable)
       .join(",");
   return ids(shown) !== ids(live);
+}
+
+function DonePreview({
+  receipts,
+  lines,
+}: Readonly<{
+  receipts: readonly Receipt[];
+  lines: readonly MagicLine[];
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const entries = [
+    ...receipts.map((receipt) => ({
+      at: receipt.occurred_at,
+      text: receiptHeadline(receipt, t, locale, zone),
+    })),
+    ...doneLinesApart(
+      lines,
+      receipts.map((receipt) => receipt.id),
+    ).map((line) => ({
+      at: line.occurred_at,
+      text: lineSentence(line, t),
+    })),
+  ].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+  const sentences = [...new Set(entries.map((entry) => entry.text))].slice(
+    0,
+    3,
+  );
+  if (sentences.length === 0) return null;
+  return <p className="brief-done-preview">{sentences.join(" · ")}</p>;
 }
