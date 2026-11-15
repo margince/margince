@@ -6,6 +6,7 @@ import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatBytes, formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { useViewerZone } from "../../lib/viewerzone";
 import { type Project360, stateOf } from "./projectsections";
 
@@ -58,11 +59,7 @@ function DocumentRow({
     <PanelRow className="project-row">
       {/* The name is the download, as on the company page: one thing to find
           for the one thing the row does. */}
-      <a
-        className="project-rowlink"
-        href={`/v1/attachments/${doc.id}`}
-        download={doc.filename}
-      >
+      <a className="project-rowlink" {...attachmentAnchor(doc)}>
         {doc.title || doc.filename}
       </a>
       <span className="project-row-meta t-caption">

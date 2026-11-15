@@ -16,6 +16,7 @@ import {
 import { formatBytes } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { activityFilesKey } from "../../lib/activitykeys";
+import { fileChipTarget } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -96,7 +97,7 @@ export function ActivityFiles({
           {files.map((file) => (
             <FileChip
               key={file.id}
-              href={`/v1/attachments/${file.id}`}
+              {...fileChipTarget(file)}
               filename={file.filename}
               size={
                 file.byte_size == null

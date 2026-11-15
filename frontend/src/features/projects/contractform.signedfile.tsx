@@ -2,6 +2,7 @@ import { Field } from "../../design-system/atoms";
 import { FileDropzoneControl } from "../../design-system/filedropzone";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
+import { attachmentAnchor } from "../../lib/attachmentlink";
 import { ACCEPTED_ATTACHMENT_ATTR } from "../../lib/attachmentupload";
 import { paperState, useContractPaper } from "./contractpaper";
 
@@ -80,8 +81,7 @@ export function SignedFileField({
                 <a
                   key={doc.id}
                   className="link-button"
-                  href={`/v1/attachments/${doc.id}`}
-                  download={doc.filename}
+                  {...attachmentAnchor(doc)}
                 >
                   {doc.title || doc.filename}
                 </a>
