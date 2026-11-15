@@ -29,14 +29,9 @@ func StampRecordAffordances[T any](ctx context.Context, tx pgx.Tx, rule ArchiveR
 	return stampAffordances(ctx, tx, rule.table, &archiveStamp[T]{rule: rule, set: setArchivable}, rows, id, setWritable)
 }
 
-// StampWritable stamps only the edit flag, through the same code as
-// StampRecordAffordances. Leads and projects carry no archive flag on the
-// wire and have no owner archive rule: their archive asks the delete grant
-// and the row write gate alone. The deal-room preview reads only the deal's
-// edit flag. Its return is the update authority field masks read.
-//
-// What it stamps is what a CLIENT is told. EnsureWritable stays the only gate
-// a mutation passes.
+// StampWritable stamps only the edit flag, through StampRecordAffordances' code.
+// Leads and projects have no owner archive rule and no archive flag on the wire.
+// The deal-room preview reads only the deal's edit flag.
 func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	rows []T, id func(T) ids.UUID, set func(*T, bool),
 ) (map[ids.UUID]bool, error) {
