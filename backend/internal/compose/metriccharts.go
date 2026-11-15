@@ -128,8 +128,7 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 	chart.Interval = &interval
 	facts := metricFacts(out.Facts, chart.Metric, reportingInterval)
 	for start := interval.StartAt; start.Before(interval.EndAt) && start.Before(frame.EvaluatedAt); {
-		days := 7 - (int(start.Weekday())+6)%7
-		end := start.AddDate(0, 0, days)
+		end := reporting.WeekEnd(start)
 		if end.After(interval.EndAt) {
 			end = interval.EndAt
 		}
@@ -148,7 +147,7 @@ func reportingWeekly(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 		}
 		key := start.Format(time.DateOnly)
 		label := start.Format("2 Jan") + "–" + end.Add(-time.Nanosecond).Format("2 Jan")
-		if days < 7 || end.Sub(start) < 6*24*time.Hour {
+		if start.Weekday() != time.Monday || end.Sub(start) < 6*24*time.Hour {
 			label += " (partial)"
 		}
 		group := "week:" + key

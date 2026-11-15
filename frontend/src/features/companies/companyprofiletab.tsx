@@ -130,20 +130,26 @@ export function CompanyProfileForm({
           <FieldGrid>
             {/* The account's own description: prose, so it reads here with
                 the account's story rather than in the details column. */}
-            <FieldRow label={t("co.description.label")}>
-              <InlineText
-                label={t("co.description.label")}
-                value={company.description ?? ""}
-                placeholder={t("co.narrative.add")}
-                multiline
-                maxLength={TEXT_LIMITS.document}
-                canEdit={canEdit}
-                readOnlyReason={reason}
-                onSave={(next) =>
-                  save(mapCompanyUpdate({ description: next }, {}))
-                }
-              />
-            </FieldRow>
+            {!repeatsDescription(
+              "offer_summary",
+              fields,
+              company.description,
+            ) && (
+              <FieldRow label={t("co.description.label")}>
+                <InlineText
+                  label={t("co.description.label")}
+                  value={company.description ?? ""}
+                  placeholder={t("co.narrative.add")}
+                  multiline
+                  maxLength={TEXT_LIMITS.document}
+                  canEdit={canEdit}
+                  readOnlyReason={reason}
+                  onSave={(next) =>
+                    save(mapCompanyUpdate({ description: next }, {}))
+                  }
+                />
+              </FieldRow>
+            )}
             {NARRATIVE_FIELDS.map((field) => (
               <SidecarFieldRow
                 key={field}
@@ -181,4 +187,16 @@ export function CompanyProfileForm({
       {tools}
     </div>
   );
+}
+
+// The site read writes its offer summary as the description too. While the two
+// hold the same words, the tab shows the offer row alone with its editor and
+// evidence. Once they differ, both rows show.
+export function repeatsDescription(
+  field: (typeof NARRATIVE_FIELDS)[number],
+  fields: readonly { field: string; value: string }[],
+  description: string | null | undefined,
+): boolean {
+  const offer = fields.find((one) => one.field === field)?.value.trim();
+  return field === "offer_summary" && !!offer && offer === description?.trim();
 }
