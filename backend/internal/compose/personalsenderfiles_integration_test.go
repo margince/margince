@@ -94,6 +94,15 @@ func TestAPersonalSendersFilesAreKeptNowhere(t *testing.T) {
 		t.Fatalf("capturing the first message: %v", err)
 	}
 	judgeSenderPersonal(ctx, t, db, "msg-first-"+tag, address)
+	// A reply to the sender does not readmit their files.
+	if err := db.Tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `INSERT INTO activity (kind, direction, source_system, source_id, source, captured_by,
+			counterparty_email, counterparty_outbound_attested)
+			VALUES ('email', 'outbound', 'gmail', $1, 'gmail:'||$1, 'connector:gmail', $2, true)`, "msg-reply-"+tag, address)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the attested reply: %v", err)
+	}
 
 	rec := withAttachedOriginal(withFiles(fromAddress(mailRecord("msg-personal-"+tag), address), onePDF()))
 	if _, err := sink.Upsert(ctx, rec); err != nil {

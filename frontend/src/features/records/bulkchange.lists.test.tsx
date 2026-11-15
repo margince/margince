@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { meFixture } from "../../testing/mefixture";
 import { CompaniesScreen } from "../companies/companies";
 import { ContactsScreen } from "../contacts/contacts";
 
@@ -41,6 +42,7 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>

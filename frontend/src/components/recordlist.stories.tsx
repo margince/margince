@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { useT } from "../i18n";
-import { StoryProviders } from "../testing/story-utils";
+import {
+  installFetchStub,
+  meRoute,
+  StoryProviders,
+} from "../testing/story-utils";
 import { type ListPage, ListTable, useListQuery } from "./listquery";
 import { mineEmptyNote } from "./recordlist";
 
@@ -63,11 +67,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const NothingOwned: Story = {
-  render: () => (
-    <StoryProviders>
-      <MineList />
-    </StoryProviders>
-  ),
+  render: () => {
+    installFetchStub({ "GET /me": meRoute({ lead: ["read"] }) });
+    return (
+      <StoryProviders>
+        <MineList />
+      </StoryProviders>
+    );
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(

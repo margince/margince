@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { meFixture } from "../testing/mefixture";
 import { MeetingOutcome } from "./meetingoutcome";
 import { writeMeetingOutcome } from "./taskactions.rowwrites";
 
@@ -45,6 +46,14 @@ function stubServer(sent: Sent[]) {
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const request = input instanceof Request ? input : new Request(input);
+      if (new URL(request.url).pathname.endsWith("/me")) {
+        return new Response(
+          JSON.stringify(
+            meFixture({ allow: { activity: ["read", "update", "create"] } }),
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
       const text = await request.clone().text();
       sent.push({
         method: request.method,
@@ -115,7 +124,7 @@ describe("MeetingOutcome", () => {
     ).toBeTruthy();
   });
 
-  it("records It happened in one press, at the meeting's version, with no dialog", async () => {
+  it("records It happened in one press, at the meeting's version, then asks for the next step", async () => {
     const sent: Sent[] = [];
     stubServer(sent);
     renderCard();
@@ -133,7 +142,42 @@ describe("MeetingOutcome", () => {
         body: { meeting_status: "held" },
       },
     ]);
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(
+      await screen.findByRole("dialog", { name: "What is the next step?" }),
+    ).toBeTruthy();
+    // Skipping files nothing.
+    await userEvent.click(screen.getByRole("button", { name: "Skip" }));
+    expect(sent).toHaveLength(1);
+  });
+
+  it("files the next step as a task whose source is the meeting", async () => {
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+    await userEvent.click(
+      screen.getByRole("button", { name: "It happened: Site visit" }),
+    );
+    await screen.findByRole("dialog", { name: "What is the next step?" });
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /Next step/ }),
+      "Send the offer",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Add task" }));
+    await waitFor(() =>
+      expect(sent.filter((request) => request.method === "POST")).toEqual([
+        {
+          method: "POST",
+          url: "/v1/activities",
+          ifMatch: null,
+          body: {
+            kind: "task",
+            source: "manual",
+            subject: "Send the offer",
+            source_activity_id: MEETING_ID,
+          },
+        },
+      ]),
+    );
   });
 
   it("asks How did it go?, then draws It happened, Add notes and Did not happen", () => {

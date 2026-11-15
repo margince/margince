@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { CONTEXTS } from "./analytics.overview.fixtures";
@@ -96,6 +97,7 @@ export const GoalDraft: Story = {
 export const GoalProposed: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"], lead: ["read"] }),
       [`POST /analytics/sales-goals/${draftPlan.owner_id}/2026/proposed-months`]:
         () => jsonResponse(goalProposal),
     });
@@ -151,6 +153,7 @@ const lead: components["schemas"]["Lead"] = {
 };
 
 const WORK_ROUTES = {
+  "GET /me": meRoute({ deal: ["read"], lead: ["read"] }),
   "GET /leads": () =>
     jsonResponse({
       data: [lead],
@@ -244,6 +247,7 @@ export const TeamPage: Story = {
 export const GoalsManager: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"], lead: ["read"] }),
       "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
       [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
         jsonResponse(draftPlan),
@@ -261,6 +265,7 @@ export const GoalsManager: Story = {
 export const GoalsSeller: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"], lead: ["read"] }),
       "GET /analytics/sales-goals": () =>
         jsonResponse({ ...goalRoster, data: goalRoster.data.slice(0, 1) }),
       [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
@@ -279,6 +284,7 @@ export const GoalsSeller: Story = {
 export const GoalsPublished: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"], lead: ["read"] }),
       "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
       [`GET /analytics/sales-goals/${draftPlan.owner_id}/2026`]: () =>
         jsonResponse({

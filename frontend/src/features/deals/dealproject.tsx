@@ -20,6 +20,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys } from "../../lib/activitykeys";
 import { ENTITY } from "../../lib/entity";
+import { useHealthScope } from "../../lib/healthscope";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
 import type { Project } from "../projects/projects.form";
@@ -60,8 +61,9 @@ function useProjectPage(
   companyId: string | undefined,
   enabled: boolean,
 ): Project[] {
+  const readerScope = useHealthScope();
   const projects = useQuery({
-    queryKey: ["projects", "open", companyId ?? "all"],
+    queryKey: ["projects", "open", companyId ?? "all", readerScope ?? ""],
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/projects", {

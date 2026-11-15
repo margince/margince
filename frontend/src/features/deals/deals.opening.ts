@@ -45,8 +45,12 @@ export function dealFiltersOf(
  * The first board column a bare `#/deals` link opens: the default pipeline's
  * earliest stage, under the key the mounted board reads it with. Undefined when
  * the catalog names no stage, so nothing unscoped is ever asked for.
+ * `readerScope` is `healthScope(me)` for the reader the column is read for.
  */
-export function dealsArrivalColumnOptions(pipelines: readonly Pipeline[]) {
+export function dealsArrivalColumnOptions(
+  pipelines: readonly Pipeline[],
+  readerScope: string,
+) {
   const pipeline = defaultPipelineOf(pipelines);
   const first = (pipeline?.stages ?? []).reduce<Stage | undefined>(
     (earliest, stage) =>
@@ -58,6 +62,7 @@ export function dealsArrivalColumnOptions(pipelines: readonly Pipeline[]) {
   if (!first) return undefined;
   const query = listQueryFromParams(NO_URL_PARAMS, DEAL_LIST_OPENING, true);
   return stageColumnOptions(
+    readerScope,
     dealFiltersOf(pipeline, query),
     undefined,
     first.id,

@@ -1,12 +1,12 @@
 import type { QueryKey } from "@tanstack/react-query";
 import type { ActivityDraft, MeetingAttendees } from "../lib/activitybody";
 import {
-  activityFileStaleKeys,
   activityFollowUpsKey,
   entityTimelineKeys,
   loggedActivityKeys,
   TASK_QUEUE_KEY,
 } from "../lib/activitykeys";
+import { fileListKeys } from "../lib/attachmentkeys";
 import type { EntityKind } from "../lib/entity";
 import { worklistKey } from "../lib/workkeys";
 import { type MeetingRecord, openMeetingKey } from "./logactivity.openmeeting";
@@ -40,7 +40,8 @@ export function activityLogKeys(
   if (draft.sourceActivityId)
     keys.push(activityFollowUpsKey(draft.sourceActivityId));
   if (input.record) keys.push(["activity", input.record.meeting.id]);
-  if (input.files.length > 0) keys.push(...activityFileStaleKeys(loggedId));
+  if (input.files.length > 0)
+    keys.push(...fileListKeys({ entityType: "activity", entityId: loggedId }));
   for (const id of linkedDealIds) {
     if (entityType !== "deal" || id !== entityId)
       keys.push(...entityTimelineKeys("deal", id));

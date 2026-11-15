@@ -53,8 +53,10 @@ function dayOf(atIso: string): string {
 
 /**
  * groupChronology folds a newest-first entry list into groups, preserving that
- * order: a group takes the position of its newest member, so the reader's sense
- * of "what happened last" survives the grouping.
+ * order. A group takes the position of its newest member, so the reader's
+ * sense of "what happened last" survives the grouping. A thread holds only
+ * messages with nothing between them. Where another row falls between two of
+ * its messages, it splits there, and each part links to the next.
  *
  * `hasMore` says the underlying page was cut. It marks only the OLDEST group,
  * because that is the only one whose members could continue past the edge.
@@ -130,6 +132,8 @@ function joinNewsletterRun(
 export function groupChronology(
   entries: readonly TimelineEntry[],
   hasMore = false,
+  // A list of conversations, not of events, keeps each thread whole.
+  { wholeThreads = false }: { wholeThreads?: boolean } = {},
 ): TimelineGroup[] {
   const bulk = bulkMembership(entries);
   const groups: TimelineGroup[] = [];
@@ -154,7 +158,15 @@ export function groupChronology(
       continue;
     }
     const existing = byKey.get(groupable.value);
-    if (existing) {
+    // A thread folds only while its messages sit next to each other. Once
+    // another row comes between them, the older messages start a new part, so
+    // the list still reads in the order things happened.
+    if (
+      existing &&
+      (wholeThreads ||
+        groupable.kind !== "thread" ||
+        groups.at(-1) === existing)
+    ) {
       existing.entries.push(entry);
       continue;
     }
@@ -166,6 +178,10 @@ export function groupChronology(
       entries: [entry],
       partial: false,
     };
+    if (existing) {
+      existing.olderPart = group.id;
+      group.newerPart = existing.id;
+    }
     byKey.set(groupable.value, group);
     groups.push(group);
   }

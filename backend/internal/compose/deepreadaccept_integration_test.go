@@ -284,7 +284,7 @@ func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 		CompanyID: ids.From[ids.CompanyKind](company),
 		SourceURL: seedURL,
 		Fields: []contacts.DeepReadField{{
-			Field: "industry", Value: "Industrial automation software",
+			Field: "industry", Value: "Software",
 			EvidenceSnippet: "Acme builds industrial automation software.", SourceURL: seedURL, Confidence: 0.9,
 		}},
 	}); err != nil {
@@ -304,7 +304,7 @@ func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 	if industry != "Logistics" {
 		t.Fatalf("industry = %q, want the colleague's value kept", industry)
 	}
-	if evidence != "Industrial automation software" {
+	if evidence != "software" {
 		t.Fatalf("industry evidence = %q, want the read's finding kept beside the column", evidence)
 	}
 }

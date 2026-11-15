@@ -18,3 +18,12 @@ export function attachmentAnchor(file: Attachment): AttachmentAnchor {
   }
   return { href: `/v1/attachments/${file.id}`, download: file.filename };
 }
+
+// The same rule in the shape `FileChip` takes: a stored file's route, or the
+// address a link row opens in a new tab.
+export function fileChipTarget(
+  file: Attachment,
+): { href: string } | { link: string } {
+  const anchor = attachmentAnchor(file);
+  return "target" in anchor ? { link: anchor.href } : { href: anchor.href };
+}

@@ -1,6 +1,7 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
+import { useCachedHealthScope } from "../lib/healthscope";
 import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { Button, SearchField } from "./atoms";
@@ -64,12 +65,16 @@ export function useCandidateSearch<T>(
   // and follows the locale. Wrapped, because a promise may reject with `null`.
   const [answer, setAnswer] = useState<Readonly<{
     query: string;
+    readerScope: string | undefined;
     candidates: readonly T[];
     failure: Readonly<{ cause: unknown }> | null;
   }> | null>(null);
 
   const query = term.trim();
   const emptySearch = searchEmpty && query === "";
+  // Candidates are records the reader's row scope narrows, so an answer holds
+  // only under the scope it was read for.
+  const readerScope = useCachedHealthScope();
 
   // New targets or a changed empty-search mode must never show the old answer.
   const [searchSpace, setSearchSpace] = useState(() => ({
@@ -94,11 +99,16 @@ export function useCandidateSearch<T>(
       try {
         const candidates = await searchTargets(query);
         if (!cancelled) {
-          setAnswer({ query, candidates, failure: null });
+          setAnswer({ query, readerScope, candidates, failure: null });
         }
       } catch (error) {
         if (!cancelled) {
-          setAnswer({ query, candidates: [], failure: { cause: error } });
+          setAnswer({
+            query,
+            readerScope,
+            candidates: [],
+            failure: { cause: error },
+          });
         }
       }
     }, SEARCH_DEBOUNCE_MS);
@@ -106,8 +116,11 @@ export function useCandidateSearch<T>(
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, searchTargets, asking]);
-  const current = asking && answer?.query === query ? answer : null;
+  }, [query, searchTargets, asking, readerScope]);
+  const current =
+    asking && answer?.query === query && answer.readerScope === readerScope
+      ? answer
+      : null;
   return {
     candidates: current?.candidates ?? [],
     answered: current !== null && current.failure === null,

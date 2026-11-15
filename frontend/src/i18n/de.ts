@@ -3362,6 +3362,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
   "rel.current": "Aktuell",
+  "rel.former": "Früher",
   "rel.endedOn": "Bis {when}",
   "rel.remove": "Entfernen",
   "rel.removeConfirm":
@@ -3898,6 +3899,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
   "timeline.group.mayContinue": "Möglicherweise gibt es frühere Nachrichten",
+  "timeline.group.newerPart": "Spätere Nachrichten weiter oben",
+  "timeline.group.olderPart": "Frühere Nachrichten weiter unten",
   "timeline.group.kind": "Thread",
   "timeline.group.earlier_other": "{count} frühere Nachrichten anzeigen",
   "timeline.group.earlier_one": "{count} frühere Nachricht anzeigen",
@@ -4249,6 +4252,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "billing.saveChange": "Änderung speichern",
   "billing.versionUnresolved":
     "Die Änderung wurde nicht gesendet, da der Rechnungskontakt nicht erneut gelesen werden konnte. Bitte lade die Seite neu und versuche es erneut.",
+  "payments.refresh": "Aktualisieren",
+  "payments.title": "Kundenzahlungen",
+  "payments.none": "Keine überfälligen Rechnungen.",
+  "payments.overdueAmount": "{amount} überfällig",
+  "payments.invoices_one": "{count} Rechnung",
+  "payments.invoices_other": "{count} Rechnungen",
+  "payments.customers_one": "{count} Kunde",
+  "payments.customers_other": "{count} Kunden",
+  "payments.oldest_one": "Älteste Rechnung seit 1 Tag überfällig",
+  "payments.oldest_other": "Älteste Rechnung seit {days} Tagen überfällig",
+  "payments.viewInvoices": "Überfällige Rechnungen ansehen",
+  "payments.customer": "Kunde",
+  "payments.openAmount": "Offener Betrag",
+  "payments.stale":
+    "Die Rechnungsdaten können sich seit der letzten Synchronisierung geändert haben.",
+  "payments.syncFailed":
+    "Die Synchronisierung der Buchhaltung ist fehlgeschlagen. Die Beträge stammen aus der letzten erfolgreichen Synchronisierung.",
+  "payments.syncUnavailable":
+    "Rechnungsdaten sind erst nach einer erfolgreichen Synchronisierung der Buchhaltung verfügbar.",
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
@@ -5235,8 +5257,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.profileField.register_number": "Registernummer",
   "co.profileField.industry": "Branche",
   "co.profileField.history": "Geschichte",
-  "co.narrative.title": "Wie sie kaufen",
+  "co.narrative.title": "Wie und an wen sie verkaufen",
   "co.narrative.add": "Hinzufügen",
+  "co.narrative.notOnSite": "Nicht auf ihrer Website",
+  "co.narrative.notReadYet": "Website noch nicht analysiert",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Letzter Austausch",
   "co.contacts.strength": "Beziehung",
@@ -20726,6 +20750,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
+  "meeting.nextStep.title": "Was ist der nächste Schritt?",
+  "meeting.nextStep.add": "Aufgabe anlegen",
+  "meeting.nextStep.skip": "Überspringen",
+  "meeting.nextStep.subject": "Nächster Schritt",
+  "meeting.nextStep.due": "Fällig",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
@@ -21194,6 +21223,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
+  "lead.company.addedOnQualify":
+    "Noch kein Unternehmenseintrag. Beim Qualifizieren kannst du ihn anlegen.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.company.matchedByDomain": "Gleiche Website-Domain",

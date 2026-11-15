@@ -39,9 +39,12 @@ export function contact360Query(contactId: string) {
 // The contacts around a contact: current colleagues and the others on its deals.
 // One page at the contract's ceiling. The composer matches typed names in it,
 // and a name on a second page would never be offered.
-export function relatedContactsQuery(contactId: string | undefined) {
+export function relatedContactsQuery(
+  contactId: string | undefined,
+  readerScope: string,
+) {
   return queryOptions({
-    queryKey: ["contactsRelatedTo", contactId],
+    queryKey: ["contactsRelatedTo", contactId, readerScope],
     queryFn:
       contactId == null
         ? skipToken
@@ -91,9 +94,9 @@ export function openingIdentity<T extends { archived_at?: string | null }>(
 }
 
 // A 360 refused while the row is re-read may be an archive the row will report.
-// So the contact page waits for the row before it calls itself unopened.
-// It shows no record while it waits, because the old 360 would offer actions
-// the refusal has withdrawn. A cached archived row waits for its re-read the same way.
+// So the contact page waits for the row before it calls itself unopened. It
+// shows no record while it waits, because the old 360 would offer actions the
+// refusal has withdrawn. A cached archived row waits for its re-read the same way.
 export function contactPageState(
   record: Readonly<{
     isPending: boolean;

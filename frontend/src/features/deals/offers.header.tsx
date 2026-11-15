@@ -18,6 +18,7 @@ import {
 } from "../../design-system/recordpicker";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { useHealthScope } from "../../lib/healthscope";
 import { useLegalEntities } from "../../lib/legalentities.queries";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import type { Offer, OfferTemplate } from "./offers";
@@ -38,8 +39,10 @@ async function searchCompanyCandidates(
 }
 
 function useOfferTemplates() {
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["offer-templates-all"],
+    queryKey: ["offer-templates-all", readerScope ?? ""],
+    enabled: readerScope !== undefined,
     queryFn: async () => {
       const data = unwrap(
         await api.GET("/offer-templates", {

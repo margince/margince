@@ -6,6 +6,10 @@ import { afterEach, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { browserZone } from "../format/timezone";
 import { CompanyZoneProvider } from "../lib/companyzone";
+import {
+  contactDocuments,
+  PROBED_CONTACT_ID,
+} from "../testing/contactdocuments";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { jsonResponse } from "../testing/story-utils";
@@ -51,6 +55,8 @@ type Behaviour = Readonly<{
   listFails?: boolean;
   // Held until the test releases it.
   holdUploads?: Promise<void>;
+  // The contact page's Documents count, mounted beside the form.
+  docs?: ReturnType<typeof contactDocuments>;
 }>;
 
 function stubApi(behaviour: Behaviour = {}): Call[] {
@@ -61,6 +67,8 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
     const request = input instanceof Request ? input : null;
     const url = new URL(request ? request.url : String(input), "https://t");
     const method = request?.method ?? init?.method ?? "GET";
+    const contactList = behaviour.docs?.answer(method, url);
+    if (contactList) return contactList;
     const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
     const form = init?.body instanceof FormData ? init.body : null;
     const call: Call = { key, form };
@@ -119,6 +127,7 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
       const dropped = behaviour.drop?.get(file.name);
       if (!dropped || dropped.stored) {
         stored.push({ filename: file.name, checksum: await sha256Hex(file) });
+        behaviour.docs?.becomes(1 + stored.length);
       }
       if (dropped) {
         call.outcome = "dropped";
@@ -131,13 +140,14 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
   return calls;
 }
 
-function renderForm(task = false) {
+function renderForm(task = false, docs?: ReturnType<typeof contactDocuments>) {
   return renderWithQueryClient(
     <ToastProvider>
+      {docs?.strip}
       <CompanyZoneProvider zone={browserZone()}>
         <LogActivityForm
           entityType="contact"
-          entityId="contact-one"
+          entityId={docs ? PROBED_CONTACT_ID : "contact-one"}
           sourceActivityId={task ? "task-one" : undefined}
           taskToComplete={task ? { id: "task-one", version: 1 } : undefined}
         />
@@ -196,6 +206,15 @@ it("uploads every picked file against the activity the server created", async ()
     ["activity", CREATED_ID, "price-list.pdf"],
     ["activity", CREATED_ID, "agenda.pdf"],
   ]);
+});
+
+it("counts the logged files in the contact's Documents tab", async () => {
+  const docs = contactDocuments(1);
+  stubApi({ docs });
+  renderForm(false, docs);
+  await docs.shows(1);
+  await logWith([pdf("price-list.pdf"), pdf("agenda.pdf")]);
+  await docs.shows(3);
 });
 
 it("says which file was refused and still uploads the rest", async () => {

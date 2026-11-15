@@ -222,12 +222,15 @@ func headerPassPays(judged, dropped int) bool {
 // skip rules would drop is NOT dropped here, because that path also records a
 // bounce from the full message; it is downloaded and judged in full.
 func dropFromHeaders(ctx context.Context, fetched Message, judge connector.PreStoreJudge, owner string) (bool, error) {
-	if hasDraftLabel(fetched.Labels) || hasRejectedLabel(fetched.Labels) {
+	if refusedUnread(fetched) {
 		return true, nil
 	}
 	msg, err := mailmap.Parse(fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // the full download parses it again and decides
+	}
+	if unsentOwnMail(fetched, msg) {
+		return true, nil
 	}
 	if _, drop := msg.SkipReason(); drop {
 		return false, nil

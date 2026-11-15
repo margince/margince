@@ -145,34 +145,37 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 	return phaseRank("project"), nil
 }
 
-// orderByReadableCompany orders by the customer's name, and by NOTHING for a
-// company this caller may not read.
+// orderByReadableCompany orders by the name of the company company_id names,
+// and by nothing where the row masks it.
 //
-// Ordering by a value is reading it, so BOTH halves of RBAC bound it. The
-// object grant first: auth.ScopeClauseFor answers row visibility and never
-// asks whether this caller may read companies at all, so a seat holding
-// project.read and no company.read would otherwise have its page arranged
-// by company names it is refused on every other surface.
-//
-// Then the row scope, INSIDE the subquery: a company outside it answers NULL,
-// which the ORDER BY already puts last, and those projects land in the tail
-// together saying nothing about which account they name — the same answer the
-// row gives when it withholds the reference.
+// Ordering by a value is reading it, so it takes the same bounds as the row's
+// company_id. A withheld first customer answers NULL and sorts last; a later
+// visible customer never stands in for it.
 func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, "company") {
+	if !auth.ReadGranted(ctx, "company") || auth.Require(ctx, "relationship", principal.ActionRead) != nil {
 		// Ordered by nothing: every row sits in the tail and the page falls
 		// back to its tie-breaker.
 		return "NULL::text", nil
+	}
+	edge, err := edgeBound(ctx, "customer_edge", arg)
+	if err != nil {
+		return "", err
 	}
 	scope, err := auth.ScopeClauseFor(ctx, "company", "company_sort", arg)
 	if err != nil {
 		return "", err
 	}
-	if scope != "" {
-		scope = " AND " + scope
+	if scope == "" {
+		scope = predicateAlways
 	}
-	return `(SELECT company_sort.display_name FROM company company_sort
-	          WHERE company_sort.id = project.` + projectCompanyColumn + scope + `)`, nil
+	return `(SELECT CASE WHEN (` + edge + `) AND (` + scope + `) THEN company_sort.display_name END
+	           FROM relationship customer_edge
+	           JOIN company company_sort ON company_sort.id = customer_edge.company_id
+	          WHERE customer_edge.kind = 'project_company' AND customer_edge.project_id = project.id
+	            AND customer_edge.role = '` + CompanyRoleCustomer + `'
+	            AND customer_edge.archived_at IS NULL AND company_sort.archived_at IS NULL
+	          ORDER BY customer_edge.created_at, customer_edge.id
+	          LIMIT 1)`, nil
 }
 
 // ListProjects answers one page under the caller's row scope.
@@ -196,7 +199,9 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 
 	return storekit.RunListPage(ctx, s, pre, projectObject, projectColumns, active, where, scanProjectPage,
 		func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Project) error { return maskProjects(ctx, tx, page) })
+		func(tx pgx.Tx, page []crmcontracts.Project) error {
+			return maskProjects(ctx, tx, page, s.projectCustomers)
+		})
 }
 
 // scanProjectPage drains one list query's rows: each project plus, under a
@@ -241,10 +246,16 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 		// ANY of the project's live companies, not the legacy anchor column: a
 		// project is work several companies do together, so narrowing the list
 		// to a partner must show the deliveries that partner is on.
+		// The edge scope too: a match discloses the project-company pair,
+		// which relationship.read governs, as the company page's own list does.
+		edge, err := edgeBound(ctx, "c", arg)
+		if err != nil {
+			return nil, err
+		}
 		where = append(where, storekit.SQLf(
 			`EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'`+
-				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL)`,
-			arg(*in.CompanyID)))
+				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL AND (%s))`,
+			arg(*in.CompanyID), edge))
 	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {

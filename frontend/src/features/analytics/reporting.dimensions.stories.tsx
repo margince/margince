@@ -7,6 +7,7 @@ import { reportingStoryEvaluation } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { DimensionChips, DimensionFilters } from "./reporting.dimensions";
@@ -36,6 +37,7 @@ const everyDimension: ReportingSelection = {
 
 function catalog(products: readonly { id: string; name: string }[]) {
   installFetchStub({
+    "GET /me": meRoute({ deal: ["read"] }),
     "GET /products": () =>
       jsonResponse({
         data: products,

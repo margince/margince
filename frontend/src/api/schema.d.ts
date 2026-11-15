@@ -3687,6 +3687,34 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/finance/customer-payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overdue customer invoices the reader may see.
+         * @description Requires finance and company read grants. Company row visibility, including
+         *     private capture rows and live record shares, is applied before totals,
+         *     counts, previews and pages. The payment read also requires company ownership,
+         *     a shared owner team, an explicit read share, or an all-rows grant;
+         *     workspace-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
+         *     Only the current accounting connection and its live customer links contribute.
+         *     Disputed invoices and former customers are excluded from collection prompts.
+         *     Amounts stay in their invoice currency; totals in different currencies stay separate.
+         *     Invoice pages are ordered by due date and invoice id, oldest first.
+         */
+        get: operations["getCustomerPayments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/companies/{id}/finance-summary": {
         parameters: {
             query?: never;
@@ -6113,7 +6141,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+         * The counts and breakdowns installed extensions add to Reports, answered for this caller.
          * @description Each count and breakdown an installed extension declares, run through the report engine for
          *     this caller. Row scope, field masks and the group floor apply as they do to a core report.
          *     Which extensions are installed is a fact of the binary, so the contract cannot list them;
@@ -35148,6 +35176,53 @@ export interface components {
         LinkFinanceSourceCustomerRequest: {
             /** Format: uuid */
             company_id: string;
+        };
+        CustomerPayments: {
+            state: components["schemas"]["FinanceSummaryState"];
+            /** @description Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined. */
+            access_scope: string;
+            provider?: string;
+            /** Format: date-time */
+            last_synced_at?: string;
+            /** @description Readable, live linked companies eligible for the payment overview. */
+            linked_companies: number;
+            invoice_count: number;
+            company_count: number;
+            /** @description Complete overdue totals for readable companies, each in its own currency. */
+            totals: components["schemas"]["CustomerPaymentTotal"][];
+            /** @description Up to three company and currency groups, oldest overdue invoice first. */
+            customers: components["schemas"]["CustomerPaymentCustomer"][];
+            data: components["schemas"]["CustomerPaymentInvoice"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        CustomerPaymentTotal: {
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+        };
+        CustomerPaymentCustomer: {
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+            invoice_count: number;
+            oldest_days: number;
+        };
+        CustomerPaymentInvoice: {
+            /** Format: uuid */
+            invoice_id: string;
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            number?: string | null;
+            currency: string;
+            /** Format: int64 */
+            open_minor: number;
+            /** Format: date */
+            due_at: string;
+            days_overdue: number;
         };
         /**
          * @description What the accounting mirror knows about one customer (ADR-0083).
@@ -67376,6 +67451,34 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getCustomerPayments: {
+        parameters: {
+            query?: {
+                /** @description Opaque continuation from this response's page.next_cursor. */
+                cursor?: string;
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scoped customer payment overview and one overdue invoice page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPayments"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

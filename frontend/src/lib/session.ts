@@ -17,6 +17,7 @@ import type { Middleware } from "openapi-fetch";
 import { useEffect, useRef } from "react";
 import { api } from "../api/client";
 import { healthScope } from "./healthscopekey";
+import { endIdBatches } from "./idbatch";
 import { unwrap } from "./problem";
 import { forgetSeat } from "./storage";
 
@@ -103,6 +104,8 @@ export function sessionAnswers(): Promise<boolean> {
 export function resetToSignedOut(queryClient: QueryClient): Promise<void> {
   // The next member must not inherit what this one stored in the browser.
   forgetSeat();
+  // A name batch still reading must not ask its next page as the next member.
+  endIdBatches();
   queryClient.removeQueries({
     predicate: (query) => query.queryKey[0] !== "me",
   });
