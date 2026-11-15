@@ -749,7 +749,7 @@
 }
 /* Done for you: one card per deal under a band like Needs you. A card's
    changes run down one line of steps, newest first, and its verbs close it.
-   Only the open card shows its steps; a closed one says where the deal ended. */
+   Only the open card shows its steps. */
 .brief-done {
   gap: var(--space-3);
 }
@@ -820,8 +820,13 @@
 .brief-done-chips:empty {
   display: none;
 }
-.brief-done-net {
-  grid-column: 1 / -1;
+.brief-done-preview {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
   color: var(--textSecondary);
 }
 /* The steps: a dot per change on a hairline spine. The dot is indigo while

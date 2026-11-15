@@ -90,8 +90,8 @@ func TestFoldedAnnouncementsPreserveTheNoticeReadBoundary(t *testing.T) {
 
 type pagedApprovalFixture struct{ stubApprovals }
 
-func (s pagedApprovalFixture) ListWire(_ context.Context, query ApprovalQuery) ([]crmcontracts.Approval, error) {
-	return s.rows[:min(len(s.rows), query.Limit)], nil
+func (s pagedApprovalFixture) ListWire(_ context.Context, query ApprovalQuery) ([]crmcontracts.Approval, bool, error) {
+	return s.rows[:min(len(s.rows), query.Limit)], len(s.rows) <= query.Limit, nil
 }
 
 func TestADecisionBeyondTheHomePageStillOwnsItsAnnouncement(t *testing.T) {

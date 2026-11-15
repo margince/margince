@@ -15,7 +15,6 @@ package settings
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -55,16 +54,14 @@ func ApplyChosenTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, bool,
 	if !e.machineryApplied {
 		return zero, false, fmt.Errorf("settings: %s is not declared MachineryApplied — read it through Get/GetTx and its gate", e.Key())
 	}
-	var raw json.RawMessage
-	err := tx.QueryRow(ctx, `SELECT value FROM setting WHERE key = $1`, e.Key()).Scan(&raw)
-	stored := err == nil
+	raw, stored, err := storedValue(ctx, tx, e.Key(), "")
 	switch {
-	case errors.Is(err, pgx.ErrNoRows):
+	case err != nil:
+		return zero, false, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
+	case !stored:
 		if raw, err = e.DefaultJSON(); err != nil {
 			return zero, false, err
 		}
-	case err != nil:
-		return zero, false, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
 	}
 	var out T
 	if err := json.Unmarshal(raw, &out); err != nil {

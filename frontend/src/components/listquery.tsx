@@ -7,13 +7,17 @@ import {
   useMemo,
   useRef,
 } from "react";
-import { FIRST_PAGE } from "../api/client";
 import type { ListChip, ListView } from "../design-system/listtable";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useTagVocabulary } from "../lib/tags.queries";
 import { currentParams, useUrlParams } from "../lib/urlstate";
 import "./listquery.css";
+import {
+  type ListFetchPage,
+  listInfiniteOptions,
+  listOpening,
+} from "./listquery.options";
 
 // The shared list foundation (P-14): every list screen sends the rich
 // q/sort/cursor/include_archived/filter vocabulary instead of a flat
@@ -21,7 +25,6 @@ import "./listquery.css";
 // mutate under a live feed). useListQuery owns the react-query wiring;
 // ListTable binds that query to the list surface, which owns the controls.
 import {
-  LIST_PAGE_SIZES,
   type ListQuery,
   listPageOf,
   listQueryFromParams,
@@ -141,11 +144,7 @@ export function useListQuery<Row>({
   enabled,
 }: Readonly<{
   key: string;
-  fetchPage: (
-    query: ListQuery,
-    cursor: string | null,
-    signal: AbortSignal,
-  ) => Promise<ListPage<Row>>;
+  fetchPage: ListFetchPage<Row>;
   initialSort?: string;
   /**
    * Filters the list opens on, for a reader who has not narrowed it themselves.
@@ -183,14 +182,8 @@ export function useListQuery<Row>({
   enabled?: (query: ListQuery) => boolean;
 }>) {
   const [params, setParams] = useUrlParams();
-  const opening = useMemo<ListQuery>(
-    () => ({
-      q: "",
-      sort: initialSort ?? "",
-      includeArchived: false,
-      filters: initialFilters ?? {},
-      perPage: LIST_PAGE_SIZES[0],
-    }),
+  const opening = useMemo(
+    () => listOpening(initialSort, initialFilters),
     [initialSort, initialFilters],
   );
 
@@ -293,14 +286,8 @@ export function useListQuery<Row>({
   );
 
   const infinite = useInfiniteQuery({
-    queryKey: [key, query],
+    ...listInfiniteOptions(key, query, fetchPage),
     enabled: enabled?.(query) ?? true,
-    queryFn: ({ pageParam, signal }) => fetchPage(query, pageParam, signal),
-    initialPageParam: FIRST_PAGE,
-    getNextPageParam: (last) =>
-      last.page.has_more && last.page.next_cursor
-        ? last.page.next_cursor
-        : undefined,
   });
   const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
   return {

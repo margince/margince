@@ -294,18 +294,22 @@ type caseSummary struct {
 // ListContactCases pages the cases the reader can see in one scope,
 // strongest first. The page is rendered from the components it ranked.
 func (s *Store) ListContactCases(ctx context.Context, in ContactCaseListInput) ([]crmcontracts.ContactCase, string, error) {
-	return s.readContactCases(ctx, in, contactCaseListMax)
+	page, next, _, err := s.readContactCases(ctx, in, contactCaseListMax)
+	return page, next, err
 }
 
-// RankedContactCases reads a bounded ranking census without re-ranking pages.
-func (s *Store) RankedContactCases(ctx context.Context, in ContactCaseListInput) ([]crmcontracts.ContactCase, error) {
-	page, _, err := s.readContactCases(ctx, in, max(in.Limit, contactCaseListDefault))
-	return page, err
+// RankedContactCases reads a bounded ranking census without re-ranking pages,
+// and how many cases the scope holds, which CountContactCases would answer.
+func (s *Store) RankedContactCases(ctx context.Context, in ContactCaseListInput) ([]crmcontracts.ContactCase, int, error) {
+	page, _, total, err := s.readContactCases(ctx, in, max(in.Limit, contactCaseListDefault))
+	return page, total, err
 }
 
-func (s *Store) readContactCases(ctx context.Context, in ContactCaseListInput, limit int) ([]crmcontracts.ContactCase, string, error) {
+// readContactCases answers one page, its next cursor, and how many cases the
+// scope holds before the cursor and the limit.
+func (s *Store) readContactCases(ctx context.Context, in ContactCaseListInput, limit int) ([]crmcontracts.ContactCase, string, int, error) {
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
-		return nil, "", err
+		return nil, "", 0, err
 	}
 	in.Limit = min(max(in.Limit, 0), limit)
 	if in.Limit == 0 {
@@ -315,20 +319,22 @@ func (s *Store) readContactCases(ctx context.Context, in ContactCaseListInput, l
 	if in.Cursor != "" {
 		cur, err := storekit.DecodeOpaque[contactCaseCursor](in.Cursor)
 		if err != nil {
-			return nil, "", err
+			return nil, "", 0, err
 		}
 		if cur.Anchor.IsZero() {
-			return nil, "", &storekit.MalformedCursorError{}
+			return nil, "", 0, &storekit.MalformedCursorError{}
 		}
 		after = &cur
 	}
 	var page []crmcontracts.ContactCase
 	var next string
+	var total int
 	err := s.txSnapshot(ctx, func(tx pgx.Tx) error {
 		ranked, err := rankedContactCases(ctx, tx, in.Scope, in.Recipient)
 		if err != nil {
 			return err
 		}
+		total = len(ranked)
 		if after != nil {
 			ranked = slices.DeleteFunc(ranked, func(c caseSummary) bool { return !rankedAfter(c, *after) })
 		}
@@ -342,7 +348,7 @@ func (s *Store) readContactCases(ctx context.Context, in ContactCaseListInput, l
 		page, err = s.contactCaseViews(ctx, tx, ranked)
 		return err
 	})
-	return page, next, err
+	return page, next, total, err
 }
 
 // CountContactCases is how many cases ListContactCases would page through in

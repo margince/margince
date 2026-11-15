@@ -22,7 +22,7 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 	lane := attentionContactCases{store: c.store}
 	for recipient, want := range map[ids.UUID][]ids.UUID{c.e.Rep2: shared, c.e.Rep3: theirs} {
 		q := attention.CaseQuery{Scope: attention.CaseScopeMine, Recipient: recipient, Limit: 10}
-		cases, err := lane.OpenCases(c.e.Admin(), q)
+		cases, total, err := lane.OpenCases(c.e.Admin(), q)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -30,7 +30,7 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if len(cases) != 1 || count != 1 || len(cases[0].Face.Members) != len(want) {
+		if len(cases) != 1 || count != 1 || total != count || len(cases[0].Face.Members) != len(want) {
 			t.Errorf("recipient %s: %d cases, count %d, want the one case of %d", recipient, len(cases), count, len(want))
 		}
 		if len(cases) == 1 && !slices.Contains(cases[0].Owners, recipient) {
@@ -40,6 +40,9 @@ func TestTheQueueReadsEachOwnersCasesAndNoContactPair(t *testing.T) {
 	all, err := lane.CountCases(c.e.Admin(), attention.CaseQuery{Scope: attention.CaseScopeAll})
 	if err != nil || all != 2 {
 		t.Errorf("all cases = %d (%v), want 2", all, err)
+	}
+	if page, total, err := lane.OpenCases(c.e.Admin(), attention.CaseQuery{Scope: attention.CaseScopeAll, Limit: 1}); err != nil || len(page) != 1 || total != 2 {
+		t.Errorf("a page of 1 from 2 cases is %d cases of total %d (%v); want 1 of 2", len(page), total, err)
 	}
 
 	pairs := attentionDuplicates{store: c.store}

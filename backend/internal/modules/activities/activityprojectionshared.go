@@ -14,14 +14,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// ActivityProjection is the SELECT list every activity read scans, rendered
-// with this query's own audience test.
-//
-// contentArm is auth.ActivityAudienceArm rendered for the caller's arguments.
-// It lands in the final column, content_available, which is what decides
-// whether a row's content reaches the caller or only its markers — so a reader
-// that composed a different test there would be answering a different question
-// about the same rows.
+// ActivityProjection is the SELECT list every activity read scans. contentArm
+// is the audience test, passed through ActivityContentFrom so it is computed
+// once per row; it fills content_available and gates body and raw. Bound a
+// paged source before adding the decision.
 func ActivityProjection(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
 	return activityColumns(ctx, contentArm, arg)
 }

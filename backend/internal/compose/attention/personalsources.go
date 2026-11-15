@@ -4,6 +4,8 @@
 package attention
 
 import (
+	"context"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -54,4 +56,13 @@ func (s *Service) forUnowned() *Service {
 	narrowed := *s
 	narrowed.taskScope = TasksUnassigned
 	return &narrowed
+}
+
+// pendingApprovals is how many approvals wait in query's scope: the page's own
+// length when it holds every one, the exact count otherwise.
+func (s *Service) pendingApprovals(ctx context.Context, query ApprovalQuery, listed int, complete bool) (int, error) {
+	if complete {
+		return listed, nil
+	}
+	return s.approvals.CountPending(ctx, query)
 }

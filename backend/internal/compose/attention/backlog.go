@@ -155,7 +155,8 @@ func (s *Service) taskWindows(asOf, until time.Time) map[totalKey]TaskWindow {
 
 // countInto states one task window's total. A window read short of its cap
 // is whole on the page. Today's cut window is the planned lane's own count,
-// which a team page narrows to its roster as the lane does.
+// which a team page narrows to its roster as the lane does. Home names a cut
+// later window as a floor; the queue drawer counts it.
 func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow, day crmcontracts.Attention, cut bool) {
 	switch {
 	case !cut:
@@ -163,6 +164,8 @@ func (s *Service) countInto(ctx context.Context, key totalKey, window TaskWindow
 		return
 	case window.From.IsZero():
 		s.backlog.exact[key] = day.Counts.Planned
+		return
+	case s.homeShape:
 		return
 	}
 	var total int

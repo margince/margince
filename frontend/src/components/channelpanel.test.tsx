@@ -85,15 +85,15 @@ function stubServer(
 }
 
 function render(ui: ReactNode) {
-  return rtlRender(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = rtlRender(
+    <QueryClientProvider client={queryClient}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...view, queryClient };
 }
 
 function renderPanel(canEdit = true) {
@@ -108,20 +108,24 @@ afterEach(() => {
 });
 
 describe("ChannelPanel", () => {
-  it("sends a reader with no chat bot to the integrations settings", async () => {
+  it("hides the card when no chat bot is connected", async () => {
     stubServer({ state: "off" });
-    renderPanel();
-    expect(
-      await screen.findByText(
-        "Connect a chat bot in Settings to link a channel.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Open chat bot settings" }),
-    ).toHaveAttribute(
-      "href",
-      expect.stringContaining("settings/integrations/telegram"),
+    const { container, queryClient } = renderPanel();
+    await waitFor(() => {
+      expect(
+        queryClient.getQueryState(["channel-link", "deal", DEAL_ID])?.status,
+      ).toBe("success");
+    });
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("hides the card while checking whether a chat bot is connected", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
     );
+    const { container } = renderPanel();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("creates a channel and names the invited members without a chat account", async () => {

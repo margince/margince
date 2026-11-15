@@ -292,11 +292,13 @@ func readActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived
 	//
 	// The hold says no principal reads restricted content.
 	content := "(" + audience + ") AND " + auth.ActivityAvailableClause("a")
+	// The id filter names only a, so it runs at a's scan, before the decision.
+	from, content := ActivityContentFrom("activity a", content)
 	columns, err := activityColumns(ctx, content, arg)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	q := `SELECT ` + columns + ` FROM activity a WHERE a.id = $1`
+	q := `SELECT ` + columns + ` FROM ` + from + ` WHERE a.id = $1`
 	if archived == storekit.LiveOnly {
 		q += ` AND a.archived_at IS NULL`
 	}
@@ -464,7 +466,7 @@ func (s *Store) CountActivities(ctx context.Context, in ListActivitiesInput) (in
 		if err != nil {
 			return err
 		}
-		columns, err := activityColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
+		columns, err := activityCountColumns(ctx, content, func(v any) int { args = append(args, v); return len(args) })
 		if err != nil {
 			return err
 		}

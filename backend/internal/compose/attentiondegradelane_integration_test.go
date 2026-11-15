@@ -98,22 +98,25 @@ func TestAStuckWaitingLaneIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *test
 	}
 }
 
-// stuckSuggestions is the real suggestion reader whose count first stalls on
-// the page's snapshot, as the visibility clause did over production's evidence.
+// stuckSuggestions is the real suggestion reader whose list first stalls on
+// the page's snapshot, as the visibility clause the list and count share can.
+// The list always runs; the count runs only when the page is not complete.
 type stuckSuggestions struct {
 	attentionDealSuggestions
 	pool *pgxpool.Pool
 }
 
-func (s stuckSuggestions) CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error) {
+func (s stuckSuggestions) OpenSuggestions(
+	ctx context.Context, owners *storekit.OwnerSet, limit int,
+) ([]crmcontracts.DealSuggestion, bool, error) {
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
 	})
 	if err != nil {
-		return 0, err
+		return nil, false, err
 	}
-	return s.attentionDealSuggestions.CountOpen(ctx, owners)
+	return s.attentionDealSuggestions.OpenSuggestions(ctx, owners, limit)
 }
 
 func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {

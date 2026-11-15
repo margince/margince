@@ -70,7 +70,7 @@ export function ChangeRow({
 }
 
 /** What one change moved, without the deal it moved it on. */
-export function ChangeWhat({ receipt }: Readonly<{ receipt: Receipt }>) {
+function ChangeWhat({ receipt }: Readonly<{ receipt: Receipt }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();

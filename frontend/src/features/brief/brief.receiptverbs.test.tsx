@@ -122,7 +122,9 @@ it("dates a change from today by its hour and an older one by its day", async ()
   await screen.findByRole("list", { name: en["brief.done.dealsLabel"] });
   const zone = browserZone();
   expect(
-    [...container.querySelectorAll("time")].map((time) => time.textContent),
+    [...container.querySelectorAll(".brief-done-change time")].map(
+      (time) => time.textContent,
+    ),
   ).toEqual([
     formatTimeOfDay(today.occurred_at, "en", zone),
     formatDayMonth(older.occurred_at, "en", zone),
