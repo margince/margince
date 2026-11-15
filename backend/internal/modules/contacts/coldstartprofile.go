@@ -67,7 +67,6 @@ var columnBackedColdStartFields = map[string]string{
 	fieldLegalName:       columnLegalName,
 	"industry":           "industry",
 	"registered_address": "address",
-	fieldOfferSummary:    "description",
 }
 
 // ApplyColdStartProfile executes an ACCEPTED coldstart proposal. A

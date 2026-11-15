@@ -223,7 +223,7 @@ func readVerdictEdits(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealV
 		SELECT c.name, max(a.occurred_at)
 		  FROM (VALUES ($2, ARRAY['expected_close_date']), ($3, ARRAY['amount_minor', 'currency']),
 		               ($4, ARRAY['win_probability_override']), ($5, ARRAY['stage_id'])) c(name, cols)
-		  JOIN audit_log a ON a.entity_type = 'deal' AND a.entity_id = $1 AND a.actor_type = 'human'
+		  JOIN audit_log a ON a.entity_type = 'deal' AND a.entity_id = $1 AND `+storekit.AuditForAUser("a")+`
 		                  AND a.after ?| c.cols
 		 GROUP BY c.name
 		UNION ALL

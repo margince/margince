@@ -24,15 +24,15 @@ var sqlPlaceholder = regexp.MustCompile(`\$(\d+)`)
 // part the split found. An address the split refuses fills nothing, so it
 // shows nothing here; its profile-field row still shows the whole text.
 func previewReadAddress(ctx context.Context, tx pgx.Tx, id ids.CompanyID, current *crmcontracts.Address, field ColdStartFieldInput) ([]CompanyReadValue, error) {
-	authority, value, err := unclaimedCompanyColumn(ctx, tx, id, columnAddress, field.Value)
-	if err != nil || value == "" {
-		return nil, err
+	value := field.Value
+	if value == "" {
+		return nil, nil
 	}
 	proposed, split := SplitAddressText(value)
 	if !split {
 		return nil, nil
 	}
-	applies, err := companyColumnWriteApplies(ctx, tx, columnAddress, authority, addressWriteArguments(id, proposed))
+	applies, err := companyColumnWriteApplies(ctx, tx, columnAddress, fillUnclaimed, addressWriteArguments(id, proposed))
 	if err != nil {
 		return nil, err
 	}

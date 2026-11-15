@@ -47,6 +47,7 @@ export type CreateField = {
   multiselectEncoding?: "json";
   placeholder?: string;
   maxLength?: number;
+  requiredWhen?: (values: Record<string, string>) => boolean;
   // Already translated guidance beneath the control.
   hint?: ReactNode;
   // A validation refusal blocks Save and is announced through Field.error.
@@ -114,7 +115,13 @@ export function visibleFields(
   fields: CreateField[],
   values: Record<string, string>,
 ): CreateField[] {
-  return fields.filter((field) => field.showWhen?.(values) ?? true);
+  return fields
+    .filter((field) => field.showWhen?.(values) ?? true)
+    .map((field) =>
+      field.requiredWhen
+        ? { ...field, required: field.requiredWhen(values) }
+        : field,
+    );
 }
 
 // Blanks what showWhen hides, so a cleared partner's role is not sent orphaned.

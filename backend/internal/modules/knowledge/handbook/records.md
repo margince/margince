@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/design-system/editablevalue.tsx frontend/src/design-system/fieldeditdialog.tsx frontend/src/components/railfield.tsx frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck frontend/src/components/contactcase.tsx frontend/src/components/contactcase.form.tsx frontend/src/components/contactcase.evidence.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/components/sourcereviewevidence.tsx backend/internal/modules/consent/noticesource.go backend/internal/modules/consent/noticesourceevidence.go backend/internal/modules/consent/noticesourceprojection.go -->
+<!-- describes: frontend/src/design-system/timelinegroups.ts frontend/src/design-system/timelinethread.tsx frontend/src/design-system/editablevalue.tsx frontend/src/design-system/fieldeditdialog.tsx frontend/src/components/railfield.tsx frontend/src/features/contacts frontend/src/features/companies frontend/src/features/records backend/internal/modules/contacts backend/internal/modules/activities backend/internal/modules/customfields backend/internal/modules/collections backend/internal/platform/vatcheck frontend/src/components/contactcase.tsx frontend/src/components/contactcase.form.tsx frontend/src/components/contactcase.evidence.tsx frontend/src/components/sourcereviewdialog.tsx frontend/src/components/sourcereviewevidence.tsx backend/internal/modules/consent/noticesource.go backend/internal/modules/consent/noticesourceevidence.go backend/internal/modules/consent/noticesourceprojection.go -->
 # Contacts, companies, leads, deals and projects
 Margince holds five kinds of record: contacts, companies, leads, deals and projects. [Shared record links](sharing-record-links.md) show a limited public card.
 
@@ -142,11 +142,11 @@ If the company is already in Margince, **View existing record** opens it instead
 A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?
-To edit a company in Margince, open it and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
+To edit a company in Margince, open it and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows. **Description** is on **Profile** and shows on its own when its text differs from the offer.
 1. If the panel is hidden, choose **Show details**.
 2. Press a value or its mark, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving. **Address**, **Domain**, **Parent company** and **Relationship type** open a dialog with several fields.
 
-To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domain**, **Parent company**, **Description**, custom fields, and **VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domain**, **Parent company**, custom fields, and **VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
@@ -247,7 +247,7 @@ Margince has no notes of their own: a note is an activity. The kinds of activity
 To see everything that happened with a contact or company in Margince, open the record's **History** tab. **All** is one timeline of emails, meetings, calls, notes, tasks and messages. Field changes are listed under **Changes** alone.
 1. Under **Timeline filter**, pick **All**, **Threads** (email conversations) or **Changes**.
 2. Cut it down with **All kinds** (Email, Calls, Meetings, Notes…), **Search this timeline**, and the From and To dates.
-A company's History also holds what reached it through its deals and the contacts who work there.
+A company's History also holds what reached it through its deals and contacts. An email thread folds while messages sit together; other activity splits it, with links between parts.
 An agent's entry names the colleague it worked for: "Made by Claude for Anna Weber". An agent that worked for nobody reads "Automated by an agent".
 Also called: timeline, activity log, customer history, interaction history, newest email.
 

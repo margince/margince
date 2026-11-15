@@ -114,6 +114,11 @@ describe("LeadCompany", () => {
     const posted = stubServer();
     render(<LeadCompany lead={{ ...lead, company_match: match }} />);
     expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
+    expect(
+      screen.queryByText(
+        "No company linked yet. Qualifying links or creates it.",
+      ),
+    ).toBeNull();
     fireEvent.click(
       screen.getByRole("button", { name: "Link to Nordwind Logistik GmbH" }),
     );
@@ -171,20 +176,25 @@ describe("LeadCompany", () => {
     ).toBeTruthy();
   });
 
-  it("shows the typed name alone when no company matches", () => {
+  it("keeps the compact company name free of qualifying guidance", () => {
     stubServer();
     render(<LeadCompany lead={lead} />);
     expect(screen.getByText("Nordwind Logistik")).toBeTruthy();
     expect(screen.queryByRole("link")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
+    expect(
+      screen.queryByText(
+        "No company linked yet. Qualifying links or creates it.",
+      ),
+    ).toBeNull();
   });
 
-  it("says beside the typed name that qualifying adds the company", () => {
+  it("says beside the typed name that qualifying links or creates the company", () => {
     stubServer();
     render(<LeadCompany lead={lead} nameShown />);
     expect(
       screen.getByText(
-        "No company record yet. You can add it when you qualify this lead.",
+        "No company linked yet. Qualifying links or creates it.",
       ),
     ).toBeTruthy();
   });
@@ -193,6 +203,7 @@ describe("LeadCompany", () => {
     stubServer();
     for (const over of [
       { status: "promoted" as const },
+      { status: "disqualified" as const },
       { archived_at: "2026-09-01T00:00:00Z" },
       { writable: false },
     ]) {
@@ -200,7 +211,7 @@ describe("LeadCompany", () => {
       render(<LeadCompany lead={{ ...lead, ...over }} nameShown />);
       expect(
         screen.queryByText(
-          "No company record yet. You can add it when you qualify this lead.",
+          "No company linked yet. Qualifying links or creates it.",
         ),
       ).toBeNull();
     }
@@ -211,7 +222,7 @@ describe("LeadCompany", () => {
     render(<LeadCompany lead={{ ...lead, company_match: match }} nameShown />);
     expect(
       screen.queryByText(
-        "No company record yet. You can add it when you qualify this lead.",
+        "No company linked yet. Qualifying links or creates it.",
       ),
     ).toBeNull();
   });

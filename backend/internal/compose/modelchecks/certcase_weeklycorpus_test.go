@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package modelchecks_test
 
 // The weekly scenarios graded against canned replies: each must accept the
 // forms a right answer takes and refuse the wrong answer it exists to catch.
@@ -51,7 +51,7 @@ func narrativeReply(t *testing.T, sentence string) string {
 }
 
 func TestTheWonDealScenarioAcceptsEveryFormOfTheWinAndNoWrongWeek(t *testing.T) {
-	prepared := preparedCorpusCase(t, "aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml")
+	prepared := preparedCorpusCase(t, "../aicert/corpus/weekly_review/a_week_with_one_thing_worth_saying.yaml")
 	for _, tc := range []struct {
 		sentence   string
 		want       string
@@ -74,7 +74,7 @@ func TestTheWonDealScenarioAcceptsEveryFormOfTheWinAndNoWrongWeek(t *testing.T) 
 }
 
 func TestTheLossPatternScenarioWantsACitedLearningAndRefusesSilence(t *testing.T) {
-	prepared := preparedCorpusCase(t, "aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml")
+	prepared := preparedCorpusCase(t, "../aicert/corpus/weekly_learnings/a_repeated_pattern_is_cited.yaml")
 	// The refs the prompt shows for the scenario's first two deals.
 	const aurora, borealis = "d1", "d2"
 	learning := func(ids ...string) string {

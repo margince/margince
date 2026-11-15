@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// It happened and Did not happen write at once from the row. Add notes opens the
+// Did not happen writes from the row; It happened asks for a next step. Add notes opens the
 // composer, where No-show and what was said are typed.
 //
 // What these pin is that the composer PATCHES the meeting rather than logging a
@@ -17,6 +17,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -29,7 +30,6 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
-import { meFixture } from "../../testing/mefixture";
 import { day, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
@@ -98,14 +98,6 @@ function stubWithMeetingRead(
       const request = input instanceof Request ? input : undefined;
       const url = String(request ? request.url : input);
       const method = String(request?.method ?? init?.method ?? "GET");
-      if (url.split("?")[0].endsWith("/me")) {
-        return new Response(
-          JSON.stringify(
-            meFixture({ allow: { activity: ["read", "update", "create"] } }),
-          ),
-          { status: 200, headers: { "content-type": "application/json" } },
-        );
-      }
       if (/\/activities\/[^/]+$/.test(url.split("?")[0])) {
         if (method === "PATCH") {
           // openapi-fetch hands the stub a Request, not (url, init), so the
@@ -253,7 +245,7 @@ describe("a meeting that owes an answer", () => {
     );
   });
 
-  it("records a held meeting from the card, and asks only for the next step", async () => {
+  it("records a held meeting from the card after skipping its optional next step", async () => {
     const sent: unknown[] = [];
     const preconditions: (string | null)[] = [];
     stubWithMeetingRead(sent, 200, CAPTURED_MEETING, preconditions);
@@ -265,12 +257,14 @@ describe("a meeting that owes an answer", () => {
         name: "It happened: Discovery call with Turbinenbau",
       }),
     );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Skip next step" }),
+    );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "held" }]);
     expect(preconditions).toEqual(["3"]);
-    expect(
-      await screen.findByRole("dialog", { name: "What is the next step?" }),
-    ).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("records a cancellation from the card, with no dialog in the way", async () => {
