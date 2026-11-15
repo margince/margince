@@ -55,9 +55,10 @@ function useAnchorProject(
     // The deal page's own key, so the composer costs no request there and
     // cannot disagree with the page behind it.
     queryKey: ["deal", entityId],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/deals/{id}", {
+          signal,
           params: { path: { id: entityId } },
         }),
       );

@@ -6,7 +6,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useEntityName } from "./entityref.queries";
+import { useCompanyMarksByID } from "./companymarks";
+import { companyReferenceQuery, useEntityName } from "./entityref.queries";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -151,5 +152,132 @@ describe("company names", () => {
     expect(result.current[0]?.name).toBe("Company c-0");
     expect(result.current[99]?.name).toBe("Company c-99");
     expect(result.current[100]?.name).toBeNull();
+  });
+});
+
+describe("company reference cache", () => {
+  it("reads only new ids when marks overlap an earlier name batch", async () => {
+    const fetchMock = companiesExcept();
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+    const names = nameAll(["c-1", "c-2"]);
+    await waitFor(() =>
+      expect(names.result.current.every((name) => name.name)).toBe(true),
+    );
+
+    const marks = renderHook(() => useCompanyMarksByID(["c-2", "c-3"]), {
+      wrapper,
+    });
+    await waitFor(() => expect(marks.result.current.marks.size).toBe(2));
+
+    expect(
+      fetchMock.mock.calls.map(([input]) =>
+        asked(input).searchParams.getAll("id"),
+      ),
+    ).toEqual([["c-1", "c-2"], ["c-3"]]);
+    const lastName = nameAll(["c-3"]);
+    expect(lastName.result.current[0]?.name).toBe("Company c-3");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps legacy string entries separate from rich company references", async () => {
+    client.setQueryData(["company", "ref", "c-1"], "Earlier name");
+    const fetchMock = companiesExcept();
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+
+    const names = nameAll(["c-1"]);
+    await waitFor(() =>
+      expect(names.result.current[0]?.name).toBe("Company c-1"),
+    );
+
+    expect(client.getQueryData(companyReferenceQuery("c-1").queryKey)).toEqual({
+      name: "Company c-1",
+      archived: false,
+      logo: undefined,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares a cached name and logo between marks and name observers", async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        data: [{ id: "c-1", display_name: "Company", logo_url: "/logo.svg" }],
+      }),
+    );
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+    const marks = renderHook(() => useCompanyMarksByID(["c-1", "c-1"]), {
+      wrapper,
+    });
+    await waitFor(() =>
+      expect(marks.result.current.marks.get("c-1")?.logoUrl).toBe("/logo.svg"),
+    );
+    const name = nameAll(["c-1"]);
+    expect(name.result.current[0]?.name).toBe("Company");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("refreshes names and marks together after invalidation", async () => {
+    let name = "Before";
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () =>
+        jsonResponse({ data: [{ id: "c-1", display_name: name }] }),
+      );
+    const names = nameAll(["c-1"]);
+    const marks = renderHook(() => useCompanyMarksByID(["c-1"]), { wrapper });
+    await waitFor(() => expect(names.result.current[0]?.name).toBe("Before"));
+    name = "After";
+    await client.invalidateQueries({
+      predicate: (query) => query.queryKey[1] === "ref",
+    });
+    await waitFor(() => {
+      expect(names.result.current[0]?.name).toBe("After");
+      expect(marks.result.current.marks.get("c-1")?.name).toBe("After");
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("settles missing marks separately from failed and pending reads", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      companiesExcept(new Set(["hidden"])),
+    );
+    const { result } = renderHook(
+      () => useCompanyMarksByID(["visible", "hidden"]),
+      { wrapper },
+    );
+    expect(result.current.pending.has("hidden")).toBe(true);
+    await waitFor(() => expect(result.current.pending.size).toBe(0));
+    expect(result.current.marks.has("visible")).toBe(true);
+    expect(result.current.marks.has("hidden")).toBe(false);
+    expect(result.current.unreadable.size).toBe(0);
+  });
+
+  it("retains batched answers for unmounted company observers and their siblings", async () => {
+    let release!: (response: Response) => void;
+    const fetchMock = vi.fn(
+      () =>
+        new Promise<Response>((resolve) => {
+          release = resolve;
+        }),
+    );
+    vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
+    const first = nameAll(["c-1"]);
+    const second = nameAll(["c-2"]);
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    first.unmount();
+    release(
+      jsonResponse({
+        data: [
+          { id: "c-1", display_name: "First" },
+          { id: "c-2", display_name: "Second" },
+        ],
+      }),
+    );
+    await waitFor(() => expect(second.result.current[0]?.name).toBe("Second"));
+    expect(
+      client.getQueryData(companyReferenceQuery("c-1").queryKey),
+    ).toMatchObject({ name: "First" });
+    const remounted = nameAll(["c-1"]);
+    expect(remounted.result.current[0]?.name).toBe("First");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

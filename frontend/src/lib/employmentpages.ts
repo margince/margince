@@ -20,9 +20,14 @@ export function nextEmploymentCursor(page: Page): string | undefined {
   return page.next_cursor;
 }
 
-export async function readEmploymentPage(contactId: string, cursor: string) {
+export async function readEmploymentPage(
+  contactId: string,
+  cursor: string,
+  signal?: AbortSignal,
+) {
   const data = unwrap(
     await api.GET("/relationships", {
+      signal,
       params: {
         query: { contact_id: contactId, kind: "employment", cursor, limit: 50 },
       },

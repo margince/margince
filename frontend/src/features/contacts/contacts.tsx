@@ -49,9 +49,11 @@ type Contact = components["schemas"]["Contact"];
 async function fetchContactsPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Contact>> {
   const data = unwrap(
     await api.GET("/contacts", {
+      signal,
       params: {
         query: {
           q: query.q || undefined,

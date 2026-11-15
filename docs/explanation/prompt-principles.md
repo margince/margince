@@ -112,7 +112,13 @@ shape in one line stays in the prompt all the same. An OpenRouter host or a loca
 enforce the schema, and the OpenAI guide to schema output says the same. Closed word sets (a
 verdict list, the IDs a reply may name) are part of the shape.
 
-*Checked by* the validator of the call site, which every certification case runs on the reply.
+The schema and the parser that reads the reply are one contract. A call site with no schema let
+a model write sections the parser dropped, and the case failed on a reply that read well.
+Each schema has a test that says the parser reads every shape the schema allows.
+
+*Checked by* the validator of the call site, which every certification case runs on the reply, and
+by tests such as `TestTheBriefSchemaAndParserAgreeOnSectionKinds`
+(`backend/internal/compose/meetingbrief/briefschema_test.go`).
 
 ### 8. Rules before data, data behind the fence, one boundary per prompt
 
@@ -156,6 +162,10 @@ its payload sends as `Recent: null` fails for that reason. So does a price reply
 tier the fixture does not carry. Before you say the model is wrong, find the fact in the traced
 request.
 
+A fixture also goes out of date when a field is added to the payload. Fixtures written before the field
+was added send it empty, so the case grades a request that production no longer makes. When you add a
+field to a payload type, fill it in every fixture of that task in the same change.
+
 *Checked by* `refuseUnreachableCriteria` (`backend/internal/compose/certcase_stageevidence.go`)
 for stage evidence. It refuses a `settled_by` that no line of the thread says. For other places
 it is review.
@@ -165,7 +175,13 @@ it is review.
 A cap, a band or a rubric clause the prompt never states grades the model on what it could not
 know. One such case is a token cap graded on offer drafts while production tells the model no
 budget, and it is removed. A rubric that allows what the prompt says not to do, or asks for a
-field the schema cannot carry, marks a right reply down.
+field the schema cannot carry, marks a right reply down. So does a rubric that checks a raw
+number the production parser fixes. Say the parser makes shares add up to 100 before it stores
+them. Then the rubric grades the shape of the reply, not its raw total.
+
+A rule for an edge names the edge in words the model can test against the input. In
+`capture_classify`, a message that reports a decision and asks nothing kept failing. The prompt
+now says such a message is `noise` unless it also promises or asks something.
 
 *Checked by* the rules in [write-a-certification-case.md](../how-to/write-a-certification-case.md);
 review.

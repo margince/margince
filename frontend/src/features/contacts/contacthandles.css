@@ -18,10 +18,6 @@
   max-inline-size: none;
   min-inline-size: 0;
 }
-/* A long address keeps one line and ends in an ellipsis; copy gives it whole. */
-.contacthandles .contactlink-copyable > :not(.copy-action) {
-  white-space: nowrap;
-}
 .contacthandles > .fieldgrid-handle > .t-caption {
   margin-inline-start: auto;
   color: var(--textSecondary);

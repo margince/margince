@@ -13,6 +13,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"regexp"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -111,7 +114,7 @@ var fullPartArgs = map[string]any{
 func argsFor(t *testing.T, action string, extra map[string]any) json.RawMessage {
 	t.Helper()
 	args := map[string]any{actionArg: action}
-	for _, need := range recordPartActions[action] {
+	for _, need := range recordPartActions[action].needs {
 		args[need] = fullPartArgs[need]
 	}
 	maps.Copy(args, extra)
@@ -163,8 +166,8 @@ func TestEachRecordPartActionReachesItsOwnSeamMethod(t *testing.T) {
 // An action missing one argument it needs is refused naming that argument, and
 // the seam is never reached.
 func TestARecordPartActionMissingAnArgumentNamesIt(t *testing.T) {
-	for action, needs := range recordPartActions {
-		for _, need := range needs {
+	for action, part := range recordPartActions {
+		for _, need := range part.needs {
 			args := map[string]any{}
 			if err := json.Unmarshal(argsFor(t, action, nil), &args); err != nil {
 				t.Fatalf("decoding %s's arguments: %v", action, err)
@@ -206,5 +209,31 @@ func TestARecordPartSeamFailureIsTheToolsAnswer(t *testing.T) {
 	_, err := changeRecordParts{parts: seamProbeRecordParts{}}.Handle(context.Background(), argsFor(t, "remove_project_stakeholder", nil))
 	if !errors.Is(err, errSeamReached) {
 		t.Errorf("a failing seam answered %v, want its own error", err)
+	}
+}
+
+// A client reads the schema, not the handler: each action has a line naming
+// every argument it reads.
+func TestChangeRecordPartsSaysWhatEachActionReads(t *testing.T) {
+	var schema struct {
+		Properties map[string]struct {
+			Description string `json:"description"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(changeRecordParts{}.Spec().InputSchema, &schema); err != nil {
+		t.Fatalf("reading change_record_parts' input schema: %v", err)
+	}
+	lines := strings.Split(schema.Properties[actionArg].Description, "\n")
+	for action, part := range recordPartActions {
+		at := slices.IndexFunc(lines, func(line string) bool { return strings.HasPrefix(line, action+": ") })
+		if at < 0 {
+			t.Errorf("the action description has no line for %s", action)
+			continue
+		}
+		for _, arg := range slices.Concat(part.needs, part.takes) {
+			if !regexp.MustCompile(`\b` + regexp.QuoteMeta(arg) + `\b`).MatchString(lines[at]) {
+				t.Errorf("%s reads %s, and its line %q does not say so", action, arg, lines[at])
+			}
+		}
 	}
 }

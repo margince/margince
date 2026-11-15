@@ -86,9 +86,10 @@ import { useProjectEdit } from "./projectedit";
 export function useProject360(id: string) {
   return useQuery({
     queryKey: project360Key(id),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/projects/{id}/360", {
+          signal,
           params: { path: { id } },
         }),
       );

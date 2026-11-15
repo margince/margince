@@ -11,7 +11,7 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { ENTITY_NAME_KEY } from "../../components/entityref.queries";
+import { companyReferenceQuery } from "../../components/entityref.queries";
 import { LocaleProvider } from "../../i18n";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
@@ -255,7 +255,7 @@ describe("useLeadCompanyNameReading", () => {
     );
     // An earlier read answered with no name, long enough ago to be read again.
     render(<Reading of={{ ...lead, company_id: "c-7" }} />, LINK_GRANTS, (c) =>
-      c.setQueryData(["company", ENTITY_NAME_KEY, "c-7"], null, {
+      c.setQueryData(companyReferenceQuery("c-7").queryKey, null, {
         updatedAt: 0,
       }),
     );

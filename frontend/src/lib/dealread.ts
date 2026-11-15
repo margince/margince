@@ -16,9 +16,10 @@ import { unwrap } from "./problem";
 export function useDeal(id: string) {
   return useQuery({
     queryKey: ["deal", id],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       return unwrap(
         await api.GET("/deals/{id}", {
+          signal,
           params: { path: { id } },
         }),
       );
