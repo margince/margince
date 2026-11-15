@@ -19,7 +19,7 @@ func TestCurrentRequestReadAdmitsBeforeLimitingAndRechecksSourceAccess(t *testin
 	e := setupLoad(t)
 	query := ids.NewV7().String()
 	want := seedEmailRequest(t, e, query+" Please send the report", "commitment", OwedVerdictAsksUs)
-	seedEmailRequest(t, e, query+" Thanks for the update", "noise", OwedVerdictInformsUs)
+	seedEmailRequest(t, e, query+" Thanks for the update", "other", OwedVerdictInformsUs)
 	store := storeKnowing(e)
 	at := requestInstant.Add(time.Hour)
 	rows, _, err := store.ListActivities(e.as(), ListActivitiesInput{RequestCurrentAsOf: &at, Query: &query, Limit: new(1)})

@@ -276,7 +276,7 @@ func TestRestrictedArchivedAndNoiseItemsAreNeverSent(t *testing.T) {
 		       restricted_until = now() + interval '1 year',
 		       retention_class = 'commercial_correspondence', retention_class_at = now()
 		 WHERE id = $1`, restricted)
-	e.WsExec(t, `UPDATE activity SET capture_label = 'noise', capture_labeled_at = now() WHERE id = $1`, noise)
+	e.WsExec(t, `UPDATE activity SET capture_label = 'other', capture_labeled_at = now() WHERE id = $1`, noise)
 
 	brain := &tagBrainStub{cues: map[string]ids.TagID{"Excel": migration}}
 	e.mustSuggest(t, brain)

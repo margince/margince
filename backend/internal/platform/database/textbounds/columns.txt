@@ -652,6 +652,8 @@ public.contact_provider_claim.employment_processing_error document checked: one 
 public.contact_provider_claim.provider document
 public.contact_provider_claim.source document
 public.contact_provider_claim.validation_status document
+public.contact_signature_enrich_state.last_outcome label
+public.contact_signature_enrich_state.last_skip_reason label
 public.contact_social.handle document
 public.contact_social.platform document
 public.contract.captured_by document

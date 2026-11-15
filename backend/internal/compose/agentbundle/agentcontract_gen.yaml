@@ -40052,10 +40052,10 @@ components:
             The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
         capture_label:
           type: [string, 'null']
-          enum: [null, commitment, meeting, noise]
+          enum: [null, commitment, meeting, other]
           readOnly: true
           description: >-
-            What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+            What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
         bulk_mail_attested:
           type: boolean
           readOnly: true

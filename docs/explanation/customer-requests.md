@@ -8,8 +8,8 @@ the user how to move it down the pipeline. That does not answer the customer or 
 ## Finding a request, who owns it, and when it is complete
 
 The owed verdict (`asks_us` or `informs_us`) decides what the sender asks for. The capture label
-(`meeting`, `commitment`, or `noise`) says what the message is about. A request to set up a meeting
-still needs action, even when its label is `meeting`. When a `noise` label disagrees, a confirmed
+(`meeting`, `commitment`, or `other`) says what the message is about. A request to set up a meeting
+still needs action, even when its label is `meeting`. When a `other` label disagrees, a confirmed
 request stays open for review and is not handed to anyone on its own.
 
 A reply to a calendar invite, such as a contact saying no to a meeting, is owed nothing on its own. It

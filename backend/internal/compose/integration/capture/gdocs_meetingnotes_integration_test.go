@@ -8,6 +8,7 @@ package capture
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"slices"
@@ -202,6 +203,15 @@ func TestMeetingNotesLandOnceAsATranscriptAndQueueAReading(t *testing.T) {
 	if got := countRows(t, e, `SELECT count(*) FROM transcript_read WHERE activity_id = '`+transcript.String()+`' AND status = 'queued'`); got != 1 {
 		t.Errorf("%d queued readings of the transcript, want 1", got)
 	}
+	if got := countRows(t, e, `SELECT count(*) FROM activity WHERE id = '`+meeting.String()+`' AND meeting_status = 'held'`); got != 1 {
+		t.Errorf("held meetings = %d, want 1", got)
+	}
+	if got := countRows(t, e, `SELECT count(*) FROM activity WHERE id = '`+transcript.String()+`' AND source_activity_id = '`+meeting.String()+`' AND meeting_status IS NULL`); got != 1 {
+		t.Errorf("transcripts recording the meeting = %d, want 1", got)
+	}
+	if got := countRows(t, e, `SELECT count(*) FROM activity_meeting_history WHERE activity_id = '`+meeting.String()+`' AND status = 'held'`); got != 1 {
+		t.Errorf("held transitions = %d, want 1", got)
+	}
 	if !slices.Equal(queued.activity, []ids.ActivityID{transcript}) {
 		t.Errorf("readings enqueued for %v, want the transcript once", queued.activity)
 	}
@@ -302,7 +312,7 @@ func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
 	store := activities.NewStore(e.DB())
 	land := func(domain string) bool {
 		t.Helper()
-		landed, err := landAs(e, store, e.Rep1, meeting, domain)
+		landed, err := landAs(t, e, store, e.Rep1, meeting, domain)
 		if err != nil {
 			t.Fatalf("LandMeetingNotesTx: %v", err)
 		}
@@ -323,9 +333,9 @@ func TestNotesLandOnlyOnEvidenceStillTrueAtTheWrite(t *testing.T) {
 
 // landAs lands the notes Doc of meeting for user, through the store, in its
 // own transaction.
-func landAs(e *integration.SearchEnv, store *activities.Store, user ids.UUID, meeting ids.UUID, domain string) (bool, error) {
+func landAs(t *testing.T, e *integration.SearchEnv, store *activities.Store, user ids.UUID, meeting ids.UUID, domain string) (bool, error) {
 	var landed bool
-	ctx := humanWithScopes(e, user, []principal.Scope{principal.ScopeRead})
+	ctx := notesWriter(t, e, user)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		landed, err = store.LandMeetingNotesTx(ctx, tx, landing(user, meeting, domain))
@@ -485,7 +495,7 @@ func TestTwoSyncsLandingOneDocAtOnceLandItOnce(t *testing.T) {
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)
 	store := activities.NewStore(e.DB())
-	ctx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	ctx := notesWriter(t, e, e.Rep1)
 	firstLanded, release, firstDone := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
 		firstDone <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
@@ -509,7 +519,7 @@ func TestTwoSyncsLandingOneDocAtOnceLandItOnce(t *testing.T) {
 	}
 	secondDone := make(chan outcome, 1)
 	go func() {
-		landed, err := landAs(e, store, e.Rep1, meeting, "myco.example")
+		landed, err := landAs(t, e, store, e.Rep1, meeting, "myco.example")
 		secondDone <- outcome{landed, err}
 	}()
 	waitForALockWait(t, e)
@@ -541,5 +551,66 @@ func waitForALockWait(t *testing.T, e *integration.SearchEnv) {
 		if waiting > 0 {
 			return
 		}
+	}
+}
+
+func TestNotesKeepAnExistingMeetingOutcome(t *testing.T) {
+	for _, status := range []string{"held", "canceled", "no_show"} {
+		t.Run(status, func(t *testing.T) {
+			env := newCaptureEnv(t)
+			e := env.e
+			meeting, _, _ := meetingWithNotes(t, env)
+			var before int64
+			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				return tx.QueryRow(context.Background(), `UPDATE activity SET meeting_status = $1 WHERE id = $2 RETURNING version`, status, meeting).Scan(&before)
+			}); err != nil {
+				t.Fatal(err)
+			}
+			docs, queued := &docsFeed{}, &queuedReadings{}
+			_, syncNotes := connectNotes(t, env, docs, captureOwner, queued)
+			syncNotes()
+			if got := notesTranscripts(t, e); got != 1 {
+				t.Fatalf("transcripts = %d, want 1", got)
+			}
+			if got := countRows(t, e, `SELECT count(*) FROM activity WHERE id = '`+meeting.String()+`' AND meeting_status = '`+status+`' AND version = `+fmt.Sprint(before)); got != 1 {
+				t.Error("notes changed a meeting that already had its outcome")
+			}
+		})
+	}
+}
+
+func notesWriter(t *testing.T, e *integration.SearchEnv, user ids.UUID) context.Context {
+	t.Helper()
+	ctx := humanWithScopes(e, user, []principal.Scope{principal.ScopeRead, principal.ScopeWrite})
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("missing notes actor")
+	}
+	grant := actor.Permissions.Objects["activity"]
+	grant.Update = true
+	actor.Permissions.Objects["activity"] = grant
+	return principal.WithActor(ctx, actor)
+}
+
+func TestNotesCanLandWithoutAuthorityToChangeTheMeeting(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	meeting, _, _ := meetingWithNotes(t, env)
+	store := activities.NewStore(e.DB())
+	ctx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		landed, err := store.LandMeetingNotesTx(ctx, tx, landing(e.Rep1, meeting, "myco.example"))
+		if err == nil && !landed {
+			t.Error("readable notes did not land")
+		}
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := notesTranscripts(t, e); got != 1 {
+		t.Fatalf("transcripts = %d, want 1", got)
+	}
+	if got := countRows(t, e, `SELECT count(*) FROM activity WHERE id = '`+meeting.String()+`' AND meeting_status='held'`); got != 0 {
+		t.Fatal("capture changed the meeting without its update grant")
 	}
 }

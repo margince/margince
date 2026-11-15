@@ -3,14 +3,8 @@
 
 package compose
 
-// The batched capture-classify engine (ai-operational-spec §2.8, ADR-0063):
-// label captured mail commitment | meeting | noise for attention routing.
-// The backlog IS the partial index (capture_label IS NULL on connector
-// email activities) — no work table; each model call labels up to ten
-// messages and COMMITS per call, so a budget stop or a crash loses nothing
-// and the remainder simply stays unlabeled for the next cycle. A noise
-// label demotes attention only — it never deletes, archives, or suppresses
-// the record an email created (§3.2 hard floor).
+// Capture labels route attention without deleting, archiving or suppressing records.
+// Each call commits separately so interrupted passes keep their completed work.
 
 import (
 	"context"
@@ -24,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -48,7 +43,7 @@ const (
 	classifyCatchUpCap = 500
 )
 
-var classifyLabels = map[string]bool{"commitment": true, "meeting": true, "noise": true}
+var classifyLabels = map[string]bool{"commitment": true, "meeting": true, capturekind.Other: true}
 
 // replyVerdicts is this site's second closed set. Its members are the module's
 // own constants rather than three more string literals, so the prompt's
@@ -353,7 +348,7 @@ func validateClassifyPayload(payload classifyPayload, batch []unlabeledMessage) 
 	}
 	for _, r := range payload.Results {
 		if !classifyLabels[r.Label] {
-			return fmt.Sprintf("label %q is not commitment|meeting|noise", clampToken(r.Label))
+			return fmt.Sprintf("label %q is not commitment|meeting|other", clampToken(r.Label))
 		}
 		if r.Confidence < 0 || r.Confidence > 1 {
 			return fmt.Sprintf("confidence %v is outside [0,1]", r.Confidence)
@@ -393,7 +388,7 @@ func classifySchema(requested []string) json.RawMessage {
 			"results": schema.Array(schema.Object(
 				map[string]schema.Node{
 					"id":                    requestedIDNode(requested),
-					"label":                 schema.Enum("commitment", "meeting", "noise"),
+					"label":                 schema.Enum("commitment", "meeting", capturekind.Other),
 					extractionConfidenceKey: schema.Number(),
 					// Optional, because an outbound message has no reply verdict
 					// to give and a schema demanding one would push the model to

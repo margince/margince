@@ -132,11 +132,7 @@ func ownerExec(t *testing.T, sql string) {
 // the restriction check asks for.
 func restrictMeeting(t *testing.T, e *integration.Env, meeting ids.UUID) {
 	t.Helper()
-	e.WsExec(t, `INSERT INTO activity_retention_evidence (activity_id, basis, qualified_at, decided_by_name, reason)
-		VALUES ($1, 'controller_pin', now(), 'Datenschutz', 'litigation hold')`, meeting)
-	e.WsExec(t, `UPDATE activity SET restricted_at = now(), archived_at = coalesce(archived_at, now()), restricted_reason = 'litigation hold',
-		restricted_until = now() + interval '1 year',
-		retention_class = 'commercial_correspondence', retention_class_at = now() WHERE id = $1`, meeting)
+	e.RestrictActivity(t, meeting)
 }
 
 func outboxRows(t *testing.T, e *integration.Env) int {

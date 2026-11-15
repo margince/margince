@@ -44632,7 +44632,7 @@ components:
               properties:
                 commitments: { type: integer }
                 meetings: { type: integer }
-                noise: { type: integer }
+                other: { type: integer, description: Neither a commitment nor a meeting; says nothing about importance. }
         connectors:
           type: array
           items:
@@ -58535,12 +58535,13 @@ components:
             whose provider offered none.
         capture_label:
           type: [string, 'null']
-          enum: [null, commitment, meeting, noise]
+          enum: [null, commitment, meeting, other]
           x-extensible-enum: true
           readOnly: true
           description: >-
             What this message turned out to be, from the batched capture classification. Null means
             unclassified, which is a backlog state and not a verdict of "ordinary".
+            Other means neither a commitment nor a meeting; it says nothing about importance.
         bulk_mail_attested:
           type: boolean
           readOnly: true

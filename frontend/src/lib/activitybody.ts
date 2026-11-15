@@ -28,7 +28,8 @@ export function isActivityKind(value: string): value is ActivityDraft["kind"] {
     value === "note" ||
     value === "task" ||
     value === "call" ||
-    value === "meeting"
+    value === "meeting" ||
+    value === "message"
   );
 }
 
@@ -53,7 +54,7 @@ export type ActivityDealSelection = Readonly<{
 
 export type ActivityDraft = {
   dealFiling?: ActivityDealSelection;
-  kind: "note" | "task" | "meeting" | "call";
+  kind: "note" | "task" | "meeting" | "call" | "message";
   subject: string;
   body: string;
   // yyyy-mm-dd from the date input. Its meaning follows the kind: a task's
@@ -74,6 +75,9 @@ export type ActivityDraft = {
   // How a call ended, "" for no outcome. Reaches the wire on a call only, so a
   // draft switched from Call to Note sends none.
   callOutcome: CallOutcome | "";
+  // The transport a message travelled on, a channel_provider id, "" for none.
+  // Reaches the wire on a message only, which the server requires it for.
+  channelProvider: string;
   sourceActivityId?: string;
   followUp?: TaskDraft;
   // The workspace's custom-field values, as the create body's cf_ keys.
@@ -205,7 +209,7 @@ export function activityRequestBody(
   return {
     kind: input.kind,
     source_activity_id: input.sourceActivityId,
-    ...callAndMeetingFields(input),
+    ...kindOnlyFields(input),
     ...occurredFields(input, recordZone),
     ...(input.kind === "task"
       ? {
@@ -247,7 +251,7 @@ export function activityRequestBody(
   };
 }
 
-function callAndMeetingFields(input: ActivityDraft) {
+function kindOnlyFields(input: ActivityDraft) {
   return {
     ...(KINDS_WITH_A_CONTACT.has(input.kind) && input.dealFiling
       ? { deal_filing: input.dealFiling.context }
@@ -255,6 +259,9 @@ function callAndMeetingFields(input: ActivityDraft) {
     // Held: a hand-logged meeting already took place (the date caps at
     // today), and held is what the lead ladder reads as engagement.
     ...(input.kind === "meeting" ? { meeting_status: "held" as const } : {}),
+    ...(input.kind === "message"
+      ? { channel_provider: input.channelProvider }
+      : {}),
     // A call always names its outcome; "No outcome" is an explicit null.
     ...(input.kind === "call"
       ? { call_outcome: input.callOutcome === "" ? null : input.callOutcome }
@@ -294,6 +301,7 @@ const EMPTY_DRAFT: ActivityDraft = {
   // A task a rep files on a record most often asks them to reach out.
   taskType: "reach_out",
   callOutcome: "",
+  channelProvider: "",
 };
 
 // The record zone keeps the entered day aligned with the stored deadline.
@@ -311,18 +319,26 @@ export function freshDraft(
   return { ...EMPTY_DRAFT, kind, day: todayDay(kind, recordZone) };
 }
 
+/** Whether a kind needs a subject: every kind but a call and a message. */
+export function subjectIsRequired(kind: ActivityDraft["kind"]): boolean {
+  return kind !== "call" && kind !== "message";
+}
+
 /**
  * Whether the draft says what happened. A call does so by its outcome or its
- * body alone; every other kind needs a subject. The server's
- * CheckEntryHasContent holds the same rule for a call.
+ * body alone, a message by its body alone; every other kind needs a subject.
+ * The server's CheckEntryHasContent holds the same rule for a call.
  */
 export function draftSaysSomething(draft: ActivityDraft): boolean {
   if (draft.subject.trim() !== "") {
     return true;
   }
+  if (subjectIsRequired(draft.kind)) {
+    return false;
+  }
   return (
-    draft.kind === "call" &&
-    (draft.callOutcome !== "" || draft.body.trim() !== "")
+    draft.body.trim() !== "" ||
+    (draft.kind === "call" && draft.callOutcome !== "")
   );
 }
 

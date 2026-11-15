@@ -77,7 +77,7 @@ func TestTheSchemaRefusesAnythingButTheRefItSent(t *testing.T) {
 	id := ids.NewV7()
 	req := classifyRequest([]unlabeledMessage{{ID: id}})
 	answer := func(answered string) string {
-		return `{"results":[{"id":"` + answered + `","label":"noise","confidence":0.9,"reply":null}]}`
+		return `{"results":[{"id":"` + answered + `","label":"other","confidence":0.9,"reply":null}]}`
 	}
 	for _, foreign := range []string{id.String(), "m2"} {
 		if err := schema.ValidateJSON(req.ResponseSchema, answer(foreign)); err == nil {

@@ -15,7 +15,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { loggedActivityKeys } from "../../lib/activitykeys";
 import { uploadAttachment } from "../../lib/attachmentupload";
-import { useChannelProviders } from "../../lib/channelproviders";
+import { useChannelProviderOptions } from "../../lib/channelproviders";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
 // Capturing a chat from a screenshot pasted on a contact. The image is stored
@@ -202,11 +202,7 @@ function ChatReview({
   const readText = groundedValue(reading, "chat_text");
   const [edited, setEdited] = useState<string | null>(null);
   const text = edited ?? readText;
-  const providers = useChannelProviders();
-  const options = (providers.data?.data ?? []).map((entry) => ({
-    value: entry.provider,
-    label: entry.label,
-  }));
+  const options = useChannelProviderOptions();
   const [picked, setPicked] = useState("");
   // A chat whose header names someone else files here only once the reader
   // says it belongs here; the server refuses it otherwise.

@@ -28,7 +28,7 @@ import (
 // pass has not read. Every test on the mail itself is in signatureSourceSQL, so
 // this query and OlderSignatureSources cannot read different mail.
 var signatureCandidateSQL = `
-			SELECT p.id, p.full_name, coalesce(pe.email, ''), ` + olderMailMayFillTitleSQL("p") + `, a.id, coalesce(a.body, ''),COALESCE(st.requested_generation,0),pg_current_snapshot()::text
+			SELECT p.id, p.full_name, coalesce(pe.email, ''), ` + olderMailMayFillTitleSQL("p") + ` AND st.retry_activity_id IS DISTINCT FROM a.id, a.id, coalesce(a.body, ''),COALESCE(st.requested_generation,0),pg_current_snapshot()::text
 			FROM contact p
 			LEFT JOIN contact_email pe ON pe.contact_id = p.id AND pe.is_primary AND pe.archived_at IS NULL
 			JOIN LATERAL (
@@ -48,6 +48,7 @@ var signatureCandidateSQL = `
 			WHERE p.archived_at IS NULL AND p.merged_into_id IS NULL
 			  AND (st.deferred_run_id IS NULL OR st.live_generation>st.processed_generation)
 			  AND ($%[1]d::uuid[] IS NULL OR p.id=ANY($%[1]d::uuid[]))
+              AND (st.retry_activity_id IS DISTINCT FROM a.id OR st.attempted_at <= now() - $%[2]d * interval '1 millisecond')
 			  AND ` + signatureAfterWatermarkSQL("a.occurred_at", "a.id") + // occurred_at raw: source ordering against the last read, not whether an activity happened.
 	`
 			-- Freshest mail first. The pass is capped and runs within minutes of
@@ -208,8 +209,8 @@ func (s *Store) SignatureCandidatesForContacts(ctx context.Context, contactIDs [
 func (s *Store) selectSignatureCandidates(ctx context.Context, limit int, defaultEnabled bool, contactIDs []ids.ContactID) ([]SignatureCandidate, error) {
 	var out []SignatureCandidate
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		args := []any{limit, defaultEnabled, contactIDs}
-		rows, err := tx.Query(ctx, fmt.Sprintf(signatureCandidateSQL, len(args)), args...)
+		args := []any{limit, defaultEnabled, contactIDs, SignatureRetryDelay.Milliseconds()}
+		rows, err := tx.Query(ctx, fmt.Sprintf(signatureCandidateSQL, len(args)-1, len(args)), args...)
 		if err != nil {
 			return err
 		}
