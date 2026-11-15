@@ -10,27 +10,27 @@ package compose
 // filed under, reads a second record type, and the caller owes that type's
 // read grant as much as they owe the first.
 //
-// A name the caller ASKS for without the grant is refused (403), on the
-// report and on the drill-through alike. A name the caller never asked for is
-// simply not served: the default plan drops it, and the drill-through omits
-// its column — the same answer shape a narrower seat gets everywhere else.
+// A name the caller asks for without the grant is refused (403); one it never
+// asked for is not served, in the report and its drill-through alike.
 
 import (
 	"context"
 	"maps"
 	"slices"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // requireVocabularyGrants refuses the first requested name whose grant the
-// caller lacks. names may mix dimensions and measures; a name outside
-// spec.grants owes nothing beyond the report's own gate.
+// caller lacks: what spec.grants declares, and the read grant of any table the
+// name's column references, which its row scope alone never stands in for.
 func requireVocabularyGrants(ctx context.Context, spec reportSpec, names []string) error {
 	for _, name := range names {
-		for _, object := range grantObjects(spec.grants[name]) {
+		for _, object := range append(referencedTables(spec, name), spec.grants[name]) {
+			if object == "" {
+				continue
+			}
 			if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 				return err
 			}
@@ -39,12 +39,14 @@ func requireVocabularyGrants(ctx context.Context, spec reportSpec, names []strin
 	return nil
 }
 
-// grantObjects reads one grants entry: an object, or several joined by commas.
-func grantObjects(entry string) []string {
-	if entry == "" {
-		return nil
+// referencedTables is the table a dimension's or filter's column references.
+func referencedTables(spec reportSpec, name string) (out []string) {
+	for _, expr := range []string{spec.dimensions[name], spec.filters[name]} {
+		if table, scoped := spec.referenceScopes[expr]; scoped && expr != "" {
+			out = append(out, table)
+		}
 	}
-	return strings.Split(entry, ",")
+	return out
 }
 
 // grantedNames filters a vocabulary down to the names this caller may be

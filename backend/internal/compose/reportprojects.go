@@ -109,7 +109,7 @@ func withProjectCompany(spec reportSpec) reportSpec {
 	spec.filterPredicates = map[string]string{fieldCompanyID: "EXISTS (SELECT 1 FROM relationship c" +
 		" JOIN company edge_company ON edge_company.id = c.company_id AND edge_company.archived_at IS NULL" +
 		" WHERE c.kind = '" + auth.ProjectCompanyKind + "' AND c.project_id = t.id AND c.archived_at IS NULL AND c.company_id = %s)"}
-	grants := map[string]string{fieldCompanyID: relationshipObject + "," + tableCompany}
+	grants := map[string]string{fieldCompanyID: relationshipObject}
 	maps.Copy(grants, spec.grants)
 	spec.grants = grants
 	return spec

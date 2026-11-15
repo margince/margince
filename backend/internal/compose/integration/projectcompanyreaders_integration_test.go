@@ -12,12 +12,15 @@ package integration
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/projectexport"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -172,5 +175,44 @@ func TestDeliveryContinuityCountsOnlyTheCompaniesOnAProject(t *testing.T) {
 	// may not read edges still finds the account's ending blocked.
 	if !active(e.readerWith("project", "company"), f.current) {
 		t.Error("a seat without relationship.read found no active delivery on a delivering account")
+	}
+}
+
+// No report field that names a company reaches a seat without company.read:
+// the row scope of a referenced column never stands in for its object grant.
+// Read over the whole published vocabulary, so a new report or column cannot
+// skip it.
+func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
+	e := Setup(t)
+	everything := []string{"deal", "lead", "activity", "contact", "project", "partner", "relationship", "company"}
+	with := compose.AnalyticsSchemaFor(e.readerWith(everything...))
+	without := compose.AnalyticsSchemaFor(e.readerWith(everything[:len(everything)-1]...))
+	named := 0
+	for key, entity := range with.Entities {
+		for field := range entity.Fields {
+			if !strings.HasSuffix(field, "company_id") {
+				continue
+			}
+			named++
+			if _, offered := without.Entities[key].Fields[field]; offered {
+				t.Errorf("%s offers %s to a seat without company.read", key, field)
+			}
+		}
+	}
+	if named == 0 {
+		t.Fatal("no report names a company, so this test swept nothing")
+	}
+	pipeline, open, _ := DealFixture(t, e)
+	company := e.SeedCompany(t, "Partner Report Co", nil)
+	companyID := companyIDOf(company)
+	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Partnered", PipelineID: pipeline, StageID: open, PartnerCompanyID: &companyID, Source: "manual",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	for _, plan := range []string{`{"group_by":["partner_company_id"]}`, `{"group_by":["company_id"]}`} {
+		if _, err := tryPrebuiltReport(e.readerWith(everything[:len(everything)-1]...), e, "deals-by-stage", plan); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("deals-by-stage %s without company.read → %v, want ErrPermissionDenied", plan, err)
+		}
 	}
 }
