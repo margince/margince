@@ -39,7 +39,6 @@ func explainOnMailbox(t *testing.T, extra, setting, explain, statement string, a
 	t.Helper()
 	e := setupPromises(t)
 	ctx := context.Background()
-	vacuumMailboxTables(ctx, t, e.owner)
 	tx, err := e.owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -73,17 +72,6 @@ func pinNeverAnalyzed(ctx context.Context, t *testing.T, tx pgx.Tx) {
 	t.Helper()
 	if _, err := tx.Exec(ctx, "UPDATE pg_class SET reltuples = -1, relpages = 0 WHERE relkind = 'r' AND relnamespace = 'public'::regnamespace"); err != nil {
 		t.Fatal(err)
-	}
-}
-
-// vacuumMailboxTables returns the tables seedMailbox fills to the pages their
-// live rows need. A rolled-back seed leaves dead tuples, so the next seed adds pages.
-// A never-analyzed table's row estimate follows its page count.
-// Without this, a plan depends on how many seeds ran before it.
-func vacuumMailboxTables(ctx context.Context, t *testing.T, owner *pgx.Conn) {
-	t.Helper()
-	if _, err := owner.Exec(ctx, "VACUUM contact, contact_email, activity, activity_participant, activity_link"); err != nil {
-		t.Fatalf("vacuuming the mailbox tables: %v", err)
 	}
 }
 

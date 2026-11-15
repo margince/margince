@@ -124,7 +124,6 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 	t.Helper()
 	e := setupPromises(t)
 	ctx := context.Background()
-	vacuumMailboxTables(ctx, t, e.owner)
 	tx, err := e.owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)

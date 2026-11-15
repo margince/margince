@@ -53,7 +53,6 @@ func waitingPlanWork(plan planNode) (judged, read float64) {
 func TestTheWaitingPageSeeksPastACursorInsideTimestampTies(t *testing.T) {
 	e := setupPromises(t)
 	ctx := context.Background()
-	vacuumMailboxTables(ctx, t, e.owner)
 	tx, err := e.owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
