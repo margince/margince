@@ -87,13 +87,13 @@ func EmailSummariesByIDBatch(
 	}
 	// The content gate holds the audience arm, so every row it admits has its
 	// content available. A second copy would only cost planning.
-	contentArm := sqlTrue
+	from, contentArm := ActivityContentFrom("activity a", sqlTrue)
 
 	columns, err := activityColumns(ctx, contentArm, arg)
 	if err != nil {
 		return nil, err
 	}
-	sql := "SELECT " + columns + " FROM activity a WHERE " +
+	sql := "SELECT " + columns + " FROM " + from + " WHERE " +
 		strings.Join(where, " AND ")
 	rows, err := tx.Query(ctx, sql, args...)
 	if err != nil {

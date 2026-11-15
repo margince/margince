@@ -52,14 +52,16 @@ func ListActivitiesByDealTx(ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, 
 		order = requestPriorityOrder
 	}
 	limit := storekit.ClampLimit(in.Limit)
+	from := `deal d CROSS JOIN LATERAL (SELECT a.id FROM activity a
+		WHERE ` + strings.Join(where, " AND ") + order + fmt.Sprintf(" LIMIT %d", limit+1) +
+		`) selected JOIN activity a ON a.id = selected.id`
+	from, content = ActivityContentFrom(from, content)
 	columns, err := activityColumns(ctx, content, arg)
 	if err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `SELECT `+columns+`, d.id AS linked_deal_id
-		FROM deal d CROSS JOIN LATERAL (SELECT a.id FROM activity a
-		WHERE `+strings.Join(where, " AND ")+order+fmt.Sprintf(" LIMIT %d", limit+1)+`) selected JOIN activity a ON a.id = selected.id
-		WHERE `+deals+` ORDER BY d.id, `+strings.TrimPrefix(order, " ORDER BY "), waitingListArgs(ctx, in, args)...)
+		FROM `+from+` WHERE `+deals+` ORDER BY d.id, `+strings.TrimPrefix(order, " ORDER BY "), waitingListArgs(ctx, in, args)...)
 	if err != nil {
 		return nil, err
 	}

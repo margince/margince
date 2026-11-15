@@ -3,7 +3,7 @@
 
 // One deal Margince changed, as a card on Home. It holds the name and value,
 // the changes on one line of steps, and the verbs that answer for them all.
-// Only the card in hand is open; a closed one says where the deal ended up.
+// Only the card in hand is open.
 
 import { EntityRef } from "../../components/entityref";
 import { BundleUndo } from "../../components/marginchanges";
@@ -20,7 +20,7 @@ import { ENTITY } from "../../lib/entity";
 import type { MarginceChangeBundle } from "../../lib/marginchanges";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
-import { ChangeRow, ChangeWhat } from "./brief.doneforyou.change";
+import { ChangeRow } from "./brief.doneforyou.change";
 import { type DealChanges, undoableShown } from "./brief.doneforyou.groups";
 
 export function DealCard({
@@ -98,11 +98,6 @@ export function DealCard({
                   </Badge>
                 )}
               </span>
-              {!open && newest && (
-                <span className="brief-done-net">
-                  <ChangeWhat receipt={newest} />
-                </span>
-              )}
             </span>
           }
         >
