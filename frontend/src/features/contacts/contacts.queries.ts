@@ -55,14 +55,20 @@ export async function fetchContactsPage(
 }
 
 /**
- * The first read a bare `#/contacts` link opens. The mounted list makes the
- * same request under the same key before the reader turns a dial.
+ * The first read a bare `#/contacts` link opens for the reader `readerScope`
+ * names (`healthScope(me)`). The mounted list makes the same request under the
+ * same key before the reader turns a dial.
  */
-export function contactsArrivalOptions() {
+export function contactsArrivalOptions(readerScope: string) {
   const query = listQueryFromParams(
     NO_URL_PARAMS,
     listOpening(CONTACTS_INITIAL_SORT, undefined),
     false,
   );
-  return listInfiniteOptions(CONTACTS_LIST_KEY, query, fetchContactsPage);
+  return listInfiniteOptions(
+    CONTACTS_LIST_KEY,
+    readerScope,
+    query,
+    fetchContactsPage,
+  );
 }

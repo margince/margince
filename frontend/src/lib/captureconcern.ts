@@ -7,6 +7,8 @@ export const CAPTURE_CONCERNS: Readonly<Record<Kind, MessageKey>> = {
   reauth_required: "captureConcern.reauth",
   connection_error: "captureConcern.error",
   sync_failing: "captureConcern.failing",
+  notes_grant_missing: "captureConcern.notesGrant",
+  notes_account_mismatch: "captureConcern.notesAccount",
   backfill_failed: "captureConcern.backfill",
   sync_stalled: "captureConcern.stalled",
   capture_silent: "captureConcern.silent",

@@ -23,6 +23,7 @@ import {
 import { formatMoneyOrWord } from "../format/moneyword";
 import { type Translator, useLocale, useT } from "../i18n";
 import { TASK_QUEUE_KEY } from "../lib/activitykeys";
+import { fileListKeys } from "../lib/attachmentkeys";
 import { problemStatus, unwrap } from "../lib/problem";
 import { useViewerZone } from "../lib/viewerzone";
 import { worklistKey } from "../lib/workkeys";
@@ -202,13 +203,17 @@ function useFileOnDeal(taskId: string) {
         }),
         t,
       ),
-    onSuccess: async () => {
+    onSuccess: async (_filed, { mail }) => {
       toast.show(t("tasks.whichDeal.filed"));
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["activity", taskId] }),
-        queryClient.invalidateQueries({ queryKey: TASK_QUEUE_KEY }),
-        queryClient.invalidateQueries({ queryKey: worklistKey }),
-      ]);
+      // The thread's files now show on the deal it was filed under.
+      await Promise.all(
+        [
+          ["activity", taskId],
+          TASK_QUEUE_KEY,
+          worklistKey,
+          ...fileListKeys({ entityType: "activity", entityId: mail }, "moved"),
+        ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+      );
     },
   });
 }

@@ -1,17 +1,10 @@
 /** @vitest-environment happy-dom */
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
+import { contactDocuments } from "../../testing/contactdocuments";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { jsonResponse } from "../../testing/story-utils";
@@ -60,6 +53,7 @@ function stubApi(
   },
   uploadAnswer: () => Response = () =>
     jsonResponse({ ...PRICE_LIST, id: "att-new" }, 201),
+  docs?: ReturnType<typeof contactDocuments>,
 ): Call[] {
   const calls: Call[] = [];
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -68,6 +62,8 @@ function stubApi(
     const method = request?.method ?? init?.method ?? "GET";
     const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
     const form = init?.body instanceof FormData ? init.body : null;
+    const contactList = docs?.answer(method, url);
+    if (contactList) return contactList;
     calls.push({ key, query: url.searchParams, form });
     if (key === "GET /me") return jsonResponse(meFixture({ allow: grants }));
     if (key === "GET /attachments") {
@@ -168,31 +164,27 @@ describe("ActivityFiles", () => {
     expect(upload?.form?.get("entity_id")).toBe("act-kickoff");
   });
 
-  it("refreshes every file list that shows the activity's files", async () => {
-    stubApi([]);
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const invalidate = vi.spyOn(client, "invalidateQueries");
+  it("counts the upload in the linked contact's Documents tab", async () => {
+    const docs = contactDocuments(1);
+    stubApi(
+      [],
+      undefined,
+      () => {
+        docs.becomes(2);
+        return jsonResponse({ ...PRICE_LIST, id: "att-new" }, 201);
+      },
+      docs,
+    );
     const user = userEvent.setup();
-    render(
-      <QueryClientProvider client={client}>
-        <LocaleProvider initial="en">
-          <ActivityFiles activityId="act-kickoff" writable />
-        </LocaleProvider>
-      </QueryClientProvider>,
+    renderWithQueryClient(
+      <>
+        {docs.strip}
+        <ActivityFiles activityId="act-kickoff" writable />
+      </>,
     );
+    await docs.shows(1);
     await uploadThroughDialog(user);
-    await waitFor(() =>
-      expect(invalidate.mock.calls.map(([filter]) => filter?.queryKey)).toEqual(
-        [
-          ["attachments", "activity", "act-kickoff"],
-          ["deal-documents"],
-          ["deal-attachments"],
-          ["companyDocuments"],
-        ],
-      ),
-    );
+    await docs.shows(2);
   });
 
   it("shows the refusal when the activity is not this rep's to change", async () => {

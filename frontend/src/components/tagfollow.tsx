@@ -13,6 +13,7 @@ import { Heading } from "../design-system/heading";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWrite, useCanWriteRecord } from "../lib/capability";
+import { useHealthScope } from "../lib/healthscope";
 import { throwProblem } from "../lib/problem";
 import { useApplyTag, useRecordTags } from "../lib/tags.queries";
 import {
@@ -149,9 +150,10 @@ export function ContactsTagOffer({
 }
 
 function useCompanyRoster(companyID: string, enabled: boolean) {
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["contacts", "employed-at", companyID],
-    enabled,
+    queryKey: ["contacts", "employed-at", companyID, readerScope ?? ""],
+    enabled: enabled && readerScope !== undefined,
     queryFn: async () => {
       const { data, error } = await api.GET("/contacts", {
         params: { query: { company_id: companyID, limit: ROSTER_LIMIT } },

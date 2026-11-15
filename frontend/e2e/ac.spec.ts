@@ -1000,7 +1000,7 @@ async function barsAndPointer(page: Page) {
   const bars = await scrollbarStates(page);
   const pointerOver = await page.evaluate(() => {
     // Document order is ancestor-first along the one hover chain, so the last
-    // match is the element `:not(:has(:hover))` leaves standing.
+    // match is the element lib/pointertarget.ts marks.
     const deepest = Array.from(document.querySelectorAll(":hover")).at(-1);
     if (deepest === undefined) {
       return "nothing: the pointer is outside the document";
@@ -1055,14 +1055,10 @@ async function pointInsideFirstStage(page: Page) {
 
 // ONE bar takes the accent, and it is the bar the pointer is on.
 //
-// Hover is a chain: the pointer inside a stage is inside the board, the shell's
-// content column and the document too, so a bare `*:hover` lights every
-// scroller between the cursor and the root and the accent says only "the
-// pointer is somewhere in this window". `*:hover:not(:has(:hover))` (app.css)
-// leaves the one element whose own box — its bar, its padding, its gutter —
-// the pointer is actually over. The board is where that matters most, because
-// it is the one surface that nests a scroller inside a scroller inside a
-// scroller.
+// Hover is a chain, so a bare `*:hover` would light every scroller between the
+// cursor and the root. app.css lights only the element lib/pointertarget.ts
+// marks: the one whose own box (bar, padding, gutter) is under the pointer.
+// The board nests a scroller inside a scroller inside a scroller.
 test("AC-pipeline-10: the bar under the pointer is the one that lights", async ({
   page,
 }) => {

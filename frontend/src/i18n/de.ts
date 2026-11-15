@@ -2105,8 +2105,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "aiAdmin.decisionSkip.uncertified":
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
-  "aiAdmin.decisionSkip.local_only":
-    "Entscheidungsmodell nicht genutzt: Diese Aktivität nutzt nur einen lokalen Anbieter für Entscheidungen.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -3361,8 +3359,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Rolle",
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
-  "rel.current": "Aktuell",
   "rel.former": "Früher",
+  "rel.current": "Aktuell",
   "rel.endedOn": "Bis {when}",
   "rel.remove": "Entfernen",
   "rel.removeConfirm":
@@ -3899,6 +3897,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
   "timeline.group.mayContinue": "Möglicherweise gibt es frühere Nachrichten",
+  "timeline.group.newerPart": "Spätere Nachrichten weiter oben",
+  "timeline.group.olderPart": "Frühere Nachrichten weiter unten",
   "timeline.group.kind": "Thread",
   "timeline.group.earlier_other": "{count} frühere Nachrichten anzeigen",
   "timeline.group.earlier_one": "{count} frühere Nachricht anzeigen",
@@ -15664,8 +15664,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eingabe zu groß für das Entscheidungsmodell",
   "aicalls.reason.decision_uncertified":
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
-  "aicalls.reason.decision_local_only":
-    "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
@@ -18209,7 +18207,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es konnte nicht gelesen werden, welche Teammitglieder in den Threads dieses Kontakts kein Postfach verbunden haben.",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
-  "contact.graph.sideColumn": "Vorstellungen und Veränderungen",
   "contact.graph.recordWorksWith": "Erfassen: arbeitet mit {name}",
   "contact.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "contact.graph.withColleague": "mit {name}",
@@ -18260,7 +18257,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.lastYesterday": "Gestern",
   "contact.intro.lastDays": "Vor {days} Tagen",
   "contact.intro.lastNever": "Keiner in 90 Tagen",
-  "contact.intro.stripWho": "Wege",
   "contact.intro.stripWhoMix":
     "{direct} direkt · {indirect} über einen Kontakt",
   "contact.intro.stripWhoOwn": "Inklusive deiner eigenen Beziehung",
@@ -18280,14 +18276,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.warmed": "Wärmer",
   "contact.intro.change.cooled": "Kühler",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Anfrage zur Vorstellung",
   "contact.intro.handoffNotStarted": "Nicht begonnen",
   "contact.intro.handoffUnread": "Nicht lesbar",
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
   "contact.intro.relayTitle": "Status der Vorstellung",
-  "contact.intro.stripLabel": "Netzwerk in Zahlen",
+  "contact.chapter.jump": "Auf diesem Tab",
+  "contact.chapter.wayIn": "Zugang",
+  "contact.chapter.whoAnswer":
+    "Wer aus deinem Team und aus dem Unternehmen mit {name} korrespondiert, und wie oft.",
+  "contact.chapter.progress": "Fortschritt",
+  "contact.chapter.routes_one": "{count} Weg",
+  "contact.chapter.routes_other": "{count} Wege",
+  "contact.chapter.allDirect_one": "direkt",
+  "contact.chapter.allDirect_other": "alle direkt",
+  "contact.chapter.allVia_one": "über einen Kontakt",
+  "contact.chapter.allVia_other": "alle über einen Kontakt",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Vorstellung: {handoff}. Letzte Änderung: {change}.",
+  "contact.chapter.toCheck": "Zu prüfen",
+  "contact.chapter.toCheckAnswer":
+    "Was Margince aus E-Mails und Seiten gelesen hat. Jeder Eintrag lässt sich bestätigen, korrigieren oder verwerfen.",
+  "contact.chapter.sources": "Quellen",
+  "contact.chapter.sourcesAnswer":
+    "Was jede Quelle sagt. Nichts hier überschreibt, was ein Teammitglied eingetragen hat.",
+  "contact.chapter.recordKeeping": "Datenpflege",
+  "contact.chapter.recordKeepingAnswer":
+    "Felder, Einwilligungen und Einstellungen zu diesem Kontakt.",
+  "contact.chapter.researchAction": "Öffentliche Quellen recherchieren",
   "contact.intro.mapTitle": "Wer {name} kennt",
   "contact.intro.stepRoute": "Weg wählen",
   "contact.intro.stepRoutePick": "auswählen, wen du fragst",
@@ -18433,7 +18452,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.unavailable": "Nicht verfügbar",
   "contact.network.momentsTitle": "Was sich geändert hat",
   "contact.network.momentsSub":
-    "Veränderungen in dieser Beziehung, aus den Nachrichten.",
+    "Veränderungen aus den Nachrichten und frühere Vorstellungen.",
   "contact.network.noMoments": "Keine neuen Veränderungen in dieser Beziehung.",
   "contact.change.repliedAfterGap":
     "Der Kontakt hat nach {days} ruhigen Tagen geantwortet.",
@@ -20720,6 +20739,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.meetingSkipNextStep": "Nächsten Schritt überspringen",
+  "worklist.verb.meetingNextStep": "Wie geht es weiter?",
   "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
@@ -21195,6 +21216,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
+  "lead.company.addedOnQualify":
+    "Noch kein Unternehmen verknüpft. Beim Qualifizieren wird es verknüpft oder angelegt.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.company.matchedByDomain": "Gleiche Website-Domain",
@@ -21428,6 +21451,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "activity.notes.connectHint":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen, um sie zu lesen.",
+  "activity.notes.otherAccount":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen mit dem Google-Konto deines Kalenders.",
+  "captureConcern.notesGrant":
+    "Besprechungsnotizen können nicht gelesen werden",
+  "captureConcern.notesAccount":
+    "Besprechungsnotizen benötigen dasselbe Google-Konto wie der Kalender",
   "captureConcern.reauth": "Erneute Verbindung erforderlich",
   "captureConcern.error": "Verbindungsfehler",
   "captureConcern.failing": "Synchronisierung schlägt fehl",

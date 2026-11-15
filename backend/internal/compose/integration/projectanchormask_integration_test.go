@@ -201,8 +201,11 @@ func TestProjectListRowsNameOnlyAReadableFirstCustomer(t *testing.T) {
 				got[ids.From[ids.ProjectKind](ids.UUID(row.Id))] = one
 			}
 			for project, want := range tc.want {
-				if got[project] != want {
-					t.Errorf("project %s: %+v, want %+v", project, got[project], want)
+				listed, ok := got[project]
+				if !ok {
+					t.Errorf("project %s is missing from the list", project)
+				} else if listed != want {
+					t.Errorf("project %s: %+v, want %+v", project, listed, want)
 				}
 			}
 		})

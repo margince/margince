@@ -42,7 +42,7 @@ it.each([
   },
   {
     path: "/v1/contacts",
-    useRead: () => useQuery(relatedContactsQuery("c-1")),
+    useRead: () => useQuery(relatedContactsQuery("c-1", "reader")),
   },
   { path: "/v1/deals/d-1", useRead: () => useDeal("d-1") },
   { path: "/v1/projects/p-1", useRead: () => useProjectRecord("p-1") },
@@ -144,7 +144,7 @@ it("does not request absent ids or disabled composites", async () => {
   const view = renderHook(
     () => ({
       contact: useQuery(contactQuery(undefined)),
-      related: useQuery(relatedContactsQuery(undefined)),
+      related: useQuery(relatedContactsQuery(undefined, "reader")),
       project: useProjectRecord(undefined),
       disabledProject: useProjectRecord("p-1", false),
       company: useCompany360("c-1", false),

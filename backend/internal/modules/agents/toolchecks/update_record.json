@@ -1,8 +1,12 @@
 {
   "verb": "update_record",
   "checks": [
-    "company.read,lead.read",
-    "company.read,lead.update",
+    "company.read,lead.read,project.read",
+    "company.read,lead.read,project.update",
+    "company.read,lead.read,relationship.read",
+    "company.read,lead.update,project.read",
+    "company.read,lead.update,project.update",
+    "company.read,lead.update,relationship.read",
     "company.update,contact.update,deal.read,lead.read,project.update",
     "company.update,contact.update,deal.read,lead.update,project.update",
     "company.update,contact.update,deal.update,lead.read,project.update",

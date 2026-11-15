@@ -10,6 +10,7 @@ import {
 import type { ListChip, ListView } from "../design-system/listtable";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useHealthScope } from "../lib/healthscope";
 import { useTagVocabulary } from "../lib/tags.queries";
 import { currentParams, useUrlParams } from "../lib/urlstate";
 import "./listquery.css";
@@ -285,9 +286,11 @@ export function useListQuery<Row>({
     [opening, setParams, screenDials, paramScope],
   );
 
+  // Rows are read for one reader scope; until /me names it nothing is read.
+  const readerScope = useHealthScope();
   const infinite = useInfiniteQuery({
-    ...listInfiniteOptions(key, query, fetchPage),
-    enabled: enabled?.(query) ?? true,
+    ...listInfiniteOptions(key, readerScope ?? "", query, fetchPage),
+    enabled: readerScope !== undefined && (enabled?.(query) ?? true),
   });
   const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
   return {

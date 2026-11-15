@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -88,7 +89,7 @@ type CompanyRow interface {
 // the first company on a project takes when nobody names one. Spelled here
 // because the create path, the migration backfill and the wire vocabulary must
 // agree about it.
-const CompanyRoleCustomer = "customer"
+const CompanyRoleCustomer = auth.ProjectCustomerRole
 
 // refusingAttachCompany is what an un-injected attach becomes: it refuses every
 // company rather than admitting every one. A seam that failed OPEN here would

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -38,7 +39,7 @@ func (l *leadMailEnv) qualifyAsks(t *testing.T, lead ids.LeadID, owner ids.UUID)
 	t.Helper()
 	return l.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id
 		WHERE al.lead_id = $1 AND a.kind = 'task' AND a.source_system = $2
-		  AND NOT a.is_done AND a.assignee_id = $3`, lead, provenance.LeadRepliedSource, owner)
+		  AND NOT a.is_done AND a.archived_at IS NULL AND a.assignee_id = $3`, lead, provenance.LeadRepliedSource, owner)
 }
 
 func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {
@@ -93,5 +94,57 @@ func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {
 	}
 	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
 		t.Errorf("a reply, a new message and a held meeting left %d open asks, want one", n)
+	}
+}
+
+// One meeting held with two leads asks each lead's owner to qualify their own
+// lead, so neither lead loses its ask to the other.
+func TestAMeetingHeldWithTwoLeadsAsksAboutEach(t *testing.T) {
+	l := setupLeadMail(t)
+	first := l.ownedLead(t, "lena@prospect.example", l.e.Rep2)
+	second := l.ownedLead(t, "mira@prospect.example", l.e.Rep2)
+	store := l.e.Activities.WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default()))
+	at, held := l.at.Add(-time.Hour), meetingoutcome.Held
+	if _, _, err := store.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Demo"), Source: "manual", OccurredAt: &at, MeetingStatus: &held,
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: first.UUID}, {EntityType: "lead", EntityID: second.UUID}},
+	}); err != nil {
+		t.Fatalf("holding a meeting with both leads: %v", err)
+	}
+	for name, lead := range map[string]ids.LeadID{"first": first, "second": second} {
+		if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+			t.Errorf("the %s lead has %d open asks after the meeting, want one", name, n)
+		}
+	}
+}
+
+// An older qualify task, keyed on the arrival alone, still counts for its lead.
+// Holding the meeting files no second task for that lead, and one for the other.
+func TestAnOlderQualifyTaskStillCountsForItsLeadAndArrival(t *testing.T) {
+	l := setupLeadMail(t)
+	first, second := l.ownedLead(t, "lena@prospect.example", l.e.Rep2), l.ownedLead(t, "mira@prospect.example", l.e.Rep2)
+	at, held, writer := l.at.Add(-time.Hour), meetingoutcome.Held, newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
+	meeting, _, err := l.e.Activities.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Demo"), Source: "manual", OccurredAt: &at,
+		Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: first.UUID}, {EntityType: "lead", EntityID: second.UUID}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	older, _, err := l.e.Activities.LogActivity(principal.SystemActing(l.e.Admin(), leadRepliedActor), legacyRepliedTaskInput(writer, first, ids.UUID(meeting.Id), "Review Lena", &l.e.Rep2))
+	if err == nil {
+		_, err = l.e.Activities.ArchiveActivity(l.e.Admin(), ids.From[ids.ActivityKind](ids.UUID(older.Id)), nil)
+	}
+	if err == nil {
+		_, err = l.e.Activities.WithLeadQualifyTasks(writer).UpdateActivity(l.e.Admin(), ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), activities.UpdateActivityInput{MeetingStatus: &held})
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE lead_id = $1 AND activity_id <> $2`, first, meeting.Id); n != 1 {
+		t.Errorf("the lead with the older task has %d qualify tasks for the meeting, want only the older one", n)
+	}
+	if n := l.qualifyAsks(t, second, l.e.Rep2); n != 1 {
+		t.Errorf("the other lead has %d open asks after the meeting, want one", n)
 	}
 }

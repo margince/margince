@@ -2050,8 +2050,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
   "aiAdmin.decisionSkip.uncertified":
     "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
-  "aiAdmin.decisionSkip.local_only":
-    "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -3269,8 +3267,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Vai trò",
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
-  "rel.current": "Hiện tại",
   "rel.former": "Trước đây",
+  "rel.current": "Hiện tại",
   "rel.endedOn": "Đến {when}",
   "rel.remove": "Gỡ",
   "rel.removeConfirm": "Gỡ quan hệ này? Không thể hoàn tác.",
@@ -3784,6 +3782,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Đóng",
   "timeline.group.openThread": "Xem toàn bộ chuỗi thư",
   "timeline.group.mayContinue": "Có thể còn tin nhắn trước đó",
+  "timeline.group.newerPart": "Tin nhắn sau ở phía trên",
+  "timeline.group.olderPart": "Tin nhắn trước ở phía dưới",
   "timeline.group.kind": "Chuỗi thư",
   "timeline.group.earlier_other": "Hiển thị {count} tin nhắn trước đó",
   "timeline.group.earlier_one": "Hiển thị {count} tin nhắn trước đó",
@@ -15256,8 +15256,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Dữ liệu đầu vào quá lớn với mô hình quyết định",
   "aicalls.reason.decision_uncertified":
     "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
-  "aicalls.reason.decision_local_only":
-    "Tác vụ chỉ chạy cục bộ nhưng mô hình quyết định thì không",
   "aicalls.reason.timeout": "Lần thử trước đã hết thời gian",
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Lượt gọi gần đây",
@@ -17734,7 +17732,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.network.captureGapsFailed":
     "Không đọc được những đồng nghiệp nào trong các cuộc trao đổi với liên hệ này chưa kết nối hộp thư.",
   "contact.graph.noDirect": "Chưa ai trong công ty trao đổi với liên hệ này.",
-  "contact.graph.sideColumn": "Giới thiệu và thay đổi",
   "contact.graph.recordWorksWith": "Theo hồ sơ: làm việc cùng {name}",
   "contact.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "contact.graph.withColleague": "với {name}",
@@ -17781,7 +17778,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.lastYesterday": "Hôm qua",
   "contact.intro.lastDays": "{days} ngày trước",
   "contact.intro.lastNever": "Không có trong 90 ngày",
-  "contact.intro.stripWho": "Hướng tiếp cận",
   "contact.intro.stripWhoMix":
     "{direct} trực tiếp · {indirect} qua một liên hệ",
   "contact.intro.stripWhoOwn": "Gồm cả quan hệ của chính bạn",
@@ -17800,14 +17796,37 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.warmed": "Ấm hơn",
   "contact.intro.change.cooled": "Nguội hơn",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Yêu cầu giới thiệu",
   "contact.intro.handoffNotStarted": "Chưa bắt đầu",
   "contact.intro.handoffUnread": "Không đọc được",
   "contact.intro.handoffOwner": "Tiếp theo: {name}",
   "contact.intro.ownerColleague": "một đồng nghiệp",
   "contact.intro.ownerNobody": "không ai",
   "contact.intro.relayTitle": "Trạng thái giới thiệu",
-  "contact.intro.stripLabel": "Số liệu mạng lưới",
+  "contact.chapter.jump": "Trong thẻ này",
+  "contact.chapter.wayIn": "Cách tiếp cận",
+  "contact.chapter.whoAnswer":
+    "Ai trong nhóm của bạn và ở công ty đang trao đổi với {name}, và thường xuyên ra sao.",
+  "contact.chapter.progress": "Tiến độ",
+  "contact.chapter.routes_one": "{count} cách",
+  "contact.chapter.routes_other": "{count} cách",
+  "contact.chapter.allDirect_one": "trực tiếp",
+  "contact.chapter.allDirect_other": "trực tiếp",
+  "contact.chapter.allVia_one": "qua liên hệ",
+  "contact.chapter.allVia_other": "qua liên hệ",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Yêu cầu giới thiệu: {handoff}. Thay đổi gần nhất: {change}.",
+  "contact.chapter.toCheck": "Cần kiểm tra",
+  "contact.chapter.toCheckAnswer":
+    "Những gì Margince đọc được từ thư và trang của họ. Hãy xác nhận, sửa hoặc bỏ qua từng mục.",
+  "contact.chapter.sources": "Nguồn",
+  "contact.chapter.sourcesAnswer":
+    "Mỗi nguồn nói gì. Không có gì ở đây ghi đè lên dữ liệu đồng nghiệp đã nhập.",
+  "contact.chapter.recordKeeping": "Lưu trữ hồ sơ",
+  "contact.chapter.recordKeepingAnswer":
+    "Các trường, quyền liên lạc và thiết lập của liên hệ này.",
+  "contact.chapter.researchAction": "Tìm hiểu từ nguồn công khai",
   "contact.intro.mapTitle": "Ai quen {name}",
   "contact.intro.stepRoute": "Chọn hướng",
   "contact.intro.stepRoutePick": "chọn người để nhờ",
@@ -17945,7 +17964,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.declined": "Đã từ chối trước đó",
   "contact.intro.unavailable": "Không khả dụng",
   "contact.network.momentsTitle": "Những gì đã thay đổi",
-  "contact.network.momentsSub": "Thay đổi trong quan hệ này, lấy từ tin nhắn.",
+  "contact.network.momentsSub":
+    "Thay đổi lấy từ tin nhắn và các yêu cầu giới thiệu trước đây.",
   "contact.network.noMoments": "Chưa có thay đổi gần đây trong quan hệ này.",
   "contact.change.repliedAfterGap": "Họ đã trả lời sau {days} ngày im lặng.",
   "contact.change.wentQuiet": "Không có hoạt động trong {days} ngày.",
@@ -20192,6 +20212,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Đã đánh dấu hoàn thành",
   "worklist.verb.promiseSettleFailed":
     "Không thể đánh dấu cam kết là đã hoàn thành. Thử lại.",
+  "worklist.verb.meetingSkipNextStep": "Bỏ qua bước tiếp theo",
+  "worklist.verb.meetingNextStep": "Bước tiếp theo là gì?",
   "worklist.verb.meetingHowDidItGo": "Cuộc họp thế nào?",
   "worklist.verb.meetingAddNotes": "Thêm ghi chú",
   "worklist.verb.meetingUpdateTitle": "Cuộc họp",
@@ -20642,6 +20664,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkTitle": "Liên kết lead này với {name}?",
   "lead.company.linkConfirm": "Liên kết công ty",
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
+  "lead.company.addedOnQualify":
+    "Chưa liên kết công ty. Xác nhận lead đủ điều kiện sẽ liên kết hoặc tạo hồ sơ công ty.",
   "lead.company.linkOnQualify":
     "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
   "lead.company.matchedByDomain": "Cùng tên miền trang web",
@@ -20865,6 +20889,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.decided_kind": "Đã quyết định mà không hỏi: {kind}",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
+  "activity.notes.connectHint":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp để đọc.",
+  "activity.notes.otherAccount":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp bằng cùng tài khoản Google với lịch của bạn.",
+  "captureConcern.notesGrant": "Không thể đọc ghi chú cuộc họp",
+  "captureConcern.notesAccount":
+    "Ghi chú cuộc họp cần cùng tài khoản Google với lịch",
   "captureConcern.reauth": "Cần kết nối lại",
   "captureConcern.error": "Lỗi kết nối",
   "captureConcern.failing": "Đồng bộ gặp lỗi",

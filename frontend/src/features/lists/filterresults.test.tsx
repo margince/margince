@@ -19,6 +19,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
 import { openViewStep } from "../../testing/listview.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { FilterResults, previewColumnNames } from "./filterresults";
 
 // The preview answers every non-generated column of the table, so what this
@@ -126,8 +127,10 @@ function preview(rows: readonly Record<string, unknown>[]): FilterPreview {
 // The table reads the companies its rows name, so it needs a query client
 // even when no column is a reference.
 function wrapper({ children }: { children: ReactNode }) {
+  const client = new QueryClient();
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return (
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <LocaleProvider>{children}</LocaleProvider>
     </QueryClientProvider>
   );
@@ -437,6 +440,7 @@ describe("a column that points at another record", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
     return render(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">

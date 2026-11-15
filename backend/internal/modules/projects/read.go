@@ -152,30 +152,12 @@ func orderByPhase(context.Context, func(any) int) (string, error) {
 // company_id. A withheld first customer answers NULL and sorts last; a later
 // visible customer never stands in for it.
 func orderByReadableCompany(ctx context.Context, arg func(any) int) (string, error) {
-	if !auth.ReadGranted(ctx, "company") || auth.Require(ctx, "relationship", principal.ActionRead) != nil {
-		// Ordered by nothing: every row sits in the tail and the page falls
-		// back to its tie-breaker.
-		return "NULL::text", nil
-	}
-	edge, err := edgeBound(ctx, "customer_edge", arg)
+	customer, err := auth.ProjectCustomerSQL(ctx, "project.id", arg)
 	if err != nil {
 		return "", err
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "company_sort", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		scope = predicateAlways
-	}
-	return `(SELECT CASE WHEN (` + edge + `) AND (` + scope + `) THEN company_sort.display_name END
-	           FROM relationship customer_edge
-	           JOIN company company_sort ON company_sort.id = customer_edge.company_id
-	          WHERE customer_edge.kind = 'project_company' AND customer_edge.project_id = project.id
-	            AND customer_edge.role = '` + CompanyRoleCustomer + `'
-	            AND customer_edge.archived_at IS NULL AND company_sort.archived_at IS NULL
-	          ORDER BY customer_edge.created_at, customer_edge.id
-	          LIMIT 1)`, nil
+	return `(SELECT company_sort.display_name FROM company company_sort
+	          WHERE company_sort.id = ` + customer.Readable + `)`, nil
 }
 
 // ListProjects answers one page under the caller's row scope.
@@ -238,24 +220,20 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
 	}
 	if in.CompanyID != nil {
-		// A row masks company_id for a role without the company grant, and the
-		// narrowed page would name it.
-		if err := auth.RefuseUnreadableReferenceFilter(ctx, filterCompanyID, "company"); err != nil {
-			return nil, err
-		}
-		// ANY of the project's live companies, not the legacy anchor column: a
-		// project is work several companies do together, so narrowing the list
-		// to a partner must show the deliveries that partner is on.
-		// The edge scope too: a match discloses the project-company pair,
-		// which relationship.read governs, as the company page's own list does.
-		edge, err := edgeBound(ctx, "c", arg)
+		// Any of the project's live companies, not the legacy anchor column.
+		// A project is work several companies do together.
+		// Narrowing the list to a partner must show the deliveries that partner is on.
+		// A match discloses the project-company pair.
+		// A caller who may not read the edges is refused the filter, as the company page's project list is.
+		edges, err := auth.ProjectCompanyEdgesSQL(ctx, arg)
 		if err != nil {
 			return nil, err
 		}
-		where = append(where, storekit.SQLf(
-			`EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'`+
-				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL AND (%s))`,
-			arg(*in.CompanyID), edge))
+		if !edges.Readable {
+			return nil, apperrors.ErrPermissionDenied
+		}
+		where = append(where, storekit.SQLf("EXISTS (SELECT 1 %s AND %s = project.id AND %s = $%d)",
+			edges.Source, auth.ProjectEdgeProject, auth.ProjectEdgeCompany, arg(*in.CompanyID)))
 	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {

@@ -4,7 +4,7 @@ import { emptyReason, repeatsDescription } from "./companyprofiletab";
 describe("repeatsDescription", () => {
   const offer = [{ field: "offer_summary", value: "Bearings sold online. " }];
 
-  it("hides the offer row that repeats the description", () => {
+  it("detects when the description repeats the offer", () => {
     expect(
       repeatsDescription("offer_summary", offer, "Bearings sold online."),
     ).toBe(true);
@@ -27,7 +27,7 @@ describe("repeatsDescription", () => {
 
 describe("emptyReason", () => {
   it("says the website does not state it once a read finished", () => {
-    for (const status of ["ready", "partial", "confirmed"]) {
+    for (const status of ["done", "partial"] as const) {
       expect(emptyReason(status)).toBe("co.narrative.notOnSite");
     }
   });
@@ -37,10 +37,11 @@ describe("emptyReason", () => {
       null,
       undefined,
       "queued",
-      "reading",
+      "deferred",
+      "running",
       "failed",
-      "abandoned",
-    ]) {
+      "cancelled",
+    ] as const) {
       expect(emptyReason(status)).toBe("co.narrative.notReadYet");
     }
   });

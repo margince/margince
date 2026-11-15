@@ -39,9 +39,12 @@ export function contact360Query(contactId: string) {
 // The contacts around a contact: current colleagues and the others on its deals.
 // One page at the contract's ceiling. The composer matches typed names in it,
 // and a name on a second page would never be offered.
-export function relatedContactsQuery(contactId: string | undefined) {
+export function relatedContactsQuery(
+  contactId: string | undefined,
+  readerScope: string,
+) {
   return queryOptions({
-    queryKey: ["contactsRelatedTo", contactId],
+    queryKey: ["contactsRelatedTo", contactId, readerScope],
     queryFn:
       contactId == null
         ? skipToken

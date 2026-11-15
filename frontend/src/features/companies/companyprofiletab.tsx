@@ -191,9 +191,8 @@ export function CompanyProfileForm({
   );
 }
 
-// The site read writes its offer summary as the description too. While the two
-// hold the same words, the tab shows the offer row alone with its editor and
-// evidence. Once they differ, both rows show.
+// Matching stored text appears once, with the offer's editor and evidence.
+// A distinct description remains visible beside the offer.
 export function repeatsDescription(
   field: (typeof NARRATIVE_FIELDS)[number],
   fields: readonly { field: string; value: string }[],
@@ -207,9 +206,9 @@ export function repeatsDescription(
 // fields from the website only and leaves out what the site does not state.
 // So after a finished read, an empty field is one the site does not mention.
 export function emptyReason(
-  status: string | null | undefined,
+  status: components["schemas"]["SiteReadReport"]["status"] | null | undefined,
 ): "co.narrative.notOnSite" | "co.narrative.notReadYet" {
-  return status === "ready" || status === "partial" || status === "confirmed"
+  return status === "done" || status === "partial"
     ? "co.narrative.notOnSite"
     : "co.narrative.notReadYet";
 }

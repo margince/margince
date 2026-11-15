@@ -9,6 +9,7 @@ import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { LeadBoard } from "./leadpresentation.board";
@@ -82,6 +83,7 @@ function counted(count: number): string {
 export const OriginAndCountInGerman: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "GET /lead-origins": () => jsonResponse({ data: [eventOrigin] }),
       "POST /reports/leads-by-status": () =>
         jsonResponse({ rows: [{ status: "promoted", leads: 2 }] }),

@@ -14,9 +14,9 @@ const (
 	// TaskBriefRanking is the one Premium-frontier default (§1.2 RATIFY): genuinely multi-hop reasoning
 	TaskBriefRanking    Task = "brief_ranking"
 	TaskCaptureClassify Task = "capture_classify"
-	// TaskCaptureConfidentialityVerdict is Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. Local-only ladder for the same reason as the sender verdict: the prompt carries subject, body and attachment names, and this is the task that decides whether a thread is private.
+	// TaskCaptureConfidentialityVerdict is Decides what one email THREAD is about, so a classified mailbox can open the ordinary ones instead of holding everything. Closed vocabulary; exactly one kind (ordinary) opens a thread and every other kind holds it, so a wrong answer, an outage and a budget stop all fail towards privacy. Asymmetric floor: an opening answer below 0.8 resolves to unsure, which holds; a holding answer needs no floor, because requiring confidence to hold would publish the threads the model found hardest. The configured routing profile and provider bindings decide where the prompt goes.
 	TaskCaptureConfidentialityVerdict Task = "capture_confidentiality_verdict"
-	// TaskCaptureCounterpartyVerdict is ADR-0072: the ambiguous first-time-sender creation gate. Exactly one KIND per address from a closed vocabulary — contact, role_mailbox, company_sender, newsletter, transactional, spam, personal, advisor, vendor_pitch — each resolving to a real|noise lifecycle status. ASYMMETRIC floor: a CREATING answer (contact, advisor, vendor_pitch) needs 0.85 and every other kind needs 0.7, because the two mistakes are not the same size — refusing a contact leaves the mail visible and the question answerable by a contact, while creating one puts a record in a shared CRM. Below its floor → unsure, never noise. Three kinds create a contact and they differ in WHO can see it: `contact` becomes an ordinary workspace contact, and `advisor` becomes an owner-scoped one — a founder's lawyer is a genuine contact whose existence is not the workspace's business. `vendor_pitch` becomes a contact carrying the vendor_marketing mark, which default contact lists skip. Every other kind creates none. The question is WHO WROTE, because the older yes/no gate grouped a contact and a company under one `real` answer and so named a contact after the company that sent the mail. `unsure` is deliberately not answerable — abstention is derived from the floor, not self-reported, so a model cannot talk its way past it by claiming certainty about its own uncertainty. Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. Local-only ladder: the prompt carries subject and body, and this is the task that decides whether a sender is personal — a cloud rung would send a founder's family mail off the machine to ask whether it was family mail.
+	// TaskCaptureCounterpartyVerdict is ADR-0072: the ambiguous first-time-sender creation gate. Exactly one KIND per address from a closed vocabulary — contact, role_mailbox, company_sender, newsletter, transactional, spam, personal, advisor, vendor_pitch — each resolving to a real|noise lifecycle status. ASYMMETRIC floor: a CREATING answer (contact, advisor, vendor_pitch) needs 0.85 and every other kind needs 0.7, because the two mistakes are not the same size — refusing a contact leaves the mail visible and the question answerable by a contact, while creating one puts a record in a shared CRM. Below its floor → unsure, never noise. Three kinds create a contact and they differ in WHO can see it: `contact` becomes an ordinary workspace contact, and `advisor` becomes an owner-scoped one — a founder's lawyer is a genuine contact whose existence is not the workspace's business. `vendor_pitch` becomes a contact carrying the vendor_marketing mark, which default contact lists skip. Every other kind creates none. The question is WHO WROTE, because the older yes/no gate grouped a contact and a company under one `real` answer and so named a contact after the company that sent the mail. `unsure` is deliberately not answerable — abstention is derived from the floor, not self-reported, so a model cannot talk its way past it by claiming certainty about its own uncertainty. Release-blocking false-noise eval threshold. The no-payload posture is the `no_payload` field above (ADR-0074); it was formerly asserted in this prose and matched by substring. The configured routing profile and provider bindings decide where the prompt goes.
 	TaskCaptureCounterpartyVerdict Task = "capture_counterparty_verdict"
 	// TaskCertJudge is the aicert quality judge — pinned to its own router in the cert lane, never the candidate's binding
 	TaskCertJudge Task = "cert_judge"
@@ -206,7 +206,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "5f39638fa0c3cfed0799806bfb470e2681eb8baa9aacd1c4c240e3848bfca4e8"
+const TaskContractHash = "2af95039d9fa6eda5e9f6a91d538392472a93d28f2448005d33bbfaebc9581f5"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -630,31 +630,6 @@ var noPayloadTasks = map[Task]bool{
 
 // NoPayload reports the contract's payload prohibition for a task.
 func NoPayload(t Task) bool { return noPayloadTasks[t] }
-
-// localOnlyTasks are the tasks whose prompt must never leave this
-// machine, whatever an operator binds the rungs of their ladder to.
-//
-// DECLARED, never inferred from a tier NAME. `local_small` is a rung and
-// which provider serves it is the operator's to set, so a guarantee
-// resting on the name holds only until somebody rebinds it — and the
-// rebinding is legal under every profile but sovereign.
-var localOnlyTasks = map[Task]bool{
-	TaskCaptureConfidentialityVerdict: true,
-	TaskCaptureCounterpartyVerdict:    true,
-}
-
-// LocalOnly reports the contract's egress prohibition for a task: its
-// prompt may be served only by a provider running on this machine.
-func LocalOnly(t Task) bool { return localOnlyTasks[t] }
-
-// localOnlyTaskList is the same set in contract order.
-var localOnlyTaskList = []Task{
-	TaskCaptureConfidentialityVerdict,
-	TaskCaptureCounterpartyVerdict,
-}
-
-// LocalOnlyTasks returns the local-only tasks in contract order.
-func LocalOnlyTasks() []Task { return localOnlyTaskList }
 
 // taskSubjectRestriction is each task's declared restriction posture.
 var taskSubjectRestriction = map[Task]SubjectRestrictionPosture{
