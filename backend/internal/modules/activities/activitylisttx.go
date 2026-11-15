@@ -94,6 +94,11 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if in.foldsInvitations() {
+		if err := WithInvitationSummaries(ctx, tx, activities); err != nil {
+			return nil, storekit.Page{}, err
+		}
+	}
 	copies := make([]SeatCopies, len(activities))
 	for i := range activities {
 		copies[i] = paged[i].copies

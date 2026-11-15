@@ -5192,6 +5192,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.needsAction": "Keine Antwort",
   "meeting.attendeesMore_one": "und {count} weiterer Gast",
   "meeting.attendeesMore_other": "und {count} weitere Gäste",
+  "meeting.invitation.invited": "{count} eingeladen",
+  "meeting.invitation.accepted": "{count} zugesagt",
+  "meeting.invitation.declined": "{count} abgesagt",
+  "meeting.invitation.tentative": "{count} vielleicht",
   "activity.detail.guestsLeftOut_one":
     "und {count} weiterer Gast, nicht aufgeführt",
   "activity.detail.guestsLeftOut_other":
