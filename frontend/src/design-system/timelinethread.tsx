@@ -336,7 +336,7 @@ export function ThreadRow({
   // every member of which is withheld says so where its subject would go.
   const subject = group.entries.find((entry) => !entry.withheld)?.title;
   return (
-    <li className={sideClass(newest)}>
+    <li className={sideClass(newest)} id={`tl-${group.id}`}>
       {/* The same three columns a single row sits on (date, rail, what
           happened), because a conversation is a row of the chronology. Its
           mark is the kind's own icon: a dot would say it was one message. */}
@@ -400,6 +400,17 @@ export function ThreadRow({
             <EmailFiles summaries={memberSummaries(group.entries)} />
           )}
           <ProvenanceTag provenance={newest.provenance} />
+          {/* A button, not a fragment link: the router owns the URL hash. */}
+          {group.newerPart && (
+            <Button variant="ghost" onClick={() => showPart(group.newerPart)}>
+              {t("timeline.group.newerPart")}
+            </Button>
+          )}
+          {group.olderPart && (
+            <Button variant="ghost" onClick={() => showPart(group.olderPart)}>
+              {t("timeline.group.olderPart")}
+            </Button>
+          )}
           {/* A thread cut by the page edge can be completed when the page
                 passed a handler; where it cannot, the notice still stands,
                 because rendering neither would present the cut as the whole
@@ -423,4 +434,11 @@ export function ThreadRow({
       </div>
     </li>
   );
+}
+
+// showPart scrolls the other part of a split thread into view.
+function showPart(id: string | undefined): void {
+  if (id) {
+    document.getElementById(`tl-${id}`)?.scrollIntoView({ block: "center" });
+  }
 }

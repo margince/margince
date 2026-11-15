@@ -302,7 +302,7 @@ func TestColdStartAcceptWritesProfileOntoCompany(t *testing.T) {
 	e := integration.Setup(t)
 	extraction := `{"fields":[
 		{"field":"legal_name","value":"Acme GmbH","evidence_snippet":"Acme GmbH","confidence":0.95},
-		{"field":"industry","value":"SaaS","evidence_snippet":"scaling SaaS companies","confidence":0.6},
+		{"field":"industry","value":"Software","evidence_snippet":"scaling SaaS companies","confidence":0.6},
 		{"field":"icp","value":"RevOps at SaaS scale-ups","evidence_snippet":"Built for RevOps leaders at scaling SaaS companies","confidence":0.7}]}`
 	brain := ai.NewFakeClient().Script(extraction, extraction)
 

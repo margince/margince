@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../../design-system/atoms";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { companyDocumentsKey, dealFilesKey } from "../../lib/attachmentkeys";
 import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
 import { AddDocumentDialog } from "./adddocument";
 
@@ -98,6 +99,8 @@ function stubApi(
     settingsStatus?: number;
     // Refuses the deal read, so the picker has a failure to report.
     dealsStatus?: number;
+    // The company the server stamps on the stored file.
+    stampedCompany?: string;
   } = {},
 ) {
   const calls: Recorded[] = [];
@@ -174,7 +177,14 @@ function stubApi(
         }
         const status = options.uploadStatus ?? 201;
         return status === 201
-          ? json({ id: "att-1", filename: "order_form.txt" }, 201)
+          ? json(
+              {
+                id: "att-1",
+                filename: "order_form.txt",
+                company_id: options.stampedCompany,
+              },
+              201,
+            )
           : json(
               {
                 title: "Unprocessable",
@@ -335,6 +345,27 @@ describe("adding a document from the account", () => {
     const sent = uploadedForm(calls);
     expect(sent.get("entity_type")).toBe("deal");
     expect(sent.get("entity_id")).toBe("deal-1");
+  });
+
+  it("refreshes the picked deal's files and the company the server filed it under", async () => {
+    const user = userEvent.setup();
+    stubApi(FULL_SEAT, { stampedCompany: "o-1" });
+    show();
+    const lists = shared ?? client();
+    const showing = [dealFilesKey("deal-1"), companyDocumentsKey("o-1")];
+    const elsewhere = [dealFilesKey("deal-2"), companyDocumentsKey("o-2")];
+    for (const queryKey of [...showing, ...elsewhere]) {
+      lists.setQueryData(queryKey, { data: [] });
+    }
+
+    await pickDeal(user, "pallet", /Pallet Handling Programme/);
+    await user.upload(screen.getByLabelText(/File/), orderForm());
+    await pressUpload(user);
+
+    const stale = (keys: readonly (readonly unknown[])[]) =>
+      keys.map((queryKey) => lists.getQueryState(queryKey)?.isInvalidated);
+    await waitFor(() => expect(stale(showing)).toEqual([true, true]));
+    expect(stale(elsewhere)).toEqual([false, false]);
   });
 
   it("reaches a deal on a later page, which no single request offers", async () => {

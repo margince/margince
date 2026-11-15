@@ -20,6 +20,7 @@ import { MergeAction } from "../../components/merge";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { useT } from "../../i18n";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import {
   useCan,
   useCanWrite,
@@ -292,6 +293,7 @@ export function CompanyActionBadges({
   // Undefined on a live account, which is what leaves those verbs pressable.
   // See companyheaderactions.tsx's CompanyHeaderActions: the id is an
   // override, never what decides whether these verbs are refused.
+  const queryClient = useQueryClient();
   const ownReasonId = useId();
   const menuReasonId = archivedReasonId ?? ownReasonId;
   const refusedReason = useCompanyVerbRefusal(company);
@@ -342,7 +344,7 @@ export function CompanyActionBadges({
           sourceName={company.display_name}
           searchTargets={searchCompanyTargets}
           merge={async (targetId) => {
-            return unwrap(
+            const merged = unwrap(
               await api.POST("/companies/{id}/merge", {
                 params: {
                   path: { id: company.id },
@@ -352,6 +354,18 @@ export function CompanyActionBadges({
               }),
               t,
             );
+            // The source's documents are refiled under the survivor.
+            await Promise.all(
+              [company.id, targetId]
+                .flatMap((id) =>
+                  fileListKeys(
+                    { entityType: "company", entityId: id },
+                    "moved",
+                  ),
+                )
+                .map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+            );
+            return merged;
           }}
           invalidate="companies"
           recordKey="company"

@@ -25,6 +25,7 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { OverflowMenu } from "../../design-system/overflowmenu";
 import { useT } from "../../i18n";
 import { entityTimelineKeys, taskWriteKeys } from "../../lib/activitykeys";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { useMessageAudience } from "../../lib/audienceservice";
 import { useCanWriteRecord } from "../../lib/capability";
 import { captureReviewTarget } from "../../lib/capturereview";
@@ -261,7 +262,14 @@ function ActivityArchiveAction({
           }),
         )
       }
-      invalidate={entityTimelineKeys(entityType, entityId)}
+      invalidate={[
+        ...entityTimelineKeys(entityType, entityId),
+        // An archived activity's files leave every Documents list.
+        ...fileListKeys(
+          { entityType: "activity", entityId: activity.id },
+          "removed",
+        ),
+      ]}
       recordKey="activity"
       onArchived={() => undefined}
     />

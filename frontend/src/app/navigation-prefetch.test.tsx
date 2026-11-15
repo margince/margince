@@ -24,6 +24,7 @@ import {
   stages,
   stubBackend,
 } from "../features/deals/deals.testkit";
+import { healthScope } from "../lib/healthscopekey";
 import { pipelinesOptions } from "../lib/pipelines.queries";
 import { sessionOptions } from "../lib/session";
 import { meFixture } from "../testing/mefixture";
@@ -46,6 +47,8 @@ const READER = meFixture({
   allow: { contact: ["read"], deal: ["read"] },
   rowScope: "all",
 });
+
+const READER_SCOPE = healthScope(READER) ?? "";
 
 const OTHER_READER = {
   ...READER,
@@ -172,7 +175,8 @@ describe("navigation intent on the rail's Contacts link", () => {
     server.answerAll();
     await waitFor(() =>
       expect(
-        client.getQueryData(contactsArrivalOptions().queryKey)?.pages,
+        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey)
+          ?.pages,
       ).toHaveLength(1),
     );
 
@@ -190,7 +194,7 @@ describe("navigation intent on the rail's Contacts link", () => {
     await act(() => Promise.resolve());
     expect(server.asked).toHaveLength(0);
     expect(
-      client.getQueryState(contactsArrivalOptions().queryKey),
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
     ).toBeUndefined();
   });
 
@@ -254,14 +258,14 @@ describe("navigation intent on the rail's Contacts link", () => {
     server.answerAll();
     await waitFor(() =>
       expect(
-        client.getQueryData(contactsArrivalOptions().queryKey),
+        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey),
       ).toBeDefined(),
     );
 
     client.setQueryData(sessionOptions.queryKey, OTHER_READER);
 
     expect(
-      client.getQueryState(contactsArrivalOptions().queryKey),
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
     ).toBeUndefined();
     renderWith(client, <ContactsScreen />);
     await waitFor(() => expect(server.asked).toHaveLength(2));
@@ -299,7 +303,7 @@ describe("navigation intent on the rail's Contacts link", () => {
     await waitFor(() => expect(server.asked[0]?.signal.aborted).toBe(true));
     server.answerAll();
     expect(
-      client.getQueryState(contactsArrivalOptions().queryKey),
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
     ).toBeUndefined();
   });
 
@@ -315,6 +319,54 @@ describe("navigation intent on the rail's Contacts link", () => {
 
     await act(() => Promise.resolve());
     expect(server.asked).toHaveLength(0);
+  });
+
+  it("starts nothing before the session names the reader", async () => {
+    const server = contactsServer();
+    const client = createQueryClient();
+
+    navigationPrefetch(client).intend("contacts");
+
+    await act(() => Promise.resolve());
+    expect(server.asked).toHaveLength(0);
+  });
+
+  it("keys the warmed list by the reader scope", () => {
+    expect(contactsArrivalOptions(READER_SCOPE).queryKey[1]).toBe(READER_SCOPE);
+  });
+
+  it("does not hand a screen rows read under the same user's old row scope", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    // Read by an earlier visit, not by the prefetch, so nothing drops it on a
+    // principal change but its key.
+    client.setQueryData(contactsArrivalOptions(READER_SCOPE).queryKey, {
+      pages: [
+        {
+          data: [
+            {
+              ...anna,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        },
+      ],
+      pageParams: [null],
+    });
+    const narrowed = meFixture({
+      allow: { contact: ["read"], deal: ["read"] },
+      rowScope: "own",
+    });
+    act(() => {
+      client.setQueryData(sessionOptions.queryKey, narrowed);
+    });
+
+    renderWith(client, <ContactsScreen />);
+
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    expect(screen.queryByText("Anna Weber")).toBeNull();
   });
 });
 
@@ -389,15 +441,19 @@ describe("navigation intent toward Deals", () => {
         .map((stage) => ({ ...stage, pipeline_id: id })),
     });
 
-    const options = dealsArrivalColumnOptions([
-      pipeline("first", false),
-      pipeline("declared", true),
-    ]);
+    const options = dealsArrivalColumnOptions(
+      [pipeline("first", false), pipeline("declared", true)],
+      READER_SCOPE,
+    );
 
-    expect(options?.queryKey[2].pipelineId).toBe("declared");
-    expect(options?.queryKey[4]).toBe("s1");
+    expect(options?.queryKey[2]).toBe(READER_SCOPE);
+    expect(options?.queryKey[3].pipelineId).toBe("declared");
+    expect(options?.queryKey[5]).toBe("s1");
     expect(
-      dealsArrivalColumnOptions([{ ...pipeline("bare", true), stages: [] }]),
+      dealsArrivalColumnOptions(
+        [{ ...pipeline("bare", true), stages: [] }],
+        READER_SCOPE,
+      ),
     ).toBeUndefined();
   });
 });
