@@ -61,7 +61,7 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	return fillOpenDealCounts(ctx, tx, idx, companyIDs, asOf)
 }
 
-// contactCountVisible is the one gate for contact_count and its sort. The
+// contactCountVisible gates contact_count and its sort. The
 // count needs relationship.read beside contact.read, because it is a fact
 // about employment edges. Without both it stays absent, so the count never
 // reveals edges the role is refused elsewhere.
@@ -69,7 +69,7 @@ func contactCountVisible(ctx context.Context) bool {
 	return auth.ReadGranted(ctx, "contact") && auth.ReadGranted(ctx, "relationship")
 }
 
-// pipelineCountsVisible is the one gate for open_deal_count, the computed
+// pipelineCountsVisible gates open_deal_count, the computed
 // fields and the open-deal sort (STATE-4). A role without deal.read or
 // computed_field.read sees none of them. Absent, not zero.
 func pipelineCountsVisible(ctx context.Context) bool {

@@ -91,9 +91,9 @@ export function openingIdentity<T extends { archived_at?: string | null }>(
 }
 
 // A 360 refused while the row is re-read may be an archive the row will report.
-// So the contact page waits for the row before it calls itself unopened, and
-// shows no record while it waits: the old 360 would offer actions the refusal
-// has withdrawn. A cached archived row waits for its re-read the same way.
+// So the contact page waits for the row before it calls itself unopened.
+// It shows no record while it waits, because the old 360 would offer actions
+// the refusal has withdrawn. A cached archived row waits for its re-read the same way.
 export function contactPageState(
   record: Readonly<{
     isPending: boolean;
