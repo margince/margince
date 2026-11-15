@@ -44,11 +44,9 @@ func NewCaptureEnrichTrigger(pool *pgxpool.Pool, enqueue *jobs.Runner, log *slog
 func (g *CaptureEnrichTrigger) queues(ctx context.Context, env events.Envelope) bool {
 	switch env.Type {
 	case eventActivityCaptured:
-		// EMAIL only, decided before anything is queued. The signature pass
-		// reads a mail's trailing lines and nothing else can carry a signature
-		// block, so a meeting or a call would queue a model-backed pass that has
-		// no work to do — this consumer's whole job is promptness, and paying
-		// for a pass per logged call is not that.
+		// EMAIL only, decided before anything is queued. Only a mail carries a
+		// signature block. A meeting or a call would queue a model-backed pass
+		// with no work to do.
 		var payload crmcontracts.PublicEventActivityCaptured
 		if err := json.Unmarshal(env.Payload, &payload); err != nil {
 			g.log.WarnContext(ctx, "capture enrich trigger: unreadable capture payload",

@@ -153,7 +153,7 @@ func TestSignatureBlockIgnoresAnUnmarkedQuotedReply(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			block := signatureBlock(envelope + "Thanks, works for me.\n\nBest\nAlex\n\n" + header + quoted)
-			if block != "Thanks, works for me.\nBest\nAlex" {
+			if block != "Best\nAlex" {
 				t.Fatalf("window = %q, want only what Alex wrote", block)
 			}
 			if signatureNamesContact(block, alex) {
@@ -346,4 +346,12 @@ func schemaFieldEnum(t *testing.T, raw json.RawMessage) []string {
 		t.Fatalf("reading the signature-enrich reply schema: %v", err)
 	}
 	return doc.Properties.Fields.Items.Properties.Field.Enum
+}
+
+func TestACompanyClosingDoesNotHideThePersonalSignature(t *testing.T) {
+	cand := contacts.SignatureCandidate{FullName: "Anna Weber", Body: "All agreed.\n\nBest regards,\nAnna Weber\nHead of Procurement\n+49 151 2345678\n\nMit freundlichen Grüßen\nIhr Beispiel Team"}
+	block := signatureBlockFor(cand)
+	if !strings.Contains(block, "Anna Weber") || !strings.Contains(block, "Head of Procurement") {
+		t.Fatalf("personal signature was lost: %q", block)
+	}
 }

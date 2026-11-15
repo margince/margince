@@ -5,16 +5,15 @@
 
 package compose
 
-// Migration 0240 replaces activity.kind's and contact_channel_identity.provider's
-// inline CHECKs with FKs into two new derived tables (DESIGN-SP4 §4). These
-// tests prove the migration itself: the seed rows land, and the FK — not an
-// application-side list — is what refuses an unregistered kind.
+// Catalogs must exist before a connector boots. Unregistered kinds are refused
+// by their database foreign key.
 
 import (
 	"context"
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -25,25 +24,15 @@ func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
 	owner := integration.OwnerConn(t)
 	ctx := context.Background()
 
-	var kinds []string
 	rows, err := owner.Query(ctx, `SELECT kind FROM activity_kind ORDER BY kind`)
 	if err != nil {
 		t.Fatalf("querying activity_kind: %v", err)
 	}
-	for rows.Next() {
-		var k string
-		if err := rows.Scan(&k); err != nil {
-			t.Fatalf("scanning activity_kind row: %v", err)
-		}
-		kinds = append(kinds, k)
+	kinds, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatalf("reading activity kinds: %v", err)
 	}
-	rows.Close()
-	// The narrowed vocabulary (ADR-0107/A158): six INTERACTION kinds, and no
-	// transport among them. telegram and whatsapp left this table at the
-	// narrowing —
-	// telegram had already become a channel_provider row, whatsapp becomes one
-	// there — so a name appearing in both lists again would mean the axes had
-	// been re-conflated.
+	// Interaction kinds stay separate from transport registrations.
 	want := []string{"call", "email", "meeting", "message", "note", "task"}
 	if len(kinds) != len(want) {
 		t.Fatalf("activity_kind seeded %v, want %v", kinds, want)
@@ -54,32 +43,25 @@ func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {
 		}
 	}
 
-	var providers []string
 	provRows, err := owner.Query(ctx, `SELECT provider || '/' || transport FROM channel_provider ORDER BY provider`)
 	if err != nil {
 		t.Fatalf("querying channel_provider: %v", err)
 	}
-	for provRows.Next() {
-		var p string
-		if err := provRows.Scan(&p); err != nil {
-			t.Fatalf("scanning channel_provider row: %v", err)
-		}
-		providers = append(providers, p)
+	providers, err := pgx.CollectRows(provRows, pgx.RowTo[string])
+	if err != nil {
+		t.Fatalf("reading channel providers: %v", err)
 	}
-	provRows.Close()
-	// whatsapp is registered but composes no connector: a transport with no
-	// sender yet, which is the honest description while A103's WhatsApp
-	// connector is still coming. Registration is what lets a hand-logged
-	// WhatsApp message name its transport; sendability is a separate question
-	// the send pre-flight answers.
-	wantProviders := []string{"dispact/core", "telegram/core", "whatsapp/core"}
-	if len(providers) != len(wantProviders) {
-		t.Fatalf("channel_provider seeded %v, want %v", providers, wantProviders)
+	// Core transports remain seed obligations; the registry also admits later
+	// migrations and unit-owned transports. Core display names must resolve too.
+	required := map[string]bool{"dispact/core": true, "telegram/core": true, "whatsapp/core": true}
+	for provider := range coreProviderLabels {
+		required[provider+"/core"] = true
 	}
-	for i, p := range wantProviders {
-		if providers[i] != p {
-			t.Fatalf("channel_provider seeded %v, want %v", providers, wantProviders)
-		}
+	for _, provider := range providers {
+		delete(required, provider)
+	}
+	if len(required) != 0 {
+		t.Fatalf("channel_provider is missing core transports: %v (seeded %v)", required, providers)
 	}
 }
 

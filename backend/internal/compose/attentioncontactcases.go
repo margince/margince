@@ -20,19 +20,20 @@ func caseListInput(q attention.CaseQuery) contacts.ContactCaseListInput {
 	return contacts.ContactCaseListInput{Scope: q.Scope, Recipient: q.Recipient}
 }
 
-// OpenCases reads the ranked census in one snapshot.
-func (c attentionContactCases) OpenCases(ctx context.Context, q attention.CaseQuery) ([]attention.ContactCase, error) {
+// OpenCases reads the ranked census in one snapshot, and the scope's total
+// from the same ranking.
+func (c attentionContactCases) OpenCases(ctx context.Context, q attention.CaseQuery) ([]attention.ContactCase, int, error) {
 	in := caseListInput(q)
 	in.Limit = q.Limit
-	page, err := c.store.RankedContactCases(ctx, in)
+	page, total, err := c.store.RankedContactCases(ctx, in)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	out := make([]attention.ContactCase, 0, len(page))
 	for _, view := range page {
 		out = append(out, laneCase(view))
 	}
-	return out, nil
+	return out, total, nil
 }
 
 func (c attentionContactCases) CountCases(ctx context.Context, q attention.CaseQuery) (int, error) {

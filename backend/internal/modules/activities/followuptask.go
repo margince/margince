@@ -155,7 +155,7 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 }
 
 func preparePatchedTaskSource(ctx context.Context, tx pgx.Tx, current crmcontracts.Activity, in UpdateActivityInput) error {
-	if in.sourceActivityID == nil {
+	if in.sourceActivityID == nil || in.recordsMeeting {
 		return nil
 	}
 	return prepareFollowUpSource(ctx, tx, &LogActivityInput{Kind: string(current.Kind), SourceActivityID: in.sourceActivityID, AssigneeID: in.AssigneeID})

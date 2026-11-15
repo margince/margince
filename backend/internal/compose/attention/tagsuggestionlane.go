@@ -36,8 +36,9 @@ func (s *Service) openTagSuggestionItems(
 		return nil, nil, nil
 	}
 	return readSuggestionLane(ctx, s, sourceTagSuggestion,
-		func(ctx context.Context) ([]crmcontracts.TagSuggestion, error) {
-			return s.tagSuggestions.OpenTagSuggestions(ctx, depth)
+		func(ctx context.Context) ([]crmcontracts.TagSuggestion, bool, error) {
+			page, err := s.tagSuggestions.OpenTagSuggestions(ctx, depth)
+			return page, false, err
 		}, s.tagSuggestions.CountOpenTagSuggestions, tagSuggestionItem)
 }
 

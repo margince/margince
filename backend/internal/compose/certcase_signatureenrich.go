@@ -76,7 +76,8 @@ func (signatureEnrichCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	if err := json.Unmarshal(fixture, &f); err != nil {
 		return nil, fmt.Errorf("enrich/signature: the fixture is not the shape this site takes: %w", err)
 	}
-	lines := signatureBlock(f.Body)
+	cand := contacts.SignatureCandidate{FullName: f.FullName, Email: f.Email, ActivityID: ids.NewV7(), Body: f.Body}
+	lines := signatureBlockFor(cand)
 	if lines == "" {
 		return nil, errors.New(
 			"enrich/signature: the fixture's mail leaves no signature block, and the pass calls no model without one")
@@ -94,12 +95,7 @@ func (signatureEnrichCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	return &signatureEnrichCase{
 		// ContactID stays unset: it reaches the apply, never the prompt and never
 		// the gate, and a case carries only what it certifies.
-		cand: contacts.SignatureCandidate{
-			FullName:   f.FullName,
-			Email:      f.Email,
-			ActivityID: ids.NewV7(),
-			Body:       f.Body,
-		},
+		cand:     cand,
 		lines:    lines,
 		expected: want,
 	}, nil

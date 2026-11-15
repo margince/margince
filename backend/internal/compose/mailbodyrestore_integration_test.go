@@ -301,7 +301,7 @@ func TestAVerdictFromTheReplacedBodyIsRefused(t *testing.T) {
 	}
 
 	applied, err := o.e.Activities.SetCaptureLabel(
-		o.judge(), message, "noise", readAt)
+		o.judge(), message, "other", readAt)
 	if err != nil {
 		t.Fatalf("offering the stale verdict: %v", err)
 	}
@@ -328,10 +328,10 @@ func TestARestoredBodyGoesBackToTheClassifyBacklog(t *testing.T) {
 	// Read rather than assumed: asLegacy rewrote the body, so the row is past
 	// the version a freshly captured message carries.
 	if _, err := o.e.Activities.SetCaptureLabel(
-		o.judge(), message, "noise", activityVersion(t, o.e, message)); err != nil {
+		o.judge(), message, "other", activityVersion(t, o.e, message)); err != nil {
 		t.Fatalf("labelling the header-only body: %v", err)
 	}
-	if label := o.captureLabel(t, message); label == nil || *label != "noise" {
+	if label := o.captureLabel(t, message); label == nil || *label != "other" {
 		t.Fatalf("label before the restore = %v, want noise", label)
 	}
 
@@ -444,7 +444,7 @@ func TestARestoredBodyIsJudgedAgainForItsReply(t *testing.T) {
 				body: readInFull(answer), encoding: "base64", authenticated: true, at: o.now.Add(-48 * time.Hour),
 			})
 			o.asLegacy(t, message, headerOnly)
-			if applied, err := o.e.Activities.SetCaptureLabelAndReply(o.judge(), message, "noise",
+			if applied, err := o.e.Activities.SetCaptureLabelAndReply(o.judge(), message, "other",
 				activityVersion(t, o.e, message), activities.ReplyVerdictNegative, "test-model"); err != nil || !applied {
 				t.Fatalf("judging the header-only body → %t, %v", applied, err)
 			}
