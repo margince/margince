@@ -41,7 +41,7 @@ const projectCompanySource = "project"
 // projectCompanyDefaultRole is what a company is to a project when the caller
 // names no role: its client. The same role the migration backfill used, so a
 // project created before the edge existed and one created after read alike.
-const projectCompanyDefaultRole = "customer"
+const projectCompanyDefaultRole = auth.ProjectCustomerRole
 
 // relationshipRoleField is the audit key the edge's role is recorded under,
 // spelled once so the three writers cannot disagree about it.

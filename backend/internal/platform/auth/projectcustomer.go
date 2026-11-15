@@ -3,9 +3,10 @@
 
 package auth
 
-// A project's companies are relationship edges, and its company_id is its first
-// customer edge. Surfaces that list, name, sort or search by them read through
-// the two functions here. A pair one surface withholds is withheld on all.
+// A project's companies are relationship edges. A project's company_id is its
+// first customer edge (ProjectCustomerSQL), and a filter or hop by company
+// matches any live edge (ProjectCompanyEdgesSQL). Both are bounded by
+// ProjectCompanyPredicates, so a pair one surface withholds is withheld on all.
 
 import (
 	"context"
@@ -14,10 +15,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// The edge kind and role a project's customer is stored under.
+// ProjectCompanyKind is the relationship kind of a project's company edges,
+// and ProjectCustomerRole the role a project's client holds on one.
 const (
-	projectCompanyKind = "project_company"
-	projectCustomer    = "customer"
+	ProjectCompanyKind  = "project_company"
+	ProjectCustomerRole = "customer"
 )
 
 // The predicates a bound answers with when it admits every row or none.
@@ -94,8 +96,8 @@ func ProjectCustomerSQL(ctx context.Context, projectRef string, arg func(any) in
 	}
 	live := `FROM relationship customer_edge
 		  JOIN company customer_company ON customer_company.id = customer_edge.company_id
-		 WHERE customer_edge.kind = '` + projectCompanyKind + `' AND customer_edge.project_id = ` + projectRef + `
-		   AND customer_edge.role = '` + projectCustomer + `'
+		 WHERE customer_edge.kind = '` + ProjectCompanyKind + `' AND customer_edge.project_id = ` + projectRef + `
+		   AND customer_edge.role = '` + ProjectCustomerRole + `'
 		   AND customer_edge.archived_at IS NULL AND customer_company.archived_at IS NULL`
 	return ProjectCustomer{
 		EdgesRead: true,
@@ -104,4 +106,40 @@ func ProjectCustomerSQL(ctx context.Context, projectRef string, arg func(any) in
 		 ORDER BY customer_edge.created_at, customer_edge.id LIMIT 1)`,
 		Present: `EXISTS (SELECT 1 ` + live + `)`,
 	}, nil
+}
+
+// The columns of ProjectCompanyEdges.Source a caller correlates against.
+const (
+	ProjectEdgeProject = "project_edge.project_id"
+	ProjectEdgeCompany = "project_edge.company_id"
+)
+
+// ProjectCompanyEdges is the readable live project-company edges, as a
+// FROM-and-WHERE a caller extends with its own correlation.
+type ProjectCompanyEdges struct {
+	// Readable is false without relationship.read or company.read. No edge
+	// is then readable, and Source must not be used.
+	Readable bool
+	// Source starts at FROM and ends inside WHERE, so a caller appends
+	// `AND <ProjectEdgeProject or ProjectEdgeCompany> = <its own reference>`.
+	Source string
+}
+
+// ProjectCompanyEdgesSQL renders every live project-company edge this caller
+// may read, whatever its role. A filter or hop by company matches through it.
+func ProjectCompanyEdgesSQL(ctx context.Context, arg func(any) int) (ProjectCompanyEdges, error) {
+	// Asked before any predicate binds an argument, so a caller rendering no
+	// clause leaves no parameter behind in its statement.
+	if !ReadGranted(ctx, tableCompany) {
+		return ProjectCompanyEdges{}, nil
+	}
+	bounds, err := ProjectCompanyPredicates(ctx, "project_edge", "project_company", arg)
+	if err != nil || !bounds.CompaniesRead {
+		return ProjectCompanyEdges{}, err
+	}
+	return ProjectCompanyEdges{Readable: true, Source: `FROM relationship project_edge
+		  JOIN company project_company ON project_company.id = project_edge.company_id
+		 WHERE project_edge.kind = '` + ProjectCompanyKind + `'
+		   AND project_edge.archived_at IS NULL AND project_company.archived_at IS NULL
+		   AND (` + bounds.Edge + `) AND (` + bounds.Company + `)`}, nil
 }

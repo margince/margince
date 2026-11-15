@@ -31,7 +31,7 @@ func TestTheProjectListRefusesACompanyFilterToARoleWithoutTheCompanyGrant(t *tes
 	if err != nil {
 		t.Fatalf("narrowing by company_id with the company and relationship grants: %v", err)
 	}
-	if !slices.ContainsFunc(clauses, func(c string) bool { return strings.Contains(c, "AND c.company_id = $") }) {
+	if !slices.ContainsFunc(clauses, func(c string) bool { return strings.Contains(c, "project_edge.company_id = $") }) {
 		t.Errorf("clauses = %q, want the company narrowing", clauses)
 	}
 

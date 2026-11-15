@@ -40,10 +40,11 @@ import (
 // failure messages below read it, so neither can drift from the subject.
 const companyTable = "company"
 
-// companyGate is the subject. No platform spelling gateSeeds it: like the lead,
-// a company has no bespoke admission helper — auth.Require(ctx, "company", …)
-// and auth.ReadGranted(ctx, "company") ARE the object gate, and objectGate
-// reads both off the call.
+// companyGate is the subject. auth.Require(ctx, "company", …) and
+// auth.ReadGranted(ctx, "company") are the object gate, and objectGate reads
+// both off the call. The project-company builders are its only seeds: each asks
+// ReadGranted itself and hands a caller without company.read a predicate that
+// admits no company.
 //
 // No row-half allowance either. contacts asks the object gate at its company
 // entry points, so the transitive resolution reaches the gate itself and never
@@ -54,9 +55,7 @@ var companyGate = objectGate{
 	object:              companyTable,
 	literal:             gatekit.TableReadPattern(companyTable),
 	objectGateSatisfies: true,
-	// The project-company builders ask auth.ReadGranted for company and admit
-	// no company without it.
-	gateSeeds: []string{"ProjectCompanyPredicates", "ProjectCustomerSQL"},
+	gateSeeds:           []string{"ProjectCompanyPredicates", "ProjectCustomerSQL", "ProjectCompanyEdgesSQL"},
 }
 
 // predicateCompanyReads: the company table appears only inside a JOIN or EXISTS

@@ -237,16 +237,16 @@ func companyReadScope(ctx context.Context, arg func(any) int) (scope string, may
 }
 
 // projectSnippet is `key · company`, naming the company the project's own read
-// names as company_id (referenceExpr). A caller who may not read it gets the
+// names as company_id (auth.ProjectCustomerSQL). A caller who may not read it gets the
 // key alone. coalesce keeps the key when no company is named; concat_ws skips
 // a NULL key rather than printing the dot.
 func projectSnippet(ctx context.Context, fallback string, arg func(any) int) (string, error) {
-	customer, err := referenceExpr(ctx, entityProject, projectCustomerColumn, "t", arg)
+	customer, err := auth.ProjectCustomerSQL(ctx, "t.id", arg)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf(`coalesce((SELECT concat_ws(' · ', t.key, o.display_name) FROM company o
-			WHERE o.id = %s), %s)`, customer, fallback), nil
+			WHERE o.id = %s), %s)`, customer.Readable, fallback), nil
 }
 
 // leadSnippet is the lead's company, named from the linked company where there

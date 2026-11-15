@@ -74,7 +74,7 @@ var relationshipGate = objectGate{
 	objectGateSatisfies: true,
 	// The two project-company builders take EdgeReadScope themselves and answer
 	// a refused caller with no edge.
-	gateSeeds:     []string{"EdgeReadScope", "ProjectCompanyPredicates", "ProjectCustomerSQL"},
+	gateSeeds:     []string{"EdgeReadScope", "ProjectCompanyPredicates", "ProjectCustomerSQL", "ProjectCompanyEdgesSQL"},
 	rowHalfSeeds:  []string{"RelationshipEndpointScope", "EnsureRelationshipVisible"},
 	rowHalfOwners: []string{"internal/modules/contacts", "internal/platform/auth"},
 }

@@ -104,8 +104,11 @@ var scopeSpellingTable = map[string]scopeSpelling{
 	"EnsureRelationshipVisible": {endpoints: true},
 	"EdgeReadScope":             {endpoints: true},
 	"RelationshipVisibleSubset": {endpoints: true},
-	"ProjectCompanyPredicates":  {endpoints: true},
-	"ProjectCustomerSQL":        {endpoints: true},
+	// The project-company builders bound the edge and the company it names.
+	// Only the company is a reference a read hands back.
+	"ProjectCompanyPredicates": {table: "company"},
+	"ProjectCustomerSQL":       {table: "company"},
+	"ProjectCompanyEdgesSQL":   {table: "company"},
 }
 
 // scopeSpelling is one spelling's table: fixed, read off an argument, or the

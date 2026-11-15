@@ -239,12 +239,17 @@ func (c *planCompiler) edgeCondition(ctx context.Context, hop hopBinding, root s
 	if hop.relation.Join != nil {
 		return joinEdgeCondition(*hop.relation.Join), nil
 	}
-	if hop.forward {
-		reference, err := referenceExpr(ctx, root, hop.column, "t", c.arg)
-		return "h.id = " + reference, err
+	if hop.forward && isProjectCompany(root, hop.column) {
+		return c.projectCompanyHop(ctx, "t.id", "h.id")
 	}
-	reference, err := referenceExpr(ctx, hop.relation.Target, hop.column, "h", c.arg)
-	return reference + " = t.id", err
+	if !hop.forward && isProjectCompany(hop.relation.Target, hop.column) {
+		return c.projectCompanyHop(ctx, "h.id", "t.id")
+	}
+	column := sanitize(hop.column)
+	if hop.forward {
+		return "h.id = t." + column, nil
+	}
+	return "h." + column + " = t.id", nil
 }
 
 // predicates renders one where-list, reporting a refusal per clause it cannot
@@ -298,12 +303,17 @@ func (c *planCompiler) predicates(
 			refusals = append(refusals, *refusal)
 			continue
 		}
-		if vocab.Target == entityProject && field.Name == projectCustomerColumn {
-			customer, err := referenceExpr(ctx, vocab.Target, field.Name, alias, c.arg)
+		if isProjectCompany(vocab.Target, field.Name) {
+			fragment, refusal, err := c.projectCompanyClause(ctx, alias, at, field, clause)
 			if err != nil {
 				return nil, nil, err
 			}
-			expr = customer
+			if refusal != nil {
+				refusals = append(refusals, *refusal)
+				continue
+			}
+			fragments = append(fragments, fragment)
+			continue
 		}
 		fragment, refusal := c.clause(expr, at, field, clause)
 		if refusal != nil {

@@ -5,138 +5,247 @@
 
 package integration
 
-// Search names a project's company the way the project's own read does. It is
-// the first live customer edge, named only to a caller who may read that edge.
+// Search reads a project's companies from their live edges, never from the
+// stored project.company_id. A filter or hop by company matches any live edge
+// the caller may read. A hit's excerpt names the first customer a project read
+// names. A caller without relationship.read learns no pair at all.
 
 import (
 	"context"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// projectCustomerFixture holds two projects whose stored company_id is the
-// same company. Only one of them still has it as a customer.
-type projectCustomerFixture struct {
-	alpha, beta             ids.UUID
-	stillAlpha, movedToBeta ids.UUID
+// projectCompanyFixture is four projects whose stored company_id and live
+// edges disagree in the ways that matter.
+type projectCompanyFixture struct {
+	alpha, beta, gamma, private ids.UUID
+	// kessel has Alpha as its customer.
+	kessel ids.UUID
+	// turbine started with Alpha, which was taken off; Beta is its customer.
+	turbine ids.UUID
+	// pumpe has Private, then Beta, as customers. Private is capture-private
+	// to Rep3, so Rep1 at own scope may not read it.
+	pumpe ids.UUID
+	// ventil has Gamma as customer and Alpha as partner; Gamma is archived.
+	ventil ids.UUID
 }
 
-func (q *queryEnv) seedProjectCustomers(t *testing.T) projectCustomerFixture {
-	t.Helper()
-	var f projectCustomerFixture
-	f.alpha = q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
-		VALUES ($1, $2, 'Alpha Kunde', 'manual', 'human:x')`, q.Rep1)
-	f.beta = q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
-		VALUES ($1, $2, 'Beta Kunde', 'manual', 'human:x')`, q.Rep1)
-	project := func(name, key string) ids.UUID {
-		return q.SeedID(t, `INSERT INTO project (id, owner_id, name, key, company_id, source, captured_by)
-			VALUES ($1, $2, $3, $4, $5, 'manual', 'human:x')`, q.Rep1, name, key, f.alpha)
-	}
-	edge := func(project, company ids.UUID, archived string) {
-		q.SeedID(t, `INSERT INTO relationship (id, kind, project_id, company_id, role, source, captured_by, archived_at)
-			VALUES ($1, 'project_company', $2, $3, 'customer', 'manual', 'human:x', `+archived+`)`, project, company)
-	}
-	f.stillAlpha = project("Kesselwartung", "KESSEL")
-	edge(f.stillAlpha, f.alpha, "NULL")
-	// Alpha was taken off this project and Beta became its customer. The
-	// stored company_id still names Alpha.
-	f.movedToBeta = project("Turbinenwartung", "TURBINE")
-	edge(f.movedToBeta, f.alpha, "now()")
-	edge(f.movedToBeta, f.beta, "NULL")
-	return f
-}
-
-// withoutEdges reads every record type, but holds no relationship.read.
-func (q *queryEnv) withoutEdges() context.Context {
-	grants := queryGrants()
-	delete(grants, "relationship")
+// writer seeds as Rep1, a seat the fixture created, with the admin grants.
+func (q *queryEnv) writer() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), q.WS)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
-		Permissions: principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll},
+		Type: principal.PrincipalHuman, ID: "human:" + q.Rep1.String(), UserID: q.Rep1,
+		Permissions: AdminPerms,
 	})
 }
 
-func TestSearchFiltersAProjectByItsReadableFirstCustomer(t *testing.T) {
-	q := setupQuery(t)
-	f := q.seedProjectCustomers(t)
-	byCompany := func(ctx context.Context, company ids.UUID) map[ids.UUID]bool {
-		return idSet(q.run(ctx, t, `{"version": "v1", "target": "project",
-			"where": [{"field": "company_id", "op": "eq", "value": "`+company.String()+`"}]}`))
+func (q *queryEnv) seedProjectCompanies(t *testing.T) projectCompanyFixture {
+	t.Helper()
+	company := func(name string, owner ids.UUID, visibility string) ids.UUID {
+		return q.SeedID(t, `INSERT INTO company (id, owner_id, display_name, visibility, source, captured_by)
+			VALUES ($1, $2, $3, $4, 'manual', 'human:x')`, owner, name, visibility)
 	}
-	if got := byCompany(q.admin(), f.alpha); !got[f.stillAlpha] || got[f.movedToBeta] || len(got) != 1 {
-		t.Errorf("projects of Alpha = %v, want only the one Alpha is still customer of", got)
+	var f projectCompanyFixture
+	f.alpha = company("Alpha Kunde", q.Rep1, "workspace")
+	f.beta = company("Beta Kunde", q.Rep1, "workspace")
+	f.gamma = company("Gamma Kunde", q.Rep1, "workspace")
+	f.private = company("Privat Kunde", q.Rep3, "workspace")
+
+	store := compose.ProjectsStore(q.Pool)
+	edges := contacts.NewStore(q.DB())
+	ctx := q.writer()
+	owner := ids.From[ids.UserKind](q.Rep1)
+	project := func(name, key string, customer ids.UUID) ids.UUID {
+		created, err := store.CreateProject(ctx, projects.CreateProjectInput{
+			Name: name, Key: &key, CompanyID: companyIDOf(customer), OwnerID: &owner, Source: "manual",
+		})
+		if err != nil {
+			t.Fatalf("creating %s: %v", name, err)
+		}
+		return ids.UUID(created.Id)
 	}
-	if got := byCompany(q.admin(), f.beta); !got[f.movedToBeta] || len(got) != 1 {
-		t.Errorf("projects of Beta = %v, want the project Beta became customer of", got)
+	attach := func(project, company ids.UUID, role string) {
+		if _, err := edges.SetProjectCompany(ctx, contacts.SetProjectCompanyInput{
+			ProjectID: ids.From[ids.ProjectKind](project), CompanyID: companyIDOf(company), Role: role,
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
-	for _, company := range []ids.UUID{f.alpha, f.beta} {
-		if got := byCompany(q.withoutEdges(), company); len(got) != 0 {
-			t.Errorf("a caller without relationship.read learned %v by filtering on company %s", got, company)
+	f.kessel = project("Kesselwartung", "KESSEL", f.alpha)
+	f.turbine = project("Turbinenwartung", "TURBINE", f.alpha)
+	attach(f.turbine, f.beta, "customer")
+	if err := edges.RemoveProjectCompany(ctx, ids.From[ids.ProjectKind](f.turbine), companyIDOf(f.alpha)); err != nil {
+		t.Fatal(err)
+	}
+	f.pumpe = project("Pumpenwartung", "PUMPE", f.private)
+	attach(f.pumpe, f.beta, "customer")
+	f.ventil = project("Ventilwartung", "VENTIL", f.gamma)
+	attach(f.ventil, f.alpha, "partner")
+	// The archive writer refuses a company a live project names, so the row is
+	// archived directly, as a company archived before its project would be.
+	if _, err := q.Owner.Exec(context.Background(), `UPDATE company SET archived_at = now() WHERE id = $1`, f.gamma); err != nil {
+		t.Fatal(err)
+	}
+	// Capture privacy, applied after the edges exist as MakeCapturePrivate does:
+	// no writer creates a private company Rep1 could attach.
+	if _, err := q.Owner.Exec(context.Background(), `UPDATE company SET visibility = 'owner' WHERE id = $1`, f.private); err != nil {
+		t.Fatal(err)
+	}
+	return f
+}
+
+// reader reads every record type at the given row scope, without the named
+// object grants.
+func (q *queryEnv) reader(scope principal.RowScope, without ...string) context.Context {
+	return q.readerAs(q.Rep1, q.Team1, scope, without...)
+}
+
+func (q *queryEnv) readerAs(user, team ids.UUID, scope principal.RowScope, without ...string) context.Context {
+	grants := queryGrants()
+	for _, object := range without {
+		delete(grants, object)
+	}
+	ctx := principal.WithWorkspaceID(context.Background(), q.WS)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
+		TeamIDs:     []ids.UUID{team},
+		Permissions: principal.Permissions{Objects: grants, RowScope: scope},
+	})
+}
+
+// projectReaders are the callers every case is asked as.
+func (q *queryEnv) projectReaders() map[string]context.Context {
+	return map[string]context.Context{
+		"all":            q.reader(principal.RowScopeAll),
+		"own":            q.reader(principal.RowScopeOwn),
+		"no edges":       q.reader(principal.RowScopeAll, "relationship"),
+		"no companies":   q.reader(principal.RowScopeAll, "company"),
+		"no edges (own)": q.reader(principal.RowScopeOwn, "relationship"),
+		"rep3":           q.readerAs(q.Rep3, q.Team2, principal.RowScopeOwn),
+	}
+}
+
+func assertSameIDs(t *testing.T, what string, got map[ids.UUID]bool, want ...ids.UUID) {
+	t.Helper()
+	wanted := map[ids.UUID]bool{}
+	for _, id := range want {
+		wanted[id] = true
+	}
+	if len(got) != len(wanted) {
+		t.Errorf("%s = %v, want %v", what, got, want)
+		return
+	}
+	for id := range wanted {
+		if !got[id] {
+			t.Errorf("%s = %v, want %v", what, got, want)
+			return
 		}
 	}
 }
 
-func TestSearchHopsBetweenAProjectAndItsReadableFirstCustomer(t *testing.T) {
+func TestSearchFiltersAProjectByAnyReadableLiveCompany(t *testing.T) {
 	q := setupQuery(t)
-	f := q.seedProjectCustomers(t)
-	toCompany := `{"version": "v1", "target": "project",
-		"traverse": {"relation": "company", "where": [{"field": "display_name", "op": "eq", "value": "Alpha Kunde"}]}}`
-	toProjects := `{"version": "v1", "target": "company",
-		"traverse": {"relation": "projects", "where": [{"field": "name", "op": "eq", "value": "Turbinenwartung"}]}}`
-
-	if got := idSet(q.run(q.admin(), t, toCompany)); !got[f.stillAlpha] || len(got) != 1 {
-		t.Errorf("projects reaching Alpha = %v, want only the one Alpha is still customer of", got)
+	f := q.seedProjectCompanies(t)
+	readers := q.projectReaders()
+	filter := func(reader, op string, company ids.UUID) map[ids.UUID]bool {
+		return idSet(q.run(readers[reader], t, `{"version": "v1", "target": "project",
+			"where": [{"field": "company_id", "op": "`+op+`", "value": "`+company.String()+`"}]}`))
 	}
-	if got := idSet(q.run(q.admin(), t, toProjects)); !got[f.beta] || len(got) != 1 {
-		t.Errorf("customers of Turbinenwartung = %v, want Beta alone", got)
-	}
-	for _, doc := range []string{toCompany, toProjects} {
-		if got := idSet(q.run(q.withoutEdges(), t, doc)); len(got) != 0 {
-			t.Errorf("a caller without relationship.read learned %v through the hop %s", got, doc)
+	assertSameIDs(t, "projects with Alpha", filter("all", "eq", f.alpha), f.kessel, f.ventil)
+	assertSameIDs(t, "projects with Beta", filter("own", "eq", f.beta), f.turbine, f.pumpe)
+	assertSameIDs(t, "projects with archived Gamma", filter("all", "eq", f.gamma))
+	assertSameIDs(t, "projects with Private, as its owner", filter("rep3", "eq", f.private), f.pumpe)
+	assertSameIDs(t, "projects with Private, outside capture privacy", filter("all", "eq", f.private))
+	assertSameIDs(t, "projects without Beta", filter("all", "neq", f.beta), f.kessel, f.ventil)
+	// Private is not readable to Rep1, so excluding it excludes nothing: the
+	// answer is the one a project without Private would give.
+	assertSameIDs(t, "projects without Private", filter("all", "neq", f.private),
+		f.kessel, f.turbine, f.pumpe, f.ventil)
+	for _, reader := range []string{"no edges", "no companies", "no edges (own)"} {
+		for _, op := range []string{"eq", "neq"} {
+			for _, company := range []ids.UUID{f.alpha, f.beta, f.private} {
+				assertSameIDs(t, reader+" "+op+" "+company.String(), filter(reader, op, company))
+			}
 		}
+	}
+}
+
+func TestSearchHopsBetweenAProjectAndAnyReadableLiveCompany(t *testing.T) {
+	q := setupQuery(t)
+	f := q.seedProjectCompanies(t)
+	readers := q.projectReaders()
+	toCompany := func(reader, name string) map[ids.UUID]bool {
+		return idSet(q.run(readers[reader], t, `{"version": "v1", "target": "project",
+			"traverse": {"relation": "company", "where": [{"field": "display_name", "op": "eq", "value": "`+name+`"}]}}`))
+	}
+	toProjects := func(reader, name string) map[ids.UUID]bool {
+		return idSet(q.run(readers[reader], t, `{"version": "v1", "target": "company",
+			"traverse": {"relation": "projects", "where": [{"field": "name", "op": "eq", "value": "`+name+`"}]}}`))
+	}
+	assertSameIDs(t, "projects reaching Alpha", toCompany("all", "Alpha Kunde"), f.kessel, f.ventil)
+	assertSameIDs(t, "projects reaching Private", toCompany("all", "Privat Kunde"))
+	assertSameIDs(t, "companies of Pumpenwartung", toProjects("all", "Pumpenwartung"), f.beta)
+	assertSameIDs(t, "companies of Turbinenwartung", toProjects("all", "Turbinenwartung"), f.beta)
+	assertSameIDs(t, "companies of Ventilwartung", toProjects("all", "Ventilwartung"), f.alpha)
+	for _, reader := range []string{"no edges", "no edges (own)"} {
+		assertSameIDs(t, reader+": projects reaching Alpha", toCompany(reader, "Alpha Kunde"))
+		assertSameIDs(t, reader+": companies of Turbinenwartung", toProjects(reader, "Turbinenwartung"))
 	}
 }
 
 func TestASearchHitNamesOnlyTheReadableFirstCustomer(t *testing.T) {
 	q := setupQuery(t)
-	q.seedProjectCustomers(t)
-	snippet := func(ctx context.Context) string {
+	q.seedProjectCompanies(t)
+	readers := q.projectReaders()
+	snippet := func(reader, name string) string {
 		t.Helper()
-		page, err := q.Store.Search(ctx, search.Input{Query: "Turbinenwartung", Types: []string{"project"}})
+		page, err := q.Store.Search(readers[reader], search.Input{Query: name, Types: []string{"project"}})
 		if err != nil {
 			t.Fatal(err)
 		}
 		if len(page.Hits) != 1 {
-			t.Fatalf("hits = %+v, want the one project", page.Hits)
+			t.Fatalf("%s hits for %s = %+v, want the one project", reader, name, page.Hits)
 		}
 		return page.Hits[0].Snippet
 	}
-	if got := snippet(q.admin()); got != "TURBINE · Beta Kunde" {
-		t.Errorf("snippet = %q, want the key and the current customer", got)
-	}
-	if got := snippet(q.withoutEdges()); got != "TURBINE" {
-		t.Errorf("snippet for a caller without relationship.read = %q, want the key alone", got)
+	for _, tc := range []struct{ reader, project, want string }{
+		{"all", "Turbinenwartung", "TURBINE · Beta Kunde"},
+		// The first customer is capture-private; Beta must not stand in.
+		{"all", "Pumpenwartung", "PUMPE"},
+		// The only customer is archived and Alpha is a partner.
+		{"all", "Ventilwartung", "VENTIL"},
+		{"no edges", "Turbinenwartung", "TURBINE"},
+		{"no companies", "Turbinenwartung", "TURBINE"},
+	} {
+		if got := snippet(tc.reader, tc.project); got != tc.want {
+			t.Errorf("%s snippet of %s = %q, want %q", tc.reader, tc.project, got, tc.want)
+		}
 	}
 }
 
-// The query_workspace tool runs the same plan executor, so its filter answers
-// the same project for the same caller.
-func TestTheQueryToolFiltersAProjectByItsReadableFirstCustomer(t *testing.T) {
+// The query_workspace tool runs the same plan executor.
+func TestTheQueryToolFiltersAProjectByAnyReadableLiveCompany(t *testing.T) {
 	q := setupQuery(t)
-	f := q.seedProjectCustomers(t)
+	f := q.seedProjectCompanies(t)
+	readers := q.projectReaders()
 	registry := compose.NewRegistry(q.Pool, compose.SendPath{})
-	plan := `{"plan":{"version": "v1", "target": "project",
-		"where": [{"field": "company_id", "op": "eq", "value": "` + f.beta.String() + `"}]}}`
-
-	if got := rowIDs(queryPayload(t, invokeQuery(q.admin(), t, registry, plan).Data)); !got[f.movedToBeta] || len(got) != 1 {
-		t.Errorf("query_workspace projects of Beta = %v, want the project Beta became customer of", got)
+	plan := func(op string) string {
+		return `{"plan":{"version": "v1", "target": "project",
+			"where": [{"field": "company_id", "op": "` + op + `", "value": "` + f.alpha.String() + `"}]}}`
 	}
-	if got := rowIDs(queryPayload(t, invokeQuery(q.withoutEdges(), t, registry, plan).Data)); len(got) != 0 {
-		t.Errorf("query_workspace told a caller without relationship.read about %v", got)
+	answer := func(reader, op string) map[ids.UUID]bool {
+		return rowIDs(queryPayload(t, invokeQuery(readers[reader], t, registry, plan(op)).Data))
 	}
+	assertSameIDs(t, "query_workspace projects with Alpha", answer("all", "eq"), f.kessel, f.ventil)
+	assertSameIDs(t, "query_workspace projects without Alpha", answer("all", "neq"), f.turbine, f.pumpe)
+	assertSameIDs(t, "query_workspace projects with Alpha, no edges", answer("no edges", "eq"))
+	assertSameIDs(t, "query_workspace projects without Alpha, no edges", answer("no edges", "neq"))
 }

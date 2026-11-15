@@ -228,16 +228,21 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 		// ANY of the project's live companies, not the legacy anchor column: a
 		// project is work several companies do together, so narrowing the list
 		// to a partner must show the deliveries that partner is on.
-		// The edge scope too: a match discloses the project-company pair,
-		// which relationship.read governs, as the company page's own list does.
-		edge, err := edgeBound(ctx, "c", arg)
+		// A match discloses the project-company pair, which relationship.read
+		// governs, so a caller without it is refused the filter.
+		if err := auth.EdgeReadAdmitted(ctx); err != nil {
+			return nil, err
+		}
+		edges, err := auth.ProjectCompanyEdgesSQL(ctx, arg)
 		if err != nil {
 			return nil, err
 		}
-		where = append(where, storekit.SQLf(
-			`EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'`+
-				` AND c.project_id = project.id AND c.company_id = $%d AND c.archived_at IS NULL AND (%s))`,
-			arg(*in.CompanyID), edge))
+		match := predicateNever
+		if edges.Readable {
+			match = storekit.SQLf("EXISTS (SELECT 1 %s AND %s = project.id AND %s = $%d)",
+				edges.Source, auth.ProjectEdgeProject, auth.ProjectEdgeCompany, arg(*in.CompanyID))
+		}
+		where = append(where, match)
 	}
 	ownership, err := storekit.OwnershipClause(in.OwnerID, in.OwnerTeamID, in.Unassigned, arg)
 	if err != nil {
