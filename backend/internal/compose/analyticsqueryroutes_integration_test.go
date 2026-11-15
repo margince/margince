@@ -328,7 +328,7 @@ func TestAnAnswerNamesTheCompaniesItGroupsBy(t *testing.T) {
 }
 
 // A saved run grouped by company is refused to a reader who may not read
-// companies, and so is its cell: the group keys are company ids.
+// companies. So is its cell, because the group keys are company ids.
 func TestANarrowerReaderOfARunIsNotHandedTheCompanyNames(t *testing.T) {
 	e := setupForecast(t)
 	company := e.seedCompanyDeals(t, "Contoso", 6).String()

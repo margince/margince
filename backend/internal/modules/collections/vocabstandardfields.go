@@ -64,7 +64,7 @@ var contactEmployerLink = "EXISTS (SELECT 1 FROM relationship rel WHERE rel.cont
 
 // contactEmployerField is withheld until bindEdgeScope admits the caller. An
 // edge discloses a contact and a company as a pair, which neither record's
-// grant covers, so by default the leaf reads nothing on anybody's behalf.
+// grant covers. By default the leaf reads nothing on anybody's behalf.
 var contactEmployerField = storekit.Field{
 	Expr: "rel.company_id", Type: storekit.FieldID, References: storekit.RefCompany,
 	Link: contactEmployerLink, Withheld: true,
