@@ -15,26 +15,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// stampArchivable sets each row's archivable flag from auth.ArchivableSubset.
-// That asks the row write gate and the archive rule together, so the flag
-// answers what the archive itself would.
-func stampArchivable[T any](
-	ctx context.Context, tx pgx.Tx, rule auth.ArchiveRule, rows []T, id func(T) ids.UUID, set func(*T, bool),
-) error {
-	named := make([]ids.UUID, len(rows))
-	for i := range rows {
-		named[i] = id(rows[i])
-	}
-	archivable, err := auth.ArchivableSubset(ctx, tx, rule, named)
-	if err != nil {
-		return err
-	}
-	for i := range rows {
-		set(&rows[i], archivable[named[i]])
-	}
-	return nil
-}
-
 // lockThenEnsureArchivable locks the record before it reads who may archive
 // it. So an owner change that commits meanwhile is read rather than raced, and
 // the archive runs on the authority the row holds when written.
@@ -50,13 +30,9 @@ func lockThenEnsureArchivable(ctx context.Context, tx pgx.Tx, table string, rule
 
 // Lists, record reads and mutation echoes show the same write and archive actions.
 func stampCompanyCapabilities(ctx context.Context, tx pgx.Tx, companies []crmcontracts.Company) error {
-	if _, err := auth.StampWritable(ctx, tx, companyEntity, companies,
+	if _, err := auth.StampRecordAffordances(ctx, tx, auth.CompanyArchive, companies,
 		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
-		func(o *crmcontracts.Company, may bool) { o.Writable = &may }); err != nil {
-		return err
-	}
-	if err := stampArchivable(ctx, tx, auth.CompanyArchive, companies,
-		func(o crmcontracts.Company) ids.UUID { return ids.UUID(o.Id) },
+		func(o *crmcontracts.Company, may bool) { o.Writable = &may },
 		func(o *crmcontracts.Company, may bool) { o.Archivable = &may }); err != nil {
 		return err
 	}
