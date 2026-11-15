@@ -2,19 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // A cached list of records is keyed by the reader scope it was read under.
-//
-// Which rows a record collection answers depends on who reads it, their grants
-// and their row scope. A same-user grant change keeps record caches (useMe
-// drops only entries keyed by the old scope), so a list keyed without the scope
-// keeps serving rows the reader may no longer see, or misses rows they now may.
-//
-// The rule judges every query call (`useQuery`, `useInfiniteQuery`,
-// `useQueries`, `queryOptions`, `infiniteQueryOptions`) that reads a record
-// collection: the call names the collection path itself, or calls a function
-// of the same file that does. Such a call must spell `readerScope`, the
-// `healthScope(me)` value its key carries. The shared list builders
-// (`listInfiniteOptions`, `stageColumnOptions`) take it as a required
-// parameter, so the compiler holds their callers.
+// A same-user grant change keeps record caches, so an unscoped list keeps
+// serving the rows the old grants allowed.
+
+// A query call reads a collection when it names the path, or calls a function
+// of the same file that does. Such a call must spell `readerScope`.
 
 import { join } from "node:path";
 import ts from "typescript";

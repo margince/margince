@@ -32,8 +32,8 @@ export function listOpening(
  *
  * `readerScope` is `healthScope(me)`: who reads, in which workspace, under
  * which grants and row scope. The rows a list holds depend on all of it. A
- * same-user grant change keeps record caches, so without the scope in the key
- * a list would go on serving the rows the old grants allowed.
+ * same-user grant change keeps record caches. Without the scope in the key, a
+ * list would go on serving the rows the old grants allowed.
  */
 export function listInfiniteOptions<Row>(
   key: string,

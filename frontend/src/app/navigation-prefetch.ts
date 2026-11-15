@@ -230,9 +230,9 @@ export class NavigationPrefetch {
   }
 
   // The principal changed: no answer read for the old one may reach a screen
-  // as fresh. Unwatched entries go. A mounted screen reads its entry again,
-  // unless the entry is keyed by a reader scope that has changed: that screen
-  // moves to its new key on its own, and reading the old one is wasted.
+  // as fresh. Unwatched entries go. A mounted screen reads its entry again.
+  // An entry keyed by a changed reader scope is the exception: its screen
+  // moves to the new key itself.
   #forget(readerScope: string | undefined): void {
     this.#releaseLease();
     this.#generation += 1;

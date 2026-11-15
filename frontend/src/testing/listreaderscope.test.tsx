@@ -9,10 +9,8 @@ import { useMe } from "../lib/session";
 import { cancellationClient, type HeldRead, holdReads } from "./cancellation";
 import { meFixture } from "./mefixture";
 
-// #11661: a same-user grant change keeps record caches (useMe drops only the
-// entries keyed by the old reader scope). So every list keys its rows by the
-// reader scope, and a list read under the old scope is never served under the
-// new one, whether the scope widens or narrows.
+// A same-user grant change keeps record caches. So a list read under the old
+// reader scope must never be served under the new one, in either direction.
 
 type Row = { id: string };
 type Scope = "own" | "all";
