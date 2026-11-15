@@ -112,9 +112,10 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	subject := "Rollout call"
 	sourceSystem := "transcript"
 	body := transcriptBody
+	// The meeting must precede the reader even if the database clock is ahead.
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, Body: &body,
-		OccurredAt:      heldAnHourAgo(t),
+		OccurredAt:      new(clocktest.Now(t).Add(-time.Hour)),
 		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
 		SourceSystem:    &sourceSystem, Source: "manual",
 	})
@@ -125,33 +126,9 @@ func setupTranscript(t *testing.T) *transcriptEnv {
 	return e
 }
 
-// heldAnHourAgo dates a meeting the reader will see as already held.
-//
-// A meeting logged without a date takes the database's now(), while read
-// judges it by this process's clock. The test database runs in a container
-// whose clock can be ahead of the host's by more than the few milliseconds
-// between logging and reading. The meeting then has "not taken place yet",
-// the promise is withheld, and the test fails or passes depending on clock
-// drift (issue #11615). An hour is far beyond any drift.
-func heldAnHourAgo(t *testing.T) *time.Time {
-	t.Helper()
-	return new(clocktest.Now(t).Add(-time.Hour))
-}
-
 // read drives one whole reading the way the worker does.
-//
-// It refuses a meeting dated within the last minute: that date almost always
-// came from the database's now(), and comparing it with this process's clock
-// gives an answer that depends on clock drift. Log the meeting with
-// heldAnHourAgo. A test about a meeting near the reader's clock uses readAt
-// with a clock it controls.
 func (e *transcriptEnv) read(t *testing.T, brain completer) activities.TranscriptRead {
 	t.Helper()
-	if e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND occurred_at > $2`,
-		e.activity.UUID, clocktest.Now(t).Add(-time.Minute)) != 0 {
-		t.Fatal("the meeting is dated within the last minute, so whether it has been held depends on " +
-			"the database clock against this process's; log it with OccurredAt: heldAnHourAgo(t)")
-	}
 	return e.readAt(t, brain, func() time.Time { return clocktest.Now(t) })
 }
 
@@ -576,7 +553,7 @@ func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
 	body := strings.TrimSuffix(long, "\n")
 	activity, _, err := e.Activities.LogActivity(e.ctx, activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, Body: &body,
-		OccurredAt: heldAnHourAgo(t), SourceSystem: &sourceSystem, Source: "manual",
+		OccurredAt: new(clocktest.Now(t).Add(-time.Hour)), SourceSystem: &sourceSystem, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("logging the long transcript: %v", err)

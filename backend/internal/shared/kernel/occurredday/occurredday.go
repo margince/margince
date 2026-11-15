@@ -175,6 +175,14 @@ func MeetingTookPlaceSQL(alias, asOf string) string {
 		alias, asOf, TodayAnchorSQL(asOf))
 }
 
+// UndatedSQL is the instant stored for an activity logged without a date: the
+// earlier of now() and writerNow, the writer's clock. SQL readers judge "has it
+// happened" by now() and Go readers by the app's clock, so only the earlier of
+// the two has passed on both however far apart they are.
+func UndatedSQL(writerNow string) string {
+	return "least(now(), CAST(" + writerNow + " AS timestamptz))"
+}
+
 // HappenedSQL is Happened for the activity under alias at asOf.
 func HappenedSQL(alias, asOf string) string {
 	return fmt.Sprintf(`((%[1]s.kind = '%[2]s' AND %[3]s) OR (%[1]s.kind <> '%[2]s' AND %[4]s))`,

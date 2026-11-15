@@ -13,11 +13,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -243,13 +241,9 @@ func TestListRecordsNarrowsCompaniesAndLeadsToAListsMembers(t *testing.T) {
 func TestListRecordsNarrowsTheTimelineToARecordsUnansweredMail(t *testing.T) {
 	d := newTwoDoors(t, "timeline-doors", "read")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Wanda Waiting", "source": "manual"})
-	// Dated a minute back: an undated message takes the database's now(), and
-	// the waiting walk judges it by this process's clock, so a database clock
-	// running ahead would hide it as "not yet arrived" (issue #11615).
 	waiting := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Contract?", "body": "Where is the contract", "source": "manual",
-		"occurred_at": clocktest.Now(t).Add(-time.Minute).Format(time.RFC3339Nano),
-		"links":       []AnyMap{{"entity_type": "contact", "entity_id": contact}},
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
 	note := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "note", "subject": "Call notes", "source": "manual",
