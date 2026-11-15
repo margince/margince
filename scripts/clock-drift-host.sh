@@ -147,7 +147,9 @@ run_shifted() {
 	offset=$(days "$1")
 	export BACKEND_CLOCK_SKEW="machine:$offset"
 	command -v timeout >/dev/null || { echo "clock-drift-host: GNU timeout is required." >&2; exit 1; }
-	trap 'finish_run "$?" "$offset"' EXIT
+	# Expanded now: offset is local and already validated as digits, and a
+	# newer bash drops a function's locals before it runs an exit trap.
+	trap "finish_run \"\$?\" $offset" EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
 	move "$offset"
