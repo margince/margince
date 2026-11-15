@@ -184,7 +184,7 @@ func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 //
 // arg is a no-op collector here — the assertion is on the RENDERED SQL shape,
 // not on a live query — because this is the ManagedTeams path, the one kind
-// labelScope never touches a database for (analyticsUserLabel/analyticsTeamLabel
+// labelScope never touches a database for (scopesubjects.OwnerLabel/TeamLabel
 // both need one), so this stays a pure policy test like its neighbours.
 func TestManagedTeamsPopulationTreatsAnUnownedRowAsShared(t *testing.T) {
 	team := ids.NewV7()

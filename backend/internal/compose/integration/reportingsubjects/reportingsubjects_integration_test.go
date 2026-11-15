@@ -266,7 +266,9 @@ func identityWriter(t *testing.T, e *integration.Env) (*identity.Service, identi
 	for _, object := range []string{"team_admin", "user_admin"} {
 		actor.Permissions.Objects[object] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	}
-	who := identity.Identity{UserID: ids.From[ids.UserKind](e.AdminUser), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
-		SeatType: string(principal.SeatFull), Roles: []string{"admin"}, Permissions: actor.Permissions}
+	who := identity.Identity{
+		UserID: ids.From[ids.UserKind](e.AdminUser), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		SeatType: string(principal.SeatFull), Roles: []string{"admin"}, Permissions: actor.Permissions,
+	}
 	return identity.NewServiceFor(compose.InstallationDB(e.Pool)), who, principal.WithActor(ctx, actor)
 }
