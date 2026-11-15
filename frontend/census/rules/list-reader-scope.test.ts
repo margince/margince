@@ -183,6 +183,45 @@ export function useRows() {
     ).toEqual([NO_WAIT]);
   });
 
+  it("takes only a scope read from useHealthScope for the scope", () => {
+    expect(
+      planted(`export function useRows() {
+  const readerScope = "fixed";
+  return useQuery({
+    queryKey: ["contacts", readerScope],
+    enabled: readerScope !== undefined,
+    queryFn: () => api.GET("/contacts", {}),
+  });
+}
+`),
+    ).toEqual([NO_KEY, NO_WAIT]);
+  });
+
+  it("does not take a wait another condition can skip", () => {
+    expect(
+      planted(`export function useRows(always, paused) {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["contacts", readerScope ?? ""],
+    enabled: always || readerScope !== undefined,
+    queryFn: () => api.GET("/contacts", {}),
+  });
+}
+export function useOthers(paused) {
+  const readerScope = useHealthScope();
+  return useQuery({
+    queryKey: ["deals", readerScope ?? ""],
+    queryFn:
+      readerScope === undefined && paused ? skipToken : () => api.GET("/deals", {}),
+  });
+}
+`),
+    ).toEqual([
+      NO_WAIT,
+      "src/features/planted.tsx:11: useQuery reads a record collection, but it does not wait for the reader scope",
+    ]);
+  });
+
   it("judges every entry of useQueries", () => {
     expect(
       planted(`export function useRows(ids) {

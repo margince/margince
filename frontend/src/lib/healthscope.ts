@@ -29,14 +29,15 @@ export function useHealthScope() {
 
 /**
  * A `placeholderData` that keeps the last answer on screen while the next one
- * loads, but never carries rows across a change of reader scope.
+ * loads, but never carries rows across a change of reader scope. The key must
+ * end with the scope.
  */
 export function previousOfScope(readerScope: string | undefined) {
   return <Data>(
     previous: Data | undefined,
     previousQuery: { queryKey: readonly unknown[] } | undefined,
   ): Data | undefined =>
-    readerScope !== undefined && previousQuery?.queryKey.includes(readerScope)
+    readerScope !== undefined && previousQuery?.queryKey.at(-1) === readerScope
       ? previous
       : undefined;
 }

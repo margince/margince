@@ -129,26 +129,62 @@ function readsCollection(
   return reached;
 }
 
-/** Whether `node` reads the `readerScope` binding, not merely its spelling. */
+/** `useHealthScope()`, or `useHealthScope() ?? fallback`. */
+function callsHealthScope(value: ts.Expression): boolean {
+  if (
+    ts.isBinaryExpression(value) &&
+    value.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken
+  )
+    return callsHealthScope(value.left);
+  return (
+    ts.isCallExpression(value) &&
+    ts.isIdentifier(value.expression) &&
+    value.expression.text === "useHealthScope"
+  );
+}
+
+/**
+ * Whether `node` reads `readerScope` bound to `useHealthScope()`, or a
+ * `readerScope` parameter a builder's caller passes in.
+ */
 function readsScope(node: ts.Node): boolean {
-  if (ts.isIdentifier(node) && node.text === "readerScope") return true;
+  if (ts.isIdentifier(node) && node.text === "readerScope") {
+    const target = declarationsInScope(node).get("readerScope");
+    return (
+      target === null ||
+      (target !== undefined &&
+        ts.isVariableDeclaration(target) &&
+        target.initializer !== undefined &&
+        callsHealthScope(target.initializer))
+    );
+  }
   return ts.forEachChild(node, readsScope) ?? false;
 }
 
-/** Whether `node` holds `readerScope !== undefined` (or `!== ""`). */
-function waitsForScope(node: ts.Node, operator: ts.SyntaxKind): boolean {
+/**
+ * Whether `node` holds only when the scope's state is `operator` to unknown:
+ * the comparison itself, or a chain that needs it (`&&` for a wait, `||` for
+ * the condition of a `skipToken`).
+ */
+function requiresScope(node: ts.Expression, operator: ts.SyntaxKind): boolean {
   const unknown = (side: ts.Expression) =>
     (ts.isIdentifier(side) && side.text === "undefined") ||
     (ts.isStringLiteral(side) && side.text === "");
-  if (
-    ts.isBinaryExpression(node) &&
+  if (ts.isParenthesizedExpression(node))
+    return requiresScope(node.expression, operator);
+  if (!ts.isBinaryExpression(node)) return false;
+  const chain =
+    operator === ts.SyntaxKind.ExclamationEqualsEqualsToken
+      ? ts.SyntaxKind.AmpersandAmpersandToken
+      : ts.SyntaxKind.BarBarToken;
+  if (node.operatorToken.kind === chain)
+    return (
+      requiresScope(node.left, operator) || requiresScope(node.right, operator)
+    );
+  return (
     node.operatorToken.kind === operator &&
     ((readsScope(node.left) && unknown(node.right)) ||
       (readsScope(node.right) && unknown(node.left)))
-  )
-    return true;
-  return (
-    ts.forEachChild(node, (child) => waitsForScope(child, operator)) ?? false
   );
 }
 
@@ -210,7 +246,7 @@ function hookWaits(options: ts.Expression): boolean {
   const enabled = property(options, "enabled");
   if (
     enabled &&
-    waitsForScope(enabled, ts.SyntaxKind.ExclamationEqualsEqualsToken)
+    requiresScope(enabled, ts.SyntaxKind.ExclamationEqualsEqualsToken)
   )
     return true;
   const queryFn = property(options, "queryFn");
@@ -219,7 +255,7 @@ function hookWaits(options: ts.Expression): boolean {
     ts.isConditionalExpression(queryFn) &&
     ts.isIdentifier(queryFn.whenTrue) &&
     queryFn.whenTrue.text === "skipToken" &&
-    waitsForScope(queryFn.condition, ts.SyntaxKind.EqualsEqualsEqualsToken)
+    requiresScope(queryFn.condition, ts.SyntaxKind.EqualsEqualsEqualsToken)
   );
 }
 
