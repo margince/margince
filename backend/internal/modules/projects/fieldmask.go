@@ -8,8 +8,7 @@ package projects
 // withhold the one its reader could not open, or the record becomes an
 // existence oracle over rows that reader's own reads would refuse.
 //
-// A project has exactly one such reference — company_id, its first customer
-// edge. That company is capture-private until somebody promotes it
+// A project has one such reference: company_id, its first customer edge. That company is capture-private until somebody promotes it
 // (platform/auth rowscope.go), while the project hanging off it is read by
 // every seat holding the object grant. So the two disagree by design, and this
 // is where the wire answer is brought back in line with what the reader may
@@ -84,7 +83,7 @@ func fillCompanies(
 
 // maskProjects stamps each row's write flag and sets company_id to the
 // project's first customer edge, null and masked when this reader may not
-// read it. ONE statement answers the whole page, never a probe per row.
+// read it. One statement answers the whole page, never a probe per row.
 func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Project) error {
 	// Whether each project is this caller's to change, one statement for the
 	// page. A project keeps the owner scope on writes even though every seat
@@ -129,8 +128,8 @@ type firstCustomer struct {
 
 // firstCustomers answers each project's first live customer edge, in attach
 // order, in one statement. read is false when the caller holds no
-// relationship.read or no company.read: the pair a customer edge discloses
-// is then withheld for every row, and no statement runs.
+// relationship.read or no company.read. The pair a customer edge discloses is
+// then withheld for every row, and no statement runs.
 //
 // The predicates are the ones the company list on a project uses
 // (contacts.CompaniesOnProjectTx), so company_id and companies agree. A

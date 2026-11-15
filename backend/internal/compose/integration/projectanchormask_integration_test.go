@@ -128,8 +128,8 @@ func TestProjectAnchorMaskIsIndependentOfVisibleCompanyEdges(t *testing.T) {
 	}
 }
 
-// A list row carries no company list, so company_id and its mask are the
-// row's only account of the customer, and must match a single read's.
+// A list row carries no company list. Its company_id and mask must still
+// match what a single read answers.
 func TestProjectListRowsNameOnlyAReadableFirstCustomer(t *testing.T) {
 	e := Setup(t)
 	hidden := e.SeedCompany(t, "Private Customer", &e.Rep3)
