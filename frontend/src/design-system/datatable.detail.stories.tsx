@@ -202,6 +202,18 @@ export const RowDetailLateContent: Story = {
     }
   },
 };
+// A tweened ground computes as `color(srgb …)` and a still one as `rgb(…)`, so
+// colours are compared as the pixel a canvas paints from them.
+function painted(color: string): string {
+  const pixel = document.createElement("canvas").getContext("2d");
+  if (pixel === null) {
+    throw new Error("this browser draws no 2D canvas");
+  }
+  pixel.fillStyle = color;
+  pixel.fillRect(0, 0, 1, 1);
+  return pixel.getImageData(0, 0, 1, 1).data.join(",");
+}
+
 // The open row takes the hover ground while the pointer is on its detail, so
 // the two read as one record. It loses it on leave and on close.
 export const RowDetailHover: Story = {
@@ -220,11 +232,12 @@ export const RowDetailHover: Story = {
     const probe = document.createElement("span");
     probe.style.background = "var(--groundHover)";
     canvasElement.append(probe);
-    const hoverGround = getComputedStyle(probe).backgroundColor;
+    const hoverGround = painted(getComputedStyle(probe).backgroundColor);
     probe.remove();
     const grounded = () =>
       [opener, ...Array.from(opener.cells)].some(
-        (part) => getComputedStyle(part).backgroundColor === hoverGround,
+        (part) =>
+          painted(getComputedStyle(part).backgroundColor) === hoverGround,
       );
 
     // The cells tween their ground, so each state is waited for.
