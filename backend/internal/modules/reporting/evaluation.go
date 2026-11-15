@@ -267,8 +267,13 @@ func evidenceWeek(frame crmcontracts.ReportingContext, group string) evidenceWee
 	if err != nil {
 		return evidenceWeekSpan{}
 	}
-	days := 7 - (int(start.Weekday())+6)%7
-	return evidenceWeekSpan{start: start, end: start.AddDate(0, 0, days), valid: true}
+	return evidenceWeekSpan{start: start, end: WeekEnd(start), valid: true}
+}
+
+// WeekEnd is the local midnight of the Monday after start, so a week a period
+// opens midweek is short. Weekly charts and their evidence both cut weeks here.
+func WeekEnd(start time.Time) time.Time {
+	return start.AddDate(0, 0, 7-(int(start.Weekday())+6)%7)
 }
 
 func (s *Service) checkedEvaluation(ctx context.Context, tx pgx.Tx, selection crmcontracts.ReportingSelection, expectation EvidenceExpectation) (Evaluation, error) {

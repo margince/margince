@@ -120,24 +120,76 @@ func TestEvidencePagesClampTheLimitAndRefuseABadCursor(t *testing.T) {
 
 func TestEvidenceRowsWithholdOwnerAndStageLabelsTheReaderMayNotSee(t *testing.T) {
 	owner := openapi_types.UUID(ids.NewV7())
-	fact := func(key string, withheld, restricted bool) Fact {
-		return Fact{Metric: "meetings_held", ContextID: "interval", OwnerLabel: "Ada", StageLabel: "Proposal", OwnerWithheld: withheld, Row: crmcontracts.ReportingEvidenceRow{Key: key, OwnerId: &owner, Restricted: restricted}}
+	seeded, stored, shown := "Seeded owner", "Seeded stage", time.Date(2026, 3, 4, 9, 0, 0, 0, time.UTC)
+	type want struct {
+		ownerID      bool
+		owner, stage string
 	}
-	facts := []Fact{fact("open", false, false), fact("withheld", true, false), fact("restricted", false, true)}
+	for _, tc := range []struct {
+		name                 string
+		withheld, restricted bool
+		ownerLabel, stage    string
+		want                 want
+	}{
+		{"open", false, false, "Ada", "Proposal", want{true, "Ada", "Proposal"}},
+		{"open without labels keeps the row's own", false, false, "", "", want{true, seeded, stored}},
+		{"withheld owner", true, false, "Ada", "Proposal", want{false, "", "Proposal"}},
+		{"restricted row", false, true, "Ada", "Proposal", want{false, "", ""}},
+		{"withheld and restricted", true, true, "Ada", "Proposal", want{false, "", ""}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			fact := Fact{OwnerLabel: tc.ownerLabel, StageLabel: tc.stage, OwnerWithheld: tc.withheld, EvidenceAt: &shown,
+				Row: crmcontracts.ReportingEvidenceRow{OwnerId: &owner, OwnerLabel: &seeded, StageLabel: &stored, Restricted: tc.restricted}}
+			row := evidenceRow(fact)
+			got := want{ownerID: row.OwnerId != nil}
+			if row.OwnerLabel != nil {
+				got.owner = *row.OwnerLabel
+			}
+			if row.StageLabel != nil {
+				got.stage = *row.StageLabel
+			}
+			if got != tc.want {
+				t.Errorf("row shows %+v, want %+v", got, tc.want)
+			}
+			if row.OccurredAt == nil || !row.OccurredAt.Equal(shown) {
+				t.Errorf("row date = %v, want the evidence date %v", row.OccurredAt, shown)
+			}
+		})
+	}
+}
+
+func TestEvidenceRowsKeepTheirOwnLabels(t *testing.T) {
+	facts := []Fact{
+		{Metric: "meetings_held", ContextID: "interval", OwnerLabel: "Ada", StageLabel: "Proposal", Row: crmcontracts.ReportingEvidenceRow{Key: "first"}},
+		{Metric: "meetings_held", ContextID: "interval", OwnerLabel: "Grace", StageLabel: "Won", Row: crmcontracts.ReportingEvidenceRow{Key: "second"}},
+	}
 	_, page := pageKeys(t, crmcontracts.ReportingContext{}, facts, "", nil, 50)
-	open, withheld, restricted := page.Rows[0], page.Rows[1], page.Rows[2]
-	if open.OwnerId == nil || open.OwnerLabel == nil || *open.OwnerLabel != "Ada" || open.StageLabel == nil || *open.StageLabel != "Proposal" {
-		t.Errorf("open row = %+v", open)
+	facts[0].OwnerLabel, facts[0].StageLabel = "changed", "changed"
+	first, second := page.Rows[0], page.Rows[1]
+	if *first.OwnerLabel != "Ada" || *first.StageLabel != "Proposal" || *second.OwnerLabel != "Grace" || *second.StageLabel != "Won" {
+		t.Errorf("rows show %s/%s and %s/%s, want Ada/Proposal and Grace/Won", *first.OwnerLabel, *first.StageLabel, *second.OwnerLabel, *second.StageLabel)
 	}
-	if withheld.OwnerId != nil || withheld.OwnerLabel != nil || withheld.StageLabel == nil {
-		t.Errorf("withheld row = %+v, want the stage without the owner", withheld)
+}
+
+// A late page skips most facts, so its cost must not grow with them: one zone
+// lookup per page, and no allocation for a fact the page does not return.
+func TestALateWeeklyEvidencePageAllocatesOnlyForItsRows(t *testing.T) {
+	frame := crmcontracts.ReportingContext{Timezone: "Europe/Berlin"}
+	allocs := func(count int) float64 {
+		facts := make([]Fact, count)
+		for i := range facts {
+			facts[i] = meetingAt(strconv.Itoa(i), time.Date(2026, 3, 5, 12, 0, 0, 0, time.UTC))
+			facts[i].OwnerLabel = "Ada"
+		}
+		cursor := strconv.Itoa(count - 50)
+		return testing.AllocsPerRun(5, func() {
+			if _, err := evidencePage(frame, facts, "meetings_held", "interval", "week:2026-03-02", nil, &cursor, 50); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
-	if restricted.OwnerId != nil || restricted.OwnerLabel != nil || restricted.StageLabel != nil {
-		t.Errorf("restricted row = %+v, want no owner and no stage", restricted)
-	}
-	facts[0].OwnerLabel = "changed"
-	if *open.OwnerLabel != "Ada" {
-		t.Error("a row shares its label with the evaluation's facts")
+	if few, many := allocs(100), allocs(2000); many != few {
+		t.Errorf("a late page allocates %v times over 2000 facts and %v over 100, want the same", many, few)
 	}
 }
 
