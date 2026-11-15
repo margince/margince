@@ -21,15 +21,14 @@ function asked(input: RequestInfo | URL): URL {
 }
 
 // Names every company asked for except the ones the reader may not see, which
-// the list leaves out as row scope does.
+// the scoped reference read omits.
 function companiesExcept(hidden: ReadonlySet<string> = new Set()) {
   return vi.fn(async (input: RequestInfo | URL) => {
     const ids = asked(input).searchParams.getAll("id");
     return jsonResponse({
       data: ids
         .filter((id) => !hidden.has(id))
-        .map((id) => ({ id, display_name: `Company ${id}` })),
-      next_cursor: null,
+        .map((id) => ({ id, name: `Company ${id}`, archived: false })),
     });
   });
 }
@@ -56,7 +55,7 @@ function nameAll(ids: readonly string[]) {
 }
 
 describe("company names", () => {
-  it("names every company rendered in one tick with one list read", async () => {
+  it("names every company rendered in one tick with one reference read", async () => {
     const fetchMock = companiesExcept();
     vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
     const ids = Array.from({ length: 40 }, (_, at) => `c-${at}`);
@@ -68,14 +67,18 @@ describe("company names", () => {
     const [first] = fetchMock.mock.calls;
     if (!first) throw new Error("no company read was sent");
     const url = asked(first[0]);
-    expect(url.pathname).toBe("/v1/companies");
+    expect(url.pathname).toBe("/v1/records/references");
     expect(url.searchParams.getAll("id")).toHaveLength(40);
-    expect(url.searchParams.get("include_archived")).toBe("true");
-    expect(url.searchParams.get("include_anchor")).toBe("true");
+    expect(url.searchParams.get("kind")).toBe("company");
+    expect(
+      [...url.searchParams.keys()].every(
+        (key) => key === "kind" || key === "id",
+      ),
+    ).toBe(true);
     expect(result.current[79]?.name).toBe("Company c-39");
   });
 
-  it("splits more companies than the list's bound into reads of 100", async () => {
+  it("splits more companies than the reference bound into reads of 100", async () => {
     const fetchMock = companiesExcept();
     vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
 
@@ -200,7 +203,9 @@ describe("company reference cache", () => {
   it("shares a cached name and logo between marks and name observers", async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        data: [{ id: "c-1", display_name: "Company", logo_url: "/logo.svg" }],
+        data: [
+          { id: "c-1", name: "Company", archived: false, logo: "/logo.svg" },
+        ],
       }),
     );
     vi.spyOn(globalThis, "fetch").mockImplementation(fetchMock);
@@ -220,7 +225,7 @@ describe("company reference cache", () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
       .mockImplementation(async () =>
-        jsonResponse({ data: [{ id: "c-1", display_name: name }] }),
+        jsonResponse({ data: [{ id: "c-1", name, archived: false }] }),
       );
     const names = nameAll(["c-1"]);
     const marks = renderHook(() => useCompanyMarksByID(["c-1"]), { wrapper });
@@ -267,8 +272,8 @@ describe("company reference cache", () => {
     release(
       jsonResponse({
         data: [
-          { id: "c-1", display_name: "First" },
-          { id: "c-2", display_name: "Second" },
+          { id: "c-1", name: "First", archived: false },
+          { id: "c-2", name: "Second", archived: false },
         ],
       }),
     );

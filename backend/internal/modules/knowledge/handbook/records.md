@@ -210,7 +210,7 @@ Leads, deals and projects have their own page. It says how to create, qualify an
 ## Archiving, restoring and deleting records
 
 ### How do I archive a contact, company, deal or project?
-To archive a record in Margince, open it and choose **More actions**. Then choose the archive entry: **Archive** on a contact or company, **Archive deal** on a deal, **Archive project** on a project. You need your role's right to delete that kind of record. A User has it only on a contact, company or deal they own, and only if they created it or were given it. Without the right, the archive entry is greyed out with the reason.
+To archive a record, open **More actions** and choose **Archive**, **Archive deal** or **Archive project**. Archiving needs a full seat and a delete right over records within your write scope or write shares. With edit rights alone, you can also archive a contact, company or deal you own. This exception excludes ownership you took yourself after creation. Projects always need the delete right, even when you own them. A refused archive entry is greyed out with the reason.
 
 Confirm the box. For contacts and companies it reads "Archive this record? You can bring it back from its history." You can archive many contacts, companies or deals at once with **Archive** in the list's bar for many records. A lead is not archived; disqualify it instead.
 

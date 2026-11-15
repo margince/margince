@@ -5,6 +5,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { CompanyProfileDetails } from "./companyprofiledetails";
 import {
   company,
@@ -113,6 +114,9 @@ describe("CompanyProfileDetails", () => {
   it("keeps the parent company a link to its record, and edits it from the bubble", async () => {
     const user = userEvent.setup();
     stub({
+      "/records/references": (request) =>
+        companyNamesAnswer(request.url, { "o-9": "Brandt Holding" }) ??
+        jsonResponse({ data: [] }),
       "/me": writableSeat,
       "/companies": () =>
         jsonResponse({

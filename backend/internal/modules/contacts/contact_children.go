@@ -327,17 +327,9 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 	if len(contacts) == 0 {
 		return nil
 	}
-	// Whether each row is this caller's to change, one statement for the page.
-	// It is stamped HERE because this is the seam the list and the single read
-	// already share: a client is otherwise left inferring write access from the
-	// object grant alone, which says nothing about who owns the row.
-	if _, err := auth.StampWritable(ctx, tx, "contact", contacts,
+	if _, err := auth.StampRecordAffordances(ctx, tx, auth.ContactArchive, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Contact, may bool) { p.Writable = &may }); err != nil {
-		return err
-	}
-	if err := stampArchivable(ctx, tx, auth.ContactArchive, contacts,
-		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Contact, may bool) { p.Writable = &may },
 		func(p *crmcontracts.Contact, may bool) { p.Archivable = &may }); err != nil {
 		return err
 	}

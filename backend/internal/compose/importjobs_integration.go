@@ -85,6 +85,13 @@ func WithImportJobWorkersForTest(into *ImportJobWorkers, failed *error) Option {
 	}
 }
 
+// WithHomeRefreshSettlerForTest lets the harness drain reads before resetting their database.
+func WithHomeRefreshSettlerForTest(into *func()) Option {
+	return func(s *Server, _ *pgxpool.Pool) {
+		*into = s.homeCache.Settle
+	}
+}
+
 // WithImportPreviewWaitForTest sets how long, and on what clock, preview_import
 // waits for its test's report. The harness works jobs by hand, so a real wait
 // would only spend the bound.

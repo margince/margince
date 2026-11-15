@@ -64,6 +64,10 @@ function stub(): void {
     {
       "GET /leads/l-1": () => jsonResponse(mergedAway),
       "GET /leads/l-2": () => jsonResponse(survivor),
+      "GET /records/references": () =>
+        jsonResponse({
+          data: [{ id: "l-2", name: "Jonas Pedersen", archived: false }],
+        }),
     },
     { lead: ["read", "update"], activity: ["read"] },
   );

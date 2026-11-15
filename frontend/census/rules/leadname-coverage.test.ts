@@ -96,11 +96,23 @@ describe("the leadname-coverage rule", () => {
           text: fallback,
         },
         {
-          path: join(srcDir, "format", "leadname.ts"),
+          path: join(srcDir, "features", "leads", "leadname.ts"),
           area: "src",
           text: fallback,
         },
       ]),
     ).toEqual(["src/features/leads/planted.tsx:1"]);
+  });
+
+  it("reports a fallback outside its feature owner", () => {
+    expect(
+      plantedFindings(rule, [
+        {
+          path: join(srcDir, "format", "leadname.ts"),
+          area: "src",
+          text: "export const n = lead.full_name ?? lead.email;\n",
+        },
+      ]),
+    ).toEqual(["src/format/leadname.ts:1"]);
   });
 });
