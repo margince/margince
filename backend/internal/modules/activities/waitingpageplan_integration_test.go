@@ -26,6 +26,18 @@ var waitingPlanHeldMailSQL = `WITH reminders AS (
  INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
  SELECT 'human', 'seed', 'create', 'activity', id FROM reminders;`
 
+// activityPaths names how the plan reads activity as the candidate, so a page
+// that judged too much says which access path it took.
+func activityPaths(plan planNode) string {
+	var paths []string
+	plan.walk(func(n planNode) {
+		if n.RelationName == "activity" && planCopySuffix.ReplaceAllString(n.Alias, "") == "a" {
+			paths = append(paths, strings.TrimSpace(n.NodeType+" "+n.IndexName))
+		}
+	})
+	return strings.Join(paths, ", ")
+}
+
 func waitingPlanWork(plan planNode) (judged, read float64) {
 	plan.walk(func(n planNode) {
 		if planCopySuffix.ReplaceAllString(n.Alias, "") == "probe" {
