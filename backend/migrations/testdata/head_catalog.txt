@@ -7683,6 +7683,23 @@ BEGIN
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
 
+public.named_time_zone(zone_name text) secdef=false cfg=search_path=pg_catalog acl=- 
+DECLARE
+ canonical text;
+BEGIN
+ IF zone_name ~ '[0-9]' THEN
+  RETURN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name);
+ END IF;
+ BEGIN
+  PERFORM set_config('TimeZone', zone_name, true);
+  canonical := current_setting('TimeZone');
+  RAISE EXCEPTION USING ERRCODE = 'MZ001';
+ EXCEPTION
+  WHEN SQLSTATE 'MZ001' THEN RETURN canonical = zone_name;
+  WHEN invalid_parameter_value THEN RETURN false;
+ END;
+END
+
 public.notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.notice.body text NOT NULL gen=- def=''::text
 public.notice.captured_by text NOT NULL gen=- def=-
@@ -10760,7 +10777,7 @@ public.valid_intent_time(wall_clock timestamp without time zone, zone_name text)
   WHEN wall_clock IS NOT NULL AND zone_name IS NOT NULL
    AND isfinite(wall_clock) AND extract(year FROM wall_clock) BETWEEN 1 AND 9999
    AND zone_name <> 'Local' AND btrim(zone_name) = zone_name
-   AND EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name)
+   AND public.named_time_zone(zone_name)
   THEN extract(year FROM public.resolve_intent_time(wall_clock, zone_name)) BETWEEN 1 AND 9999
   ELSE false
  END
