@@ -6117,7 +6117,7 @@ public.idx_activity_attested_counterparty CREATE INDEX idx_activity_attested_cou
 public.idx_activity_calendar_sends CREATE INDEX idx_activity_calendar_sends ON public.activity USING btree (calendar_uid, occurred_at DESC, id) WHERE ((calendar_uid IS NOT NULL) AND (kind = 'email'::text))
 public.idx_activity_channel_thread CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)
 public.idx_activity_counterparty_email CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)
-public.idx_activity_direction CREATE INDEX idx_activity_direction ON public.activity USING btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))
+public.idx_activity_direction_page CREATE INDEX idx_activity_direction_page ON public.activity USING btree (direction, occurred_at DESC, id DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))
 public.idx_activity_kind CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_activity_labeled CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)
 public.idx_activity_link_suggestion_pending CREATE INDEX idx_activity_link_suggestion_pending ON public.activity_link_suggestion USING btree (created_at, id) WHERE (status = 'pending'::text)
