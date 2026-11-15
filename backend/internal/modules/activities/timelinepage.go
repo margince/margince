@@ -62,6 +62,12 @@ func timelinePageSQL(ctx context.Context, in ListActivitiesInput, limit int) (ti
 			where = append(where, keyset)
 		}
 	}
+	if !in.CollapseSeatCopies {
+		// Bound the candidate rows before the fenced content decision.
+		from = BoundActivityPage(from, strings.Join(where, " AND "), order, limit+1)
+		where = []string{sqlTrue}
+	}
+	from, content = ActivityContentFrom(from, content)
 	columns, err := activityColumns(ctx, content, arg)
 	if err != nil {
 		return timelinePage{}, err

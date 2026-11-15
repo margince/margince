@@ -149,6 +149,9 @@ type ListActivitiesInput struct {
 	// affordances, commitment admissions, offered email and custom values are
 	// not read.
 	FactsOnly bool
+	// LinkedFactsOnly is FactsOnly with each row's links, for a reader that
+	// draws a row from its own columns and the records it is filed under.
+	LinkedFactsOnly bool
 	// WithoutCopiesOf leaves out, on a collapsed page, the row that stands for
 	// this activity or any mailbox copy of it, whatever filter the copy passes.
 	WithoutCopiesOf *ids.UUID
