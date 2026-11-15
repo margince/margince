@@ -66,7 +66,7 @@ func New() extension.Extension {
 			},
 		}},
 		// The reference for a report: how many ledger accounts exist, drawn on
-		// Reports and Home for a seat that may read the kind.
+		// Reports for a seat that may read the kind.
 		ReportCounts:     []extension.ReportCount{{Name: "ledger_accounts", Label: "Ledger accounts", Population: "ledger_account"}},
 		ReportBreakdowns: []extension.ReportBreakdown{{Name: "accounts_by_name", Label: "Ledger accounts by name", Population: "ledger_account", By: "name"}},
 		// A signal type the unit can file about a company, deal, contact or

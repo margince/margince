@@ -3,8 +3,8 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { LocaleProvider } from "../i18n";
-import { jsonResponse } from "../testing/story-utils";
+import { LocaleProvider } from "../../i18n";
+import { jsonResponse } from "../../testing/story-utils";
 import { ExtensionReports } from "./extensionreports";
 
 const originalFetch = globalThis.fetch;

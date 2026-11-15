@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { api } from "../api/client";
-import { unwrap } from "./problem";
+import { api } from "../../api/client";
+import { unwrap } from "../../lib/problem";
 
 // The counts and breakdowns installed extensions add, answered for this seat.
 // The generated types carry no list of them, so the server answers. Each answer

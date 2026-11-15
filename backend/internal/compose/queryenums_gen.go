@@ -488,6 +488,9 @@ var queryMinimumTable = map[string][]queryMinimum{
 	"GET /v1/field-history": {
 		{Name: "limit", Minimum: 1},
 	},
+	"GET /v1/finance/customer-payments": {
+		{Name: "limit", Minimum: 1},
+	},
 	"GET /v1/finance/source/customers": {
 		{Name: "limit", Minimum: 1},
 	},
