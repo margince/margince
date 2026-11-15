@@ -640,3 +640,42 @@ export const NotesAnAgentLogged: Story = {
     await expect(canvas.getByText("Automated by an agent")).toBeVisible();
   },
 };
+
+export const ThreadSplitIntoParts: Story = {
+  render: () => (
+    <ul className="timeline">
+      <ThreadRow
+        zone={ZONE}
+        group={{
+          id: "split-new",
+          kind: "thread",
+          partial: false,
+          olderPart: "split-old",
+          entries: [
+            entry("split-new", "2026-08-14T15:20:00Z", {
+              direction: "inbound",
+              counterparts: "Dana Buyer",
+              body: "Sounds good, see you Thursday.",
+            }),
+          ],
+        }}
+      />
+      <ThreadRow
+        zone={ZONE}
+        group={{
+          id: "split-old",
+          kind: "thread",
+          partial: false,
+          newerPart: "split-new",
+          entries: [
+            entry("split-old", "2026-08-04T09:00:00Z", {
+              direction: "outbound",
+              counterparts: "Dana Buyer",
+              body: "Here is the offer.",
+            }),
+          ],
+        }}
+      />
+    </ul>
+  ),
+};

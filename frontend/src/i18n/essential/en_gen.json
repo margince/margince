@@ -1857,6 +1857,8 @@
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View full thread",
   "timeline.group.mayContinue": "Earlier messages may exist",
+  "timeline.group.newerPart": "Later messages above",
+  "timeline.group.olderPart": "Earlier messages below",
   "timeline.group.kind": "Thread",
   "timeline.group.earlier_other": "Show {count} earlier messages",
   "timeline.group.earlier_one": "Show {count} earlier message",
