@@ -8,21 +8,27 @@ package projects
 // withhold the one its reader could not open, or the record becomes an
 // existence oracle over rows that reader's own reads would refuse.
 //
-// A project has exactly one such reference — its anchor company. That company
-// is capture-private until somebody promotes it (platform/auth rowscope.go),
-// while the project hanging off it is read by every seat holding the object
-// grant. So the two disagree by design, and this is where the wire answer is
-// brought back in line with what the reader may actually see.
+// A project has exactly one such reference — company_id, its first customer
+// edge. That company is capture-private until somebody promotes it
+// (platform/auth rowscope.go), while the project hanging off it is read by
+// every seat holding the object grant. So the two disagree by design, and this
+// is where the wire answer is brought back in line with what the reader may
+// actually see.
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // filterCompanyIDOnProject is masked_fields' name for the anchor
@@ -44,9 +50,7 @@ func (s *Store) maskProjectForCaller(ctx context.Context, tx pgx.Tx, p crmcontra
 	return s.withCompanies(ctx, tx, one[0])
 }
 
-// withCompanies fills a single project's company list from the edges, and
-// derives company_id from it: the customer edge is what that field has
-// always meant, and deriving it here is what keeps the two from disagreeing.
+// withCompanies fills a single project's company list from the edges.
 //
 // Only the single-project reads carry the list. A list page would need one more
 // statement per page for a field no list column renders, and a page that
@@ -58,6 +62,7 @@ func (s *Store) withCompanies(ctx context.Context, tx pgx.Tx, p crmcontracts.Pro
 
 // fillCompanies is withCompanies for a caller that holds the seam itself — the
 // create path, which runs inside a transaction the store did not open.
+// company_id and its mask are maskProjects' answer and stay as they are.
 func fillCompanies(
 	ctx context.Context, tx pgx.Tx, p crmcontracts.Project, companies ProjectCompanies,
 ) (crmcontracts.Project, error) {
@@ -66,25 +71,20 @@ func fillCompanies(
 		return crmcontracts.Project{}, err
 	}
 	listed := make([]crmcontracts.ProjectCompany, 0, len(on))
-	var customer *openapi_types.UUID
 	for _, one := range on {
 		listed = append(listed, crmcontracts.ProjectCompany{
 			CompanyId:   openapi_types.UUID(one.CompanyID.UUID),
 			DisplayName: one.DisplayName,
 			Role:        one.Role,
 		})
-		if customer == nil && one.Role == CompanyRoleCustomer {
-			id := openapi_types.UUID(one.CompanyID.UUID)
-			customer = &id
-		}
 	}
 	p.Companies = &listed
-	p.CompanyId = customer
 	return p, nil
 }
 
-// maskProjects withholds, per row, the anchor company this reader may not
-// open. ONE statement answers the whole page, never a probe per row.
+// maskProjects stamps each row's write flag and sets company_id to the
+// project's first customer edge, null and masked when this reader may not
+// read it. ONE statement answers the whole page, never a probe per row.
 func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Project) error {
 	// Whether each project is this caller's to change, one statement for the
 	// page. A project keeps the owner scope on writes even though every seat
@@ -95,27 +95,106 @@ func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Projec
 		func(p *crmcontracts.Project, may bool) { p.Writable = &may }); err != nil {
 		return err
 	}
-	companyIDs := make([]ids.UUID, 0, len(projects))
+	projectIDs := make([]ids.UUID, 0, len(projects))
 	for _, p := range projects {
-		if p.CompanyId != nil {
-			companyIDs = append(companyIDs, ids.UUID(*p.CompanyId))
-		}
+		projectIDs = append(projectIDs, ids.UUID(p.Id))
 	}
-	// VisibleSubset answers an empty list without a round trip, and it checks
-	// the company object grant as well as the row scope — a seat holding
-	// no `company.read` learns no company id from a project either.
-	visible, err := auth.VisibleSubset(ctx, tx, "company", companyIDs)
+	customers, read, err := firstCustomers(ctx, tx, projectIDs)
 	if err != nil {
 		return err
 	}
 	for i := range projects {
-		anchor := projects[i].CompanyId
-		if anchor == nil || visible[ids.UUID(*anchor)] {
+		projects[i].CompanyId = nil
+		first, found := customers[ids.UUID(projects[i].Id)]
+		if read && !found {
 			continue
 		}
-		projects[i].CompanyId = nil
+		if read && first.readable {
+			id := openapi_types.UUID(first.company)
+			projects[i].CompanyId = &id
+			continue
+		}
 		named := []string{filterCompanyIDOnProject}
 		projects[i].MaskedFields = &named
 	}
 	return nil
+}
+
+// firstCustomer is one project's first live customer edge as one reader
+// sees it. company is zero when the reader may not read that company.
+type firstCustomer struct {
+	company  ids.UUID
+	readable bool
+}
+
+// firstCustomers answers each project's first live customer edge, in attach
+// order, in one statement. read is false when the caller holds no
+// relationship.read or no company.read: the pair a customer edge discloses
+// is then withheld for every row, and no statement runs.
+//
+// The predicates are the ones the company list on a project uses
+// (contacts.CompaniesOnProjectTx), so company_id and companies agree. A
+// withheld customer's id is blanked in SQL and never reaches this process.
+func firstCustomers(ctx context.Context, tx pgx.Tx, projectIDs []ids.UUID) (map[ids.UUID]firstCustomer, bool, error) {
+	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, false, nil
+		}
+		return nil, false, err
+	}
+	if !auth.ReadGranted(ctx, "company") {
+		return nil, false, nil
+	}
+	if len(projectIDs) == 0 {
+		return map[ids.UUID]firstCustomer{}, true, nil
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	projectsPos := arg(projectIDs)
+	edge, err := edgeBound(ctx, "r", arg)
+	if err != nil {
+		return nil, false, err
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
+	if err != nil {
+		return nil, false, err
+	}
+	if scope == "" {
+		scope = predicateAlways
+	}
+	rows, err := tx.Query(ctx, storekit.SQLf(`
+		SELECT project_id, readable, CASE WHEN readable THEN company_id END
+		  FROM (
+		    SELECT DISTINCT ON (r.project_id) r.project_id, r.company_id,
+		           ((%s) AND (%s)) AS readable
+		      FROM relationship r
+		      JOIN company o ON o.id = r.company_id
+		     WHERE r.kind = 'project_company' AND r.project_id = ANY($%d)
+		       AND r.role = '`+CompanyRoleCustomer+`'
+		       AND r.archived_at IS NULL AND o.archived_at IS NULL
+		     ORDER BY r.project_id, r.created_at, r.id
+		  ) first`, edge, scope, projectsPos), args...)
+	if err != nil {
+		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[ids.UUID]firstCustomer, len(projectIDs))
+	for rows.Next() {
+		var project ids.UUID
+		var one firstCustomer
+		var company *ids.UUID
+		if err := rows.Scan(&project, &one.readable, &company); err != nil {
+			return nil, false, fmt.Errorf("read one project's first customer: %w", err)
+		}
+		if one.readable && company != nil {
+			one.company = *company
+		} else {
+			one.readable = false
+		}
+		out[project] = one
+	}
+	if err := rows.Err(); err != nil {
+		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)
+	}
+	return out, true, nil
 }
