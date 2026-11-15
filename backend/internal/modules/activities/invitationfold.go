@@ -65,7 +65,7 @@ func WithInvitationSummaries(ctx context.Context, tx pgx.Tx, page []crmcontracts
 		       count(*) FILTER (WHERE p.response = 'tentative')
 		  FROM activity mt
 		  LEFT JOIN activity_participant p ON p.activity_id = mt.id AND `+auth.ParticipantStandsSQL("p", "mt")+`
-		 WHERE mt.id = ANY($1) AND EXISTS (
+		 WHERE mt.id = ANY($1) AND mt.restricted_at IS NULL AND mt.archived_at IS NULL AND EXISTS (
 		       SELECT 1 FROM activity_identity ai WHERE ai.activity_id = mt.id AND ai.identity_kind = '`+IdentityKindMeeting+`')
 		 GROUP BY mt.id`, meetings)
 	if err != nil {
