@@ -96,8 +96,10 @@ func actionLinks(move crmcontracts.DealStatusCardMove) map[string]any {
 // The Next box speaks the reader's language over an English installation, and
 // its dismissal identity stays the one an English reader sees.
 func TestTheNextBoxFollowsTheReadersLanguage(t *testing.T) {
-	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, lang: "en",
-		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Send the offer"}}}
+	f := facts{
+		deal: openDeal(), now: testNow, loc: time.UTC, lang: "en",
+		openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Send the offer"}},
+	}
 	english := decideMove(f)
 	f.say = string(textlang.Vietnamese)
 	vietnamese := decideMove(f)
