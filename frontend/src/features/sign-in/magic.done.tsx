@@ -14,7 +14,8 @@ import { floorFigure } from "../../format/figure";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MagicLine } from "../../lib/magic.queries";
-import { LineSubject, LineUndo, lineNotes, lineSentence } from "./magic.lines";
+import { lineSentence } from "../../lib/magiccopy";
+import { LineSubject, LineUndo, lineNotes } from "./magic.lines";
 import { axisLabel, markKind } from "./magic.marks";
 
 /** Lines whose sentence reads the same, newest first. */

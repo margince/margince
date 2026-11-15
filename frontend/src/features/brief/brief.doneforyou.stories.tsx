@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { en } from "../../i18n/en";
 import type { Receipt } from "../../lib/handled";
 import { OpenSourceProvider } from "../../lib/opensource";
+import { line, receipt } from "../../testing/magic.fixtures";
 import {
   jsonResponse,
   StoryProviders,
@@ -13,6 +15,8 @@ import {
 } from "../../testing/story-utils";
 import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
 import { DoneForYou } from "./brief.doneforyou";
+import { ChangeRow } from "./brief.doneforyou.change";
+import { DealCard } from "./brief.doneforyou.deal";
 import "./brief.css";
 
 const meta: Meta<typeof DoneForYou> = {
@@ -213,7 +217,7 @@ function stub(receipts: readonly Receipt[]) {
 /**
  * Four deals. One probability moved back and forth, with one change
  * replaced. Then a quote, a long name, and a deal with one change accepted
- * before Margince stopped asking. Each card starts with a short preview.
+ * before Margince stopped asking. A short preview stands under the section heading.
  */
 export const ChangedDeals: Story = {
   render: () => {
@@ -326,7 +330,7 @@ export const LongPreview: Story = {
     const head = (
       await canvas.findByRole("link", { name: "Acme renewal" })
     ).closest("summary");
-    const preview = head?.querySelector(".brief-done-net");
+    const preview = canvasElement.querySelector(".brief-done-preview");
     if (!(preview instanceof HTMLElement)) throw new Error("no change preview");
     await expect(head).toHaveAttribute("aria-expanded", "false");
     await expect(getComputedStyle(preview).webkitLineClamp).toBe("2");
@@ -338,4 +342,90 @@ export const LongPreviewPhone: Story = {
   ...LongPreview,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+export const OnlySmallChanges: Story = {
+  render: () => {
+    stub([]);
+    stubWithSession(
+      {
+        "GET /deal-corrections/pending": () => jsonResponse(pending([])),
+        "GET /worklist/handled": () =>
+          jsonResponse({
+            as_of: "2026-09-13T08:00:00Z",
+            receipts: [],
+            truncated: false,
+          }),
+        "GET /magic": () =>
+          jsonResponse(
+            receipt({
+              done: [
+                line({ summary: { key: "magic.action.create_activity" } }),
+              ],
+            }),
+          ),
+      },
+      {},
+    );
+    return (
+      <StoryProviders>
+        <DoneForYou completed={() => null} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const preview = await canvas.findByText("Saved email or meeting");
+    await expect(preview.previousElementSibling).toHaveClass("brief-done-band");
+  },
+};
+
+export const OnlySmallChangesPhone: Story = {
+  ...OnlySmallChanges,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const ClosedDeal: Story = {
+  render: () => {
+    stub([]);
+    const [open, onOpen] = useState(false);
+    return (
+      <StoryProviders>
+        <ul className="brief-done-deals">
+          <DealCard
+            group={{
+              dealId: deal(1),
+              name: "Acme — ERP implementation",
+              receipts: RECEIPTS.slice(0, 1),
+              unloaded: 0,
+            }}
+            bundle={undefined}
+            currency="EUR"
+            open={open}
+            onOpen={onOpen}
+            asOf="2026-09-13T08:00:00Z"
+            onSettled={() => undefined}
+          />
+        </ul>
+      </StoryProviders>
+    );
+  },
+};
+
+export const ChangeStep: Story = {
+  render: () => {
+    stub([]);
+    return (
+      <StoryProviders>
+        <ol className="brief-done-changes">
+          <ChangeRow
+            receipt={automaticStageReceipt}
+            asOf="2026-09-13T08:00:00Z"
+            onSettled={() => undefined}
+          />
+        </ol>
+      </StoryProviders>
+    );
+  },
 };
