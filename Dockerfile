@@ -327,7 +327,7 @@ RUN GOWORK=/src/build/composition/go.work sh /src/scripts/backend-notices.sh /ou
 
 # ── api: runtime ──────────────────────────────────────────────────────────────
 # cmd/api — the HTTP process role (serves /v1 + /healthz + /readyz + /metrics).
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS api
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS api
 
 RUN apk add --no-cache ca-certificates tzdata
 
@@ -369,7 +369,7 @@ EXPOSE 8080
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # ── worker: runtime ───────────────────────────────────────────────────────────
-FROM alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS worker
+FROM alpine:3.24@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf AS worker
 
 RUN apk add --no-cache ca-certificates tzdata
 
