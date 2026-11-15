@@ -9,15 +9,13 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
-// projectCustomerColumn is the project reference that is not its stored
-// column: a project's company_id is its first customer edge, which the
-// project_company relationship rows hold and project.company_id does not track.
+// projectCustomerColumn names a project's company_id, which is its first
+// customer edge. The stored project.company_id does not track that edge.
 const projectCustomerColumn = "company_id"
 
 // referenceExpr renders one record's reference column on alias as this caller
-// may read it. A project's company_id is the readable first customer edge
-// (auth.ProjectCustomerSQL), so a filter, a hop and an excerpt answer the
-// company a project read names and never one it withholds.
+// may read it. A project's company_id is auth.ProjectCustomerSQL's readable
+// first customer, so search never names a company a project read withholds.
 func referenceExpr(ctx context.Context, entity, column, alias string, arg func(any) int) (string, error) {
 	if entity != entityProject || column != projectCustomerColumn {
 		return alias + "." + sanitize(column), nil

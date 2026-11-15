@@ -3,10 +3,9 @@
 
 package auth
 
-// A project's companies are relationship edges, and a project's company_id is
-// its first customer edge. Every surface that lists, names, sorts or searches
-// by those companies reads them through the two functions here, so a pair one
-// surface withholds is withheld on every other.
+// A project's companies are relationship edges, and its company_id is its first
+// customer edge. Surfaces that list, name, sort or search by them read through
+// the two functions here. A pair one surface withholds is withheld on all.
 
 import (
 	"context"
@@ -42,10 +41,8 @@ type ProjectCompanyBounds struct {
 // edgeAlias joined to company on companyAlias.
 //
 // An edge discloses that a project and a company work together, which
-// relationship.read governs and the endpoints' grants do not. The company is
-// row-scoped as well, and its object grant is checked first: under
-// row_scope=all the row scope admits every company, even for a seat without
-// company.read.
+// relationship.read governs. The company object grant is checked before its
+// row scope, because row_scope=all admits every company row.
 func ProjectCompanyPredicates(
 	ctx context.Context, edgeAlias, companyAlias string, arg func(any) int,
 ) (ProjectCompanyBounds, error) {

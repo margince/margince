@@ -5,9 +5,8 @@
 
 package integration
 
-// Search names a project's company the way the project's own read does: the
-// first live customer edge, and only to a caller who may read that edge. A
-// filter, a hop and a hit's excerpt each answer that one company or none.
+// Search names a project's company the way the project's own read does. It is
+// the first live customer edge, named only to a caller who may read that edge.
 
 import (
 	"context"

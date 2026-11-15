@@ -234,7 +234,7 @@ func (c *planCompiler) lateralHop(ctx context.Context, plan ValidatedPlan, bindi
 // derived from, in whichever of the three ways declares it: the target's own
 // column, the referring record's, or a table between them.
 //
-// root is the record type t stands for, which a forward hop refers FROM.
+// root is the record type t stands for, the one a forward hop starts at.
 func (c *planCompiler) edgeCondition(ctx context.Context, hop hopBinding, root string) (string, error) {
 	if hop.relation.Join != nil {
 		return joinEdgeCondition(*hop.relation.Join), nil
