@@ -227,12 +227,14 @@ export const RowDetailHover: Story = {
         (part) => getComputedStyle(part).backgroundColor === hoverGround,
       );
 
+    // The cells tween their ground, so each state is waited for.
     await expect(grounded()).toBe(false);
     await userEvent.hover(detail);
-    await expect(grounded()).toBe(true);
+    await waitFor(() => expect(grounded()).toBe(true));
     await userEvent.unhover(detail);
-    await expect(grounded()).toBe(false);
+    await waitFor(() => expect(grounded()).toBe(false));
     await userEvent.hover(detail);
+    await waitFor(() => expect(grounded()).toBe(true));
     await userEvent.click(toggle);
     await waitFor(() => expect(grounded()).toBe(false));
   },
