@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/completedchanges"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
@@ -249,6 +250,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithDone(attentionPins{pool: pool, store: activities.NewStore(db).WithClock(now)}).
 		WithWalks(worklistsnap.New(pool, now)).
 		WithTaskBacklog(attentionTasks{store: activities.NewStore(db), work: newInquiryWork(db)}).
+		WithHandledReceipts(completedchanges.Reader{Magic: newMagicService(pool, svc, now)}).
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
 			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
 		}).

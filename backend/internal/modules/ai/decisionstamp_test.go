@@ -17,31 +17,21 @@ var (
 	selfHostedLane = &DecisionsConfig{Provider: providerJevCompatible, Model: "typed-decisions", BaseURL: "http://127.0.0.1:8767/v1/systemone"}
 )
 
-// The local-only cases here all read "" because localOnlyAdmits is currently
-// unconditional (#6396, pending #3351) — this proves decisionSkipFor reads
-// that one shared predicate rather than reimplementing the check, not that a
-// local-only task is unrestricted forever. TestServableLadderReadsTheSame
-// PredicateAsTheDecisionLane (router_test.go) is the ladder's half of the
-// same claim.
-func TestTheDecisionLaneServesEveryTaskButKeepsLocalOnlyDataLocal(t *testing.T) {
+func TestTheDecisionLaneServesBoundTasks(t *testing.T) {
 	cases := []struct {
 		name string
 		lane *DecisionsConfig
-		task Task
 		want string
 	}{
-		{"unbound", nil, TaskSiteTriage, DecisionSkipUnbound},
-		{"jev on a cloud task", jevLane, TaskSiteTriage, ""},
-		{"jev on a local-only task", jevLane, TaskCaptureCounterpartyVerdict, ""},
-		{"self-hosted on a local-only task", selfHostedLane, TaskCaptureCounterpartyVerdict, ""},
+		{"unbound", nil, DecisionSkipUnbound},
+		{"jev on a cloud task", jevLane, ""},
+		{"jev on a verdict task", jevLane, ""},
+		{"self-hosted on a verdict task", selfHostedLane, ""},
 	}
 	for _, tc := range cases {
-		if got := decisionSkipFor(tc.lane, tc.task); got != tc.want {
+		if got := decisionSkipFor(tc.lane); got != tc.want {
 			t.Errorf("%s: decisionSkipFor = %q, want %q", tc.name, got, tc.want)
 		}
-	}
-	if len(LocalOnlyTasks()) == 0 {
-		t.Fatal("no local-only task declared: the cases above prove nothing")
 	}
 }
 

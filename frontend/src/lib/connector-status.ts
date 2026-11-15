@@ -158,32 +158,11 @@ export function missingCalendarWriteGrant(
   );
 }
 
-// Mirror of capture.MeetingNotesGranted; its Go parity test reads this table.
-const MEETING_NOTES_SCOPES: Readonly<Record<string, readonly string[]>> = {
-  gdocs: ["https://www.googleapis.com/auth/documents.readonly"],
-};
-
-/** Whether a meeting-notes connection lacks the grant to read the notes: its
- *  owner unticked the scope on Google's screen. */
-export function missingMeetingNotesGrant(
-  connection: Pick<CaptureConnection, "provider" | "scopes">,
-): boolean {
-  const grants = MEETING_NOTES_SCOPES[connection.provider];
-  return (
-    grants !== undefined &&
-    !grants.some((scope) => connection.scopes.includes(scope))
-  );
-}
-
 /** Whether a connection's grant is too narrow for what its row offers. */
 function missingGrant(
   connection: Pick<CaptureConnection, "provider" | "scopes">,
 ): boolean {
-  return (
-    missingSendGrant(connection) ||
-    missingCalendarWriteGrant(connection) ||
-    missingMeetingNotesGrant(connection)
-  );
+  return missingSendGrant(connection) || missingCalendarWriteGrant(connection);
 }
 
 /** The words the Connections page puts on an account and on each service.
@@ -222,39 +201,50 @@ export function healthBadge(health: ConnectorHealth): HealthBadge {
 /** Whether a service needs its owner's consent again: the vendor refused the
  *  grant, or the grant is too narrow to send, to book or to read notes. */
 export function needsReconnect(service: CaptureConnection): boolean {
-  return service.status === "reauth_required" || missingGrant(service);
+  return (
+    service.status === "reauth_required" ||
+    service.concern === "notes_grant_missing" ||
+    missingGrant(service)
+  );
 }
 
 /** One service's badge. A grant too narrow to send or to book is named by
  *  what it cannot do, so the row needs no second badge to say it. */
 export function serviceBadge(service: CaptureConnection): HealthBadge {
   const health = serviceHealth(service);
+  if (service.concern === "notes_grant_missing")
+    return badgeOf("attention", "connectors.cannotReadNotes");
+  if (service.concern === "notes_account_mismatch")
+    return badgeOf("attention", "captureConcern.notesAccount");
   if (health === "up_to_date" && missingSendGrant(service)) {
     return badgeOf("attention", "connectors.cannotSend");
   }
   if (health === "up_to_date" && missingCalendarWriteGrant(service)) {
     return badgeOf("attention", "scheduling.readOnlyBadge");
   }
-  if (health === "up_to_date" && missingMeetingNotesGrant(service)) {
-    return badgeOf("attention", "connectors.cannotReadNotes");
-  }
   return healthBadge(health);
 }
 
 /** The one sentence that says why a service is not up to date, or null. */
 export function serviceReason(service: CaptureConnection): MessageKey | null {
+  if (service.concern === "notes_grant_missing")
+    return "connectors.reconnectToReadNotes";
+  if (service.concern === "notes_account_mismatch")
+    return "captureConcern.notesAccount";
   const health = serviceHealth(service);
   if (health === "needs_reconnect" || health === "needs_attention") {
     return errorClassKey(service.last_sync_error_class);
   }
   if (missingSendGrant(service)) return "connectors.reconnectToSend";
   if (missingCalendarWriteGrant(service)) return "scheduling.readOnlyCalendar";
-  if (missingMeetingNotesGrant(service))
-    return "connectors.reconnectToReadNotes";
   return null;
 }
 
-type ServiceFacts = Pick<CaptureConnection, "status" | "last_sync_error_class">;
+type ServiceFacts = Pick<
+  CaptureConnection,
+  "status" | "last_sync_error_class"
+> &
+  Partial<Pick<CaptureConnection, "concern">>;
 
 /** Whether a service is connected at all: set up, and neither removed nor
  *  expired. A failing sync still counts, and so does an `error` row, because the
@@ -277,7 +267,11 @@ export function serviceHealth(service: ServiceFacts): ConnectorHealth {
     case "disconnected":
       return "not_connected";
     case "connected":
-      return service.last_sync_error_class ? "needs_attention" : "up_to_date";
+      return service.last_sync_error_class ||
+        service.concern === "notes_grant_missing" ||
+        service.concern === "notes_account_mismatch"
+        ? "needs_attention"
+        : "up_to_date";
     default:
       return "needs_attention";
   }

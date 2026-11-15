@@ -264,17 +264,20 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 	e := setupCloseDate(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	now := clocktest.Now(t)
-	subject := "Renewal call"
-	message, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "call", Subject: &subject, Source: "manual"})
-	if err != nil {
-		t.Fatal(err)
-	}
 	moved := today().AddDate(0, 0, 45)
-	applied := func(name string) ids.ApprovalID {
+	applied := func(name string) ids.UUID {
 		deal := e.seedSweepDeal(t, name, e.late, new(95), new(30), 1)
-		card := e.stageDateCard(ctx, t, deal, ids.UUID(message.Id), moved)
-		appliedUnderPolicy(ctx, t, e.Pool, e.svc, card, e.Rep1)
-		return card
+		actor := "system:paging:" + name
+		if _, err := e.Deals.UpdateDeal(principal.SystemActing(ctx, actor), ids.From[ids.DealKind](deal), deals.UpdateDealInput{ExpectedClose: &moved}); err != nil {
+			t.Fatal(err)
+		}
+		var audit ids.UUID
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(ctx, `SELECT id FROM audit_log WHERE entity_type='deal' AND entity_id=@deal AND actor_id=@actor AND action='update' ORDER BY occurred_at DESC,id DESC LIMIT 1`, pgx.NamedArgs{"deal": deal, "actor": actor}).Scan(&audit)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return audit
 	}
 	for i := range 55 {
 		applied(fmt.Sprintf("Paged project %02d", i))
@@ -305,7 +308,7 @@ func TestATruncatedPageContinuesWhereItStopped(t *testing.T) {
 			t.Errorf("receipt %s is on both pages", id)
 		}
 		seen[id] = true
-		if id == late.UUID {
+		if id == late {
 			t.Error("a receipt that landed after the first page shifted the second")
 		}
 		if receipt.Actor == nil {

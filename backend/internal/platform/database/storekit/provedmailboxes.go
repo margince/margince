@@ -12,7 +12,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ProvedMailboxLabels reads labels attested by a connected OAuth provider, never typed IMAP labels.
@@ -21,24 +20,20 @@ import (
 // until somebody takes it down. The label on it would otherwise go on
 // attributing imports to a mailbox nobody holds.
 func ProvedMailboxLabels(ctx context.Context, tx pgx.Tx) (map[ids.UUID][]string, error) {
-	rows, err := tx.Query(ctx, `SELECT c.user_id, c.account_label FROM capture_connection c
-		 JOIN app_user u ON u.id = c.user_id AND `+workforce.LiveMemberSQL("u")+`
-		 WHERE `+provedMailboxClause("c"))
+	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
-		return nil, fmt.Errorf("reading proved mailbox labels: %w", err)
-	}
-	defer rows.Close()
-	out := map[ids.UUID][]string{}
-	for rows.Next() {
-		var seat ids.UUID
-		var label string
-		if err := rows.Scan(&seat, &label); err != nil {
-			return nil, err
-		}
-		out[seat] = append(out[seat], label)
-	}
-	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	out := map[ids.UUID][]string{}
+	for _, record := range records {
+		if !record.provedMailbox {
+			continue
+		}
+		seat, err := ids.Parse(record.seat)
+		if err != nil {
+			return nil, fmt.Errorf("reading proved mailbox seat: %w", err)
+		}
+		out[seat] = append(out[seat], record.label)
 	}
 	return out, nil
 }

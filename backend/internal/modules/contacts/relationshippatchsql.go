@@ -21,8 +21,8 @@ func demoteForRelationshipPatch(ctx context.Context, tx pgx.Tx, current relation
 	arg := func(v any) string { args = append(args, v); return storekit.SQLf("$%d", len(args)) }
 	contact, row := arg(*current.ContactID), arg(id)
 	ended := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::date, patched.ended_at) END", arg(in.ClearEndedAt), arg(in.EndedAt))
-	status := storekit.SQLf("coalesce(%s::text, patched.employment_status)", arg(in.EmploymentStatus))
-	precision := storekit.SQLf("coalesce(%s::text, patched.ended_precision)", arg(in.EndedPrecision))
+	status := relationshipStatusPatch("patched.employment_status", in, arg)
+	precision := relationshipPrecisionPatch("patched.ended_precision", in.EndedPrecision, in.ClearEndedAt || in.ClearEndedPrecision, arg)
 	return flipCurrentPrimary(ctx, tx, storekit.SQLf(`UPDATE relationship SET is_current_primary=false
  WHERE contact_id=%s AND id<>%s AND %s
  AND EXISTS(SELECT 1 FROM relationship patched WHERE patched.id=%s AND %s)`,
@@ -36,13 +36,21 @@ func patchRelationshipRow(ctx context.Context, tx pgx.Tx, id ids.UUID, in Update
 	role := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, role) END", arg(in.ClearRole), arg(in.Role))
 	started := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::date, started_at) END", arg(in.ClearStartedAt), arg(in.StartedAt))
 	ended := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::date, ended_at) END", arg(in.ClearEndedAt), arg(in.EndedAt))
-	status := storekit.SQLf("coalesce(%s::text, employment_status)", arg(in.EmploymentStatus))
-	startPrecision := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, started_precision) END", arg(in.ClearStartedAt), arg(in.StartedPrecision))
-	endPrecision := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, ended_precision) END", arg(in.ClearEndedAt), arg(in.EndedPrecision))
+	status := relationshipStatusPatch("employment_status", in, arg)
+	startPrecision := relationshipPrecisionPatch("started_precision", in.StartedPrecision, in.ClearStartedAt || in.ClearStartedPrecision, arg)
+	endPrecision := relationshipPrecisionPatch("ended_precision", in.EndedPrecision, in.ClearEndedAt || in.ClearEndedPrecision, arg)
 	captured := arg(capturedBy)
 	query := storekit.SQLf(`UPDATE relationship SET role=%s, captured_by=%s,
  is_current_primary=coalesce(%s,is_current_primary) AND (kind<>'employment' OR %s),
  started_at=%s, ended_at=%s, employment_status=%s, started_precision=%s, ended_precision=%s
  WHERE id=%s RETURNING %s`, role, captured, primary, employment.IsCurrentSQL(ended, status, endPrecision), started, ended, status, startPrecision, endPrecision, row, relationshipColumns)
 	return scanRelationship(tx.QueryRow(ctx, query, args...))
+}
+
+func relationshipStatusPatch(column string, in UpdateRelationshipInput, arg func(any) string) string {
+	return storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, %s) END", arg(in.ClearEmploymentStatus), arg(in.EmploymentStatus), column)
+}
+
+func relationshipPrecisionPatch(column string, value *string, clearValue bool, arg func(any) string) string {
+	return storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::text, %s) END", arg(clearValue), arg(value), column)
 }

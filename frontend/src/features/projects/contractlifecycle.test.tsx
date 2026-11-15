@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { meFixture } from "../../testing/mefixture";
 import {
   ContractCancelModal,
   ContractRenewModal,
@@ -66,6 +67,7 @@ function show(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider>{ui}</LocaleProvider>
@@ -476,6 +478,7 @@ describe("ContractCancelModal", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
+    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
     const { rerender } = render(
       <QueryClientProvider client={client}>
         <LocaleProvider>

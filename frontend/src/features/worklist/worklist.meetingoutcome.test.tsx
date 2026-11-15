@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// It happened and Did not happen write at once from the row. Add notes opens the
+// Did not happen writes from the row; It happened asks for a next step. Add notes opens the
 // composer, where No-show and what was said are typed.
 //
 // What these pin is that the composer PATCHES the meeting rather than logging a
@@ -17,6 +17,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -244,7 +245,7 @@ describe("a meeting that owes an answer", () => {
     );
   });
 
-  it("records a held meeting from the card, with no dialog in the way", async () => {
+  it("records a held meeting from the card after skipping its optional next step", async () => {
     const sent: unknown[] = [];
     const preconditions: (string | null)[] = [];
     stubWithMeetingRead(sent, 200, CAPTURED_MEETING, preconditions);
@@ -255,6 +256,10 @@ describe("a meeting that owes an answer", () => {
       await screen.findByRole("button", {
         name: "It happened: Discovery call with Turbinenbau",
       }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Skip next step" }),
     );
     expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "held" }]);

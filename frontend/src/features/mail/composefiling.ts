@@ -13,6 +13,7 @@ import {
 } from "../../design-system/projectpicker";
 import { useThreadProject } from "../../lib/activityfiling";
 import { relatedContactsQuery } from "../../lib/contact.queries";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
@@ -410,9 +411,10 @@ export function useComposeRecords({
     open && recipientContact != null,
   );
   // Suggestions only, like the roster: the To field still takes any address.
+  const readerScope = useHealthScope();
   const related = useQuery({
-    ...relatedContactsQuery(recipientContact),
-    enabled: open && recipientContact != null,
+    ...relatedContactsQuery(recipientContact, readerScope ?? ""),
+    enabled: open && recipientContact != null && readerScope !== undefined,
   });
   // roster-failure: suggestions only; the To field still takes any address.
   const colleagues = useRoster("user", open && !isChannelReply);

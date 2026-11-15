@@ -39,6 +39,9 @@ export const healthCodes: Readonly<Record<string, MessageKey>> = {
   capture_connection_sync_failing: CAPTURE_CONCERNS.sync_failing,
   capture_connection_backfill_failed: CAPTURE_CONCERNS.backfill_failed,
   capture_connection_sync_stalled: CAPTURE_CONCERNS.sync_stalled,
+  capture_connection_notes_grant_missing: CAPTURE_CONCERNS.notes_grant_missing,
+  capture_connection_notes_account_mismatch:
+    CAPTURE_CONCERNS.notes_account_mismatch,
   capture_connection_capture_silent: CAPTURE_CONCERNS.capture_silent,
   capture_checked: "health.code.capture_checked",
   capture_processing: "health.code.capture_processing",

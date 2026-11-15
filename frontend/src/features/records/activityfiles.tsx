@@ -15,7 +15,7 @@ import {
 } from "../../design-system/surfacestate";
 import { formatBytes } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { activityFilesKey } from "../../lib/activitykeys";
+import { activityFilesKey } from "../../lib/attachmentkeys";
 import { fileChipTarget } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";

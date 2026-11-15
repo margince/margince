@@ -14,6 +14,7 @@ import { activityDay } from "../format/activitywhen";
 import { foldForSearch } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { SCREEN_ENTITY } from "../lib/entity";
+import { useHealthScope } from "../lib/healthscope";
 import {
   problemFieldErrors,
   problemMessageOf,
@@ -84,9 +85,11 @@ export function useSearchCommands(query: string): SearchArm {
   // The typed floor hides a cleared box's hits at once (its fetch aborts a
   // pause later, when `settled` moves); the settled one never asks one letter.
   const enabled = typed.length >= 2 && settled.length >= 2;
+  // Hits are records the reader's row scope narrows.
+  const readerScope = useHealthScope();
   const result = useQuery({
-    queryKey: ["palette-search", settled],
-    enabled,
+    queryKey: ["palette-search", settled, readerScope ?? ""],
+    enabled: enabled && readerScope !== undefined,
     // The last answer stands while the next is asked: an empty list between
     // two answers reads as "no matches" for a word that has some.
     placeholderData: keepPreviousData,

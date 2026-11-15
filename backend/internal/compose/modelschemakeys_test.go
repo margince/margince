@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -97,15 +98,15 @@ func issuedRequests(t *testing.T, census *aitasks.Registry, sc aicert.Scenario) 
 	if err != nil {
 		t.Fatalf("scenario %s: the site refused its own committed fixture: %v", sc.Name, err)
 	}
-	completer := &recordingCompleter{reply: canaryReply}
+	completer := &testmodel.Recorder{}
 	if _, runErr := prepared.Run(t.Context(), completer); runErr != nil {
 		t.Logf("scenario %s: the case refused the stand-in reply (%v); inspecting the %d request(s) it issued",
-			sc.Name, runErr, len(completer.requests))
+			sc.Name, runErr, len(completer.Requests))
 	}
-	if len(completer.requests) == 0 {
+	if len(completer.Requests) == 0 {
 		t.Fatalf("scenario %s issued no request, so nothing it sends was inspected", sc.Name)
 	}
-	return completer.requests
+	return completer.Requests
 }
 
 // publishedSchemalessSites is the sites the published prompts record lists with

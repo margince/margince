@@ -140,11 +140,13 @@ export function nextCursorOf(page: DealListPage): string | undefined {
  */
 export function useDeals(f: DealFilters, enabled = true, limit = 100) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
+  // The rows one reader scope may see; nothing is read before /me names it.
+  const readerScope = useHealthScope();
   return useInfiniteQuery({
-    enabled,
+    enabled: enabled && readerScope !== undefined,
     // The days, not the dial's word: a list opened after the quarter turns
     // never reuses the old quarter's cached page. Today is read at mount.
-    queryKey: ["deals", f, closeDay, limit],
+    queryKey: ["deals", readerScope ?? "", f, closeDay, limit],
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.

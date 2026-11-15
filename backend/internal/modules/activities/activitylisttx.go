@@ -26,7 +26,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if in.WithOutsideParty {
+	if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 		in.outsideParty = outsidePartyClause(ctx, tx)
 	}
 	limit := storekit.ClampLimit(in.Limit)

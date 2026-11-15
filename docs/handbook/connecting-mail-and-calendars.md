@@ -71,7 +71,12 @@ Each document is read once. Margince also does this for notes it already read. M
 Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
 
 If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**. The same happens when Google later refuses it.
+
 To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.
+
+A meeting with notes waiting to be read offers **Connect meeting notes** in its **Files** panel.
+It says when your Google accounts differ. The message leaves once the transcript lands or the reading window ends.
+
 Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 
 ### Who a meeting from your calendar shows

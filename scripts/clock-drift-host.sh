@@ -26,7 +26,7 @@ BASELINE="${CLOCK_DRIFT_BASELINE:-${RUNNER_TEMP:-${TMPDIR:-/tmp}}/clock-drift-ba
 SHORTFALL_TOLERANCE_SECONDS=600
 
 usage() {
-	echo "usage: $0 move <days> | assert <days> | restore <days>" >&2
+	echo "usage: $0 move <days> | assert <days> | restore <days> | run <days>" >&2
 	exit 2
 }
 
@@ -72,11 +72,10 @@ move() {
 	local days real
 	days=$(days "$1")
 	real=$(date -u +%s)
+	# Record recovery before mutation: an interrupted move must still restore.
+	printf '%s\n' "$real" >"$BASELINE"
 	sudo timedatectl set-ntp false
 	sudo date -s "+${days} days" >/dev/null
-	# Written only once the jump has taken, so the file's EXISTENCE is the
-	# evidence that there is something to undo.
-	printf '%s\n' "$real" >"$BASELINE"
 	assert "$days"
 }
 
@@ -115,24 +114,56 @@ restore() {
 	days=$(days "$1")
 	if [[ ! -r "$BASELINE" ]]; then
 		echo "clock-drift-host: no baseline, so the clock was never moved — leaving it where it is."
-		sudo timedatectl set-ntp true
+		sudo timedatectl set-ntp true || return
 		return 0
 	fi
-	short=$(shortfall "$days")
-	rm -f "$BASELINE"
+	short=$(shortfall "$days") || return
 	if [[ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]]; then
 		echo "clock-drift-host: the clock is already back (${short}s short of the offset) — leaving it alone."
-		sudo timedatectl set-ntp true
+		sudo timedatectl set-ntp true || return
+		rm -f "$BASELINE" || return
 		return 0
 	fi
-	sudo date -s "-${days} days" >/dev/null
-	sudo timedatectl set-ntp true
+	sudo date -s "-${days} days" >/dev/null || return
+	sudo timedatectl set-ntp true || return
+	rm -f "$BASELINE" || return
 	echo "clock-drift-host: clock restored, time sync back on."
+}
+
+# The runner's TLS credentials also expire at the shifted date. Restore in the
+# same shell, before returning control to its agent, even on failure or a hang.
+finish_run() {
+	local status="$1" offset="$2"
+	trap - EXIT INT TERM
+	if ! restore "$offset"; then
+		echo "clock-drift-host: restoration failed; recovery baseline retained." >&2
+		[[ "$status" -ne 0 ]] || status=1
+	fi
+	exit "$status"
+}
+
+run_shifted() {
+	local offset status=0
+	offset=$(days "$1")
+	export BACKEND_CLOCK_SKEW="machine:$offset"
+	command -v timeout >/dev/null || { echo "clock-drift-host: GNU timeout is required." >&2; exit 1; }
+	trap 'finish_run "$?" "$offset"' EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	move "$offset"
+	# A relative timer survives wall-clock changes. Leave recovery time before
+	# the runner loses its control-plane lease during a long network outage.
+	timeout --signal=TERM --kill-after=30s 45m make backend-clock-drift || status=$?
+	if [[ "$status" -eq 124 ]]; then
+		echo "clock-drift-host: suite exceeded the shifted-clock budget; no complete verdict." >&2
+	fi
+	exit "$status"
 }
 
 case "${1:-}" in
 move) [[ $# -eq 2 ]] || usage; move "$2" ;;
 assert) [[ $# -eq 2 ]] || usage; assert "$2" ;;
 restore) [[ $# -eq 2 ]] || usage; restore "$2" ;;
+run) [[ $# -eq 2 ]] || usage; run_shifted "$2" ;;
 *) usage ;;
 esac

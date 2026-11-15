@@ -12,6 +12,7 @@ import { pluralKey } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { summaryWords } from "./approvalpreviewfields";
 import type { Receipt } from "./handled";
+import { lineSentence } from "./magiccopy";
 
 // A close date the nightly verdict read from the customer's words. It is no
 // estimate, so it carries neither the estimate's wording nor its basis.
@@ -23,6 +24,9 @@ export function receiptSummary(
   locale: Locale,
   zone: string,
 ): string {
+  if (receipt.completed_change && !receipt.summary) {
+    return completedChangeSummary(receipt.completed_change, t, locale);
+  }
   const change = receipt.close_date_change;
   if (!change) {
     const fields = summaryFieldsLine(receipt.summary_parts, summaryWords(t));
@@ -131,4 +135,24 @@ export function receiptReason(
   locale: Locale,
 ): string | null {
   return receipt.reason ?? receiptBasis(receipt, t, locale);
+}
+
+function completedChangeSummary(
+  line: NonNullable<Receipt["completed_change"]>,
+  t: Translator,
+  locale: Locale,
+): string {
+  const count = line.count ?? 1;
+  const group = count > 1 || line.count_is_floor === true;
+  const counted = group
+    ? t(
+        pluralKey(
+          locale,
+          line.count_is_floor ? "magic.aboutCountAtLeast" : "magic.aboutCount",
+          count,
+        ),
+        { count: formatNumber(count, locale) },
+      )
+    : null;
+  return [lineSentence(line, t), counted].filter(Boolean).join(" — ");
 }

@@ -115,15 +115,7 @@ type companyField struct {
 // reads the way the form does.
 var companyFields = []companyField{
 	{name: fieldDisplayName},
-	// offer_summary FILLS description (the header's one-line answer) and does
-	// not replace it. The read-back's apply REPLACES a description no contact
-	// authored, and this arm deliberately does not follow it there: the form
-	// re-sends an unchanged summary on every save, so an overwrite here would
-	// clobber a newer description typed into the header's inline edit
-	// (UpdateCompany), which stays the one editor of a standing value. The
-	// read-back has no such re-send, which is why one column takes different
-	// authority from the two paths.
-	{name: fieldOfferSummary, column: columnDescription, authority: fillUnclaimed},
+	{name: fieldOfferSummary},
 	{name: fieldLegalName, column: columnLegalName, authority: replaceStanding},
 	{name: fieldRegisteredAddress, column: columnAddress, authority: replaceStanding},
 	{name: fieldRegisterVat},

@@ -67,10 +67,10 @@ The contact's company comes from the lead. Without a company link, the lead's wo
 A personal address such as Gmail names no company. The dialog then offers **Add … as the employer**, which links or creates the company with the typed name. Left unticked, the contact gets no job link, and its page offers the typed name to link or create.
 
 Margince does not qualify a lead on its own. Mail and chat stay on the lead, and a booking is filed there too.
-A current reply or booking gives the lead's owner a task to review the lead and qualify them
-when that is the right next step.
+A current reply, booking or held meeting gives the lead's owner a task to review qualification.
+A lead keeps at most one open qualification task until you qualify or disqualify them.
 
-This advice has no automatic deadline. Old imported mail creates no new task. A reply you already answered creates no new task. A task you kept remains your work.
+This advice has no automatic deadline. Old imported mail creates no new task. A reply you already answered creates no new task. An open qualification task remains after you answer its source mail.
 
 When you add or edit a contact with an email or LinkedIn profile held by a live lead, Margince asks whether to convert the lead. Nothing is written until you choose. An automatic import or enrichment does not make the second record.
 

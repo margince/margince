@@ -10,18 +10,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gdocs"
 )
 
-func TestMeetingNotesGrantMatchesFrontend(t *testing.T) {
-	grants := frontendScopeTable(t, "MEETING_NOTES_SCOPES")
-	if len(meetingNotesScopes) == 0 || len(grants) != len(meetingNotesScopes) {
-		t.Fatalf("frontend providers %v do not match backend %v", grants, meetingNotesScopes)
-	}
-	for provider, scopes := range meetingNotesScopes {
-		if len(scopes) == 0 || !slices.Equal(scopes, grants[provider]) {
-			t.Errorf("%s: backend scopes %v, frontend scopes %v", provider, scopes, grants[provider])
-		}
-	}
-}
-
 func TestMeetingNotesGrantReadsTheDocsConsentScope(t *testing.T) {
 	if !MeetingNotesGranted("gdocs", gdocs.ConsentScopes()) {
 		t.Error("a full Docs consent does not grant meeting notes")

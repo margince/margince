@@ -2,6 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../testing/mefixture";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
@@ -47,6 +48,7 @@ function hits(data: readonly Record<string, string>[]) {
 function renderPalette() {
   renderWithQueryClient(
     <CommandPalette open onClose={() => {}} commands={commands} />,
+    meFixture({ rowScope: "all" }),
   );
 }
 
@@ -109,7 +111,10 @@ describe("CommandPalette Enter", () => {
   it("stays closed after Enter runs a row from a palette a button opened", async () => {
     const user = steppedClock();
     hits([]);
-    renderWithQueryClient(<PaletteWithOpener />);
+    renderWithQueryClient(
+      <PaletteWithOpener />,
+      meFixture({ rowScope: "all" }),
+    );
     const opener = screen.getByRole("button", { name: "Search" });
     await user.click(opener);
     await user.type(screen.getByRole("searchbox"), "deals");

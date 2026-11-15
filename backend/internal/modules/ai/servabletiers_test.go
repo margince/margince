@@ -6,7 +6,7 @@ package ai
 import "testing"
 
 func TestServableTiersReachesTheDegradeClosure(t *testing.T) {
-	// capture_confidentiality_verdict is local-only, and local_small degrades to
+	// capture_confidentiality_verdict uses local_small, which degrades to
 	// itself, so its servable set is exactly its ladder.
 	got := ServableTiers(TaskCaptureConfidentialityVerdict)
 	if len(got) != 1 || got[0] != TierLocalSmall {

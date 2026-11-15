@@ -77,6 +77,7 @@ export type MeetingOutcomeWrite = {
   // later one wins with no warning.
   version: number | undefined;
   status: "held" | "no_show" | "canceled";
+  followUpTask?: components["schemas"]["ActivityFollowUpTask"];
   dealFiling?: components["schemas"]["ActivityDealFiling"];
   // Each sent only when given, so an answer alone never touches the notes.
   subject?: string;
@@ -107,6 +108,7 @@ export async function writeMeetingOutcome(
       },
       body: {
         meeting_status: input.status,
+        ...(input.followUpTask ? { follow_up_task: input.followUpTask } : {}),
         ...(input.dealFiling ? { deal_filing: input.dealFiling } : {}),
         ...(input.subject === undefined ? {} : { subject: input.subject }),
         ...(input.body === undefined ? {} : { body: input.body }),

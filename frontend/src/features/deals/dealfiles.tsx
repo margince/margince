@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryKey,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -16,10 +21,15 @@ import {
 } from "../../design-system/surfacestate";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import {
+  dealFilesKey,
+  dealHideKeys,
+  fileListKeys,
+  homeOf,
+} from "../../lib/attachmentkeys";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
-import { ROOM_DOCUMENTS_PREFIX } from "./dealroomdocuments.key";
 
 // The deal's Files area: what a rep uploaded on the deal, and what arrived
 // with the messages linked to it. The second half is why this exists — an
@@ -34,12 +44,13 @@ import { ROOM_DOCUMENTS_PREFIX } from "./dealroomdocuments.key";
 
 type Deal = components["schemas"]["Deal"];
 type DealDocument = components["schemas"]["DealDocument"];
+type Attachment = components["schemas"]["Attachment"];
 
 // Enough for a working set; the area is not a library somebody pages through.
 const PAGE_LIMIT = 100;
 
 export function dealDocumentsKey(dealId: string, includeHidden: boolean) {
-  return ["deal-documents", dealId, includeHidden] as const;
+  return [...dealFilesKey(dealId), includeHidden] as const;
 }
 
 // The deal's files, one read for the tab and for the count on its label, so
@@ -202,7 +213,7 @@ function FileVerbs({
   const t = useT();
   const file = doc.attachment;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
-  const verbs = useFileVerbs(dealId, file.id);
+  const verbs = useFileVerbs(dealId, file);
   const side = useRef<HTMLSpanElement | null>(null);
   // A ref, not state: the dialog reads it as it closes, before a re-render.
   const deleted = useRef(false);
@@ -292,19 +303,21 @@ function FileMenu({
 
 // The three writes a row offers. Each refreshes both views of the area (with
 // and without hidden rows), since a hide moves a row from one to the other.
-function useFileVerbs(dealId: string, attachmentId: string) {
+function useFileVerbs(dealId: string, file: Attachment) {
+  const attachmentId = file.id;
+  const home = homeOf(file);
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  // Both keys of the deal's files: this area's own and the Deal Room picker's,
-  // so a delete here leaves no ghost there. The room's own list goes too,
-  // because it says whether each entry still reaches the buyer.
-  const refresh = () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: ["deal-documents", dealId] }),
-      queryClient.invalidateQueries({ queryKey: ["deal-attachments", dealId] }),
-      queryClient.invalidateQueries({ queryKey: ROOM_DOCUMENTS_PREFIX }),
-    ]);
+  // A hide or unhide moves the row within this deal: its area, the Deal Room
+  // picker (same key, without hidden rows), and the rooms that say whether
+  // each entry still reaches the buyer. A delete takes the file out of every
+  // list its parent puts it in.
+  const refreshKeys = (keys: readonly QueryKey[]) =>
+    Promise.all(
+      keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+    );
+  const refresh = () => refreshKeys(dealHideKeys(dealId));
   // A refused hide or Undo has no dialog, and the row has no error slot.
   const sayRefused = (error: Error) =>
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
@@ -350,7 +363,7 @@ function useFileVerbs(dealId: string, attachmentId: string) {
         t,
       );
     },
-    onSuccess: refresh,
+    onSuccess: () => refreshKeys(fileListKeys(home, "removed")),
   });
   return { hide, unhide, remove };
 }
