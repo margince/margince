@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// What changed about this relationship lately, which change is a reason to
-// act today, and the earlier asks about the contact, all on one dated line.
+// What changed about this relationship lately, and which change is a reason to
+// act today. Earlier asks about the contact share the same dated line.
 
 import type { components } from "../../../api/schema";
 import { Badge } from "../../../design-system/atoms";

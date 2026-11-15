@@ -16,8 +16,8 @@ type Moments = Pick<
   "relationship_changes" | "sections_omitted"
 >;
 
-// Progress ends on one dated line, so an earlier ask sits where it happened
-// among the changes rather than in a list of its own above them.
+// Progress ends on one dated line. An earlier ask sits where it happened among
+// the changes, not in a list of its own.
 
 function ask(over: Partial<IntroRequest> = {}): IntroRequest {
   return {
