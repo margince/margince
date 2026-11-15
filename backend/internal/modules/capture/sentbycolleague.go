@@ -52,7 +52,11 @@ func (s *Sink) asSentByColleagueTx(
 	// A colleague forwarding someone else's invitation is not its sender, so
 	// a stated organizer must be them.
 	if fields.HasCalendarPart {
-		if organizer := statedOrganizer(fields); organizer == "" || organizer == foldAddress(cp.Email) {
+		organised, err := organisedByTx(ctx, tx, statedOrganizer(fields), colleague)
+		if err != nil {
+			return rec, fields, err
+		}
+		if organised {
 			fields.InvitationFromSeat = colleague
 		}
 		rec.Fields = fields
@@ -240,6 +244,30 @@ func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner 
 		return seat, nil
 	}
 	return ids.Nil, nil
+}
+
+// organisedByTx reports whether the seat organised the invitation: the part
+// names no organizer, or names the seat's login or a mailbox the provider
+// proved is theirs (calendarSeatMatch's rule). A declared alias never counts.
+func organisedByTx(ctx context.Context, tx pgx.Tx, organizer string, seat ids.UUID) (bool, error) {
+	if organizer == "" {
+		return true, nil
+	}
+	login, err := colleagueTx(ctx, tx, organizer)
+	if err != nil || login == seat {
+		return login == seat, err
+	}
+	args := []any{seat.String(), organizer}
+	bind := func(v any) int { args = append(args, v); return len(args) }
+	identities, err := storekit.ProvedMailSeatIdentitiesSQL(ctx, tx, bind)
+	if err != nil {
+		return false, err
+	}
+	var proved bool
+	if err := tx.QueryRow(ctx, `SELECT coalesce((`+identities+` -> $1::text) ? $2, false)`, args...).Scan(&proved); err != nil {
+		return false, fmt.Errorf("capture: reading whether the seat organised the invitation: %w", err)
+	}
+	return proved, nil
 }
 
 // statedOrganizer is the folded ORGANIZER address the calendar part names, or

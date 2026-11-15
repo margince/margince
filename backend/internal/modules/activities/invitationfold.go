@@ -34,7 +34,7 @@ func (in ListActivitiesInput) foldsInvitations() bool {
 func InvitationFoldSQL(candidates, content string) string {
 	key := "ai.identity_key"
 	return `NOT (` + foldedCalendarMailSQL + ` AND (` + content + `)
-	AND (a.calendar_uid, coalesce(a.calendar_event->>'occurrence', '')) IN (
+	AND (a.calendar_uid, ` + mailOccurrenceSQL + `) IN (
 	SELECT ` + meetingUIDOfKeySQL(key) + `, slot.occurrence
 	  FROM activity a JOIN activity_identity ai ON ai.activity_id = a.id
 	 CROSS JOIN LATERAL (VALUES (''), (right(` + key + `, strpos(reverse(` + key + `), '/') - 1))) slot(occurrence)

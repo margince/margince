@@ -40,9 +40,15 @@ var answerableInvitationSQL = "(a.calendar_uid IS NOT NULL AND " + calendarMetho
 // (RECURRENCE-ID) is about that occurrence only; one naming none is about all.
 func mailNamesMeetingSQL(key string) string {
 	return `(` + meetingUIDOfKeySQL(key) + ` = a.calendar_uid
-	  AND (coalesce(a.calendar_event->>'occurrence', '') = ''
-	       OR ` + key + ` = a.calendar_uid || '/' || (a.calendar_event->>'occurrence')))`
+	  AND (` + mailOccurrenceSQL + ` = '' OR ` + key + ` = a.calendar_uid || '/' || ` + mailOccurrenceSQL + `))`
 }
+
+// mailOccurrenceSQL is the calendar mail's RECURRENCE-ID on alias a, spelled as
+// MeetingIdentityKey spells an occurrence, or ” for none. The parser writes an
+// all-day occurrence as YYYYMMDD; the key holds its midnight in UTC.
+const mailOccurrenceSQL = `(CASE WHEN a.calendar_event->>'occurrence' ~ '^[0-9]{8}$'
+	THEN to_char(to_date(a.calendar_event->>'occurrence', 'YYYYMMDD'), 'YYYY-MM-DD') || 'T00:00:00Z'
+	ELSE coalesce(a.calendar_event->>'occurrence', '') END)`
 
 // invitationNeverOwedSQL is a calendar invitation no verdict can make owed. A
 // colleague's invitation waits on nobody's written reply. Neither does one
