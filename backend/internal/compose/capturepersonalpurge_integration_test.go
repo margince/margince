@@ -293,7 +293,7 @@ func resolvePersonal(t *testing.T, e *integration.Env, from string, activityID, 
 }
 
 // unattest clears the outbound-correspondence flag, so the row is saved by
-// its direction alone and not by NOT counterparty_outbound_attested.
+// its direction alone and not by `counterparty_outbound_attested`.
 func unattest(t *testing.T, e *integration.Env, activityID ids.UUID) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
