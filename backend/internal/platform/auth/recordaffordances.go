@@ -65,8 +65,12 @@ func StampRecordAffordances[T any](ctx context.Context, tx pgx.Tx, rule ArchiveR
 	// The seat ceiling limits actions only; masks read the role's row authority.
 	seat := seatAdmitsWrites(p)
 	for i, rowID := range named {
-		setWritable(&rows[i], seat && update[rowID] && !archived[rowID])
+		setWritable(&rows[i], liveEdit(seat, update[rowID], archived[rowID]))
 		setArchivable(&rows[i], archivable[rowID])
 	}
 	return update, nil
+}
+
+func liveEdit(seat, authority, archived bool) bool {
+	return seat && authority && !archived
 }

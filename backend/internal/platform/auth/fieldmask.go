@@ -202,7 +202,7 @@ func StampWritable[T any](ctx context.Context, tx pgx.Tx, table string,
 	seat := seatAdmitsWrites(p)
 	for i := range rows {
 		rowID := id(rows[i])
-		set(&rows[i], seat && writable[rowID] && !archived[rowID])
+		set(&rows[i], liveEdit(seat, writable[rowID], archived[rowID]))
 	}
 	return writable, nil
 }
