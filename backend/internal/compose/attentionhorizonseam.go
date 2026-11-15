@@ -43,6 +43,8 @@ func (h attentionMeetingHorizon) NextCustomerMeeting(
 		Kind: &kind, OccurredAfter: &window.From, OccurredBefore: &window.Until, DayDates: dayDatesOf(window),
 		Sort: &soonestFirst, Limit: &one,
 		OpenStatusOnly: true, CustomerMeetingsOnly: true, ReadableOnly: true,
+		// The answer names the meeting's id, time and subject, and its room.
+		FactsOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, attention.TasksMine, ids.UUID{}) {
 		return crmcontracts.Contact360NextMeeting{}, false, nil

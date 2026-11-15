@@ -55,8 +55,11 @@ type attentionTasks struct {
 func openTasksDueBy(
 	ctx context.Context, asOf, until time.Time, scope attention.TaskScope, owner ids.UUID, team []ids.UUID,
 ) (activities.ListActivitiesInput, bool) {
+	// A task row is drawn from its own columns and its links (taskFromActivity),
+	// so the page skips the enrichment an activity list shows.
 	in := activities.ListActivitiesInput{
 		OpenAndDueBy: &until, IncludeEmailRequests: true, IncludeWebsiteInquiries: true, WorklistAsOf: &asOf, ReadableOnly: true, TeamQueueOf: team,
+		LinkedFactsOnly: true,
 	}
 	switch scope {
 	case attention.TasksMine:
@@ -283,7 +286,7 @@ func (t attentionTasks) dueReminders(ctx context.Context, asOf time.Time) ([]crm
 	}
 	var due []crmcontracts.Activity
 	page := reminderPage
-	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true}
+	in := activities.ListActivitiesInput{RemindersDue: true, AsOf: &asOf, Limit: &page, ReadableOnly: true, LinkedFactsOnly: true}
 	for {
 		rows, next, err := t.listTaskPage(ctx, in)
 		if err != nil {
