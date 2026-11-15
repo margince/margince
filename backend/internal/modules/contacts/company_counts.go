@@ -43,34 +43,17 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Company, len(companies))
 	companyIDs := make([]ids.UUID, len(companies))
-	// The object grant comes first, as it does on the two lists themselves: a
-	// role that may not read contacts gets no contact count, and one that may
-	// not read deals gets no deal count — absent, not zero.
-	//
-	// The contact count needs the EDGE grant beside the contact one, because the
-	// number is a fact about the employment pairs and not about either end:
-	// "how many contacts work at Acme" is precisely what relationship.read
-	// governs, and a count that answered without it would be a counting oracle
-	// over edges the role is refused on every other surface. Absent, again —
-	// zero would be a wrong number on screen rather than a withheld one.
-	contactsVisible := auth.ReadGranted(ctx, "contact") && auth.ReadGranted(ctx, "relationship")
-	dealsVisible := auth.ReadGranted(ctx, "deal") && auth.ReadGranted(ctx, "computed_field")
+	dealsVisible := pipelineCountsVisible(ctx)
 	for i := range companies {
 		idx[companies[i].Id] = &companies[i]
 		companyIDs[i] = ids.UUID(companies[i].Id)
-		if contactsVisible {
-			zero := 0
-			companies[i].ContactCount = &zero
-		}
 		if dealsVisible {
-			zeroDeals := 0
-			companies[i].OpenDealCount = &zeroDeals
+			zero := 0
+			companies[i].OpenDealCount = &zero
 		}
 	}
-	if contactsVisible {
-		if err := fillContactCounts(ctx, tx, idx, companyIDs); err != nil {
-			return err
-		}
+	if err := fillContactCounts(ctx, tx, idx, companyIDs); err != nil {
+		return err
 	}
 	if !dealsVisible {
 		return nil
@@ -78,15 +61,36 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	return fillOpenDealCounts(ctx, tx, idx, companyIDs, asOf)
 }
 
-// fillContactCounts counts distinct current employees to live contacts
-// the caller may see. The company end needs no predicate of its own:
-// every account on the page already passed the list's row scope.
+// contactCountVisible gates contact_count and its sort. The
+// count needs relationship.read beside contact.read, because it is a fact
+// about employment edges. Without both it stays absent, so the count never
+// reveals edges the role is refused elsewhere.
+func contactCountVisible(ctx context.Context) bool {
+	return auth.ReadGranted(ctx, "contact") && auth.ReadGranted(ctx, "relationship")
+}
+
+// pipelineCountsVisible gates open_deal_count, the computed
+// fields and the open-deal sort (STATE-4). A role without deal.read or
+// computed_field.read sees none of them. Absent, not zero.
+func pipelineCountsVisible(ctx context.Context) bool {
+	return auth.ReadGranted(ctx, "deal") && auth.ReadGranted(ctx, "computed_field")
+}
+
+// fillContactCounts counts distinct current employees to live contacts the
+// caller may see. It checks contactCountVisible itself and sets the zero, so
+// the list and the single read gate the count alike.
 func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Company, companyIDs []ids.UUID) error {
+	if len(companyIDs) == 0 || !contactCountVisible(ctx) {
+		return nil
+	}
+	for _, company := range idx {
+		zero := 0
+		company.ContactCount = &zero
+	}
 	args := []any{companyIDs}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	// attachCompanyCounts admitted the object; the helper bounds which edges and
-	// contacts are counted, so a count never includes an edge whose endpoint the
-	// caller cannot reach.
+	// The helper bounds which edges and contacts are counted. A count never
+	// includes an edge whose endpoint the caller cannot reach.
 	from, err := countedEmploymentFrom(ctx, "rel.company_id = ANY($1)", arg)
 	if err != nil {
 		return err
