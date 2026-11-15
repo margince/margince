@@ -84,9 +84,8 @@ func adHocSpec(entity datasource.EntityType) (reportSpec, bool) {
 		if f.Type == "bigint" || f.Type == "integer" {
 			spec.measures[f.Name] = expr
 		}
-		// A descriptor field that POINTS AT a row-scoped record carries the same
-		// obligation as in the prebuilt catalog, derived from the schema so a
-		// new reference is never missed.
+		// A descriptor field that points at a row-scoped record carries the
+		// prebuilt catalog's obligation. It is derived from the schema.
 		if table, isReference := adHocReferenceTables[f.Name]; isReference {
 			if spec.referenceScopes == nil {
 				spec.referenceScopes = map[string]string{}

@@ -5,13 +5,9 @@ package compose
 
 // Vocabulary that reads ANOTHER record type than the report's own.
 //
-// The engine's admission gate covers spec.entity. A measure that folds the
-// deals under a project, or a dimension that names the project an activity is
-// filed under, reads a second record type, and the caller owes that type's
-// read grant as much as they owe the first.
-//
-// A name the caller asks for without the grant is refused (403); one it never
-// asked for is not served, in the report and its drill-through alike.
+// The engine's admission gate covers spec.entity. A name that reads a second
+// record type owes that type's read grant too. Asked for without it, the name
+// is refused (403); never asked for, it is not served.
 
 import (
 	"context"
@@ -23,8 +19,8 @@ import (
 )
 
 // requireVocabularyGrants refuses the first requested name whose grant the
-// caller lacks: what spec.grants declares, and the read grant of any table the
-// name's column references, which its row scope alone never stands in for.
+// caller lacks. A name owes what spec.grants declares and the read grant of any
+// table its column references; row scope never stands in for that grant.
 func requireVocabularyGrants(ctx context.Context, spec reportSpec, names []string) error {
 	for _, name := range names {
 		for _, object := range append(referencedTables(spec, name), spec.grants[name]) {
