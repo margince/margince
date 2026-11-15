@@ -152,7 +152,7 @@ func personalPurgeDue(seatCol string) string {
 // Personal mail is the opposite kind of thing and carries no such header, so
 // requiring it here would refuse every message this sweep exists for. The
 // evidence that replaces it is the scope above — inbound, connector-captured,
-// unlinked, never written to, inside the verdict's reach — plus a window four
+// unlinked, inside the verdict's reach — plus a window four
 // times longer when no human confirmed the verdict.
 //
 // Read-only, and shaped like SelectPurgeSubjectTx so a preview and the sweep
