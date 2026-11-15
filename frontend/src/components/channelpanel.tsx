@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { AppLink } from "../design-system/applink";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CopyAction } from "../design-system/clipboardcopy";
@@ -22,8 +21,6 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { routeHash } from "../lib/router";
-import { settingsHref } from "../lib/settingsrouting";
 import {
   isVerbosity,
   LinkExistingDialog,
@@ -72,6 +69,7 @@ export function ChannelPanel({
   // Held here, not in the unlinked body. A create moves the card to linked,
   // and the notice must outlive the body that asked for the channel.
   const [invites, setInvites] = useState<ChannelInvites | null>(null);
+  if (query.isPending || state?.state === "off") return null;
   return (
     <OverviewCard
       title={t("channelLink.title")}
@@ -86,38 +84,21 @@ export function ChannelPanel({
           />
         ) : undefined
       }
-      empty={state?.state === "off" ? t("channelLink.off") : undefined}
-      emptyAction={
-        state?.state === "off" ? (
-          <AppLink
-            className="link-button"
-            href={routeHash(settingsHref("integrations", "telegram"))}
-          >
-            {t("channelLink.openSettings")}
-          </AppLink>
-        ) : undefined
-      }
     >
-      {state?.state === "off" ? undefined : (
-        <QueryStates query={query} pendingLabel={t("channelLink.title")}>
-          {state?.state === "none" && (
-            <UnlinkedBody
-              record={ref}
-              canEdit={canEdit}
-              onCreated={setInvites}
-            />
-          )}
-          {state?.link && (
-            <LinkedBody
-              record={ref}
-              channel={state.link}
-              paused={state.state === "paused"}
-              canEdit={canEdit}
-            />
-          )}
-          {invites && <InvitesNotice invites={invites} />}
-        </QueryStates>
-      )}
+      <QueryStates query={query} pendingLabel={t("channelLink.title")}>
+        {state?.state === "none" && (
+          <UnlinkedBody record={ref} canEdit={canEdit} onCreated={setInvites} />
+        )}
+        {state?.link && (
+          <LinkedBody
+            record={ref}
+            channel={state.link}
+            paused={state.state === "paused"}
+            canEdit={canEdit}
+          />
+        )}
+        {invites && <InvitesNotice invites={invites} />}
+      </QueryStates>
     </OverviewCard>
   );
 }

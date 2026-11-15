@@ -213,7 +213,7 @@ function stub(receipts: readonly Receipt[]) {
 /**
  * Four deals. One probability moved back and forth, with one change
  * replaced. Then a quote, a long name, and a deal with one change accepted
- * before Margince stopped asking. The first card is open, with its Undo.
+ * before Margince stopped asking. Each card starts with a short preview.
  */
 export const ChangedDeals: Story = {
   render: () => {
@@ -228,6 +228,12 @@ export const ChangedDeals: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    const first = (
+      await canvas.findByRole("link", { name: "Straight X platform rollout" })
+    ).closest("summary");
+    if (!first) throw new Error("no deal preview");
+    await expect(first).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(first);
     await expect(
       await canvas.findByText(en["brief.changes.superseded"]),
     ).toBeVisible();
@@ -295,4 +301,41 @@ export const NoReasonRecorded: Story = {
       </StoryProviders>
     );
   },
+};
+
+export const LongPreview: Story = {
+  render: () => {
+    stub([
+      change(
+        1,
+        "Acme renewal",
+        `Changed the amount on "Acme renewal": ${"The updated scope includes delivery, training and support across the regional teams. ".repeat(12)}`,
+        {
+          kind: "deal_amount",
+        },
+      ),
+    ]);
+    return (
+      <StoryProviders>
+        <DoneForYou completed={() => null} />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const head = (
+      await canvas.findByRole("link", { name: "Acme renewal" })
+    ).closest("summary");
+    const preview = head?.querySelector(".brief-done-net");
+    if (!(preview instanceof HTMLElement)) throw new Error("no change preview");
+    await expect(head).toHaveAttribute("aria-expanded", "false");
+    await expect(getComputedStyle(preview).webkitLineClamp).toBe("2");
+    await expect(preview.scrollHeight).toBeGreaterThan(preview.clientHeight);
+  },
+};
+
+export const LongPreviewPhone: Story = {
+  ...LongPreview,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

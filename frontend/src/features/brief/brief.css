@@ -822,6 +822,11 @@
 }
 .brief-done-net {
   grid-column: 1 / -1;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
   color: var(--textSecondary);
 }
 /* The steps: a dot per change on a hairline spine. The dot is indigo while

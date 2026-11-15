@@ -12188,8 +12188,6 @@ export const en = {
 
   // The team chat card on a deal or project.
   "channelLink.title": "Team chat",
-  "channelLink.off": "Connect a chat bot in Settings to link a channel.",
-  "channelLink.openSettings": "Open chat bot settings",
   "channelLink.none": "No channel yet",
   "channelLink.noneSub":
     "A private channel keeps the team up to date on this record.",

@@ -78,14 +78,11 @@ export function MagicPanel({
   visibleReceiptIds = [],
   lanes = LANES,
   embedded = false,
-  doneOpen = false,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
   lanes?: readonly MagicLane[];
   embedded?: boolean;
-  /** Embedded, the done card opens on arrival: nothing above it to read first. */
-  doneOpen?: boolean;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -179,7 +176,7 @@ export function MagicPanel({
           byDay={byDay}
           embedded={embedded}
           note={laneNote(lane)}
-          done={{ fold: doneFold, floor: doneFloor, open: doneOpen }}
+          done={{ fold: doneFold, floor: doneFloor }}
         />
       ))}
       {notShown.length > 0 && (
@@ -222,7 +219,7 @@ function DrawnLane({
   embedded: boolean;
   /** Why the lane may hold more than it draws, under it. */
   note: string | undefined;
-  done: Readonly<{ fold: string; floor: boolean; open: boolean }>;
+  done: Readonly<{ fold: string; floor: boolean }>;
 }>) {
   const t = useT();
   if (embedded && lane === "done") {
@@ -234,7 +231,6 @@ function DrawnLane({
           zone={zone}
           byDay={byDay}
           floor={done.floor}
-          defaultOpen={done.open}
         />
         {note && <p className="t-caption">{note}</p>}
       </>

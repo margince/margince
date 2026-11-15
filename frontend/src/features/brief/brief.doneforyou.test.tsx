@@ -175,7 +175,11 @@ it("keeps an older server's summary whole and claims no missing reason", async (
     [bundle(1, [auditId(1)])],
   );
   render(<DoneForYou completed={() => null} />);
-  expect(await screen.findByText("Closed as lost — reason 1.0")).toBeTruthy();
+  const head = (await screen.findByRole("link", { name: "Deal 1" })).closest(
+    "summary",
+  );
+  if (!head) throw new Error("no deal preview");
+  expect(within(head).getByText("Closed as lost — reason 1.0")).toBeTruthy();
   expect(screen.queryByText(en["brief.done.noReason"])).toBeNull();
 });
 
@@ -356,7 +360,7 @@ it("keeps the drawer's list and its Undo together until the reader asks for new 
   expect(await within(drawer).findByText("reason 3.0")).toBeTruthy();
 });
 
-it("opens the first deal and says where a closed one ended up", async () => {
+it("starts with deal previews and opens only the selected deal", async () => {
   routes(
     [change(1), change(2)],
     [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
@@ -370,7 +374,7 @@ it("opens the first deal and says where a closed one ended up", async () => {
     .getByRole("link", { name: "Deal 2" })
     .closest("summary");
   if (!first || !second) throw new Error("no deal heads");
-  expect(first.getAttribute("aria-expanded")).toBe("true");
+  expect(first.getAttribute("aria-expanded")).toBe("false");
   expect(second.getAttribute("aria-expanded")).toBe("false");
   // A closed card carries its newest change on its head.
   expect(within(second).getByText("Closed as lost")).toBeTruthy();
@@ -387,7 +391,9 @@ it("says what a change moved without naming the deal it sits under", async () =>
     "li",
   );
   if (!card) throw new Error("no card for deal 1");
-  expect(within(card).getByText("Closed as lost")).toBeTruthy();
+  const head = card.querySelector("summary");
+  if (!head) throw new Error("no deal preview");
+  expect(within(head).getByText("Closed as lost")).toBeTruthy();
   expect(within(card).queryByText(/"Deal 1"/)).toBeNull();
 });
 
