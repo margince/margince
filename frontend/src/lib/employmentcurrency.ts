@@ -12,8 +12,14 @@ export function today(): string {
   return isoDay(new Date());
 }
 
-// A future departure keeps the job current until its last day.
-export function stillHeld(employment: Employment): boolean {
+// A future departure keeps the job current until its last day. A company's
+// relationship row carries the same three fields and is judged the same way.
+export function stillHeld(
+  employment: Pick<
+    Employment,
+    "employment_status" | "ended_at" | "ended_precision"
+  >,
+): boolean {
   if (
     employment.employment_status === "former" ||
     employment.employment_status === "unknown"

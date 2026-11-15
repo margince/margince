@@ -3267,6 +3267,7 @@ export const en = {
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
   "rel.current": "Current",
+  "rel.former": "Former",
   "rel.endedOn": "Until {when}",
   "rel.remove": "Remove",
   "rel.removeConfirm": "Remove this relationship? There is no undo.",
@@ -3838,6 +3839,8 @@ export const en = {
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View full thread",
   "timeline.group.mayContinue": "Earlier messages may exist",
+  "timeline.group.newerPart": "Later messages above",
+  "timeline.group.olderPart": "Earlier messages below",
   // A thread on the chronology is one card: the kind, the count and who was
   // on it over the subject, then each message with who wrote it and when.
   "timeline.group.kind": "Thread",
@@ -20944,6 +20947,8 @@ export const en = {
   "lead.company.linkTitle": "Link this lead to {name}?",
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
+  "lead.company.addedOnQualify":
+    "No company record yet. You can add it when you qualify this lead.",
   "lead.company.linkOnQualify":
     "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.company.matchedByDomain": "Same website domain",

@@ -32,6 +32,7 @@ type Store struct {
 	// relationship table a project's companies ride on.
 	attachCompany    AttachCompany
 	projectCompanies ProjectCompanies
+	projectCustomers ProjectCustomers
 	// checkDeal and attachDeal link the deal a project comes from (dealseam.go).
 	checkDeal  CheckDeal
 	attachDeal AttachDeal
@@ -47,6 +48,7 @@ func NewStore(db *database.DB) *Store {
 		db: db, clock: time.Now,
 		attachCompany:    refusingAttachCompany(),
 		projectCompanies: refusingProjectCompanies(),
+		projectCustomers: refusingProjectCustomers(),
 		checkDeal:        refusingCheckDeal(),
 		attachDeal:       refusingAttachDeal(),
 	}
@@ -54,12 +56,15 @@ func NewStore(db *database.DB) *Store {
 
 // WithCompanyEdges wires the seams that put a company on a project and read the
 // companies back. Compose binds them to modules/contacts, which owns the table.
-func (s *Store) WithCompanyEdges(attach AttachCompany, list ProjectCompanies) *Store {
+func (s *Store) WithCompanyEdges(attach AttachCompany, list ProjectCompanies, customers ProjectCustomers) *Store {
 	if attach != nil {
 		s.attachCompany = attach
 	}
 	if list != nil {
 		s.projectCompanies = list
+	}
+	if customers != nil {
+		s.projectCustomers = customers
 	}
 	return s
 }

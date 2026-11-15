@@ -37,6 +37,13 @@ type ProjectCompanies func(
 	ctx context.Context, tx pgx.Tx, projectID ids.ProjectID,
 ) ([]CompanyOnProject, error)
 
+// ProjectCustomers answers each project's first customer edge for one page.
+// A project with no customer is absent, and a customer this caller may not
+// read is nil. edgesRead is false when the caller may not read company edges.
+type ProjectCustomers func(
+	ctx context.Context, tx pgx.Tx, projectIDs []ids.ProjectID,
+) (customers map[ids.ProjectID]*ids.CompanyID, edgesRead bool, err error)
+
 // CompanyOnProject is one company's place on a project.
 type CompanyOnProject struct {
 	CompanyID   ids.CompanyID
@@ -100,6 +107,14 @@ func refusingAttachCompany() AttachCompany {
 func refusingProjectCompanies() ProjectCompanies {
 	return func(context.Context, pgx.Tx, ids.ProjectID) ([]CompanyOnProject, error) {
 		return nil, errCompanySeamUnwired("the project-companies read")
+	}
+}
+
+// refusingProjectCustomers fails closed like its siblings: a project answered
+// without its customer read would look like a project with no customer.
+func refusingProjectCustomers() ProjectCustomers {
+	return func(context.Context, pgx.Tx, []ids.ProjectID) (map[ids.ProjectID]*ids.CompanyID, bool, error) {
+		return nil, false, errCompanySeamUnwired("the project-customers read")
 	}
 }
 

@@ -3270,6 +3270,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
   "rel.current": "Hiện tại",
+  "rel.former": "Trước đây",
   "rel.endedOn": "Đến {when}",
   "rel.remove": "Gỡ",
   "rel.removeConfirm": "Gỡ quan hệ này? Không thể hoàn tác.",
@@ -3783,6 +3784,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Đóng",
   "timeline.group.openThread": "Xem toàn bộ chuỗi thư",
   "timeline.group.mayContinue": "Có thể còn tin nhắn trước đó",
+  "timeline.group.newerPart": "Tin nhắn sau ở phía trên",
+  "timeline.group.olderPart": "Tin nhắn trước ở phía dưới",
   "timeline.group.kind": "Chuỗi thư",
   "timeline.group.earlier_other": "Hiển thị {count} tin nhắn trước đó",
   "timeline.group.earlier_one": "Hiển thị {count} tin nhắn trước đó",
@@ -20641,6 +20644,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkTitle": "Liên kết lead này với {name}?",
   "lead.company.linkConfirm": "Liên kết công ty",
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
+  "lead.company.addedOnQualify":
+    "Chưa có hồ sơ công ty. Bạn có thể tạo hồ sơ khi xác nhận đủ điều kiện.",
   "lead.company.linkOnQualify":
     "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
   "lead.company.matchedByDomain": "Cùng tên miền trang web",

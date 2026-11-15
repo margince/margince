@@ -46,6 +46,6 @@ func ProjectsStore(pool *pgxpool.Pool) *projects.Store {
 func ProjectsStoreOver(db *database.DB) *projects.Store {
 	return projects.NewStore(db).
 		WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
-		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx)).
+		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx), contacts.FirstCustomersOnProjectsTx).
 		WithDealLink(installseam.ProjectDealLink(deals.NewStore(db, DealsInstallation())))
 }
