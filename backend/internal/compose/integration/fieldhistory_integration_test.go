@@ -532,7 +532,7 @@ func TestFieldHistoryHonestEmptyForVisibleRecordWithNoMatches(t *testing.T) {
 func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 	e := Setup(t)
 
-	description := "An independent description written by a person."
+	description := "An independent description written by a member."
 	seeded, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: "Scale Commerce", Description: &description, Source: "manual",
 		Domains: []contacts.CompanyDomainInput{{Domain: "scale.example", IsPrimary: true}},

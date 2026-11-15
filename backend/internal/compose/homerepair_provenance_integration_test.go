@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 type legacyRepairFixture struct {
@@ -58,8 +59,8 @@ func seedLegacyRepairOn(t *testing.T, e *integration.Env, now time.Time, old boo
 	writer := newLeadWorkTasks(InstallationDB(e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
 	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
-	in := writer.repliedTaskInput(leadID, ids.UUID(source.Id), "Review the enquiry", &e.Rep2)
-	in.SourceActivityID, in.DueAt = nil, &now
+	in := legacyRepliedTaskInput(writer, leadID, ids.UUID(source.Id), "Review the enquiry", &e.Rep2)
+	in.DueAt = &now
 	if len(locator) > 0 {
 		in.SourceID = &locator[0]
 	}
@@ -68,6 +69,15 @@ func seedLegacyRepairOn(t *testing.T, e *integration.Env, now time.Time, old boo
 		t.Fatal(err)
 	}
 	return legacyRepairFixture{e: e, now: now, task: ids.From[ids.ActivityKind](ids.UUID(task.Id)), source: ids.UUID(source.Id), lead: leadID}
+}
+
+// legacyRepliedTaskInput is a qualify task as written before tasks named their
+// source activity: keyed on the arrival alone, with no source_activity_id.
+func legacyRepliedTaskInput(writer leadWorkTasks, lead ids.LeadID, arrival ids.UUID, title string, owner *ids.UUID) activities.LogActivityInput {
+	in := writer.repliedTaskInput(lead, arrival, title, owner)
+	key := provenance.LegacyLeadQualifyKey(arrival)
+	in.SourceID, in.SourceActivityID = &key, nil
+	return in
 }
 
 func (f legacyRepairFixture) preview(t *testing.T) (datatask.ReviewRequest, homeRepairTaskRef) {

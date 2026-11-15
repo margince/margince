@@ -309,10 +309,10 @@ function useFileVerbs(dealId: string, file: Attachment) {
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  // A hide or unhide moves the row within this deal: its area, the Deal Room
-  // picker (same key, without hidden rows), and the rooms that say whether
-  // each entry still reaches the buyer. A delete takes the file out of every
-  // list its parent puts it in.
+  // A hide or unhide moves the row within this deal. That changes its area,
+  // the Deal Room picker (same key, without hidden rows), and the rooms that
+  // say whether each entry still reaches the buyer.
+  // A delete takes the file out of every list its parent puts it in.
   const refreshKeys = (keys: readonly QueryKey[]) =>
     Promise.all(
       keys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),

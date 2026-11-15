@@ -46,12 +46,30 @@ const WITHDRAWABLE = new Set<IntroRequest["status"]>([
   "name_drop_approved",
 ]);
 
+/** isOpenAsk is whether a row can still carry a verb for either party. */
+export function isOpenAsk(ask: IntroRequest): boolean {
+  return WITHDRAWABLE.has(ask.status);
+}
+
 /**
- * IntroAsksPanel lists the open and settled asks the viewer is party to.
+ * askSettledAt is when a settled ask last moved, so a timeline can place it.
+ * Its latest stamp wins; an ask with none falls back to when it was made.
+ */
+export function askSettledAt(ask: IntroRequest): string {
+  return (
+    ask.replied_at ??
+    ask.name_dropped_at ??
+    ask.introduced_at ??
+    ask.decided_at ??
+    ask.requested_at
+  );
+}
+
+/**
+ * IntroAsksPanel lists the open asks the viewer is party to.
  *
- * An empty list renders nothing at all rather than an empty card: a contact
- * nobody has asked about is the ordinary case, and a card saying so on every
- * such page is noise on most of them.
+ * Settled asks belong to the Progress timeline, where they sit by date among
+ * the relationship's changes. With no open ask the panel renders nothing.
  */
 export function IntroAsksPanel({
   contactId,
@@ -95,7 +113,7 @@ export function IntroAsksPanel({
       </Panel>
     );
   }
-  const rows = asks.data ?? [];
+  const rows = (asks.data ?? []).filter(isOpenAsk);
   if (rows.length === 0) {
     return null;
   }
@@ -182,8 +200,7 @@ function AskRow({
   // press on each before the first answer returns cannot fire both at once.
   return (
     <li>
-      <Badge>{t(labelFor(STATUS_LABEL, ask.status))}</Badge>{" "}
-      <AskSummary ask={ask} />
+      <AskLine ask={ask} />
       {mine && ask.status === "requested" ? (
         <Button onClick={onAnswer}>{t("contact.intro.answerAction")}</Button>
       ) : null}
@@ -215,6 +232,17 @@ function AskRow({
         </p>
       ) : null}
     </li>
+  );
+}
+
+/** AskLine is an ask's state and its one-line summary, with no verbs. */
+export function AskLine({ ask }: Readonly<{ ask: IntroRequest }>) {
+  const t = useT();
+  return (
+    <>
+      <Badge>{t(labelFor(STATUS_LABEL, ask.status))}</Badge>{" "}
+      <AskSummary ask={ask} />
+    </>
   );
 }
 

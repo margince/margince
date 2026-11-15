@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // The file lists' query keys are spelled once, in src/lib/attachmentkeys.ts,
-// beside fileListKeys, which says which lists a written file lands in. A writer
-// that spells a list's key by hand refreshes the list it thought of and leaves
-// the others showing a file that moved or is gone. Tests count: a test that
-// spells a key by hand checks a key production may no longer use.
+// beside fileListKeys, which says which lists a written file lands in.
+// A writer that spells a list's key by hand refreshes only the list it thought of.
+// The others keep showing a file that moved or is gone.
+// Tests count: a test that spells a key by hand checks a key production may no longer use.
 
 import ts from "typescript";
 import type { CensusFile, CensusRule } from "../tree";

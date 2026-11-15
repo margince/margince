@@ -40,7 +40,7 @@ func TestLeadReplyAdviceFollowsTheSourceRatherThanTheImport(t *testing.T) {
 	var due *time.Time
 	var source *ids.UUID
 	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `SELECT due_at, source_activity_id FROM activity WHERE source_system=$1 AND source_id=$2`, provenance.LeadRepliedSource, inbound.String()).Scan(&due, &source)
+		return tx.QueryRow(context.Background(), `SELECT due_at, source_activity_id FROM activity WHERE source_system=$1 AND source_id=$2`, provenance.LeadRepliedSource, inbound.String()+":"+lead.String()).Scan(&due, &source)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -95,8 +95,7 @@ func TestLeadReplyAdviceRejectsFutureMailAndSharesLegacyAdmission(t *testing.T) 
 	source := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Legacy source", at: now.AddDate(0, 0, -31)}, true)
 	writer := newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	input := writer.repliedTaskInput(lead, source, "Historic qualification", &l.e.Rep2)
-	input.SourceActivityID = nil
+	input := legacyRepliedTaskInput(writer, lead, source, "Historic qualification", &l.e.Rep2)
 	input.DueAt = &now
 	if _, _, err := l.e.Activities.LogActivity(principal.SystemActing(l.e.Admin(), leadRepliedActor), input); err != nil {
 		t.Fatal(err)
@@ -163,8 +162,7 @@ func TestLegacyNotificationDatesAreNotDeadlinesAndHumanDatesSurvive(t *testing.T
 	source := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Source", at: l.at}, true)
 	writer := newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	in := writer.repliedTaskInput(lead, source, "Choose qualification", &l.e.Rep2)
-	in.SourceActivityID = nil
+	in := legacyRepliedTaskInput(writer, lead, source, "Choose qualification", &l.e.Rep2)
 	in.DueAt = &now
 	task, _, err := l.e.Activities.LogActivity(principal.SystemActing(l.e.Admin(), leadRepliedActor), in)
 	if err != nil {
@@ -223,8 +221,7 @@ func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
 	source := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Current source", at: l.at}, true)
 	writer := newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default())
 	writer.now = func() time.Time { return now }
-	in := writer.repliedTaskInput(lead, source, "Review qualification", &l.e.Rep2)
-	in.SourceActivityID = nil
+	in := legacyRepliedTaskInput(writer, lead, source, "Review qualification", &l.e.Rep2)
 	task, _, err := l.e.Activities.LogActivity(principal.SystemActing(l.e.Admin(), leadRepliedActor), in)
 	if err != nil {
 		t.Fatal(err)
