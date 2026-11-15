@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
+	"github.com/margince/margince/backend/internal/compose/qualifytasks"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
@@ -99,7 +101,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		heldMailDataTask(now), subjectMailDataTask(now), noticeSourceDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(), taskActivityClocksDataTask(),
 		unaskedcommitments.DataTask(), retiredstagecards.DataTask(), colleagueSenderDataTask(), deliveryReportsDataTask(pool, now), liftedAgentCallsDataTask(), mailDealsDataTask(pool), mailBodyCompletenessDataTask(),
 		machineSenderDataTask(), signatureTitleHistoryDataTask(pool), manualSignalNoEvidenceDataTask(), companyIndustryDataTask(), contactEmployersDataTask(pool), unknownEmploymentDataTask(pool), leadScoresFollowOriginDataTask(now), phaseHistoryLinksDataTask(),
-		activities.MeetingNotesDataTask(activities.NewStore(InstallationDB(pool))), activities.CaptureLabelsDataTask(), membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
+		activities.MeetingNotesDataTask(activities.NewStore(InstallationDB(pool)).WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default()))), activities.CaptureLabelsDataTask(), membersOnlyMailDataTask(), signatureWindowDataTask(), unsplitAddressDataTask(), dedupeScanDataTask(),
 		leadMailDataTask(pool), documentLinksDataTask(), requestProofDataTask(), ownDomainFoldDataTask(), participantEvidenceDataTask(), polymorphicKeysDataTask(), initialsNamesDataTask(), seatEmploymentDataTask(), meetingNoonStartsDataTask(), meetingHistoryPrecisionDataTask(), guessedMailboxSeatsDataTask(), matchedMeetingGuestsDataTask(pool),
 		meetingGuestAnswersDataTask(pool),
 		calendarDescriptionsDataTask(),
@@ -134,5 +136,6 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
 		customerlinks.DataTask(),
+		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 	}
 }
