@@ -13,6 +13,7 @@ import { useT } from "../../i18n";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import type { OpenReceipt } from "../records/record360";
 import { profileFieldLabel } from "./companies";
+import { useLatestSiteRead } from "./companydeepread";
 import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";
 import { CompanyProfileDetails } from "./companyprofiledetails";
@@ -95,6 +96,7 @@ export function CompanyProfileForm({
   const { canEdit, reason } = useCompanyEditGate(company);
   const profileQuery = useCompanyProfileFields(company.id);
   const fields = profileQuery.data ?? [];
+  const latestRead = useLatestSiteRead(company.id);
   const save = useCompanyFieldSave(company);
 
   return (
@@ -165,7 +167,7 @@ export function CompanyProfileForm({
                 // (PROFILE_FIELD_LABELS), not a second list here: a field
                 // renamed there must not keep its old name on this tab.
                 label={profileFieldLabel(field, t)}
-                placeholderKey="co.narrative.add"
+                placeholderKey={emptyReason(latestRead.data?.status)}
                 canEdit={canEdit}
                 readOnlyReason={reason}
                 multiline
@@ -199,4 +201,15 @@ export function repeatsDescription(
 ): boolean {
   const offer = fields.find((one) => one.field === field)?.value.trim();
   return field === "offer_summary" && !!offer && offer === description?.trim();
+}
+
+// An empty narrative field says why it is empty. A site read fills these
+// fields from the website only and leaves out what the site does not state.
+// So after a finished read, an empty field is one the site does not mention.
+export function emptyReason(
+  status: string | null | undefined,
+): "co.narrative.notOnSite" | "co.narrative.notReadYet" {
+  return status === "ready" || status === "partial" || status === "confirmed"
+    ? "co.narrative.notOnSite"
+    : "co.narrative.notReadYet";
 }

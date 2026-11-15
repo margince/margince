@@ -10,15 +10,17 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestFillingNoCompaniesPreservesTheAnchorMaskAndWriteFlag(t *testing.T) {
+func TestFillingNoCompaniesKeepsCompanyIDItsMaskAndWriteFlag(t *testing.T) {
+	customer := openapi_types.UUID(ids.NewV7())
 	for _, writable := range []bool{false, true} {
 		masked := []string{"company_id"}
-		p := crmcontracts.Project{MaskedFields: &masked, Writable: &writable}
+		p := crmcontracts.Project{CompanyId: &customer, MaskedFields: &masked, Writable: &writable}
 		got, err := fillCompanies(context.Background(), nil, p,
 			func(context.Context, pgx.Tx, ids.ProjectID) ([]CompanyOnProject, error) {
 				return nil, nil
@@ -26,8 +28,11 @@ func TestFillingNoCompaniesPreservesTheAnchorMaskAndWriteFlag(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got.CompanyId != nil || got.Companies == nil || len(*got.Companies) != 0 {
-			t.Errorf("company_id = %v, companies = %v, want null and an empty list", got.CompanyId, got.Companies)
+		if got.CompanyId == nil || *got.CompanyId != customer {
+			t.Errorf("company_id = %v, want %s left as it was", got.CompanyId, customer)
+		}
+		if got.Companies == nil || len(*got.Companies) != 0 {
+			t.Errorf("companies = %v, want an empty list", got.Companies)
 		}
 		if got.MaskedFields == nil || !reflect.DeepEqual(*got.MaskedFields, []string{"company_id"}) {
 			t.Errorf("masked_fields = %v, want only company_id", got.MaskedFields)
