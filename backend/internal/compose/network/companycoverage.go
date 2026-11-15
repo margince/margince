@@ -291,7 +291,7 @@ func companyStakeholderEdge(ctx context.Context, companyPos int, arg func(any) i
 		OR (r.kind = 'project_stakeholder' AND EXISTS (
 		      SELECT 1 FROM relationship pc
 		        JOIN project pr ON pr.id = pc.project_id AND pr.archived_at IS NULL
-		       WHERE pc.kind = 'project_company' AND pc.project_id = r.project_id
+		       WHERE pc.kind = '`+auth.ProjectCompanyKind+`' AND pc.project_id = r.project_id
 		         AND pc.company_id = $%[1]d AND pc.archived_at IS NULL
 		         AND (%[3]s))))`, companyPos, dealScope, projectScope), nil
 }

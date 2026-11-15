@@ -18,7 +18,9 @@ import (
 // invitedHistory is one customer's History: a meeting and the mail about its
 // event from both sides, plus mail that is not about a captured meeting.
 type invitedHistory struct {
-	contact, meeting                    ids.UUID
+	contact, meeting ids.UUID
+	// starts is the meeting's occurrence, as its identity key spells it.
+	starts                              string
 	sent, received, update, answer      ids.UUID
 	counter, written, otherEvent, plain ids.UUID
 }
@@ -26,12 +28,12 @@ type invitedHistory struct {
 func (e *loadEnv) invitedHistory(t *testing.T) invitedHistory {
 	t.Helper()
 	now := clocktest.Now(t)
-	h := invitedHistory{contact: e.buyer(t), meeting: ids.NewV7()}
+	h := invitedHistory{contact: e.buyer(t), meeting: ids.NewV7(), starts: now.Add(24 * time.Hour).UTC().Format(time.RFC3339)}
 	uid := "kickoff-" + ids.NewV7().String() + "@google.com"
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'meeting', 'Kickoff', $2, 'seed', 'system')`, h.meeting, now.Add(24*time.Hour))
 	e.exec(t, `INSERT INTO activity_identity (identity_kind, identity_key, activity_id, attested_by)
-		VALUES ('meeting', $1, $2, 'seed')`, MeetingIdentityKey(uid, now.Add(24*time.Hour).Format(time.RFC3339)), h.meeting)
+		VALUES ('meeting', $1, $2, 'seed')`, MeetingIdentityKey(uid, h.starts), h.meeting)
 	e.exec(t, `INSERT INTO activity_participant (activity_id, role, user_id, response) VALUES ($1, 'organizer', $2, 'accepted')`, h.meeting, e.rep)
 	e.exec(t, `INSERT INTO activity_participant (activity_id, role, contact_id, response) VALUES ($1, 'attendee', $2, 'declined')`, h.meeting, h.contact)
 	e.exec(t, `INSERT INTO activity_participant (activity_id, role, user_id) VALUES ($1, 'attendee', $2)`, h.meeting, e.other)
@@ -142,7 +144,7 @@ func TestMailForOneOccurrenceFoldsOnlyOntoThatOccurrence(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(), `SELECT calendar_uid FROM activity WHERE id = $1`, h.sent).Scan(&uid); err != nil {
 		t.Fatal(err)
 	}
-	listed := clocktest.Now(t).Add(24 * time.Hour).UTC().Format(time.RFC3339)
+	listed := h.starts
 	other := clocktest.Now(t).Add(8 * 24 * time.Hour).UTC().Format(time.RFC3339)
 	e.exec(t, `UPDATE activity SET calendar_event = jsonb_build_object('occurrence', $2::text) WHERE id = $1`, h.update, other)
 	e.exec(t, `UPDATE activity SET calendar_event = jsonb_build_object('occurrence', $2::text) WHERE id = $1`, h.answer, listed)

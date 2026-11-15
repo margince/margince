@@ -198,7 +198,7 @@ func TestAPopulationWhoseEntityTheSeatCannotReadIsAbsent(t *testing.T) {
 // A row's own timestamp can still bound a range, so it narrows and never groups.
 func TestTheVocabularyOffersNoFieldThatCanOnlyBeWithheld(t *testing.T) {
 	t.Parallel()
-	schema := AnalyticsSchemaFor(seatWith("deal", "activity", "contact", "company", "project", "partner"))
+	schema := AnalyticsSchemaFor(seatWith("deal", "activity", "contact", "company", "project", "partner", "relationship"))
 	for _, name := range []string{"project-commitments", "projects-gone-quiet"} {
 		entity, ok := schema.Entities[name]
 		if !ok {
