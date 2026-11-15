@@ -118,7 +118,9 @@ export function useReferenceOptions(reference: Reference | undefined) {
   const members = useMemberFilterOptions(kind === "user");
   const roster = useRoster("team", kind === "team");
   const rosterPartial = useRosterPartial("team", kind === "team");
-  const readerScope = useHealthScope();
+  // Projects are records the reader's row scope narrows; configuration is not.
+  const scope = useHealthScope();
+  const readerScope = reference === "project" ? scope : null;
   const query = useQuery({
     queryKey: ["filter-reference", reference, locale, readerScope ?? ""],
     enabled:
