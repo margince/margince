@@ -268,6 +268,9 @@ func LockForWrite(ctx context.Context, tx pgx.Tx, key string) error {
 	if _, err := tx.Exec(ctx, `SELECT 1 FROM setting WHERE key = $1 FOR UPDATE`, key); err != nil {
 		return fmt.Errorf("settings: locking the %s row for write: %w", key, err)
 	}
+	// A value this transaction read before the lock may predate another
+	// writer's commit, so the writer reads the row again.
+	database.Forget(tx, ValueMemoKey(key))
 	return nil
 }
 
@@ -443,12 +446,21 @@ func GetStoredTx[T any](ctx context.Context, tx pgx.Tx, e *Entry[T]) (T, bool, e
 	if err := RequireRead(ctx, e); err != nil {
 		return zero, false, err
 	}
-	stored, err := hasRow(ctx, tx, e.Key())
+	// The presence and the value come from one read, so they always agree.
+	raw, stored, err := storedValue(ctx, tx, e.Key(), "")
 	if err != nil {
-		return zero, false, err
+		return zero, false, fmt.Errorf("settings: reading %s: %w", e.Key(), err)
 	}
-	out, err := GetTx(ctx, tx, e)
-	return out, stored, err
+	if !stored {
+		if raw, err = e.DefaultJSON(); err != nil {
+			return zero, false, err
+		}
+	}
+	var out T
+	if err := json.Unmarshal(raw, &out); err != nil {
+		return zero, false, fmt.Errorf("settings: decoding %s: %w", e.Key(), err)
+	}
+	return out, stored, nil
 }
 
 // RequireTx reads a setting inside a transaction the caller already holds, for

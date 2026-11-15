@@ -53,3 +53,48 @@ func TestASettingIsReadOncePerTransactionAndAgainAfterItsWriter(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// A writer reads the row again after its lock. A value its transaction
+// remembered from before another writer's commit is not what it writes over.
+func TestASettingWriteIsNotFooledByWhatItsTransactionReadBeforeTheLock(t *testing.T) {
+	e := integration.Setup(t)
+	store := settings.New(e.Pool, settingsRegistry())
+	ctx := e.As(e.AdminUser, nil, principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
+		RowScope: principal.RowScopeAll,
+	})
+	write := func(name string) {
+		t.Helper()
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			return settings.SetTx(ctx, store, tx, identity.Timezone, name)
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	read := func() string {
+		t.Helper()
+		var name string
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			name, err = identity.TimezoneAppliedTx(ctx, tx)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return name
+	}
+	write("Europe/Lisbon")
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		seen, err := identity.TimezoneAppliedTx(ctx, tx)
+		if err != nil || seen != "Europe/Lisbon" {
+			t.Fatalf("the transaction first read %q (%v), want Europe/Lisbon", seen, err)
+		}
+		write("Pacific/Auckland")
+		return settings.SetTx(ctx, store, tx, identity.Timezone, "Europe/Lisbon")
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(); got != "Europe/Lisbon" {
+		t.Errorf("after the write the zone is %q, want Europe/Lisbon", got)
+	}
+}

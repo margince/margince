@@ -38,6 +38,8 @@ func storedValue(ctx context.Context, tx pgx.Tx, key, lock string) (json.RawMess
 		return row, err
 	}
 	if lock != "" {
+		// What the lock saw replaces what an unlocked read remembered.
+		database.Forget(tx, ValueMemoKey(key))
 		row, err := read()
 		return row.raw, row.found, err
 	}
