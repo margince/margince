@@ -9,6 +9,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -224,5 +227,31 @@ func TestTheResponseRateCountsNoAnswerToANeverOwedInvitation(t *testing.T) {
 	}
 	if control.Answered != after.Answered+1 {
 		t.Errorf("an answered request moved the count %d → %d, so the case above proves nothing", after.Answered, control.Answered)
+	}
+}
+
+// A company finding that cites an invitation for a held meeting says no question
+// is waiting: SettledCitations reads it as settled, as the Worklist does.
+func TestACitedInvitationForAHeldMeetingIsSettled(t *testing.T) {
+	e := setupLoad(t)
+	held := invitationAsking(t, e)
+	meetingWithUID(t, e, held, requestInstant.Add(-24*time.Hour))
+	ahead := invitationAsking(t, e)
+	meetingWithUID(t, e, ahead, requestInstant.Add(72*time.Hour))
+
+	var settled map[ids.UUID]bool
+	reader := e.asSeat(e.rep)
+	if err := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)).Tx(reader, func(tx pgx.Tx) error {
+		var err error
+		settled, err = SettledCitations(reader, tx, []ids.UUID{held, ahead}, nil, requestInstant.Add(time.Hour))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !settled[held] {
+		t.Error("an invitation for a held meeting still reads as a question waiting for an answer")
+	}
+	if settled[ahead] {
+		t.Error("an outside invitation for a meeting ahead reads as settled, so the case above proves nothing")
 	}
 }

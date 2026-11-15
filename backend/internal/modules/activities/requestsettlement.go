@@ -120,10 +120,8 @@ type RepliedRequest struct {
 // verdict that recorded its evidence is skipped while that evidence is
 // unchanged, so an edit, a narrowing or a backdated answer brings it back. An
 // older verdict without it is skipped while its answer is still the newest. A
-// still_owed verdict from an older rule is never skipped. An invitation no
-// verdict can make owed is not judged at all, unless a human took it as a request.
-var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `))
- AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL("$1::timestamptz") + `)
+// still_owed verdict from an older rule is never skipped. A never-owed invitation is not judged.
+var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `)) AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL("$1::timestamptz") + `)
  AND ` + auth.WorkspaceAudienceSQL("a") + `
  AND NOT ` + auth.ActivityRestrictedSQL("a.id") + `
  AND a.counterparty_email IS NOT NULL
