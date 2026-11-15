@@ -112,7 +112,8 @@
   background: var(--bgHover);
 }
 .chapter-jump-chip:focus-visible {
-  outline: none;
+  outline: var(--focus-ring-forced);
+  outline-offset: 2px;
   box-shadow: var(--focus-glow);
 }
 .chapter-jump-title {
