@@ -16,18 +16,13 @@ package projects
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // filterCompanyIDOnProject is masked_fields' name for the anchor
@@ -43,7 +38,7 @@ const filterCompanyIDOnProject = "company_id"
 // with no companies, and there is no field a reader could check to tell.
 func (s *Store) maskProjectForCaller(ctx context.Context, tx pgx.Tx, p crmcontracts.Project) (crmcontracts.Project, error) {
 	one := []crmcontracts.Project{p}
-	if err := maskProjects(ctx, tx, one); err != nil {
+	if err := maskProjects(ctx, tx, one, s.projectCustomers); err != nil {
 		return crmcontracts.Project{}, err
 	}
 	return s.withCompanies(ctx, tx, one[0])
@@ -84,7 +79,9 @@ func fillCompanies(
 // maskProjects stamps each row's write flag and sets company_id to the
 // project's first customer edge, null and masked when this reader may not
 // read it. One statement answers the whole page, never a probe per row.
-func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Project) error {
+func maskProjects(
+	ctx context.Context, tx pgx.Tx, projects []crmcontracts.Project, customersOf ProjectCustomers,
+) error {
 	// Whether each project is this caller's to change, one statement for the
 	// page. A project keeps the owner scope on writes even though every seat
 	// reads it, so the flag is the only thing a client can draw its edit
@@ -94,22 +91,22 @@ func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Projec
 		func(p *crmcontracts.Project, may bool) { p.Writable = &may }); err != nil {
 		return err
 	}
-	projectIDs := make([]ids.UUID, 0, len(projects))
+	projectIDs := make([]ids.ProjectID, 0, len(projects))
 	for _, p := range projects {
-		projectIDs = append(projectIDs, ids.UUID(p.Id))
+		projectIDs = append(projectIDs, ids.From[ids.ProjectKind](ids.UUID(p.Id)))
 	}
-	customers, read, err := firstCustomers(ctx, tx, projectIDs)
+	customers, edgesRead, err := customersOf(ctx, tx, projectIDs)
 	if err != nil {
 		return err
 	}
 	for i := range projects {
 		projects[i].CompanyId = nil
-		first, found := customers[ids.UUID(projects[i].Id)]
-		if read && !found {
+		customer, hasCustomer := customers[projectIDs[i]]
+		if edgesRead && !hasCustomer {
 			continue
 		}
-		if read && first.readable {
-			id := openapi_types.UUID(first.company)
+		if customer != nil {
+			id := openapi_types.UUID(customer.UUID)
 			projects[i].CompanyId = &id
 			continue
 		}
@@ -117,83 +114,4 @@ func maskProjects(ctx context.Context, tx pgx.Tx, projects []crmcontracts.Projec
 		projects[i].MaskedFields = &named
 	}
 	return nil
-}
-
-// firstCustomer is one project's first live customer edge as one reader
-// sees it. company is zero when the reader may not read that company.
-type firstCustomer struct {
-	company  ids.UUID
-	readable bool
-}
-
-// firstCustomers answers each project's first live customer edge, in attach
-// order, in one statement. read is false when the caller holds no
-// relationship.read or no company.read. The pair a customer edge discloses is
-// then withheld for every row, and no statement runs.
-//
-// The predicates are the ones the company list on a project uses
-// (contacts.CompaniesOnProjectTx), so company_id and companies agree. A
-// withheld customer's id is blanked in SQL and never reaches this process.
-func firstCustomers(ctx context.Context, tx pgx.Tx, projectIDs []ids.UUID) (map[ids.UUID]firstCustomer, bool, error) {
-	if err := auth.Require(ctx, "relationship", principal.ActionRead); err != nil {
-		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, false, nil
-		}
-		return nil, false, err
-	}
-	if !auth.ReadGranted(ctx, "company") {
-		return nil, false, nil
-	}
-	if len(projectIDs) == 0 {
-		return map[ids.UUID]firstCustomer{}, true, nil
-	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	projectsPos := arg(projectIDs)
-	edge, err := edgeBound(ctx, "r", arg)
-	if err != nil {
-		return nil, false, err
-	}
-	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
-	if err != nil {
-		return nil, false, err
-	}
-	if scope == "" {
-		scope = predicateAlways
-	}
-	rows, err := tx.Query(ctx, storekit.SQLf(`
-		SELECT project_id, readable, CASE WHEN readable THEN company_id END
-		  FROM (
-		    SELECT DISTINCT ON (r.project_id) r.project_id, r.company_id,
-		           ((%s) AND (%s)) AS readable
-		      FROM relationship r
-		      JOIN company o ON o.id = r.company_id
-		     WHERE r.kind = 'project_company' AND r.project_id = ANY($%d)
-		       AND r.role = '`+CompanyRoleCustomer+`'
-		       AND r.archived_at IS NULL AND o.archived_at IS NULL
-		     ORDER BY r.project_id, r.created_at, r.id
-		  ) first`, edge, scope, projectsPos), args...)
-	if err != nil {
-		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)
-	}
-	defer rows.Close()
-	out := make(map[ids.UUID]firstCustomer, len(projectIDs))
-	for rows.Next() {
-		var project ids.UUID
-		var one firstCustomer
-		var company *ids.UUID
-		if err := rows.Scan(&project, &one.readable, &company); err != nil {
-			return nil, false, fmt.Errorf("read one project's first customer: %w", err)
-		}
-		if one.readable && company != nil {
-			one.company = *company
-		} else {
-			one.readable = false
-		}
-		out[project] = one
-	}
-	if err := rows.Err(); err != nil {
-		return nil, false, fmt.Errorf("read the projects' first customers: %w", err)
-	}
-	return out, true, nil
 }

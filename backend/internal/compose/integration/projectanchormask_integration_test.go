@@ -128,6 +128,12 @@ func TestProjectAnchorMaskIsIndependentOfVisibleCompanyEdges(t *testing.T) {
 	}
 }
 
+// listedCustomer is what one list row says about its customer.
+type listedCustomer struct {
+	customer string
+	masked   bool
+}
+
 // A list row carries no company list. Its company_id and mask must still
 // match what a single read answers.
 func TestProjectListRowsNameOnlyAReadableFirstCustomer(t *testing.T) {
@@ -138,6 +144,7 @@ func TestProjectListRowsNameOnlyAReadableFirstCustomer(t *testing.T) {
 	hiddenFirst := seedProject(e.Admin(), t, e, "Hidden first customer", hidden, &e.Rep1)
 	openFirst := seedProject(e.Admin(), t, e, "Open first customer", open, &e.Rep1)
 	hiddenTakenOff := seedProject(e.Admin(), t, e, "Hidden customer taken off", hidden, &e.Rep1)
+	noCustomer := seedProject(e.Admin(), t, e, "Partner only", open, &e.Rep1)
 	for _, project := range []ids.ProjectID{hiddenFirst.ID, hiddenTakenOff.ID} {
 		if _, err := e.Contacts.SetProjectCompany(e.Admin(), contacts.SetProjectCompanyInput{
 			ProjectID: project, CompanyID: companyIDOf(later), Role: "customer",
@@ -148,51 +155,85 @@ func TestProjectListRowsNameOnlyAReadableFirstCustomer(t *testing.T) {
 	if err := e.Contacts.RemoveProjectCompany(e.Admin(), hiddenTakenOff.ID, companyIDOf(hidden)); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := e.Contacts.SetProjectCompany(e.Admin(), contacts.SetProjectCompanyInput{
+		ProjectID: noCustomer.ID, CompanyID: companyIDOf(open), Role: "partner",
+	}); err != nil {
+		t.Fatal(err)
+	}
 	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
+	withheld := listedCustomer{masked: true}
 	for _, tc := range []struct {
-		name          string
-		relationships bool
-		want          map[ids.ProjectID]string
+		name                     string
+		relationships, companies bool
+		want                     map[ids.ProjectID]listedCustomer
 	}{
-		{name: "with the relationship grant", relationships: true, want: map[ids.ProjectID]string{
-			hiddenFirst.ID: "", openFirst.ID: open.String(), hiddenTakenOff.ID: later.String(),
+		{name: "with both grants", relationships: true, companies: true, want: map[ids.ProjectID]listedCustomer{
+			hiddenFirst.ID: withheld, openFirst.ID: {customer: open.String()},
+			hiddenTakenOff.ID: {customer: later.String()}, noCustomer.ID: {},
 		}},
-		{name: "without the relationship grant", want: map[ids.ProjectID]string{
-			hiddenFirst.ID: "", openFirst.ID: "", hiddenTakenOff.ID: "",
+		{name: "without the company grant", relationships: true, want: map[ids.ProjectID]listedCustomer{
+			hiddenFirst.ID: withheld, openFirst.ID: withheld, hiddenTakenOff.ID: withheld, noCustomer.ID: {},
+		}},
+		{name: "without the relationship grant", companies: true, want: map[ids.ProjectID]listedCustomer{
+			hiddenFirst.ID: withheld, openFirst.ID: withheld, hiddenTakenOff.ID: withheld, noCustomer.ID: withheld,
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			reader := OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 				RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
 				Objects: map[string]principal.ObjectGrant{
-					"project": {Read: true}, "company": {Read: true}, "relationship": {Read: tc.relationships},
+					"project": {Read: true}, "company": {Read: tc.companies}, "relationship": {Read: tc.relationships},
 				},
 			}), principal.SeatFull)
 			rows, _, err := e.Projects.ListProjects(reader, projects.ListProjectsInput{})
 			if err != nil {
 				t.Fatal(err)
 			}
-			seen := map[ids.ProjectID]crmcontracts.Project{}
+			got := map[ids.ProjectID]listedCustomer{}
 			for _, row := range rows {
-				seen[ids.From[ids.ProjectKind](ids.UUID(row.Id))] = row
+				one := listedCustomer{masked: row.MaskedFields != nil}
+				if row.MaskedFields != nil && !reflect.DeepEqual(*row.MaskedFields, []string{"company_id"}) {
+					t.Errorf("project %s: masked_fields = %v, want only company_id", row.Id, *row.MaskedFields)
+				}
+				if row.CompanyId != nil {
+					one.customer = row.CompanyId.String()
+				}
+				got[ids.From[ids.ProjectKind](ids.UUID(row.Id))] = one
 			}
-			for project, customer := range tc.want {
-				got, ok := seen[project]
-				if !ok {
-					t.Fatalf("project %s is missing from the list", project)
-				}
-				named := ""
-				if got.CompanyId != nil {
-					named = got.CompanyId.String()
-				}
-				masked := got.MaskedFields != nil && reflect.DeepEqual(*got.MaskedFields, []string{"company_id"})
-				if named != customer || masked != (customer == "") || (customer != "" && got.MaskedFields != nil) {
-					t.Errorf("project %s: company_id = %q, masked_fields = %v, want %q masked=%v",
-						project, named, got.MaskedFields, customer, customer == "")
+			for project, want := range tc.want {
+				if got[project] != want {
+					t.Errorf("project %s: %+v, want %+v", project, got[project], want)
 				}
 			}
 		})
 	}
+}
+
+// Ordering by company reads the same first customer company_id names, so a
+// withheld one sorts last instead of by a later customer's name.
+func TestProjectsSortByTheirReadableFirstCustomer(t *testing.T) {
+	e := Setup(t)
+	hidden := e.SeedCompany(t, "Aaron Private", &e.Rep3)
+	zeta := e.SeedCompany(t, "Zeta Open", nil)
+	alma := e.SeedCompany(t, "Alma Open", nil)
+	hiddenFirst := seedProject(e.Admin(), t, e, "Hidden first", hidden, &e.Rep1)
+	if _, err := e.Contacts.SetProjectCompany(e.Admin(), contacts.SetProjectCompanyInput{
+		ProjectID: hiddenFirst.ID, CompanyID: companyIDOf(alma), Role: "customer",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	zetaFirst := seedProject(e.Admin(), t, e, "Zeta first", zeta, &e.Rep1)
+	almaFirst := seedProject(e.Admin(), t, e, "Alma first", alma, &e.Rep1)
+	e.MakeCapturePrivate(t, "company", hidden, e.Rep3)
+	reader := OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
+		Objects: map[string]principal.ObjectGrant{
+			"project": {Read: true}, "company": {Read: true}, "relationship": {Read: true},
+		},
+	}), principal.SeatFull)
+	assertIDOrder(t, projectIDsIn(reader, t, e, "company_id"),
+		[]ids.UUID{almaFirst.ID.UUID, zetaFirst.ID.UUID, hiddenFirst.ID.UUID},
+		"Alma, then Zeta, then the withheld first customer last")
 }
 
 func TestProjectMutationEchoesKeepTheHiddenAnchorMask(t *testing.T) {
