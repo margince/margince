@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/completedchanges"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -56,8 +57,6 @@ func newMagicService(
 		WithReferenceNames(newAttentionNames(db))
 }
 
-// magicDecidedReceipts hands the done lane the receipts the worklist reads,
-// by their canonical ids. The two surfaces then show one population.
 type magicDecidedReceipts struct{ receipts attentionReceipts }
 
 func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time, limit int) ([]magic.DecidedReceipt, bool, error) {
@@ -67,6 +66,7 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 	}
 	out := make([]magic.DecidedReceipt, 0, len(recent))
 	for _, receipt := range recent {
+		completedchanges.Remember(ctx, receipt)
 		out = append(out, magic.DecidedReceipt{
 			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
 			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,

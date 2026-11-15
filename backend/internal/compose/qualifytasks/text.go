@@ -17,11 +17,11 @@ import (
 // its subject came from, so it renders in the reader's language.
 func TextDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1794744120_qualify_task_text_follows_the_reader", Version: 1,
+		ID: "core/1794744120_qualify_task_text_follows_the_reader", Version: 2, Requires: []string{"core/1794283985"},
 		Title: systemtext.Literal("datatask.title.core.1794744120_qualify_task_text_follows_the_reader"),
 		Steps: []datatask.Step{{
 			Name: "describe_qualify_task_subjects", Limit: 200, MinLimit: 10,
-			Audit:    datatask.AuditPolicy{Reason: "adds display metadata that renders the stored subject unchanged; the subject itself is not written"},
+			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: activities.CountQualifyTasksWithoutText,
 			Batch: func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 				after, err := datatask.UUIDCursor(in.Cursor)

@@ -3264,8 +3264,8 @@ export const en = {
   "rel.role": "Role",
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
-  "rel.current": "Current",
   "rel.former": "Former",
+  "rel.current": "Current",
   "rel.endedOn": "Until {when}",
   "rel.remove": "Remove",
   "rel.removeConfirm": "Remove this relationship? There is no undo.",
@@ -21173,6 +21173,13 @@ export const en = {
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
   "magic.action.capture_connection_error": "{provider} could not be reached",
+  "activity.notes.connectHint":
+    "Notes are attached. Connect meeting notes to read them.",
+  "activity.notes.otherAccount":
+    "Notes are attached. Connect meeting notes with the same Google account as your calendar.",
+  "captureConcern.notesGrant": "Cannot read meeting notes",
+  "captureConcern.notesAccount":
+    "Meeting notes need the same Google account as the calendar",
   "captureConcern.reauth": "Reconnect required",
   "captureConcern.error": "Connection error",
   "captureConcern.failing": "Sync is failing",

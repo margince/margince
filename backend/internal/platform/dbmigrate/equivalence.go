@@ -25,6 +25,10 @@ package dbmigrate
 // half differs need that checked separately; equal up-schemas do not imply it.
 var equivalentContent = map[string]map[string][]equivalence{
 	"core": {
+		// The up SQL is unchanged. The down restores the validated provider vocabulary;
+		// its rollback test admits the old digest and preserves live credential references.
+		"1794379079": {{applied: "b072a9301b6a7adb4b5cfdc6e97461da09d02a515fbbe3725e681ee393f0e499", source: "07383c2e7cf9d9e126f51d9e9e07ae406507b5c7517b53b5a30967dd8714947c"}},
+		"1794412054": {{applied: "7095201fa85775e88f7fa30e3c6e1c33a274f457f9e37118b74a51da14bfddcd", source: "a6d8d5969440802eb035846f76246f9b7e59b5f6b76b6be0a9fa11a73092cbb0"}},
 		// 1789122755 is the migration that renamed the company record type's
 		// columns. It rewrote stored row values BEFORE the PL/pgSQL function
 		// bodies naming the renamed columns, so on a database holding rows the

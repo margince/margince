@@ -38,7 +38,7 @@ func (l *leadMailEnv) qualifyAsks(t *testing.T, lead ids.LeadID, owner ids.UUID)
 	t.Helper()
 	return l.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link al ON al.activity_id = a.id
 		WHERE al.lead_id = $1 AND a.kind = 'task' AND a.source_system = $2
-		  AND NOT a.is_done AND a.assignee_id = $3`, lead, provenance.LeadRepliedSource, owner)
+		  AND NOT a.is_done AND a.archived_at IS NULL AND a.assignee_id = $3`, lead, provenance.LeadRepliedSource, owner)
 }
 
 func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {

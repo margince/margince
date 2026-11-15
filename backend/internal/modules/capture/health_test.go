@@ -57,3 +57,25 @@ func TestHealthConcernsRefusesAPrincipalWithNoHumanBehindIt(t *testing.T) {
 		t.Fatalf("HealthConcerns with no actor = %v, want ErrPermissionDenied", err)
 	}
 }
+
+func TestMeetingNotesHealthRequiresTheReadGrantAndTheCalendarAccount(t *testing.T) {
+	for _, tc := range []struct {
+		name            string
+		scopes          []string
+		notes, calendar *string
+		want            string
+	}{
+		{"missing scope", nil, new("alex@example.org"), new("alex@example.org"), ConcernNotesGrantMissing},
+		{"other account", meetingNotesScopes[providerGdocs], new("alex@example.org"), new("blair@example.org"), ConcernNotesAccountMismatch},
+		{"no calendar", meetingNotesScopes[providerGdocs], new("alex@example.org"), nil, ConcernNotesAccountMismatch},
+		{"same account", meetingNotesScopes[providerGdocs], new("Alex <ALEX@example.org>"), new("alex@example.org"), ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			view := ConnectionView{Provider: providerGdocs, Status: statusConnected, ProviderScopes: tc.scopes, AccountLabel: tc.notes, CalendarAccountLabel: tc.calendar}
+			classifyConnection(&view, time.Time{})
+			if view.Concern != tc.want {
+				t.Fatalf("concern = %q, want %q", view.Concern, tc.want)
+			}
+		})
+	}
+}

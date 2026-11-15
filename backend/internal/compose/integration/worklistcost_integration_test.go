@@ -39,7 +39,7 @@ const worklistOutsideStatements = 9
 
 // The seeded read includes every bound lane and an open task. Lower this
 // pgx-call ceiling when a batch or empty-set shortcut removes calls.
-const worklistExchangeBudget = 76
+const worklistExchangeBudget = 68
 
 const worklistRoundTripBudget = worklistExchangeBudget
 
@@ -178,8 +178,8 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
 const (
-	homeReadStatementCeiling = 93
-	homeReadRoundTripCeiling = 64
+	homeReadStatementCeiling = 91
+	homeReadRoundTripCeiling = 62
 )
 
 // homeStages are the stages Home's read runs. A lane that stops running lowers

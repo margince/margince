@@ -356,9 +356,9 @@ A task that is late, or whose reminder is due, stays in Today. Also called: late
 
 ### Change history
 
-**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Done for you**. A long list ends in **Show more**, which loads the next changes.
+**Change history**, on the Worklist, reads the same changes and time window as the Home preview. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Done for you**. A long list ends in **Show more**, which loads the next changes.
 
-When there is nothing: "No actions taken on your behalf today."
+When there is nothing: "No actions taken on your behalf today." A read that fails says it could not read the changes instead.
 
 **Undo** puts the record back the way it was before a deal change. A change already undone stays in history with its status and has no action to take. **Undo changes on 3 deals** takes back every change Margince made to your deals in the last 7 days that you have not undone. A change to a field somebody edited since stays, and the deal's other changes go back. If somebody moved the deal after Margince moved it, none of that deal's changes go back, and other deals still do.
 

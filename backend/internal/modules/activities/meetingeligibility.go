@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -64,7 +65,7 @@ func customerMeetingClause(ctx context.Context, arg func(any) int) (string, erro
 // appendOutsidePartyClause keeps the meetings with somebody from outside on
 // them, when the read asks for WithOutsideParty.
 func appendOutsidePartyClause(in ListActivitiesInput, arg func(any) int, where []string) ([]string, error) {
-	if in.outsideParty == nil {
+	if in.outsideParty == nil || in.AwaitingOutcomeAsOf != nil {
 		return where, nil
 	}
 	outside, err := in.outsideParty(arg)
@@ -78,7 +79,7 @@ func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, ar
 	if in.AwaitingOutcomeAsOf == nil {
 		return where, nil
 	}
-	owed, err := awaitingOutcomeClause(ctx, *in.AwaitingOutcomeAsOf, arg)
+	owed, err := awaitingOutcomeClause(ctx, *in.AwaitingOutcomeAsOf, arg, in.outsideParty)
 	if err != nil {
 		return nil, err
 	}
@@ -88,9 +89,19 @@ func appendAwaitingOutcomeClause(ctx context.Context, in ListActivitiesInput, ar
 // awaitingOutcomeClause is a live customer meeting with no result recorded that
 // took place by asOf. The outcome lane filters on it and every Activity read
 // stamps it (stampAwaitingOutcome).
-func awaitingOutcomeClause(ctx context.Context, asOf time.Time, arg func(any) int) (string, error) {
+func awaitingOutcomeClause(ctx context.Context, asOf time.Time, arg func(any) int, outsideParty func(func(any) int) (string, error)) (string, error) {
 	open, tookPlace, err := openCustomerMeeting(ctx, asOf, arg)
-	return "(a.archived_at IS NULL AND " + open + " AND " + tookPlace + ")", err
+	if err != nil {
+		return "", err
+	}
+	if outsideParty == nil {
+		return "", errors.New("activities: outcome eligibility needs the outside-party reader")
+	}
+	outside, err := outsideParty(arg)
+	if err != nil {
+		return "", err
+	}
+	return "(a.archived_at IS NULL AND " + open + " AND " + tookPlace + " AND " + outside + ")", nil
 }
 
 // UpcomingMeetingClause is a live customer meeting under alias a with no
