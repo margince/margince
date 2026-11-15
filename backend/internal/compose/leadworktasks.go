@@ -87,6 +87,9 @@ func (w leadWorkTasks) askToQualifyTx(ctx context.Context, tx pgx.Tx, lead ids.L
 		return err
 	}
 	open, err := activities.KeepOneSystemTaskOnTx(ctx, tx, provenance.LeadRepliedSource, entityLead, lead.UUID, arrival, w.now())
+	if err == nil && !open {
+		open, err = activities.SystemTaskFiledOnTx(ctx, tx, provenance.LeadRepliedSource, provenance.LegacyLeadQualifyKey(arrival), entityLead, lead.UUID)
+	}
 	if err != nil || open {
 		return err
 	}
@@ -157,10 +160,10 @@ func leadArrivalComponent(arrival contacts.LeadArrival) *systemtext.Component {
 	return component
 }
 
-// repliedTaskInput is the ask to qualify a lead who wrote or booked.
+// repliedTaskInput is the ask to qualify a lead who wrote, booked or met.
 func (w leadWorkTasks) repliedTaskInput(lead ids.LeadID, arrival ids.UUID, title string, owner *ids.UUID) activities.LogActivityInput {
 	at := w.now().UTC()
-	source, key := provenance.LeadRepliedSource, arrival.String()
+	source, key := provenance.LeadRepliedSource, provenance.LeadQualifyKey(arrival, lead)
 	return activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Prose(systemtext.Quote, "")}, Kind: activityKindTask, Subject: &title, OccurredAt: &at,
 		SourceSystem: &source, SourceID: &key, SourceActivityID: &arrival,

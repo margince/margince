@@ -68,7 +68,7 @@ export function homeOf(file: Attachment): FileHome {
 
 /**
  * What a write did to the files under a parent. An upload adds a file no room
- * shares yet; a move (relink, merge, filing a thread) or a removal can take a
+ * shares yet. A move (relink, merge, filing a thread) or a removal can take a
  * shared file out of a deal, and so out of its rooms.
  */
 export type FileChange = "uploaded" | "moved" | "removed";

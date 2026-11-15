@@ -109,24 +109,27 @@ assert() {
 # leave the machine however long the suite took in the past. It re-proves the
 # shift first: a baseline can outlive a jump a time service undid, and
 # subtracting from a clock nobody moved poisons the runner from the other side.
+#
+# Each failure returns its own status: run from an exit trap, a bare `return`
+# reports the status from before the trap in bash 5.
 restore() {
 	local days short
 	days=$(days "$1")
 	if [[ ! -r "$BASELINE" ]]; then
 		echo "clock-drift-host: no baseline, so the clock was never moved — leaving it where it is."
-		sudo timedatectl set-ntp true || return
+		sudo timedatectl set-ntp true || return $?
 		return 0
 	fi
-	short=$(shortfall "$days") || return
+	short=$(shortfall "$days") || return $?
 	if [[ "$short" -gt "$SHORTFALL_TOLERANCE_SECONDS" ]]; then
 		echo "clock-drift-host: the clock is already back (${short}s short of the offset) — leaving it alone."
-		sudo timedatectl set-ntp true || return
-		rm -f "$BASELINE" || return
+		sudo timedatectl set-ntp true || return $?
+		rm -f "$BASELINE" || return $?
 		return 0
 	fi
-	sudo date -s "-${days} days" >/dev/null || return
-	sudo timedatectl set-ntp true || return
-	rm -f "$BASELINE" || return
+	sudo date -s "-${days} days" >/dev/null || return $?
+	sudo timedatectl set-ntp true || return $?
+	rm -f "$BASELINE" || return $?
 	echo "clock-drift-host: clock restored, time sync back on."
 }
 
@@ -147,7 +150,9 @@ run_shifted() {
 	offset=$(days "$1")
 	export BACKEND_CLOCK_SKEW="machine:$offset"
 	command -v timeout >/dev/null || { echo "clock-drift-host: GNU timeout is required." >&2; exit 1; }
-	trap 'finish_run "$?" "$offset"' EXIT
+	# Expanded now: offset is local and already validated as digits, and a
+	# newer bash drops a function's locals before it runs an exit trap.
+	trap "finish_run \"\$?\" $offset" EXIT
 	trap 'exit 130' INT
 	trap 'exit 143' TERM
 	move "$offset"

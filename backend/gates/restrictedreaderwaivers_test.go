@@ -10,6 +10,7 @@ import "github.com/margince/margince/backend/internal/shared/gatekit"
 const activityCorrectionMetadata = "system data-task progress counts only a capped primary-key page, never content. Immutable IDs stay in that scan so progress advances across every inspected record; the domain corrections exclude restricted rows before reading their content or writing them"
 
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/systemtaskopen.go:SystemTaskFiledOnTx":                 "System-only. Answers whether a task with one source key is linked to one record, as the replay lookup does, and returns only that boolean. A held task must count too, or its record gets a second task.",
 	"internal/modules/activities/capturelabelrename.go:activitiesToInspectTx":           activityCorrectionMetadata,
 	"internal/modules/activities/capturelabelrename.go:CountActivitiesToInspect":        activityCorrectionMetadata,
 	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":                mailCopyGroupReader,

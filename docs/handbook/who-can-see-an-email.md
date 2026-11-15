@@ -24,7 +24,9 @@ each file by name and size, with its kind where the file name shows one, marked
 as not kept.
 
 A sender verdict does not apply to a sender you marked as business on the
-Senders page, or to a contact you write with. A reply does not change it: mail
+Senders page. It does not apply to an address on a contact either. An archived
+contact does not count. Nor does an address that came only from a file import,
+a contact card, **Quick capture** or a chat app. A reply does not change it: mail
 from a sender judged personal loses its files even after you or a colleague
 answered that sender.
 
