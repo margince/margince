@@ -101,3 +101,24 @@ func CurrentLeadEngagementTx(ctx context.Context, tx pgx.Tx, source ids.UUID, ow
 	}
 	return true, nil
 }
+
+// SystemTaskFiledOnTx reports whether a task from this source and key is filed
+// on the record, done or archived included, as LogActivityTx's replay check does.
+func SystemTaskFiledOnTx(ctx context.Context, tx pgx.Tx, sourceSystem, sourceID, entityType string, entityID ids.UUID) (bool, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return false, err
+	}
+	column := linkColumn(entityType)
+	if column == "" {
+		return false, &InvalidLinkTypeError{EntityType: entityType}
+	}
+	args := []any{}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	query := storekit.SQLf(`SELECT EXISTS (SELECT 1 FROM activity t JOIN activity_link l ON l.activity_id = t.id
+		 WHERE t.source_system = $%d AND t.source_id = $%d AND l.%s = $%d)`, arg(sourceSystem), arg(sourceID), column, arg(entityID))
+	var filed bool
+	if err := tx.QueryRow(ctx, query, args...).Scan(&filed); err != nil {
+		return false, fmt.Errorf("activities: reading the %s task on a %s: %w", sourceSystem, entityType, err)
+	}
+	return filed, nil
+}

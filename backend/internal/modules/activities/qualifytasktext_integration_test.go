@@ -36,11 +36,20 @@ func TestOlderQualifyTasksLearnTheirTemplate(t *testing.T) {
 	booked := seed("Review qualification for Lena Prospect after booking")
 	held := seed("Review qualification for Lena Prospect after the meeting")
 	other := seed("Call Lena about the budget")
-	if err := database.WithWorkspaceTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
-		_, _, err := DescribeQualifyTaskTextTx(asClassifier(e), tx, ids.Nil, 10)
-		return err
-	}); err != nil {
-		t.Fatal(err)
+	// Other tests in the package leave qualify tasks too, so every page is read.
+	for after := ids.Nil; ; {
+		var scanned []ids.UUID
+		if err := database.WithWorkspaceTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
+			var err error
+			scanned, _, err = DescribeQualifyTaskTextTx(asClassifier(e), tx, after, 10)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if len(scanned) == 0 {
+			break
+		}
+		after = scanned[len(scanned)-1]
 	}
 	read := func(id ids.UUID) *systemtext.Message {
 		t.Helper()
