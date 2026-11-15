@@ -17,8 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// DuplicatesDataTask keeps the newest open qualify task on each lead, retiring
-// the rest as of now.
+// DuplicatesDataTask keeps the newest open qualify task on each lead and
+// retires the rest as of now.
 func DuplicatesDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1794740089_one_open_qualify_task_per_lead", Version: 1,
