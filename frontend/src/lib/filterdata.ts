@@ -16,6 +16,7 @@ import {
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { useHealthScope } from "./healthscope";
 import { historyFieldLabelKey } from "./historyfieldlabels";
 import { unwrap } from "./problem";
 import {
@@ -95,9 +96,11 @@ export function useFilterVocabulary(resource: FilterResource, enabled = true) {
 export function useFilterPreview(resource: FilterResource, tree: Node) {
   const askable = isComplete(tree);
   const filter = encode(tree);
+  // The preview's rows are records the reader's row scope narrows.
+  const readerScope = useHealthScope();
   const query = useInfiniteQuery({
-    queryKey: ["filter-preview", resource, filter],
-    enabled: askable,
+    queryKey: ["filter-preview", resource, filter, readerScope ?? ""],
+    enabled: askable && readerScope !== undefined,
     // A count that flickers to a spinner on every keystroke is harder to read
     // than one that lags: the previous answer stays on screen while the next is
     // in flight, and the caller shows staleness rather than absence.

@@ -14,6 +14,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { isTagTone } from "../../design-system/tagpill";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { navigate, navigateReplacing } from "../../lib/router";
 import "./tagresult.css";
@@ -192,12 +193,13 @@ function ResultGroup({
   const t = useT();
   const { locale } = useLocale();
   const group = GROUPS[kind];
+  const readerScope = useHealthScope();
   const rows = useQuery({
-    queryKey: ["tag-records", kind, tagID],
+    queryKey: ["tag-records", kind, tagID, readerScope ?? ""],
     // The tag read already said this type carries none, so asking for its rows
     // is a round trip whose answer is known. The hook still RUNS — a group that
     // called it conditionally would change the hook order as counts arrive.
-    enabled: count > 0,
+    enabled: count > 0 && readerScope !== undefined,
     queryFn: async () => {
       const data = unwrap(
         await api.GET(group.path, {
