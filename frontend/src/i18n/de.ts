@@ -20729,6 +20729,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingWhatHappened": "Was passiert ist",
   "worklist.verb.meetingBodyHint":
     "Besprochenes und nächste Schritte. Kalendernotizen lassen sich hier bearbeiten.",
+  "meeting.nextStep.title": "Was ist der nächste Schritt?",
+  "meeting.nextStep.add": "Aufgabe anlegen",
+  "meeting.nextStep.skip": "Überspringen",
+  "meeting.nextStep.subject": "Nächster Schritt",
+  "meeting.nextStep.due": "Fällig",
   "worklist.verb.meetingHeld": "Hat stattgefunden",
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
