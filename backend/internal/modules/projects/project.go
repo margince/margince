@@ -166,7 +166,7 @@ func createProjectTx(
 	// read. The store-bound spelling is unavailable here because this runs
 	// inside a caller-opened transaction, so the seam is threaded in.
 	one := []crmcontracts.Project{out}
-	if err := maskProjects(ctx, tx, one); err != nil {
+	if err := maskProjects(ctx, tx, one, seams.projectCustomers); err != nil {
 		return crmcontracts.Project{}, err
 	}
 	return fillCompanies(ctx, tx, one[0], seams.projectCompanies)
