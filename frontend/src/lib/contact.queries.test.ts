@@ -5,7 +5,9 @@ import { skipToken } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import {
   archivedContactRow,
+  confirmedContactRow,
   contactPageState,
+  openingIdentity,
   relatedContactsQuery,
 } from "./contact.queries";
 
@@ -38,26 +40,50 @@ describe("the contact page's read state", () => {
     expect(contactPageState(row, { ...view, isLoading: true })).toBe("opening");
   });
 
-  it("waits for a row re-read before a failed 360 counts", () => {
+  it("shows no record while a failed 360 waits on a row re-read", () => {
     expect(
       contactPageState(
         { ...row, isFetching: true },
         { ...view, isError: true },
       ),
-    ).toBe("ready");
+    ).toBe("opening");
     expect(contactPageState(row, { ...view, isError: true })).toBe("notOpened");
   });
 
+  const archived = { archived_at: "2026-06-01T08:00:00Z" };
+  const read = {
+    isError: false,
+    isFetching: false,
+    isFetchedAfterMount: false,
+  };
+
   it("opens the archived page only from a row that did not fail", () => {
-    const archived = { archived_at: "2026-06-01T08:00:00Z" };
-    expect(archivedContactRow({ isError: false, data: archived })).toBe(
-      archived,
-    );
+    expect(archivedContactRow({ ...read, data: archived })).toBe(archived);
     expect(
-      archivedContactRow({ isError: true, data: archived }),
+      archivedContactRow({ ...read, isError: true, data: archived }),
     ).toBeUndefined();
     expect(
-      archivedContactRow({ isError: false, data: { archived_at: null } }),
+      archivedContactRow({ ...read, data: { archived_at: null } }),
     ).toBeUndefined();
+  });
+
+  it("does not trust a cached row while its first re-read is in flight", () => {
+    const pending = { ...read, isFetching: true, data: archived };
+    expect(confirmedContactRow(pending)).toBeUndefined();
+    expect(archivedContactRow(pending)).toBeUndefined();
+    expect(contactPageState({ ...row, ...pending }, view)).toBe("opening");
+    const later = { ...pending, isFetchedAfterMount: true };
+    expect(confirmedContactRow(later)).toBe(archived);
+  });
+
+  it("names nobody in the opening after a refused 360 or for an untrusted archive", () => {
+    const live = { ...read, data: { archived_at: null } };
+    expect(openingIdentity(live, { isError: true })).toEqual({
+      hideIdentity: true,
+    });
+    expect(
+      openingIdentity({ ...read, isFetching: true, data: archived }, view),
+    ).toEqual({ hideIdentity: true });
+    expect(openingIdentity(live, view).contact).toBe(live.data);
   });
 });

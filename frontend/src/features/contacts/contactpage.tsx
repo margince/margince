@@ -21,6 +21,7 @@ import {
   archivedContactRow,
   contactPageState,
   contactQuery,
+  openingIdentity,
 } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
 import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
@@ -198,13 +199,7 @@ export function ContactPageV2({
   }
   const reads = contactPageState(record, view);
   if (reads === "opening") {
-    return (
-      <ContactOpening
-        id={id}
-        contact={record.data}
-        hideIdentity={view.isError}
-      />
-    );
+    return <ContactOpening id={id} {...openingIdentity(record, view)} />;
   }
   if (reads === "notOpened" || !view.data) {
     return <div className="wrap">{t("contact.page.notOpened")}</div>;

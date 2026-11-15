@@ -129,7 +129,7 @@ describe("the contact page's row read", () => {
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
   });
 
-  it("keeps the page while a refused 360 waits on the row being re-read", async () => {
+  it("withdraws the page and its actions while a refused 360 waits on the row", async () => {
     const client = createQueryClient();
     const routes = liveRoutes();
     mount(routes, client);
@@ -149,7 +149,10 @@ describe("the contact page's row read", () => {
     await waitFor(() =>
       expect(client.getQueryState(["contact360", "p-1"])?.status).toBe("error"),
     );
+    expect(await screen.findByText(en["contact.page.loading"])).toBeTruthy();
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
     act(() => row.release(archivedContact));
     expect(await screen.findByText(en["record.archived"])).toBeTruthy();
   });
@@ -276,18 +279,30 @@ describe("confirmed contact identity while the 360 loads", () => {
       ).toBeTruthy();
     });
 
-    it(`does not keep a cached archived identity after base ${status}`, async () => {
+    it(`shows no cached archived row while its re-read is held, then refuses on ${status}`, async () => {
       const client = createQueryClient();
+      client.setDefaultOptions({
+        queries: { ...client.getDefaultOptions().queries, retry: false },
+      });
       client.setQueryData(["contact", "p-1"], archivedContact, {
         updatedAt: 1,
+      });
+      let refuse: () => void = () => undefined;
+      const held = new Promise<Response>((settle) => {
+        refuse = () => settle(jsonResponse({ status }, status));
       });
       mount(
         {
           ...archivedContactRoutes(),
-          "GET /contacts/p-1": () => jsonResponse({ status }, status),
+          "GET /contacts/p-1": () => held,
         },
         client,
       );
+      expect(await screen.findByText(en["contact.page.loading"])).toBeTruthy();
+      expect(screen.queryByText(en["record.archived"])).toBeNull();
+      expect(screen.queryByRole("heading")).toBeNull();
+      expect(screen.queryAllByRole("button")).toHaveLength(0);
+      act(() => refuse());
       expect(
         await screen.findByText(en["contact.page.notOpened"]),
       ).toBeTruthy();
@@ -297,6 +312,20 @@ describe("confirmed contact identity while the 360 loads", () => {
       ).toBeNull();
     });
   }
+
+  it("opens a cached archived row once its re-read confirms it", async () => {
+    const client = createQueryClient();
+    client.setQueryData(["contact", "p-1"], archivedContact, { updatedAt: 1 });
+    const row = heldRow();
+    mount(
+      { ...archivedContactRoutes(), "GET /contacts/p-1": row.answer },
+      client,
+    );
+    expect(await screen.findByText(en["contact.page.loading"])).toBeTruthy();
+    expect(screen.queryByText(en["record.archived"])).toBeNull();
+    act(() => row.release(archivedContact));
+    expect(await screen.findByText(en["record.archived"])).toBeTruthy();
+  });
 
   it("does not show a previous contact when its pending 360 answers after navigation", async () => {
     const first = heldRow();
