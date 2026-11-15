@@ -304,12 +304,12 @@ type Extension struct {
 	// rights of both records it joins.
 	LinkTypes []LinkType
 
-	// ReportCounts are the named numbers this unit adds to Reports and Home.
+	// ReportCounts are the named numbers this unit adds to Reports.
 	// They are data: core builds the query, so a unit cannot register one that
 	// skips row scope, field masks or the group floor.
 	ReportCounts []ReportCount
 
-	// ReportBreakdowns are counts split by one field, added to Reports and Home.
+	// ReportBreakdowns are counts split by one field, added to Reports.
 	// They are data too, and core builds the only query that reads the field.
 	ReportBreakdowns []ReportBreakdown
 

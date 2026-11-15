@@ -1,8 +1,8 @@
-import type { components } from "../api/schema";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
-import { useExtensionReports } from "../lib/extensionreports";
+import type { components } from "../../api/schema";
+import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { useExtensionReports } from "./extensionreports.queries";
 
 type Report = components["schemas"]["ExtensionReport"];
 
@@ -38,11 +38,7 @@ function Figures({ report }: Readonly<{ report: Report }>) {
   );
 }
 
-/**
- * Reports an installed extension registers, one panel each. Reports and Home
- * both draw it, so a registered number reads the same on both. Nothing draws
- * when no extension registers one.
- */
+/** Reports an installed extension registers, shown on Analytics. */
 export function ExtensionReports({
   enabled = true,
 }: Readonly<{ enabled?: boolean }>) {

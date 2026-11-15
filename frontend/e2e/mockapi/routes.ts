@@ -98,6 +98,21 @@ export const routes: readonly MockRoute[] = [
     path: "/installation/configuration",
     handle: reply(session.installationConfiguration),
   },
+  {
+    method: "GET",
+    path: "/finance/customer-payments",
+    handle: reply({
+      access_scope: "disconnected",
+      state: "no_connection",
+      linked_companies: 0,
+      company_count: 0,
+      invoice_count: 0,
+      totals: [],
+      customers: [],
+      data: [],
+      page: { has_more: false },
+    }),
+  },
   // An installation with the demo source composed in and nothing connected.
   {
     method: "GET",
