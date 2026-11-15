@@ -12224,9 +12224,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leer lassen, um den gespeicherten Ereignis-Schlüssel zu behalten.",
 
   "channelLink.title": "Team-Chat",
-  "channelLink.off":
-    "Verbinde in den Einstellungen einen Chat-Bot, um einen Kanal zu verknüpfen.",
-  "channelLink.openSettings": "Chat-Bot-Einstellungen öffnen",
   "channelLink.none": "Noch kein Kanal",
   "channelLink.noneSub":
     "Ein privater Kanal hält das Team zu diesem Datensatz auf dem Laufenden.",

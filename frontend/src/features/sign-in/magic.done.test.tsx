@@ -2,6 +2,7 @@
 
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { line, receipt, renderMagic, stub } from "../../testing/magic.testkit";
@@ -32,11 +33,11 @@ const archived = line({
   count: 2,
 });
 
-function renderDone(doneOpen = false) {
+function renderDone() {
   return renderMagic(
     "en",
     new QueryClient({ defaultOptions: { queries: { retry: false } } }),
-    { lanes: ["done"], embedded: true, doneOpen },
+    { lanes: ["done"], embedded: true },
   );
 }
 
@@ -47,22 +48,28 @@ function summaryOf(text: string): HTMLElement {
 }
 
 describe("the small changes on Home", () => {
-  it("counts every record under one card, closed, and names what changed", async () => {
+  it("counts every record without previewing small changes while closed", async () => {
     stub(receipt({ done: [archived, saved(5), saved(4), saved(3)] }));
     renderDone();
     await screen.findByText("5 small changes");
     expect(summaryOf("5 small changes").getAttribute("aria-expanded")).toBe(
       "false",
     );
-    expect(
-      screen.getByText("Archived email or meeting · Saved email or meeting"),
-    ).toBeTruthy();
+    expect(summaryOf("5 small changes").textContent).not.toContain(
+      "Archived email or meeting",
+    );
+    expect(summaryOf("5 small changes").textContent).not.toContain(
+      "Saved email or meeting",
+    );
     expect(screen.queryByText(en["magic.lane.done"])).toBeNull();
   });
 
   it("draws repeated lines as one step with a count, keeping each record", async () => {
     stub(receipt({ done: [saved(5), saved(4), saved(3)] }));
-    renderDone(true);
+    const user = userEvent.setup();
+    renderDone();
+    await screen.findByText("3 small changes");
+    await user.click(summaryOf("3 small changes"));
     const steps = await screen.findByRole("list", {
       name: en["brief.done.smallLabel"],
     });
@@ -83,7 +90,10 @@ describe("the small changes on Home", () => {
         ],
       }),
     );
-    renderDone(true);
+    const user = userEvent.setup();
+    renderDone();
+    await screen.findByText("1 small change");
+    await user.click(summaryOf("1 small change"));
     const note = await screen.findByText(
       en["magic.undoReason.noCompletedChange"],
     );
@@ -93,12 +103,12 @@ describe("the small changes on Home", () => {
     );
   });
 
-  it("opens on arrival when no deal stands above it", async () => {
+  it("starts closed when small changes are the only completed work", async () => {
     stub(receipt({ done: [saved(5)] }));
-    renderDone(true);
+    renderDone();
     await waitFor(() =>
       expect(summaryOf("1 small change").getAttribute("aria-expanded")).toBe(
-        "true",
+        "false",
       ),
     );
   });

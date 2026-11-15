@@ -50,8 +50,8 @@ export const DONE_PREVIEW_DEALS = 5;
 export function DoneForYou({
   completed,
 }: Readonly<{
-  /** The small changes; `alone` when no deal card stands above them. */
-  completed: (alone: boolean) => ReactNode;
+  /** The small changes, collapsed until the reader asks for them. */
+  completed: () => ReactNode;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -122,7 +122,7 @@ export function DoneForYou({
           />
         </SurfaceState>
       )}
-      {completed(state === "empty")}
+      {completed()}
       {state === "ready" && (
         <div className="brief-done-foot">
           <AllChanges
@@ -313,10 +313,7 @@ function undoableBundles(
   });
 }
 
-/**
- * The changed deals as cards, one open at a time: the first until the reader
- * opens another.
- */
+/** The changed deals as previews, with one open at a time. */
 function DealChangeList({
   groups,
   pending,
@@ -331,8 +328,7 @@ function DealChangeList({
   pick?: (dealId: string) => ComponentProps<typeof DealCard>["pick"];
 }>) {
   const t = useT();
-  const [chosen, choose] = useState<string | null | undefined>(undefined);
-  const openId = chosen === undefined ? groups[0]?.dealId : chosen;
+  const [openId, choose] = useState<string | null>(null);
   return (
     <ul className="brief-done-deals" aria-label={t("brief.done.dealsLabel")}>
       {groups.map((group) => (

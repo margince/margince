@@ -102,28 +102,37 @@ const NIGHT: MagicReceipt = {
 };
 
 // The done lane as Home embeds it under the Done for you band.
-function smallChanges(alone: boolean) {
+function smallChanges() {
   stubWithSession({ "GET /magic": () => jsonResponse(NIGHT) }, {});
   return (
     <StoryProviders>
       <section className="brief-section brief-done">
-        <MagicPanel lanes={["done"]} embedded doneOpen={alone} />
+        <MagicPanel lanes={["done"]} embedded />
       </section>
     </StoryProviders>
   );
 }
 
-/** Below the changed deals: closed, one line saying what kinds of change. */
-export const Closed: Story = {
-  render: () => smallChanges(false),
-};
-
-/** A night with no deal changes: open on arrival, each repeat one step. */
-export const Alone: Story = {
-  render: () => smallChanges(true),
+/** Expanding the count reveals the grouped changes and their controls. */
+export const Expanded: Story = {
+  render: () => smallChanges(),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("7 small changes"));
     await expect(await canvas.findByText("4 changes")).toBeVisible();
+  },
+};
+
+/** A night with no deal changes still starts closed. */
+export const Alone: Story = {
+  render: () => smallChanges(),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const count = await canvas.findByText("7 small changes");
+    await expect(count.closest("summary")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
   },
 };
 
@@ -132,6 +141,7 @@ export const DetailsOpened: Story = {
   render: Alone.render,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByText("7 small changes"));
     const [, details] = await canvas.findAllByText("Details");
     if (!details) throw new Error("no Details");
     await userEvent.click(details);

@@ -11907,8 +11907,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.bot.eventsSecretKeepHint": "Để trống để giữ khóa sự kiện đã lưu.",
 
   "channelLink.title": "Chat nhóm",
-  "channelLink.off": "Hãy kết nối bot chat trong Cài đặt để liên kết kênh.",
-  "channelLink.openSettings": "Mở cài đặt bot chat",
   "channelLink.none": "Chưa có kênh",
   "channelLink.noneSub":
     "Một kênh riêng tư giúp cả nhóm nắm được tình hình của hồ sơ này.",

@@ -272,11 +272,10 @@ function PersonalMorning({
             {/* What Margince finished stands with the work, where a reader
                 reviews or undoes it, not in the rail beside it. */}
             <DoneForYou
-              completed={(alone) => (
+              completed={() => (
                 <MagicPanel
                   lanes={["done"]}
                   embedded
-                  doneOpen={alone}
                   visibleReceiptIds={
                     handled.isSuccess && !handled.isRefetchError
                       ? shownReceiptIds(
