@@ -28,6 +28,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -90,6 +91,10 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	if err := storekit.LockSubjectsStopAddresses(ctx, tx, subjectKey(from), subjectKey(to)); err != nil {
 		return err
 	}
+	recordedAt, err := stopLockInstantTx(ctx, tx)
+	if err != nil {
+		return err
+	}
 
 	// DISTINCT ON collapses several live source rows of one (kind, purpose_id)
 	// to the strongest, because a subquery in an INSERT ... SELECT does NOT
@@ -125,12 +130,12 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
 		  (contact_id, lead_id, address, kind, source, decided_by_level,
-		   captured_by, carried_from, purpose_id, recorded_through, recorded_for_addresses)
+		   captured_by, carried_from, purpose_id, recorded_through, recorded_for_addresses, recorded_at)
 		SELECT @to_contact, @to_lead, address, kind,
 		       CASE WHEN starts_with(source, @carried_mark) THEN source ELSE @carried_mark || source END,
-		       decided_by_level, @by, id, purpose_id, recorded_through, recorded_for_addresses
+		       decided_by_level, @by, id, purpose_id, recorded_through, recorded_for_addresses, @recorded_at
 		  FROM (`+stopCarryCandidates+`) candidates
-		RETURNING kind, decided_by_level`, carriedStopArgs(from, to, by))
+		RETURNING kind, decided_by_level`, carriedStopArgs(from, to, by, recordedAt))
 	if err != nil {
 		return fmt.Errorf("consent: carrying the subject's stops onto the surviving record: %w", err)
 	}
@@ -276,8 +281,9 @@ func zeroAsNull(id ids.UUID) *ids.UUID {
 
 // carriedStopArgs adds the mark every carried copy's source carries, so a copy
 // whose original was later deleted still reads as a copy (typedObjection).
-func carriedStopArgs(from, to commsauthz.StopSubject, by string) pgx.NamedArgs {
+func carriedStopArgs(from, to commsauthz.StopSubject, by string, recordedAt time.Time) pgx.NamedArgs {
 	args := carryAuthorityArgs(from, to, by)
 	args["carried_mark"] = carriedSourceMark
+	args["recorded_at"] = recordedAt
 	return args
 }

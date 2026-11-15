@@ -143,28 +143,20 @@ func TestARecordOnAReadSeatOffersNoActionAndRefusesEachMutation(t *testing.T) {
 		rename     AnyMap
 	}{
 		{
-			path:       "/v1/contacts/" + createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"}),
-			archivable: true,
-			archive:    true,
-			rename:     AnyMap{"title": "Renamed"},
+			"/v1/contacts/" + createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"}),
+			true, true,
+			AnyMap{"title": "Renamed"},
+		},
+		{"/v1/deals/" + apptest.CreateOpenDeal(t, e, seeded), true, true, AnyMap{"name": "Renamed"}},
+		{
+			"/v1/leads/" + createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat@lead.test", "source": "manual"}),
+			false, false,
+			AnyMap{"full_name": "Renamed"},
 		},
 		{
-			path:       "/v1/deals/" + apptest.CreateOpenDeal(t, e, seeded),
-			archivable: true,
-			archive:    true,
-			rename:     AnyMap{"name": "Renamed"},
-		},
-		{
-			path:       "/v1/leads/" + createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat@lead.test", "source": "manual"}),
-			archivable: false,
-			archive:    false,
-			rename:     AnyMap{"full_name": "Renamed"},
-		},
-		{
-			path:       "/v1/projects/" + createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"}),
-			archivable: false,
-			archive:    true,
-			rename:     AnyMap{"name": "Renamed"},
+			"/v1/projects/" + createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"}),
+			false, true,
+			AnyMap{"name": "Renamed"},
 		},
 	}
 	for _, seat := range []string{"full", "read"} {

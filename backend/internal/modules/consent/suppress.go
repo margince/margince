@@ -279,6 +279,10 @@ func (s *Store) suppressAdmittedTx(
 		}
 	}
 	sub.id = subjectID
+	recordedAt, err := stopLockInstantTx(ctx, tx)
+	if err != nil {
+		return err
+	}
 	// storekit.CapturedBy, which is the write shape's own reader: it resolves
 	// the authenticated principal to the string every audited table stores, so
 	// a suppression names its author the same way every other row does.
@@ -307,12 +311,12 @@ func (s *Store) suppressAdmittedTx(
 	// subject's new record is matched through them. The first row answers the id.
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
-		    (`+sub.column+`, address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_through)
-		SELECT $1, u.hash, CASE WHEN u.hash IS NOT NULL THEN $8::text END, $2, $3, $4, $5, $6
+		    (`+sub.column+`, address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_through, recorded_at)
+		SELECT $1, u.hash, CASE WHEN u.hash IS NOT NULL THEN $8::text END, $2, $3, $4, $5, $6, $9
 		  FROM unnest(coalesce($7::text[], ARRAY[NULL::text])) WITH ORDINALITY AS u(hash, n)
 		 ORDER BY u.n
 		RETURNING id`,
-		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept, keptKey)
+		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept, keptKey, recordedAt)
 	if err != nil {
 		return fmt.Errorf("consent: recording the suppression: %w", err)
 	}

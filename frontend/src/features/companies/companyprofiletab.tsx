@@ -168,6 +168,7 @@ export function CompanyProfileForm({
                 // renamed there must not keep its old name on this tab.
                 label={profileFieldLabel(field, t)}
                 placeholderKey={emptyReason(latestRead.data?.status)}
+                emptyKey={emptyReason(latestRead.data?.status)}
                 canEdit={canEdit}
                 readOnlyReason={reason}
                 multiline

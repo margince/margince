@@ -224,3 +224,22 @@ export const InGridReadOnly: Story = {
     await expect(within(canvasElement).queryByRole("button")).toBeNull();
   },
 };
+
+// A viewer reads why an empty field is empty instead of "Unset".
+export const EmptyWithReason: Story = {
+  render: () => (
+    <InlineText
+      label="Sales motion"
+      value=""
+      placeholder="Not on their website"
+      emptyText="Not on their website"
+      canEdit={false}
+      onSave={async () => {}}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByText("Not on their website"),
+    ).toBeInTheDocument();
+  },
+};
