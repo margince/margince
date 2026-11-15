@@ -34,6 +34,13 @@ type Answers<T> = Readonly<{
   failures: ReadonlyMap<string, unknown>;
 }>;
 
+// The ids asked within one tick of one session, and the answer they share.
+type Pending<T> = {
+  readonly session: number;
+  readonly ids: Set<string>;
+  readonly answers: Promise<Answers<T>>;
+};
+
 /**
  * Coalesces every id asked for within one tick into reads of at most
  * `pageSize` ids, rather than one request per reference. A leaf component
@@ -47,15 +54,16 @@ export function idBatcher<T>(
   pageSize: number,
   readPage: PageReader<T>,
 ): (id: string) => Promise<T | null> {
-  let queued: string[] = [];
-  let batch: Promise<Answers<T>> | null = null;
+  let pending: Pending<T> | null = null;
 
-  async function readAll(ids: readonly string[]): Promise<Answers<T>> {
+  async function readAll(
+    ids: readonly string[],
+    session: number,
+  ): Promise<Answers<T>> {
     const pages: (readonly string[])[] = [];
     for (let at = 0; at < ids.length; at += pageSize) {
       pages.push(ids.slice(at, at + pageSize));
     }
-    const session = sessionsEnded;
     const live = () => sessionsEnded === session;
     const answers = await readPages(readPage, pages, live);
     if (!live()) {
@@ -64,19 +72,29 @@ export function idBatcher<T>(
     return merge(pages, answers);
   }
 
-  function join(id: string): Promise<Answers<T>> {
-    queued.push(id);
-    if (!batch) {
+  // The session is noted when the batch opens, not when it reads. A sign-out
+  // before the first read then still aborts the batch and asks no page.
+  function open(): Pending<T> {
+    const batch: Pending<T> = {
+      session: sessionsEnded,
+      ids: new Set(),
       // Opened as a microtask: every component that renders in this tick has
       // enqueued by the time it runs, and nothing waits on a timer.
-      batch = Promise.resolve().then(() => {
-        const asking = [...new Set(queued)];
-        queued = [];
-        batch = null;
-        return readAll(asking);
-      });
-    }
+      answers: Promise.resolve().then(() => {
+        if (pending === batch) {
+          pending = null;
+        }
+        return readAll([...batch.ids], batch.session);
+      }),
+    };
     return batch;
+  }
+
+  function join(id: string): Promise<Answers<T>> {
+    const batch = pending?.session === sessionsEnded ? pending : open();
+    pending = batch;
+    batch.ids.add(id);
+    return batch.answers;
   }
 
   return async (id) => {

@@ -152,6 +152,73 @@ it("paginates invoices and replaces the whole read after an access refusal", asy
   expect(screen.queryByText("INV-001")).toBeNull();
 });
 
+function serveTwoPages(nextPage: () => Response) {
+  stubApi({
+    "GET /me": () => jsonResponse(allowed),
+    "GET /finance/customer-payments": (_body, query) =>
+      query.has("cursor")
+        ? nextPage()
+        : jsonResponse(
+            customerPayments({ page: { has_more: true, next_cursor: "next" } }),
+          ),
+  });
+}
+
+it("keeps the drawer and its rows when Load more fails, and retries that page", async () => {
+  let fail = true;
+  serveTwoPages(() =>
+    fail
+      ? jsonResponse(
+          { code: "internal", title: "Unavailable", status: 500 },
+          500,
+        )
+      : jsonResponse(
+          customerPayments({
+            data: customerPayments().data.map((invoice) => ({
+              ...invoice,
+              invoice_id: "00000000-0000-4000-8000-000000000022",
+              number: "INV-002",
+            })),
+          }),
+        ),
+  );
+  const user = userEvent.setup();
+  render(<CustomerPaymentsCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["payments.viewInvoices"] }),
+  );
+  await user.click(screen.getByRole("button", { name: en["list.loadMore"] }));
+  const drawer = screen.getByRole("dialog", {
+    name: en["payments.viewInvoices"],
+  });
+  expect(await within(drawer).findByRole("alert")).toBeTruthy();
+  expect(within(drawer).getByText("INV-001")).toBeTruthy();
+  expect(screen.queryByText(en["common.error"])).toBeNull();
+  fail = false;
+  await user.click(
+    within(drawer).getByRole("button", { name: en["list.loadMore"] }),
+  );
+  expect(await within(drawer).findByText("INV-002")).toBeTruthy();
+  expect(within(drawer).queryByRole("alert")).toBeNull();
+});
+
+it("hides every figure when Load more is refused for access", async () => {
+  serveTwoPages(() =>
+    jsonResponse(
+      { code: "permission_denied", title: "Forbidden", status: 403 },
+      403,
+    ),
+  );
+  const user = userEvent.setup();
+  const { container } = render(<CustomerPaymentsCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["payments.viewInvoices"] }),
+  );
+  await user.click(screen.getByRole("button", { name: en["list.loadMore"] }));
+  await waitFor(() => expect(container.textContent).toBe(""));
+  expect(screen.queryByText("INV-001")).toBeNull();
+});
+
 it("drops cached amounts as soon as the reader's authorization changes", async () => {
   let refuse = false;
   stubApi({
