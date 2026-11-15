@@ -40,6 +40,13 @@ func CompanyDeliveryTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lo
 		" AND c.company_id = $%d AND c.archived_at IS NULL)", auth.ProjectCompanyKind, companyPos)
 	from := "project"
 	if lock {
+		// Removing a company takes its project's edges FOR UPDATE, so sharing
+		// them here holds the delivery fact still. A new edge to the company
+		// waits on the company row the decision has already locked.
+		if _, err := tx.Exec(ctx, "SELECT 1 FROM relationship c WHERE c.kind = $1 AND c.company_id = $2"+
+			" AND c.archived_at IS NULL FOR SHARE", auth.ProjectCompanyKind, company); err != nil {
+			return false, false, fmt.Errorf("lock account delivery edges: %w", err)
+		}
 		// Name the scope and continuity columns so custom-field DDL cannot change the locked row shape.
 		from = "(SELECT id, company_id, owner_id, phase, archived_at FROM project p WHERE " + onProject + " ORDER BY id FOR UPDATE)"
 	}

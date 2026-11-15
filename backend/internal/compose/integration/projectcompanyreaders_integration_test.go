@@ -14,6 +14,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -214,5 +215,59 @@ func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
 		if _, err := tryPrebuiltReport(e.readerWith(everything[:len(everything)-1]...), e, "deals-by-stage", plan); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("deals-by-stage %s without company.read → %v, want ErrPermissionDenied", plan, err)
 		}
+	}
+}
+
+// A locked delivery read holds the account's edge set still until the
+// decision commits: neither taking a company off a project nor putting it on
+// another can change the fact under it.
+func TestALockedDeliveryReadHoldsTheAccountsEdges(t *testing.T) {
+	e := Setup(t)
+	f := seedMovedProject(t, e)
+	admin := e.Admin()
+	other, err := e.Projects.CreateProject(admin, projects.CreateProjectInput{
+		Name: "Other delivery", CompanyID: f.current, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	locked, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+	go func() {
+		done <- database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+			if _, err := contacts.LockCompanyTx(admin, tx, f.partner); err != nil {
+				return err
+			}
+			if _, _, err := projects.CompanyDeliveryTx(admin, tx, f.partner, true); err != nil {
+				return err
+			}
+			close(locked)
+			<-release
+			return nil
+		})
+	}()
+	<-locked
+	waiting := func(what string, write func(context.Context) error) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(admin, time.Second)
+		defer cancel()
+		if err := write(ctx); err == nil {
+			t.Errorf("%s committed under a locked delivery read", what)
+		}
+	}
+	waiting("taking the partner off", func(ctx context.Context) error {
+		return e.Contacts.RemoveProjectCompany(ctx, f.project, f.partner)
+	})
+	waiting("putting the partner on another project", func(ctx context.Context) error {
+		_, err := e.Contacts.SetProjectCompany(ctx, contacts.SetProjectCompanyInput{
+			ProjectID: ids.From[ids.ProjectKind](ids.UUID(other.Id)), CompanyID: f.partner, Role: "partner",
+		})
+		return err
+	})
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	if err := e.Contacts.RemoveProjectCompany(admin, f.project, f.partner); err != nil {
+		t.Errorf("taking the partner off after the decision committed: %v", err)
 	}
 }

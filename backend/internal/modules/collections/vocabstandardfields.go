@@ -219,12 +219,12 @@ func maskedForCaller(ctx context.Context, object, field string) bool {
 	return err != nil || masked
 }
 
-// bindEdgeScope admits an edge-reading leaf for a caller who may read edges,
-// bounded to the edges they may read on alias — the gate the contact list's
-// employer filter and the project list's company filter take. A caller
-// refused the edge keeps the field, withheld.
+// bindEdgeScope admits a company-naming edge leaf for a caller who may read
+// edges and companies, bounded to the edges they may read on alias — the gate
+// the contact list's employer filter and the project list's company filter
+// take. A caller refused either keeps the field, withheld.
 func bindEdgeScope(ctx context.Context, field storekit.Field, alias string) storekit.Field {
-	if auth.EdgeReadAdmitted(ctx) != nil {
+	if auth.EdgeReadAdmitted(ctx) != nil || !auth.ReadGranted(ctx, "company") {
 		return field
 	}
 	field.Withheld = false

@@ -104,6 +104,16 @@ func TestTheProjectCompanyLeafTakesTheEdgeGate(t *testing.T) {
 	if sql, _ := compileLeaf(maskedCtx(), t, &Store{}, projectEntity, companyIDField, storekit.OpEq, employerID); sql != "FALSE" {
 		t.Errorf("a reader refused relationship:read got %q, want the project company leaf withheld", sql)
 	}
+	edgesOnly := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"project": {Read: true}, "relationship": {Read: true}},
+			RowScope: principal.RowScopeOwn,
+		},
+	})
+	if sql, _ := compileLeaf(edgesOnly, t, &Store{}, projectEntity, companyIDField, storekit.OpEq, employerID); sql != "FALSE" {
+		t.Errorf("a reader refused company:read got %q, want the project company leaf withheld", sql)
+	}
 	with := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman,
 		Permissions: principal.Permissions{
