@@ -116,8 +116,8 @@ func TestTheRepairKeepsOneOpenQualifyTaskPerLead(t *testing.T) {
 		t.Fatal(err)
 	}
 	// The data task rejects a page that changed more than it scanned.
-	if len(scanned) != 1 || changed != 1 {
-		t.Errorf("the repair scanned %d leads and changed %d, want the one lead counted once", len(scanned), changed)
+	if len(scanned) != 2 || changed != 2 {
+		t.Errorf("the repair scanned %d tasks and changed %d, want the two older tasks", len(scanned), changed)
 	}
 	for i, task := range tasks {
 		var archived bool

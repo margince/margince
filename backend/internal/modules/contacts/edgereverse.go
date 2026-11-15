@@ -30,6 +30,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+const (
+	employmentStartedPrecisionField = "started_precision"
+	employmentEndedPrecisionField   = "ended_precision"
+)
+
 // EdgeFacts is what deciding a reverse needs to know about the edge itself: what
 // the audit row cannot say because it was written before whatever happened next.
 //
@@ -158,8 +163,7 @@ func (s *Store) ReverseEdge(ctx context.Context, in ReverseEdgeInput) error {
 			return err
 		}
 		patch.IfVersion, patch.Evidence = &in.IfVersion, in.Evidence
-		_, err = s.UpdateRelationship(ctx, in.EdgeID, patch)
-		return err
+		return s.reverseRelationshipUpdate(ctx, in, patch)
 	default:
 		return unreversibleEdgeAction(in.Action)
 	}
@@ -185,11 +189,36 @@ func relationshipPatchFromImage(image map[string]any) (UpdateRelationshipInput, 
 	if out.IsCurrentPrimary, err = imageBool(image, "is_current_primary"); err != nil {
 		return UpdateRelationshipInput{}, err
 	}
-	if out.StartedAt, err = imageTime(image, "started_at"); err != nil {
+	if out.StartedAt, err = imageTime(image, wireStartedAt); err != nil {
 		return UpdateRelationshipInput{}, err
 	}
-	if out.EndedAt, err = imageTime(image, "ended_at"); err != nil {
+	if out.EndedAt, err = imageTime(image, wireEndedAt); err != nil {
 		return UpdateRelationshipInput{}, err
+	}
+	for key, target := range map[string]**string{employmentStatusField: &out.EmploymentStatus, employmentStartedPrecisionField: &out.StartedPrecision, employmentEndedPrecisionField: &out.EndedPrecision} {
+		value, err := imageString(image, key)
+		if err != nil {
+			return UpdateRelationshipInput{}, err
+		}
+		*target = value
+	}
+	if value, present := image[relationshipRoleField]; present && value == nil {
+		out.ClearRole = true
+	}
+	if value, present := image[wireStartedAt]; present && value == nil {
+		out.ClearStartedAt = true
+	}
+	if value, present := image[wireEndedAt]; present && value == nil {
+		out.ClearEndedAt = true
+	}
+	if value, present := image[employmentStatusField]; present && value == nil {
+		out.ClearEmploymentStatus = true
+	}
+	if value, present := image[employmentStartedPrecisionField]; present && value == nil {
+		out.ClearStartedPrecision = true
+	}
+	if value, present := image[employmentEndedPrecisionField]; present && value == nil {
+		out.ClearEndedPrecision = true
 	}
 	return out, nil
 }
@@ -257,4 +286,14 @@ func imageTime(image map[string]any, key string) (*time.Time, error) {
 		}
 	}
 	return nil, fmt.Errorf("contacts: edge image %q is not a date: %q", key, *text)
+}
+
+// EdgeFieldCanRestoreNull keeps undo aligned with the relationship patch policy.
+func EdgeFieldCanRestoreNull(field string) bool {
+	switch field {
+	case relationshipRoleField, wireStartedAt, wireEndedAt, employmentStatusField, employmentStartedPrecisionField, employmentEndedPrecisionField:
+		return true
+	default:
+		return false
+	}
 }

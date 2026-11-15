@@ -3267,8 +3267,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Vai trò",
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
-  "rel.current": "Hiện tại",
   "rel.former": "Trước đây",
+  "rel.current": "Hiện tại",
   "rel.endedOn": "Đến {when}",
   "rel.remove": "Gỡ",
   "rel.removeConfirm": "Gỡ quan hệ này? Không thể hoàn tác.",
@@ -20889,6 +20889,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.decided_kind": "Đã quyết định mà không hỏi: {kind}",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
+  "activity.notes.connectHint":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp để đọc.",
+  "activity.notes.otherAccount":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp bằng cùng tài khoản Google với lịch của bạn.",
+  "captureConcern.notesGrant": "Không thể đọc ghi chú cuộc họp",
+  "captureConcern.notesAccount":
+    "Ghi chú cuộc họp cần cùng tài khoản Google với lịch",
   "captureConcern.reauth": "Cần kết nối lại",
   "captureConcern.error": "Lỗi kết nối",
   "captureConcern.failing": "Đồng bộ gặp lỗi",

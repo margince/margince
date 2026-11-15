@@ -60,14 +60,14 @@ func retentionSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]crmcontr
 		       count(DISTINCT a.entity_id), max(a.occurred_at),
 		       (array_agg(a.id ORDER BY a.occurred_at DESC, a.id DESC))[1]
 		  FROM audit_log a
-		 WHERE a.occurred_at >= $1
+		 WHERE a.occurred_at >= @since AND (@through::timestamptz IS NULL OR a.occurred_at <= @through)
 		   -- Every retention action but one states itself in its evidence. A
 		   -- contact erasure goes through the Art. 17 eraser, whose tombstone
 		   -- records the reason instead (privacy/erasure_tombstone.go).
 		   AND (a.evidence ? 'retention_action'
 		        OR (a.action = 'erase' AND a.entity_type = 'contact' AND a.evidence->>'reason' = 'retention'))
 		 GROUP BY 1, 2, 3
-		 ORDER BY 5 DESC`, since)
+		 ORDER BY 5 DESC`, pgx.NamedArgs{"since": since, "through": completedThrough(ctx)})
 	if err != nil {
 		return nil, fmt.Errorf("read what retention did: %w", err)
 	}

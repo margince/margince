@@ -3359,8 +3359,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Rolle",
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
-  "rel.current": "Aktuell",
   "rel.former": "Früher",
+  "rel.current": "Aktuell",
   "rel.endedOn": "Bis {when}",
   "rel.remove": "Entfernen",
   "rel.removeConfirm":
@@ -21451,6 +21451,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "activity.notes.connectHint":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen, um sie zu lesen.",
+  "activity.notes.otherAccount":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen mit dem Google-Konto deines Kalenders.",
+  "captureConcern.notesGrant":
+    "Besprechungsnotizen können nicht gelesen werden",
+  "captureConcern.notesAccount":
+    "Besprechungsnotizen benötigen dasselbe Google-Konto wie der Kalender",
   "captureConcern.reauth": "Erneute Verbindung erforderlich",
   "captureConcern.error": "Verbindungsfehler",
   "captureConcern.failing": "Synchronisierung schlägt fehl",

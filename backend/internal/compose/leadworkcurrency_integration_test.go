@@ -51,6 +51,9 @@ func TestLeadReplyAdviceFollowsTheSourceRatherThanTheImport(t *testing.T) {
 	assertCurrentLeadAdvice(t, l, lead, now, 0)
 	assertLeadAdviceOnWorklist(t, l, now, 0)
 	l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Re: Current enquiry", inReplyTo: "current@prospect.example", at: l.at.Add(2 * time.Minute)}, true)
+	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
+		t.Fatalf("open qualification tasks=%d, want one", n)
+	}
 	assertCurrentLeadAdvice(t, l, lead, now, 1)
 	assertLeadAdviceOnWorklist(t, l, now, 1)
 	if _, err := l.e.Activities.ArchiveActivity(l.e.Admin(), ids.From[ids.ActivityKind](answer), nil); err != nil {

@@ -90,7 +90,7 @@ func TestADecisionOlderThanTheOverlapIsStillDrawn(t *testing.T) {
 	t.Parallel()
 	source := &decisionSource{receipts: decisions(101)}
 	svc := (&Service{}).WithDecidedReceipts(source)
-	lines, floor, err := svc.decidedDone(context.Background(), groupedLine(source.receipts, 100), time.Time{}, 100)
+	lines, floor, _, err := svc.decidedPage(context.Background(), groupedLine(source.receipts, 100), time.Time{}, 100)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestADecisionSourceExactlyAtThePageIsComplete(t *testing.T) {
 	t.Parallel()
 	source := &decisionSource{receipts: decisions(100)}
 	svc := (&Service{}).WithDecidedReceipts(source)
-	lines, floor, err := svc.decidedDone(context.Background(), groupedLine(source.receipts, 100), time.Time{}, 100)
+	lines, floor, _, err := svc.decidedPage(context.Background(), groupedLine(source.receipts, 100), time.Time{}, 100)
 	if err != nil || len(lines) != 0 || floor {
 		t.Fatalf("drew %d lines (floor=%t, err=%v), want none and a complete lane", len(lines), floor, err)
 	}
@@ -113,7 +113,7 @@ func TestADecisionSourceStillFullAtTheCapMakesTheLaneAFloor(t *testing.T) {
 	t.Parallel()
 	source := &decisionSource{receipts: decisions(readCap + 1)}
 	svc := (&Service{}).WithDecidedReceipts(source)
-	_, floor, err := svc.decidedDone(context.Background(), groupedLine(source.receipts, readCap), time.Time{}, 100)
+	_, floor, _, err := svc.decidedPage(context.Background(), groupedLine(source.receipts, readCap), time.Time{}, 100)
 	if err != nil || !floor || source.widest != readCap {
 		t.Fatalf("floor=%t widest=%d err=%v, want a floor after reading to %d", floor, source.widest, err, readCap)
 	}

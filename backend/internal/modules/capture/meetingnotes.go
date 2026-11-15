@@ -6,11 +6,11 @@ package capture
 import (
 	"maps"
 	"slices"
+	"strings"
 )
 
 // meetingNotesScopes are the grants that let a connection read the Google Docs
-// Meet writes its notes and transcripts into, keyed by provider. Held equal to
-// frontend/src/lib/connector-status.ts's MEETING_NOTES_SCOPES by a parity test.
+// Meet writes its notes and transcripts into, keyed by provider.
 var meetingNotesScopes = map[string][]string{
 	providerGdocs: {"https://www.googleapis.com/auth/documents.readonly"},
 }
@@ -33,3 +33,25 @@ func MeetingNotesGranted(provider string, scopes []string) bool {
 func MeetingNotesProviders() []string {
 	return slices.Sorted(maps.Keys(meetingNotesScopes))
 }
+
+// MeetingNotesConcern is the grant and account policy used before reading notes.
+func MeetingNotesConcern(provider string, scopes []string, notes, calendar *string) string {
+	if _, paired := meetingNotesCalendars[provider]; !paired {
+		return ""
+	}
+	if !MeetingNotesGranted(provider, scopes) {
+		return ConcernNotesGrantMissing
+	}
+	if notes == nil || calendar == nil {
+		return ConcernNotesAccountMismatch
+	}
+	account := strings.ToLower(bareAddress(*notes))
+	if account == "" || account != strings.ToLower(bareAddress(*calendar)) {
+		return ConcernNotesAccountMismatch
+	}
+	return ""
+}
+
+const notesCalendarAccountSQL = `(SELECT cal.account_label FROM capture_connection cal
+ WHERE cal.user_id = c.user_id AND cal.provider = 'gcal'
+ AND cal.status IN ('connected','error') AND cal.archived_at IS NULL)`

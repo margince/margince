@@ -117,6 +117,8 @@ const credentialRepairReader = "the credential repair, which reads every mail be
 const qualifyTaskTextReader = "a system data task adds display metadata to qualify tasks; it shows no row to anyone and leaves the subject unchanged"
 
 var audienceReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/legacysystemtext.go:LegacySystemTasksTx": "System-only bounded repair reads native task text to recover its catalog descriptor. No row is returned to a user; archived and held rows are excluded.",
+
 	"internal/shared/ports/connector/mailcopygroup.go:MailCopyGroupFrom":             mailCopyGroupReader,
 	"internal/compose/credentialrepair/credentialrepair.go:estimateMaskableMailText": credentialRepairReader,
 	"internal/compose/credentialrepair/credentialrepair.go:maskMailTextBatch":        credentialRepairReader,

@@ -122,6 +122,7 @@ const (
 func doneSince(
 	ctx context.Context, tx pgx.Tx, since time.Time, limit int,
 ) ([]entry, map[string]bool, error) {
+	width := max(readCap, limit)
 	found := make([]entry, 0, limit)
 	// An arm that came back full was CUT: readCap is a LIMIT, so the rows it
 	// did not return are indistinguishable from rows that do not exist, and
@@ -130,20 +131,20 @@ func doneSince(
 	for _, bulk := range []bool{false, true} {
 		actions := admittedActions(bulk)
 		for entityType, table := range scopedTypes {
-			rows, err := doneForType(ctx, tx, entityType, table, since, actions)
+			rows, err := doneForType(ctx, tx, entityType, table, since, actions, width)
 			if err != nil {
 				return nil, nil, err
 			}
-			if len(rows) == readCap {
+			if len(rows) == width {
 				capped[armOf(entityType, bulk)] = true
 			}
 			found = append(found, rows...)
 		}
-		activities, err := doneForActivities(ctx, tx, since, actions)
+		activities, err := doneForActivities(ctx, tx, since, actions, width)
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(activities) == readCap {
+		if len(activities) == width {
 			capped[armOf(typeActivity, bulk)] = true
 		}
 		found = append(found, activities...)
@@ -202,7 +203,7 @@ const notRetention = `NOT (a.action = ANY('{create,archive}'::text[]) AND coales
 // cannot see does not survive it, and the predicate is the table's own rather
 // than one written here.
 func doneForType(
-	ctx context.Context, tx pgx.Tx, entityType, table string, since time.Time, actions []string,
+	ctx context.Context, tx pgx.Tx, entityType, table string, since time.Time, actions []string, width int,
 ) ([]entry, error) {
 	// THE GRANT FIRST, and it is not optional even though the clause below often
 	// renders nothing. auth.UnboundedFor answers true for a rep on most of these
@@ -247,6 +248,7 @@ func doneForType(
 	where := fmt.Sprintf(
 		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = $%d AND %s AND %s`,
 		sinceAt, actors, actionsAt, typeAt, unscrubbed, notRetention)
+	where += completedCutoff(ctx, arg)
 	if scope != "" {
 		where += " AND " + scope
 	}
@@ -260,7 +262,7 @@ func doneForType(
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, groupingImages, recordLabels[entityType], table, where, arg(readCap))
+		 LIMIT $%d`, groupingImages, recordLabels[entityType], table, where, arg(width))
 	return scanEntries(ctx, tx, query, args)
 }
 
@@ -273,7 +275,7 @@ func doneForType(
 // without the grant serves every row to a seat that lost activity.read entirely,
 // which is the trap of taking a scope clause for a gate.
 func doneForActivities(
-	ctx context.Context, tx pgx.Tx, since time.Time, actions []string,
+	ctx context.Context, tx pgx.Tx, since time.Time, actions []string, width int,
 ) ([]entry, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		// A DENIAL narrows this arm to nothing and leaves the rest of the page
@@ -303,6 +305,7 @@ func doneForActivities(
 	where := fmt.Sprintf(
 		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = 'activity' AND %s AND %s`,
 		sinceAt, actors, actionsAt, unscrubbed, notRetention)
+	where += completedCutoff(ctx, arg)
 	if content != "" {
 		where += " AND " + content
 	}
@@ -314,7 +317,7 @@ func doneForActivities(
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
 		 ORDER BY a.occurred_at DESC, a.id DESC
-		 LIMIT $%d`, groupingImages, recordLabels[typeActivity], where, arg(readCap))
+		 LIMIT $%d`, groupingImages, recordLabels[typeActivity], where, arg(width))
 	return scanEntries(ctx, tx, query, args)
 }
 

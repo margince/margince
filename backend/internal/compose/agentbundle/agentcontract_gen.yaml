@@ -27930,7 +27930,7 @@ components:
         total: {type: integer, description: The size of the whole shipped baseline.}
     CaptureConcernKind:
       type: string
-      enum: [reauth_required, connection_error, sync_failing, backfill_failed, sync_stalled, capture_silent]
+      enum: [reauth_required, connection_error, sync_failing, notes_grant_missing, notes_account_mismatch, backfill_failed, sync_stalled, capture_silent]
     DismissCaptureSilenceRequest:
       type: object
       additionalProperties: false
@@ -40187,6 +40187,11 @@ components:
           enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
           description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: {type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.'}
+        meeting_notes_connection:
+          type: string
+          enum: [connect, notes_grant_missing, notes_account_mismatch]
+          readOnly: true
+          description: A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
         invitation_status:
           type: [string, 'null']
           readOnly: true
@@ -55098,6 +55103,13 @@ components:
         What the product did on this reader's behalf, reported rather than asked about.
       required: [as_of, receipts, truncated]
       properties:
+        count_is_floor:
+          type: boolean
+          description: The shared completed-change read reached a source bound; counts remain lower bounds.
+        sources_unavailable:
+          type: array
+          items: {$ref: '#/components/schemas/WorklistSourceUnavailable'}
+          description: Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened.
         as_of: {type: string, format: date-time, description: 'The instant these were read at.'}
         since:
           type: string
@@ -55169,6 +55181,9 @@ components:
         One completed act, and the record it was about.
       required: [id, kind, summary, occurred_at]
       properties:
+        completed_change:
+          $ref: '#/components/schemas/MagicLine'
+          description: The canonical completed change or group shared with Home, including receipt identities and count bounds.
         system_display:
           $ref: '#/components/schemas/SystemDisplay'
         close_date_change: {$ref: '#/components/schemas/CloseDateChange'}

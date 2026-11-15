@@ -69,7 +69,9 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // exclusion, lead or deal, from its two callers.
 // 100: the four chatlinks.Store doors take the record a channel carries, deal
 // or project, which recordColumn holds to those two.
-const dynamicObjectCeiling = 100
+// 101: completed-change omissions follow the same scoped entity catalog as their reader.
+// The real Home/history regression also checks source refusals with no read grants.
+const dynamicObjectCeiling = 101
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as
