@@ -523,7 +523,7 @@ func TestABoughtEmploymentCarriesItsTitleAsRole(t *testing.T) {
 		var role, audited string
 		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 			edge, planted, err := plantProviderEmploymentEdge(ctx, tx, ids.UUID(contact.Id),
-				ids.From[ids.CompanyKind](ids.UUID(company.Id)), "peopledata", tc.title)
+				ids.From[ids.CompanyKind](ids.UUID(company.Id)), "databroker", tc.title)
 			if err != nil || !planted {
 				return fmt.Errorf("planting the bought employment: planted %v, %w", planted, err)
 			}
