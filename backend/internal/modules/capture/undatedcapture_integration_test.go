@@ -12,9 +12,8 @@ import (
 	"time"
 )
 
-// A capture without a usable timestamp is dated by the database as well as by
-// this process, or not at all: a failed read is an error, never the app's
-// clock alone.
+// A capture without a usable timestamp is dated by the database and by this
+// process together. A failed read is an error, never the app's clock alone.
 func TestAnUndatedCaptureIsDatedByBothClocksOrNotAtAll(t *testing.T) {
 	ctx := context.Background()
 	tx, err := ownerConn(t).Begin(ctx)

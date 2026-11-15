@@ -8,9 +8,9 @@ package compose
 // An activity logged without a date has happened for every reader at once,
 // whichever clock the reader judges by. The app and the database keep their
 // own clocks, and they disagree. Here the activities store and the transcript
-// reader run on an injected clock that plays the app host's, an hour away from
-// the database's now() in either direction. A capture runs on a pool whose
-// now() is moved instead, since the capture time is the process clock.
+// reader run on an injected clock that plays the app host's. It is an hour
+// away from the database's now(), in either direction. A capture takes the
+// process clock, so its tests move the pool's now() instead.
 
 import (
 	"context"
@@ -30,8 +30,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// appClock is a clock shift away from the database's, read once from it, so
-// the skew is exact whatever offset the fixture lane gives the test's clock.
+// appClock is a clock shift away from the database's, read once from it. The
+// skew stays exact whatever offset the fixture lane gives the test's clock.
 func appClock(t *testing.T, e *integration.Env, shift time.Duration) func() time.Time {
 	t.Helper()
 	var dbNow time.Time
@@ -127,7 +127,7 @@ func TestAnUndatedActivityIsTheLastActivityAtOnceWhenTheAppClockIsAhead(t *testi
 }
 
 // A capture without a usable timestamp has happened for the database's clock
-// and the app's, whichever of the two is ahead, and a replay keeps its time.
+// and the app's, whichever is ahead. A replay keeps its time.
 func TestAnUndatedCaptureHasHappenedForTheDatabaseAndTheApp(t *testing.T) {
 	for name, shift := range map[string]time.Duration{"database behind": -time.Hour, "database ahead": time.Hour} {
 		t.Run(name, func(t *testing.T) {
