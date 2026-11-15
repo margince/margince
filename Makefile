@@ -1797,7 +1797,7 @@ COSIGN_IMAGE ?= gcr.io/projectsigstore/cosign@sha256:c77247c92f4dfea851c70555738
 # Bump tag and digest together, same as above.
 CYCLONEDX_IMAGE   ?= cyclonedx/cyclonedx-cli@sha256:252c2e26f468c25fea1e63ecde1bc3198ad6e9dbb57f5ed3236bddcb2281b3a7 # v0.33.1
 JSONSCHEMA_IMAGE  ?= ghcr.io/sourcemeta/jsonschema@sha256:a8931de12c23cb07a40318a9549beecf9ace73ac1af219ab61123ab46d3f1284 # v16.5.0
-SBOM_PYTHON_IMAGE ?= python@sha256:646fb0bca3dd3ea1bcc6feb72c17ed16eed6e10cffc732fcc1478bd3e7f02d7b # 3.12-slim
+SBOM_PYTHON_IMAGE ?= python@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b # 3.12-slim
 DOCKER_SBOM  := docker run --rm -v "$(CURDIR)":/src -w /src
 # The validators only read; mount the tree read-only so a swapped image cannot
 # touch the working copy it validates — the same "the tools that read the repo
