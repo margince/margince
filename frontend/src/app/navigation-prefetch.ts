@@ -76,6 +76,8 @@ export class NavigationPrefetch {
   readonly #client: QueryClient;
   #lease: Lease | undefined;
   #principal: string | undefined;
+  // The reader scope the warmed entries are keyed under.
+  #readerScope: string | undefined;
   // Bumped whenever the principal changes, so a catalog answer read for one
   // principal never starts a column read for the next.
   #generation = 0;
@@ -86,12 +88,12 @@ export class NavigationPrefetch {
     const sessionHash = hashKey(sessionOptions.queryKey);
     client.getQueryCache().subscribe((event) => {
       if (event.query.queryHash !== sessionHash) return;
-      const principal =
+      const me =
         event.type === "removed"
           ? undefined
-          : principalOf(client.getQueryData(sessionOptions.queryKey));
-      if (this.#principal !== undefined && principal !== this.#principal)
-        this.#forget();
+          : client.getQueryData<Me>(sessionOptions.queryKey);
+      if (this.#principal !== undefined && principalOf(me) !== this.#principal)
+        this.#forget(healthScope(me));
     });
   }
 
@@ -104,8 +106,11 @@ export class NavigationPrefetch {
     if (document.visibilityState !== "visible" || !onlineManager.isOnline())
       return;
     this.#principal = principalOf(me);
+    // #currentSession answers only a snapshot whose scope is known.
+    const readerScope = healthScope(me) ?? "";
+    this.#readerScope = readerScope;
     if (target === "contacts") {
-      const options = contactsArrivalOptions();
+      const options = contactsArrivalOptions(readerScope);
       this.#warm(
         target,
         options.queryKey,
@@ -113,7 +118,7 @@ export class NavigationPrefetch {
       );
       return;
     }
-    this.#warmDeals();
+    this.#warmDeals(readerScope);
   }
 
   /** The pointer or focus left the link to `target` without following it. */
@@ -148,10 +153,10 @@ export class NavigationPrefetch {
     return principalOf(state.data) === undefined ? undefined : state.data;
   }
 
-  #warmDeals(): void {
+  #warmDeals(readerScope: string): void {
     const catalog = this.#client.getQueryData(pipelinesOptions.queryKey);
     if (catalog) {
-      this.#warmColumn(catalog);
+      this.#warmColumn(catalog, readerScope);
       return;
     }
     const generation = this.#generation;
@@ -161,7 +166,7 @@ export class NavigationPrefetch {
       new QueryObserver(this.#client, { ...pipelinesOptions, ...SPECULATIVE }),
       (pipelines) => {
         if (generation !== this.#generation) return;
-        this.#warmColumn(pipelines);
+        this.#warmColumn(pipelines, readerScope);
         // The column inherits a click that landed while the catalog was in flight.
         if (catalogLease?.deadline !== undefined)
           this.follow("deals", catalogLease.deadline);
@@ -169,8 +174,11 @@ export class NavigationPrefetch {
     );
   }
 
-  #warmColumn(pipelines: components["schemas"]["Pipeline"][]): void {
-    const options = dealsArrivalColumnOptions(pipelines);
+  #warmColumn(
+    pipelines: components["schemas"]["Pipeline"][],
+    readerScope: string,
+  ): void {
+    const options = dealsArrivalColumnOptions(pipelines, readerScope);
     if (options)
       this.#warm(
         "deals",
@@ -222,18 +230,26 @@ export class NavigationPrefetch {
   }
 
   // The principal changed: no answer read for the old one may reach a screen
-  // as fresh. Unwatched entries go; a mounted screen reads its entry again.
-  #forget(): void {
+  // as fresh. Unwatched entries go. A mounted screen reads its entry again.
+  // An entry keyed by a changed reader scope is the exception: its screen
+  // moves to the new key itself.
+  #forget(readerScope: string | undefined): void {
     this.#releaseLease();
     this.#generation += 1;
     this.#principal = undefined;
+    const previous = this.#readerScope;
+    this.#readerScope = undefined;
     const cache = this.#client.getQueryCache();
     for (const query of this.#owned) {
       if (cache.get(query.queryHash) !== query) continue;
+      const rekeyed =
+        previous !== undefined &&
+        previous !== readerScope &&
+        query.queryKey.includes(previous);
       if (query.getObserversCount() === 0) cache.remove(query);
       // A reset clears the old answer before the screen reads again; an
       // invalidation would keep showing it while the new read runs.
-      else
+      else if (!rekeyed)
         void this.#client.resetQueries({
           queryKey: query.queryKey,
           exact: true,

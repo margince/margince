@@ -115,8 +115,7 @@ func (s *SenderOverrideStore) Set(ctx context.Context, address, decision string)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The same key every reader of this decision takes, so a seat recording
 		// one cannot land between a reader's look and the act it drives.
-		if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
-			senderOverrideIdentity(actor.UserID, folded)); err != nil {
+		if err := lockSenderDecisionTx(ctx, tx, actor.UserID, folded); err != nil {
 			return err
 		}
 		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
@@ -174,8 +173,7 @@ func (s *SenderOverrideStore) Remove(ctx context.Context, address string) error 
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		folded := normalizeEmail(address)
-		if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
-			senderOverrideIdentity(actor.UserID, folded)); err != nil {
+		if err := lockSenderDecisionTx(ctx, tx, actor.UserID, folded); err != nil {
 			return err
 		}
 		if err := refuseAgentOverAUsersDecisionTx(ctx, tx, actor, folded); err != nil {
@@ -263,8 +261,7 @@ func OverrideForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string
 	// own transaction commits between this read and that write, and the answer
 	// acted on was already stale. Reentrant, so Set may take it and then write
 	// through here without deadlocking.
-	if err := storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
-		senderOverrideIdentity(user, folded)); err != nil {
+	if err := lockSenderDecisionTx(ctx, tx, user, folded); err != nil {
 		return "", err
 	}
 	var decision string
@@ -308,4 +305,9 @@ func (e *InvalidOverrideError) Error() string { return "capture sender decision:
 // FieldFault maps the refusal onto the wire.
 func (e *InvalidOverrideError) FieldFault() (field, code, message string) {
 	return e.Field, "invalid_sender_decision", e.Reason
+}
+
+func lockSenderDecisionTx(ctx context.Context, tx pgx.Tx, user ids.UUID, address string) error {
+	return storekit.LockWriteIdentity(ctx, tx, senderOverrideEntity,
+		senderOverrideIdentity(user, normalizeEmail(address)))
 }

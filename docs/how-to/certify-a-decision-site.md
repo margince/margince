@@ -1,7 +1,7 @@
 <!-- prose:plain -->
 # Certify a decision site
 
-A `decisions:` lane answers every site its local-only rule lets in, as soon as the config binds it.
+A `decisions:` lane answers every site with a decision form, as soon as the config binds it.
 Like the rung of any other task's ladder, it needs no certification row to serve. Certification is
 **advisory**. It measures how often a (task, site, provider, model) binding is right, against graded
 scenarios. Then it writes a record to the generated table
@@ -49,9 +49,7 @@ config meets. The LLM part runs as it would without the lane, and writes its usu
 asks the lane each scenario whose site has a decision form, `RUNS` times, with no judge. The answer is a
 closed label, so the gate of the site and the label the scenario expects grade it.
 
-A lane that is not local never gets a `local_only` task, such as the two capture verdicts. Certify
-those sites with a `jev_compatible` lane on a self-hosted server, at a loopback or private-range
-address. Against OpenRouter or `jev`, every run falls back and the record reads `not_supported`.
+The routing profile and provider bindings decide where text goes. The `sovereign` profile refuses cloud providers.
 
 ## 2. Read the decision record
 

@@ -37,6 +37,7 @@ const meetingNotesRawKey = "google_doc"
 
 // MeetingNotesQuery asks for the notes links on one owner's meetings.
 type MeetingNotesQuery struct {
+	Meeting      *ids.ActivityID
 	Owner        ids.UserID
 	Domains      []string
 	Since, Until time.Time
@@ -84,13 +85,14 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, l.url FROM attachment l JOIN activity a ON a.id = l.entity_id
 		 WHERE `+meetingNotesReadable+`
+ AND (@meeting::uuid IS NULL OR a.id = @meeting)
 		   AND `+occurredday.FromSQL("a", "@since::timestamptz")+`
 		   AND `+occurredday.MeetingTookPlaceSQL("a", "@until::timestamptz")+`
 		   AND NOT EXISTS (SELECT 1 FROM activity t
 		                    WHERE t.source_system = @transcript AND t.source_id = l.url)
 		 ORDER BY a.occurred_at DESC, l.id
 		 LIMIT @limit`, pgx.NamedArgs{
-		"owner": q.Owner, "domains": q.Domains, "since": q.Since, "until": q.Until,
+		KindMeeting: q.Meeting, "owner": q.Owner, "domains": q.Domains, "since": q.Since, "until": q.Until,
 		"transcript": transcriptSourceSystem, argLimit: q.Limit,
 	})
 	if err != nil {

@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
@@ -85,7 +86,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
-	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
+	return activities.NewHandlers(InstallationDB(pool)).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{}).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).

@@ -222,20 +222,8 @@ func (p *CapturePurger) stillPurgeable(seat ids.UUID, rule capture.Exclusion) pr
 	}
 }
 
-// carryOut performs what a selected purge decided, in the one order that is
-// survivable, and is the ONLY place that order is written.
-//
-// Both purge paths run it: an owner acting on their own exclusion rule, and the
-// sweep that destroys personal mail once its window closes. They differ in what
-// they select and why; what happens to a selected message is one answer, and a
-// second copy of this sequence is how one path would quietly stop auditing a
-// release or stop recomputing an audience.
-//
-// Held by: TestBothPurgePathsShareOneExecutor (backend/gates/purgeexecutor_test.go)
-//
-// It asks who may call the two destructive steps rather than listing the purge
-// paths, so a third path written three packages away is refused the day it is
-// written — which is the only day the claim matters.
+// Anonymise contacts before destroying the mail that identifies them, and keep
+// shared-import release on the same audited path for every purge.
 func (p *CapturePurger) carryOut(
 	ctx context.Context, subject capture.PurgeSubject,
 	minted []ids.UUID, stillPurgeable privacy.ContactStillPurgeable,
@@ -365,10 +353,11 @@ func (p *CapturePurger) SweepPersonalMail(ctx context.Context, windows capture.P
 		// and passing a selector that looked for one would either find a contact
 		// somebody made for another reason or find nothing while implying it had
 		// looked.
-		if _, err := p.carryOut(ctx, subject, nil, nil, seat, privacy.PurgePersonalVerdict); err != nil {
+		n, err := p.purgePersonalSelection(ctx, subject, seat, windows)
+		if err != nil {
 			return destroyed, fmt.Errorf("verdict: destroying personal mail: %w", err)
 		}
-		destroyed += len(subject.SoleImports)
+		destroyed += n
 	}
 	return destroyed, nil
 }

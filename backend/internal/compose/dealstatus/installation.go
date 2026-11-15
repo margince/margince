@@ -29,12 +29,3 @@ func (s *Service) gatherInstallation(ctx context.Context, f *facts) error {
 	}
 	return nil
 }
-
-// cacheLanguage keys the cached card. The reader's language joins it only
-// where it differs, so a card cached for a base-language reader stays current.
-func (f facts) cacheLanguage() string {
-	if f.say == "" || f.say == f.lang {
-		return f.lang
-	}
-	return f.lang + "/" + f.say
-}

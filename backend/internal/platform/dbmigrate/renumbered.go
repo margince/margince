@@ -127,7 +127,7 @@ func renumberSource(namespace string, pair Renumber, source map[string]Migration
 	}
 	asOld := current
 	asOld.Version = pair.Old
-	if Digest(asOld) != pair.OldDigest {
+	if !ContentAdmitted(namespace, asOld, pair.OldDigest) {
 		return Migration{}, renumberRefusal(namespace, pair, "the migration that ships no longer has the declared old content")
 	}
 	return current, nil

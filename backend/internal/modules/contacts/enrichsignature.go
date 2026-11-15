@@ -22,6 +22,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -201,8 +202,10 @@ func (s *Store) applySignature(ctx context.Context, contactID ids.ContactID, sou
 		if len(appliedFields) == 0 {
 			return nil
 		}
-		if err := s.roleFromSignatureTitleTx(ctx, tx, contactID, fields, appliedFields); err != nil {
-			return err
+		if slices.Contains(appliedFields, fieldTitle) {
+			if err := s.roleFromSignatureTitleTx(ctx, tx, contactID, sourceRef); err != nil {
+				return err
+			}
 		}
 		before, after := signatureImages(appliedFields)
 		// The write shape: the enrichment is a contact mutation, so the

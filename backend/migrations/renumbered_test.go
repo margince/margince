@@ -65,7 +65,7 @@ func holdsPairs(t *testing.T, ns dbmigrate.Namespace, pairs []dbmigrate.Renumber
 		}
 		asOld := current
 		asOld.Version = p.Old
-		if dbmigrate.Digest(asOld) != p.OldDigest {
+		if !dbmigrate.ContentAdmitted(ns.Name, asOld, p.OldDigest) {
 			t.Errorf("%s %s_%s → %s: the declared old digest is not today's content under the old version, "+
 				"so the SQL changed and the move cannot be declared", ns.Name, p.Old, p.Name, p.New)
 		}

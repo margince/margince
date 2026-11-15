@@ -7,6 +7,7 @@ import {
   emptyPage,
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import type { Offer } from "./offers";
@@ -46,6 +47,7 @@ const draftOffer: Offer = {
 export const Open: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offer-templates": () => jsonResponse(emptyPage),
     });
     return (
@@ -63,6 +65,7 @@ export const Open: Story = {
 export const TwoLegalEntities: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offer-templates": () => jsonResponse(emptyPage),
       "GET /legal-entities": () =>
         jsonResponse({

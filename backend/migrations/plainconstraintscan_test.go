@@ -116,13 +116,24 @@ func checkPlainConstraintScans(t *testing.T, namespace string, dir fs.FS) {
 			return nil
 		}
 		examined++
-		for _, finding := range scansUnderExclusiveLock(string(body)) {
+		findings := scansUnderExclusiveLock(string(body))
+		// This rollback must restore validation at its own version boundary; splitting the swap changes that schema.
+		rollbackSwap := namespace == "core" && path == "1794412054_a_google_docs_connection_reads_meeting_notes.down.sql"
+		restored := false
+		for _, finding := range findings {
+			if rollbackSwap && finding.table == "capture_connection" && finding.constraint == "capture_connection_provider_check" {
+				restored = true
+				continue
+			}
 			t.Errorf("%s/%s adds %s to %s, which it did not create, without NOT VALID.\n"+
 				"A plain ADD CONSTRAINT scans every existing row while holding ACCESS EXCLUSIVE, "+
 				"so every write to that table waits for the scan. Add it NOT VALID here and "+
 				"VALIDATE it in a LATER migration — a VALIDATE in this file would hold the same "+
 				"lock for longer, which is what notvalidsplit_test.go refuses.",
 				namespace, path, finding.constraint, finding.table)
+		}
+		if rollbackSwap && !restored {
+			t.Error("the provider rollback scan exception is stale")
 		}
 		return nil
 	})

@@ -55,11 +55,8 @@ type decisionTry struct {
 	servedModel string
 }
 
-// Decide serves a decision site: the decisions lane first when it may answer
-// this task and site, then the task's own ladder with the LLM request. A lane
-// that is unbound, uncertified for the site, barred from a local-only task,
-// failing or unsure never costs the caller its answer — the ladder serves as
-// CompleteStructured would, and the completion row says why it ran.
+// Decide tries the decisions lane before the task's LLM ladder.
+// A missing or refused decision falls back with its reason recorded.
 func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decision.Request,
 	req model.Request, validate Validator, gate DecisionGate,
 ) (DecideOutcome, RouteInfo, error) {
@@ -175,7 +172,7 @@ func (r *Router) cachedAnswerServes(b *binding, task Task, wsID ids.WorkspaceID,
 		return false
 	}
 	_, tier, hit := r.cache.get(key, wsID, b.generation)
-	return hit && tierOnLadder(servableLadder(b, task, ladder), tier)
+	return hit && tierOnLadder(servableLadder(b, ladder), tier)
 }
 
 // decisionAttempt asks the lane when it may answer this task and site, and
@@ -183,9 +180,6 @@ func (r *Router) cachedAnswerServes(b *binding, task Task, wsID ids.WorkspaceID,
 func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *binding, task Task, site string,
 	dreq decision.Request, gate DecisionGate,
 ) (decisionTry, error) {
-	if reason := r.decisionRefusal(b, task); reason != "" {
-		return decisionTry{reason: reason}, nil
-	}
 	// The state is data a site assembled from mail and pages, bound for a
 	// vendor like any prompt, so it passes the same stripper a prompt does —
 	// through the recorder a completion attempt uses, so the row says what was
@@ -201,19 +195,6 @@ func (r *Router) decisionAttempt(ctx context.Context, lc *logicalCall, b *bindin
 	}
 	dreq.State, dreq.Model = state, b.decisions.meta.model
 	return r.callDecider(ctx, lc, b, task, dreq, gate, strips)
-}
-
-// decisionRefusal is why the lane may not answer this site, as the attempt
-// reason the ladder walk carries; "" when it may. A bound lane serves every
-// site its local-only rule admits — no certification row required, same as
-// any other task's ladder rung: bind it and it runs, the site's own floor
-// (decisionAttempt's below-floor check) is what catches a bad answer.
-func (r *Router) decisionRefusal(b *binding, task Task) string {
-	m := b.decisions.meta
-	if decisionSkipFor(&DecisionsConfig{Provider: m.provider, Model: m.model, BaseURL: m.baseURL}, task) == DecisionSkipLocalOnly {
-		return attemptReasonDecisionLocalOnly
-	}
-	return ""
 }
 
 // callDecider makes the one decision call: rail, trace, meter, answer.

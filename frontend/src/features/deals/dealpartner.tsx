@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useNoPartnersYet } from "../../components/dealpartnerfields";
 import { useEntityName } from "../../components/entityref";
 import { AppLink } from "../../design-system/applink";
 import { FieldGuard } from "../../design-system/rbac";
 import { useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import type { Deal } from "./deals";
-import { useNoPartnersYet } from "./deals.fields";
 
 type DealPartnerFacts = Pick<
   Deal,

@@ -9,6 +9,7 @@ import { useActivityGate } from "../../components/activitygate";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { companyDocumentsKey } from "../../lib/attachmentkeys";
 import {
   changeChoice,
   openChoiceDialog,
@@ -135,10 +136,12 @@ function stubRosterRefused() {
   );
 }
 
-function renderInApp(ui: ReactNode) {
-  const client = new QueryClient({
+function renderInApp(
+  ui: ReactNode,
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -389,6 +392,56 @@ describe("an archived account's verbs", () => {
     expect(
       screen.getByTestId("company-full-history").hasAttribute("disabled"),
     ).toBe(false);
+  });
+});
+
+describe("merging an account into another", () => {
+  it("refreshes both companies' document libraries, and no other", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const { pathname } = new URL(request.url);
+        if (pathname.endsWith("/me")) {
+          return Response.json({ user: { id: "u-reader" }, ...READER });
+        }
+        if (pathname.endsWith("/merge")) {
+          return Response.json({ ...COMPANY, id: "o-kept" });
+        }
+        if (pathname === "/v1/companies") {
+          return Response.json({
+            data: [{ ...COMPANY, id: "o-kept", display_name: "Brandt AG" }],
+            page: { has_more: false, next_cursor: null },
+          });
+        }
+        return Response.json({
+          data: [],
+          page: { has_more: false, next_cursor: null },
+        });
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    for (const id of ["o-1", "o-kept", "o-other"]) {
+      client.setQueryData(companyDocumentsKey(id), { data: [] });
+    }
+    const user = userEvent.setup();
+    renderInApp(<MenuHost company={COMPANY} />, client);
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("merge-record"));
+    await user.type(screen.getByRole("searchbox"), "Brandt");
+    await user.click(await screen.findByRole("button", { name: /Brandt AG/ }));
+    await user.click(screen.getByTestId("merge-confirm"));
+
+    const stale = (id: string) =>
+      client.getQueryState(companyDocumentsKey(id))?.isInvalidated;
+    await waitFor(() =>
+      expect([stale("o-1"), stale("o-kept")]).toEqual([true, true]),
+    );
+    expect(stale("o-other")).toBe(false);
   });
 });
 

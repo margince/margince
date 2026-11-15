@@ -119,15 +119,13 @@ func SendersFor(ctx context.Context, db *database.DB, windows PersonalPurgeWindo
 			       -- test is here rather than in the scope because the sweep
 			       -- RELEASES a shared message instead of destroying it — a
 			       -- different outcome, not an excluded row.
-			       --
-			       -- Over EVERY ledger row of the seat for the address, as the sweep
-			       -- joins them, not only the newest one the row shows.
 			       (SELECT min(`+PersonalPurgeDeadline("$2", "$3")+`)
 			          FROM capture_pending_counterparty p
 			          JOIN activity a ON a.counterparty_email = p.email
 			          JOIN capture_import i ON i.activity_id = a.id AND i.user_id = $1
 			         WHERE p.owner_id = $1 AND p.email = coalesce(latest.email, o.address)
-			           AND p.kind = 'personal' AND p.status = 'noise' AND p.resolved_at IS NOT NULL
+			           AND p.kind = 'personal' AND p.status = 'noise'
+			           AND `+latestResolvedSenderVerdict("p")+`
 			           AND `+PersonalPurgeScope("$1")+`
 			           AND (SELECT count(*) FROM capture_import c
 			                 WHERE c.activity_id = a.id) = 1) AS deletes_at

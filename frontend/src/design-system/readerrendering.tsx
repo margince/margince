@@ -2,19 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { QueryClientContext } from "@tanstack/react-query";
-import {
-  type ReactNode,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from "react";
+import { type ReactNode, useContext, useEffect, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { healthScope } from "../lib/healthscopekey";
+import { useCachedHealthScope } from "../lib/healthscope";
 import { problemCodeOf, unwrap } from "../lib/problem";
 import { Button } from "./button";
 import { ErrorLine } from "./errorline";
@@ -43,19 +36,7 @@ type Press =
  */
 export function useReaderRendering() {
   const client = useContext(QueryClientContext);
-  const scope = useSyncExternalStore(
-    (notify) =>
-      client
-        ? client.getQueryCache().subscribe((event) => {
-            if (event.query.queryKey[0] === "me") notify();
-          })
-        : () => {},
-    () =>
-      healthScope(
-        client?.getQueryData<components["schemas"]["MeResponse"]>(["me"]),
-      ),
-    () => undefined,
-  );
+  const scope = useCachedHealthScope();
   const [press, setPress] = useState<Press>({ state: "idle" });
   const generation = useRef(0);
   const pending = useRef<

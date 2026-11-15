@@ -386,8 +386,6 @@ func TestADecisionRowCarriesItsPayloadInTheDecisionForm(t *testing.T) {
 	}
 }
 
-// verdictRouter serves a local-only verdict task from a local rung, with lane
-// as its decisions lane and payload capture on.
 func verdictRouter(lane *DecisionsConfig, decider decision.Client, store *fakeCallStore) *Router {
 	r := assembleRouter(map[Tier]model.Client{TierLocalSmall: stubClient{resp: model.Response{Text: "local answer"}}}, NewFakeClient(),
 		ProfileCloudFrontier, &memMeter{}, StaticBudget(100), store,
@@ -397,10 +395,7 @@ func verdictRouter(lane *DecisionsConfig, decider decision.Client, store *fakeCa
 	return r
 }
 
-// A cloud lane answers a local-only task end to end while localOnlyAdmits is
-// unconditional (#6396, pending #3351) — decisionSkipFor's unit case says so
-// in isolation; this exercises Decide over it.
-func TestALocalOnlyTaskReachesACloudLaneWhileLocalOnlyIsReverted(t *testing.T) {
+func TestAVerdictTaskReachesABoundCloudLane(t *testing.T) {
 	decider := &scriptedDecider{replies: []decisionReply{answered("parked", 0.99)}}
 	store := &fakeCallStore{}
 	out, _, err := verdictRouter(jevLane, decider, store).Decide(wsContext(t), TaskCaptureCounterpartyVerdict, "verdict",
@@ -413,9 +408,7 @@ func TestALocalOnlyTaskReachesACloudLaneWhileLocalOnlyIsReverted(t *testing.T) {
 	}
 }
 
-// A local lane may answer a local-only task, and the task's no_payload
-// contract holds on its decision row as on any other.
-func TestALocalLaneAnswersALocalOnlyTaskAndCapturesNothing(t *testing.T) {
+func TestALocalLaneAnswersAVerdictTaskAndCapturesNothing(t *testing.T) {
 	if !NoPayload(TaskCaptureCounterpartyVerdict) {
 		t.Fatal("the verdict task is expected to be no_payload; this case would prove nothing")
 	}

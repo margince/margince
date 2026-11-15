@@ -8,6 +8,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../../design-system/atoms";
 import { pickOption } from "../../design-system/select-testing";
+import { meFixture } from "../../testing/mefixture";
 import { AnalyticsScreen } from "./analytics";
 import type { AnalyticsScope } from "./analytics.context";
 import { QuestionsView } from "./analytics.questions";
@@ -52,6 +53,7 @@ function stubServer(
       const answer = answers[`${method} ${path}`];
       if (answer) return answer();
       if (path === "/analytics/schema") return jsonResponse(SCHEMA);
+      if (path === "/me") return jsonResponse(meFixture({ rowScope: "all" }));
       if (path === "/stages") return jsonResponse(STAGES);
       if (path === "/users") return jsonResponse(USERS);
       if (path === "/analytics/query") return jsonResponse(ANSWER);

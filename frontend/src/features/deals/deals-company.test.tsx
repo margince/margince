@@ -506,16 +506,21 @@ describe("the board past the picker's first page", () => {
     });
     vi.stubGlobal("fetch", fetchMock);
     const { client } = render(<DealsScreen />);
+    // The board's company page, read once /me names the reader scope.
+    const boardCompaniesStatus = (held: typeof client) =>
+      held
+        .getQueryCache()
+        .getAll()
+        .find((q) => q.queryKey[0] === "companies" && q.queryKey[1] !== "")
+        ?.state.status;
 
     const card = await boardCard("Fleet retrofit");
     expect(await within(card).findByText("Northgate Systems")).toBeTruthy();
-    expect(client.getQueryState(["companies"])?.status).toBe("pending");
+    expect(boardCompaniesStatus(client)).toBe("pending");
     expect(byIdCalls(fetchMock)).toEqual([[company.id]]);
 
     openPage();
-    await waitFor(() =>
-      expect(client.getQueryState(["companies"])?.status).toBe("success"),
-    );
+    await waitFor(() => expect(boardCompaniesStatus(client)).toBe("success"));
     expect(within(card).getByText("Northgate Systems")).toBeTruthy();
     expect(byIdCalls(fetchMock)).toEqual([[company.id]]);
   });

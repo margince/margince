@@ -2016,8 +2016,6 @@ export const en = {
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
-  "aiAdmin.decisionSkip.local_only":
-    "Decision model not used: this activity takes only a local decision provider.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -3266,8 +3264,8 @@ export const en = {
   "rel.role": "Role",
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
-  "rel.current": "Current",
   "rel.former": "Former",
+  "rel.current": "Current",
   "rel.endedOn": "Until {when}",
   "rel.remove": "Remove",
   "rel.removeConfirm": "Remove this relationship? There is no undo.",
@@ -3839,6 +3837,8 @@ export const en = {
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View full thread",
   "timeline.group.mayContinue": "Earlier messages may exist",
+  "timeline.group.newerPart": "Later messages above",
+  "timeline.group.olderPart": "Earlier messages below",
   // A thread on the chronology is one card: the kind, the count and who was
   // on it over the subject, then each message with who wrote it and when.
   "timeline.group.kind": "Thread",
@@ -5142,6 +5142,10 @@ export const en = {
   "activity.detail.response.needsAction": "No answer",
   "meeting.attendeesMore_one": "and {count} more",
   "meeting.attendeesMore_other": "and {count} more",
+  "meeting.invitation.invited": "{count} invited",
+  "meeting.invitation.accepted": "{count} accepted",
+  "meeting.invitation.declined": "{count} declined",
+  "meeting.invitation.tentative": "{count} maybe",
   "activity.detail.guestsLeftOut_one": "and {count} more guest not listed",
   "activity.detail.guestsLeftOut_other": "and {count} more guests not listed",
   "activity.detail.colleagues": "Colleagues",
@@ -15572,8 +15576,6 @@ export const en = {
     "Input too large for the decision model",
   "aicalls.reason.decision_uncertified":
     "Decision model not certified for this task",
-  "aicalls.reason.decision_local_only":
-    "Task is local-only and the decision model is not",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
@@ -18024,7 +18026,6 @@ export const en = {
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the
   // landmark list rather than by scrolling to it.
-  "contact.graph.sideColumn": "Introductions and changes",
   "contact.graph.recordWorksWith": "Record: works with {name}",
   "contact.graph.noEdge": "No recorded correspondence with {name}.",
   "contact.graph.withColleague": "with {name}",
@@ -18075,7 +18076,6 @@ export const en = {
   "contact.intro.lastYesterday": "Yesterday",
   "contact.intro.lastDays": "{days} days ago",
   "contact.intro.lastNever": "None in 90 days",
-  "contact.intro.stripWho": "Routes",
   "contact.intro.stripWhoMix": "{direct} direct · {indirect} via a contact",
   "contact.intro.stripWhoOwn": "Includes your own relationship",
   "contact.intro.otherRoutesTitle": "Other routes",
@@ -18093,14 +18093,37 @@ export const en = {
   "contact.intro.change.warmed": "Warmer",
   "contact.intro.change.cooled": "Cooler",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Intro request",
   "contact.intro.handoffNotStarted": "Not started",
   "contact.intro.handoffUnread": "Could not be read",
   "contact.intro.handoffOwner": "Next: {name}",
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
   "contact.intro.relayTitle": "Introduction status",
-  "contact.intro.stripLabel": "Network figures",
+  "contact.chapter.jump": "On this tab",
+  "contact.chapter.wayIn": "Way in",
+  "contact.chapter.whoAnswer":
+    "Who on your team and at their company corresponds with {name}, and how often.",
+  "contact.chapter.progress": "Progress",
+  "contact.chapter.routes_one": "{count} route",
+  "contact.chapter.routes_other": "{count} routes",
+  "contact.chapter.allDirect_one": "direct",
+  "contact.chapter.allDirect_other": "all direct",
+  "contact.chapter.allVia_one": "via a contact",
+  "contact.chapter.allVia_other": "all via a contact",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Intro request: {handoff}. Latest change: {change}.",
+  "contact.chapter.toCheck": "To check",
+  "contact.chapter.toCheckAnswer":
+    "What Margince read from their mail and pages. Confirm, correct or dismiss each one.",
+  "contact.chapter.sources": "Sources",
+  "contact.chapter.sourcesAnswer":
+    "What each source says. Nothing here overwrites what a colleague typed.",
+  "contact.chapter.recordKeeping": "Record keeping",
+  "contact.chapter.recordKeepingAnswer":
+    "The fields, permissions and settings kept on this contact.",
+  "contact.chapter.researchAction": "Research public sources",
   "contact.intro.mapTitle": "Who knows {name}",
   "contact.intro.stepRoute": "Choose route",
   "contact.intro.stepRoutePick": "select who to ask",
@@ -18241,7 +18264,7 @@ export const en = {
   "contact.intro.unavailable": "Not available",
   "contact.network.momentsTitle": "What changed",
   "contact.network.momentsSub":
-    "Changes in this relationship, from the messages.",
+    "Changes read from the messages, and earlier intro requests.",
   "contact.network.noMoments": "No recent changes in this relationship.",
   "contact.change.repliedAfterGap": "They replied after {days} quiet days.",
   "contact.change.wentQuiet": "No activity for {days} days.",
@@ -20463,6 +20486,8 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
+  "worklist.verb.meetingSkipNextStep": "Skip next step",
+  "worklist.verb.meetingNextStep": "What is the next step?",
   "worklist.verb.meetingHowDidItGo": "How did it go?",
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
@@ -20945,6 +20970,8 @@ export const en = {
   "lead.company.linkTitle": "Link this lead to {name}?",
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
+  "lead.company.addedOnQualify":
+    "No company linked yet. Qualifying links or creates it.",
   "lead.company.linkOnQualify":
     "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.company.matchedByDomain": "Same website domain",
@@ -21171,6 +21198,13 @@ export const en = {
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
   "magic.action.capture_connection_error": "{provider} could not be reached",
+  "activity.notes.connectHint":
+    "Notes are attached. Connect meeting notes to read them.",
+  "activity.notes.otherAccount":
+    "Notes are attached. Connect meeting notes with the same Google account as your calendar.",
+  "captureConcern.notesGrant": "Cannot read meeting notes",
+  "captureConcern.notesAccount":
+    "Meeting notes need the same Google account as the calendar",
   "captureConcern.reauth": "Reconnect required",
   "captureConcern.error": "Connection error",
   "captureConcern.failing": "Sync is failing",

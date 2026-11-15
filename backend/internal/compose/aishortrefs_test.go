@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -93,12 +94,12 @@ func scenarioRequests(t *testing.T, census *aitasks.Registry, sc aicert.Scenario
 		t.Errorf("%s/%s (%s): the site refused its own committed fixture: %v", sc.Task, sc.Site, sc.Name, err)
 		return nil
 	}
-	recorder := &recordingCompleter{reply: canaryReply}
+	recorder := &testmodel.Recorder{}
 	if _, runErr := prepared.Run(context.Background(), recorder); runErr != nil {
 		t.Logf("%s/%s (%s): the case refused the stand-in reply after %d request(s): %v",
-			sc.Task, sc.Site, sc.Name, len(recorder.requests), runErr)
+			sc.Task, sc.Site, sc.Name, len(recorder.Requests), runErr)
 	}
-	return recorder.requests
+	return recorder.Requests
 }
 
 // recordIDsIn names each model-facing part of a request that carries a record

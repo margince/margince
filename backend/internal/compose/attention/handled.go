@@ -85,6 +85,17 @@ func (s *Service) WithReceiptDetails(d ReceiptDetails) *Service {
 	return s
 }
 
+// ReceiptRead retains partial source reads through history pagination.
+type ReceiptRead struct {
+	Receipts    []Receipt
+	Floor       bool
+	Unavailable []crmcontracts.WorklistSourceUnavailable
+}
+
+type receiptStateReader interface {
+	RecentWithState(context.Context, time.Time, time.Time, int) (ReceiptRead, error)
+}
+
 // HandledForYou is what was done, newest first, from the page `cursor` names.
 func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontracts.HandledForYou, error) {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
@@ -94,7 +105,7 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
-	if s.receipts == nil {
+	if s.handledReceipts == nil && s.receipts == nil {
 		// UNBOUND is an empty page, not a refusal, and the difference matters
 		// here. An installation that wires no receipt reader did nothing on
 		// anybody's behalf to report — which is honestly nothing to show,
@@ -111,18 +122,23 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 		}
 	}
 	since := position.Since
-	recent, err := s.recentPinned(ctx, since, position)
+	read, err := s.recentPinned(ctx, since, position)
 	if err != nil {
 		return crmcontracts.HandledForYou{}, err
 	}
+	if read.Unavailable == nil {
+		read.Unavailable = []crmcontracts.WorklistSourceUnavailable{}
+	}
+	recent := read.Receipts
 	out := crmcontracts.HandledForYou{
+		CountIsFloor: &read.Floor, SourcesUnavailable: &read.Unavailable,
 		AsOf:      asOf,
 		Since:     &since,
 		Receipts:  make([]crmcontracts.Receipt, 0, handledCap),
-		Truncated: len(recent) > position.Offset+handledCap,
+		Truncated: read.Floor || len(recent) > position.Offset+handledCap,
 	}
 	page := recent[min(position.Offset, len(recent)):min(position.Offset+handledCap, len(recent))]
-	if out.Truncated && position.Offset+len(page) <= maxHandledOffset {
+	if len(recent) > position.Offset+handledCap && position.Offset+len(page) <= maxHandledOffset {
 		next, err := position.after(len(page), recent)
 		if err != nil {
 			return crmcontracts.HandledForYou{}, err
@@ -139,17 +155,28 @@ func (s *Service) HandledForYou(ctx context.Context, cursor *string) (crmcontrac
 // reported, not inferred from a full page. A receipt newer than the pin takes a
 // read slot and is dropped. So a full read that lost rows is read again wider,
 // until it holds that one more or the window ends.
-func (s *Service) recentPinned(ctx context.Context, since time.Time, position handledCursor) ([]Receipt, error) {
+func (s *Service) recentPinned(ctx context.Context, since time.Time, position handledCursor) (ReceiptRead, error) {
+	receipts := s.handledReceipts
+	if receipts == nil {
+		receipts = s.receipts
+	}
 	want := position.Offset + handledCap + 1
 	for limit := want; ; {
-		read, err := s.receipts.Recent(ctx, since, limit)
-		if err != nil {
-			return nil, err
+		var read ReceiptRead
+		var err error
+		if source, ok := receipts.(receiptStateReader); ok {
+			read, err = source.RecentWithState(ctx, since, position.Newest, limit)
+		} else {
+			read.Receipts, err = receipts.Recent(ctx, since, limit)
 		}
-		kept := position.pin(read)
-		dropped := len(read) - len(kept)
-		if len(read) < limit || len(kept) >= want || dropped == 0 {
-			return kept, nil
+		if err != nil {
+			return ReceiptRead{}, err
+		}
+		kept := position.pin(read.Receipts)
+		dropped := len(read.Receipts) - len(kept)
+		if len(read.Receipts) < limit || len(kept) >= want || dropped == 0 {
+			read.Receipts = kept
+			return read, nil
 		}
 		limit += dropped
 	}
@@ -222,6 +249,7 @@ func DescribeReceipts(ctx context.Context, details ReceiptDetails, names Names, 
 // WireReceipt is one completed act on the wire.
 func WireReceipt(receipt Receipt) crmcontracts.Receipt {
 	out := crmcontracts.Receipt{
+		CompletedChange: receipt.CompletedChange,
 		Id:              openapi_types.UUID(receipt.ID),
 		Review:          receipt.Review,
 		CloseDateChange: receipt.CloseDateChange,
@@ -275,4 +303,24 @@ func optionalText(text string) *string {
 		return nil
 	}
 	return &text
+}
+
+// WithHandledReceipts keeps history admission separate from the bounded attention feed.
+func (s *Service) WithHandledReceipts(receipts Receipts) *Service {
+	s.handledReceipts = receipts
+	return s
+}
+
+func (s *Service) done(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
+	defer timeStage(ctx, "done_for_you")()
+	since := asOf.Add(-24 * time.Hour)
+	recent, err := s.receipts.Recent(ctx, since, doneCap)
+	if err != nil {
+		return nil, err
+	}
+	items := make([]crmcontracts.AttentionItem, 0, len(recent))
+	for _, receipt := range recent {
+		items = append(items, receiptItem(receipt))
+	}
+	return items, nil
 }

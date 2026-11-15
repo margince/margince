@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
+import { meFixture } from "../../testing/mefixture";
 import { PartnerDeals } from "./partnerdeals";
 
 // The sourced-deals panel on a partner's company page. These deals belong to
@@ -25,6 +26,7 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>

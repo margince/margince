@@ -4,11 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { healthScope } from "../../lib/healthscopekey";
 import { pipelinesOptions } from "../../lib/pipelines.queries";
+import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
-  meRoute,
   StoryProviders,
   storyQueryClient,
 } from "../../testing/story-utils";
@@ -85,19 +86,40 @@ function NewDeal({
   pipeline,
   submit,
   cached = false,
+  attribution = false,
 }: Readonly<{
   pipeline: Pipeline;
   cached?: boolean;
+  attribution?: boolean;
   submit?: (body: unknown) => Response | Promise<Response>;
 }>) {
   const client = storyQueryClient();
+  const me = meFixture({
+    allow: { pipeline: ["read"], deal: ["create"], company: ["read"] },
+  });
+  const readerScope = healthScope(me);
+  client.setQueryData(["me"], me);
   if (cached) {
     client.setQueryDefaults(pipelinesOptions.queryKey, { staleTime: Infinity });
     client.setQueryData(pipelinesOptions.queryKey, [pipeline]);
   }
+  if (attribution) {
+    client.setQueryData(
+      ["partners", "options", readerScope],
+      [{ company_id: "partner-1" }],
+    );
+    client.setQueryData(
+      ["partners", "names", readerScope],
+      [{ id: "partner-1", display_name: "Referral partner" }],
+    );
+    client.setQueryData(
+      ["acquisition-sources"],
+      [{ key: "referral", label: "Referral", active: true }],
+    );
+  }
   installFetchStub({
     // Where the deal may land, and the write that puts it there.
-    "GET /me": meRoute({ pipeline: ["read"], deal: ["create"] }),
+    "GET /me": () => jsonResponse(me),
     "GET /pipelines": () =>
       cached
         ? jsonResponse({ title: "The cached catalog should be reused" }, 500)
@@ -234,3 +256,18 @@ export const NewDealFailed: Story = {
 // The id the workspace mints for a name its catalog has never carried. The
 // apply call is addressed to a RESOLVED tag, so a story that wants to answer
 // it has to route the id the create handed back, not the contract's template.
+
+export const NewDealWithAttribution: Story = {
+  render: () => <NewDeal pipeline={openPipeline} attribution />,
+  play: async (context) => {
+    await NewDealOpen.play?.(context);
+    const body = within(context.canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("combobox", { name: "Referring partner" }),
+    );
+    await userEvent.click(
+      await body.findByRole("option", { name: "Referral partner" }),
+    );
+    await body.findByRole("combobox", { name: "Partner attribution" });
+  },
+};
