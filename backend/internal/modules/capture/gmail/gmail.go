@@ -282,22 +282,18 @@ func captureOne(ctx context.Context, fetched Message, sink connector.Sink, bounc
 	// reported symptom was five "sent" rows in eleven minutes for one email
 	// nobody had sent, rather than a single wrong row.
 	//
-	// Before the parse: a draft needs no reading to be refused.
-	if hasDraftLabel(fetched.Labels) {
-		return false, nil
-	}
-	// Spam and trash for the same reason and in the same place. Both
-	// enumerations already ask Gmail to leave them out — messages.list carries
-	// includeSpamTrash=false — but neither ask is a guarantee about the message
-	// that finally arrives: ids are listed in one call and read in another, and
-	// a message can be moved between them. The listing narrows what is offered;
-	// this refuses what turns up anyway.
-	if hasRejectedLabel(fetched.Labels) {
+	// Before the parse: a draft needs no reading to be refused. Spam and trash
+	// too: both enumerations ask Gmail to leave them out, but a message can be
+	// moved between the listing and this read.
+	if refusedUnread(fetched) {
 		return false, nil
 	}
 	msg, err := parseTimed(ctx, fetched.RFC822, owner)
 	if err != nil {
 		return false, nil //nolint:nilerr // a single unparseable message is a skip, not a fatal pull error (mirrors the IMAP connector)
+	}
+	if unsentOwnMail(fetched, msg) {
+		return false, nil
 	}
 	if _, drop := msg.SkipReason(); drop {
 		return false, mailmap.RecordIfBounce(ctx, fetched.RFC822, bounces)
@@ -463,4 +459,12 @@ func (c *Connector) ListContainers(
 	}
 	labels, err := c.api.ListLabels(ctx, access)
 	return labels, false, err
+}
+
+// unsentOwnMail reports whether the owner wrote this message and Gmail has not
+// sent it. The API shows a "Schedule send" message with no label at all, and
+// Gmail files every message the owner sent under SENT. It is captured once
+// Gmail adds SENT, which History reports as a label change.
+func unsentOwnMail(m Message, parsed mailmap.Message) bool {
+	return len(m.Labels) == 0 && parsed.Outbound()
 }
