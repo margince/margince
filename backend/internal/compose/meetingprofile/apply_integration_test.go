@@ -78,8 +78,10 @@ func (m *meeting) read(t *testing.T, entries ...saidBy) {
 	t.Helper()
 	profile := []map[string]any{}
 	for _, entry := range entries {
-		profile = append(profile, map[string]any{"speaker_ref": "contact:" + entry.speaker.String(),
-			"field": entry.field, "value": entry.value, "source_lines": []int{1}, "confidence": 0.8})
+		profile = append(profile, map[string]any{
+			"speaker_ref": "contact:" + entry.speaker.String(),
+			"field":       entry.field, "value": entry.value, "source_lines": []int{1}, "confidence": 0.8,
+		})
 	}
 	raw, err := json.Marshal(profile)
 	if err != nil {
