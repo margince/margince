@@ -11,8 +11,8 @@ import {
 import "./inlinechoice.css";
 
 // The field for a reader who cannot edit it. `placeholder` is written for
-// someone about to press it ("Add legal name"), so it never stands in here:
-// a suggested value does, muted, then `emptyText`, and failing that `field.unset`.
+// someone about to press it ("Add legal name"), so it never stands in here.
+// A suggested value does, muted, then `emptyText`, and failing that `field.unset`.
 function ReadOnlyText({
   value,
   display,

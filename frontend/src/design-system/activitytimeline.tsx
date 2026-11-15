@@ -160,7 +160,7 @@ export function activityTimeline(
       // where a direction sits.
       qualifier:
         callOutcomeLabel(activity, who?.t) ??
-        meetingInvitationLabel(activity, who?.t),
+        meetingInvitationLabel(activity, who?.locale),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated
       // subjectless rows together.
