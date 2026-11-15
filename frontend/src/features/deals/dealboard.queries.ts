@@ -4,12 +4,13 @@
 import {
   type QueryClient,
   type QueryKey,
+  queryOptions,
   type UseQueryResult,
   useQueries,
   useQueryClient,
 } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
-import { CLOSE_DAY_DIAL } from "../../lib/dealranges";
+import { CLOSE_DAY_DIAL, type DayRange } from "../../lib/dealranges";
 import {
   type DealFilters,
   type DealListPage,
@@ -133,6 +134,39 @@ function stageColumnRead(
   };
 }
 
+function stageColumnKey(
+  f: DealFilters,
+  closeDay: DayRange | undefined,
+  stageId: string,
+) {
+  return ["deals", "stage-column", f, closeDay, stageId] as const;
+}
+
+/**
+ * One stage column's cache entry and read. The board mounts it per stage, and a
+ * navigation prefetch warms the first column with the same key and walk.
+ */
+export function stageColumnOptions(
+  f: DealFilters,
+  closeDay: DayRange | undefined,
+  stageId: string,
+) {
+  return queryOptions({
+    queryKey: stageColumnKey(f, closeDay, stageId),
+    queryFn: ({ client, queryKey, signal }) =>
+      readStageColumn(
+        client,
+        queryKey,
+        {
+          ...dealsQueryParams({ ...f, closeDay }),
+          limit: STAGE_COLUMN_LIMIT,
+          stage_id: stageId,
+        },
+        signal,
+      ),
+  });
+}
+
 // Not one walk over every stage: a later column would head a count over no cards.
 // Not useInfiniteQuery: useQueries takes no infinite query.
 // A column shows, and re-reads, the pages its cache entry holds.
@@ -146,31 +180,10 @@ export function useStageColumns(
   const readStages = f.filters.stage_id
     ? stageIds.filter((stageId) => stageId === f.filters.stage_id)
     : stageIds;
-  const keyOf = (stageId: string) =>
-    ["deals", "stage-column", f, closeDay, stageId] as const;
   const queries = useQueries({
     queries: readStages.map((stageId) => ({
-      queryKey: keyOf(stageId),
+      ...stageColumnOptions(f, closeDay, stageId),
       enabled,
-      queryFn: ({
-        client,
-        queryKey,
-        signal,
-      }: {
-        client: QueryClient;
-        queryKey: QueryKey;
-        signal: AbortSignal;
-      }) =>
-        readStageColumn(
-          client,
-          queryKey,
-          {
-            ...dealsQueryParams({ ...f, closeDay }),
-            limit: STAGE_COLUMN_LIMIT,
-            stage_id: stageId,
-          },
-          signal,
-        ),
     })),
   });
   const columns = new Map<string, StageColumnRead>();
@@ -180,7 +193,9 @@ export function useStageColumns(
     columns.set(
       stageId,
       stageColumnRead(query, () =>
-        askForMore(client, keyOf(stageId), () => query.refetch()),
+        askForMore(client, stageColumnKey(f, closeDay, stageId), () =>
+          query.refetch(),
+        ),
       ),
     );
   });
