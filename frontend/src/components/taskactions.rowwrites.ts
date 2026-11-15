@@ -119,7 +119,12 @@ export async function writeMeetingOutcome(
   );
 }
 
-export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
+// holdsRefresh keeps a successful write from refreshing at once, for a caller
+// that asks something more first and refreshes when that is answered.
+export function useMeetingOutcome(
+  invalidateKeys: readonly QueryKey[],
+  holdsRefresh?: (input: MeetingOutcomeWrite) => boolean,
+) {
   const t = useT();
   const queryClient = useQueryClient();
   const reread = (id: string) => {
@@ -132,7 +137,9 @@ export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   };
   return useMutation({
     mutationFn: (input: MeetingOutcomeWrite) => writeMeetingOutcome(input, t),
-    onSuccess: (_data, input) => reread(input.id),
+    onSuccess: (_data, input) => {
+      if (!holdsRefresh?.(input)) reread(input.id);
+    },
     // A retry must carry the version the meeting holds now, not the one refused.
     onError: (error, input) => {
       if (isVersionSkewOf(error)) reread(input.id);
