@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -24,12 +25,21 @@ func TestTheProjectListRefusesACompanyFilterToARoleWithoutTheCompanyGrant(t *tes
 	company := ids.New[ids.CompanyKind]()
 	in := ListProjectsInput{CompanyID: &company, IncludeArchived: true}
 
-	clauses, err := filterProjects(map[string]principal.ObjectGrant{"project": {Read: true}, "company": {Read: true}}, in)
+	clauses, err := filterProjects(map[string]principal.ObjectGrant{
+		"project": {Read: true}, "company": {Read: true}, "relationship": {Read: true},
+	}, in)
 	if err != nil {
-		t.Fatalf("narrowing by company_id with the company grant: %v", err)
+		t.Fatalf("narrowing by company_id with the company and relationship grants: %v", err)
 	}
-	if !slices.ContainsFunc(clauses, func(c string) bool { return strings.Contains(c, "c.company_id = $1") }) {
+	if !slices.ContainsFunc(clauses, func(c string) bool { return strings.Contains(c, "AND c.company_id = $") }) {
 		t.Errorf("clauses = %q, want the company narrowing", clauses)
+	}
+
+	// A match discloses the project-company pair, which relationship.read
+	// governs.
+	_, err = filterProjects(map[string]principal.ObjectGrant{"project": {Read: true}, "company": {Read: true}}, in)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("narrowing by company_id without the relationship grant → %v, want permission denied", err)
 	}
 
 	_, err = filterProjects(map[string]principal.ObjectGrant{"project": {Read: true}}, in)
