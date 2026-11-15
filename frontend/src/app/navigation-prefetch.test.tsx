@@ -28,7 +28,7 @@ import { pipelinesOptions } from "../lib/pipelines.queries";
 import { sessionOptions } from "../lib/session";
 import { meFixture } from "../testing/mefixture";
 import { renderWith } from "../testing/shellharness";
-import { navigationPrefetch } from "./navigation-prefetch";
+import { HANDOFF_MS, navigationPrefetch } from "./navigation-prefetch";
 import { createQueryClient } from "./queryclient";
 import { WorkspaceRail } from "./shell";
 
@@ -92,6 +92,44 @@ function contactsServer() {
   );
   return {
     asked,
+    answerAll: () => {
+      for (const answer of waiting.splice(0)) answer();
+    },
+  };
+}
+
+// Holds the pipeline catalog and every column read until the case answers.
+function dealsServer() {
+  const catalog: Request[] = [];
+  const columns: Request[] = [];
+  const waiting: Array<() => void> = [];
+  const held = <T,>(body: T) =>
+    new Promise<Response>((resolve) =>
+      waiting.push(() => resolve(Response.json(body))),
+    );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      if (url.pathname.endsWith("/pipelines")) {
+        catalog.push(request);
+        return held({
+          data: [
+            { id: "pl", name: "Sales", is_default: true, position: 0, stages },
+          ],
+        });
+      }
+      if (url.pathname.endsWith("/deals")) {
+        columns.push(request);
+        return held({ data: [], page: { has_more: false } });
+      }
+      return Response.json({ data: [], page: { has_more: false } });
+    }),
+  );
+  return {
+    catalog,
+    columns,
     answerAll: () => {
       for (const answer of waiting.splice(0)) answer();
     },
@@ -229,6 +267,27 @@ describe("navigation intent on the rail's Contacts link", () => {
     await waitFor(() => expect(server.asked).toHaveLength(2));
   });
 
+  it("clears a warmed list a screen shows the moment the workspace changes under the same user", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("contacts");
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    server.answerAll();
+    renderWith(client, <ContactsScreen />);
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+
+    act(() => {
+      client.setQueryData(sessionOptions.queryKey, {
+        ...READER,
+        workspace_name: "Another Workspace",
+      });
+    });
+
+    // The new principal's read is still held, so the old rows left on their own.
+    await waitFor(() => expect(screen.queryByText("Anna Weber")).toBeNull());
+    await waitFor(() => expect(server.asked).toHaveLength(2));
+  });
+
   it("abandons a warm read still in flight when the principal changes", async () => {
     const server = contactsServer();
     const client = signedIn();
@@ -283,6 +342,40 @@ describe("navigation intent toward Deals", () => {
       new URL(url, "https://test.local").searchParams.get("stage_id"),
     );
     expect(stagesRead.filter((stage) => stage === "s1")).toHaveLength(1);
+  });
+
+  it("abandons a pending catalog read on a principal change and starts no column", async () => {
+    const server = dealsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("deals");
+    await waitFor(() => expect(server.catalog).toHaveLength(1));
+
+    client.setQueryData(sessionOptions.queryKey, OTHER_READER);
+    await waitFor(() => expect(server.catalog[0]?.signal.aborted).toBe(true));
+    server.answerAll();
+
+    await act(() => Promise.resolve());
+    expect(server.columns).toHaveLength(0);
+    expect(client.getQueryState(pipelinesOptions.queryKey)).toBeUndefined();
+  });
+
+  it("lets a followed link's catalog and column reads go within one handoff window", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const server = dealsServer();
+    const client = signedIn();
+    const prefetch = navigationPrefetch(client);
+    prefetch.intend("deals");
+    await vi.waitFor(() => expect(server.catalog).toHaveLength(1));
+    prefetch.follow("deals");
+
+    await vi.advanceTimersByTimeAsync(HANDOFF_MS - 1_000);
+    server.answerAll();
+    await vi.waitFor(() => expect(server.columns).toHaveLength(1));
+    expect(server.columns[0]?.signal.aborted).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(server.columns[0]?.signal.aborted).toBe(true);
   });
 
   it("chooses the declared default pipeline and its earliest stage", () => {

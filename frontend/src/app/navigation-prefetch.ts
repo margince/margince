@@ -43,6 +43,8 @@ type Lease = {
   target: PrefetchTarget;
   release: () => void;
   handedOff: boolean;
+  // When a followed lease lets go, at the latest: one deadline per click.
+  deadline?: number;
   timer?: ReturnType<typeof setTimeout>;
 };
 
@@ -121,11 +123,15 @@ export class NavigationPrefetch {
   }
 
   /** The link to `target` was followed in this tab: its screen will adopt the read. */
-  follow(target: PrefetchTarget): void {
+  follow(target: PrefetchTarget, deadline = Date.now() + HANDOFF_MS): void {
     const lease = this.#lease;
     if (lease?.target !== target || lease.handedOff) return;
     lease.handedOff = true;
-    lease.timer = setTimeout(() => this.#releaseLease(lease), HANDOFF_MS);
+    lease.deadline = deadline;
+    lease.timer = setTimeout(
+      () => this.#releaseLease(lease),
+      Math.max(0, deadline - Date.now()),
+    );
   }
 
   // A session snapshot that is answered, current and not being re-read. A
@@ -157,7 +163,8 @@ export class NavigationPrefetch {
         if (generation !== this.#generation) return;
         this.#warmColumn(pipelines);
         // The column inherits a click that landed while the catalog was in flight.
-        if (catalogLease?.handedOff) this.follow("deals");
+        if (catalogLease?.deadline !== undefined)
+          this.follow("deals", catalogLease.deadline);
       },
     );
   }
@@ -224,8 +231,10 @@ export class NavigationPrefetch {
     for (const query of this.#owned) {
       if (cache.get(query.queryHash) !== query) continue;
       if (query.getObserversCount() === 0) cache.remove(query);
+      // A reset clears the old answer before the screen reads again; an
+      // invalidation would keep showing it while the new read runs.
       else
-        void this.#client.invalidateQueries({
+        void this.#client.resetQueries({
           queryKey: query.queryKey,
           exact: true,
         });
