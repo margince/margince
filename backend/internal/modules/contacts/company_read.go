@@ -88,13 +88,12 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 	if err := fillContactCounts(ctx, tx, idx, []ids.UUID{id.UUID}); err != nil {
 		return crmcontracts.Company{}, fmt.Errorf("read company counts: %w", err)
 	}
-	// STATE-4: open_deal_count and the computed fields share one gate, the
-	// same deal plus computed_field pair attachCompanyCounts applies to a list.
+	// STATE-4: open_deal_count and the computed fields share the list's gate.
 	// The gate is a pure permission check (no query). A caller without both
 	// grants never pays for the rollup read, and both fields stay nil, so
 	// omitempty drops their keys on marshal (T1). With both grants, one rollup
 	// statement feeds both fields.
-	if auth.ReadGranted(ctx, "computed_field") && auth.ReadGranted(ctx, "deal") {
+	if pipelineCountsVisible(ctx) {
 		open, err := openPipelineRollup(ctx, tx, id, asOf)
 		if err != nil {
 			return crmcontracts.Company{}, fmt.Errorf("read open pipeline rollup: %w", err)

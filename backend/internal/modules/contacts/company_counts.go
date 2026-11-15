@@ -43,9 +43,7 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	}
 	idx := make(map[openapi_types.UUID]*crmcontracts.Company, len(companies))
 	companyIDs := make([]ids.UUID, len(companies))
-	// The object grant comes first, as it does on the deal list itself: a role
-	// that may not read deals gets no deal count. Absent, not zero.
-	dealsVisible := auth.ReadGranted(ctx, "deal") && auth.ReadGranted(ctx, "computed_field")
+	dealsVisible := pipelineCountsVisible(ctx)
 	for i := range companies {
 		idx[companies[i].Id] = &companies[i]
 		companyIDs[i] = ids.UUID(companies[i].Id)
@@ -63,13 +61,26 @@ func attachCompanyCounts(ctx context.Context, tx pgx.Tx, companies []crmcontract
 	return fillOpenDealCounts(ctx, tx, idx, companyIDs, asOf)
 }
 
+// contactCountVisible is the one gate for contact_count and its sort. The
+// count needs relationship.read beside contact.read, because it is a fact
+// about employment edges. Without both it stays absent, so the count never
+// reveals edges the role is refused elsewhere.
+func contactCountVisible(ctx context.Context) bool {
+	return auth.ReadGranted(ctx, "contact") && auth.ReadGranted(ctx, "relationship")
+}
+
+// pipelineCountsVisible is the one gate for open_deal_count, the computed
+// fields and the open-deal sort (STATE-4). A role without deal.read or
+// computed_field.read sees none of them. Absent, not zero.
+func pipelineCountsVisible(ctx context.Context) bool {
+	return auth.ReadGranted(ctx, "deal") && auth.ReadGranted(ctx, "computed_field")
+}
+
 // fillContactCounts counts distinct current employees to live contacts the
-// caller may see. It owns its grant check, so the list and the single read
-// gate alike. The count needs relationship.read beside contact.read, because
-// it is a fact about employment edges. Without both grants it stays absent,
-// so the count never reveals edges the role is refused elsewhere.
+// caller may see. It checks contactCountVisible itself and sets the zero, so
+// the list and the single read gate the count alike.
 func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Company, companyIDs []ids.UUID) error {
-	if len(companyIDs) == 0 || !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "relationship") {
+	if len(companyIDs) == 0 || !contactCountVisible(ctx) {
 		return nil
 	}
 	for _, company := range idx {
