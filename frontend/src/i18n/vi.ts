@@ -2050,8 +2050,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
   "aiAdmin.decisionSkip.uncertified":
     "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
-  "aiAdmin.decisionSkip.local_only":
-    "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -15258,8 +15256,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Dữ liệu đầu vào quá lớn với mô hình quyết định",
   "aicalls.reason.decision_uncertified":
     "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
-  "aicalls.reason.decision_local_only":
-    "Tác vụ chỉ chạy cục bộ nhưng mô hình quyết định thì không",
   "aicalls.reason.timeout": "Lần thử trước đã hết thời gian",
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Lượt gọi gần đây",
@@ -20194,6 +20190,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Đã đánh dấu hoàn thành",
   "worklist.verb.promiseSettleFailed":
     "Không thể đánh dấu cam kết là đã hoàn thành. Thử lại.",
+  "worklist.verb.meetingSkipNextStep": "Bỏ qua bước tiếp theo",
+  "worklist.verb.meetingNextStep": "Bước tiếp theo là gì?",
   "worklist.verb.meetingHowDidItGo": "Cuộc họp thế nào?",
   "worklist.verb.meetingAddNotes": "Thêm ghi chú",
   "worklist.verb.meetingUpdateTitle": "Cuộc họp",
@@ -20201,11 +20199,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingWhatHappened": "Điều đã diễn ra",
   "worklist.verb.meetingBodyHint":
     "Nội dung trao đổi và bước tiếp theo. Có thể sửa ghi chú từ lịch tại đây.",
-  "meeting.nextStep.title": "Bước tiếp theo là gì?",
-  "meeting.nextStep.add": "Thêm việc cần làm",
-  "meeting.nextStep.skip": "Bỏ qua",
-  "meeting.nextStep.subject": "Bước tiếp theo",
-  "meeting.nextStep.due": "Hạn",
   "worklist.verb.meetingHeld": "Đã diễn ra",
   "worklist.verb.meetingNoShow": "Vắng mặt",
   "worklist.verb.meetingCanceled": "Không diễn ra",
@@ -20650,7 +20643,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Liên kết công ty",
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
   "lead.company.addedOnQualify":
-    "Chưa có hồ sơ công ty. Bạn có thể tạo hồ sơ khi xác nhận đủ điều kiện.",
+    "Chưa liên kết công ty. Xác nhận lead đủ điều kiện sẽ liên kết hoặc tạo hồ sơ công ty.",
   "lead.company.linkOnQualify":
     "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
   "lead.company.matchedByDomain": "Cùng tên miền trang web",

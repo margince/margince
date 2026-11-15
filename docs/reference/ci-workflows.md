@@ -247,9 +247,9 @@ Notes on the jobs:
   `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare
   against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the
   runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
-- Every step that needs the network ends before the clock moves, because 200 days ends the TLS
-  certificates those steps check. The clock is set back even on failure, so the runner does not
-  return to the pool 200 days later.
+- Downloads finish before the clock moves. One shell moves it, runs the suites and puts it back.
+  After 45 minutes it stops the suites; the clock goes back on failure too.
+  If that fails, the saved real date stays for the last step to try again.
 - `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
   weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
 - The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is

@@ -5,7 +5,7 @@
 
 package compose
 
-// An in-contract offer summary always reaches the company header.
+// The form keeps a full offer summary in its own profile field.
 
 import (
 	"context"
@@ -37,9 +37,7 @@ func anchorDescription(t *testing.T, e *integration.Env) string {
 	return *description
 }
 
-// An in-contract summary fills the header whole: the header column admits the
-// document limit, so no in-contract summary is cut or dropped.
-func TestALongOfferSummaryStillFillsTheCompanyHeader(t *testing.T) {
+func TestALongOfferSummaryStaysWholeInTheCompanyProfile(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 	summary := strings.TrimSpace(strings.Repeat("We build warehouse robotics for mid-market logistics. ", 29))
@@ -51,8 +49,14 @@ func TestALongOfferSummaryStillFillsTheCompanyHeader(t *testing.T) {
 		t.Fatalf("saving the company profile: %v", err)
 	}
 
-	if header := anchorDescription(t, e); header != summary {
-		t.Errorf("the header holds %d of the summary's %d characters; an in-contract summary must reach it whole",
-			len([]rune(header)), len([]rune(summary)))
+	if header := anchorDescription(t, e); header != "" {
+		t.Errorf("offer form duplicated the summary into the description: %q", header)
+	}
+	profile, err := e.Contacts.GetAnchorCompany(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if profile.Fields["offer_summary"] != summary {
+		t.Errorf("stored summary = %q, want full input", profile.Fields["offer_summary"])
 	}
 }

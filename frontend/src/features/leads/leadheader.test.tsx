@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
@@ -107,10 +108,15 @@ describe("the lead page's head", () => {
     render(<LeadScreen id="l-1" />);
 
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
-    const lines = document.querySelector(".record-split-lines");
+    const lines = document.querySelectorAll<HTMLElement>(
+      ".record-split-lines > span",
+    );
+    expect(lines).toHaveLength(2);
+    expect(lines[0].textContent).toBe("VP Sales");
+    expect(within(lines[1]).getByText("Nordwind Logistik")).toBeTruthy();
     expect(
-      [...(lines?.children ?? [])].map((line) => line.textContent),
-    ).toEqual(["VP Sales", "Nordwind Logistik"]);
+      within(lines[1]).queryByText(en["lead.company.addedOnQualify"]),
+    ).toBeNull();
   });
 
   it("shows the lead marker, the ladder status and who may open it as pills, and nothing else there", async () => {

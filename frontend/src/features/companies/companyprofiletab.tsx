@@ -191,9 +191,8 @@ export function CompanyProfileForm({
   );
 }
 
-// The site read writes its offer summary as the description too. While the two
-// hold the same words, the tab shows the offer row alone with its editor and
-// evidence. Once they differ, both rows show.
+// Matching stored text appears once, with the offer's editor and evidence.
+// A distinct description remains visible beside the offer.
 export function repeatsDescription(
   field: (typeof NARRATIVE_FIELDS)[number],
   fields: readonly { field: string; value: string }[],

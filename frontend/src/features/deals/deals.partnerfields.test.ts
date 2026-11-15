@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { partnerFields } from "../../components/dealpartnerfields";
 import { translate } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { partnerFields } from "./deals.fields";
 
 const t = (key: MessageKey) => translate("en", key);
 

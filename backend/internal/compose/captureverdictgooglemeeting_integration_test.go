@@ -125,6 +125,10 @@ func TestAForgedPersonalVerdictDestroysNoAuthenticatedNotes(t *testing.T) {
 	pastWindow := 31 * 24 * time.Hour
 	agePersonalMail(t, o.e, forged, geminiNotes, pastWindow)
 	agePersonalMail(t, o.e, authentic, geminiNotes, pastWindow)
+	if n := countIn(t, o.e, `SELECT count(*) FROM capture_pending_counterparty
+        WHERE email = $1 AND status = 'pending' AND resolved_at IS NULL`, geminiNotes); n != 1 {
+		t.Fatalf("aging the verdict changed its unanswered successor: %d pending questions", n)
+	}
 
 	if n := sweepPersonal(t, o.e); n != 1 {
 		t.Fatalf("the personal sweep destroyed %d messages, want only the forged one", n)
