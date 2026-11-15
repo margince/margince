@@ -81,8 +81,10 @@ func TestAReplyFromALeadAsksItsOwnerToQualifyThemOnce(t *testing.T) {
 	l.mail(t, owedMail{from: address, to: l.seat, subject: "Re: Our offer", inReplyTo: offer, at: l.at.Add(4 * time.Minute)}, true)
 	store := l.e.Activities.WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(l.e.Pool), slog.Default()))
 	at, held := l.at.Add(-time.Hour), meetingoutcome.Held
-	meeting, _, err := store.LogActivity(l.e.Admin(), activities.LogActivityInput{Kind: "meeting", Subject: new("Demo"), Source: "manual",
-		OccurredAt: &at, Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}}})
+	meeting, _, err := store.LogActivity(l.e.Admin(), activities.LogActivityInput{
+		Kind: "meeting", Subject: new("Demo"), Source: "manual",
+		OccurredAt: &at, Links: []activities.ActivityLinkInput{{EntityType: "lead", EntityID: lead.UUID}},
+	})
 	if err == nil {
 		_, err = store.UpdateActivity(l.e.Admin(), ids.From[ids.ActivityKind](ids.UUID(meeting.Id)), activities.UpdateActivityInput{MeetingStatus: &held})
 	}

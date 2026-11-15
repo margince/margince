@@ -46,8 +46,10 @@ func TestMarkingAMeetingHeldAsksItsLeadToBeQualified(t *testing.T) {
 	writer := principal.WithActor(e.as(), actor)
 
 	at, subject := requestInstant.Add(-time.Hour), "Demo"
-	meeting, _, err := store.LogActivity(writer, LogActivityInput{Kind: "meeting", Subject: &subject, Source: "manual",
-		OccurredAt: &at, Links: []ActivityLinkInput{{EntityType: "lead", EntityID: lead}}})
+	meeting, _, err := store.LogActivity(writer, LogActivityInput{
+		Kind: "meeting", Subject: &subject, Source: "manual",
+		OccurredAt: &at, Links: []ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,8 +64,10 @@ func TestMarkingAMeetingHeldAsksItsLeadToBeQualified(t *testing.T) {
 		t.Errorf("marking the meeting held asked %v, want the lead asked after this meeting", asks.asked)
 	}
 	// A meeting logged already held asks too.
-	logged, _, err := store.LogActivity(writer, LogActivityInput{Kind: "meeting", Subject: &subject, Source: "manual", OccurredAt: &at,
-		MeetingStatus: &held, Links: []ActivityLinkInput{{EntityType: "lead", EntityID: lead}}})
+	logged, _, err := store.LogActivity(writer, LogActivityInput{
+		Kind: "meeting", Subject: &subject, Source: "manual", OccurredAt: &at,
+		MeetingStatus: &held, Links: []ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -82,8 +86,10 @@ func TestTheRepairKeepsOneOpenQualifyTaskPerLead(t *testing.T) {
 	source := provenance.LeadRepliedSource
 	var tasks []ids.UUID
 	for _, subject := range []string{"Review qualification", "Review qualification again", "Review qualification once more"} {
-		task, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{Kind: "task", Subject: &subject, Source: "system",
-			SourceSystem: &source, Links: []ActivityLinkInput{{EntityType: "lead", EntityID: lead}}})
+		task, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{
+			Kind: "task", Subject: &subject, Source: "system",
+			SourceSystem: &source, Links: []ActivityLinkInput{{EntityType: "lead", EntityID: lead}},
+		})
 		if err != nil {
 			t.Fatal(err)
 		}
