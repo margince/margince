@@ -344,7 +344,9 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	// to the last of those while the SQL grouped by a company id, and
 	// open-deals-per-company then named companies its reader cannot open.
 	if len(req.GroupBy) == 0 {
-		req.GroupBy = spec.defaultBy
+		req.GroupBy = slices.DeleteFunc(slices.Clone(spec.defaultBy), func(f string) bool {
+			return requireVocabularyGrants(ctx, spec, []string{f}) != nil
+		})
 	}
 	groupBy := req.GroupBy
 	aggregates := req.Aggregates
