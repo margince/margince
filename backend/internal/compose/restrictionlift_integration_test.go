@@ -13,15 +13,21 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -180,6 +186,48 @@ func TestARestrictionRecordedWhileTheLiftNoticeWaitsStays(t *testing.T) {
 	}
 }
 
+// laneWithAppClockOff rewires the lane so the delivery store reads a Go clock
+// off from the database clock by skew. An API host and its database never
+// share one clock, so the lift may not compare a time from each.
+func laneWithAppClockOff(t *testing.T, l *confirmLaneEnv, skew time.Duration) {
+	t.Helper()
+	inserter, err := jobs.NewInserter(l.e.Pool, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	queue, ok := NewControllerMailQueue(l.e.Pool, inserter, laneFromAddress).(controllerMailQueue)
+	if !ok {
+		t.Fatal("the controller mail queue is not the compose lane")
+	}
+	queue.comms = comms.NewStore(InstallationDB(l.e.Pool), func() time.Time { return clocktest.Now(t).Add(skew) }, queue.activities)
+	l.store = consent.NewStore(InstallationDB(l.e.Pool)).WithConfirmationLane(queue, l.vault, "https://crm.example.test")
+}
+
+// The lift ends the restrictions that stood when the admin asked. It ends none
+// recorded after, whichever way the API host's clock is off.
+func TestALiftJudgesWhichRestrictionsStoodOnTheDatabaseClock(t *testing.T) {
+	for name, skew := range map[string]time.Duration{"app clock behind": -time.Minute, "app clock ahead": time.Minute} {
+		t.Run(name, func(t *testing.T) {
+			l := setupConfirmLane(t)
+			laneWithAppClockOff(t, l, skew)
+			stop := restrictLaneContact(t, l)
+			delivery := askToLift(t, l, stop)
+			newer := restrictLaneContact(t, l)
+			relay := testsmtp.Start(t, false)
+			host, port := relay.Address(t)
+			if outcome := dispatchNotice(t, l, delivery, mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}); outcome != comms.OutcomeSent {
+				t.Fatalf("the notice was not sent: %s", outcome)
+			}
+			if stopIsLive(t, l, stop) {
+				t.Fatal("the restriction the admin asked to lift stayed after its notice was sent")
+			}
+			if !stopIsLive(t, l, newer) {
+				t.Fatal("a restriction recorded after the lift was asked for ended with it")
+			}
+		})
+	}
+}
+
 func TestARestrictionStaysWhileItsLiftNoticeFailsAndSaysWhy(t *testing.T) {
 	l := setupConfirmLane(t)
 	stop := restrictLaneContact(t, l)
@@ -276,5 +324,150 @@ func TestASecondLiftIsRefusedWhileTheNoticeWaits(t *testing.T) {
 	}
 	if notice := liftNoticeOf(t, l, stop, false); notice == nil {
 		t.Fatal("the stops panel lost the waiting notice")
+	}
+}
+
+// pausedAtStopLock is a pool whose first stop-lock statement waits for release:
+// its transaction has begun, so now() is fixed, but it holds no lock yet.
+func pausedAtStopLock(ctx context.Context, t *testing.T, l *confirmLaneEnv) (*pgxpool.Pool, <-chan struct{}, func()) {
+	t.Helper()
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	config := l.e.Pool.Config()
+	config.ConnConfig.Tracer = &graphMarkBarrier{entered: entered, release: release, marker: "pg_advisory_xact_lock(hashtextextended"}
+	pool, err := testdb.OwnPoolFromConfig(ctx, config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	unblock := func() { once.Do(func() { close(release) }) }
+	t.Cleanup(unblock)
+	return pool, entered, unblock
+}
+
+func awaitStopLock(t *testing.T, entered <-chan struct{}) {
+	t.Helper()
+	select {
+	case <-entered:
+	case <-time.After(10 * time.Second):
+		t.Fatal("the paused writer never reached the stop lock")
+	}
+}
+
+// awaitWriter fails the test when a released writer does not finish.
+func awaitWriter(t *testing.T, done <-chan error, what string) {
+	t.Helper()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("%s: %v", what, err)
+		}
+	case <-time.After(20 * time.Second):
+		t.Fatalf("%s did not finish after the stop lock was released", what)
+	}
+}
+
+func sendLiftNotice(t *testing.T, l *confirmLaneEnv) {
+	t.Helper()
+	var delivery ids.UUID
+	if err := l.e.Pool.QueryRow(context.Background(), `SELECT id FROM comms_outbound
+		 WHERE template_key = 'restriction_lift' AND status = 'pending'`).Scan(&delivery); err != nil {
+		t.Fatalf("the lift queued no notice: %v", err)
+	}
+	relay := testsmtp.Start(t, false)
+	host, port := relay.Address(t)
+	if outcome := dispatchNotice(t, l, delivery, mailer.SMTP{Host: host, Port: port, FromAddress: "privacy@example.test"}); outcome != comms.OutcomeSent {
+		t.Fatalf("the notice was not sent: %s", outcome)
+	}
+}
+
+func newestRestriction(t *testing.T, l *confirmLaneEnv) ids.UUID {
+	t.Helper()
+	var stop ids.UUID
+	if err := l.e.Pool.QueryRow(context.Background(), `SELECT id FROM communication_suppression
+		 WHERE contact_id = $1 AND kind = 'processing_restriction' ORDER BY recorded_at DESC, id DESC LIMIT 1`, l.contact).Scan(&stop); err != nil {
+		t.Fatal(err)
+	}
+	return stop
+}
+
+// A restriction can begin its transaction before the lift and take the stop
+// lock after it. It is a newer objection, so the lift's notice does not end it.
+func TestARestrictionThatTookTheStopLockAfterTheLiftStays(t *testing.T) {
+	l := setupConfirmLane(t)
+	ctx, cancel := context.WithTimeout(l.e.Admin(), 30*time.Second)
+	defer cancel()
+	stop := restrictLaneContact(t, l)
+	pool, entered, release := pausedAtStopLock(ctx, t, l)
+	recorded := make(chan error, 1)
+	go func() {
+		recorded <- consent.NewStore(InstallationDB(pool)).Suppress(ctx, consent.SuppressInput{
+			ContactID: ids.From[ids.ContactKind](l.contact), Kind: "processing_restriction",
+		})
+	}()
+	awaitStopLock(t, entered)
+	askToLift(t, l, stop)
+	release()
+	awaitWriter(t, recorded, "recording the newer restriction")
+	newer := newestRestriction(t, l)
+	sendLiftNotice(t, l)
+	if stopIsLive(t, l, stop) {
+		t.Fatal("the restriction the admin asked to lift stayed")
+	}
+	if !stopIsLive(t, l, newer) {
+		t.Fatal("a restriction that took the stop lock after the lift ended with it")
+	}
+}
+
+// A lift can begin its transaction before a restriction and take the stop lock
+// after it. The restriction stood when the lift was queued, so the notice ends it.
+func TestALiftThatTookTheStopLockAfterARestrictionEndsIt(t *testing.T) {
+	l := setupConfirmLane(t)
+	ctx, cancel := context.WithTimeout(l.e.Admin(), 30*time.Second)
+	defer cancel()
+	stop := restrictLaneContact(t, l)
+	pool, entered, release := pausedAtStopLock(ctx, t, l)
+	inserter, err := jobs.NewInserter(pool, slog.New(slog.DiscardHandler))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lifter := consent.NewStore(InstallationDB(pool)).
+		WithConfirmationLane(NewControllerMailQueue(pool, inserter, laneFromAddress), l.vault, "https://crm.example.test")
+	asked := make(chan error, 1)
+	go func() {
+		asked <- lifter.RequestRestrictionLift(ctx, consent.LiftInput{
+			ContactID: ids.From[ids.ContactKind](l.contact), SuppressionID: stop, Reason: "the dispute is settled",
+		})
+	}()
+	awaitStopLock(t, entered)
+	standing := restrictLaneContact(t, l)
+	release()
+	awaitWriter(t, asked, "asking to lift")
+	sendLiftNotice(t, l)
+	if n := liveRestrictions(t, l); n != 0 {
+		t.Fatalf("%d restrictions stayed; %s stood when the lift took the stop lock", n, standing)
+	}
+}
+
+// A merge after the lift request carries the restriction onto the survivor.
+// The copy stood when its original did, so the lift notice ends it too.
+func TestALiftNoticeEndsTheRestrictionAMergeCarriedOntoTheSurvivor(t *testing.T) {
+	l := setupConfirmLane(t)
+	stop := restrictLaneContact(t, l)
+	askToLift(t, l, stop)
+	survivor := l.e.SeedContact(t, "Confirm Survivor", &l.e.Rep1)
+	merger := withContactMergeCarriers(InstallationDB(l.e.Pool), contacts.NewStore(InstallationDB(l.e.Pool)))
+	if _, err := merger.MergeContact(l.e.Admin(), ids.From[ids.ContactKind](l.contact), ids.From[ids.ContactKind](survivor), nil); err != nil {
+		t.Fatalf("merging the restricted contact: %v", err)
+	}
+	carried := l.e.WsCount(t, `SELECT count(*) FROM communication_suppression
+		 WHERE contact_id = '`+survivor.String()+`' AND kind = 'processing_restriction' AND revoked_at IS NULL`)
+	if carried != 1 {
+		t.Fatalf("the merge carried %d restrictions onto the survivor, want 1", carried)
+	}
+	sendLiftNotice(t, l)
+	if n := l.e.WsCount(t, `SELECT count(*) FROM communication_suppression
+		 WHERE contact_id IN ('`+survivor.String()+`', '`+l.contact.String()+`') AND kind = 'processing_restriction' AND revoked_at IS NULL`); n != 0 {
+		t.Fatalf("%d restrictions stayed after the lift notice was sent across the merge", n)
 	}
 }
