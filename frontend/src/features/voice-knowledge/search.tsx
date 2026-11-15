@@ -16,6 +16,7 @@ import {
 import { RecordCardList } from "../../design-system/recordcard";
 import { useT } from "../../i18n";
 import { isExtensionEntityKind } from "../../lib/entity";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { useRecordKindDirectory } from "../../lib/recordkinds";
 import { navigate, useRoute } from "../../lib/router";
@@ -188,8 +189,10 @@ function GroupedResults({
   onNarrow: (type: SearchHitType) => void;
 }>) {
   const t = useT();
+  const readerScope = useHealthScope();
   const query = useQuery({
-    queryKey: ["search", q, ALL_TYPES],
+    queryKey: ["search", q, ALL_TYPES, readerScope ?? ""],
+    enabled: readerScope !== undefined,
     queryFn: async () => {
       return unwrap(
         await api.GET("/search", {
@@ -235,8 +238,10 @@ function NarrowedResults({
   onOpen: OpenHit;
 }>) {
   const t = useT();
+  const readerScope = useHealthScope();
   const query = useInfiniteQuery({
-    queryKey: ["search", q, type],
+    queryKey: ["search", q, type, readerScope ?? ""],
+    enabled: readerScope !== undefined,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       return unwrap(
