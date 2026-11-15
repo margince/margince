@@ -28,7 +28,7 @@ import (
 
 const distributors = "They sell through regional distributors."
 
-// meeting is one transcript and the outside people in it.
+// meeting is one transcript and the outside contacts in it.
 type meeting struct {
 	e          *integration.Env
 	transcript ids.ActivityID
@@ -138,11 +138,11 @@ func TestEachSpeakersValueLandsOnTheirOwnCompany(t *testing.T) {
 		t.Errorf("the speaker's company reads %q, want what they said", got.Value)
 	}
 	if got, ok := m.field(t, nordkraft, "sales_motion"); ok {
-		t.Errorf("the other company got %q, which its people never said", got.Value)
+		t.Errorf("the other company got %q, which nobody of theirs said", got.Value)
 	}
 }
 
-func TestAMeetingNeverWritesOntoOurOwnCompanyOrOverAPerson(t *testing.T) {
+func TestAMeetingNeverWritesOntoOurOwnCompanyOrOverAUser(t *testing.T) {
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	dana := m.employee(t, company, "Dana Brandt")
@@ -152,7 +152,7 @@ func TestAMeetingNeverWritesOntoOurOwnCompanyOrOverAPerson(t *testing.T) {
 	}
 	m.read(t, saidBy{dana, "icp", "Insurers"})
 	if got, _ := m.field(t, company, "icp"); got.Value != "Mid-sized banks" {
-		t.Errorf("icp reads %q; a person's value stays", got.Value)
+		t.Errorf("icp reads %q; a user's value stays", got.Value)
 	}
 	if _, err := integration.OwnerConn(t).Exec(context.Background(), `UPDATE company SET is_anchor = true WHERE id = $1`, company); err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func TestAMeetingValueGoesWhenTheMeetingNoLongerStatesItOrIsDeleted(t *testing.T
 	}
 }
 
-func TestAPersonsCorrectionStopsCitingTheMeeting(t *testing.T) {
+func TestAUsersCorrectionStopsCitingTheMeeting(t *testing.T) {
 	m := newMeeting(t, "workspace")
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "icp", "Banks"})
@@ -199,7 +199,7 @@ func TestAPersonsCorrectionStopsCitingTheMeeting(t *testing.T) {
 		t.Fatal(err)
 	}
 	if got.Source != crmcontracts.CompanyProfileFieldSourceHuman || got.SourceActivityId != nil || got.SourceOccurredAt != nil {
-		t.Errorf("the corrected field reads source %q citing %v on %v, want a person's value citing no meeting",
+		t.Errorf("the corrected field reads source %q citing %v on %v, want a user's value citing no meeting",
 			got.Source, got.SourceActivityId, got.SourceOccurredAt)
 	}
 }

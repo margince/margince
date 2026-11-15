@@ -37,7 +37,7 @@ const Key = "company_profile"
 const MaxValue = 400
 
 // Fields are the profile fields a meeting may fill: how the company sells,
-// as its own people describe it. What it does and its legal identity come
+// as its own staff describe it. What it does and its legal identity come
 // from its website.
 var Fields = []string{
 	string(crmcontracts.CompanyProfileFieldFieldIcp),

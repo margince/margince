@@ -31,7 +31,7 @@ type MeetingProfileField struct {
 }
 
 // ApplyMeetingProfileTx writes the fields one transcript states. It removes
-// what an earlier reading of it wrote and this one no longer states. A person's
+// what an earlier reading of it wrote and this one no longer states. A user's
 // or agent's value and our own company are never written. Only a transcript the
 // whole workspace may read fills a field, since the company's readers see it.
 func ApplyMeetingProfileTx(
