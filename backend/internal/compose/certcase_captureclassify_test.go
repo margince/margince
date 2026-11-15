@@ -165,7 +165,7 @@ func TestClassifyCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			// model takes, and the record has to be able to say so.
 			name: "a label for a message nobody asked about",
 			answer: func(requested []string) string {
-				return classifyReplyText(classifyVerdictFor(ids.NewV7().String(), "noise"))
+				return classifyReplyText(classifyVerdictFor(ids.NewV7().String(), "other"))
 			},
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "was not requested",
@@ -174,7 +174,7 @@ func TestClassifyCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			name: "one message answered twice and the other not at all",
 			answer: func(requested []string) string {
 				return classifyReplyText(
-					classifyVerdictFor(requested[0], "commitment"), classifyVerdictFor(requested[0], "noise"))
+					classifyVerdictFor(requested[0], "commitment"), classifyVerdictFor(requested[0], "other"))
 			},
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "appears twice",
@@ -193,7 +193,7 @@ func TestClassifyCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			name:       "a label outside the closed vocabulary",
 			answer:     classifyAnswer("spam", "meeting"),
 			wantResult: aitasks.OutcomeInvalid,
-			wantDetail: "is not commitment|meeting|noise",
+			wantDetail: "is not commitment|meeting|other",
 		},
 		{
 			name:       "a reply that is not the required JSON",
@@ -205,9 +205,9 @@ func TestClassifyCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			// Well formed and wrong is a measurement of the model, not a defect in
 			// the reply — the opposite fix from every case above it.
 			name:       "a well-formed answer the scenario disagrees with",
-			answer:     classifyAnswer("commitment", "noise"),
+			answer:     classifyAnswer("commitment", "other"),
 			wantResult: aitasks.OutcomeWrongAnswer,
-			wantDetail: `message 2 is labeled "noise" where the scenario expects "meeting"`,
+			wantDetail: `message 2 is labeled "other" where the scenario expects "meeting"`,
 		},
 	}
 	for _, tc := range cases {
@@ -227,7 +227,7 @@ func TestClassifyCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 // one message right and two wrong is not the near miss the first line alone
 // would read as.
 func TestClassifyCaseNamesEveryMessageItDisagreesWith(t *testing.T) {
-	outcome, _ := runClassifyCase(t, []string{"commitment", "meeting"}, classifyAnswer("noise", "noise"))
+	outcome, _ := runClassifyCase(t, []string{"commitment", "meeting"}, classifyAnswer("other", "other"))
 
 	if outcome.Result != aitasks.OutcomeWrongAnswer {
 		t.Fatalf("Result = %q (%s), want a wrong answer", outcome.Result, outcome.Detail)
@@ -330,7 +330,7 @@ func TestClassifyCaseRefusesAnUnreachableExpectation(t *testing.T) {
 		{
 			name:       "a label outside the closed vocabulary",
 			labels:     []string{"commitment", "spam"},
-			wantReason: "commitment|meeting|noise",
+			wantReason: "commitment|meeting|other",
 		},
 		{
 			name:       "fewer labels than the batch carries messages",
@@ -339,7 +339,7 @@ func TestClassifyCaseRefusesAnUnreachableExpectation(t *testing.T) {
 		},
 		{
 			name:       "more labels than the batch carries messages",
-			labels:     []string{"commitment", "meeting", "noise"},
+			labels:     []string{"commitment", "meeting", "other"},
 			wantReason: "one label per message",
 		},
 	}
@@ -414,7 +414,7 @@ func TestClassifyCaseRefusesABatchProductionCouldNeverRead(t *testing.T) {
 // A scenario shaped like something else asserts nothing about the reply, and a
 // case that ran it anyway would report a number nobody wrote a claim for.
 func TestClassifyCaseRefusesAnExpectationItCannotRead(t *testing.T) {
-	for _, expected := range []json.RawMessage{nil, json.RawMessage(`{"labels":["noise"]}`), json.RawMessage(`7`)} {
+	for _, expected := range []json.RawMessage{nil, json.RawMessage(`{"labels":["other"]}`), json.RawMessage(`7`)} {
 		_, err := captureClassifyCases{}.Prepare(classifyFixtureJSON(t), expected)
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)
@@ -428,7 +428,7 @@ func TestClassifyCaseRefusesAnExpectationItCannotRead(t *testing.T) {
 // A fixture shaped like something else is not a batch, and running it would
 // certify a prompt built from whatever survived the decode.
 func TestClassifyCaseRefusesAFixtureItCannotRead(t *testing.T) {
-	_, err := captureClassifyCases{}.Prepare(json.RawMessage(`{"subject":"quote please"}`), classifyExpectation(t, "noise"))
+	_, err := captureClassifyCases{}.Prepare(json.RawMessage(`{"subject":"quote please"}`), classifyExpectation(t, "other"))
 	if err == nil {
 		t.Fatal("a fixture that is not a list of messages prepared")
 	}
@@ -467,8 +467,8 @@ func TestClassifyCaseGradesTheReplyWhenTheScenarioNamesOne(t *testing.T) {
 	}{
 		{"a ruled-out verdict", `[{"not_reply":"negative"}]`, "negative", aitasks.OutcomeWrongAnswer},
 		{"any other verdict with the label open", `[{"not_reply":"negative"}]`, "neutral", aitasks.OutcomeAccepted},
-		{"the verdict wanted", `[{"label":"noise","reply":"neutral"}]`, "neutral", aitasks.OutcomeAccepted},
-		{"another verdict than the one wanted", `[{"label":"noise","reply":"negative"}]`, "neutral", aitasks.OutcomeWrongAnswer},
+		{"the verdict wanted", `[{"label":"other","reply":"neutral"}]`, "neutral", aitasks.OutcomeAccepted},
+		{"another verdict than the one wanted", `[{"label":"other","reply":"negative"}]`, "neutral", aitasks.OutcomeWrongAnswer},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -477,7 +477,7 @@ func TestClassifyCaseGradesTheReplyWhenTheScenarioNamesOne(t *testing.T) {
 				t.Fatalf("preparing the case: %v", err)
 			}
 			answer := func(requested []string) string {
-				return classifyReplyText(fmt.Sprintf(`{"id":%q,"label":"noise","confidence":0.9,"reply":%q}`, requested[0], tc.reply))
+				return classifyReplyText(fmt.Sprintf(`{"id":%q,"label":"other","confidence":0.9,"reply":%q}`, requested[0], tc.reply))
 			}
 			trace, err := prepared.Run(context.Background(), &classifyCompleterStub{answer: answer})
 			if err != nil {
@@ -500,7 +500,7 @@ func TestClassifyCaseRefusesAFixtureCarryingQuotedMail(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = captureClassifyCases{}.Prepare(fixture, classifyExpectation(t, "noise"))
+	_, err = captureClassifyCases{}.Prepare(fixture, classifyExpectation(t, "other"))
 	if err == nil || !strings.Contains(err.Error(), "current message") {
 		t.Fatalf("a fixture with quoted mail prepared: %v", err)
 	}

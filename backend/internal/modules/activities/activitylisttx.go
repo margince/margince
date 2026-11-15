@@ -81,9 +81,14 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 		}
 		// Request priority has no resumable cursor; its count still includes later rows.
 	}
-	if in.FactsOnly {
+	switch {
+	case in.FactsOnly:
 		err = WithEmailRowFacts(ctx, tx, activities, listClock(in))
-	} else {
+	case in.LinkedFactsOnly:
+		if err = WithEmailRowFacts(ctx, tx, activities, listClock(in)); err == nil {
+			err = AttachLinks(ctx, tx, activities)
+		}
+	default:
 		err = FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in))
 	}
 	if err != nil {

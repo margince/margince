@@ -7383,6 +7383,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.kindTask": "Việc cần làm",
   "log.kindMeeting": "Cuộc họp",
   "log.kindCall": "Cuộc gọi",
+  "log.kindMessage": "Tin nhắn",
+  "log.channel": "Ứng dụng chat",
+  "log.channelPlaceholder": "Chọn ứng dụng chat",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
     "Dán bản chép lời cuộc gọi hoặc cuộc họp. Nhãn người nói được giữ nguyên nếu có.",
@@ -11904,8 +11907,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.bot.eventsSecretKeepHint": "Để trống để giữ khóa sự kiện đã lưu.",
 
   "channelLink.title": "Chat nhóm",
-  "channelLink.off": "Hãy kết nối bot chat trong Cài đặt để liên kết kênh.",
-  "channelLink.openSettings": "Mở cài đặt bot chat",
   "channelLink.none": "Chưa có kênh",
   "channelLink.noneSub":
     "Một kênh riêng tư giúp cả nhóm nắm được tình hình của hồ sơ này.",

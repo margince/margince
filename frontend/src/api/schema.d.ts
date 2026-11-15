@@ -30849,7 +30849,8 @@ export interface components {
                 classify?: {
                     commitments?: number;
                     meetings?: number;
-                    noise?: number;
+                    /** @description Neither a commitment nor a meeting; says nothing about importance. */
+                    other?: number;
                 };
             };
             connectors: {
@@ -42388,10 +42389,10 @@ export interface components {
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**
-             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
              * @enum {string|null}
              */
-            readonly capture_label?: null | "commitment" | "meeting" | "noise";
+            readonly capture_label?: null | "commitment" | "meeting" | "other";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */

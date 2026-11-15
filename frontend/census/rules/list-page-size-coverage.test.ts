@@ -36,6 +36,41 @@ describe("the list-page-size-coverage rule", () => {
     ]);
   });
 
+  it("reads a fetcher the screen imports from its queries module", () => {
+    const planted = (limit: string) => [
+      {
+        path: join(srcDir, "features", "planted.tsx"),
+        area: "src" as const,
+        text: [
+          'import { fetchRows } from "./planted.queries";',
+          "const rows = useListQuery<Row>({",
+          "  fetchPage: fetchRows,",
+          "});",
+          "",
+        ].join("\n"),
+      },
+      {
+        path: join(srcDir, "features", "planted.queries.ts"),
+        area: "src" as const,
+        text: [
+          "export async function fetchRows(query: ListQuery, cursor: string | null) {",
+          '  return api.GET("/rows", { params: { query: {',
+          "    cursor: cursor || undefined,",
+          `    limit: ${limit},`,
+          "  } } });",
+          "}",
+          "",
+        ].join("\n"),
+      },
+    ];
+    expect(
+      plantedFindings(rule, planted("listFetchLimit(query.perPage)")),
+    ).toEqual([]);
+    expect(plantedFindings(rule, planted("50"))).toEqual([
+      "src/features/planted.tsx sends the page limit 50",
+    ]);
+  });
+
   it("reports a list screen with no fetcher of the shared shape", () => {
     const path = join(srcDir, "features", "planted.tsx");
     const text = "const rows = useListQuery<Row>({ fetch });\n";

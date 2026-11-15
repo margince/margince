@@ -32,9 +32,7 @@ const meetingNotesSource = "meeting_notes"
 // argLimit names the row bound of a paged read.
 const argLimit = "limit"
 
-// meetingNotesRawKey holds, in the transcript's raw, the meeting and the Doc
-// revision it was read from. source_activity_id is not used: on a meeting it
-// names the task an outcome answers.
+// meetingNotesRawKey preserves the source document revision.
 const meetingNotesRawKey = "google_doc"
 
 // MeetingNotesQuery asks for the notes links on one owner's meetings.
@@ -126,7 +124,7 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 	err := tx.QueryRow(ctx, `
 		SELECT l.filename FROM attachment l JOIN activity a ON a.id = l.entity_id
 		 WHERE a.id = @meeting AND l.url = @url AND `+meetingNotesReadable+`
-		   FOR SHARE OF a`, pgx.NamedArgs{
+		   FOR UPDATE OF a`, pgx.NamedArgs{
 		"meeting": in.Meeting, "url": in.URL, "owner": in.Owner, "domains": in.Domains,
 	}).Scan(&linkName)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -156,7 +154,8 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 	transcript := LogActivityInput{
 		Kind: KindMeeting, Subject: &title, Body: &body, OccurredAt: &meeting.OccurredAt,
 		SourceSystem: new(transcriptSourceSystem), SourceID: &in.URL,
-		Source: meetingNotesSource, Links: filedUnder(meeting),
+		Source: meetingNotesSource, Links: linksOfKinds(meeting, []string{linkEntityContact}),
+		recordsMeeting: &in.Meeting, keepRecordedOutcome: true,
 		Raw: &map[string]any{meetingNotesRawKey: map[string]any{
 			"meeting_id": in.Meeting.String(), "revision_id": in.Revision,
 		}},

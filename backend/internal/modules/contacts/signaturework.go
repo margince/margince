@@ -14,7 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const signatureReopenSetSQL = `activity_id=NULL, last_activity_at=NULL, history_depth=NULL,
+var signatureReopenSetSQL = resetSignatureRetrySQL("true") + `,activity_id=NULL, last_activity_at=NULL, history_depth=NULL,
  live_generation=st.requested_generation+1, requested_generation=st.requested_generation+1, due_at=now(), deferred_run_id=NULL`
 
 // SignatureWork is one durable request observed before a signature read.
@@ -55,6 +55,7 @@ func QueueSignatureEventTx(ctx context.Context, tx pgx.Tx, contacts []ids.Contac
  activity_id=CASE WHEN $%[4]d THEN NULL ELSE st.activity_id END,
  last_activity_at=CASE WHEN $%[4]d THEN NULL ELSE st.last_activity_at END,
  history_depth=CASE WHEN $%[4]d THEN NULL ELSE st.history_depth END,
+ `+resetSignatureRetrySQL("$%[4]d")+`,
  due_at=CASE WHEN $%[5]d THEN LEAST(st.due_at, now()) ELSE st.due_at END,
  deferred_run_id=EXCLUDED.deferred_run_id
  WHERE CASE WHEN $%[3]d::text='' OR st.read_snapshot IS NULL THEN true
@@ -130,4 +131,10 @@ func (s *Store) SettleSignatureWork(ctx context.Context, work SignatureWork, ret
  WHERE contact_id=$%[1]d AND requested_generation >= $%[2]d`, len(args)-3, len(args)-2, len(args)-1, len(args)), args...)
 		return err
 	})
+}
+
+func resetSignatureRetrySQL(reopen string) string {
+	return "retry_activity_id=CASE WHEN " + reopen + " THEN NULL ELSE st.retry_activity_id END," +
+		"retry_count=CASE WHEN " + reopen + " THEN 0 ELSE st.retry_count END," +
+		"attempted_at=CASE WHEN " + reopen + " THEN NULL ELSE st.attempted_at END"
 }

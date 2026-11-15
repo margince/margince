@@ -178,8 +178,8 @@ func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 // read is the assembly a cache miss pays; the cache's own lookup and store are
 // outside it.
 const (
-	homeReadStatementCeiling = 152
-	homeReadRoundTripCeiling = 70
+	homeReadStatementCeiling = 96
+	homeReadRoundTripCeiling = 67
 )
 
 // homeStages are the stages Home's read runs. A lane that stops running lowers

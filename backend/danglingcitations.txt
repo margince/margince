@@ -52,7 +52,6 @@ backend/internal/compose/accountdraft/input.go core 0203
 backend/internal/compose/agenttaskretention.go migration 0201
 backend/internal/compose/captureverdict_integration_test.go migration 0137
 backend/internal/compose/captureverdictnoise_integration_test.go migration 0137
-backend/internal/compose/channelprovider_migration_integration_test.go migration 0240
 backend/internal/compose/channelproviderfacts.go migration 0247
 backend/internal/compose/channelproviderfacts_test.go migration 0247
 backend/internal/compose/commsscheduled.go core 0260

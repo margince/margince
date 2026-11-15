@@ -299,7 +299,7 @@ func (e ActivityCallOutcome) Valid() bool {
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
 	ActivityCaptureLabelMeeting    ActivityCaptureLabel = "meeting"
-	ActivityCaptureLabelNoise      ActivityCaptureLabel = "noise"
+	ActivityCaptureLabelOther      ActivityCaptureLabel = "other"
 )
 
 // Valid indicates whether the value is a known member of the ActivityCaptureLabel enum.
@@ -309,7 +309,7 @@ func (e ActivityCaptureLabel) Valid() bool {
 		return true
 	case ActivityCaptureLabelMeeting:
 		return true
-	case ActivityCaptureLabelNoise:
+	case ActivityCaptureLabelOther:
 		return true
 	default:
 		return false
@@ -32473,7 +32473,7 @@ type Activity struct {
 	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
 	CanShareInternal *bool `json:"can_share_internal,omitempty"`
 
-	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
@@ -32641,7 +32641,7 @@ type ActivityAutomaticKind string
 // ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 type ActivityCallOutcome string
 
-// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 type ActivityCaptureLabel string
 
 // ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
@@ -56940,7 +56940,9 @@ type MorningDigest struct {
 		Classify         *struct {
 			Commitments *int `json:"commitments,omitempty"`
 			Meetings    *int `json:"meetings,omitempty"`
-			Noise       *int `json:"noise,omitempty"`
+
+			// Other Neither a commitment nor a meeting; says nothing about importance.
+			Other *int `json:"other,omitempty"`
 		} `json:"classify,omitempty"`
 
 		// DedupeOpen Every open duplicate review item the reader can see, as the Worklist shows them, not only those filed overnight. A group of duplicate contacts counts once, however many pairs join it; each company and lead pair counts on its own.

@@ -83,11 +83,10 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		return nil, "", nil, nil, err
 	}
 
-	// The timeline is DISCOVER-gated: a row reachable through a record the
-	// caller may read is listed, and whether its content comes with it is the
-	// audience's call, answered per row (content_state). The free text of a
-	// limited conversation is blanked by the scan, never selected into the
-	// response.
+	// The timeline is DISCOVER-gated: a row reachable through a readable record
+	// is listed. Whether its content comes with it is the audience's call, per
+	// row (content_state). A limited conversation's body and raw come back NULL
+	// from SQL, and the scan blanks its other free text.
 	//
 	// Composed HERE rather than in a helper of its own, and the reason is a
 	// gate rather than taste: restrictedreaders_test.go reads the declaration

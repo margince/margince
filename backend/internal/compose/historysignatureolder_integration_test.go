@@ -65,13 +65,16 @@ func TestOlderHistoricalMailCanFillATitleAfterANewerMailWasAlreadyRead(t *testin
 	if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error { return contacts.QueueSignatureWorkTx(system, tx, []ids.ContactID{id}, nil) }); err != nil {
 		t.Fatal(err)
 	}
-	reader := NewCaptureEnricher(b.env.Pool, &signatureScriptBrain{fields: statesTitle("Director")}, b.handlers.log)
+	// The newer mail states no title, so the model finds none in it.
+	brain := &signatureScriptBrain{}
+	reader := NewCaptureEnricher(b.env.Pool, brain, b.handlers.log)
 	if _, err := reader.RunPendingWorkspace(system); err != nil {
 		t.Fatal(err)
 	}
 	if got := b.env.WsCount(t, `SELECT count(*) FROM contact_signature_enrich_state WHERE contact_id=@contact AND activity_id IS NOT NULL`, pgx.NamedArgs{"contact": id}); got != 1 {
 		t.Fatal("newer mail was not read")
 	}
+	brain.fields = statesTitle("Director")
 	write(-2, "Best regards,\nAlice Buyer\nDirector")
 	all := historyGraphEvents(t, b, run)
 	if len(all) != 2 {

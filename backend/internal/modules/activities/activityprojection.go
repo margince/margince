@@ -27,6 +27,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -165,7 +166,7 @@ var activityProjection = []activityColumn{
 	{"a.updated_at", func(s *activityScan) any { return &s.a.UpdatedAt }},
 	{"a.archived_at", func(s *activityScan) any { return &s.a.ArchivedAt }},
 	{"a.thread_key", func(s *activityScan) any { return &s.threadKey }},
-	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
+	{capturekind.SQL("a.capture_label"), func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
 	{"a.body_completeness", func(s *activityScan) any { return &s.bodyCompleteness }},
 	{"a.origin", func(s *activityScan) any { return &s.origin }},
@@ -236,10 +237,22 @@ func SourceAuthorOf(id *ids.UUID, seatName, sourceName, sourceSystem *string) *c
 // archived rows rather than fail.
 const activityLive = "a.archived_at IS NULL"
 
-// activityColumns renders the select list. contentArm is the predicate
-// auth.ActivityAudienceArm rendered for this query's arguments, which is why
-// the final column's SQL cannot be a constant.
+// activityColumns renders the select list. contentArm is the audience test
+// rendered for this query's arguments, so the SQL cannot be a constant. Body
+// and raw are returned only when it holds, so withheld payload stays in the
+// database. Callers pass a decision computed once per row (ActivityContentFrom).
 func activityColumns(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
+	return renderActivityColumns(ctx, contentArm, arg, true)
+}
+
+// activityCountColumns serves CountActivities, which wraps the list only to
+// bind its arguments and never reads a value. Body and raw stay ungated there,
+// so the count statement carries the audience test once.
+func activityCountColumns(ctx context.Context, contentArm string, arg func(any) int) (string, error) {
+	return renderActivityColumns(ctx, contentArm, arg, false)
+}
+
+func renderActivityColumns(ctx context.Context, contentArm string, arg func(any) int, gatePayload bool) (string, error) {
 	share, err := auth.ActivityInternalMailShareClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
@@ -247,6 +260,15 @@ func activityColumns(ctx context.Context, contentArm string, arg func(any) int) 
 	out := make([]string, len(activityProjection))
 	for i, c := range activityProjection {
 		out[i] = c.sql
+		if !gatePayload {
+			continue
+		}
+		switch c.sql {
+		case "a.body":
+			out[i] = "CASE WHEN (" + contentArm + ") THEN a.body END AS body"
+		case "a.raw":
+			out[i] = "CASE WHEN (" + contentArm + ") THEN a.raw END AS raw"
+		}
 	}
 	out[len(out)-1] = "(" + contentArm + ") AS content_available"
 	out[len(out)-2] = "CASE WHEN a.internal_mail_authorization IS NOT NULL THEN (" + share + ") ELSE NULL END AS can_share_internal"

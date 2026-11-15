@@ -73,21 +73,16 @@ func deferredLane(ctx context.Context, tx *deferredTx, budget time.Duration, fn 
 	if aborted(tx) {
 		return errors.New("pg: opening a degradable read: the snapshot is already aborted")
 	}
-	var page string
 	savepoint := fmt.Sprintf("degradable_read_%d", tx.scopes+1)
-	lane := tx.open(
-		deferredStatement{sql: `SELECT current_setting('statement_timeout')`, scan: func(row pgx.Row) error { return row.Scan(&page) }},
-		deferredStatement{sql: `SAVEPOINT ` + savepoint, opens: true, savepoint: true},
-		deferredStatement{sql: boundStatementSQL, args: []any{milliseconds}},
-	)
+	lane, timeout := tx.openTimeout(milliseconds, deferredStatement{sql: `SAVEPOINT ` + savepoint, opens: true, savepoint: true})
 	if err := fn(tx); err != nil {
-		return errors.Join(err, abandonDeferredLane(ctx, tx, lane, savepoint))
+		return errors.Join(err, abandonDeferredLane(ctx, tx, lane, timeout, savepoint))
 	}
 	// No closing exchange runs here to find a failure the lane swallowed.
 	if aborted(tx) {
-		return errors.Join(errors.New("pg: a degradable read left its transaction aborted"), abandonDeferredLane(ctx, tx, lane, savepoint))
+		return errors.Join(errors.New("pg: a degradable read left its transaction aborted"), abandonDeferredLane(ctx, tx, lane, timeout, savepoint))
 	}
-	tx.close(lane, deferredStatement{sql: boundStatementSQL, args: []any{page}}, deferredStatement{sql: `RELEASE SAVEPOINT ` + savepoint})
+	tx.closeTimeout(lane, timeout, deferredStatement{sql: `RELEASE SAVEPOINT ` + savepoint})
 	return nil
 }
 
@@ -97,9 +92,13 @@ func aborted(tx pgx.Tx) bool { return tx.Conn().PgConn().TxStatus() == 'E' }
 
 // abandonDeferredLane is abandonLane for a deferred lane: one that never
 // reached the server has nothing to undo, and what it left pending goes.
-func abandonDeferredLane(ctx context.Context, tx *deferredTx, lane *deferredScope, savepoint string) error {
+func abandonDeferredLane(ctx context.Context, tx *deferredTx, lane *deferredScope, timeout *laneTimeout, savepoint string) error {
 	tx.drop(lane)
-	if !lane.sent {
+	sent := lane.sent
+	// The rollback puts back the timeout the lane found; a restore it held back
+	// is owed again.
+	defer tx.returnTimeout(timeout)
+	if !sent {
 		return nil
 	}
 	if _, err := tx.Tx.Exec(ctx, `ROLLBACK TO SAVEPOINT `+savepoint+`; RELEASE SAVEPOINT `+savepoint); err != nil {
