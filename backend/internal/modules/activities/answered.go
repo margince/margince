@@ -66,6 +66,7 @@ func owedRulesSQL(asOf, informsStillOwed, unjudgedResponseStillOwed, accepted st
 	   OR ` + accepted + `)
 	 AND ((` + confirmedRequestOf(accepted) + `) OR NOT ` + machineSenderSQL + `)
 	 AND (` + accepted + ` OR NOT a.bulk_mail_attested)
+	 AND (` + accepted + ` OR NOT ` + invitationNeverOwedSQL(asOf) + `)
 	 AND ((` + confirmedRequestOf(accepted) + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentOf(accepted) + `)
