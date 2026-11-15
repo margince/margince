@@ -138,8 +138,10 @@ func TestEvidenceRowsWithholdOwnerAndStageLabelsTheReaderMayNotSee(t *testing.T)
 		{"withheld and restricted", true, true, "Ada", "Proposal", want{false, "", ""}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fact := Fact{OwnerLabel: tc.ownerLabel, StageLabel: tc.stage, OwnerWithheld: tc.withheld, EvidenceAt: &shown,
-				Row: crmcontracts.ReportingEvidenceRow{OwnerId: &owner, OwnerLabel: &seeded, StageLabel: &stored, Restricted: tc.restricted}}
+			fact := Fact{
+				OwnerLabel: tc.ownerLabel, StageLabel: tc.stage, OwnerWithheld: tc.withheld, EvidenceAt: &shown,
+				Row: crmcontracts.ReportingEvidenceRow{OwnerId: &owner, OwnerLabel: &seeded, StageLabel: &stored, Restricted: tc.restricted},
+			}
 			row := evidenceRow(fact)
 			got := want{ownerID: row.OwnerId != nil}
 			if row.OwnerLabel != nil {
