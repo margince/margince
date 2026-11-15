@@ -76,6 +76,40 @@ func readReportingPopulationFact(ctx context.Context, tx pgx.Tx, key reportingPo
 	return fact, err
 }
 
+// sharesATeamWith asks whether one user is a live member of any of these
+// teams, once per evaluation for the same user and team set.
+func sharesATeamWith(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.UUID) (bool, error) {
+	if len(teams) == 0 {
+		return false, nil
+	}
+	key := reportingPopulationKey{kind: "membership", subject: user, teams: reportingPopulationTeams(teams)}
+	fact, err := readReportingPopulationFact(ctx, tx, key, func() (reportingPopulationFact, error) {
+		member, err := readSharesATeamWith(ctx, tx, teams, user)
+		return reportingPopulationFact{member: member}, err
+	})
+	return fact.member, err
+}
+
+// analyticsUserLabel names a live owner and refuses one who is not, once per
+// evaluation for the same owner.
+func analyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
+	fact, err := readReportingPopulationFact(ctx, tx, reportingPopulationKey{kind: ScopeKindOwner, subject: id}, func() (reportingPopulationFact, error) {
+		label, err := readAnalyticsUserLabel(ctx, tx, id)
+		return reportingPopulationFact{label: label}, err
+	})
+	return fact.label, err
+}
+
+// analyticsTeamLabel names a live team and refuses an archived or unknown
+// one, once per evaluation for the same team.
+func analyticsTeamLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
+	fact, err := readReportingPopulationFact(ctx, tx, reportingPopulationKey{kind: ScopeKindTeam, subject: id}, func() (reportingPopulationFact, error) {
+		label, err := readAnalyticsTeamLabel(ctx, tx, id)
+		return reportingPopulationFact{label: label}, err
+	})
+	return fact.label, err
+}
+
 func reportingPopulationTeams(teams []ids.UUID) string {
 	keys := make([]string, len(teams))
 	for i, id := range teams {

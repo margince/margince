@@ -98,11 +98,11 @@ func (s *Service) evaluateAt(ctx context.Context, tx pgx.Tx, selection crmcontra
 	return out, err
 }
 
-// snapshotReads is an evaluator that can reuse its live-subject reads (a named
-// team's or owner's label and liveness, a shared-team check) for the rest of
-// one evaluation: the metrics, the targets and the owner names. The reads are
-// facts of the transaction's snapshot, never an authorization decision, and
-// they end with the evaluation.
+// snapshotReads is an evaluator that reads each named subject once per
+// evaluation. The subject reads are a team's or owner's label and liveness and
+// the shared-team check. The metrics, the targets and the owner names all reuse
+// them. They are facts of the transaction's snapshot, not an authorization
+// decision, and they end with the evaluation.
 type snapshotReads interface {
 	SnapshotReads(context.Context, pgx.Tx) (context.Context, func())
 }

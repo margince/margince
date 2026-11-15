@@ -402,22 +402,10 @@ func resolveOwnerScope(
 	return ResolvedScope{Kind: ScopeKindOwner, ID: &id}, nil
 }
 
-// sharesATeamWith asks whether one user is a live member of any of these teams.
+// readSharesATeamWith asks whether one user is a live member of any of these teams.
 //
 // The membership read is what makes a team manager's owner scope safe: without
 // it a manager could name any user id in the installation and measure them.
-func sharesATeamWith(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.UUID) (bool, error) {
-	if len(teams) == 0 {
-		return false, nil
-	}
-	key := reportingPopulationKey{kind: "membership", subject: user, teams: reportingPopulationTeams(teams)}
-	fact, err := readReportingPopulationFact(ctx, tx, key, func() (reportingPopulationFact, error) {
-		member, err := readSharesATeamWith(ctx, tx, teams, user)
-		return reportingPopulationFact{member: member}, err
-	})
-	return fact.member, err
-}
-
 func readSharesATeamWith(ctx context.Context, tx pgx.Tx, teams []ids.UUID, user ids.UUID) (bool, error) {
 	var shares bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (
@@ -462,20 +450,12 @@ func labelScope(ctx context.Context, tx pgx.Tx, resolved *ResolvedScope) error {
 	return nil
 }
 
-// analyticsUserLabel and analyticsTeamLabel name a population for the reader.
+// readAnalyticsUserLabel and readAnalyticsTeamLabel name a population for the reader.
 //
 // Both refuse an archived subject as absent rather than labelling it. A scope
 // resolved against a team that was archived after the request was written is
 // not a population any more, and answering over it would report a set the
 // installation no longer has.
-
-func analyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
-	fact, err := readReportingPopulationFact(ctx, tx, reportingPopulationKey{kind: ScopeKindOwner, subject: id}, func() (reportingPopulationFact, error) {
-		label, err := readAnalyticsUserLabel(ctx, tx, id)
-		return reportingPopulationFact{label: label}, err
-	})
-	return fact.label, err
-}
 
 func readAnalyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
 	var label string
@@ -490,14 +470,6 @@ func readAnalyticsUserLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string
 		return "", fmt.Errorf("compose: naming the measured contact: %w", err)
 	}
 	return label, nil
-}
-
-func analyticsTeamLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
-	fact, err := readReportingPopulationFact(ctx, tx, reportingPopulationKey{kind: ScopeKindTeam, subject: id}, func() (reportingPopulationFact, error) {
-		label, err := readAnalyticsTeamLabel(ctx, tx, id)
-		return reportingPopulationFact{label: label}, err
-	})
-	return fact.label, err
 }
 
 func readAnalyticsTeamLabel(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
