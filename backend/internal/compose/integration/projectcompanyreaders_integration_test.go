@@ -82,6 +82,32 @@ func TestAProjectReportFiltersByAnyLiveCompanyOnTheProject(t *testing.T) {
 	}
 }
 
+// The partner filter keeps the project even when its first customer is
+// capture-private to someone else: the customer column's mask is about what the
+// report displays, never about which rows the filter keeps.
+func TestAProjectReportFilterIsNotNarrowedByAnUnreadableFirstCustomer(t *testing.T) {
+	e := Setup(t)
+	f := seedMovedProject(t, e)
+	e.MakeCapturePrivate(t, "company", f.current.UUID, e.Rep3)
+	reader := e.readerWith("project", "company", "relationship")
+	rows := runPrebuiltReport(reader, t, e, "projects-by-phase", `{"filters":{"company_id":"`+f.partner.String()+`"}}`)
+	if len(rows) != 1 || cell(rows[0], "projects") != "1" {
+		t.Errorf("projects with the partner, first customer private = %v, want the one project", rows)
+	}
+}
+
+// A seat that may read edges but not companies is never handed a company id.
+func TestAProjectReportGroupsNoCompanyForASeatWithoutCompanyRead(t *testing.T) {
+	e := Setup(t)
+	seedMovedProject(t, e)
+	rows := runPrebuiltReport(e.readerWith("project", "relationship"), t, e, "projects-by-phase", `{"group_by":["company_id"]}`)
+	for _, row := range rows {
+		if id := cell(row, "company_id"); id != "" && id != "<nil>" {
+			t.Errorf("a seat without company.read was grouped under company %s: %v", id, rows)
+		}
+	}
+}
+
 func TestAProjectReportRefusesTheCompanyToASeatWithoutRelationshipRead(t *testing.T) {
 	e := Setup(t)
 	f := seedMovedProject(t, e)
@@ -121,12 +147,12 @@ func TestDeliveryContinuityCountsOnlyTheCompaniesOnAProject(t *testing.T) {
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	admin := e.Admin()
-	active := func(company ids.CompanyID) bool {
+	active := func(ctx context.Context, company ids.CompanyID) bool {
 		t.Helper()
 		var delivering bool
-		if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
-			delivering, _, err = projects.CompanyDeliveryTx(admin, tx, company, false)
+			delivering, _, err = projects.CompanyDeliveryTx(ctx, tx, company, false)
 			return err
 		}); err != nil {
 			t.Fatal(err)
@@ -134,8 +160,13 @@ func TestDeliveryContinuityCountsOnlyTheCompaniesOnAProject(t *testing.T) {
 		return delivering
 	}
 	for company, want := range map[ids.CompanyID]bool{f.current: true, f.partner: true, f.old: false} {
-		if got := active(company); got != want {
+		if got := active(admin, company); got != want {
 			t.Errorf("company %s in active delivery = %v, want %v", company, got, want)
 		}
+	}
+	// Whether an account still has delivery is the account's fact: a seat that
+	// may not read edges still finds the account's ending blocked.
+	if !active(e.readerWith("project", "company"), f.current) {
+		t.Error("a seat without relationship.read found no active delivery on a delivering account")
 	}
 }

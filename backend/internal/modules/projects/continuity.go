@@ -33,17 +33,11 @@ func CompanyDeliveryTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lo
 		scope = "TRUE"
 	}
 	// The company's projects are the ones it is on now, by a live edge: the
-	// stored company_id keeps naming a company taken off the project.
-	edges, err := auth.ProjectCompanyEdgesSQL(ctx, arg)
-	if err != nil {
-		return false, false, err
-	}
-	if !edges.Readable {
-		// No edge is readable, so no project is this company's to count.
-		return false, true, nil
-	}
-	onProject := storekit.SQLf("p.id IN (SELECT %s %s AND %s = $%d)",
-		auth.ProjectEdgeProject, edges.Source, auth.ProjectEdgeCompany, companyPos)
+	// stored company_id keeps naming a company taken off the project. Whether
+	// an account still has delivery is a fact about the account, so the edges
+	// are read whole, whatever this caller may read of them.
+	onProject := storekit.SQLf("p.id IN (SELECT c.project_id FROM relationship c WHERE c.kind = '%s'"+
+		" AND c.company_id = $%d AND c.archived_at IS NULL)", auth.ProjectCompanyKind, companyPos)
 	from := "project"
 	if lock {
 		// Name the scope and continuity columns so custom-field DDL cannot change the locked row shape.
