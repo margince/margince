@@ -6,6 +6,7 @@
 package activities
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -116,5 +117,41 @@ func TestInvitationMailStaysWhereItsMeetingIsNotListed(t *testing.T) {
 	archived := e.history(t, ListActivitiesInput{EntityType: &contactType, EntityID: &h.contact, CollapseSeatCopies: true})
 	if _, shown := archived[h.sent]; !shown {
 		t.Error("the invitation of an archived meeting is hidden with it")
+	}
+}
+
+func TestInvitationMailStaysWhenTheReaderCannotOpenItsMeeting(t *testing.T) {
+	e := setupLoad(t)
+	h := e.invitedHistory(t)
+	e.exec(t, `DELETE FROM activity_participant WHERE activity_id = $1 AND user_id = $2`, h.meeting, e.rep)
+	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, h.meeting)
+	contactType := "contact"
+	rows := e.history(t, ListActivitiesInput{EntityType: &contactType, EntityID: &h.contact, CollapseSeatCopies: true})
+	if _, shown := rows[h.sent]; !shown {
+		t.Error("an invitation the reader may open is hidden behind a meeting they may not")
+	}
+	if meeting, shown := rows[h.meeting]; shown && meeting.Invitation != nil {
+		t.Error("a withheld meeting says who it invited")
+	}
+}
+
+func TestMailForOneOccurrenceFoldsOnlyOntoThatOccurrence(t *testing.T) {
+	e := setupLoad(t)
+	h := e.invitedHistory(t)
+	var uid string
+	if err := e.owner.QueryRow(context.Background(), `SELECT calendar_uid FROM activity WHERE id = $1`, h.sent).Scan(&uid); err != nil {
+		t.Fatal(err)
+	}
+	listed := clocktest.Now(t).Add(24 * time.Hour).UTC().Format(time.RFC3339)
+	other := clocktest.Now(t).Add(8 * 24 * time.Hour).UTC().Format(time.RFC3339)
+	e.exec(t, `UPDATE activity SET calendar_event = jsonb_build_object('occurrence', $2::text) WHERE id = $1`, h.update, other)
+	e.exec(t, `UPDATE activity SET calendar_event = jsonb_build_object('occurrence', $2::text) WHERE id = $1`, h.answer, listed)
+	contactType := "contact"
+	rows := e.history(t, ListActivitiesInput{EntityType: &contactType, EntityID: &h.contact, CollapseSeatCopies: true})
+	if _, shown := rows[h.update]; !shown {
+		t.Errorf("mail about the occurrence on %s folds onto the one on %s (series %s)", other, listed, uid)
+	}
+	if _, shown := rows[h.answer]; shown {
+		t.Error("mail about the listed occurrence is still its own row")
 	}
 }

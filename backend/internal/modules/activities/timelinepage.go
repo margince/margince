@@ -46,7 +46,7 @@ func timelinePageSQL(ctx context.Context, in ListActivitiesInput, limit int) (ti
 	if in.CollapseSeatCopies {
 		candidates, without := strings.Join(where, " AND "), sqlTrue
 		if in.foldsInvitations() {
-			candidates += " AND " + InvitationFoldSQL(candidates)
+			candidates += " AND " + InvitationFoldSQL(candidates, content)
 		}
 		if in.WithoutCopiesOf != nil {
 			// The activity joins the candidates so its copies group with it; the

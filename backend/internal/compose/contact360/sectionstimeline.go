@@ -268,7 +268,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	// The recent timeline shows one row per email, as the company timeline does.
 	from, trailing, collapse := "activity a", "", order == byRecency
 	if collapse {
-		candidates += " AND " + activities.InvitationFoldSQL(candidates)
+		// TRUE: the content gate appears once per statement; the candidates
+		// still hold the meeting to what this reader may discover.
+		candidates += " AND " + activities.InvitationFoldSQL(candidates, "TRUE")
 		from = activities.SeatCopyFrom(ctx, candidates, contentArm, arg)
 		contentArm, trailing, candidates = activities.SeatCopyReadable, activities.SeatCopyColumns, "TRUE"
 	}

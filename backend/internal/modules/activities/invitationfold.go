@@ -26,18 +26,25 @@ func (in ListActivitiesInput) foldsInvitations() bool {
 }
 
 // InvitationFoldSQL leaves out the calendar mail whose meeting is itself one
-// of the candidates. The inner query names the meeting `a` so the candidates'
-// own terms judge it; a meeting the list would not show keeps its mail shown.
-func InvitationFoldSQL(candidates string) string {
-	return `NOT (` + foldedCalendarMailSQL + ` AND a.calendar_uid IN (
-	SELECT ` + meetingUIDOfKeySQL("ai.identity_key") + `
+// of the candidates. The inner query names the meeting `a`, so the candidates'
+// and content's own terms judge it. Mail that names an occurrence folds onto
+// that occurrence only; mail for the whole series folds onto any of them.
+// A caller whose content arm is not "TRUE" passes it to keep a readable mail
+// from hiding behind a meeting the reader may not open.
+func InvitationFoldSQL(candidates, content string) string {
+	key := "ai.identity_key"
+	return `NOT (` + foldedCalendarMailSQL + ` AND (` + content + `)
+	AND (a.calendar_uid, coalesce(a.calendar_event->>'occurrence', '')) IN (
+	SELECT ` + meetingUIDOfKeySQL(key) + `, slot.occurrence
 	  FROM activity a JOIN activity_identity ai ON ai.activity_id = a.id
+	 CROSS JOIN LATERAL (VALUES (''), (right(` + key + `, strpos(reverse(` + key + `), '/') - 1))) slot(occurrence)
 	 WHERE ai.identity_kind = '` + IdentityKindMeeting + `' AND a.kind = 'meeting'
-	   AND a.archived_at IS NULL AND (` + candidates + `)))`
+	   AND a.archived_at IS NULL AND (` + candidates + `) AND (` + content + `)))`
 }
 
-// WithInvitationSummaries stamps each readable meeting on a folded page whose
-// event has calendar mail with who was invited and how they answered.
+// WithInvitationSummaries stamps each readable calendar meeting on a folded
+// page with who was invited and how they answered. It reads only the meeting's
+// own participants, so it says nothing about mail the reader may not open.
 func WithInvitationSummaries(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) error {
 	at := map[ids.UUID]int{}
 	meetings := []ids.UUID{}
@@ -59,9 +66,7 @@ func WithInvitationSummaries(ctx context.Context, tx pgx.Tx, page []crmcontracts
 		  FROM activity mt
 		  LEFT JOIN activity_participant p ON p.activity_id = mt.id AND `+auth.ParticipantStandsSQL("p", "mt")+`
 		 WHERE mt.id = ANY($1) AND EXISTS (
-		       SELECT 1 FROM activity_identity ai JOIN activity a ON `+meetingUIDOfKeySQL("ai.identity_key")+` = a.calendar_uid
-		        WHERE ai.activity_id = mt.id AND ai.identity_kind = '`+IdentityKindMeeting+`'
-		          AND a.archived_at IS NULL AND `+foldedCalendarMailSQL+`)
+		       SELECT 1 FROM activity_identity ai WHERE ai.activity_id = mt.id AND ai.identity_kind = '`+IdentityKindMeeting+`')
 		 GROUP BY mt.id`, meetings)
 	if err != nil {
 		return fmt.Errorf("activities: reading the invitations folded onto meetings: %w", err)
