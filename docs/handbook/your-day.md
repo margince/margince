@@ -193,7 +193,9 @@ The work counts come from the current Worklist read. Each part of Home can refre
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**. Deal cards start closed and show a short preview of the newest change. Press a card to read its changes; one deal is open at a time. **Small changes** starts closed and shows only its count until you open it.
+**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**.
+
+A short preview under the heading shows up to three recent changes in two lines, even when there are only small changes. Deal cards start closed. Press a card to read its changes; one deal is open at a time. **Small changes** starts closed and shows only its count until you open it.
 
 The small-changes card holds the work Margince did beside the deals, such as saving or filing an email. Open it to read the changes. Changes that read the same show as one step with a count, such as **Saved email or meeting** with **4 changes**. Each line in the step keeps its own **Undo**, and a line that touched more than one email or meeting opens with **View 2 changes**. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot. When some activity could not be counted, a line under the card says so.
 

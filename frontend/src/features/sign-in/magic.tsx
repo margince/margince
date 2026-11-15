@@ -25,6 +25,7 @@ import {
   type MagicReceipt,
   useMagic,
 } from "../../lib/magic.queries";
+import { doneLinesApart } from "../../lib/magiccopy";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
 import { MagicDoneCard } from "./magic.done";
 import { MagicLaneSection } from "./magic.lines";
@@ -366,12 +367,6 @@ function distinctReceipt(
     needs_you: receipt.needs_you?.filter(
       (line) => !approvalIds.includes(line.id),
     ),
-    // A grouped line names every change it stands for, so it leaves only when
-    // all of them are shown elsewhere. A line without ids always stays.
-    done: receipt.done?.filter(
-      (line) =>
-        !line.receipt_ids?.length ||
-        !line.receipt_ids.every((id) => receiptIds.includes(id)),
-    ),
+    done: receipt.done && doneLinesApart(receipt.done, receiptIds),
   };
 }
