@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -98,9 +99,13 @@ func (s *Store) queueRestrictionLiftTx(ctx context.Context, tx pgx.Tx, sub subje
 	if err != nil {
 		return err
 	}
+	requestedAt, err := stopLockInstantTx(ctx, tx)
+	if err != nil {
+		return err
+	}
 	messageID := restrictionLiftMessageID(in.SuppressionID, act)
 	if _, err := s.confirmSender.QueueConfirmationTx(ctx, tx, ConfirmationSend{
-		ContactID: in.ContactID, Recipient: address, Category: category, MessageID: messageID, Rendered: rendered,
+		ContactID: in.ContactID, Recipient: address, Category: category, MessageID: messageID, Rendered: rendered, StagedAt: requestedAt,
 	}); err != nil {
 		return err
 	}
@@ -173,11 +178,23 @@ func (s *Store) liftNoticedTx(ctx context.Context, tx pgx.Tx, stopID ids.UUID) e
 	if err := lockSubjectSuppressions(ctx, tx, contact); err != nil {
 		return err
 	}
-	if err := auth.EnsureWritable(ctx, tx, entityContact, contact); err != nil {
+	// A merge carries the restriction onto the survivor; read under the lock above,
+	// it is either committed and seen here or waits for this lift.
+	survivor, err := survivingSubject(ctx, tx, contact)
+	if err != nil {
 		return err
 	}
+	if err := lockSubjectSuppressions(ctx, tx, survivor); err != nil {
+		return err
+	}
+	for _, holder := range slices.Compact([]ids.UUID{contact, survivor}) {
+		if err := auth.EnsureWritable(ctx, tx, entityContact, holder); err != nil {
+			return err
+		}
+	}
 	// A sent notice ends the restrictions that stood when the admin asked. One
-	// recorded while the notice waited is a newer objection, and it stays.
+	// recorded while the notice waited is a newer objection, and it stays. Both
+	// stamps are stopLockInstantTx reads, so they compare in the order the lock was held.
 	var requestedAt *time.Time
 	if err := tx.QueryRow(ctx, `SELECT max(o.created_at) FROM comms_outbound o
 		 WHERE o.status = '`+deliverySent+`' AND o.message_id LIKE `+liftNoticeLikeSQL("$1::uuid"), stopID).Scan(&requestedAt); err != nil {
@@ -186,9 +203,14 @@ func (s *Store) liftNoticedTx(ctx context.Context, tx pgx.Tx, stopID ids.UUID) e
 	if requestedAt == nil {
 		return nil
 	}
-	rows, err := tx.Query(ctx, `SELECT s.id, s.decided_by_level FROM communication_suppression s
+	// A copy a merge carried stood when its original did, whatever its own stamp.
+	rows, err := tx.Query(ctx, `WITH RECURSIVE answered AS (
+		SELECT s.id FROM communication_suppression s
 		 WHERE s.contact_id = $1 AND `+auth.LiveRestrictionSQL("s")+` AND s.recorded_at <= $2
-		 ORDER BY s.id FOR UPDATE`, contact, *requestedAt)
+		UNION SELECT carried.id FROM communication_suppression carried JOIN answered ON carried.carried_from = answered.id
+		 WHERE `+auth.LiveRestrictionSQL("carried")+`)
+		SELECT s.id, s.decided_by_level, s.contact_id FROM communication_suppression s
+		 WHERE s.id IN (SELECT id FROM answered) ORDER BY s.id FOR UPDATE`, contact, *requestedAt)
 	if err != nil {
 		return fmt.Errorf("consent: reading the contact's restrictions: %w", err)
 	}
@@ -196,8 +218,8 @@ func (s *Store) liftNoticedTx(ctx context.Context, tx pgx.Tx, stopID ids.UUID) e
 	if err != nil {
 		return fmt.Errorf("consent: reading the contact's restrictions: %w", err)
 	}
-	sub := subject{entityType: entityContact, column: subjectColumnContact, id: contact}
 	for _, stop := range live {
+		sub := subject{entityType: entityContact, column: subjectColumnContact, id: stop.Contact}
 		if err := s.revokeStopTx(ctx, tx, sub, revocation{
 			stopID: stop.ID, recordedAt: stop.Decided, by: commsauthz.LevelAdmin, reason: liftReasonNoticeSent, basis: liftBasisNoticeSent,
 		}); err != nil {
@@ -211,6 +233,7 @@ func (s *Store) liftNoticedTx(ctx context.Context, tx pgx.Tx, stopID ids.UUID) e
 type liveRestriction struct {
 	ID      ids.UUID
 	Decided string
+	Contact ids.UUID
 }
 
 // errLiftUnderway refuses a second lift while a notice is queued or sent.
