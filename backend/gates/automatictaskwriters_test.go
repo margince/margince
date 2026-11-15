@@ -119,6 +119,7 @@ var taskSourceWriters = map[string][]string{
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/systemtaskopen.go:lockOpenSystemTask":         "Finds the record's open task of one source, current or stale, so an arrival keeps or repoints it instead of filing a second. It surfaces no open work.",
 	"modules/activities/duplicatesystemtasks.go:duplicateLeadTaskSQL": "Duplicate repair compares all open source tasks, current or stale, to preserve one newest task per lead. It returns no worklist rows.",
 
 	"modules/activities/taskanswered.go:answeredTaskSQL":                  "The answered-task rule: completes every existing open task for the sender and addressed contact, including dormant automatic tasks. It creates and surfaces no open work.",

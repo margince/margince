@@ -25,18 +25,17 @@ type Document struct {
 const googleDocMimeType = "application/vnd.google-apps.document"
 
 // notesTitleSuffixes are the endings Google gives the notes and transcript
-// documents it writes for a meeting, per language. Google titles them
-// "<meeting> - <date> - Notes by Gemini" and "<meeting> - Transcript". An
-// agenda attached by hand carries no such ending, so it is not read.
-//
-// Vietnamese is not listed until its exact titles are known; a document with an
-// unknown title is simply not matched.
+// documents it writes for a meeting, in the organizer's account language.
+// Google titles them "<meeting> - <date> - Notes by Gemini" and
+// "<meeting> - Transcript". An agenda attached by hand carries no such ending,
+// so it is not read. A language not listed here is never matched.
 var notesTitleSuffixes = []struct {
 	suffix string
 	kind   string
 }{
 	{"notes by gemini", capture.MeetingDocumentNotes},
 	{"notizen von gemini", capture.MeetingDocumentNotes},
+	{"ghi chú của gemini", capture.MeetingDocumentNotes},
 	{"transcript", capture.MeetingDocumentTranscript},
 	{"transkript", capture.MeetingDocumentTranscript}, //nolint:misspell // German: Google's title for a transcript
 }
