@@ -11,7 +11,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The two count sorts withhold their order exactly when the printed count is
+// The two count sorts withhold their order when, and only when, the count is
 // withheld. Both read the gate the list and the single read use, so this
 // checks every combination of the four grants against that gate.
 func TestCompanyCountSortsFollowTheCountGates(t *testing.T) {
