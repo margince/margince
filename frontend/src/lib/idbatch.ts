@@ -13,6 +13,19 @@ export type PageReader<T> = (
 // then costs one round trip, not two. A big batch never opens every page.
 const PAGES_IN_FLIGHT = 2;
 
+// Counts ended sessions. A batch notes it when it starts, and stops when it
+// changes. The readers are module-scoped and outlive the QueryClient.
+let sessionsEnded = 0;
+
+/**
+ * Ends every batch in flight when the session ends. A page not yet asked is
+ * never asked under the next session's cookie. The callers get an AbortError,
+ * not the answers already read, so no batch spans two sessions.
+ */
+export function endIdBatches(): void {
+  sessionsEnded += 1;
+}
+
 // What one batch came back with. A page's refusal is about the ids ON that
 // page. The answers another page returned are ones the server gave, and one
 // map could only report them as a read that never arrived.
@@ -42,7 +55,13 @@ export function idBatcher<T>(
     for (let at = 0; at < ids.length; at += pageSize) {
       pages.push(ids.slice(at, at + pageSize));
     }
-    return merge(pages, await readPages(readPage, pages));
+    const session = sessionsEnded;
+    const live = () => sessionsEnded === session;
+    const answers = await readPages(readPage, pages, live);
+    if (!live()) {
+      throw new DOMException("The session ended", "AbortError");
+    }
+    return merge(pages, answers);
   }
 
   function join(id: string): Promise<Answers<T>> {
@@ -70,17 +89,19 @@ export function idBatcher<T>(
 }
 
 // Each worker asks for its next page only once its last one settles, so one
-// batch has at most PAGES_IN_FLIGHT reads open. The cap is per batch: a later
+// batch has at most PAGES_IN_FLIGHT reads open. No page starts once the
+// session that opened the batch has ended. The cap is per batch: a later
 // batch starts at once and never waits behind an older one. The answers keep
 // page order, so a merge reads the same however the pages finish.
 async function readPages<T>(
   readPage: PageReader<T>,
   pages: readonly (readonly string[])[],
+  live: () => boolean,
 ): Promise<(ReadonlyMap<string, T> | Refusal)[]> {
   const answers: (ReadonlyMap<string, T> | Refusal)[] = [];
   let next = 0;
   async function worker() {
-    while (next < pages.length) {
+    while (next < pages.length && live()) {
       const at = next;
       next += 1;
       answers[at] = await readOrRefusal(readPage, pages[at] ?? []);

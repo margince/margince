@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { resetToSignedOut } from "../lib/session";
 import {
   cancellationClient,
   type HeldRead,
@@ -115,4 +116,45 @@ it("names a new reference while a large older batch still holds both its pages",
   expect(held.every((read) => idsOf(read).length <= 100)).toBe(true);
   expect(record.result.current.name).toBe("Name new");
   client.clear();
+});
+
+it("stops a 201-id batch at sign-out and reads the next member's names afresh", async () => {
+  const held = heldReferences();
+  const old = cancellationClient();
+  const asked = Array.from({ length: 201 }, (_, at) => `id-${at}`);
+  const board = renderHook(() => asked.map((id) => useEntityName("lead", id)), {
+    wrapper: old.wrapper,
+  });
+  await waitFor(() => expect(held).toHaveLength(2));
+  await act(async () => {
+    await resetToSignedOut(old.client);
+  });
+  board.unmount();
+  await act(async () => {
+    answerAll(held[0]);
+    answerAll(held[1]);
+  });
+  const next = cancellationClient();
+  const record = renderHook(() => useEntityName("lead", "next-0"), {
+    wrapper: next.wrapper,
+  });
+  await waitFor(() => expect(held).toHaveLength(3));
+  // The third request is the next member's own, not the old batch's last page.
+  expect(idsOf(held[2])).toEqual(["next-0"]);
+  await act(async () => {
+    held[2]?.answer({
+      data: [{ id: "next-0", name: "Next member's name", archived: false }],
+    });
+  });
+  await waitFor(() =>
+    expect(record.result.current.name).toBe("Next member's name"),
+  );
+  expect(held).toHaveLength(3);
+  expect(
+    old.client
+      .getQueryCache()
+      .getAll()
+      .map((query) => query.queryKey[0]),
+  ).toEqual(["me"]);
+  next.client.clear();
 });

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { afterEach, expect, it, vi } from "vitest";
-import { idBatcher } from "./idbatch";
+import { endIdBatches, idBatcher } from "./idbatch";
 
 const PAGE_MS = 100;
 
@@ -155,4 +155,66 @@ it("lets two large batches from different ticks progress side by side", async ()
   expect(await first).toBe(2 * PAGE_MS);
   expect(await second).toBe(5 + 2 * PAGE_MS);
   expect(transport.seen).toMatchObject({ requests: 6, peak: 4 });
+});
+
+function heldReader() {
+  const opened: { page: readonly string[]; finish: () => void }[] = [];
+  const read = vi.fn(
+    (page: readonly string[]) =>
+      new Promise<ReadonlyMap<string, string>>((resolve) => {
+        opened.push({
+          page,
+          finish: () => resolve(new Map(page.map((id) => [id, `Name ${id}`]))),
+        });
+      }),
+  );
+  return { opened, read };
+}
+
+it("asks no further page and answers no caller once the session ends", async () => {
+  const reader = heldReader();
+  const read = idBatcher(1, reader.read);
+  const settled = Promise.allSettled(["a", "b", "c"].map(read));
+  await vi.waitFor(() => expect(reader.opened).toHaveLength(2));
+  endIdBatches();
+  reader.opened[0]?.finish();
+  reader.opened[1]?.finish();
+  const results = await settled;
+  expect(results.map((result) => result.status)).toEqual([
+    "rejected",
+    "rejected",
+    "rejected",
+  ]);
+  expect(results[0]).toMatchObject({ reason: { name: "AbortError" } });
+  expect(reader.read.mock.calls).toEqual([[["a"]], [["b"]]]);
+  // The next session's batch reads as usual.
+  const next = read("d");
+  await vi.waitFor(() => expect(reader.opened).toHaveLength(3));
+  reader.opened[2]?.finish();
+  expect(await next).toBe("Name d");
+});
+
+it("merges pages in page order whichever page answers first", async () => {
+  const opened: {
+    page: readonly string[];
+    resolve: (answer: ReadonlyMap<string, string>) => void;
+  }[] = [];
+  const read = idBatcher(
+    1,
+    (page) =>
+      new Promise<ReadonlyMap<string, string>>((resolve) => {
+        opened.push({ page, resolve });
+      }),
+  );
+  const names = Promise.all(["first", "second"].map(read));
+  await vi.waitFor(() => expect(opened).toHaveLength(2));
+  // Both pages name "first"; the later page answers first, and still wins.
+  opened[1]?.resolve(
+    new Map([
+      ["first", "From page two"],
+      ["second", "Two"],
+    ]),
+  );
+  opened[0]?.resolve(new Map([["first", "From page one"]]));
+  expect(await names).toEqual(["From page two", "Two"]);
 });
