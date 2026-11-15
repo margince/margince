@@ -282,9 +282,9 @@ function AttachPicker({
   };
 
   // An upload files the bytes on the record and then attaches what came back.
-  // The two are one act to the reader and two writes underneath, which is why
-  // the record's lists are re-asked: the Documents tab behind this drawer is
-  // now out of date about a file this rep just added.
+  // The two are one act to the reader and two writes underneath.
+  // So the record's lists are re-asked: the Documents tab behind this drawer
+  // is now out of date about a file this rep just added.
   const upload = useMutation({
     mutationFn: async (picked: File) => {
       const parent: AttachmentParent = { entityType, entityId };

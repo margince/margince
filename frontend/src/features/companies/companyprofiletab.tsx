@@ -206,9 +206,9 @@ export function repeatsDescription(
 // fields from the website only and leaves out what the site does not state.
 // So after a finished read, an empty field is one the site does not mention.
 export function emptyReason(
-  status: string | null | undefined,
+  status: components["schemas"]["SiteReadReport"]["status"] | null | undefined,
 ): "co.narrative.notOnSite" | "co.narrative.notReadYet" {
-  return status === "ready" || status === "partial" || status === "confirmed"
+  return status === "done" || status === "partial"
     ? "co.narrative.notOnSite"
     : "co.narrative.notReadYet";
 }

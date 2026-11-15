@@ -45,7 +45,11 @@ export function RelayPanel({
   const owner =
     ask && !SETTLED.has(ask.status) ? ownerOf(ask, t, reader) : undefined;
   return (
-    <Panel title={t("contact.intro.relayTitle")} titleAction={action}>
+    <Panel
+      title={t("contact.intro.relayTitle")}
+      titleAction={action}
+      className="pn-relay-panel"
+    >
       <PanelBody>
         <ol className="pn-relay">
           {steps.map((step, index) => (

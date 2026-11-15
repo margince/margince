@@ -10,7 +10,7 @@ import { useEffect } from "react";
 import { api } from "../../api/client";
 import { grants } from "../../lib/accessgrants";
 import { healthScope } from "../../lib/healthscopekey";
-import { unwrap } from "../../lib/problem";
+import { problemFieldErrorsOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 
 export function useCustomerPayments(enabled: boolean) {
@@ -53,17 +53,26 @@ export function useCustomerPayments(enabled: boolean) {
   );
   const pages = query.data?.pages;
   const latest = pages?.at(-1);
+  // A cursor from a replaced accounting connection never works again, so the
+  // list starts over instead of retrying it.
+  const staleCursor =
+    query.isFetchNextPageError &&
+    problemFieldErrorsOf(query.error).some(
+      (fault) =>
+        fault.field === "cursor" && fault.code === "cursor_param_mismatch",
+    );
   useEffect(() => {
     if (
-      latest &&
-      pages?.some((page) => page.access_scope !== latest.access_scope)
+      staleCursor ||
+      (latest &&
+        pages?.some((page) => page.access_scope !== latest.access_scope))
     ) {
       void client.resetQueries({
         queryKey: ["customer-payments", scope],
         exact: true,
       });
     }
-  }, [latest, pages, client, scope]);
+  }, [staleCursor, latest, pages, client, scope]);
   return {
     query,
     allowed,

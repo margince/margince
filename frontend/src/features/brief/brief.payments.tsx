@@ -8,6 +8,7 @@ import { Button, Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
@@ -42,6 +43,9 @@ export function CustomerPaymentsCard({
     latest: summary,
     pages,
   } = useCustomerPayments(enabled);
+  // A failed "Load more" keeps the pages already read, so only a failed first
+  // read or refetch takes the card and its drawer down.
+  const failed = query.isError && !query.isFetchNextPageError;
   if (
     !enabled ||
     !allowed ||
@@ -51,7 +55,7 @@ export function CustomerPaymentsCard({
   )
     return null;
   if (
-    !query.isError &&
+    !failed &&
     (summary?.state === "no_connection" || summary?.linked_companies === 0)
   )
     return null;
@@ -59,7 +63,7 @@ export function CustomerPaymentsCard({
     <Panel
       title={t("payments.title")}
       footer={
-        summary?.last_synced_at && !query.isError ? (
+        summary?.last_synced_at && !failed ? (
           <span className="t-caption">
             {t("finance.syncedFrom", {
               provider: summary.provider ?? "",
@@ -69,7 +73,15 @@ export function CustomerPaymentsCard({
         ) : undefined
       }
     >
-      <QueryStates query={query} pendingLabel={t("finance.loading")}>
+      <QueryStates
+        query={{
+          isPending: query.isPending,
+          isError: failed,
+          error: query.error,
+          refetch: query.refetch,
+        }}
+        pendingLabel={t("finance.loading")}
+      >
         {summary && (
           <PaymentOverview
             summary={summary}
@@ -79,7 +91,7 @@ export function CustomerPaymentsCard({
           />
         )}
       </QueryStates>
-      {open && !query.isError && (
+      {open && !failed && (
         <Modal
           intent="drawer-reading"
           labelledBy={titleId}
@@ -94,6 +106,7 @@ export function CustomerPaymentsCard({
           </DrawerHead>
           <DrawerBody>
             <PaymentInvoices rows={pages.flatMap((page) => page.data)} />
+            <ErrorLine error={query.isFetchNextPageError && query.error} />
             <LoadMoreButton query={query} />
           </DrawerBody>
         </Modal>
