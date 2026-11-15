@@ -90,6 +90,16 @@ func computedFieldByKey(rows []crmcontracts.ComputedField, key string) crmcontra
 	return crmcontracts.ComputedField{}
 }
 
+// assertDetailOpenDealCount checks the open_deal_count the single company read
+// prints. It comes from the same rollup row as open_pipeline, so every pricing
+// state below must still count each open deal, priced or not.
+func assertDetailOpenDealCount(t *testing.T, company crmcontracts.Company, want int) {
+	t.Helper()
+	if company.OpenDealCount == nil || *company.OpenDealCount != want {
+		t.Fatalf("open_deal_count = %v, want %d", company.OpenDealCount, want)
+	}
+}
+
 // assertHonestFloors checks the four non-computable rows: weighted_pipeline
 // names the read that actually serves it (poc-v1 HAS that read, unlike
 // the poc-1 reference this ports), the other three are genuinely unbuilt.
@@ -190,6 +200,7 @@ func TestCompanyComputed_GatedVisible_RealValueMatchesDirectViewRead(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertDetailOpenDealCount(t, company, 2)
 	if company.ComputedFields == nil || len(*company.ComputedFields) != 5 {
 		t.Fatalf("want exactly 5 computed_fields rows, got %v", company.ComputedFields)
 	}
@@ -226,6 +237,7 @@ func TestCompanyComputed_NoOpenDeals_FloorsToZero(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertDetailOpenDealCount(t, company, 0)
 	rows := *company.ComputedFields
 	open0 := computedFieldByKey(rows, "open_pipeline")
 	if !open0.Computable {
@@ -267,6 +279,7 @@ func TestCompanyComputed_SomeDealsUnpriceable_RefusesTheShortTotal(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertDetailOpenDealCount(t, company, 2)
 	got := computedFieldByKey(*company.ComputedFields, "open_pipeline")
 	if got.Computable {
 		t.Fatalf("a total covering 1 of 2 open deals was reported as computable: %+v", got)
@@ -304,6 +317,7 @@ func TestCompanyComputed_OpenDealsInTheBaseCurrency_ReportTheirTotal(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertDetailOpenDealCount(t, company, 2)
 	got := computedFieldByKey(*company.ComputedFields, "open_pipeline")
 	if !got.Computable {
 		t.Fatalf("an open EUR pipeline on a EUR installation is not computable: %+v — it needs no rate to convert", got)
@@ -358,6 +372,7 @@ func TestCompanyComputed_OpenDealsWithNoUsableRate_AwaitingFX(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	assertDetailOpenDealCount(t, company, 2)
 	open0 := computedFieldByKey(*company.ComputedFields, "open_pipeline")
 	if open0.Computable {
 		t.Fatalf("a NULL-aggregate row with open deals present must be computable=false, got %+v", open0)
@@ -410,6 +425,9 @@ func TestCompanyComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t *tes
 	company, err := e.Contacts.GetCompany(ctx, companyIDOf(companyID), storekit.IncludeArchived)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if company.OpenDealCount != nil {
+		t.Fatalf("want open_deal_count withheld without computed_field:read, got %d", *company.OpenDealCount)
 	}
 	if company.ComputedFields != nil {
 		t.Fatalf("want a nil ComputedFields pointer for an ungated viewer, got %v", company.ComputedFields)
@@ -492,6 +510,7 @@ func TestCompanyComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *t
 		t.Fatalf("the company could not be read at all: %v — one deal the view cannot represent "+
 			"must refuse one figure, never the record", err)
 	}
+	assertDetailOpenDealCount(t, company, 2)
 
 	_, count, found := directOpenPipelineRead(e.Admin(), t, e, companyID)
 	if !found {
@@ -581,6 +600,7 @@ func TestCompanyComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testi
 		t.Fatalf("the company could not be read at all: %v — a total nobody can represent must "+
 			"refuse the figure, never the record", err)
 	}
+	assertDetailOpenDealCount(t, company, dealCount)
 
 	minor, count, priced, found := directOpenPipelineReadPriced(e.Admin(), t, e, companyID)
 	if !found {

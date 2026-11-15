@@ -174,7 +174,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_calendar_sends`: `btree (calendar_uid, occurred_at DESC, id) WHERE ((calendar_uid IS NOT NULL) AND (kind = 'email'))`
 - `idx_activity_channel_thread`: `btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL)`
 - `idx_activity_counterparty_email`: `btree (counterparty_email) WHERE (counterparty_email IS NOT NULL)`
-- `idx_activity_direction`: `btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))`
+- `idx_activity_direction_page`: `btree (direction, occurred_at DESC, id DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL))`
 - `idx_activity_kind`: `btree (kind, occurred_at DESC) WHERE (archived_at IS NULL)`
 - `idx_activity_labeled`: `btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL)`
 - `idx_activity_meeting_host`: `btree (host_user_id, occurred_at) WHERE ((kind = 'meeting') AND (archived_at IS NULL))`
