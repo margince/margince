@@ -45,6 +45,7 @@ import { importRoutes } from "./imports";
 import * as insight from "./insight";
 import * as lists from "./lists";
 import * as records from "./records";
+import { recordReferences } from "./references";
 import { type MockRoute, notFound, page, reply } from "./server";
 import * as session from "./session";
 import * as work from "./work";
@@ -271,9 +272,10 @@ export const routes: readonly MockRoute[] = [
   {
     method: "POST",
     path: "/leads/l-1/promote",
-    handle: reply(records.promotedLead),
+    handle: records.promoteLead,
   },
   { path: "/users", handle: reply(page(seats)) },
+  { method: "GET", path: "/records/references", handle: recordReferences },
   { path: "/users/names", handle: records.userNames },
   { path: "/pipelines", handle: reply(records.pipelines) },
   {

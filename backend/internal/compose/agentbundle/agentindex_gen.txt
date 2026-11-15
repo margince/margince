@@ -260,6 +260,12 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /deals/{id}/commitments` | getDealCommitments | What the customer committed to that this deal waits on. | Read records | at once |
 | `POST /deals/{id}/role-proposals` | proposeDealRoles | Read the buying roles out of what this deal's contacts have written. | Use AI and buy data | at once |
 
+## Links
+
+| Call | operationId | What it does | Permission | Runs |
+| --- | --- | --- | --- | --- |
+| `GET /records/references` | readRecordReferences | Read names and archive state for a bounded set of records. | Read records | at once |
+
 ## Pipelines
 
 | Call | operationId | What it does | Permission | Runs |

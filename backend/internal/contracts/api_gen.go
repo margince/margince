@@ -31663,6 +31663,33 @@ func (e ListRecordLinksParamsRecordType) Valid() bool {
 	}
 }
 
+// Defines values for ReadRecordReferencesParamsKind.
+const (
+	ReadRecordReferencesParamsKindCompany ReadRecordReferencesParamsKind = "company"
+	ReadRecordReferencesParamsKindContact ReadRecordReferencesParamsKind = "contact"
+	ReadRecordReferencesParamsKindDeal    ReadRecordReferencesParamsKind = "deal"
+	ReadRecordReferencesParamsKindLead    ReadRecordReferencesParamsKind = "lead"
+	ReadRecordReferencesParamsKindProject ReadRecordReferencesParamsKind = "project"
+)
+
+// Valid indicates whether the value is a known member of the ReadRecordReferencesParamsKind enum.
+func (e ReadRecordReferencesParamsKind) Valid() bool {
+	switch e {
+	case ReadRecordReferencesParamsKindCompany:
+		return true
+	case ReadRecordReferencesParamsKindContact:
+		return true
+	case ReadRecordReferencesParamsKindDeal:
+		return true
+	case ReadRecordReferencesParamsKindLead:
+		return true
+	case ReadRecordReferencesParamsKindProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListRelationshipsParamsKind.
 const (
 	ListRelationshipsParamsKindBillingContact     ListRelationshipsParamsKind = "billing_contact"
@@ -60606,6 +60633,21 @@ type RecordQualifyingEventRequest struct {
 // answer to a question the data already settles.
 type RecordQualifyingEventRequestKind string
 
+// RecordReference defines model for RecordReference.
+type RecordReference struct {
+	Archived bool               `json:"archived"`
+	Id       openapi_types.UUID `json:"id"`
+
+	// Logo Company logo URL; omitted for other kinds.
+	Logo *string `json:"logo,omitempty"`
+	Name *string `json:"name"`
+}
+
+// RecordReferenceListResponse defines model for RecordReferenceListResponse.
+type RecordReferenceListResponse struct {
+	Data []RecordReference `json:"data"`
+}
+
 // RecordRole One administered responsibility a colleague or team can hold on a record. The role says WHAT someone is responsible for; it grants no access of its own.
 type RecordRole struct {
 	// Active False is retired: existing assignments keep rendering their label, but the role is refused for a new assignment.
@@ -79357,6 +79399,15 @@ type UpdateRecordRoleParams struct {
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
+
+// ReadRecordReferencesParams defines parameters for ReadRecordReferences.
+type ReadRecordReferencesParams struct {
+	Kind ReadRecordReferencesParamsKind `form:"kind" json:"kind"`
+	Id   []openapi_types.UUID           `form:"id" json:"id"`
+}
+
+// ReadRecordReferencesParamsKind defines parameters for ReadRecordReferences.
+type ReadRecordReferencesParamsKind string
 
 // GetRecordContextParams defines parameters for GetRecordContext.
 type GetRecordContextParams struct {
@@ -98291,6 +98342,9 @@ type ServerInterface interface {
 	// Relabel, reorder, re-scope or retire a responsibility role.
 	// (PATCH /record-roles/{id})
 	UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams)
+	// Read names and archive state for a bounded set of records.
+	// (GET /records/references)
+	ReadRecordReferences(w http.ResponseWriter, r *http.Request, params ReadRecordReferencesParams)
 	// The lists one record is on that this caller may find.
 	// (GET /records/{entity_type}/{entity_id}/lists)
 	GetRecordLists(w http.ResponseWriter, r *http.Request, entityType string, entityId openapi_types.UUID)
@@ -104288,6 +104342,12 @@ func (_ Unimplemented) CreateRecordRole(w http.ResponseWriter, r *http.Request, 
 // Relabel, reorder, re-scope or retire a responsibility role.
 // (PATCH /record-roles/{id})
 func (_ Unimplemented) UpdateRecordRole(w http.ResponseWriter, r *http.Request, id Id, params UpdateRecordRoleParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read names and archive state for a bounded set of records.
+// (GET /records/references)
+func (_ Unimplemented) ReadRecordReferences(w http.ResponseWriter, r *http.Request, params ReadRecordReferencesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -144889,6 +144949,60 @@ func (siw *ServerInterfaceWrapper) UpdateRecordRole(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ReadRecordReferences operation middleware
+func (siw *ServerInterfaceWrapper) ReadRecordReferences(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReadRecordReferencesParams
+
+	// ------------- Required query parameter "kind" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "kind", r.URL.Query(), &params.Kind, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "kind"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "kind", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "id", r.URL.Query(), &params.Id, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReadRecordReferences(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetRecordLists operation middleware
 func (siw *ServerInterfaceWrapper) GetRecordLists(w http.ResponseWriter, r *http.Request) {
 
@@ -156607,6 +156721,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/record-roles/{id}", wrapper.UpdateRecordRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/records/references", wrapper.ReadRecordReferences)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{entity_id}/lists", wrapper.GetRecordLists)

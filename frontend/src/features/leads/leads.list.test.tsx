@@ -461,6 +461,21 @@ describe("LeadsScreen — rich create (P-15)", () => {
           page: { has_more: false },
         });
       }
+      const asked = new URL(url);
+      if (
+        asked.pathname === "/v1/records/references" &&
+        asked.searchParams.get("kind") === "company"
+      ) {
+        return jsonResponse({
+          data: asked.searchParams
+            .getAll("id")
+            .flatMap((id) =>
+              id === "c-old"
+                ? [{ id, name: "Former Partner AG", archived: true }]
+                : [],
+            ),
+        });
+      }
       if (url.includes("/v1/companies") && url.includes("id=c-old")) {
         return jsonResponse({
           data: [

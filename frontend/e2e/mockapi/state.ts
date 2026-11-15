@@ -79,7 +79,11 @@ export type CounterpartyHold = {
   created_at: string;
 };
 
-export type DealPatches = Record<string, Partial<(typeof deals)[number]>>;
+export type DealPatches = Record<
+  string,
+  Partial<(typeof deals)[number]> &
+    Pick<Partial<components["schemas"]["Deal"]>, "archived_at">
+>;
 
 function captureSettings(): components["schemas"]["CaptureSettings"] {
   return {
@@ -174,6 +178,10 @@ export function createMockState(options: MockApiOptions = {}) {
       options.journey === "unstarted" || options.journey === "unconfigured",
     automations: [{ ...seededAutomation }],
     dealPatches,
+    recordReferences: new Map<
+      string,
+      components["schemas"]["RecordReference"]
+    >(),
     views: seededViews.map((view) => ({ ...view })),
     brief: {
       ...briefRun,
