@@ -20,6 +20,11 @@ import (
 // the message and goes with it. A held reminder keeps what its hold keeps.
 // The erased mark is the system text, which no mail can carry as its subject.
 func (e *Eraser) eraseRequestReminders(ctx context.Context, tx pgx.Tx, source ids.UUID, act erasureAct) error {
+	// Capture files a reminder while it holds this lock, and skips a locked
+	// source. So the read below sees every reminder capture will ever file.
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity WHERE id = $1 FOR UPDATE`, source); err != nil {
+		return err
+	}
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a
  WHERE a.source_system = @system AND a.source_activity_id = @source AND a.system_text IS DISTINCT FROM @erased
  AND a.restricted_at IS NULL AND NOT `+retentionscope.HeldThroughAnyLink("a.id")+`
