@@ -1,4 +1,4 @@
-<!-- describes: backend/pkg/extension extensions -->
+<!-- describes: backend/pkg/extension extensions backend/internal/compose/extcapability -->
 # Extensions at a glance
 
 An extension is a small add-on that lives in its own folder, `extensions/<name>/`, and gives Margince
@@ -71,6 +71,35 @@ feed stops when they leave. A service member is the account made for this. No hu
 
 The member is not counted against the seat limit and is never deleted, only archived. The steps and the
 call are in [declare-a-service-member.md](../how-to/declare-a-service-member.md).
+
+## The doors from a unit into the core
+
+A unit runs in the core's process, so its code could reach anything. The design gives it three doors instead. Each is a published port in `backend/pkg/extension`, and the core builds the other side.
+
+```text
+ unit code (extensions/<name>)
+   │
+   ├─ 1  rt.Tx ─────────▶ the unit's OWN tables      as role ext_runtime;
+   │                      ext.ext_<name>_*            a core table is refused
+   │
+   ├─ 2  tx.Core() ─────▶ core records               the caller's live RBAC, row-scope check,
+   │     read doors       (contacts, deals, ...)     audit row, outbox event; the core stamps
+   │                                                  the unit's name
+   │
+   └─ 3  rt.Models()  ──▶ what the installation OWNS  gate: did the unit declare the need?
+         rt.Objects()     (AI key and budget,         then validate, trace, call, map the
+                          S3 credentials)             error. No secret crosses the line.
+```
+
+| Door | Use it for | What guards it | Page |
+|---|---|---|---|
+| 1. `rt.Tx` | The unit's own data | A database role with no core table | [add-an-extension.md](../how-to/add-an-extension.md) |
+| 2. `tx.Core()` and the read doors | A core record | The write path of the product, under the caller's rights | [read-core-records-from-an-extension.md](../how-to/read-core-records-from-an-extension.md) |
+| 3. `rt.Models()` and `rt.Objects()` | A service the installation pays for or holds a secret for | `Extension.Needs`, checked on each call | [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md) |
+
+Door 3 differs from door 2 in who the call acts as. Door 2 acts as the signed-in member, so the member's rights decide it. A model or file call has no record behind it, so the installation's own choice decides: the model the admin picked, the shared budget, a key prefix of the unit's own. The admin reads each declared need and the author's reason under Settings, Extensions before the unit runs. The reasons are in [extension-capability-grants.md](extension-capability-grants.md).
+
+A new core service for units is a new method on `Runtime`, a published port and a core side that holds the gate. The steps are in [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md).
 
 ## The tool bag: what a unit can do to each core record
 
@@ -230,4 +259,6 @@ first how-to below.
   records.
 - [declare-a-service-member.md](../how-to/declare-a-service-member.md): the account a timed job runs as.
 - [send-a-notice-from-an-extension.md](../how-to/send-a-notice-from-an-extension.md): tell a user about a record.
+- [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md): let units use a core
+  service that holds a secret.
 - [extensibility.md](extensibility.md): why the tier is built this way, and what it guards.
