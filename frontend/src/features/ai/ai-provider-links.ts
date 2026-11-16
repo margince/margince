@@ -14,6 +14,7 @@ const PRICING_PAGES: Readonly<Record<string, string>> = {
   openai: "https://developers.openai.com/api/docs/pricing",
   jev: "https://openrouter.ai/typesafe/jev-1.13",
   jev_compatible: "https://openrouter.ai/typesafe/jev-1.13",
+  gemini_decision: "https://ai.google.dev/gemini-api/docs/pricing",
 };
 
 // OpenRouter or one of its subdomains, as the server reads a broker host: a

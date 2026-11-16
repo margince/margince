@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
@@ -27,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // Completer is the model seam: the summarize lane, or nil.
@@ -119,7 +121,22 @@ func BriefRequest(in Input, lang string) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 		Subjects:       in.subjects(),
+		ResponseSchema: briefSchema(),
 	}
+}
+
+// briefSchema is the reply ParseBrief reads, its record types the ones knownRecords grounds.
+func briefSchema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("sentences", schema.Array(schema.Record(
+			schema.Field("text", schema.String()),
+			schema.Field("nature", schema.Enum(slices.Sorted(maps.Keys(knownNature))...)),
+			schema.Field("evidence", schema.Array(schema.Record(
+				schema.Field("entity_type", schema.Enum(citeContact, citeDeal, citeActivity)),
+				schema.Field("entity_id", schema.String()),
+			))),
+		))),
+	))
 }
 
 // subjects are the contact and every activity the input quotes.

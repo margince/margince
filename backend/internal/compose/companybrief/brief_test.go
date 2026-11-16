@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // briefCompanyID is the account every fixture here is about.
@@ -658,5 +659,26 @@ func TestAMoveWrittenAsAPromiseIsRefusedWithoutSpendingTheAdviceBudget(t *testin
 	if len(sections) != 1 || len(sections[0].Sentences) != 1 ||
 		sections[0].Sentences[0].Text != "Send them the retrofit proposal for signature once legal finishes its review." {
 		t.Fatalf("kept %+v, want only the move addressed to the reader", sections)
+	}
+}
+
+// The brief request sends the shape ParseBriefSections reads, and that shape admits a reply it keeps.
+func TestTheBriefRequestSendsTheShapeItsParserReads(t *testing.T) {
+	in := inputFixture()
+	req := BriefRequest(in, string(textlang.English))
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the brief request carries no response schema, so a decoder may write any shape")
+	}
+	good := `{"sections":[{"kind":"health","sentences":[{"text":"The retrofit deal has stalled.","nature":"fact",` +
+		`"evidence":[{"entity_type":"deal","entity_id":"d1"}]}]}]}`
+	if kept, err := ParseBriefSections(good, briefCompanyID, in); err != nil || len(kept) != 1 {
+		t.Fatalf("the parser kept %d sections of the well-formed reply (%v), want 1", len(kept), err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, good); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	fact := strings.Replace(good, `"entity_type":"deal"`, `"entity_type":"fact"`, 1)
+	if err := schema.ValidateJSON(req.ResponseSchema, fact); err == nil {
+		t.Error("the schema admits a fact citation, which the brief's input never carries to ground")
 	}
 }

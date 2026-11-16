@@ -333,8 +333,8 @@ func TestAColleagueRequestDoesNotEnterPersonalHiddenFigures(t *testing.T) {
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
 	before := hiddenNow(t, e)
-	if before.Shown != 0 {
-		t.Fatal("a colleague's request entered this reader's personal queue")
+	if before.Shown != 0 || !before.Clear() {
+		t.Fatalf("a colleague's request entered this reader's personal figures: %+v", before)
 	}
 	aside := e.seedPersonalWait(t, "Set aside", contact)
 	e.exec(t, `INSERT INTO activity_reader_state (activity_id, reader_id, state, set_by)

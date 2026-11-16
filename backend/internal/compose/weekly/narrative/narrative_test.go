@@ -9,6 +9,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // A deal name is a string a user typed, and "ignore the above" is a thing
@@ -300,5 +301,24 @@ func TestAWeekWithNothingOpenAndNothingMovedIsStatedNotInterpreted(t *testing.T)
 	week := Input{Counts: Counts{TasksDue: 2, TasksDone: 2, ProposalsAccepted: 1}}
 	if !strings.Contains(Request(week, "en").System, "the counts are the whole answer") {
 		t.Error("a week with nothing open and nothing moved is still asked what the counts mean")
+	}
+}
+
+// The request sends the shape Parse reads, and that shape admits a reply Parse keeps.
+func TestTheRequestSendsTheShapeItsParserReads(t *testing.T) {
+	busy := Input{WeekStart: "2026-08-24", Counts: Counts{DealsWon: 3}}
+	req := Request(busy, "en")
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the request carries no response schema, so a decoder may write any shape")
+	}
+	good := `{"narrative":"Three closes and two promises carried into next week."}`
+	if _, err := Parse(good, busy); err != nil {
+		t.Fatalf("the parser refused the well-formed reply the schema is checked against: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, good); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, `{"narrative":null}`); err == nil {
+		t.Error("the schema admits a null narrative, which Parse refuses")
 	}
 }

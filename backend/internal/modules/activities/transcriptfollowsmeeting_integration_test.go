@@ -40,15 +40,15 @@ func colleagueCtx(e *sendEnv) context.Context {
 func sweepTranscripts(t *testing.T, e *sendEnv) int {
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:transcript-audience")
-	var changed int
+	var page DriftedPage
 	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
-		changed, err = FollowDriftedTranscriptsTx(ctx, tx, 200)
+		page, err = FollowDriftedTranscriptsTx(ctx, tx, ids.ActivityID{}, 200)
 		return err
 	}); err != nil {
 		t.Fatalf("sweeping the transcripts: %v", err)
 	}
-	return changed
+	return page.Changed
 }
 
 func colleagueReads(t *testing.T, e *sendEnv, id ids.ActivityID) bool {

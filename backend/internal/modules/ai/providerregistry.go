@@ -11,8 +11,8 @@ import "github.com/margince/margince/backend/internal/platform/config"
 // endpoint default, carriage, public naming, default model, vendor hosting) is
 // a projection of providerRegistry, so a provider cannot be known to one
 // question and missing from the next. Adding a chat provider is adding one row
-// here plus its construction recipe in selectBrainOn; a decision provider needs
-// the row alone, since every decision adapter speaks one wire.
+// here plus its construction recipe in selectBrainOn. A decision provider needs
+// the row alone, since one decision client speaks every dialect of its wire.
 //
 // Held by: TestProviderFactsLiveOnlyInTheRegistry (backend/internal/modules/ai/providerregistry_census_test.go)
 type providerDescriptor struct {
@@ -86,6 +86,9 @@ type providerDescriptor struct {
 	// floorSkipsTools marks an adapter that sends no floor on a request
 	// carrying tools, so an agent_loop site is never floored on it.
 	floorSkipsTools bool
+	// decisionDialect is which spelling of the decision wire the adapter
+	// speaks; the zero value is Jev's.
+	decisionDialect decisionDialect
 }
 
 // capSet is the set of wires an adapter answers on.
@@ -105,6 +108,14 @@ const (
 	providerJev           = "jev"
 	providerJevCompatible = "jev_compatible"
 	defaultJevEndpoint    = "https://api.typesafe.ai/v1/systemone"
+)
+
+// Google's Decisions API, which the Gemini Developer API alone serves, and the
+// one model Google documents for it.
+const (
+	providerGeminiDecision        = "gemini_decision"
+	defaultGeminiDecisionEndpoint = "https://generativelanguage.googleapis.com/v1beta/decisions"
+	geminiDecisionModel           = "gemini-decision-1"
 )
 
 // providerRegistry's row order is the order knownProviders reports, which
@@ -201,6 +212,15 @@ var providerRegistry = []providerDescriptor{
 		name:        providerJevCompatible, caps: capDecision, egress: egressOperatorEndpoint,
 		key: JevCompatibleKey, keyOptional: true, servedSource: servedIdentityPerReply,
 		localByEndpoint: true,
+	},
+	{
+		// Google's Decisions API, sent the gemini row's key. Google hosts it in
+		// no EU region, so it is a vendor cloud like jev. Its answer names no
+		// model, so a reply is graded as the configured one.
+		priceSource: modelsDevSource("google"),
+		name:        providerGeminiDecision, caps: capDecision, egress: egressPublicOnly, key: GeminiKey,
+		servedSource: servedIdentitySourceResponse, vendorHosted: true,
+		defaultEndpoint: defaultGeminiDecisionEndpoint, decisionDialect: dialectGemini,
 	},
 }
 

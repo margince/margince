@@ -17,8 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// sweepBatch bounds one workspace's pass; a pass that stops early leaves the
-// rest for the next one.
+// sweepBatch bounds one transaction of a workspace's pass.
 const sweepBatch = 200
 
 // Sweep gives each meeting transcript the readers its meeting has now. A guest
@@ -27,11 +26,24 @@ type Sweep struct {
 	Pool *pgxpool.Pool
 }
 
-// Workspace runs one workspace's pass, as the system.
+// Workspace runs one workspace's pass, as the system. It pages through every
+// drifted transcript, so a guest taken off a meeting loses its transcript
+// within one cadence however many drifted. The job's timeout bounds the pass.
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "system:transcript-audience")
-	return database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
-		_, err := activities.FollowDriftedTranscriptsTx(ctx, tx, sweepBatch)
-		return err
-	})
+	var after ids.ActivityID
+	for {
+		var page activities.DriftedPage
+		if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
+			var err error
+			page, err = activities.FollowDriftedTranscriptsTx(ctx, tx, after, sweepBatch)
+			return err
+		}); err != nil {
+			return err
+		}
+		if page.Next.IsZero() {
+			return nil
+		}
+		after = page.Next
+	}
 }

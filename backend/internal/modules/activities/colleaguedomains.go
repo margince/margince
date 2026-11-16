@@ -5,15 +5,10 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sync/atomic"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ColleagueDomainsReader reads the workspace's own email domains in the
@@ -44,16 +39,7 @@ func colleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	if read == nil {
 		return nil, nil
 	}
-	// The list tests only mail, and a reader without the activity grant reads
-	// none, so their read degrades to no list instead of refusing.
-	readCtx, err := auth.Unrecorded(ctx, "activity", principal.ActionRead)
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	domains, err := (*read)(readCtx, tx)
+	domains, err := (*read)(ctx, tx)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading which domains are our own: %w", err)
 	}

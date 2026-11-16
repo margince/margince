@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // PromptVersion changes when the prompt or the reply shape changes.
@@ -89,6 +90,10 @@ func Request(in Input) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encode(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: schema.Must(schema.Record(
+			schema.Field("months", schema.Array(schema.Integer())),
+			schema.Field("reason", schema.String()),
+		)),
 	}
 }
 

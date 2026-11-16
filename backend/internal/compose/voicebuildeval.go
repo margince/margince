@@ -237,7 +237,7 @@ func voiceEvalDraftRequest(personality string, artifact ai.VoiceArtifact, sample
 		System: voiceEvalDraftSystemFor(fence),
 		Messages: []model.Message{{Role: chatRoleUser, Content: profileBlock + "\n\n" + evalTaskFor(sample, fence) +
 			fmt.Sprintf("\n(variation %d)", repeat+1)}},
-		MaxTokens:      1200,
+		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: replyDraftSchema,
 		SecretStripper: ai.NewSecretStripper(),
 	}
@@ -375,11 +375,6 @@ func voiceEvalJudgeRequest(original string, bodies []string) model.Request {
 		// finish_reason "length" on every repeat. That is the exact failure
 		// ai.ReasoningOutputMaxTokens documents, so this lane uses it rather than
 		// keeping a second, smaller answer.
-		//
-		// The draft request above keeps its own 1200 deliberately: that number
-		// bounds how long a DRAFT may be, which is part of what this eval
-		// measures against a held-out sample, so it is a property of the
-		// experiment rather than headroom the model needs.
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: voiceEvalJudgeSchema,
 		SecretStripper: ai.NewSecretStripper(),
