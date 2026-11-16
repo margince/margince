@@ -43,6 +43,9 @@ type ControllerParticulars struct {
 	// it is a SEPARATE field from the postal address because that requirement
 	// is about reachability rather than about where somebody is registered.
 	AdvertiserContact string `yaml:"AdvertiserContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
+	// PrivacyPage is where the installation's own privacy information is
+	// published, the link a subscription question points a reader to.
+	PrivacyPage string `yaml:"PrivacyPage"` //nolint:tagliatelle // the saved row spells each field by its Go name
 	// Translations state the same particulars in other languages. A mail in
 	// one of them prints its version where one is stated.
 	Translations []ParticularsTranslation `yaml:"Translations"` //nolint:tagliatelle // the saved row spells each field by its Go name
@@ -117,7 +120,7 @@ const particularsFieldCap = 500
 func (p ControllerParticulars) IsZero() bool {
 	return p.LegalName == "" && p.PostalAddress == "" &&
 		p.PrivacyContact == "" && p.ObjectionRoute == "" &&
-		p.AdvertiserContact == "" && len(p.Translations) == 0
+		p.AdvertiserContact == "" && p.PrivacyPage == "" && len(p.Translations) == 0
 }
 
 // ControllerIdentity is the installation's own particulars. MachineryApplied: a
@@ -182,6 +185,8 @@ func particularFields(p ControllerParticulars, language string) []particularFiel
 		{name("privacy_contact"), p.PrivacyContact, messagingrules.PrivacyContact},
 		{name("objection_route"), p.ObjectionRoute, messagingrules.ObjectionRoute},
 		{name("advertiser_contact"), p.AdvertiserContact, messagingrules.AdvertiserContact},
+		// No disclosure kind: the page is linked, never printed as a particular.
+		{name("privacy_page"), p.PrivacyPage, ""},
 	}
 }
 

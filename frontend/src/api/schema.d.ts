@@ -7302,6 +7302,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lawful-basis-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that a user read the no-lawful-basis warning and chose to send anyway.
+         * @description A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
+         *     legitimate-interest basis and the record holds no basis that pack accepts for the use. This
+         *     records, in the audit log, that the signed-in user read the warning and chose to send, and
+         *     leaves one confirmation per record. Staging spends it on the first send by this user, or by
+         *     an agent acting for them, to that record within 15 minutes. A send with none is refused as
+         *     `lawful_basis_unconfirmed`, which a recorded human decision may still direct.
+         *
+         *     It needs the authority to send (`activity` at `create`) and read access to each record. A
+         *     record the warning does not apply to is left out of `confirmed`. A retry while a
+         *     confirmation is open records nothing new.
+         */
+        post: operations["confirmSendWithoutLawfulBasis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/emails:sign-off": {
         parameters: {
             query?: never;
@@ -18809,6 +18838,36 @@ export interface paths {
          *     `404` alike.
          */
         post: operations["liftLeadSuppression"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/consent/optout-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Export this contact's registrations, refusals and opt-out receipts for an inspection.
+         * @description The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email to keep for at
+         *     least one year and to show an inspector: every consent the contact gave or withdrew, every
+         *     stop recorded on them with the time the refusal arrived and the time sending stopped, and
+         *     every opt-out receipt sent or queued to them. Retention keeps a refusal and its receipt
+         *     until the floor the contact's rules set ends, a year under Decree 91. After that a
+         *     retention policy may act on them as on any other record.
+         *
+         *     An archived contact is answered too. Times are UTC.
+         */
+        get: operations["exportContactOptOutRecords"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -33943,9 +34002,18 @@ export interface components {
             company_id?: string | null;
             /** @description The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain. */
             company_name?: string | null;
+            /** @description Where the contact came from, as the user creating it states. The contact's privacy page prints it. `other` needs `acquisition_note`. */
+            acquisition_source?: components["schemas"]["ContactStatedSource"];
+            /** @description Their own words about the source, printed on the contact's privacy page beside it. */
+            acquisition_note?: string | null;
         } & {
             [key: string]: unknown;
         };
+        /**
+         * @description Where a contact created by hand came from, as the user who created it stated.
+         * @enum {string}
+         */
+        ContactStatedSource: "met_in_person" | "business_card" | "referral" | "website" | "other";
         /**
          * @description One contact as a reader of their public profile can state them. Deliberately
          *     flatter than CreateContactRequest: one email and one phone rather than the
@@ -44380,6 +44448,20 @@ export interface components {
             /** @description The draft's plain text, checked only for `content_findings`. */
             body?: string;
         };
+        LawfulBasisConfirmationRequest: {
+            /**
+             * @description The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+             *     them. A pinned lead is named as the lead, never as a contact sharing its address.
+             */
+            subjects: components["schemas"]["CommunicationEvidenceSubject"][];
+        };
+        LawfulBasisConfirmation: {
+            /**
+             * @description The records whose warning was confirmed by the signed-in user. Each confirmation waits
+             *     15 minutes for its send and is spent by the first send to that record.
+             */
+            confirmed: components["schemas"]["CommunicationEvidenceSubject"][];
+        };
         /**
          * @description What the engine would decide, per recipient, for a message nobody has sent.
          *
@@ -44406,8 +44488,8 @@ export interface components {
             /**
              * @description `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
              *     proof (the document's name, number and date), and states none.
-             *     `advertising_language_first`: the draft does not open in the language the pack asks
-             *     advertising to lead with.
+             *     `advertising_language_first`: the draft does not open in the pack's disclosure
+             *     language, which advertising leads with.
              * @enum {string}
              */
             requirement: "claim_without_proof" | "advertising_language_first";
@@ -44429,6 +44511,13 @@ export interface components {
         SendAuthorizationPreviewRecipient: {
             /** Format: email */
             address: string;
+            /**
+             * @description The recipient's country has no legitimate-interest basis, and the record holds neither
+             *     their consent nor an agreement with them. A privacy notice they were sent is neither.
+             *     Not a refusal: a surface shows a warning and records the sender's confirmation through
+             *     `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+             */
+            lawful_basis_missing?: boolean;
             /**
              * @description The existing contact or lead this recipient resolves to, only when the caller
              *     can read it. Absent for newly filed addresses and records unavailable to the
@@ -53639,14 +53728,22 @@ export interface components {
              * @enum {string}
              */
             class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description How often the purpose's mail goes out, roughly. The subscription question states it.
+         * @enum {string}
+         */
+        ConsentPurposeFrequency: "weekly" | "monthly" | "quarterly";
         CreateConsentPurposeRequest: {
             key: string;
             label: string;
             /** @default false */
             requires_double_opt_in: boolean;
+            /** @description Absent means monthly. */
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
         };
         ExistingCustomerNotice: {
             /** Format: uuid */
@@ -54513,6 +54610,8 @@ export interface components {
             postal_address?: string;
             /** @description How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists. */
             privacy_contact?: string;
+            /** @description Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty. */
+            privacy_page?: string;
             /**
              * @description How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
              *     message rather than only the first. The one-click unsubscribe this product mints is
@@ -54529,7 +54628,7 @@ export interface components {
             /**
              * @description The same particulars in other languages, one entry per language. A mail or page in one of
              *     them prints the translated text where it is stated and the text above where it is not.
-             *     Where a jurisdiction pack in force names an advertising language, an advertising mail to a
+             *     Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
              *     recipient under that pack is refused until its objection route and advertiser contact are
              *     stated in that language.
              */
@@ -54539,7 +54638,7 @@ export interface components {
              *     contact to be stated in. The packs in force are those of the installation's country and
              *     of each legal entity's country.
              */
-            readonly advertising_languages?: string[];
+            readonly disclosure_languages?: string[];
             /**
              * @description What every stated objection route must name under the packs in force. Saving a route that
              *     lacks one answers 422 with the field and the missing part.
@@ -55184,9 +55283,11 @@ export interface components {
             controller?: components["schemas"]["PrivacyInformationController"];
             /**
              * @description The basis on record for each entry in `purposes`, at the same index: `consent` for a
-             *     purpose the reader agreed to, else the kind of a live communication basis.
+             *     purpose the reader agreed to, else the kind of a live communication basis. `none` says
+             *     no basis is recorded, for a reader whose country has no legitimate-interest basis and
+             *     whose record holds neither their consent nor an agreement with them.
              */
-            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement")[];
+            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement" | "none")[];
             /**
              * @description The kinds of data held about the reader, read from the subject-access export's own
              *     sections. Codes only: the page names each kind and never shows a value.
@@ -55211,6 +55312,10 @@ export interface components {
              * @description When the acquisition happened, absent where the door could not say.
              */
             acquired_at?: string | null;
+            /** @description Where the contact came from, as the user who created it by hand stated. Absent when nothing was given. */
+            stated_source?: components["schemas"]["ContactStatedSource"];
+            /** @description Their own words beside `stated_source`. Absent when none were given. */
+            stated_source_note?: string;
             /** @description What the installation uses this contact's data for, by published name. */
             purposes?: string[];
             /**
@@ -55219,6 +55324,11 @@ export interface components {
              *     other.
              */
             purpose_keys?: string[];
+            /**
+             * @description When the reader gave the consent each entry in `purposes` rests on, at the same index.
+             *     Null for an entry whose basis is not consent.
+             */
+            purpose_since?: (string | null)[];
             /**
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
@@ -55240,6 +55350,8 @@ export interface components {
             privacy_contact?: string;
             /** @description How to object, where the installation states a way of its own. */
             objection_route?: string;
+            /** @description Where the installation publishes its own privacy information. Absent when not stated. */
+            privacy_page?: string;
         };
         /** @description One retention rule that acts on the reader's data. */
         PrivacyInformationRetention: {
@@ -55271,6 +55383,7 @@ export interface components {
             purpose_key: string;
             /** @description Its published name, for the page to show. */
             purpose_label: string;
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /**
              * @description Their answer today, so somebody who already said yes is not asked as though they had not.
              * @enum {string}
@@ -55309,6 +55422,11 @@ export interface components {
             language?: components["schemas"]["MailLanguage"];
             controller?: components["schemas"]["PrivacyInformationController"];
             question?: components["schemas"]["ConfirmQuestion"];
+            /**
+             * @description False when the recipient's country bars asking about news in a details check. The page
+             *     then shows no news question, and a submit carrying a marketing answer is a 422.
+             */
+            asks_news?: boolean;
         };
         /**
          * @description The question this link pinned, in the link's language and resolved with its purpose. The
@@ -57038,6 +57156,58 @@ export interface components {
              * @description When the earliest of them happened. Null when nobody recorded the time.
              */
             occurred_at?: string | null;
+        };
+        /** @description One contact's registrations, refusals and opt-out receipts, as kept for an inspection. */
+        OptOutRecords: {
+            /** Format: uuid */
+            contact_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            /** @description Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`. */
+            consent_events: components["schemas"]["ConsentEvent"][];
+            /** @description Every stop recorded on the contact, lifted ones included. */
+            stops: components["schemas"]["OptOutRecordStop"][];
+            /** @description Every opt-out receipt filed under the contact. */
+            receipts: components["schemas"]["OptOutReceiptRecord"][];
+        };
+        OptOutRecordStop: {
+            /** Format: uuid */
+            id: string;
+            /** @description `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`. */
+            kind: string;
+            /** @description The one purpose a narrow stop binds. */
+            purpose_key?: string | null;
+            /**
+             * Format: date-time
+             * @description When the refusal reached the controller.
+             */
+            received_at: string;
+            /**
+             * Format: date-time
+             * @description When sending stopped.
+             */
+            stopped_at: string;
+            /**
+             * Format: date-time
+             * @description When the stop was lifted. Null while it stands.
+             */
+            revoked_at?: string | null;
+        };
+        OptOutReceiptRecord: {
+            /** @description The receipt's Message-ID. One refusal has one. */
+            message_id: string;
+            /** @description The delivery's state, such as `queued`, `sent` or `parked`. */
+            status: string;
+            /** @description The version of the receipt wording it carries. */
+            template_version: number;
+            /** Format: date-time */
+            queued_at: string;
+            /** Format: date-time */
+            sent_at?: string | null;
+            /** @description Null once an erasure removed it. */
+            subject?: string | null;
+            /** @description The plain-text body. Null once an erasure removed it. */
+            body?: string | null;
         };
         /** @description One live stop on a contact, and whether the caller may take it back. */
         ContactStop: {
@@ -60791,6 +60961,12 @@ export interface components {
              *     attendees are all withheld both produce, and both mean the same thing here.
              */
             with_contact?: string;
+            /**
+             * @description Who is in a `meeting` row's room, as this reader may see them: the same room
+             *     `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+             *     reader may not read the meeting.
+             */
+            room?: components["schemas"]["WorklistMeetingRoom"];
             contact?: components["schemas"]["WorklistContactFacts"];
             /**
              * @description Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
@@ -61733,6 +61909,22 @@ export interface components {
              *     reader cannot act on it and cannot tell it from a bug.
              */
             label?: string;
+        };
+        /**
+         * @description Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+         *     meeting today and the next one name their attendees by one rule.
+         */
+        WorklistMeetingRoom: {
+            /** @description The attendees who are contacts this reader may see, named first. */
+            participants: {
+                /** Format: uuid */
+                contact_id: string;
+                full_name: string;
+            }[];
+            /** @description The attendees who are not contacts, named after the contacts within the same eight. */
+            other_participants?: components["schemas"]["MeetingOtherParticipant"][];
+            /** @description How many more attendees this reader may see than the eight named. Absent when every attendee is named. */
+            participants_more?: number;
         };
         /**
          * @description The human behind the row — whom a reply would go to — and how the silence
@@ -73504,6 +73696,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SendAuthorizationPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    confirmSendWithoutLawfulBasis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LawfulBasisConfirmationRequest"];
+            };
+        };
+        responses: {
+            /** @description The addresses whose warning this user confirmed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LawfulBasisConfirmation"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -91016,6 +91236,14 @@ export interface operations {
                      *     later asks to lift is only reviewable if the record says why it was made.
                      */
                     reason?: string;
+                    /**
+                     * Format: date-time
+                     * @description When the refusal reached you: the arrival time of the mail that said so, or the
+                     *     time of the call. Never the time you record it. Left out, it is the time of
+                     *     recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+                     *     so a later time than now is refused.
+                     */
+                    received_at?: string;
                 };
             };
         };
@@ -91193,6 +91421,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    exportContactOptOutRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The records, newest first in each list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OptOutRecords"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];

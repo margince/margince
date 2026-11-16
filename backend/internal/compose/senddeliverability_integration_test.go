@@ -38,7 +38,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	// Two granted purposes: a marketing one, which carries an unsubscribe
 	// surface, and the locked transactional one, which by definition does not.
 	for _, key := range []string{"newsletter", "transactional"} {
-		purpose, err := consentStore.CreatePurpose(admin, key, key, false)
+		purpose, err := consentStore.CreatePurpose(admin, key, key, false, "")
 		if err != nil {
 			t.Fatalf("create purpose %s: %v", key, err)
 		}

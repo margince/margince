@@ -63,7 +63,7 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 			if !found {
 				continue
 			}
-			for _, f := range draftFindings(rules.AdvertisingLanguage, rules.ClaimsNeedProof, subject, body) {
+			for _, f := range draftFindings(rules.DisclosureLanguage, rules.ClaimsNeedProof, subject, body) {
 				if !slices.ContainsFunc(findings, func(have DraftFinding) bool { return have.Detail == f.Detail }) {
 					findings = append(findings, f)
 				}

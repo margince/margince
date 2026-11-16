@@ -19,7 +19,7 @@ const STORED = {
   objection_route: "Write to privacy@example.com.",
   advertiser_contact: "",
   translations: [],
-  advertising_languages: ["vi"],
+  disclosure_languages: ["vi"],
   objection_route_means: ["web", "email", "phone"],
 };
 

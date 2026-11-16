@@ -20,9 +20,9 @@ type disclosureLayout struct {
 	// language is the message's language; baseLanguage the language the
 	// installation's default text is written in.
 	language, baseLanguage string
-	// advertisingLanguage is the language a recipient's pack asks the
-	// advertising particulars to be stated in.
-	advertisingLanguage string
+	// packLanguage is a recipient pack's DisclosureLanguage, which advertising
+	// particulars must be stated in.
+	packLanguage string
 	// refusalLast closes advertising with the refusal section, the
 	// advertiser's block directly before it.
 	refusalLast bool
@@ -54,29 +54,29 @@ func layoutDisclosures(owed []messagingrules.Disclosure, p ControllerParticulars
 
 // particularsFor answers the version of p a disclosure of kind prints.
 //
-// An advertising particular owed in an advertising language is that version
+// An advertising particular owed in a pack language is that version
 // or nothing: the default text counts only when it is written in that
 // language. Every other particular prints the message's language where one is
 // stated, else the default text.
 func (l disclosureLayout) particularsFor(kind messagingrules.DisclosureKind, p ControllerParticulars) ControllerParticulars {
-	if !l.marketing || l.advertisingLanguage == "" || dataProtectionDisclosure(kind) {
+	if !l.marketing || l.packLanguage == "" || dataProtectionDisclosure(kind) {
 		return p.In(l.language)
 	}
 	return l.advertising(p)
 }
 
-// advertising is p as advertising in the advertising language prints it. The
+// advertising is p as advertising in the pack language prints it. The
 // name and address fall back to the default text; the objection route and
 // the advertiser contact do not.
 func (l disclosureLayout) advertising(p ControllerParticulars) ControllerParticulars {
-	if l.advertisingLanguage == "" {
+	if l.packLanguage == "" {
 		return p.In(l.language)
 	}
-	out := p.In(l.advertisingLanguage)
-	if l.baseLanguage == l.advertisingLanguage {
+	out := p.In(l.packLanguage)
+	if l.baseLanguage == l.packLanguage {
 		return out
 	}
-	stated, _ := p.translation(l.advertisingLanguage)
+	stated, _ := p.translation(l.packLanguage)
 	out.ObjectionRoute, out.AdvertiserContact = stated.ObjectionRoute, stated.AdvertiserContact
 	return out
 }
@@ -88,7 +88,7 @@ func (l disclosureLayout) advertising(p ControllerParticulars) ControllerParticu
 // controller identity line would repeat them, and is folded into the block.
 // The refusal states the right to refuse, the route, and the data choice.
 func (l disclosureLayout) refusalSectionLast(lines []DisclosureLine, advertising ControllerParticulars) []DisclosureLine {
-	language := l.advertisingLanguage
+	language := l.packLanguage
 	if language == "" {
 		language = l.language
 	}

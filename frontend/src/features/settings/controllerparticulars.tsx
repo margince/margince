@@ -66,9 +66,7 @@ function textOf(source: Partial<Record<FieldKey, string | null>>): Text {
 // already stated.
 function languagesOf(particulars: Particulars): string[] {
   const stated = (particulars.translations ?? []).map((t) => t.language);
-  return [
-    ...new Set([...(particulars.advertising_languages ?? []), ...stated]),
-  ];
+  return [...new Set([...(particulars.disclosure_languages ?? []), ...stated])];
 }
 
 function draftOf(particulars: Particulars): Draft {

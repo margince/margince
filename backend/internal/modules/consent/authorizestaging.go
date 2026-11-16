@@ -109,6 +109,9 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 			return commsauthz.DecisionSet{}, err
 		}
 		d.Phase = commsauthz.PhaseStaging
+		if d, err = requireConfirmationTx(ctx, tx, d, deliveryID); err != nil {
+			return commsauthz.DecisionSet{}, err
+		}
 		// From the RESOLVED category, so the authority stamped on the row is
 		// the one belonging to what the engine decided the message is.
 		d.Mode = ModeFor(modes, d.Resolved)
@@ -237,7 +240,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], string(d.Mode), by, evidence, authority, instructionID,
 			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
-			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
+			groundNotice(d), groundOffer(d), groundSoldAt(d), dataProtectionStampFor(countries[i], protection),
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision

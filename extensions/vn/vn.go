@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // New returns the unit's declaration (the ADR-0120 §4 constructor contract the
@@ -47,6 +48,7 @@ func New() extension.Extension {
 		Description:   "Vietnamese jurisdiction pack: the Decree 91/2020/ND-CP advertising-email rules — prior consent, the subject label, advertiser identity, the daily ceiling and the acknowledged opt-out.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 		Messaging:     []messaging.Rules{messagingRules()},
+		SubjectRights: []subjectrights.Rules{subjectRights()},
 	}
 }
 
@@ -65,7 +67,7 @@ type retention struct{}
 
 func (retention) Classes() []jurisdiction.RetentionClass { return nil }
 
-// vnAdvertisingCap is the ceiling Decree 91/2020/ND-CP Art. 22(2) places on
+// vnAdvertisingCap is the ceiling Decree 91/2020/ND-CP Art. 13.5 places on
 // advertising email: at most three messages to one address in twenty-four
 // hours, unless the recipient has agreed otherwise.
 //
@@ -77,7 +79,7 @@ const (
 	vnAdvertisingWindow         = 24 * time.Hour
 )
 
-// advertisingLabel is the subject marking Decree 91/2020/ND-CP Art. 12 fixes
+// advertisingLabel is the subject marking Decree 91/2020/ND-CP Art. 18 fixes
 // for an advertising message. The literal lives HERE rather than on the
 // published messaging surface for the reason every country string does: core
 // applies a prefix a pack supplies and knows nothing about which one, so a
@@ -140,7 +142,7 @@ func superlatives() []string {
 // The cross-jurisdiction consequence is that evidence of a German sale
 // authorizes nothing here.
 //
-// THE [QC] PREFIX is Art. 12: an advertising message must be labelled as
+// The [QC] prefix is Art. 18: an advertising message must be labelled as
 // advertising in its subject, and the decree fixes the label. Declaring it
 // while nothing applies it is deliberate: the rule is what the decree says, and
 // a pack that waited would leave the obligation unrecorded until the machinery
@@ -149,19 +151,18 @@ func superlatives() []string {
 // (backend/gates/messagingruleapplied_test.go) holds the answer, and fails when
 // a field is applied or abandoned without the record moving with it.
 //
-// ADVERTISER IDENTIFICATION is Art. 13: an advertising message names the
+// Advertiser identification is Art. 19: an advertising message names the
 // advertiser and gives a way to reach them. It is declared as an
-// AdvertiserContact disclosure alongside the Art. 13 GDPR-shaped controller
-// disclosures, because a Vietnamese recipient is owed BOTH — who is processing
-// their data and who is advertising to them are the same organisation here and
-// need not be, and the two obligations come from different instruments. It also
-// needs an advertiser phone and website, which the installation settings do not
-// carry.
+// AdvertiserContact disclosure beside the controller disclosures GDPR Art. 13
+// shapes. A Vietnamese recipient is owed both. Who processes their data and who
+// advertises to them are often one organisation, and need not be. The two
+// duties come from different instruments. It also needs an advertiser phone and
+// website, which the installation settings do not carry.
 //
-// THE ACKNOWLEDGED OPT-OUT is Art. 16: a recipient who refuses further
-// advertising is owed a confirmation that their refusal was received, sent
-// within twenty-four hours and carrying no advertising of its own. The flag says
-// one is owed; the engine's controller lane is what will send it, which is the
+// The acknowledged opt-out is Art. 20. A recipient who refuses advertising
+// email is owed a receipt at once. It states when the refusal arrived and when
+// sending stopped, and carries no advertising. The deadline below is an
+// internal alert, not the decree's window. The controller lane sends it: the
 // only lane that may write to somebody who has just suppressed themselves.
 //
 // THE DAILY CEILING is the one rule here the engine applies today. It refuses
@@ -173,10 +174,13 @@ func superlatives() []string {
 func messagingRules() messaging.Rules {
 	return messaging.Rules{
 		Jurisdiction: "vn",
-		// 3: the objection route must name three means, advertising leads
-		// with Vietnamese and ends with the refusal section, and superlatives
-		// need a stated proof. A decision recording 2 was judged without them.
-		Version:            3,
+		// 2 stated the 2025 instruments. 3 applied them: the data-protection
+		// rules follow the recipient, no use rests on legitimate interests, and
+		// the receipt is due at once in Vietnam time. 4 adds that a consent
+		// mail answers the recipient's own request. 5 asks three refusal
+		// means, ends advertising with the refusal section and flags claims
+		// that need a proof. The number tells a decision under each set apart.
+		Version:            5,
 		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
@@ -190,15 +194,53 @@ func messagingRules() messaging.Rules {
 			{Kind: messaging.ObjectionRoute, MarketingOnly: true, Means: refusalMeans()},
 			{Kind: messaging.AdvertiserContact, MarketingOnly: true},
 		},
-		AdvertisingLanguage: "vi",
-		RefusalSectionLast:  true,
-		ClaimsNeedProof:     superlatives(),
-		SubjectPrefix:       advertisingLabel,
+		RefusalSectionLast: true,
+		ClaimsNeedProof:    superlatives(),
+		SubjectPrefix:      advertisingLabel,
 		FrequencyCap: &messaging.FrequencyCap{
 			Messages: vnAdvertisingMessagesPerDay,
 			Window:   vnAdvertisingWindow,
 		},
-		OptOutAcknowledgement:       true,
-		OptOutAcknowledgementWithin: 24 * time.Hour,
+		OptOutAcknowledgement: true,
+		// Art. 20.3 owes the receipt at once, and it is queued with the refusal.
+		// An hour is when a receipt still unsent raises an alarm.
+		OptOutAcknowledgementWithin: time.Hour,
+		// Art. 20.4(a): the receipt states both times, read here in Vietnam time.
+		OptOutAcknowledgementUTCOffset: 7 * time.Hour,
+		// Art. 11.7 keeps registrations, refusals and receipts at least one
+		// year; 366 days holds across a leap year.
+		OptOutRecordsKeep: 366 * 24 * time.Hour,
+		// Law 91/2025/QH15 Art. 1.2(c) reaches a foreign controller that
+		// processes a Vietnamese citizen's data.
+		DataProtectionFollowsRecipient: true,
+		DisclosureLanguage:             "vi",
+		// Art. 9 and 11.1 need consent before collection, unless an Art. 19.1
+		// case applies. The law has no legitimate-interest basis.
+		NoLegitimateInterests: true,
+		// Decree 91/2020/ND-CP Art. 11.2: a consent request the recipient did
+		// not ask for is itself an unsolicited message.
+		ConsentConfirmationNeedsRequest: true,
+	}
+}
+
+// subjectRights are the Decree 356/2025/ND-CP Art. 5 deadlines. Every request
+// is owed a first answer in 2 working days. It is carried out in 10 days to
+// correct (Art. 5.3), 20 to erase (Art. 5.4) and 15 to restrict (Art. 5.2),
+// counted in calendar days. Access keeps the core month.
+func subjectRights() subjectrights.Rules {
+	return subjectrights.Rules{
+		Jurisdiction: "vn",
+		Version:      1,
+		Instruments: []messaging.Instrument{
+			{Name: "Decree 356/2025/ND-CP, Art. 5", EffectiveFrom: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		},
+		Deadlines: map[subjectrights.RequestKind]subjectrights.Deadline{
+			subjectrights.Rectify:     {Period: jurisdiction.Period{Days: 10}},
+			subjectrights.Erasure:     {Period: jurisdiction.Period{Days: 20}},
+			subjectrights.Restriction: {Period: jurisdiction.Period{Days: 15}},
+		},
+		ReplyWithinWorkingDays: 2,
+		// Working days are Vietnamese days.
+		UTCOffset: 7 * time.Hour,
 	}
 }

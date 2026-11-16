@@ -213,6 +213,19 @@ func stricter(a, b Rules) Rules {
 	out.ConsentOnly = a.ConsentOnly || b.ConsentOnly
 	out.OptOutAcknowledgement = a.OptOutAcknowledgement || b.OptOutAcknowledgement
 	out.OptOutAcknowledgementWithin = shorterWindow(a.OptOutAcknowledgementWithin, b.OptOutAcknowledgementWithin)
+	// A floor either side requires holds, so the longer one wins.
+	out.OptOutRecordsKeep = max(a.OptOutRecordsKeep, b.OptOutRecordsKeep)
+	// One receipt prints one zone. The first declared wins, as the prefix does.
+	if out.OptOutAcknowledgementUTCOffset == 0 {
+		out.OptOutAcknowledgementUTCOffset = b.OptOutAcknowledgementUTCOffset
+	}
+	out.DataProtectionFollowsRecipient = a.DataProtectionFollowsRecipient || b.DataProtectionFollowsRecipient
+	out.NoLegitimateInterests = a.NoLegitimateInterests || b.NoLegitimateInterests
+	if out.DisclosureLanguage == "" {
+		out.DisclosureLanguage = b.DisclosureLanguage
+	}
+	out.RecordConfirmationWithoutNews = a.RecordConfirmationWithoutNews || b.RecordConfirmationWithoutNews
+	out.ConsentConfirmationNeedsRequest = a.ConsentConfirmationNeedsRequest || b.ConsentConfirmationNeedsRequest
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.
@@ -221,13 +234,9 @@ func stricter(a, b Rules) Rules {
 	return out
 }
 
-// foldAdvertisingContent adds b's advertising content rules to out. One body
-// leads with one language, so the first declared wins, as with SubjectPrefix.
-// A claim either side restricts stays restricted.
+// foldAdvertisingContent adds b's advertising content rules to out. A claim
+// either side restricts stays restricted.
 func foldAdvertisingContent(out *Rules, b Rules) {
-	if out.AdvertisingLanguage == "" {
-		out.AdvertisingLanguage = b.AdvertisingLanguage
-	}
 	out.RefusalSectionLast = out.RefusalSectionLast || b.RefusalSectionLast
 	claims := slices.Clone(out.ClaimsNeedProof)
 	for _, word := range b.ClaimsNeedProof {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package draftcontent
 
 // The preview's advertising content edge, bound to the consent module, which
 // owns the packs and reads each recipient's country.
@@ -13,15 +13,16 @@ import (
 	"github.com/margince/margince/backend/internal/modules/consent"
 )
 
-type draftContentAdapter struct {
-	store *consent.Store
+// Adapter answers activities' draft checks from consent's packs.
+type Adapter struct {
+	Store *consent.Store
 }
 
 // CheckAdvertisingDraft answers what the draft does not meet.
-func (a draftContentAdapter) CheckAdvertisingDraft(
+func (a Adapter) CheckAdvertisingDraft(
 	ctx context.Context, recipients []string, subject, body string,
 ) ([]activities.DraftContentFinding, error) {
-	found, err := a.store.CheckAdvertisingDraft(ctx, recipients, subject, body)
+	found, err := a.Store.CheckAdvertisingDraft(ctx, recipients, subject, body)
 	if err != nil {
 		return nil, err
 	}

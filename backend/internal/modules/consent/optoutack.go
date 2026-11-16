@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -25,7 +26,9 @@ import (
 //
 // One receipt per act, not per purpose: a press that withdrew four purposes is
 // one refusal. withdrawalMessageID names the act by subject and transaction.
-func (s *Store) acknowledgeWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, purposeClass string) error {
+// The subject's own press arrives and stops sending at the instant it is
+// recorded, withdrawnAt.
+func (s *Store) acknowledgeWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, purposeClass string, withdrawnAt time.Time) error {
 	if !slices.Contains(commsauthz.MarketingPurposeClasses(), purposeClass) {
 		return nil
 	}
@@ -38,7 +41,8 @@ func (s *Store) acknowledgeWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subj
 	if err != nil || !first {
 		return err
 	}
-	return s.stageAcknowledgementTx(ctx, tx, sub, messageID, ids.UUID{})
+	return s.stageAcknowledgementTx(ctx, tx, sub, messageID, ids.UUID{},
+		RefusalTimes{ReceivedAt: withdrawnAt, StoppedAt: withdrawnAt})
 }
 
 // acknowledgedActsSetting is the transaction-local setting that lists the
@@ -72,13 +76,23 @@ func firstAcknowledgementOfActTx(ctx context.Context, tx pgx.Tx, messageID strin
 // owes one exactly as a self-service press does — the decree is about the
 // refusal, not about which door recorded it.
 func (s *Store) acknowledgeOptOutTx(
-	ctx context.Context, tx pgx.Tx, sub subject, kind string, stopID ids.UUID,
+	ctx context.Context, tx pgx.Tx, sub subject, kind string, stopID ids.UUID, times RefusalTimes,
 ) error {
 	if !acknowledgeableStop(kind) {
 		return nil
 	}
-	return s.stageAcknowledgementTx(ctx, tx, sub, acknowledgementMessageID(stopID), stopID)
+	return s.stageAcknowledgementTx(ctx, tx, sub, acknowledgementMessageID(stopID), stopID, times)
 }
+
+// receiptKind is which receipt a refusal or request owes: the rules that say
+// whether one is owed, and the wording that answers it.
+type receiptKind struct {
+	owed   func(s *Store, ctx context.Context, tx pgx.Tx, sub subject) (receiptTerms, bool, error)
+	render func(language string, times RefusalTimes) (Rendered, commsauthz.Category, error)
+}
+
+// optOutReceipt is the receipt a refusal of advertising owes.
+var optOutReceipt = receiptKind{owed: (*Store).receiptOwedTx, render: RenderOptOutAcknowledgement}
 
 // stageAcknowledgementTx is the one place an acknowledgement is composed and
 // queued, for both the suppression door and the unsubscribe press.
@@ -88,80 +102,162 @@ func (s *Store) acknowledgeOptOutTx(
 // the message id, which each caller derives from the act it is acknowledging.
 //
 // stopID names the suppression this receipt acknowledges, zero for a
-// withdrawal, which records none.
-func (s *Store) stageAcknowledgementTx(ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID) error {
+// withdrawal, which records none. times are the refusal's, which it prints.
+func (s *Store) stageAcknowledgementTx(
+	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
+) error {
+	return s.stageReceiptTx(ctx, tx, optOutReceipt, sub, messageID, stopID, times)
+}
+
+// stageReceiptTx stages one receipt in a savepoint. A receipt that cannot be
+// staged never undoes the refusal or request it answers; it raises the alarm.
+func (s *Store) stageReceiptTx(
+	ctx context.Context, tx pgx.Tx, kind receiptKind, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
+) error {
+	terms, owed, err := s.keepUnderReceiptRulesTx(ctx, tx, kind, sub, stopID, times)
+	if err != nil || !owed {
+		return err
+	}
 	nested, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("consent: opening receipt preparation: %w", err)
 	}
-	owed, missing, err := s.stageOwedReceiptTx(ctx, nested, sub, messageID, stopID)
+	missing, err := s.stageOwedReceiptTx(ctx, nested, kind, sub, terms, messageID, stopID, times)
 	missed := MissedReceipt{SubjectType: sub.entityType, SubjectID: sub.id, MessageID: messageID, Reason: missing}
 	if err != nil {
 		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
 			return fmt.Errorf("consent: rolling back receipt preparation: %w", rollbackErr)
 		}
-		slog.ErrorContext(ctx, "opt-out receipt could not be staged; the refusal remains recorded",
+		slog.ErrorContext(ctx, "receipt could not be staged; the refusal or request remains recorded",
 			"subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
-		// A failure before the rules answered cannot say a receipt was owed.
-		if owed {
-			missed.Reason = MissedReceiptNotPrepared
-			s.raiseMissedReceiptTx(ctx, tx, missed)
-		}
-		return nil
-	}
-	if err := nested.Commit(ctx); err != nil {
+		missed.Reason = MissedReceiptNotPrepared
+	} else if err := nested.Commit(ctx); err != nil {
 		return fmt.Errorf("consent: committing receipt preparation: %w", err)
 	}
-	if owed && missing != "" {
+	if missed.Reason != "" {
 		s.raiseMissedReceiptTx(ctx, tx, missed)
 	}
 	return nil
 }
 
-// stageOwedReceiptTx stages the receipt when the rules owe one. It answers
-// whether one is owed, and why it could not be staged when it was not.
-func (s *Store) stageOwedReceiptTx(
-	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID,
-) (bool, string, error) {
-	owed, dueAt, err := s.receiptOwedTx(ctx, tx, sub)
-	if err != nil || !owed {
-		return false, "", err
+// keepUnderReceiptRulesTx reads the receipt terms kind's rules set and stamps
+// the refusal's retention floor, in a savepoint apart from the receipt's. So a
+// receipt that fails to stage cannot take the floor down with it.
+func (s *Store) keepUnderReceiptRulesTx(
+	ctx context.Context, tx pgx.Tx, kind receiptKind, sub subject, stopID ids.UUID, times RefusalTimes,
+) (receiptTerms, bool, error) {
+	nested, err := tx.Begin(ctx)
+	if err != nil {
+		return receiptTerms{}, false, fmt.Errorf("consent: opening the refusal's retention floor: %w", err)
 	}
+	terms, owed, err := kind.owed(s, ctx, nested, sub)
+	if err == nil {
+		terms.keptUntil, err = keepRefusalTx(ctx, nested, sub, stopID, times, terms.keep)
+	}
+	if err != nil {
+		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
+			return receiptTerms{}, false, fmt.Errorf("consent: rolling back the refusal's retention floor: %w", rollbackErr)
+		}
+		// A failure before the rules answered cannot say a receipt was owed.
+		slog.ErrorContext(ctx, "receipt rules could not be read; the refusal or request remains recorded",
+			"subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
+		return receiptTerms{}, false, nil
+	}
+	if err := nested.Commit(ctx); err != nil {
+		return receiptTerms{}, false, fmt.Errorf("consent: committing the refusal's retention floor: %w", err)
+	}
+	return terms, owed, nil
+}
+
+// stageOwedReceiptTx stages the receipt the rules owe, and answers why it
+// could not be staged when it was not.
+func (s *Store) stageOwedReceiptTx(
+	ctx context.Context, tx pgx.Tx, kind receiptKind, sub subject, terms receiptTerms, messageID string, stopID ids.UUID, times RefusalTimes,
+) (string, error) {
+	times.UTCOffset = terms.utcOffset
 	if s.confirmSender == nil {
-		return true, MissedReceiptNoMailLane, nil
+		return MissedReceiptNoMailLane, nil
 	}
 	address, err := acknowledgementAddressTx(ctx, tx, sub, stopID)
 	if err != nil {
-		return true, "", err
+		return "", err
 	}
 	if address == "" {
-		return true, MissedReceiptNoAddress, nil
+		return MissedReceiptNoAddress, nil
 	}
-	return true, "", s.prepareAcknowledgementTx(ctx, tx, sub, dueAt, address, messageID)
+	return "", s.prepareAcknowledgementTx(ctx, tx, kind, sub, terms, address, messageID, times)
+}
+
+// receiptTerms are what the rules ask of one refusal and its receipt. dueAt is
+// when an unsent receipt raises its alarm, nil for never. utcOffset is where its
+// times print. keep is how long the refusal and receipt stay out of retention's
+// reach, and keptUntil the instant that ends for this refusal.
+type receiptTerms struct {
+	dueAt     *time.Time
+	utcOffset time.Duration
+	keep      time.Duration
+	keptUntil *time.Time
+}
+
+// keepRefusalTx stamps the stop with the end of its retention floor, and
+// answers that end for the receipt. Nil when the rules set no floor.
+func keepRefusalTx(
+	ctx context.Context, tx pgx.Tx, sub subject, stopID ids.UUID, times RefusalTimes, keep time.Duration,
+) (*time.Time, error) {
+	if keep <= 0 {
+		return nil, nil //nolint:nilnil // a nil end is the absence of a retention floor, which the receipt reads as none
+	}
+	kept := times.StoppedAt.Add(keep)
+	if !stopID.IsZero() {
+		var err error
+		if kept, err = stampRefusalFloorTx(ctx, tx, sub, stopID, kept); err != nil {
+			return nil, err
+		}
+	}
+	return &kept, nil
+}
+
+// stampRefusalFloorTx sets the stop's retention floor to kept, and answers the
+// floor the stop carries. A stop recorded again keeps the floor it already has.
+func stampRefusalFloorTx(ctx context.Context, tx pgx.Tx, sub subject, stopID ids.UUID, kept time.Time) (time.Time, error) {
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
+		return time.Time{}, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE communication_suppression SET kept_until = $2 WHERE id = $1 AND kept_until IS NULL`, stopID, kept)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("consent: keeping the refusal for its retention floor: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		if err := tx.QueryRow(ctx, `SELECT kept_until FROM communication_suppression WHERE id = $1`, stopID).Scan(&kept); err != nil {
+			return time.Time{}, fmt.Errorf("consent: reading the refusal's retention floor: %w", err)
+		}
+	}
+	return kept, nil
 }
 
 // receiptOwedTx asks the stopping subject's own country's rules whether this
-// refusal owes a receipt, and by when. A nil deadline is a rule that sets none.
-func (s *Store) receiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (bool, *time.Time, error) {
+// refusal owes a receipt, and on which terms.
+func (s *Store) receiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (receiptTerms, bool, error) {
 	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
 	if err != nil {
-		return false, nil, err
+		return receiptTerms{}, false, err
 	}
 	rules, _, applicable := applicableRules(country.Code)
-	if !applicable || !rules.OptOutAcknowledgement {
-		return false, nil, nil
+	if !applicable {
+		return receiptTerms{}, false, nil
 	}
-	if rules.OptOutAcknowledgementWithin <= 0 {
-		return true, nil, nil
+	terms := receiptTerms{utcOffset: rules.OptOutAcknowledgementUTCOffset, keep: rules.OptOutRecordsKeep}
+	if rules.OptOutAcknowledgementWithin > 0 {
+		due := s.now().Add(rules.OptOutAcknowledgementWithin)
+		terms.dueAt = &due
 	}
-	due := s.now().Add(rules.OptOutAcknowledgementWithin)
-	return true, &due, nil
+	return terms, rules.OptOutAcknowledgement, nil
 }
 
 func (s *Store) prepareAcknowledgementTx(
-	ctx context.Context, tx pgx.Tx, sub subject, dueAt *time.Time, address, messageID string,
+	ctx context.Context, tx pgx.Tx, kind receiptKind, sub subject, terms receiptTerms, address, messageID string, times RefusalTimes,
 ) error {
-	rendered, category, err := RenderControllerTemplate(TemplateOptOutAcknowledgement, time.Time{}, s.replyLanguage(ctx, tx, sub))
+	rendered, category, err := kind.render(s.replyLanguage(ctx, tx, sub), times)
 	if err != nil {
 		return err
 	}
@@ -169,7 +265,9 @@ func (s *Store) prepareAcknowledgementTx(
 	if err != nil {
 		return err
 	}
-	send := ConfirmationSend{Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered}
+	send := ConfirmationSend{
+		Recipient: address, Category: category, MessageID: messageID, DueAt: terms.dueAt, KeptUntil: terms.keptUntil, Rendered: rendered,
+	}
 	// Filed under the subject who refused, so the receipt's timeline row, the
 	// overdue sweep and an erasure all find it on that record.
 	if sub.entityType == entityLead {
@@ -194,6 +292,15 @@ func (s *Store) prepareAcknowledgementTx(
 // second delivery attempt at one the provider already rejected.
 func acknowledgeableStop(kind string) bool {
 	return slices.Contains(acknowledgeableKinds(), kind)
+}
+
+// receiptEvidenceKinds is acknowledgeableKinds, plus the restriction the
+// request receipt answers under a pack that follows the recipient.
+func receiptEvidenceKinds(recipientBound bool) []string {
+	if recipientBound {
+		return append(acknowledgeableKinds(), kindProcessingRestriction)
+	}
+	return acknowledgeableKinds()
 }
 
 // acknowledgeableKinds is the same answer as a list, for the validator that has
@@ -266,7 +373,13 @@ func acknowledgementMessageID(stopID ids.UUID) string {
 // A second press of the same purposes on one day, after a re-grant, is a
 // second refusal. It owes its own receipt.
 func withdrawalMessageID(subjectID ids.UUID, act string) string {
-	return "optout-ack-" + strings.ReplaceAll(subjectID.String(), "-", "") + "-" + act + "@margince.invalid"
+	return withdrawalMessagePrefix(subjectID) + act + "@margince.invalid"
+}
+
+// withdrawalMessagePrefix opens the id of every withdrawal receipt of one
+// subject, so a reader finds them by the subject they answer.
+func withdrawalMessagePrefix(subjectID ids.UUID) string {
+	return "optout-ack-" + strings.ReplaceAll(subjectID.String(), "-", "") + "-"
 }
 
 // withdrawalActTx names the transaction recording this press: the database day

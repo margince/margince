@@ -21,11 +21,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -83,6 +87,37 @@ type Acquisition struct {
 	// OccurredAt records the acquisition or captured activity time when known.
 	// An unknown source needs review; capture time only bounds a confirmed indirect duty.
 	OccurredAt *time.Time
+	// StatedSource is where the user creating the contact by hand said it
+	// came from, and Note their own words beside it. Both reach the contact's
+	// privacy page. They leave Kind alone: what a rep says about a card is not
+	// the act a kind records.
+	StatedSource string
+	Note         string
+}
+
+// statedAcquisition checks what the create request says about its source.
+// "other" says nothing on its own, so it needs the note.
+func statedAcquisition(source *crmcontracts.ContactStatedSource, note *string) (Acquisition, error) {
+	var out Acquisition
+	if note != nil {
+		out.Note = strings.TrimSpace(*note)
+		if err := httperr.RequireWithin("acquisition_note", out.Note, 500); err != nil {
+			return Acquisition{}, err
+		}
+	}
+	if source == nil || *source == "" {
+		return out, nil
+	}
+	if !source.Valid() {
+		return Acquisition{}, httperr.Validation("acquisition_source", "invalid",
+			"pick met in person, business card, referral, website or other")
+	}
+	if *source == crmcontracts.ContactStatedSourceOther && out.Note == "" {
+		return Acquisition{}, httperr.Validation("acquisition_note", "required",
+			"say where the contact came from when the source is other")
+	}
+	out.StatedSource = string(*source)
+	return out, nil
 }
 
 // recordAcquisition writes one evidence row beside a contact that was just
@@ -103,9 +138,12 @@ func recordAcquisition(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		entity = &resolved
 	}
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, legal_entity_id)
-		VALUES (@contact, @kind, @occurred, @actor, @entity)`,
-		pgx.StrictNamedArgs{contactKey: contactID, acquisitionKindField: in.Kind, "occurred": in.OccurredAt, actorKey: capturedBy, "entity": entity}); err != nil {
+		INSERT INTO contact_acquisition_evidence (contact_id, kind, occurred_at, captured_by, legal_entity_id, stated_source, note)
+		VALUES (@contact, @kind, @occurred, @actor, @entity, nullif(@stated, ''), nullif(@note, ''))`,
+		pgx.StrictNamedArgs{
+			contactKey: contactID, acquisitionKindField: in.Kind, "occurred": in.OccurredAt, actorKey: capturedBy,
+			"entity": entity, "stated": in.StatedSource, "note": in.Note,
+		}); err != nil {
 		return fmt.Errorf("contacts: recording how this contact was acquired: %w", err)
 	}
 	return nil

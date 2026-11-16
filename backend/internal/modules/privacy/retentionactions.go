@@ -87,6 +87,9 @@ func (s *RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id i
 	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
 		return err
 	}
+	if err := refuseIfOptOutKeptNow(ctx, tx, "contact_id", id); err != nil {
+		return err
+	}
 	return anonymizeContactRecord(ctx, tx, id, s.eraser)
 }
 

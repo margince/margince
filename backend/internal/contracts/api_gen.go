@@ -7792,6 +7792,27 @@ func (e ConsentPurposeClass) Valid() bool {
 	}
 }
 
+// Defines values for ConsentPurposeFrequency.
+const (
+	ConsentPurposeFrequencyMonthly   ConsentPurposeFrequency = "monthly"
+	ConsentPurposeFrequencyQuarterly ConsentPurposeFrequency = "quarterly"
+	ConsentPurposeFrequencyWeekly    ConsentPurposeFrequency = "weekly"
+)
+
+// Valid indicates whether the value is a known member of the ConsentPurposeFrequency enum.
+func (e ConsentPurposeFrequency) Valid() bool {
+	switch e {
+	case ConsentPurposeFrequencyMonthly:
+		return true
+	case ConsentPurposeFrequencyQuarterly:
+		return true
+	case ConsentPurposeFrequencyWeekly:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConsentQualifyingEventKind.
 const (
 	ConsentQualifyingEventKindActiveDeal         ConsentQualifyingEventKind = "active_deal"
@@ -9277,6 +9298,33 @@ func (e ContactResearchRunState) Valid() bool {
 	case ContactResearchRunStateNotConnected:
 		return true
 	case ContactResearchRunStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactStatedSource.
+const (
+	ContactStatedSourceBusinessCard ContactStatedSource = "business_card"
+	ContactStatedSourceMetInPerson  ContactStatedSource = "met_in_person"
+	ContactStatedSourceOther        ContactStatedSource = "other"
+	ContactStatedSourceReferral     ContactStatedSource = "referral"
+	ContactStatedSourceWebsite      ContactStatedSource = "website"
+)
+
+// Valid indicates whether the value is a known member of the ContactStatedSource enum.
+func (e ContactStatedSource) Valid() bool {
+	switch e {
+	case ContactStatedSourceBusinessCard:
+		return true
+	case ContactStatedSourceMetInPerson:
+		return true
+	case ContactStatedSourceOther:
+		return true
+	case ContactStatedSourceReferral:
+		return true
+	case ContactStatedSourceWebsite:
 		return true
 	default:
 		return false
@@ -19109,6 +19157,7 @@ const (
 	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
 	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
 	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesNone                           PrivacyInformationPagePurposeBases = "none"
 	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
 	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
 	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
@@ -19127,6 +19176,8 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 	case PrivacyInformationPagePurposeBasesLegalObligation:
 		return true
 	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	case PrivacyInformationPagePurposeBasesNone:
 		return true
 	case PrivacyInformationPagePurposeBasesPrecontractRequest:
 		return true
@@ -43431,7 +43482,10 @@ type ConsentPurpose struct {
 	// Class What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 	Class     *ConsentPurposeClass `json:"class,omitempty"`
 	CreatedAt time.Time            `json:"created_at"`
-	Id        openapi_types.UUID   `json:"id"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Id        openapi_types.UUID       `json:"id"`
 
 	// Key Stable machine key (e.g. transactional, marketing_email, profiling). Referenced by send_email.consent_purpose.
 	Key   string `json:"key"`
@@ -43443,6 +43497,9 @@ type ConsentPurpose struct {
 
 // ConsentPurposeClass What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 type ConsentPurposeClass string
+
+// ConsentPurposeFrequency How often the purpose's mail goes out, roughly. The subscription question states it.
+type ConsentPurposeFrequency string
 
 // ConsentQualifyingEvent A recorded exchange that may support a scoped message. The send check also
 // uses its sending company, request or deal context, current stops and source
@@ -45037,6 +45094,9 @@ type ContactResearchSource struct {
 	Url   string  `json:"url"`
 }
 
+// ContactStatedSource Where a contact created by hand came from, as the user who created it stated.
+type ContactStatedSource string
+
 // ContactStop One live stop on a contact, and whether the caller may take it back.
 type ContactStop struct {
 	// Address The address a stop is held on. Null for a stop on the contact.
@@ -45318,10 +45378,10 @@ type ControllerParticulars struct {
 	// as met.
 	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
 
-	// AdvertisingLanguages The languages the jurisdiction packs in force ask the objection route and the advertiser
+	// DisclosureLanguages The languages the jurisdiction packs in force ask the objection route and the advertiser
 	// contact to be stated in. The packs in force are those of the installation's country and
 	// of each legal entity's country.
-	AdvertisingLanguages *[]string `json:"advertising_languages,omitempty"`
+	DisclosureLanguages *[]string `json:"disclosure_languages,omitempty"`
 
 	// LegalName Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020.
 	LegalName *string `json:"legal_name,omitempty"`
@@ -45345,9 +45405,12 @@ type ControllerParticulars struct {
 	// PrivacyContact How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
 
+	// PrivacyPage Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
+
 	// Translations The same particulars in other languages, one entry per language. A mail or page in one of
 	// them prints the translated text where it is stated and the text above where it is not.
-	// Where a jurisdiction pack in force names an advertising language, an advertising mail to a
+	// Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
 	// recipient under that pack is refused until its objection route and advertiser contact are
 	// stated in that language.
 	Translations *[]ControllerParticularsTranslation `json:"translations,omitempty"`
@@ -45769,9 +45832,11 @@ type CreateCompanyRequestSizeBand string
 
 // CreateConsentPurposeRequest defines model for CreateConsentPurposeRequest.
 type CreateConsentPurposeRequest struct {
-	Key                 string `json:"key"`
-	Label               string `json:"label"`
-	RequiresDoubleOptIn *bool  `json:"requires_double_opt_in,omitempty"`
+	// Frequency Absent means monthly.
+	Frequency           *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Key                 string                   `json:"key"`
+	Label               string                   `json:"label"`
+	RequiresDoubleOptIn *bool                    `json:"requires_double_opt_in,omitempty"`
 }
 
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.
@@ -45791,6 +45856,12 @@ type CreateContactEnrichmentRunRequest struct {
 
 // CreateContactRequest Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
 type CreateContactRequest struct {
+	// AcquisitionNote Their own words about the source, printed on the contact's privacy page beside it.
+	AcquisitionNote *string `json:"acquisition_note,omitempty"`
+
+	// AcquisitionSource Where the contact came from, as the user creating it states. The contact's privacy page prints it. `other` needs `acquisition_note`.
+	AcquisitionSource *ContactStatedSource `json:"acquisition_source,omitempty"`
+
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
@@ -49106,8 +49177,8 @@ type DraftContentFinding struct {
 
 	// Requirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
 	// proof (the document's name, number and date), and states none.
-	// `advertising_language_first`: the draft does not open in the language the pack asks
-	// advertising to lead with.
+	// `advertising_language_first`: the draft does not open in the pack's disclosure
+	// language, which advertising leads with.
 	Requirement DraftContentFindingRequirement `json:"requirement"`
 
 	// Words The claim words found, for `claim_without_proof`.
@@ -49116,8 +49187,8 @@ type DraftContentFinding struct {
 
 // DraftContentFindingRequirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
 // proof (the document's name, number and date), and states none.
-// `advertising_language_first`: the draft does not open in the language the pack asks
-// advertising to lead with.
+// `advertising_language_first`: the draft does not open in the pack's disclosure
+// language, which advertising leads with.
 type DraftContentFindingRequirement string
 
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
@@ -54021,6 +54092,20 @@ type LatestInboundList struct {
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
 }
 
+// LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
+type LawfulBasisConfirmation struct {
+	// Confirmed The records whose warning was confirmed by the signed-in user. Each confirmation waits
+	// 15 minutes for its send and is spent by the first send to that record.
+	Confirmed []CommunicationEvidenceSubject `json:"confirmed"`
+}
+
+// LawfulBasisConfirmationRequest defines model for LawfulBasisConfirmationRequest.
+type LawfulBasisConfirmationRequest struct {
+	// Subjects The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+	// them. A pinned lead is named as the lead, never as a contact sharing its address.
+	Subjects []CommunicationEvidenceSubject `json:"subjects"`
+}
+
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -58302,6 +58387,60 @@ type OperationSettings struct {
 	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds" maximum:"3600" minimum:"10"`
 }
 
+// OptOutReceiptRecord defines model for OptOutReceiptRecord.
+type OptOutReceiptRecord struct {
+	// Body The plain-text body. Null once an erasure removed it.
+	Body *string `json:"body,omitempty"`
+
+	// MessageId The receipt's Message-ID. One refusal has one.
+	MessageId string     `json:"message_id"`
+	QueuedAt  time.Time  `json:"queued_at"`
+	SentAt    *time.Time `json:"sent_at,omitempty"`
+
+	// Status The delivery's state, such as `queued`, `sent` or `parked`.
+	Status string `json:"status"`
+
+	// Subject Null once an erasure removed it.
+	Subject *string `json:"subject,omitempty"`
+
+	// TemplateVersion The version of the receipt wording it carries.
+	TemplateVersion int `json:"template_version"`
+}
+
+// OptOutRecordStop defines model for OptOutRecordStop.
+type OptOutRecordStop struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`.
+	Kind string `json:"kind"`
+
+	// PurposeKey The one purpose a narrow stop binds.
+	PurposeKey *string `json:"purpose_key,omitempty"`
+
+	// ReceivedAt When the refusal reached the controller.
+	ReceivedAt time.Time `json:"received_at"`
+
+	// RevokedAt When the stop was lifted. Null while it stands.
+	RevokedAt *time.Time `json:"revoked_at,omitempty"`
+
+	// StoppedAt When sending stopped.
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+// OptOutRecords One contact's registrations, refusals and opt-out receipts, as kept for an inspection.
+type OptOutRecords struct {
+	// ConsentEvents Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`.
+	ConsentEvents []ConsentEvent     `json:"consent_events"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+	GeneratedAt   time.Time          `json:"generated_at"`
+
+	// Receipts Every opt-out receipt filed under the contact.
+	Receipts []OptOutReceiptRecord `json:"receipts"`
+
+	// Stops Every stop recorded on the contact, lifted ones included.
+	Stops []OptOutRecordStop `json:"stops"`
+}
+
 // OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
 // stored option stays the value written on records; only its display changes. On a write
 // the map replaces the stored one, and an option the field does not offer is 422
@@ -58961,6 +59100,9 @@ type PrivacyInformationController struct {
 
 	// PrivacyContact How to reach whoever answers questions about the data.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
+
+	// PrivacyPage Where the installation publishes its own privacy information. Absent when not stated.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
 }
 
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
@@ -58999,13 +59141,19 @@ type PrivacyInformationPage struct {
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
-	// purpose the reader agreed to, else the kind of a live communication basis.
+	// purpose the reader agreed to, else the kind of a live communication basis. `none` says
+	// no basis is recorded, for a reader whose country has no legitimate-interest basis and
+	// whose record holds neither their consent nor an agreement with them.
 	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
 	// other.
 	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
+
+	// PurposeSince When the reader gave the consent each entry in `purposes` rests on, at the same index.
+	// Null for an entry whose basis is not consent.
+	PurposeSince *[]*time.Time `json:"purpose_since,omitempty"`
 
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
@@ -59021,6 +59169,12 @@ type PrivacyInformationPage struct {
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
 	// language. Art. 14(2)(c)-(e) requires naming them.
 	Rights []PrivacyInformationPageRights `json:"rights"`
+
+	// StatedSource Where the contact came from, as the user who created it by hand stated. Absent when nothing was given.
+	StatedSource *ContactStatedSource `json:"stated_source,omitempty"`
+
+	// StatedSourceNote Their own words beside `stated_source`. Absent when none were given.
+	StatedSourceNote *string `json:"stated_source_note,omitempty"`
 }
 
 // PrivacyInformationPageDataCategories defines model for PrivacyInformationPage.DataCategories.
@@ -60644,6 +60798,10 @@ type RecordCommunicationContextRequestKind string
 // A purpose-built projection and never the Contact360 read model, which carries this workspace's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
+	// AsksNews False when the recipient's country bars asking about news in a details check. The page
+	// then shows no news question, and a submit carrying a marketing answer is a 422.
+	AsksNews *bool `json:"asks_news,omitempty"`
+
 	// Company The current employer, read through the live employment relationship. Not correctable here.
 	Company string `json:"company"`
 
@@ -64737,6 +64895,12 @@ type SendAuthorizationPreviewRecipient struct {
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
 
+	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
+	// their consent nor an agreement with them. A privacy notice they were sent is neither.
+	// Not a refusal: a surface shows a warning and records the sender's confirmation through
+	// `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+	LawfulBasisMissing *bool `json:"lawful_basis_missing,omitempty"`
+
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
 	// showed it as a refusal would be describing a rollout position as a rule.
@@ -66469,8 +66633,11 @@ type StatedAmount struct {
 type SubscriptionConfirmationPage struct {
 	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
 	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
-	Controller *PrivacyInformationController    `json:"controller,omitempty"`
-	Kind       SubscriptionConfirmationPageKind `json:"kind"`
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency         `json:"frequency,omitempty"`
+	Kind      SubscriptionConfirmationPageKind `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -72047,6 +72214,11 @@ type WorklistItem struct {
 	// RequestCheck On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
 	RequestCheck *TaskRequestCheck `json:"request_check,omitempty"`
 
+	// Room Who is in a `meeting` row's room, as this reader may see them: the same room
+	// `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+	// reader may not read the meeting.
+	Room *WorklistMeetingRoom `json:"room,omitempty"`
+
 	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
 	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
 	// engine's English sentence.
@@ -72211,6 +72383,22 @@ type WorklistMayBeDone struct {
 
 	// WrotePrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 	WrotePrecision OccurredPrecision `json:"wrote_precision"`
+}
+
+// WorklistMeetingRoom Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+// meeting today and the next one name their attendees by one rule.
+type WorklistMeetingRoom struct {
+	// OtherParticipants The attendees who are not contacts, named after the contacts within the same eight.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
+	// Participants The attendees who are contacts this reader may see, named first.
+	Participants []struct {
+		ContactId openapi_types.UUID `json:"contact_id"`
+		FullName  string             `json:"full_name"`
+	} `json:"participants"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named. Absent when every attendee is named.
+	ParticipantsMore *int `json:"participants_more,omitempty" minimum:"1"`
 }
 
 // WorklistMove The next step this row suggests, and what it would act on.
@@ -76015,6 +76203,12 @@ type SuppressContactJSONBody struct {
 	// Reason What the contact was told, in their words. Stored because a suppression somebody
 	// later asks to lift is only reviewable if the record says why it was made.
 	Reason *string `json:"reason,omitempty"`
+
+	// ReceivedAt When the refusal reached you: the arrival time of the mail that said so, or the
+	// time of the call. Never the time you record it. Left out, it is the time of
+	// recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+	// so a later time than now is refused.
+	ReceivedAt *time.Time `json:"received_at,omitempty"`
 }
 
 // SuppressContactJSONBodyKind defines parameters for SuppressContact.
@@ -82054,6 +82248,9 @@ type AskCorpusJSONRequestBody AskCorpusJSONBody
 // UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
 type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
 
+// ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
+type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
+
 // CreateLeadDisqualifyReasonJSONRequestBody defines body for CreateLeadDisqualifyReason for application/json ContentType.
 type CreateLeadDisqualifyReasonJSONRequestBody = CreateLeadDisqualifyReasonRequest
 
@@ -86737,6 +86934,22 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["acquisition_note"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionNote)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_note': %w", err)
+		}
+		delete(object, "acquisition_note")
+	}
+
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
 	if raw, found := object["address"]; found {
 		err = json.Unmarshal(raw, &a.Address)
 		if err != nil {
@@ -86907,6 +87120,20 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AcquisitionNote != nil {
+		object["acquisition_note"], err = json.Marshal(a.AcquisitionNote)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_note': %w", err)
+		}
+	}
+
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
 
 	if a.Address != nil {
 		object["address"], err = json.Marshal(a.Address)
@@ -97177,6 +97404,9 @@ type ServerInterface interface {
 	// Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
 	// (GET /contacts/{id}/consent/mail-preview)
 	PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams)
+	// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+	// (GET /contacts/{id}/consent/optout-records)
+	ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id)
 	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
 	// (POST /contacts/{id}/consent/privacy-notice)
 	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
@@ -97903,6 +98133,9 @@ type ServerInterface interface {
 	// Download a document's own bytes.
 	// (GET /knowledge/documents/{id})
 	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that a user read the no-lawful-basis warning and chose to send anyway.
+	// (POST /lawful-basis-confirmations)
+	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -101704,6 +101937,12 @@ func (_ Unimplemented) PreviewControllerMail(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+// (GET /contacts/{id}/consent/optout-records)
+func (_ Unimplemented) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Mail this contact the Art. 14 disclosure, which asks them for nothing.
 // (POST /contacts/{id}/consent/privacy-notice)
 func (_ Unimplemented) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id) {
@@ -103153,6 +103392,12 @@ func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Reque
 // Download a document's own bytes.
 // (GET /knowledge/documents/{id})
 func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that a user read the no-lawful-basis warning and chose to send anyway.
+// (POST /lawful-basis-confirmations)
+func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124526,6 +124771,40 @@ func (siw *ServerInterfaceWrapper) PreviewControllerMail(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ExportContactOptOutRecords operation middleware
+func (siw *ServerInterfaceWrapper) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportContactOptOutRecords(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SendPrivacyNotice operation middleware
 func (siw *ServerInterfaceWrapper) SendPrivacyNotice(w http.ResponseWriter, r *http.Request) {
 
@@ -134576,6 +134855,26 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DownloadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmSendWithoutLawfulBasis operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmSendWithoutLawfulBasis(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -155621,6 +155920,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/contacts/{id}/consent/mail-preview", wrapper.PreviewControllerMail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/consent/optout-records", wrapper.ExportContactOptOutRecords)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/privacy-notice", wrapper.SendPrivacyNotice)
 	})
 	r.Group(func(r chi.Router) {
@@ -156345,6 +156647,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)

@@ -22,6 +22,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -209,7 +210,8 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	publicEdge := publicInstrument(ComposedExtensions(), newPublicInstrumentLimiter())(
 		publicForms(srv.webFormsHandlers)(
 			publicConfirm(newPublicConfirmLimiters())(
-				publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+				publicPreferences(consent.NewStore(InstallationDB(pool)).
+					WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}), newPublicPreferenceLimiters())(
 					publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
 						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
 							extensionEdge(srv, log)(api),

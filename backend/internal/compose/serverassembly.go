@@ -21,12 +21,14 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
+	"github.com/margince/margince/backend/internal/compose/draftcontent"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
+	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -114,18 +116,10 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		// The disclosures a jurisdiction demands, put into the body that owes
 		// them. See compose/disclosurefooter.go.
-		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
-			// WITH THE COUNTRY READER, which decides which pack applies. A bare
-			// store answers no country, so applicableRules finds no pack and
-			// every message silently owes nothing — the failure this seam
-			// exists to end, arriving through the wiring instead.
-			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
-			// The installation's language, which says whether the default
-			// particulars already meet a pack's advertising language.
-			WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))}).
+		WithDisclosures(newDisclosureAdapter(InstallationDB(pool))).
 		// The advertising content rules a draft is checked against while it
-		// is written. See compose/draftcontent.go.
-		WithDraftContent(draftContentAdapter{store: consent.NewStore(InstallationDB(pool))}).
+		// is written. See compose/draftcontent.
+		WithDraftContent(draftcontent.Adapter{Store: consent.NewStore(InstallationDB(pool))}).
 		// The sender's own sign-off (core 0235). contacts owns the row because
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,
@@ -415,6 +409,8 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// Wired with or without a mail lane. A receipt owed where no lane can
 		// send it is one the privacy operators must hear about.
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).
+		// A request under a pack with deadlines of its own becomes a dated task.
+		WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

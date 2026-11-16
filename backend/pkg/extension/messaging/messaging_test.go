@@ -161,23 +161,35 @@ func TestADisclosureMeansMustBeOneTheEngineRecognises(t *testing.T) {
 	}
 }
 
-func TestAdvertisingContentRulesAreRefusedWhenNothingCouldApplyThem(t *testing.T) {
-	cases := []struct {
-		name  string
+func TestAClaimWordMustMatchSomethingAndNotEverything(t *testing.T) {
+	for _, c := range []struct {
+		words []string
+		ok    bool
+	}{
+		{[]string{"tốt nhất"}, true},
+		{[]string{""}, false},
+		{[]string{" nhất"}, false},
+	} {
+		r := Rules{Jurisdiction: "zz", Version: 1, ClaimsNeedProof: c.words}
+		if err := r.Validate(); (err == nil) != c.ok {
+			t.Errorf("Validate(%q) = %v, want ok=%v", c.words, err, c.ok)
+		}
+	}
+}
+
+func TestADisclosureLanguageNeedsARecipientBoundLawAndACode(t *testing.T) {
+	for _, c := range []struct {
 		rules Rules
 		ok    bool
 	}{
-		{"a two-letter language", Rules{AdvertisingLanguage: "vi"}, true},
-		{"an upper-case language", Rules{AdvertisingLanguage: "VI"}, false},
-		{"a three-letter language", Rules{AdvertisingLanguage: "vie"}, false},
-		{"a claim word", Rules{ClaimsNeedProof: []string{"tốt nhất"}}, true},
-		{"an empty claim word", Rules{ClaimsNeedProof: []string{""}}, false},
-		{"a padded claim word", Rules{ClaimsNeedProof: []string{" nhất"}}, false},
-	}
-	for _, c := range cases {
-		c.rules.Jurisdiction, c.rules.Version = "zz", 1
+		{Rules{Jurisdiction: "zz", Version: 1, DisclosureLanguage: "vi"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "VI"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "vie"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "vi"}, true},
+	} {
 		if err := c.rules.Validate(); (err == nil) != c.ok {
-			t.Errorf("%s: Validate() = %v, want accepted=%v", c.name, err, c.ok)
+			t.Errorf("Validate(%q, follows=%v) = %v, want ok=%v",
+				c.rules.DisclosureLanguage, c.rules.DataProtectionFollowsRecipient, err, c.ok)
 		}
 	}
 }

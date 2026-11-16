@@ -792,6 +792,9 @@
             "AdvertiserContact": {
               "type": "string"
             },
+            "PrivacyPage": {
+              "type": "string"
+            },
             "Translations": {
               "type": "array",
               "items": {
@@ -896,6 +899,15 @@
       ],
       "additionalProperties": false,
       "properties": {
+        "read_concurrency": {
+          "description": "Limit on concurrent Worklist and ranked-search reads per process, capped at half the pool with at least one slot. Restart to apply.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "default": 3
+        },
         "worker_max_connections": {
           "description": "Worker connection limit, with the River listener counted. Also bounded by the DSN and queue worker count. Count every process when sizing the installation.",
           "type": [
@@ -1648,7 +1660,7 @@
       "additionalProperties": false,
       "properties": {
         "token": {
-          "description": "Licence token; unset with no license.token_file runs with no license, which production refuses.",
+          "description": "Licence token, read once at boot, or at each licence check when it is a ${file:} reference; with it, license.token_file and the key vault all empty, production runs the 14-day trial and then locks, while dev and test run with no license.",
           "type": [
             "string",
             "null"

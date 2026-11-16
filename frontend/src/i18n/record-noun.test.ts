@@ -104,7 +104,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // "a person" here is a HUMAN BEING deciding, not the contact record.
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
-    "confirm.done.body",
     "firstRun.microsoft.tenantHint",
     "firstRun.platform.sub",
     "oauthApp.google.sub",
@@ -259,7 +258,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "tab.relationships",
     // A colleague, a user, an admin, an operator — somebody with a seat here.
     "common.permissionDenied",
-    "confirm.done.body",
     "deal.notYoursToChange",
     "deals.totalsOwnerNotMeasurable",
     "lead.boardCountsOwnerNotMeasurable",

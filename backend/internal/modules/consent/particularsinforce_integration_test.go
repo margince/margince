@@ -20,7 +20,7 @@ import (
 )
 
 // advertisingPack registers a pack shaped like the Vietnamese one under a
-// test code: three refusal means, an advertising language and the refusal
+// test code: three refusal means, a disclosure language and the refusal
 // section last. The installation and the env contact are both in it.
 func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 	t.Helper()
@@ -33,8 +33,9 @@ func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 			}},
 			{Kind: messagingrules.AdvertiserContact, MarketingOnly: true},
 		},
-		AdvertisingLanguage: "vi",
-		RefusalSectionLast:  true,
+		DataProtectionFollowsRecipient: true,
+		DisclosureLanguage:             "vi",
+		RefusalSectionLast:             true,
 	})
 	livesIn(t, e, code)
 	return e.store.WithInstallationCountry(
@@ -45,7 +46,7 @@ func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 
 func TestSavingParticularsWithNoPhoneInTheObjectionRouteIsRefused(t *testing.T) {
 	e := setupChannelConsent(t)
-	store := advertisingPack(t, e, "zv")
+	store := advertisingPack(t, e, "ya")
 	h := Handlers{store: store}.WithSettings(settingsStoreFor(t))
 
 	put := func(body string) *httptest.ResponseRecorder {
@@ -71,14 +72,14 @@ func TestSavingParticularsWithNoPhoneInTheObjectionRouteIsRefused(t *testing.T) 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("a route naming all three means answered %d %s", rec.Code, rec.Body.String())
 	}
-	if !strings.Contains(rec.Body.String(), `"advertising_languages":["vi"]`) {
+	if !strings.Contains(rec.Body.String(), `"disclosure_languages":["vi"]`) {
 		t.Errorf("the answer does not say which language the pack asks for: %s", rec.Body.String())
 	}
 }
 
 func TestAVietnameseAdvertisingMailPrintsTheStoredVietnameseRoute(t *testing.T) {
 	e := setupChannelConsent(t)
-	store := advertisingPack(t, e, "zu")
+	store := advertisingPack(t, e, "yb")
 	route := "gửi email đến privacy@example.com, gọi số +84 00 0000 0000 hoặc dùng trang https://example.com/stop"
 	stateParticulars(t, e, ControllerParticulars{
 		LegalName: "Example Trading GmbH", PostalAddress: "Hauptstraße 1\n10115 Berlin",

@@ -65,7 +65,7 @@ const TemplateSubscriptionQuestion = "subscription_question"
 // against the frontend's own strings, and by
 // TestEveryPublishedQuestionIsPinnedToItsVersion, which pins the words to this
 // version.
-const marketingQuestionVersion = 5
+const marketingQuestionVersion = 6
 
 // QuestionKeyForLink names which published question a link will ask.
 //

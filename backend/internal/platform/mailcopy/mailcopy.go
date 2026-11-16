@@ -123,17 +123,14 @@ type Copy struct {
 
 	RoomSharedBy   string
 	ControllerFrom string
-	// The labels over the particulars a controller mail discloses. A
-	// particular prints its translation in the mail's language where one is
-	// stated, else the text the operator typed.
+	// The labels over the particulars a controller mail discloses, each in
+	// the mail's language where a translation is stated.
 	DisclosureController     string
 	DisclosurePrivacyContact string
 	DisclosureObjection      string
 	DisclosureAdvertiser     string
-	// The refusal section that closes an advertising mail where a pack asks
-	// for one. %s names the advertiser.
-	AdvertisingRefusal    string
-	AdvertisingDataChoice string
+	AdvertisingRefusal       string // closes advertising where a pack asks; %s names the advertiser
+	AdvertisingDataChoice    string
 	// PoweredBy is the small line under the letterhead of mail the system
 	// relay sends as the installation.
 	PoweredBy string
@@ -174,6 +171,7 @@ type Copy struct {
 	ConfirmRecordPreview   string
 	ConfirmConsentPreview  string
 	OptOutAckPreview       string
+	RequestAckPreview      string
 	RestrictionLiftPreview string
 
 	MailPersonal    string
@@ -328,9 +326,18 @@ type Copy struct {
 	// agreeing to something they were not asked, which is the defect the whole
 	// published-question change exists to end.
 	//
-	// {purpose} is substituted with the purpose's own label at render time.
+	// {purpose}, {controller}, {frequency} and {privacy_page} are filled when
+	// a confirm page serves the question, so the grant records the full text.
 	ConfirmSubscriptionAsk     string
 	ConfirmSubscriptionConfirm string
+	// The words a purpose's frequency is named by inside that sentence.
+	FrequencyWeekly    string
+	FrequencyMonthly   string
+	FrequencyQuarterly string
+	// ControllerFallback names the sender in a question when the installation
+	// has stated no legal name. The confirm screen's confirm.controllerFallback
+	// holds the same words.
+	ControllerFallback string
 	// ConfirmPersonal says the link is the reader's alone. ConfirmExpiry is
 	// APPENDED to it when the link has a date, with the date as %s.
 	//
@@ -339,11 +346,18 @@ type Copy struct {
 	// while every language spells that sentence the same way.
 	ConfirmPersonal string
 	ConfirmExpiry   string
+	// ZoneOfCountry names the recipient's local time by their country, with
+	// the country's name as %s.
+	ZoneOfCountry string
 	// The closing line, different for the two messages: a record confirmation
 	// asks nothing of its reader, while an unanswered opt-in withholds the
 	// permission until they answer.
 	ConfirmRecordIgnore  string
 	ConfirmConsentIgnore string
+	// The details check for a recipient who may not be asked about news in
+	// it: the same invitation and closing, with no word about news.
+	ConfirmRecordCheckBody   string
+	ConfirmRecordCheckIgnore string
 	// The privacy notice's closing line. It asks for nothing, so it says so:
 	// a reader who does nothing has lost nothing, which is what makes this a
 	// notice rather than a request.
@@ -354,9 +368,11 @@ type Copy struct {
 	PreviewLinkMarker string
 	SentLinkMarker    string
 
-	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
-	// Vietnamese recipient who refuses further advertising: a confirmation
-	// that their refusal was received, within twenty-four hours.
+	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 20 owes a
+	// Vietnamese recipient who refuses advertising email: a receipt sent at once.
+	// OptOutAckBody takes the time the refusal arrived (%[1]s), the time
+	// sending stopped (%[2]s) and their offset from UTC (%[3]s). The Vietnamese
+	// wording names Vietnam time instead, as the decree's receipt reads.
 	//
 	// IT CARRIES NO LINK and no advertising of its own. This is the one message
 	// the product sends to somebody who has just told it to stop, so anything
@@ -366,6 +382,14 @@ type Copy struct {
 	OptOutAckSubject string
 	OptOutAckBody    string
 	OptOutAckIgnore  string
+
+	// The request receipt: the first answer a data-subject request is owed
+	// under a pack that sets one, such as Decree 356/2025/ND-CP Art. 5.
+	// RequestAckBody takes the time the request arrived (%[1]s), the date it
+	// is carried out by (%[2]s) and their offset from UTC (%[3]s). It carries
+	// no link, as the opt-out receipt does not.
+	RequestAckSubject string
+	RequestAckBody    string
 
 	// The notice GDPR Art. 18(3) owes a contact before their restriction of
 	// processing is lifted. It carries no link: it tells, and asks nothing.

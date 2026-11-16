@@ -2092,9 +2092,7 @@ export const en = {
   "brief.schedule.connect": "Connect a calendar",
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
-  "brief.schedule.now": "Now",
-  "brief.schedule.freeUntil": "Free until {time}",
-  "brief.schedule.clearRest": "Nothing else booked today",
+  "brief.schedule.clearRest": "No more external meetings today",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -2293,6 +2291,7 @@ export const en = {
   "systemJob.brief_overnight": "Overnight summary",
   "systemJob.captured_deal_refile": "Captured conversation filing",
   "systemJob.capture": "Mail capture",
+  "systemJob.privacy_request_task": "Data request tasks",
   "systemJob.capture_auto_enrich": "Company enrichment from mail",
   "systemJob.capture_classify": "Mail sorting",
   "systemJob.capture_credential_backfill": "Mail connection update",
@@ -3598,6 +3597,7 @@ export const en = {
   "consent.stopLiftBody": "Mail this stop held back can be sent again.",
   "consent.stopReason": "Why (kept in the record history)",
   "consent.manage": "Manage consent and proof history",
+  "consent.optOutRecords": "Download opt-out records",
   "contact.consent": "Consent",
   "consent.grant": "Record consent",
   // Submitted as the proof row's wording when an operator records a grant
@@ -7059,7 +7059,7 @@ export const en = {
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.panel.schedule": "Your day",
+  "brief.panel.schedule": "External meetings",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -7287,6 +7287,15 @@ export const en = {
   "create.firstName": "First name",
   "create.lastName": "Last name",
   "create.contactTitle": "Title",
+  "create.acquisitionSource": "Where this contact came from",
+  "create.acquisitionSourceHint":
+    "The contact sees this on their privacy page.",
+  "create.acquisitionNote": "Source details",
+  "create.source.metInPerson": "Met face to face",
+  "create.source.businessCard": "Business card",
+  "create.source.referral": "Referral",
+  "create.source.website": "Website",
+  "create.source.other": "Other",
   "create.email": "Email",
   "create.phone": "Phone",
   "create.linkedin": "LinkedIn",
@@ -8017,6 +8026,8 @@ export const en = {
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":
@@ -8036,6 +8047,20 @@ export const en = {
   "sendPermission.ready": "Recipients checked",
   "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "lawfulBasis.title": "No consent on record for this contact",
+  "lawfulBasis.body":
+    "Under Vietnamese law you may not process this recipient’s data without consent. Sending is at your own risk.",
+  "lawfulBasis.confirm": "Send anyway",
+  "lawfulBasis.failed": "Your confirmation was not recorded. Try again.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "your consent of {date}",
+  "privacynotice.basisOn.agreement":
+    "to carry out the agreement between you and {controller}",
+  "privacynotice.basisOn.us": "us",
+  "privacynotice.basis.none": "No basis is recorded for this use.",
+  "privacynotice.basisOn.none": "no basis recorded",
+  "confirm.done.bodyNamed":
+    "Your answer is recorded. Staff at {controller} will handle your request and give you the reason if they need more time. This link is now used up.",
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
@@ -8220,6 +8245,8 @@ export const en = {
     "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.privacy_request":
+    "Created when the contact asked to correct, erase or stop the use of their data. Their country’s law sets the dates on this task.",
   "tasks.origin.analytics_decision":
     "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
@@ -10861,6 +10888,10 @@ export const en = {
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
+  "privacy.purposeFrequency": "How often",
+  "privacy.purposeFrequency.weekly": "About once a week",
+  "privacy.purposeFrequency.monthly": "About once a month",
+  "privacy.purposeFrequency.quarterly": "About once a quarter",
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
     "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
@@ -11069,7 +11100,13 @@ export const en = {
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",
-  "privacynotice.purposes.title": "What we use it for",
+  "privacynotice.source.stated.metInPerson": "We met you face to face.",
+  "privacynotice.source.stated.businessCard": "You gave us your business card.",
+  "privacynotice.source.stated.referral": "Someone recommended you to us.",
+  "privacynotice.source.stated.website": "We found your details on a website.",
+  "privacynotice.source.stated.other": "Another source, described below.",
+  "privacynotice.source.statedNote": "In our words: {note}",
+  "privacynotice.purposes.title": "What we use it for, and on what basis",
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
     "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
@@ -11122,6 +11159,10 @@ export const en = {
   "privacynotice.retention.keptByLaw":
     "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
   "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.transfers.title":
+    "AI services, transfers and automated decisions",
+  "privacynotice.transfers.body":
+    "We use AI services to sort, summarize and draft text about our correspondence with you. Which provider receives that text, and where it processes it, is set by us: it can be a model we run ourselves, or a provider such as Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral or OpenRouter. Where we choose an EU location or OpenRouter’s EU service, processing stays in the EU; otherwise it can take place outside the EU, including in the United States, under the provider’s contract with us. No decision that has legal effects for you, or affects you similarly, is made by automated means alone: the AI suggests, and whether we may write to you is decided by fixed rules about your consent and your requests.",
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
@@ -11131,11 +11172,11 @@ export const en = {
   "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
-    "{scope}: taken out of daily use after {days}.",
+    "{scope}: kept for {days} from when they were recorded, then moved to an archive with restricted access. They are deleted only when you ask or when your record is deleted.",
   "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
   "privacynotice.retention.erase": "{scope}: deleted after {days}.",
   "privacynotice.retention.rest":
-    "We keep everything else while we use it for the purposes above. If you ask us to delete it, we delete what the law lets us delete.",
+    "We keep everything else while we use it for the purposes under “What we use it for, and on what basis”. If you ask us to delete it, we delete what the law lets us delete.",
   "privacynotice.retention.scope.activity":
     "Emails, meetings and calls with you",
   "privacynotice.retention.scope.activityTranscript":
@@ -13443,9 +13484,13 @@ export const en = {
     "This choice is optional. You can correct your details without subscribing.",
   "confirm.marketing.title": "Receive occasional news?",
   "confirm.marketing.ask":
-    "News from time to time, roughly once a month. Your choice is respected.",
+    "{controller} will use your name and email address to send you news about its products and services by email, roughly once a month. You can withdraw your consent at any time with the unsubscribe link in each email.",
   "confirm.marketing.yes": "Subscribe to news",
   "confirm.marketing.no": "Do not send news",
+  "confirm.controllerFallback": "the sender",
+  "confirm.frequency.weekly": "once a week",
+  "confirm.frequency.monthly": "once a month",
+  "confirm.frequency.quarterly": "once a quarter",
   "confirm.provenance.title": "Sources of your details",
   "confirm.provenance.empty": "No source is recorded for these details.",
   "confirm.provenance.line": "{field}: from {source}, recorded {date}",
@@ -13454,7 +13499,8 @@ export const en = {
     "Removal requested. Confirm below to send the request.",
   "confirm.submit": "Confirm",
   "confirm.subscription.title": "Confirm your subscription",
-  "confirm.subscription.ask": "Confirm that you want to receive {purpose}.",
+  "confirm.subscription.ask":
+    "Confirm that you agree that {controller} may use your name and email address to send you {purpose} by email, roughly {frequency}. You can withdraw your consent at any time with the unsubscribe link in each email. Information about your rights: {privacy_page}.",
   "confirm.subscription.confirm": "Confirm subscription",
   "confirm.subscription.alreadyTitle": "You are subscribed",
   "confirm.subscription.alreadyBody":
@@ -13466,7 +13512,7 @@ export const en = {
   "confirm.receipt.rectify": "Correction requested",
   "confirm.receipt.erasure": "Removal requested",
   "confirm.done.body":
-    "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
+    "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":
@@ -22269,6 +22315,8 @@ export const en = {
     "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
   "health.effect.automatic":
     "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
+  "health.effect.receipts":
+    "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, which the rules of their country require at once.",
   "health.effect.readFailed":
     "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
   "health.reportCopyFailed": "Could not copy the technical report",
@@ -22361,6 +22409,7 @@ export const en = {
   "health.source.updates": "Data updates",
   "health.source.recovery": "Recovery evidence",
   "health.source.automatic": "Automatic work quality",
+  "health.source.receipts": "Opt-out receipts",
   "health.scope": "Affected scope",
   "health.window": "Reporting window",
   "health.observed": "Latest observation",
@@ -22387,6 +22436,8 @@ export const en = {
     "Record a successful restore drill within the recovery and data-loss targets.",
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
+  "health.recovery.receipts":
+    "Each refusal in the last 30 days must have a sent receipt, or its alert must be settled.",
   "health.ownerHandoff":
     "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Connections, on the Activity tab.",
   "health.operatorHandoff":
@@ -22458,6 +22509,9 @@ export const en = {
   "health.code.automatic_checked":
     "No routing-review threshold exceeded in the checked sample",
   "health.code.automatic_routing": "Automatic work routing needs review",
+  "health.code.receipts_sent":
+    "No opt-out receipt missed or overdue in the last 30 days",
+  "health.code.receipts_missed": "Some opt-out receipts were not sent",
   "health.code.capture_thread_processing":
     "Thread classification is processing",
   "health.code.capture_thread_uncertain": "Review private conversations",
@@ -22481,6 +22535,8 @@ export const en = {
     "The restore test did not meet its targets. Ask your system operator to fix the problem and run another test.",
   "health.impact.automatic":
     "Work may be assigned to the wrong colleague. Review routing and correct the owner.",
+  "health.impact.receipts":
+    "Contacts who refused advertising did not get the receipt the law requires. Open the notifications about missed receipts and fix the address or the mail setup.",
   "analytics.outlook.calledAt": "Called {at}",
   "analytics.prospect.weeksByQualification":
     "Each lead counts in the week it was first qualified.",

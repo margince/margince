@@ -61,15 +61,15 @@ func TestAVietnameseMailPrintsTheVietnameseObjectionRouteWhenOneIsStored(t *test
 	}
 }
 
-// Advertising under a pack that names an advertising language prints the
+// Advertising under a pack that names a disclosure language prints the
 // particulars a reader acts on in that language. Otherwise they are missing,
 // and the send is refused.
-func TestAdvertisingInAnAdvertisingLanguageNeedsTheParticularsInIt(t *testing.T) {
+func TestAdvertisingInThePackLanguageNeedsTheParticularsInIt(t *testing.T) {
 	owed := []messagingrules.Disclosure{
 		{Kind: messagingrules.ObjectionRoute, MarketingOnly: true, Means: threeMeans},
 		{Kind: messagingrules.AdvertiserContact, MarketingOnly: true},
 	}
-	layout := disclosureLayout{marketing: true, language: "en", baseLanguage: "en", advertisingLanguage: "vi"}
+	layout := disclosureLayout{marketing: true, language: "en", baseLanguage: "en", packLanguage: "vi"}
 
 	for _, line := range layoutDisclosures(owed, particularsWith("", ""), layout) {
 		if !line.Missing() {
@@ -81,12 +81,12 @@ func TestAdvertisingInAnAdvertisingLanguageNeedsTheParticularsInIt(t *testing.T)
 			t.Errorf("%s is missing although its Vietnamese version is stated", line.Kind)
 		}
 	}
-	// An installation that writes in the advertising language has stated
+	// An installation that writes in the pack language has stated
 	// its particulars in it already.
-	native := disclosureLayout{marketing: true, language: "vi", baseLanguage: "vi", advertisingLanguage: "vi"}
+	native := disclosureLayout{marketing: true, language: "vi", baseLanguage: "vi", packLanguage: "vi"}
 	for _, line := range layoutDisclosures(owed, particularsWith("", ""), native) {
 		if line.Missing() {
-			t.Errorf("%s is missing although the default text is written in the advertising language", line.Kind)
+			t.Errorf("%s is missing although the default text is written in the pack language", line.Kind)
 		}
 	}
 }
@@ -110,7 +110,7 @@ func TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal(t *testin
 		{Kind: messagingrules.AdvertiserContact, MarketingOnly: true},
 	}
 	layout := disclosureLayout{
-		marketing: true, language: "vi", baseLanguage: "en", advertisingLanguage: "vi", refusalLast: true,
+		marketing: true, language: "vi", baseLanguage: "en", packLanguage: "vi", refusalLast: true,
 	}
 	lines := layoutDisclosures(owed, particularsWith(vietnameseRoute, vietnameseReach), layout)
 

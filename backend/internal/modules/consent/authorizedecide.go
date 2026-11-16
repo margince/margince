@@ -43,6 +43,9 @@ func (g *Gate) resolveAndRecord(ctx context.Context, tx pgx.Tx, req commsauthz.R
 	if !res.Supported {
 		return res, nil
 	}
+	if res, err = settlePackBasisTx(ctx, tx, subject, res); err != nil {
+		return resolution{}, err
+	}
 	// The ground goes on the record BEFORE the message is permitted on it.
 	// A basis written afterwards would be describing a send that already
 	// happened, and one never written at all is the gap that made the
@@ -127,6 +130,7 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	d.Verdict = commsauthz.VerdictAllow
 	d.ReasonCode = commsauthz.ReasonAllowed
 	d.Basis = res.Basis
+	d.LawfulBasisMissing = res.BasisMissing
 	return d
 }
 

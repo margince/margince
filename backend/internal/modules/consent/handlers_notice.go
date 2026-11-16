@@ -189,7 +189,7 @@ func (h Handlers) writeParticulars(w http.ResponseWriter, r *http.Request, p Con
 	for _, m := range means {
 		wireMeans = append(wireMeans, crmcontracts.ContactMeans(m))
 	}
-	out.AdvertisingLanguages, out.ObjectionRouteMeans = &languages, &wireMeans
+	out.DisclosureLanguages, out.ObjectionRouteMeans = &languages, &wireMeans
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -209,6 +209,7 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		PrivacyContact:    valueOr(req.PrivacyContact),
 		ObjectionRoute:    valueOr(req.ObjectionRoute),
 		AdvertiserContact: valueOr(req.AdvertiserContact),
+		PrivacyPage:       valueOr(req.PrivacyPage),
 		Translations:      particularsTranslationsFrom(req.Translations),
 	}
 	// THE READ GATE FIRST, before anything is written. The response echoes the
@@ -267,6 +268,7 @@ func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars
 		PrivacyContact:    &p.PrivacyContact,
 		ObjectionRoute:    &p.ObjectionRoute,
 		AdvertiserContact: &p.AdvertiserContact,
+		PrivacyPage:       &p.PrivacyPage,
 		Translations:      wireTranslations(p.Translations),
 	}
 }

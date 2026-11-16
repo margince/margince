@@ -97,6 +97,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 	}
 	page := wireConfirmCard(card)
 	page.Language = pageLanguage(ref)
+	page.AsksNews = &ref.AsksNews
 	if page.Controller, err = h.pageController(r, ref.QuestionLocale); err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -220,6 +221,7 @@ func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInforma
 		Purposes:       &purposes,
 		PurposeKeys:    &keys,
 		PurposeBases:   wireCodes[crmcontracts.PrivacyInformationPagePurposeBases](info.PurposeBases),
+		PurposeSince:   &info.PurposeSince,
 		Rights:         rights,
 		Controller:     wireController(info.Controller),
 		DataCategories: wireCodes[crmcontracts.PrivacyInformationPageDataCategories](info.DataCategories),
@@ -242,6 +244,14 @@ func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInforma
 	if info.AcquiredAt != nil {
 		at := *info.AcquiredAt
 		out.AcquiredAt = &at
+	}
+	if info.StatedSource != "" {
+		source := crmcontracts.ContactStatedSource(info.StatedSource)
+		out.StatedSource = &source
+	}
+	if info.StatedSourceNote != "" {
+		note := info.StatedSourceNote
+		out.StatedSourceNote = &note
 	}
 	return out
 }
@@ -274,7 +284,11 @@ func wireController(p ControllerParticulars) *crmcontracts.PrivacyInformationCon
 	if name := strings.TrimSpace(p.LegalName); name != "" {
 		out.LegalName = &name
 	}
-	if out.LegalName == nil && out.Identity == nil && out.PrivacyContact == nil && out.ObjectionRoute == nil {
+	if page := strings.TrimSpace(p.PrivacyPage); page != "" {
+		out.PrivacyPage = &page
+	}
+	if out.LegalName == nil && out.Identity == nil && out.PrivacyContact == nil && out.ObjectionRoute == nil &&
+		out.PrivacyPage == nil {
 		return nil
 	}
 	return &out
@@ -323,10 +337,12 @@ func wireSubscriptionCard(card SubscriptionCard) crmcontracts.SubscriptionConfir
 	if state == "" {
 		state = "unknown"
 	}
+	frequency := crmcontracts.ConsentPurposeFrequency(card.Frequency)
 	return crmcontracts.SubscriptionConfirmationPage{
 		Kind:         crmcontracts.SubscriptionConfirmationPageKindSubscriptionConfirmation,
 		PurposeKey:   card.PurposeKey,
 		PurposeLabel: card.PurposeLabel,
+		Frequency:    &frequency,
 		State:        crmcontracts.SubscriptionConfirmationPageState(state),
 	}
 }

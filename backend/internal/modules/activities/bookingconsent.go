@@ -32,14 +32,14 @@ func PrepareBookingConsent(ctx context.Context, in crmcontracts.CaptureConsent, 
 	if err != nil {
 		return ids.Nil, BookingConsent{}, err
 	}
-	marketing, err := prepareBookingMarketing(ctx, in, "", capturer)
+	marketing, err := prepareBookingMarketing(ctx, in, "", false, capturer)
 	if err != nil {
 		return ids.Nil, BookingConsent{}, err
 	}
 	return contact, BookingConsent{PurposeID: purpose, PolicyVersion: in.PolicyVersion, Wording: *in.Wording, Marketing: marketing}, nil
 }
 
-func prepareBookingMarketing(ctx context.Context, in crmcontracts.CaptureConsent, tickedFrom string, capturer ConsentCapturer) (*BookingMarketing, error) {
+func prepareBookingMarketing(ctx context.Context, in crmcontracts.CaptureConsent, tickedFrom string, askedBySubject bool, capturer ConsentCapturer) (*BookingMarketing, error) {
 	m := in.Marketing
 	if m == nil {
 		return nil, nil //nolint:nilnil // Marketing consent is optional for the booking.
@@ -54,5 +54,8 @@ func prepareBookingMarketing(ctx context.Context, in crmcontracts.CaptureConsent
 	if err := capturer.ValidateMarketingPurpose(ctx, purpose); err != nil {
 		return nil, err
 	}
-	return &BookingMarketing{PurposeID: purpose, PolicyVersion: m.PolicyVersion, Wording: m.Wording, TickedFrom: tickedFrom}, nil
+	return &BookingMarketing{
+		PurposeID: purpose, PolicyVersion: m.PolicyVersion, Wording: m.Wording,
+		TickedFrom: tickedFrom, AskedBySubject: askedBySubject,
+	}, nil
 }

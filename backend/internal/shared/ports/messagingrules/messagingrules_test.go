@@ -337,16 +337,14 @@ func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
 }
 
 // A fold keeps every advertising content rule either side declares: the
-// refusal layout, every restricted claim, and the first language stated.
+// refusal layout and every restricted claim.
 func TestAdvertisingContentRulesSurviveTheFold(t *testing.T) {
 	a := Rules{Jurisdiction: "aa", Version: 1, ClaimsNeedProof: []string{"best"}}
-	b := Rules{Jurisdiction: "bb", Version: 1, AdvertisingLanguage: "vi",
-		RefusalSectionLast: true, ClaimsNeedProof: []string{"best", "tốt nhất"}}
+	b := Rules{Jurisdiction: "bb", Version: 1, RefusalSectionLast: true, ClaimsNeedProof: []string{"best", "tốt nhất"}}
 
 	got := stricter(a, b)
-	if got.AdvertisingLanguage != "vi" || !got.RefusalSectionLast {
-		t.Errorf("the fold dropped a layout rule: language %q, refusal last %v",
-			got.AdvertisingLanguage, got.RefusalSectionLast)
+	if !got.RefusalSectionLast {
+		t.Error("the fold dropped the refusal layout")
 	}
 	if !slices.Equal(got.ClaimsNeedProof, []string{"best", "tốt nhất"}) {
 		t.Errorf("claims %v, want each restricted word once", got.ClaimsNeedProof)
@@ -364,5 +362,20 @@ func TestTheRegistryHandsOutItsOwnCopyOfTheMeans(t *testing.T) {
 	copied.Disclosures[0].Means[0] = MeansPhone
 	if r.Disclosures[0].Means[0] != MeansWeb {
 		t.Error("the clone shares its means with the registered rule set")
+	}
+}
+
+// A data-protection law that follows the recipient, and one with no
+// legitimate-interest basis, bind a send whichever side declares them.
+func TestARecipientBoundLawSurvivesTheFold(t *testing.T) {
+	bound := Rules{
+		Jurisdiction: "aa", Version: 1, DataProtectionFollowsRecipient: true,
+		NoLegitimateInterests: true, DisclosureLanguage: "vi",
+	}
+	plain := Rules{Jurisdiction: "bb", Version: 1}
+	for _, folded := range []Rules{stricter(plain, bound), stricter(bound, plain)} {
+		if !folded.DataProtectionFollowsRecipient || !folded.NoLegitimateInterests || folded.DisclosureLanguage != "vi" {
+			t.Errorf("fold = %+v, want the recipient-bound law and its language kept", folded)
+		}
 	}
 }

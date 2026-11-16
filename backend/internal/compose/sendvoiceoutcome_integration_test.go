@@ -173,7 +173,7 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	addContactEmail(t, e, contact, recipient)
 	admin := e.Admin()
 	store := consent.NewStore(InstallationDB(e.Pool))
-	purpose, err := store.CreatePurpose(admin, "transactional", "Transactional", false)
+	purpose, err := store.CreatePurpose(admin, "transactional", "Transactional", false, "")
 	if err != nil {
 		t.Fatalf("create purpose: %v", err)
 	}

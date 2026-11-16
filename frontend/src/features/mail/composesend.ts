@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
 import { useSettledValue } from "../../design-system/debouncedsearch";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
@@ -391,6 +392,9 @@ export function useComposeSend({
         : undefined,
     enabled: open && !isChannelReply,
   });
+  // A recipient with no lawful basis on record is warned about, and Send waits
+  // for the sender to confirm it.
+  const lawfulBasis = useLawfulBasisGate(answer.preview);
   // A consent refusal joins the engine's answer as one status, and only while
   // it is about this message. A stale one would sit red beside a newer check.
   const request = sendRequest(fields, {
@@ -453,16 +457,18 @@ export function useComposeSend({
     }
     setDirectOpen(false);
     const askedWithReason = hold.withReason;
-    send.mutate(request, {
-      onError: (error) => {
-        if (
-          askedWithReason &&
-          sendReviewOf(error)?.actions.includes("direct_send")
-        ) {
-          setDirectOpen(true);
-        }
-      },
-    });
+    lawfulBasis.gate(() =>
+      send.mutate(request, {
+        onError: (error) => {
+          if (
+            askedWithReason &&
+            sendReviewOf(error)?.actions.includes("direct_send")
+          ) {
+            setDirectOpen(true);
+          }
+        },
+      }),
+    );
   };
   // What this client already knows will stop the send. The mark beside Send
   // makes no passed claim while any of it stands.
@@ -490,6 +496,7 @@ export function useComposeSend({
     hold,
     directOpen,
     setDirectOpen,
+    lawfulBasisDialog: lawfulBasis.dialog,
   };
 }
 

@@ -175,7 +175,8 @@ func (s *Store) countriesInForceTx(ctx context.Context, tx pgx.Tx) ([]jurisdicti
 }
 
 // particularsAsked answers what the packs in force ask of the particulars.
-// That is the advertising languages, and the means an objection route names.
+// That is the packs' disclosure languages, and the means an objection route
+// names.
 func (s *Store) particularsAsked(ctx context.Context) ([]string, []messagingrules.ContactMeans, error) {
 	var languages []string
 	var means []messagingrules.ContactMeans
@@ -189,7 +190,7 @@ func (s *Store) particularsAsked(ctx context.Context) ([]string, []messagingrule
 			if !found {
 				continue
 			}
-			if language := rules.AdvertisingLanguage; language != "" && !slices.Contains(languages, language) {
+			if language := rules.DisclosureLanguage; language != "" && !slices.Contains(languages, language) {
 				languages = append(languages, language)
 			}
 			for _, d := range rules.Disclosures {

@@ -138,6 +138,10 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			}
 			entry.SupportedAlternatives = &alternatives
 		}
+		if d.LawfulBasisMissing {
+			missing := true
+			entry.LawfulBasisMissing = &missing
+		}
 		if preview.NewContacts[correspondence.Fold(d.Recipient.Email)] {
 			newContact := true
 			entry.NewContact = &newContact

@@ -63,7 +63,7 @@ func labelledDisclosure(line DisclosureLine, words mailcopy.Copy) string {
 
 func controllerAction(key string, words mailcopy.Copy) string {
 	switch key {
-	case TemplateRecordConfirmation:
+	case TemplateRecordConfirmation, TemplateRecordCheck:
 		return words.ConfirmRecordAction
 	case TemplateConsentConfirmation:
 		return words.ConfirmConsentAction

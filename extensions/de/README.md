@@ -73,6 +73,15 @@ no acknowledgement owed for an opt-out.
 The zero values are intended, so a reader who compares packs can tell a chosen absence from a
 missing field. `TestGermanyImposesNoPrefixNoCapAndNoAcknowledgement` holds them.
 
+## The details check asks nothing about news (UWG §7(2) no. 2)
+
+A mail can ask a contact to check their details and also ask for marketing consent. German law
+does not yet say whether such a mail is itself advertising. So this pack declares
+`RecordConfirmationWithoutNews`. The details check then goes out with the `record_check` wording,
+which names no news, and its page asks no news question. The rule is read in
+`backend/internal/modules/consent/confirmrules.go`. It goes when German legal advice confirms that the
+combined mail is not advertising.
+
 ## Request deadlines (GDPR Art. 12(3))
 
 Every kind of GDPR request is due one calendar month after it arrives. German
