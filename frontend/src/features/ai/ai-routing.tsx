@@ -11,12 +11,9 @@ import { formatNumber } from "../../format/format";
 import { lockReasonOr } from "../../format/settinglocks";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  unkeyedProviders,
-  useAiModelCatalogue,
-  withBorrowedRows,
-} from "../../lib/ai-models";
+import { useAiModelCatalogue, withBorrowedRows } from "../../lib/ai-models";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
+import { unkeyedProviders } from "../../lib/ai-provider-keys";
 import { providerName } from "../../lib/ai-provider-names";
 import {
   ROUTING_KEY,

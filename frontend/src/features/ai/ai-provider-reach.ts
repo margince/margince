@@ -2,11 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import {
-  type AvailableModels,
-  keyRowFor,
-  useAvailableModels,
-} from "../../lib/ai-models";
+import { type AvailableModels, useAvailableModels } from "../../lib/ai-models";
+import { keyRowFor } from "../../lib/ai-provider-keys";
 import { boundProviders, type RoutingRead } from "../../lib/ai-routing-query";
 
 // Which providers a binding editor may offer, and which of them still lack the
