@@ -157,45 +157,31 @@ db_admin() {
 #
 #   LANE_POOL_MAX_CONNS   ceiling for EACH pool the shared harness opens, handed
 #                         to it as MARGINCE_TEST_POOL_MAX_CONNS (testdb's
-#                         PoolMaxConnsEnv). 8 rather than database.NewPool's 16
-#                         because the measured high-water mark for a WHOLE
-#                         package at 16 jobs is 16 connections — both shared
-#                         pools and every ad-hoc connection together.
-#                         It travels as an ENV VAR and not in the DSN: cmd/migrate
-#                         and every bare pgx connection a fixture opens parse the
-#                         same DSNs with pgx.ParseConfig, which forwards an
-#                         unknown pool_* key to the server as a startup parameter
-#                         and dies with `FATAL: unrecognized configuration
-#                         parameter`.
-#   LANE_CONNS_PER_PACKAGE  what one package may hold at once. A SUM, because the
-#                         parts are bounded by different things:
-#                           2 x LANE_POOL_MAX_CONNS = 16, the two pools testdb
-#                             keys by DSN (owner + app) — this part is ENFORCED;
-#                           + 8 for everything the pin does not reach. That is
-#                             not only the ad-hoc pgx connections a fixture
-#                             opens: 49 integration test files build their OWN
-#                             pool from the same DSNs, and those keep
-#                             database.NewPool's fallback of 16. So this term is
-#                             a MEASURED budget, not a proved ceiling — the
-#                             high-water mark for one package is 16 with the pin
-#                             applied, and 24 is that plus half again. #1744
-#                             carries bringing those pools under the pin, which
-#                             is what would make this a ceiling.
-#                         It must EXCEED the measured peak, not equal it: a
-#                         budget equal to its own measurement is not a budget.
+#                         PoolMaxConnsEnv). It travels as an ENV VAR and not in
+#                         the DSN: cmd/migrate and every bare pgx connection a
+#                         fixture opens parse the same DSNs with pgx.ParseConfig,
+#                         which forwards an unknown pool_* key to the server and
+#                         dies with `FATAL: unrecognized configuration parameter`.
+#   LANE_TEST_PARALLEL    how many tests of one package run at once, handed to
+#                         go test as -parallel. Each test has a database of its
+#                         own, so each opens its own pools.
+#   LANE_CONNS_PER_PACKAGE  what one package may hold at once:
+#                           LANE_TEST_PARALLEL x (2 x LANE_POOL_MAX_CONNS + 8)
+#                           = 2 x (2 x 8 + 8) = 48. Per test that is the owner
+#                           and app pools testdb keys by DSN, plus 8 for the
+#                           connections a fixture dials itself.
 #   LANE_FIXED_CONNS      what the lane costs beyond the packages: one admin
 #                         connection per slot for CREATE/DROP DATABASE is counted
-#                         per job below (cmd/migrate's db verbs open one
-#                         connection each, not a pool, and at a slot handover
-#                         jobs of them overlap); this covers the template migrate
-#                         (2), superuser_reserved_connections (3), and an
-#                         operator's own psql or a metrics scrape while the lane
-#                         runs (3).
+#                         per job below; this covers the template migrate (2),
+#                         superuser_reserved_connections (3), and an operator's
+#                         own psql or a metrics scrape while the lane runs (3).
 #
+# At CI's 8 jobs: 8 x (48 + 1) + 8 = 400, under the 408 in docker-compose.dev.yml.
 # Raise the concurrency and every term moves with it. That is the point: the
 # guard reads these, not a number somebody wrote down once.
 LANE_POOL_MAX_CONNS=8
-LANE_CONNS_PER_PACKAGE=24
+LANE_TEST_PARALLEL=2
+LANE_CONNS_PER_PACKAGE=48
 LANE_FIXED_CONNS=8
 
 # declare_lane_budget <jobs> — export the ceiling the harness applies and the
@@ -214,6 +200,7 @@ declare_lane_budget() {
   LANE_CONN_BUDGET=$(( jobs * (LANE_CONNS_PER_PACKAGE + 1) + LANE_FIXED_CONNS ))
   export LANE_CONN_BUDGET
   export MARGINCE_TEST_POOL_MAX_CONNS="$LANE_POOL_MAX_CONNS"
+  export LANE_TEST_PARALLEL
 }
 # ---------------------------------------------------------------------------
 

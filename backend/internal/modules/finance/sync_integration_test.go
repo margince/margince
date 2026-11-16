@@ -207,6 +207,7 @@ func (e *financeEnv) summaryAtEpoch(
 // would make every pass rewrite every row — an event per invoice, a version
 // bump per row, and a mirror reporting change where none happened.
 func TestASecondSyncOverAnUnchangedSourceWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, provider, store := e.ctx, e.provider(), e.store
 
@@ -239,6 +240,7 @@ func TestASecondSyncOverAnUnchangedSourceWritesNothing(t *testing.T) {
 // trail and a concurrency guard both read, so an idle pass that moved it would
 // make every invoice look edited.
 func TestAnUnchangedInvoiceKeepsItsVersion(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, companyID, provider := e.ctx, e.company, e.provider()
 	store := e.store
@@ -291,6 +293,7 @@ func invoiceVersions(
 // The whole point of the arc: after a sync, the card answers with figures
 // rather than with a state that says it cannot.
 func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, companyID, provider := e.ctx, e.company, e.provider()
 	store := e.store
@@ -353,6 +356,7 @@ func TestAfterASyncTheCardHasFiguresToShow(t *testing.T) {
 // EUR and CHF got no label and therefore no money figure at all. The reading
 // was suppressed for want of a name for a number it had already computed.
 func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, companyID, provider := e.ctx, e.company, e.provider()
 
@@ -403,6 +407,7 @@ func TestAnAccountBilledInTwoCurrenciesStillReportsATotal(t *testing.T) {
 // `net - credited`, read off the reduced invoice, so this is the write that
 // proves the amount landed on the right row.
 func TestTheCreditNoteReducesItsTargetInTheMirror(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, companyID, provider := e.ctx, e.company, e.provider()
 	if _, err := e.store.SyncConnection(ctx, provider); err != nil {
@@ -440,6 +445,7 @@ func TestTheCreditNoteReducesItsTargetInTheMirror(t *testing.T) {
 // between two passes becomes overdue on READ, and the pass must not rewrite
 // the row to say so — that is the whole reason status is derived.
 func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, provider := e.ctx, e.provider()
 
@@ -483,6 +489,7 @@ func TestCrossingADueDateDoesNotRewriteTheLedger(t *testing.T) {
 // good — and one unconvertible row refuses the whole total (FIN-AC-6). The
 // source has no reason to change again, so nothing would ever fix it.
 func TestASyncRepairsAnInvoiceThatIsMissingItsRate(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, companyID, provider := e.ctx, e.company, e.provider()
 
@@ -542,6 +549,7 @@ func TestASyncRepairsAnInvoiceThatIsMissingItsRate(t *testing.T) {
 // six hours over an unchanged ledger would mint history forever, which is the
 // failure the whole hash discipline exists to avoid.
 func TestEveryMirroredRowWritesItsAuditRowAndASecondPassWritesNone(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, provider, store := e.ctx, e.provider(), e.store
 
@@ -647,6 +655,7 @@ func outboxRowsForFinance(ctx context.Context, t *testing.T, e *financeEnv) int 
 // changed, and the two transitions anybody reads this history for — the source
 // went down, the source came back — would be buried in them.
 func TestAConnectionAuditsItsStateChangesAndNotItsHeartbeat(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	ctx, provider, store := e.ctx, e.provider(), e.store
 	connectionAudits := func() int { return auditRowsByEntity(ctx, t, e)[entityConnection] }
@@ -691,6 +700,7 @@ func TestAConnectionAuditsItsStateChangesAndNotItsHeartbeat(t *testing.T) {
 // audit row, it would put a failure on the history of a source that was
 // answering perfectly well.
 func TestAFailedSyncMarksOnlyTheConnectionItRanAgainst(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	other := e.plantSecondConnection(t)
 
@@ -745,6 +755,7 @@ func (e *financeEnv) connectionStatus(t *testing.T, id ids.UUID) string {
 // The value is append-only once written, which is why it is asserted here and
 // not left to a reader to notice years later.
 func TestTheMirrorsAuditRowsNameNoGrantTheSweepDoesNotHold(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatalf("sync: %v", err)
@@ -785,6 +796,7 @@ func TestTheMirrorsAuditRowsNameNoGrantTheSweepDoesNotHold(t *testing.T) {
 // collection to make, and a rep acting on the most natural reading telephones a
 // customer who is not one.
 func TestAFormerCustomersCardKeepsItsHistoryAndWithholdsItsOverdue(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatalf("sync: %v", err)

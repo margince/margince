@@ -498,7 +498,7 @@ run_one() {
   [[ -n "$runre" ]] && run_args=(-run "$runre")
   # -vet=off: `make lint` vets tagged code with a superset of these analyzers, and
   # gates/lintbuildtagreach_test.go holds that. A slot would only repeat it.
-  local test_cmd=(go test -p 1 -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"$IT_SHUFFLE"}
+  local test_cmd=(go test -p 1 -parallel "$LANE_TEST_PARALLEL" -vet=off -tags=integration -v -count=1 -timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"$IT_SHUFFLE"}
     "${cover_pre[@]+"${cover_pre[@]}"}" "${run_args[@]+"${run_args[@]}"}"
     "$rel" "${cover_post[@]+"${cover_post[@]}"}")
   [[ -z "${BIN_DIR:-}" ]] || test_cmd=(run_binary "$rel" "$COVERDIR/$idx" "${run_args[@]+"${run_args[@]}"}")
@@ -544,7 +544,7 @@ run_binary() {
   local run_flags=()
   [[ "${1:-}" != "-run" ]] || run_flags=(-test.run="$2")
   t0="${EPOCHREALTIME:-$(date +%s)}"
-  ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 \
+  ( cd "$rel" && "$BIN_DIR/$rel/integration.test" -test.paniconexit0 -test.v=true -test.count=1 -test.parallel="$LANE_TEST_PARALLEL" \
       -test.timeout="$IT_TIMEOUT" ${IT_SHUFFLE:+"-test.${IT_SHUFFLE#-}"} "${run_flags[@]+"${run_flags[@]}"}" \
       -test.gocoverdir="$coverdir" ) || st=$?
   t1="${EPOCHREALTIME:-$(date +%s)}"

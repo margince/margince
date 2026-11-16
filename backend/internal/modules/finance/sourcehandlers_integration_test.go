@@ -163,6 +163,7 @@ func decode[T any](t *testing.T, rec *httptest.ResponseRecorder) T {
 }
 
 func TestTheSourceCardShowsTheLiveConnectionAndWhatIsOnOffer(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 
 	rec := call(a.admin(), http.MethodGet, "", a.handlers.GetFinanceSource)
@@ -186,6 +187,7 @@ func TestTheSourceCardShowsTheLiveConnectionAndWhatIsOnOffer(t *testing.T) {
 }
 
 func TestABuildWithoutSourcesAnswersNotImplemented(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	bare := Handlers{store: a.store}
 	expect(t, call(a.admin(), http.MethodPut, `{"provider":"test_ledger"}`, bare.ConnectFinanceSource),
@@ -196,6 +198,7 @@ func TestABuildWithoutSourcesAnswersNotImplemented(t *testing.T) {
 // A source that cannot be read is refused before any row exists, so the sweep
 // never meets a connection it fails on every six hours.
 func TestConnectingAnUnreadableSourceLeavesNothingBehind(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 	expect(t, call(ctx, http.MethodDelete, "", a.handlers.DisconnectFinanceSource), http.StatusNoContent, "")
@@ -225,6 +228,7 @@ func TestConnectingAnUnreadableSourceLeavesNothingBehind(t *testing.T) {
 }
 
 func TestConnectingRecordsOneSourceAndQueuesItsFirstSync(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 	expect(t, call(ctx, http.MethodDelete, "", a.handlers.DisconnectFinanceSource), http.StatusNoContent, "")
@@ -255,6 +259,7 @@ func TestConnectingRecordsOneSourceAndQueuesItsFirstSync(t *testing.T) {
 }
 
 func TestOnlyAHumanWithTheIntegrationsGrantConnects(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	body := `{"provider":"test_ledger"}`
 
@@ -279,6 +284,7 @@ func TestOnlyAHumanWithTheIntegrationsGrantConnects(t *testing.T) {
 // Disconnecting keeps the mirrored rows and stops the sync; a second disconnect
 // finds nothing to do and says so with the same answer.
 func TestDisconnectingStopsTheSyncAndAuditsTheTransition(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 
@@ -296,6 +302,7 @@ func TestDisconnectingStopsTheSyncAndAuditsTheTransition(t *testing.T) {
 }
 
 func TestASyncIsQueuedOnlyForAConnectedSource(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 

@@ -78,6 +78,7 @@ func (e *financeEnv) otherCompany(t *testing.T) ids.UUID {
 }
 
 func TestTheSyncWritesEveryMirroredRowThroughItsCustomerLink(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
@@ -113,6 +114,7 @@ func (e *financeEnv) ownerScalarCount(t *testing.T, query string, args ...any) i
 // The database refuses each way a mirrored row could land on a company its
 // connection never mapped, and a credit note that is not one.
 func TestTheDatabaseRefusesAMisattributedRow(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
@@ -199,6 +201,7 @@ func (e *financeEnv) foreignInvoice(t *testing.T, company ids.UUID) ids.UUID {
 
 // A row mirrored before rows named their link gets its link on the next pass.
 func TestASyncNamesTheLinkOnARowMirroredBeforeRowsNamedOne(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
@@ -218,6 +221,7 @@ func TestASyncNamesTheLinkOnARowMirroredBeforeRowsNamedOne(t *testing.T) {
 // The backfill names the archived link on rows a sync no longer reads, and
 // leaves NULL on a row whose connection never mapped its company.
 func TestTheBackfillNamesTheArchivedLinkAndLeavesAnUnmappedRow(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)

@@ -92,6 +92,7 @@ func linkedName(entry crmcontracts.FinanceSourceCustomer) string {
 }
 
 func TestTheDirectoryPagesInNameOrderAndNamesTheLinkedCompany(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	ctx := a.admin()
@@ -134,6 +135,7 @@ func TestTheDirectoryPagesInNameOrderAndNamesTheLinkedCompany(t *testing.T) {
 // and unlinking takes it off. A move archives the old link and makes a new one,
 // two audit rows, because a link never changes its company.
 func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	ctx := a.admin()
@@ -167,6 +169,7 @@ func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 }
 
 func TestALinkRequestNamesAKnownCustomerAndCompany(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	ctx := a.admin()
@@ -191,6 +194,7 @@ func TestALinkRequestNamesAKnownCustomerAndCompany(t *testing.T) {
 // that company, not only sight of it. A member sees another seat's company in
 // the directory, and still may not link onto it or take a customer off it.
 func TestALinkNeedsWriteAuthorityOnTheCompany(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)
 	stranger := a.seedUser(t)
@@ -216,6 +220,7 @@ func TestALinkNeedsWriteAuthorityOnTheCompany(t *testing.T) {
 // The ledgers are read with no transaction open, so the database can change
 // under a pass. A link removed meanwhile mirrors nothing.
 func TestALinkRemovedWhileTheLedgersAreReadMirrorsNothing(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 	source := directorySource{customers: directory, onLedger: func() {
@@ -239,6 +244,7 @@ func TestALinkRemovedWhileTheLedgersAreReadMirrorsNothing(t *testing.T) {
 // Marking a pass synced would reconnect a source the administrator disconnected
 // while its ledgers were being read.
 func TestASourceDisconnectedDuringAPassStaysDisconnected(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	ctx := a.admin()
 	source := directorySource{customers: directory, onLedger: func() {
@@ -273,6 +279,7 @@ func (unreadableLedger) InvoicesFor(context.Context, string) (SourceLedger, erro
 }
 
 func TestALedgerTheSourceCannotReadFailsThePass(t *testing.T) {
+	t.Parallel()
 	a := setupSourceAdmin(t)
 	_, err := a.store.SyncConnection(a.ctx, unreadableLedger{directorySource{customers: directory}})
 	if !errors.Is(err, errLedgerRefused) {

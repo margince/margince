@@ -189,6 +189,11 @@ func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
 	if perPackage < perPool {
 		t.Fatalf("LANE_CONNS_PER_PACKAGE=%d is below LANE_POOL_MAX_CONNS=%d — a package opens more than one pool from these DSNs, so its allowance cannot be smaller than one pool's ceiling", perPackage, perPool)
 	}
+	// Each parallel test has a database of its own, so it opens the owner and
+	// app pools again.
+	if parallel := laneTerm(t, script, "LANE_TEST_PARALLEL"); perPackage < parallel*2*perPool {
+		t.Fatalf("LANE_CONNS_PER_PACKAGE=%d is below LANE_TEST_PARALLEL=%d tests x 2 pools x LANE_POOL_MAX_CONNS=%d", perPackage, parallel, perPool)
+	}
 
 	demand := laneConnectionDemand(t, jobs)
 	if !fits(demand, maxConns) {
@@ -259,6 +264,17 @@ func TestTheLanePinsThePoolCeilingItBudgetsFor(t *testing.T) {
 	// variable that is set but not exported expands to empty in them.
 	if !strings.Contains(script, `export MARGINCE_TEST_POOL_MAX_CONNS="$LANE_POOL_MAX_CONNS"`) {
 		t.Fatalf("%s no longer exports MARGINCE_TEST_POOL_MAX_CONNS from LANE_POOL_MAX_CONNS — the budget above would be sized for a ceiling the harness never hears about", laneScriptPath)
+	}
+	// Every test run the lane starts is held to the parallel tests the budget
+	// counts; go test's own default is one per CPU.
+	for _, path := range []string{"../scripts/test-integration-one.sh", "../scripts/test-integration-parallel.sh"} {
+		for _, line := range strings.Split(readRepoFile(t, path), "\n") {
+			code := !strings.HasPrefix(strings.TrimSpace(line), "#")
+			starts := code && (strings.Contains(line, "go test -p 1") || strings.Contains(line, "-test.paniconexit0"))
+			if starts && !strings.Contains(line, `parallel="$LANE_TEST_PARALLEL"`) && !strings.Contains(line, `-parallel "$LANE_TEST_PARALLEL"`) {
+				t.Errorf("%s starts tests without LANE_TEST_PARALLEL, so go test runs one per CPU: %s", path, strings.TrimSpace(line))
+			}
+		}
 	}
 	// The harness's end: the name the lane exports is the name testdb reads.
 	pool := readRepoFile(t, "../backend/internal/platform/testdb/pool.go")

@@ -88,24 +88,19 @@ services:
     # their sum, not a round figure chosen to be comfortable:
     #
     #   INTEGRATION_JOBS                    8   (.github/workflows/_lane-integration.yml)
-    #   x LANE_CONNS_PER_PACKAGE           24   two pools at LANE_POOL_MAX_CONNS=8,
-    #                                           plus 8 for what the pin does not
-    #                                           reach — see the term's own note
+    #   x LANE_CONNS_PER_PACKAGE           48   2 parallel tests, each with two
+    #                                           pools at LANE_POOL_MAX_CONNS=8
+    #                                           plus 8 the pin does not reach
     #   + one admin connection per slot     1   CREATE/DROP DATABASE at a handover
     #   ------------------------------------
-    #      8 x (24 + 1)                  = 200
+    #      8 x (48 + 1)                  = 392
     #   + LANE_FIXED_CONNS                  8   template migrate 2, superuser
     #                                           reserve 3, an operator's psql 3
     #   ------------------------------------
-    #                                    = 208
+    #                                    = 400
     #
-    # This number stays at 408, which is that sum at the SIXTEEN jobs the lane
-    # ran until the memory finding in #5483 brought it to eight. It is left above
-    # the demand deliberately, and it is the one place in this block where the
-    # figure is not the sum: the gate below holds `demand <= max_connections`,
-    # the direction that actually fails a lane, and cutting capacity in the same
-    # change that cut demand would mean a later INTEGRATION_JOBS going back up
-    # re-crosses two ceilings at once instead of one gate.
+    # The setting is 408, a little above the sum: the gate holds
+    # `demand <= max_connections`, the direction that fails a lane.
     #
     # Measured, so the terms are not guesses: at INTEGRATION_JOBS=16 the whole
     # cluster peaks at 86 backends and one package at 16, sampled every 100ms
