@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/licensecheck"
@@ -186,40 +185,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, modelPath, compose.RoutingKeys(cfg.settings), logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
-}
-
-// openInstallation opens what this role reaches the installation THROUGH: the
-// database pool, and the one key vault every phase below reads secrets from.
-//
-// Together because the vault is a table in that pool, and apart from every
-// phase that uses them because both are settled before any phase runs. The pool
-// is already proven to connect as the role it must — boot.go carries why that
-// check belongs with the pool's own construction.
-//
-// The vault is resolved ONCE, here, and handed down — the license this
-// installation may have sealed, the connector-credential surface, the outbound
-// relay password each used to resolve their own, so one deployment fact was
-// read three times. A nil vault IS an unconfigured deployment; keyvault.ForRole
-// carries why nothing downstream is handed a flag beside it.
-//
-// The caller owns closing the pool it gets back. A vault that refuses the boot
-// closes it here instead, because there is no pool to return alongside an error.
-//
-//nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
-func openInstallation(ctx context.Context, cfg apiConfig) (*pgxpool.Pool, keyvault.Vault, error) {
-	pool, err := boundPool(ctx, cfg.dsn)
-	if err != nil {
-		return nil, nil, err
-	}
-	vault, err := keyvault.ForRole(ctx, "api", pool, cfg.settings)
-	if err == nil {
-		err = storekit.RefuseForeignSuppressionKey(ctx, pool)
-	}
-	if err != nil {
-		pool.Close()
-		return nil, nil, err
-	}
-	return pool, vault, nil
 }
 
 // validatePublicBaseURL refuses a base URL the connector cannot be reached at.

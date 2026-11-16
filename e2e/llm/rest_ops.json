@@ -233,6 +233,7 @@
     "GET /v1/contacts/{id}/consent/allow": "list_contact_overrides",
     "GET /v1/contacts/{id}/consent/guard": "get_contact_consent_guard",
     "GET /v1/contacts/{id}/consent/mail-preview": "preview_controller_mail",
+    "GET /v1/contacts/{id}/consent/optout-records": "export_contact_optout_records",
     "GET /v1/contacts/{id}/consent/stops": "list_contact_stops",
     "GET /v1/contacts/{id}/conversation-suggestions": "read_view",
     "GET /v1/contacts/{id}/employment-import": "read_view",

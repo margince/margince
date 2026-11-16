@@ -1,0 +1,18 @@
+{
+  "tool": "read_details",
+  "action": "contact_optout_records",
+  "verb": "export_contact_optout_records",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": [],
+  "colleague_record": {
+    "manager": "ran",
+    "rep": "ran"
+  }
+}
