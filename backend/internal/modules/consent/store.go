@@ -429,9 +429,6 @@ func stateOrUnknown(state string) string {
 	return state
 }
 
-// codeInvalid is the machine code a refused consent field carries.
-const codeInvalid = "invalid"
-
 // ValidationError maps to a 422 at the transport.
 type ValidationError struct {
 	Field  string
