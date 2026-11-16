@@ -730,6 +730,30 @@ describe("which employer is the current one", () => {
     expect(second).not.toContain("Current");
   });
 
+  it("writes a date known only to its month as the month and year", async () => {
+    mount({
+      ...granted,
+      employments: {
+        data: [
+          {
+            relationship_id: "rel-month",
+            company_id: "o-month",
+            company_name: "Monthly AG",
+            is_current_primary: false,
+            employment_status: "former",
+            started_at: "2021-03-01T00:00:00Z",
+            started_precision: "month",
+            ended_at: "2026-08-16T00:00:00Z",
+            ended_precision: "day",
+          },
+        ],
+        page,
+      },
+    });
+
+    expect(await screen.findByText("Mar 2021 – 16 Aug 2026")).toBeTruthy();
+  });
+
   it("stops calling it current once the last day has passed", async () => {
     // The flag still says this employer is the primary one — the record of WHICH
     // employer it was is not rewritten when the date passes. Currency is derived

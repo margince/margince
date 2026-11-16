@@ -161,13 +161,14 @@ export function dateRangeParts(
   const unknown =
     rel.kind === "employment" && rel.employment_status === "unknown";
   const held = rel.kind !== "employment" || stillHeld(rel);
-  // A table column, so the numeric, sortable date form.
+  // A table column, so the numeric, sortable date and year-month forms.
   const day = (value: string) => formatDate(value, locale, zone);
+  const month = (value: string) => value.slice(0, 7);
   const start = rel.started_at
-    ? careerDate(rel.started_at, rel.started_precision, day)
+    ? careerDate(rel.started_at, rel.started_precision, day, month)
     : "";
   const end = rel.ended_at
-    ? careerDate(rel.ended_at, rel.ended_precision, day)
+    ? careerDate(rel.ended_at, rel.ended_precision, day, month)
     : unknown
       ? ""
       : t(held ? "rel.current" : "rel.former");
