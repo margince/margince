@@ -181,6 +181,14 @@ func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 			t.Errorf("company %s holds %d unit notes, want %d", company, n, want)
 		}
 	}
+	// The moved row's own history names the survivor; the bystander has none.
+	for company, want := range map[ids.UUID]int{tgt.UUID: 1, bystander: 0} {
+		if n := e.WsCount(t, `SELECT count(*) FROM audit_log a JOIN ext.ext_reachtest_note n ON n.id = a.entity_id
+			WHERE a.entity_type = 'ext_reachtest_note' AND a.action = 'update' AND n.company_id = $1
+			  AND a.before->>'company_id' = $2 AND a.after->>'company_id' = n.company_id::text`, company, src.UUID.String()); n != want {
+			t.Errorf("the unit note now on %s has %d move audit row(s), want %d", company, n, want)
+		}
+	}
 }
 
 // The declared relink runs in the caller's transaction, so a merge that rolls
@@ -194,7 +202,7 @@ func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 	abort := errors.New("abort the merge")
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		if err := sweepreach.Relink(ctx, tx, reach.Company, src.UUID, tgt.UUID); err != nil {
+		if _, err := sweepreach.Relink(ctx, tx, reach.Company, src.UUID, tgt.UUID); err != nil {
 			return err
 		}
 		return abort

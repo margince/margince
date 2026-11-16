@@ -78,7 +78,8 @@ type Table struct {
 	Name string
 
 	// Links are the columns holding a core record's id. The merge moves each
-	// one onto the survivor.
+	// one onto the survivor. The table must have a uuid `id` column: the core
+	// writes an audit row for each row it moves.
 	Links []Link
 
 	// Erase are the columns the erasure clears on every row a contact link

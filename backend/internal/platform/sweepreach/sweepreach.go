@@ -96,14 +96,22 @@ func (o Owned) qualified() string {
 	return pgx.Identifier{o.Schema, o.Table.Name}.Sanitize()
 }
 
+// Relinked is one declared column the merge moved and the rows it moved there.
+type Relinked struct {
+	Table, Column string
+	Rows          []ids.UUID
+}
+
 // Relink moves every declared column holding the retired record's id onto the
 // survivor, in the caller's transaction. A plain UPDATE is right because a
-// declared link is a pointer and nothing makes it unique per record.
-func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target ids.UUID) error {
+// declared link is a pointer and nothing makes it unique per record. The
+// caller writes the audit row for each moved row, as for each row Erase clears.
+func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target ids.UUID) ([]Relinked, error) {
 	tables, err := Tables()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var out []Relinked
 	for _, o := range tables {
 		for _, l := range o.Table.Links {
 			if !movesFor(l, record) {
@@ -116,12 +124,20 @@ func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target 
 				stmt += ` AND ` + pgx.Identifier{l.KindColumn}.Sanitize() + ` = $3`
 				args = append(args, string(record))
 			}
-			if _, err := tx.Exec(ctx, stmt, args...); err != nil {
-				return fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
+			rows, err := tx.Query(ctx, stmt+` RETURNING id`, args...)
+			if err != nil {
+				return nil, fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
+			}
+			moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+			if err != nil {
+				return nil, fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
+			}
+			if len(moved) > 0 {
+				out = append(out, Relinked{Table: o.Table.Name, Column: l.Column, Rows: moved})
 			}
 		}
 	}
-	return nil
+	return out, nil
 }
 
 // movesFor reports whether Relink moves any row of the link when a record of
