@@ -6922,6 +6922,26 @@ public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid
          WHERE r.contact_id = ANY (contact_ids) AND r.kind = 'employment'
            AND r.ended_at IS NULL AND r.archived_at IS NULL
 
+public.lawful_basis_confirmation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.lawful_basis_confirmation.confirmed_at timestamp with time zone NOT NULL gen=- def=now()
+public.lawful_basis_confirmation.confirmed_by uuid NOT NULL gen=- def=-
+public.lawful_basis_confirmation.contact_id uuid gen=- def=-
+public.lawful_basis_confirmation.delivery_id uuid gen=- def=-
+public.lawful_basis_confirmation.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.lawful_basis_confirmation.id uuid NOT NULL gen=- def=uuidv7()
+public.lawful_basis_confirmation.lawful_basis_confirmation_confirmed_by_fkey FOREIGN KEY (confirmed_by) REFERENCES app_user(id) ON DELETE CASCADE
+public.lawful_basis_confirmation.lawful_basis_confirmation_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
+public.lawful_basis_confirmation.lawful_basis_confirmation_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE SET NULL
+public.lawful_basis_confirmation.lawful_basis_confirmation_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
+public.lawful_basis_confirmation.lawful_basis_confirmation_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+public.lawful_basis_confirmation.lawful_basis_confirmation_pkey PRIMARY KEY (id)
+public.lawful_basis_confirmation.lawful_basis_confirmation_window CHECK ((expires_at > confirmed_at))
+public.lawful_basis_confirmation.lead_id uuid gen=- def=-
+public.lawful_basis_confirmation.spent_at timestamp with time zone gen=- def=-
+public.lawful_basis_confirmation_delivery CREATE INDEX lawful_basis_confirmation_delivery ON public.lawful_basis_confirmation USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
+public.lawful_basis_confirmation_open_contact CREATE INDEX lawful_basis_confirmation_open_contact ON public.lawful_basis_confirmation USING btree (contact_id, confirmed_by) WHERE ((contact_id IS NOT NULL) AND (spent_at IS NULL))
+public.lawful_basis_confirmation_open_lead CREATE INDEX lawful_basis_confirmation_open_lead ON public.lawful_basis_confirmation USING btree (lead_id, confirmed_by) WHERE ((lead_id IS NOT NULL) AND (spent_at IS NULL))
+public.lawful_basis_confirmation_pkey CREATE UNIQUE INDEX lawful_basis_confirmation_pkey ON public.lawful_basis_confirmation USING btree (id)
 public.lead acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.lead.archived_at timestamp with time zone gen=- def=-
 public.lead.arrival_owner_id uuid gen=- def=-

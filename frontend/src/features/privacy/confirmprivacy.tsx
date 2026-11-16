@@ -79,10 +79,33 @@ export function PrivacyNotice({
     ? SOURCE_LABEL[card.acquired_as]
     : "privacynotice.source.unknown";
   const keys = card.purpose_keys ?? [];
+  const since = card.purpose_since ?? [];
+  const controllerName =
+    card.controller?.legal_name ?? t("privacynotice.basisOn.us");
   const purposes = (card.purposes ?? []).map((label, i) => ({
     name: labelOf(t, { key: keys[i] ?? "", label }),
     basis: card.purpose_bases[i],
+    since: since[i] ?? null,
   }));
+  // The basis as the clause the purpose card reads: a consent with its date,
+  // an agreement with the controller named, or that none is recorded. Any
+  // other basis keeps its own sentence.
+  const basisClause = (purpose: (typeof purposes)[number]): string | null => {
+    if (purpose.basis === "consent" && purpose.since) {
+      return t("privacynotice.basisOn.consent", {
+        date: formatDate(purpose.since, locale, tz),
+      });
+    }
+    if (purpose.basis === "none") {
+      return t("privacynotice.basisOn.none");
+    }
+    if (purpose.basis === "contract") {
+      return t("privacynotice.basisOn.agreement", {
+        controller: controllerName,
+      });
+    }
+    return null;
+  };
   // The right to object has a card of its own, so the list leaves it out.
   const rights = card.rights.filter((right) => right !== "objection");
 
@@ -110,25 +133,31 @@ export function PrivacyNotice({
         ) : null}
       </Card>
 
-      {purposes.length > 0 ? (
-        <Card>
-          <Heading size="large" className="t-h3">
-            {t("privacynotice.purposes.title")}
-          </Heading>
-          <ul className="confirm-fields">
-            {purposes.map((purpose) => (
+      <Card>
+        <Heading size="large" className="t-h3">
+          {t("privacynotice.purposes.title")}
+        </Heading>
+        <ul className="confirm-fields">
+          {purposes.map((purpose) => {
+            const clause = basisClause(purpose);
+            return (
               <li key={purpose.name} className="t-body">
-                {purpose.name}
-                {purpose.basis ? (
+                {clause
+                  ? t("privacynotice.purposeLine", {
+                      purpose: purpose.name,
+                      basis: clause,
+                    })
+                  : purpose.name}
+                {!clause && purpose.basis ? (
                   <span className="t-caption confirm-basis">
                     {t(labelFor(BASIS_LABEL, purpose.basis))}
                   </span>
                 ) : null}
               </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
+            );
+          })}
+        </ul>
+      </Card>
 
       <HeldCard card={card} />
       <RetentionCard retention={card.retention} />

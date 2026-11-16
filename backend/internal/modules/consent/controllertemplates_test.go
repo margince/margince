@@ -29,7 +29,7 @@ var exampleRefusal = RefusalTimes{
 // the catalog reaches the receipt too.
 func renderAnyTemplate(key string, expiresAt time.Time, language, purpose string) (Rendered, commsauthz.Category, error) {
 	if controllerTemplates[key].refusalTimes {
-		return RenderOptOutAcknowledgement(language, exampleRefusal)
+		return renderReceipt(key, language, exampleRefusal)
 	}
 	return renderTemplateContext(key, expiresAt, language, purpose)
 }
@@ -212,6 +212,9 @@ var pinnedWording = map[string]string{
 	"optout_acknowledgement@4@de": "18f7fde93aba9471ace152b00294ab4366e309ebe8648ea15b0ade9ab5db0a7d",
 	"optout_acknowledgement@4@en": "0e53dd1ec79223e43a8de554f0592f24e79970483a03adec516f9471404f7467",
 	"optout_acknowledgement@4@vi": "f923d73de53266ad7d29874c8ca4ec3eb1118778984e07a86c5fc2730d49a63f",
+	"request_receipt@1@de":        "b10035272f9adb8de0f9e23506722ff6e717dcaab8413b788bfcfc012b7caf7f",
+	"request_receipt@1@en":        "ae9acd80f560a7d1409348434665e2409c23c39b7b2787bbaa7b05ac9b9b5f45",
+	"request_receipt@1@vi":        "424c6d27ba1082a7a7057144b3e8699fdfe8da049d8b4c83b69feb97d908c154",
 	"restriction_lift@2@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
 	"restriction_lift@2@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
 	"restriction_lift@2@vi":       "3903eb642861db8d8a8f30329aff02a23d64577e4146435ce26dca84868bc257",
@@ -426,10 +429,11 @@ func TestOnlyTheReceiptDropsThePoweredByLine(t *testing.T) {
 			}
 			markup := RenderControllerPresentation(rendered, "Example Company", "")
 			attributed := strings.Contains(markup, mailcopy.For(string(language)).PoweredBy)
-			if key == TemplateOptOutAcknowledgement && (attributed || strings.Contains(markup+rendered.Subject+rendered.Body, "Margince")) {
-				t.Errorf("the %s receipt names Margince:\n%s", language, markup)
+			receipt := controllerTemplates[key].unbranded
+			if receipt && (attributed || strings.Contains(markup+rendered.Subject+rendered.Body, "Margince")) {
+				t.Errorf("the %s %s names Margince:\n%s", language, key, markup)
 			}
-			if key != TemplateOptOutAcknowledgement && !attributed {
+			if !receipt && !attributed {
 				t.Errorf("%s in %s lost its attribution line", key, language)
 			}
 		}

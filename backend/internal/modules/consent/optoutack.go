@@ -84,6 +84,16 @@ func (s *Store) acknowledgeOptOutTx(
 	return s.stageAcknowledgementTx(ctx, tx, sub, acknowledgementMessageID(stopID), stopID, times)
 }
 
+// receiptKind is which receipt a refusal or request owes: the rules that say
+// whether one is owed, and the wording that answers it.
+type receiptKind struct {
+	owed   func(s *Store, ctx context.Context, tx pgx.Tx, sub subject) (receiptTerms, bool, error)
+	render func(language string, times RefusalTimes) (Rendered, commsauthz.Category, error)
+}
+
+// optOutReceipt is the receipt a refusal of advertising owes.
+var optOutReceipt = receiptKind{owed: (*Store).receiptOwedTx, render: RenderOptOutAcknowledgement}
+
 // stageAcknowledgementTx is the one place an acknowledgement is composed and
 // queued, for both the suppression door and the unsubscribe press.
 //
@@ -96,11 +106,19 @@ func (s *Store) acknowledgeOptOutTx(
 func (s *Store) stageAcknowledgementTx(
 	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
 ) error {
+	return s.stageReceiptTx(ctx, tx, optOutReceipt, sub, messageID, stopID, times)
+}
+
+// stageReceiptTx stages one receipt in a savepoint. A receipt that cannot be
+// staged never undoes the refusal or request it answers; it raises the alarm.
+func (s *Store) stageReceiptTx(
+	ctx context.Context, tx pgx.Tx, kind receiptKind, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
+) error {
 	nested, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("consent: opening receipt preparation: %w", err)
 	}
-	owed, missing, err := s.stageOwedReceiptTx(ctx, nested, sub, messageID, stopID, times)
+	owed, missing, err := s.stageOwedReceiptTx(ctx, nested, kind, sub, messageID, stopID, times)
 	missed := MissedReceipt{SubjectType: sub.entityType, SubjectID: sub.id, MessageID: messageID, Reason: missing}
 	if err != nil {
 		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
@@ -127,9 +145,9 @@ func (s *Store) stageAcknowledgementTx(
 // stageOwedReceiptTx stages the receipt when the rules owe one. It answers
 // whether one is owed, and why it could not be staged when it was not.
 func (s *Store) stageOwedReceiptTx(
-	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
+	ctx context.Context, tx pgx.Tx, kind receiptKind, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
 ) (bool, string, error) {
-	terms, owed, err := s.receiptOwedTx(ctx, tx, sub)
+	terms, owed, err := kind.owed(s, ctx, tx, sub)
 	if err != nil {
 		return false, "", err
 	}
@@ -147,7 +165,7 @@ func (s *Store) stageOwedReceiptTx(
 	if address == "" {
 		return true, MissedReceiptNoAddress, nil
 	}
-	return true, "", s.prepareAcknowledgementTx(ctx, tx, sub, terms, address, messageID, times)
+	return true, "", s.prepareAcknowledgementTx(ctx, tx, kind, sub, terms, address, messageID, times)
 }
 
 // receiptTerms are what the rules ask of one refusal and its receipt. dueAt is
@@ -208,9 +226,9 @@ func (s *Store) receiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (rece
 }
 
 func (s *Store) prepareAcknowledgementTx(
-	ctx context.Context, tx pgx.Tx, sub subject, terms receiptTerms, address, messageID string, times RefusalTimes,
+	ctx context.Context, tx pgx.Tx, kind receiptKind, sub subject, terms receiptTerms, address, messageID string, times RefusalTimes,
 ) error {
-	rendered, category, err := RenderOptOutAcknowledgement(s.replyLanguage(ctx, tx, sub), times)
+	rendered, category, err := kind.render(s.replyLanguage(ctx, tx, sub), times)
 	if err != nil {
 		return err
 	}
@@ -245,6 +263,15 @@ func (s *Store) prepareAcknowledgementTx(
 // second delivery attempt at one the provider already rejected.
 func acknowledgeableStop(kind string) bool {
 	return slices.Contains(acknowledgeableKinds(), kind)
+}
+
+// receiptEvidenceKinds is acknowledgeableKinds, plus the restriction the
+// request receipt answers under a pack that follows the recipient.
+func receiptEvidenceKinds(recipientBound bool) []string {
+	if recipientBound {
+		return append(acknowledgeableKinds(), kindProcessingRestriction)
+	}
+	return acknowledgeableKinds()
 }
 
 // acknowledgeableKinds is the same answer as a list, for the validator that has

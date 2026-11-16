@@ -149,3 +149,20 @@ func TestAMalformedJurisdictionIsRefused(t *testing.T) {
 		t.Error("an upper-case jurisdiction code was accepted")
 	}
 }
+
+func TestADisclosureLanguageNeedsARecipientBoundLawAndACode(t *testing.T) {
+	for _, c := range []struct {
+		rules Rules
+		ok    bool
+	}{
+		{Rules{Jurisdiction: "zz", Version: 1, DisclosureLanguage: "vi"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "VI"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "vie"}, false},
+		{Rules{Jurisdiction: "zz", Version: 1, DataProtectionFollowsRecipient: true, DisclosureLanguage: "vi"}, true},
+	} {
+		if err := c.rules.Validate(); (err == nil) != c.ok {
+			t.Errorf("Validate(%q, follows=%v) = %v, want ok=%v",
+				c.rules.DisclosureLanguage, c.rules.DataProtectionFollowsRecipient, err, c.ok)
+		}
+	}
+}

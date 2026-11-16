@@ -169,6 +169,7 @@ type Copy struct {
 	ConfirmRecordPreview   string
 	ConfirmConsentPreview  string
 	OptOutAckPreview       string
+	RequestAckPreview      string
 	RestrictionLiftPreview string
 
 	MailPersonal    string
@@ -363,6 +364,14 @@ type Copy struct {
 	OptOutAckSubject string
 	OptOutAckBody    string
 	OptOutAckIgnore  string
+
+	// The request receipt: the first answer a data-subject request is owed
+	// under a pack that sets one, such as Decree 356/2025/ND-CP Art. 5.
+	// RequestAckBody takes the time the request arrived (%[1]s), the date it
+	// is carried out by (%[2]s) and their offset from UTC (%[3]s). It carries
+	// no link, as the opt-out receipt does not.
+	RequestAckSubject string
+	RequestAckBody    string
 
 	// The notice GDPR Art. 18(3) owes a contact before their restriction of
 	// processing is lifted. It carries no link: it tells, and asks nothing.

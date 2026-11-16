@@ -22,6 +22,7 @@ import {
   remedyCategoryOf,
   type SendStatus,
 } from "../lib/sendstatus";
+import { LawfulBasisCallout } from "./lawfulbasiswarning";
 
 // What the engine decided about this message, said where the rep is writing it.
 //
@@ -149,17 +150,7 @@ const TITLE: Record<RefusalKind, MessageKey> = {
  * grown by accident, and two spellings of a consent surface means one screen
  * tells a rep they may send while another says they may not, about one message.
  */
-export function SendPermission({
-  preview,
-  unanswered = false,
-  asking = false,
-  refusal,
-  onOverride,
-  override,
-  picksReason = false,
-  namesRecipients = false,
-  onRecheck,
-}: Readonly<{
+type SendPermissionProps = Readonly<{
   preview: Preview | undefined;
   /**
    * The question is in flight. Drawn rather than left silent, because silence
@@ -194,7 +185,32 @@ export function SendPermission({
    * here rather than by a press that cannot be made.
    */
   onRecheck?: () => void;
-}>) {
+}>;
+
+/**
+ * The engine's answer for this message, and the warning a recipient with no
+ * lawful basis on record owes. The warning stands even when the message may go.
+ */
+export function SendPermission(props: SendPermissionProps) {
+  return (
+    <>
+      <LawfulBasisCallout preview={props.preview} />
+      <PermissionNotice {...props} />
+    </>
+  );
+}
+
+function PermissionNotice({
+  preview,
+  unanswered = false,
+  asking = false,
+  refusal,
+  onOverride,
+  override,
+  picksReason = false,
+  namesRecipients = false,
+  onRecheck,
+}: SendPermissionProps) {
   const t = useT();
   const status = sendStatus({ preview, asking, unanswered, refusal });
   if (status.kind === "unavailable") {

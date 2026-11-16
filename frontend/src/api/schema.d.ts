@@ -7302,6 +7302,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/lawful-basis-confirmations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record that a user read the no-lawful-basis warning and chose to send anyway.
+         * @description A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
+         *     legitimate-interest basis and the record holds no basis that pack accepts for the use. This
+         *     records, in the audit log, that the signed-in user read the warning and chose to send, and
+         *     leaves one confirmation per record. Staging spends it on the first send by this user, or by
+         *     an agent acting for them, to that record within 15 minutes. A send with none is refused as
+         *     `lawful_basis_unconfirmed`, which a recorded human decision may still direct.
+         *
+         *     It needs the authority to send (`activity` at `create`) and read access to each record. A
+         *     record the warning does not apply to is left out of `confirmed`. A retry while a
+         *     confirmation is open records nothing new.
+         */
+        post: operations["confirmSendWithoutLawfulBasis"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/emails:sign-off": {
         parameters: {
             query?: never;
@@ -44400,6 +44429,20 @@ export interface components {
             consent_purpose?: string;
             evidence?: components["schemas"]["CommunicationEvidence"];
         };
+        LawfulBasisConfirmationRequest: {
+            /**
+             * @description The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+             *     them. A pinned lead is named as the lead, never as a contact sharing its address.
+             */
+            subjects: components["schemas"]["CommunicationEvidenceSubject"][];
+        };
+        LawfulBasisConfirmation: {
+            /**
+             * @description The records whose warning was confirmed by the signed-in user. Each confirmation waits
+             *     15 minutes for its send and is spent by the first send to that record.
+             */
+            confirmed: components["schemas"]["CommunicationEvidenceSubject"][];
+        };
         /**
          * @description What the engine would decide, per recipient, for a message nobody has sent.
          *
@@ -44427,6 +44470,13 @@ export interface components {
         SendAuthorizationPreviewRecipient: {
             /** Format: email */
             address: string;
+            /**
+             * @description The recipient's country has no legitimate-interest basis, and the record holds neither
+             *     their consent nor an agreement with them. A privacy notice they were sent is neither.
+             *     Not a refusal: a surface shows a warning and records the sender's confirmation through
+             *     `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+             */
+            lawful_basis_missing?: boolean;
             /**
              * @description The existing contact or lead this recipient resolves to, only when the caller
              *     can read it. Absent for newly filed addresses and records unavailable to the
@@ -55148,9 +55198,11 @@ export interface components {
             controller?: components["schemas"]["PrivacyInformationController"];
             /**
              * @description The basis on record for each entry in `purposes`, at the same index: `consent` for a
-             *     purpose the reader agreed to, else the kind of a live communication basis.
+             *     purpose the reader agreed to, else the kind of a live communication basis. `none` says
+             *     no basis is recorded, for a reader whose country has no legitimate-interest basis and
+             *     whose record holds neither their consent nor an agreement with them.
              */
-            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement")[];
+            purpose_bases: ("consent" | "contract" | "precontract_request" | "subject_initiated_correspondence" | "legitimate_interests" | "legal_obligation" | "vital_or_security_interest" | "existing_customer_exception" | "vn_subject_agreement" | "none")[];
             /**
              * @description The kinds of data held about the reader, read from the subject-access export's own
              *     sections. Codes only: the page names each kind and never shows a value.
@@ -55183,6 +55235,11 @@ export interface components {
              *     other.
              */
             purpose_keys?: string[];
+            /**
+             * @description When the reader gave the consent each entry in `purposes` rests on, at the same index.
+             *     Null for an entry whose basis is not consent.
+             */
+            purpose_since?: (string | null)[];
             /**
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
@@ -73542,6 +73599,34 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SendAuthorizationPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    confirmSendWithoutLawfulBasis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LawfulBasisConfirmationRequest"];
+            };
+        };
+        responses: {
+            /** @description The addresses whose warning this user confirmed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LawfulBasisConfirmation"];
                 };
             };
             401: components["responses"]["Unauthorized"];

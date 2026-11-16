@@ -34,6 +34,8 @@ var remedies = map[string][]Remedy{
 	ReasonClaimContradictsResolution: {RemedyAnswer},
 	// No answer or fact supplies marketing consent.
 	ReasonNoMarketingConsent: {RemedyException},
+	// A user who did not confirm the warning may still direct the send.
+	ReasonLawfulBasisUnconfirmed: {RemedyException},
 
 	// The subject's own stop: nobody sends past it, an admin included. A stop
 	// recorded by mistake is corrected on the record, which lifts the refusal.
