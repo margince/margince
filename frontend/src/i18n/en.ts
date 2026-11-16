@@ -11141,6 +11141,10 @@ export const en = {
   "privacynotice.retention.keptByLaw":
     "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
   "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.transfers.title":
+    "AI services, transfers and automated decisions",
+  "privacynotice.transfers.body":
+    "We use AI services to sort, summarize and draft text about our correspondence with you. Which provider receives that text, and where it processes it, is set by us: it can be a model we run ourselves, or a provider such as Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral or OpenRouter. Where we choose an EU location or OpenRouter’s EU service, processing stays in the EU; otherwise it can take place outside the EU, including in the United States, under the provider’s contract with us. No decision that has legal effects for you, or affects you similarly, is made by automated means alone: the AI suggests, and whether we may write to you is decided by fixed rules about your consent and your requests.",
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",

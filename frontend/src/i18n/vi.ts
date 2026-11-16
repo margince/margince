@@ -10875,6 +10875,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.keptByLaw":
     "Thư về đơn hàng hoặc hợp đồng được lưu ít nhất {period} theo luật, kể cả khi thời hạn ở đây ngắn hơn.",
   "privacynotice.recipients.title": "Ai được xem thông tin",
+  "privacynotice.transfers.title":
+    "Dịch vụ AI, chuyển dữ liệu và quyết định tự động",
+  "privacynotice.transfers.body":
+    "Chúng tôi dùng dịch vụ AI để phân loại, tóm tắt và soạn thảo văn bản về thư từ giữa chúng tôi với quý khách. Chúng tôi quyết định nhà cung cấp nào nhận văn bản đó và xử lý ở đâu: một mô hình do chúng tôi tự vận hành, hoặc một nhà cung cấp như Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral hoặc OpenRouter. Khi chúng tôi chọn vị trí tại EU hoặc dịch vụ EU của OpenRouter, việc xử lý diễn ra trong EU; nếu không, việc xử lý có thể diễn ra ngoài EU, kể cả tại Hoa Kỳ, theo hợp đồng giữa nhà cung cấp và chúng tôi. Không có quyết định nào gây hậu quả pháp lý hoặc ảnh hưởng tương tự đến quý khách được đưa ra chỉ bằng phương tiện tự động: AI chỉ đưa ra gợi ý, còn việc chúng tôi có được gửi thư cho quý khách hay không do các quy tắc cố định về sự đồng ý và yêu cầu của quý khách quyết định.",
   "privacynotice.recipient.colleagues": "Nhân viên của chúng tôi dùng CRM này.",
   "privacynotice.recipient.serviceProviders":
     "Các công ty vận hành CRM và gửi email thay mặt chúng tôi. Hợp đồng buộc họ chỉ dùng dữ liệu theo chỉ dẫn của chúng tôi.",

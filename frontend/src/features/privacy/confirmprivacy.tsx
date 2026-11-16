@@ -159,6 +159,13 @@ export function PrivacyNotice({
 
       <Card>
         <Heading size="large" className="t-h3">
+          {t("privacynotice.transfers.title")}
+        </Heading>
+        <p className="t-body">{t("privacynotice.transfers.body")}</p>
+      </Card>
+
+      <Card>
+        <Heading size="large" className="t-h3">
           {t("privacynotice.rights.title")}
         </Heading>
         <ul className="confirm-fields">

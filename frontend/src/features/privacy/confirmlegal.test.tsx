@@ -241,3 +241,22 @@ describe("the record page's news question", () => {
     expect(posted[0]).not.toHaveProperty("marketing_choice");
   });
 });
+
+describe("the privacy page states AI providers, transfers and automated decisions", () => {
+  const LINES = {
+    en: /^We use AI services to sort, summarize and draft text.*No decision that has legal effects for you/,
+    de: /^Wir nutzen KI-Dienste.*Keine Entscheidung mit rechtlicher Wirkung/,
+    vi: /^Chúng tôi dùng dịch vụ AI.*Không có quyết định nào gây hậu quả pháp lý/,
+  };
+  for (const [language, line] of Object.entries(LINES)) {
+    it(`renders the line in ${language}`, async () => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        jsonResponse({ ...NOTICE, language }),
+      );
+
+      render(<ConfirmDetailsScreen token={`tok-transfers-${language}`} />);
+
+      expect(await screen.findByText(line)).toBeInTheDocument();
+    });
+  }
+});

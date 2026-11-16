@@ -11172,6 +11172,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.keptByLaw":
     "Laut Gesetz bewahren wir Nachrichten zu einer Bestellung oder einem Vertrag mindestens {period} auf, auch wo hier eine kürzere Frist steht.",
   "privacynotice.recipients.title": "Wer die Daten sieht",
+  "privacynotice.transfers.title":
+    "KI-Dienste, Übermittlungen und automatisierte Entscheidungen",
+  "privacynotice.transfers.body":
+    "Wir nutzen KI-Dienste, um unsere Korrespondenz mit Ihnen zu sortieren, zusammenzufassen und Texte zu entwerfen. Welcher Anbieter diese Texte erhält und wo er sie verarbeitet, legen wir fest: ein Modell, das wir selbst betreiben, oder ein Anbieter wie Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral oder OpenRouter. Wählen wir einen Standort in der EU oder den EU-Dienst von OpenRouter, bleibt die Verarbeitung in der EU. Andernfalls kann sie außerhalb der EU stattfinden, auch in den USA, auf Grundlage des Vertrags des Anbieters mit uns. Keine Entscheidung mit rechtlicher Wirkung für Sie oder ähnlich erheblicher Wirkung wird ausschließlich automatisiert getroffen: Die KI macht Vorschläge, und ob wir Ihnen schreiben dürfen, entscheiden feste Regeln zu Ihrer Einwilligung und Ihren Anfragen.",
   "privacynotice.recipient.colleagues":
     "Mitarbeitende, die mit unserem CRM arbeiten.",
   "privacynotice.recipient.serviceProviders":
