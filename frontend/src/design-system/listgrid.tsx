@@ -391,7 +391,7 @@ function phonePlace<Row>(column: ListColumn<Row>): PhonePlace | undefined {
 
 /**
  * The columns the grid draws. A list with a `phone` place draws phone rows at
- * the fold, in declared order: the reader's ticks and order are a desk's.
+ * the fold, in declared order: the reader's ticks and order are a desktop's.
  */
 export function useDrawnColumns<Row>(
   columns: readonly ListColumn<Row>[],
@@ -432,10 +432,7 @@ function phoneContent<Row>(column: ListColumn<Row>, row: Row): ReactNode {
   return said === undefined ? column.cell(row) : said;
 }
 
-/**
- * A phone row: the identity, its end item and the row menu on line one, and
- * one caption cell of the facts that have something to say.
- */
+/** A phone row's cells: line one's, then one caption of the facts with something to say. */
 function phoneCells<Row>(
   row: Row,
   shown: readonly ListColumn<Row>[],

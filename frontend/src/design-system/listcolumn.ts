@@ -36,7 +36,7 @@ export type ListColumn<Row> = {
    * under the name. A list that places no column keeps the labelled phone card.
    */
   phone?: "end" | "caption";
-  /** Drawn in phone rows alone: no desk column, tick, width or place in the order. */
+  /** Drawn in phone rows alone: no desktop column, tick, width or place in the order. */
   phoneOnly?: boolean;
   /**
    * What the cell says in a phone row, the identity's included: `null` says

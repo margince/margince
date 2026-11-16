@@ -845,7 +845,7 @@ export const PhoneRowMenuAndSelection: Story = {
   tags: ["uat-phone"],
 };
 
-// The name drops its region on a phone, where a phone-only headcount joins the caption.
+// The name drops its region on a phone, where a phone-only year joins the caption.
 export const PhoneRowFoldedName: Story = {
   render: () => (
     <Surface
@@ -858,11 +858,11 @@ export const PhoneRowFoldedName: Story = {
         },
         ...phoneRowColumns.slice(1),
         {
-          key: "headcount",
-          header: "Headcount",
+          key: "since",
+          header: "Since",
           phone: "caption",
           phoneOnly: true,
-          cell: (row: Company) => `${row.size} people`,
+          cell: (row: Company) => `Since ${row.createdAt.slice(0, 4)}`,
         },
       ]}
     />
@@ -870,7 +870,7 @@ export const PhoneRowFoldedName: Story = {
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText("Company 01");
     await expect(factsOf(name.closest("tr")).join(" | ")).toBe(
-      "Company 01 | Customer | Manufacturing | Lars | 201-500 people",
+      "Company 01 | Customer | Manufacturing | Lars | Since 2026",
     );
   },
   ...phoneStory,
