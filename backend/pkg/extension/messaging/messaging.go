@@ -158,6 +158,16 @@ type Rules struct {
 	// privacy pages are written in, as a lower-case ISO 639-1 code. It applies
 	// only with DataProtectionFollowsRecipient. Empty keeps the installation's.
 	DisclosureLanguage string
+
+	// RecordConfirmationWithoutNews says the mail that asks a recipient to
+	// check their details must not also ask whether they want news. The link
+	// then pins no question, its page shows none and its submit takes none.
+	RecordConfirmationWithoutNews bool
+
+	// ConsentConfirmationNeedsRequest says a consent-confirmation mail may be
+	// sent only when the recipient's own request to subscribe is on record. A
+	// mail asking for consent nobody requested is itself unsolicited.
+	ConsentConfirmationNeedsRequest bool
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:

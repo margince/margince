@@ -22,12 +22,12 @@ import (
 //
 // gatekit:fixture the sha256 of each published question body
 var pinnedQuestion = map[string]string{
-	"marketing_question@5@en":    "e857e5468b71a88ad027e8a9a819392d686258513424c1c75781ff27a3856d7d",
-	"marketing_question@5@de":    "4b157ad993538ea86f98410395239c0578da8cba22c4377ea9c845648e9dc08e",
-	"marketing_question@5@vi":    "8d3fafee47b1f955bfea7390e8232252a9c6a7e9c8940e85984bda36823f6b9f",
-	"subscription_question@5@en": "8e75d8851231582ef3754845c914f3155194ce99ef1b2724b72ca8a9047aa970",
-	"subscription_question@5@de": "65679282ca4695990ad37950a95607fd6520458f0421815ef5349f53815ef60a",
-	"subscription_question@5@vi": "6dfa5d398a194e9c93e69a4102d08bc0ea8e28c3e48a2b6d54f39e0e20b94dcb",
+	"marketing_question@6@de":    "9d465acdd71805ba27a8e46c7738e012d21334c0c682e3382493ec96d3650b78",
+	"marketing_question@6@en":    "81c5b8d820503d80eab76f2936f7374906a3d940e6d54fc3f75cff6e62e7224d",
+	"marketing_question@6@vi":    "09e932743c70bf1f4489a52d455de5d553a87d90e6822294cc438febc4d1f50c",
+	"subscription_question@6@de": "98a4d7ed1a0a8be667409b73473d9c07ab81726426ddf8a59634349efe25a2a6",
+	"subscription_question@6@en": "f8fab3f8b7b4fc5d6c51cf6ffe5f387f578b0d90cc847dbc0b9407c26f42e231",
+	"subscription_question@6@vi": "6dc15e6c17bb477d6ba49ea99c2a7df3c1ccebe76e9d59095505e7fe26fabcc2",
 }
 
 // TestEveryPublishedQuestionIsPinnedToItsVersion fails when a question's words

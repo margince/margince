@@ -51,6 +51,9 @@ type mintRequest struct {
 	language string
 	// askedByTheSubject lifts the re-solicitation guard; see linkRequest.
 	askedByTheSubject bool
+	// operatorAsks marks the staff door to a consent link, which some
+	// recipients' rules allow only in answer to their own request.
+	operatorAsks bool
 }
 
 // mintedLink is what the mint produces, also without the plaintext.
@@ -102,6 +105,10 @@ func (s *Store) issueLinkTx(
 		if req.lane == refuseWithoutMailLane && !s.canSendConfirm() {
 			return ErrNoMailLane
 		}
+		rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, deliveredTo, req.operatorAsks)
+		if err != nil {
+			return err
+		}
 		issued := s.now().UTC()
 		expires := issued.Add(confirmTokenTTL)
 		// Per KIND, and per purpose within a kind. A fresh record-confirmation
@@ -129,6 +136,7 @@ func (s *Store) issueLinkTx(
 		tokenRowID, err := insertContactLinkTx(ctx, tx, contactLink{
 			contactID: contactID, tokenHash: req.tokenHash, deliveredTo: deliveredTo,
 			issued: issued, expires: expires, kind: kind, purposeID: purposeID, language: questionLocale,
+			rules: rules,
 		})
 		if err != nil {
 			return err
@@ -158,6 +166,7 @@ func (s *Store) issueLinkTx(
 			tokenRowID: tokenRowID,
 			link:       req.link,
 			expiresAt:  expires,
+			asksNews:   rules.asksNews,
 		})
 		if err != nil {
 			return err
@@ -200,19 +209,29 @@ type contactLink struct {
 	kind            string
 	purposeID       ids.PurposeID
 	language        string
+	rules           confirmRules
 }
 
 // insertContactLinkTx writes one link's row and pins the question it asks.
 // A grant read back at proof time could name wording the subject never saw.
+// A link that asks no news question pins none; its locale still names the
+// language its page opens in.
 func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.UUID, error) {
+	var key *string
+	var version *int
+	if link.rules.asksNews {
+		questionKey, questionVersion := QuestionKeyForLink(link.kind), marketingQuestionVersion
+		key, version = &questionKey, &questionVersion
+	}
 	args := []any{
 		link.contactID, link.tokenHash, link.deliveredTo, link.issued, link.expires, link.kind,
-		nullablePurpose(link.purposeID), QuestionKeyForLink(link.kind), link.language, marketingQuestionVersion,
+		nullablePurpose(link.purposeID), key, link.language, version,
+		link.rules.asksNews, zeroUUIDAsNull(link.rules.subjectRequest),
 	}
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
-		                           question_key, question_locale, question_version)
+		                           question_key, question_locale, question_version, asks_news, subject_request_id)
 		VALUES (`+storekit.Placeholders(args)+`)
 		RETURNING id`, args...).Scan(&id)
 	return id, err

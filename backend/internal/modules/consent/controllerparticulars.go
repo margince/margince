@@ -41,6 +41,9 @@ type ControllerParticulars struct {
 	// it is a SEPARATE field from the postal address because that requirement
 	// is about reachability rather than about where somebody is registered.
 	AdvertiserContact string `yaml:"AdvertiserContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
+	// PrivacyPage is where the installation's own privacy information is
+	// published, the link a subscription question points a reader to.
+	PrivacyPage string `yaml:"PrivacyPage"` //nolint:tagliatelle // the saved row spells each field by its Go name
 }
 
 // particularsFieldCap bounds one field. Long enough for a postal address with a
@@ -57,7 +60,7 @@ const particularsFieldCap = 500
 func (p ControllerParticulars) IsZero() bool {
 	return p.LegalName == "" && p.PostalAddress == "" &&
 		p.PrivacyContact == "" && p.ObjectionRoute == "" &&
-		p.AdvertiserContact == ""
+		p.AdvertiserContact == "" && p.PrivacyPage == ""
 }
 
 // ControllerIdentity is the installation's own particulars. MachineryApplied: a
@@ -90,6 +93,7 @@ func validateControllerParticulars(p ControllerParticulars) error {
 		{"privacy_contact", p.PrivacyContact},
 		{"objection_route", p.ObjectionRoute},
 		{"advertiser_contact", p.AdvertiserContact},
+		{"privacy_page", p.PrivacyPage},
 	} {
 		if len([]rune(f.value)) > particularsFieldCap {
 			return fmt.Errorf(

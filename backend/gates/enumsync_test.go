@@ -54,6 +54,8 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"contact_consent.state":                      {"internal/modules/consent", "ConsentState"},
 	"communication_suppression.recorded_through": {"internal/shared/ports/commsauthz", "RecordedThrough"},
 	"consent_purpose.class":                      {"internal/modules/consent", "Class"},
+	"consent_purpose.frequency":                  {"internal/contracts", "ConsentPurposeFrequency"},
+	"contact_acquisition_evidence.stated_source": {"internal/contracts", "ContactStatedSource"},
 	"offer_line_item.proposal_state":             {"internal/modules/deals", "ProposalState"},
 	"stage_exit_criterion.kind":                  {"internal/modules/deals", "CriterionKind"},
 	"knowledge_document.ingest_status":           {"internal/contracts", "KnowledgeDocumentIngestStatus"},

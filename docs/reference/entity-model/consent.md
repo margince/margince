@@ -335,11 +335,12 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## confirm_token
 
-16 columns · primary key `(id)` · referenced by 2 foreign keys
+18 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `asks_news` | `boolean`, default `true` | yes |  |
 | `consumed_at` | `timestamp with time zone` |  |  |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `delivered_to` | `text` | yes |  |
@@ -354,6 +355,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `question_key` | `text` |  |  |
 | `question_locale` | `text` |  |  |
 | `question_version` | `integer` |  |  |
+| `subject_request_id` | `uuid` |  | Points at `consent_qualifying_event.id`. |
 | `token_hash` | `text` | yes |  |
 
 **Points at**
@@ -363,6 +365,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `lead_id` | `lead` | deleting the parent deletes this row |
 | `purpose_id` | `consent_purpose` | the parent cannot be deleted while this row points at it |
+| `subject_request_id` | `consent_qualifying_event` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -425,7 +428,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_event
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -443,6 +446,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `policy_text` | `text` |  |  |
 | `policy_version` | `text` |  |  |
 | `purpose_id` | `uuid` | yes | Points at `consent_purpose.id`. |
+| `subject_request_id` | `uuid` |  | Points at `consent_qualifying_event.id`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `source` | `text` | yes | How consent was captured (e.g. webform, import, double_opt_in). |
 
@@ -454,6 +458,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `lead_id` | `lead` | the parent cannot be deleted while this row points at it |
 | `purpose_id` | `consent_purpose` | the parent cannot be deleted while this row points at it |
+| `subject_request_id` | `consent_qualifying_event` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -474,12 +479,13 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_purpose
 
-7 columns · primary key `(id)` · referenced by 8 foreign keys
+8 columns · primary key `(id)` · referenced by 8 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `class` | `text`, default `'marketing'::text` | yes | What kind of message the purpose is for. |
+| `frequency` | `text`, default `'monthly'::text` | yes | One of `weekly`, `monthly`, `quarterly`. |
 | `key` | `text` | yes | Stable machine key (e.g. transactional, marketing_email, profiling). |
 | `label` | `text` | yes |  |
 | `requires_double_opt_in` | `boolean`, default `false` | yes | When true, a grant is only effective after a confirmed DOI event (German email norm). |
@@ -489,6 +495,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Rules**
 
 - `consent_purpose_class_check`: `CHECK ((class = ANY (ARRAY['business_correspondence', 'transactional', 'marketing', 'phone_outreach'])))`
+- `consent_purpose_frequency_check`: `CHECK ((frequency = ANY (ARRAY['weekly', 'monthly', 'quarterly'])))`
 - `consent_purpose_key_unique`: `UNIQUE (key)`
 
 **Indexes**
@@ -498,12 +505,12 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "class": 20000, "label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"key":20000,"label":120}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "class": 20000, "label": 120}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"key":20000,"label":120}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')`
 
 ## consent_qualifying_event
 
-17 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|

@@ -559,6 +559,7 @@ public.consent_event.policy_text exempt the proof of consent keeps the wording s
 public.consent_event.policy_version document
 public.consent_event.source document
 public.consent_purpose.class document
+public.consent_purpose.frequency document
 public.consent_purpose.key document
 public.consent_purpose.label label
 public.consent_qualifying_event.captured_by document
@@ -606,6 +607,7 @@ public.contact_acquisition_evidence.purpose_claimed document
 public.contact_acquisition_evidence.recorded_for_addresses document
 public.contact_acquisition_evidence.request_retracted_by document
 public.contact_acquisition_evidence.source_entity_type document
+public.contact_acquisition_evidence.stated_source document
 public.contact_address_country.countries document
 public.contact_brief.fingerprint document
 public.contact_brief.generated_by document

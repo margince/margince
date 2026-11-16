@@ -212,6 +212,8 @@ func stricter(a, b Rules) Rules {
 	if out.DisclosureLanguage == "" {
 		out.DisclosureLanguage = b.DisclosureLanguage
 	}
+	out.RecordConfirmationWithoutNews = a.RecordConfirmationWithoutNews || b.RecordConfirmationWithoutNews
+	out.ConsentConfirmationNeedsRequest = a.ConsentConfirmationNeedsRequest || b.ConsentConfirmationNeedsRequest
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.

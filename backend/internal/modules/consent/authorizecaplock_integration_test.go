@@ -81,15 +81,15 @@ func releaseCapLock(t *testing.T, holder *pgx.Conn, address string) {
 // window from reading as a variable any of these cases depends on.
 const capWindow = 24 * time.Hour
 
-// The ISO user-assigned QM–QZ and XA–XZ ranges, then the unassigned QB–QL,
-// keep these tests apart from real packs and from sibling Z codes.
+// The ISO user-assigned QM–QZ and XA–XZ ranges, then the unassigned QB–QL and
+// KA–KZ, keep these tests apart from real packs and from sibling Z codes.
 var capJurisdictions = struct {
 	mu   sync.Mutex
 	next int
 }{}
 
 var testJurisdictionRanges = []struct{ prefix, first, last rune }{
-	{'q', 'm', 'z'}, {'x', 'a', 'z'}, {'q', 'b', 'l'},
+	{'q', 'm', 'z'}, {'x', 'a', 'z'}, {'q', 'b', 'l'}, {'k', 'a', 'z'},
 }
 
 // Jurisdictions are process-wide and cannot be registered twice.

@@ -51,7 +51,7 @@ func TestPreferenceCenterOptOutBlocksAgentSend(t *testing.T) {
 
 	// A non-DOI marketing purpose, granted — so the agent send is initially
 	// allowed and we prove the block is the opt-out, not a missing grant.
-	purpose, err := consentStore.CreatePurpose(admin, "newsletter", "Newsletter", false)
+	purpose, err := consentStore.CreatePurpose(admin, "newsletter", "Newsletter", false, "")
 	if err != nil {
 		t.Fatalf("create purpose: %v", err)
 	}

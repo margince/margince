@@ -133,11 +133,11 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 	err := tx.QueryRow(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
 		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
-		                           issuance_trigger, consent_text_version_id)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12)
+		                           issuance_trigger, consent_text_version_id, subject_request_id)
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), $6, $7, $8, $9, $10, $11, $12, $13)
 		RETURNING id`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
 		text, version, doiConfirmedAt, capturedAt, actorID, trigger,
-		zeroUUIDAsNull(in.TextVersionID)).Scan(&proofID)
+		zeroUUIDAsNull(in.TextVersionID), zeroUUIDAsNull(in.SubjectRequest)).Scan(&proofID)
 	return proofID, err
 }

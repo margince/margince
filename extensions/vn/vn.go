@@ -161,11 +161,12 @@ func vnInstruments() []messaging.Instrument {
 func messagingRules() messaging.Rules {
 	return messaging.Rules{
 		Jurisdiction: "vn",
-		// 2 stated the 2025 instruments. 3 applies them: the data-protection
+		// 2 stated the 2025 instruments. 3 applied them: the data-protection
 		// rules follow the recipient, no use rests on legitimate interests, and
-		// the receipt is due at once in Vietnam time. The number tells a
+		// the receipt is due at once in Vietnam time. 4 adds that a consent
+		// mail answers the recipient's own request. The number tells a
 		// decision taken under each set apart.
-		Version:            3,
+		Version:            4,
 		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
@@ -200,6 +201,9 @@ func messagingRules() messaging.Rules {
 		// Art. 9 and 11.1 need consent before collection, unless an Art. 19.1
 		// case applies. The law has no legitimate-interest basis.
 		NoLegitimateInterests: true,
+		// Decree 91/2020/ND-CP Art. 11.2: a consent request the recipient did
+		// not ask for is itself an unsolicited message.
+		ConsentConfirmationNeedsRequest: true,
 	}
 }
 

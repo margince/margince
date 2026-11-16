@@ -17,9 +17,14 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -57,17 +62,18 @@ var errPageOlderThanQuestion = &apperrors.VersionSkewError{
 	Message: "The question on this page changed after it was opened. Reload the page and answer again.",
 }
 
-// servedQuestionTx resolves the question this link pinned, in the link's language.
-func servedQuestionTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (ServedQuestion, boundQuestion, bool, error) {
+// servedQuestionTx resolves the question this link pinned, in the link's
+// language, with its fields filled.
+func (s *Store) servedQuestionTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (ServedQuestion, boundQuestion, bool, error) {
 	bound, found, err := publishedQuestionForLinkTx(ctx, tx, ref)
 	if err != nil || !found {
 		return ServedQuestion{}, boundQuestion{}, false, err
 	}
-	text, err := substitutePurposeTx(ctx, tx, bound.Text, ref.PurposeID, ref.QuestionLocale)
+	fields, err := s.questionFieldsTx(ctx, tx, ref)
 	if err != nil {
 		return ServedQuestion{}, boundQuestion{}, false, err
 	}
-	return ServedQuestion{Version: bound.Version, Text: text}, bound, true, nil
+	return ServedQuestion{Version: bound.Version, Text: fillQuestion(bound.Text, fields)}, bound, true, nil
 }
 
 // servedQuestionFor is the question a confirm page shows for this link, absent
@@ -75,7 +81,7 @@ func servedQuestionTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (ServedQue
 func (s *Store) servedQuestionFor(ctx context.Context, ref ConfirmRef) (*ServedQuestion, error) {
 	var out *ServedQuestion
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		served, _, found, err := servedQuestionTx(ctx, tx, ref)
+		served, _, found, err := s.servedQuestionTx(ctx, tx, ref)
 		if found {
 			out = &served
 		}
@@ -90,7 +96,7 @@ func (s *Store) servedQuestionFor(ctx context.Context, ref ConfirmRef) (*ServedQ
 func (s *Store) wordingForGrantTx(
 	ctx context.Context, tx pgx.Tx, ref ConfirmRef, in ConfirmSubmission,
 ) (GrantWording, error) {
-	served, bound, found, err := servedQuestionTx(ctx, tx, ref)
+	served, bound, found, err := s.servedQuestionTx(ctx, tx, ref)
 	if err != nil {
 		return GrantWording{}, err
 	}
@@ -104,36 +110,112 @@ func (s *Store) wordingForGrantTx(
 	return GrantWording{Text: served.Text, Version: &version, VersionID: bound.VersionID}, nil
 }
 
-// substitutePurposeTx fills the {purpose} placeholder with the purpose's name in
-// the question's language, as the page shows it, leaving any other text untouched.
-//
-// A MISSING LABEL LEAVES THE PLACEHOLDER rather than failing the grant. A
-// purpose archived between the mail and the click has no label to read, and
-// refusing somebody's consent because we can no longer name what they
-// subscribed to would be the wrong way round — the proof still carries
-// purpose_id, which is what identifies it.
-func substitutePurposeTx(
-	ctx context.Context, tx pgx.Tx, text string, purposeID ids.PurposeID, locale string,
-) (string, error) {
-	if !strings.Contains(text, purposePlaceholder) || purposeID.IsZero() {
-		return text, nil
-	}
-	var key, label string
-	err := tx.QueryRow(ctx,
-		`SELECT key, label FROM consent_purpose WHERE id = $1`, purposeID).Scan(&key, &label)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return text, nil
-	}
-	if err != nil {
-		return "", fmt.Errorf("consent: naming the purpose this question asked about: %w", err)
-	}
-	return strings.ReplaceAll(text, purposePlaceholder, purposeName(key, label, mailcopy.For(locale))), nil
+// questionFields are what a published question leaves open, in the
+// question's language.
+type questionFields struct {
+	purpose, controller, frequency, privacyPage string
+	words                                       mailcopy.Copy
 }
 
-// purposePlaceholder is what the published subscription question holds where
-// the purpose's own name goes. One spelling, shared with the catalog that
-// writes it and the screen that fills it.
-const purposePlaceholder = "{purpose}"
+// questionFieldsTx reads the fields for one link: the installation's legal
+// name and privacy page, and the name and frequency of the purpose it names.
+//
+// A purpose archived between the mail and the click leaves its two fields
+// empty rather than failing the grant: the proof still carries purpose_id.
+func (s *Store) questionFieldsTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (questionFields, error) {
+	out := questionFields{words: mailcopy.For(ref.QuestionLocale)}
+	var held PrivacyInformation
+	if err := readControllerTx(ctx, tx, &held); err != nil {
+		return out, err
+	}
+	out.controller = held.Controller.LegalName
+	out.privacyPage = privacyPageOf(held.Controller)
+	if ref.PurposeID.IsZero() {
+		return out, nil
+	}
+	var key, label, frequency string
+	err := tx.QueryRow(ctx,
+		`SELECT key, label, frequency FROM consent_purpose WHERE id = $1`, ref.PurposeID).Scan(&key, &label, &frequency)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return out, nil
+	}
+	if err != nil {
+		return out, fmt.Errorf("consent: naming the purpose this question asked about: %w", err)
+	}
+	out.purpose = purposeName(key, label, out.words)
+	out.frequency = frequencyName(frequency, out.words)
+	return out, nil
+}
+
+// fillQuestion puts the fields into a published question. A purpose or
+// frequency with no value keeps its placeholder. The controller is "the sender"
+// when the installation has stated no name, and the privacy page is empty.
+func fillQuestion(text string, f questionFields) string {
+	controller := f.controller
+	if controller == "" {
+		controller = f.words.ControllerFallback
+		if strings.HasPrefix(text, controllerPlaceholder) {
+			controller = capitalized(controller)
+		}
+	}
+	pairs := []string{controllerPlaceholder, controller, privacyPagePlaceholder, f.privacyPage}
+	for placeholder, value := range map[string]string{
+		purposePlaceholder: f.purpose, frequencyPlaceholder: f.frequency,
+	} {
+		if value != "" {
+			pairs = append(pairs, placeholder, value)
+		}
+	}
+	return strings.NewReplacer(pairs...).Replace(text)
+}
+
+// frequencyName is a purpose's frequency as the question's language says it.
+func frequencyName(frequency string, words mailcopy.Copy) string {
+	switch crmcontracts.ConsentPurposeFrequency(frequency) {
+	case crmcontracts.ConsentPurposeFrequencyWeekly:
+		return words.FrequencyWeekly
+	case crmcontracts.ConsentPurposeFrequencyQuarterly:
+		return words.FrequencyQuarterly
+	}
+	return words.FrequencyMonthly
+}
+
+// privacyPageFields is where a subscription question points its reader for
+// their rights, first stated wins: the privacy page, then the privacy contact,
+// then nothing. frontend/src/features/privacy/privacypage.ts mirrors it.
+//
+// Held by: TestThePrivacyPageFallbackIsOneOnBothSides
+// (backend/gates/privacypagefallback_test.go)
+var privacyPageFields = []string{"privacy_page", "privacy_contact"}
+
+// PrivacyPageFields is privacyPageFields for the gate that holds the mirror.
+func PrivacyPageFields() []string { return slices.Clone(privacyPageFields) }
+
+func privacyPageOf(p ControllerParticulars) string {
+	stated := map[string]string{"privacy_page": p.PrivacyPage, "privacy_contact": p.PrivacyContact}
+	for _, field := range privacyPageFields {
+		if value := strings.TrimSpace(stated[field]); value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func capitalized(word string) string {
+	for i, r := range word {
+		return string(unicode.ToUpper(r)) + word[i+utf8.RuneLen(r):]
+	}
+	return word
+}
+
+// The placeholders a published question holds, one spelling each, shared with
+// the catalog that writes them and the screen that fills them.
+const (
+	purposePlaceholder     = "{purpose}"
+	controllerPlaceholder  = "{controller}"
+	frequencyPlaceholder   = "{frequency}"
+	privacyPagePlaceholder = "{privacy_page}"
+)
 
 // boundQuestion is a published question a grant can point at.
 type boundQuestion struct {

@@ -7287,6 +7287,15 @@ export const en = {
   "create.firstName": "First name",
   "create.lastName": "Last name",
   "create.contactTitle": "Title",
+  "create.acquisitionSource": "Where this contact came from",
+  "create.acquisitionSourceHint":
+    "The contact sees this on their privacy page.",
+  "create.acquisitionNote": "Source details",
+  "create.source.metInPerson": "Met face to face",
+  "create.source.businessCard": "Business card",
+  "create.source.referral": "Referral",
+  "create.source.website": "Website",
+  "create.source.other": "Other",
   "create.email": "Email",
   "create.phone": "Phone",
   "create.linkedin": "LinkedIn",
@@ -10879,6 +10888,10 @@ export const en = {
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
+  "privacy.purposeFrequency": "How often",
+  "privacy.purposeFrequency.weekly": "About once a week",
+  "privacy.purposeFrequency.monthly": "About once a month",
+  "privacy.purposeFrequency.quarterly": "About once a quarter",
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
     "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
@@ -11087,6 +11100,12 @@ export const en = {
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",
+  "privacynotice.source.stated.metInPerson": "We met you face to face.",
+  "privacynotice.source.stated.businessCard": "You gave us your business card.",
+  "privacynotice.source.stated.referral": "Someone recommended you to us.",
+  "privacynotice.source.stated.website": "We found your details on a website.",
+  "privacynotice.source.stated.other": "Another source, described below.",
+  "privacynotice.source.statedNote": "In our words: {note}",
   "privacynotice.purposes.title": "What we use it for, and on what basis",
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
@@ -11140,6 +11159,10 @@ export const en = {
   "privacynotice.retention.keptByLaw":
     "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
   "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.transfers.title":
+    "AI services, transfers and automated decisions",
+  "privacynotice.transfers.body":
+    "We use AI services to sort, summarize and draft text about our correspondence with you. Which provider receives that text, and where it processes it, is set by us: it can be a model we run ourselves, or a provider such as Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral or OpenRouter. Where we choose an EU location or OpenRouter’s EU service, processing stays in the EU; otherwise it can take place outside the EU, including in the United States, under the provider’s contract with us. No decision that has legal effects for you, or affects you similarly, is made by automated means alone: the AI suggests, and whether we may write to you is decided by fixed rules about your consent and your requests.",
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
@@ -11149,7 +11172,7 @@ export const en = {
   "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
-    "{scope}: taken out of daily use after {days}.",
+    "{scope}: kept for {days} from when they were recorded, then moved to an archive with restricted access. They are deleted only when you ask or when your record is deleted.",
   "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
   "privacynotice.retention.erase": "{scope}: deleted after {days}.",
   "privacynotice.retention.rest":
@@ -13461,9 +13484,13 @@ export const en = {
     "This choice is optional. You can correct your details without subscribing.",
   "confirm.marketing.title": "Receive occasional news?",
   "confirm.marketing.ask":
-    "News from time to time, roughly once a month. Your choice is respected.",
+    "{controller} will use your name and email address to send you news about its products and services by email, roughly once a month. You can withdraw your consent at any time with the unsubscribe link in each email.",
   "confirm.marketing.yes": "Subscribe to news",
   "confirm.marketing.no": "Do not send news",
+  "confirm.controllerFallback": "the sender",
+  "confirm.frequency.weekly": "once a week",
+  "confirm.frequency.monthly": "once a month",
+  "confirm.frequency.quarterly": "once a quarter",
   "confirm.provenance.title": "Sources of your details",
   "confirm.provenance.empty": "No source is recorded for these details.",
   "confirm.provenance.line": "{field}: from {source}, recorded {date}",
@@ -13472,7 +13499,8 @@ export const en = {
     "Removal requested. Confirm below to send the request.",
   "confirm.submit": "Confirm",
   "confirm.subscription.title": "Confirm your subscription",
-  "confirm.subscription.ask": "Confirm that you want to receive {purpose}.",
+  "confirm.subscription.ask":
+    "Confirm that you agree that {controller} may use your name and email address to send you {purpose} by email, roughly {frequency}. You can withdraw your consent at any time with the unsubscribe link in each email. Information about your rights: {privacy_page}.",
   "confirm.subscription.confirm": "Confirm subscription",
   "confirm.subscription.alreadyTitle": "You are subscribed",
   "confirm.subscription.alreadyBody":

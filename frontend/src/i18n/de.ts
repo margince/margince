@@ -7265,6 +7265,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
   "create.contactTitle": "Jobtitel",
+  "create.acquisitionSource": "Herkunft des Kontakts",
+  "create.acquisitionSourceHint":
+    "Diese Angabe erscheint auf der Datenschutzseite des Kontakts.",
+  "create.acquisitionNote": "Angaben zur Herkunft",
+  "create.source.metInPerson": "Persönlich kennengelernt",
+  "create.source.businessCard": "Visitenkarte",
+  "create.source.referral": "Empfehlung",
+  "create.source.website": "Website",
+  "create.source.other": "Andere",
   "create.email": "E-Mail",
   "create.phone": "Telefon",
   "create.linkedin": "LinkedIn",
@@ -10894,6 +10903,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeKey": "Schlüssel",
   "privacy.purposeLabel": "Bezeichnung",
   "privacy.purposeDoi": "Double-Opt-in erforderlich",
+  "privacy.purposeFrequency": "Wie oft",
+  "privacy.purposeFrequency.weekly": "Etwa einmal pro Woche",
+  "privacy.purposeFrequency.monthly": "Etwa einmal im Monat",
+  "privacy.purposeFrequency.quarterly": "Etwa einmal im Quartal",
   "privacy.purposeCreate": "Zweck erstellen",
   "privacy.purposeAppendOnly":
     "Ein Zweck lässt sich nach dem Erstellen weder umbenennen noch entfernen. Der Katalog kann nur ergänzt werden. Wähle den Schlüssel mit Bedacht.",
@@ -11112,6 +11125,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ihre Daten stammen aus einer Liste, die gekauft oder importiert wurde.",
   "privacynotice.source.unknown":
     "Wir können nicht sagen, wie Ihre Daten zu uns gelangt sind.",
+  "privacynotice.source.stated.metInPerson":
+    "Wir haben Sie persönlich kennengelernt.",
+  "privacynotice.source.stated.businessCard":
+    "Sie haben uns Ihre Visitenkarte gegeben.",
+  "privacynotice.source.stated.referral": "Jemand hat Sie uns empfohlen.",
+  "privacynotice.source.stated.website":
+    "Wir haben Ihre Daten auf einer Website gefunden.",
+  "privacynotice.source.stated.other": "Eine andere Quelle, unten beschrieben.",
+  "privacynotice.source.statedNote": "Unsere Angabe dazu: {note}",
   "privacynotice.purposes.title":
     "Wofür wir Ihre Daten nutzen und auf welcher Grundlage",
   "privacynotice.rights.title": "Ihre Rechte an diesen Daten",
@@ -11171,6 +11193,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.keptByLaw":
     "Laut Gesetz bewahren wir Nachrichten zu einer Bestellung oder einem Vertrag mindestens {period} auf, auch wo hier eine kürzere Frist steht.",
   "privacynotice.recipients.title": "Wer die Daten sieht",
+  "privacynotice.transfers.title":
+    "KI-Dienste, Übermittlungen und automatisierte Entscheidungen",
+  "privacynotice.transfers.body":
+    "Wir nutzen KI-Dienste, um unsere Korrespondenz mit Ihnen zu sortieren, zusammenzufassen und Texte zu entwerfen. Welcher Anbieter diese Texte erhält und wo er sie verarbeitet, legen wir fest: ein Modell, das wir selbst betreiben, oder ein Anbieter wie Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral oder OpenRouter. Wählen wir einen Standort in der EU oder den EU-Dienst von OpenRouter, bleibt die Verarbeitung in der EU. Andernfalls kann sie außerhalb der EU stattfinden, auch in den USA, auf Grundlage des Vertrags des Anbieters mit uns. Keine Entscheidung mit rechtlicher Wirkung für Sie oder ähnlich erheblicher Wirkung wird ausschließlich automatisiert getroffen: Die KI macht Vorschläge, und ob wir Ihnen schreiben dürfen, entscheiden feste Regeln zu Ihrer Einwilligung und Ihren Anfragen.",
   "privacynotice.recipient.colleagues":
     "Mitarbeitende, die mit unserem CRM arbeiten.",
   "privacynotice.recipient.serviceProviders":
@@ -11181,7 +11207,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.afterDays_other": "{count} Tagen",
   "privacynotice.retention.title": "Wie lange wir die Daten speichern",
   "privacynotice.retention.archive":
-    "{scope}: nach {days} aus der täglichen Nutzung genommen.",
+    "{scope}: nach {days} ab der Erfassung in ein Archiv mit eingeschränktem Zugriff verschoben. Gelöscht werden sie nur, wenn Sie dies verlangen oder Ihr Datensatz gelöscht wird.",
   "privacynotice.retention.anonymize": "{scope}: nach {days} anonymisiert.",
   "privacynotice.retention.erase": "{scope}: nach {days} gelöscht.",
   "privacynotice.retention.rest":
@@ -13487,9 +13513,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Auswahl ist freiwillig. Sie können Ihre Kontaktdaten korrigieren, ohne Neuigkeiten zu abonnieren.",
   "confirm.marketing.title": "Gelegentlich Neuigkeiten erhalten?",
   "confirm.marketing.ask":
-    "Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
+    "{controller} verwendet Ihren Namen und Ihre E-Mail-Adresse, um Ihnen etwa einmal im Monat per E-Mail Neuigkeiten zu eigenen Produkten und Dienstleistungen zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen.",
   "confirm.marketing.yes": "Neuigkeiten abonnieren",
   "confirm.marketing.no": "Keine Neuigkeiten senden",
+  "confirm.controllerFallback": "das Unternehmen",
+  "confirm.frequency.weekly": "einmal pro Woche",
+  "confirm.frequency.monthly": "einmal im Monat",
+  "confirm.frequency.quarterly": "einmal im Quartal",
   "confirm.provenance.title": "Herkunft Ihrer Angaben",
   "confirm.provenance.empty": "Für diese Angaben ist keine Quelle erfasst.",
   "confirm.provenance.line": "{field}: aus {source}, erfasst am {date}",
@@ -13499,7 +13529,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.submit": "Angaben bestätigen",
   "confirm.subscription.title": "Bestätigen Sie Ihr Abonnement",
   "confirm.subscription.ask":
-    "Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
+    "Bestätigen Sie, dass {controller} Ihren Namen und Ihre E-Mail-Adresse verwenden darf, um Ihnen etwa {frequency} {purpose} per E-Mail zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen. Informationen zu Ihren Rechten: {privacy_page}.",
   "confirm.subscription.confirm": "Abonnement bestätigen",
   "confirm.subscription.alreadyTitle": "Abonnement aktiv",
   "confirm.subscription.alreadyBody":

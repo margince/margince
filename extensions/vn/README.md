@@ -112,6 +112,15 @@ usual policies apply. A request to delete the subject still removes their detail
 **Download opt-out records** on a contact's consent panel exports all three when the state asks to
 see them (Art. 11.3).
 
+## A consent request answers the contact's own request (Art. 11.2)
+
+A mail that asks a contact to confirm a subscription they never asked for is itself a message they
+did not ask for. So this pack declares `ConsentConfirmationNeedsRequest`. A user can send the
+consent-confirmation mail only when the contact's own request is on record. That is a request a
+user logged, a form the contact sent, or a mail the contact wrote. The core keeps that request on the
+link and on the grant's proof row (`consent_event.subject_request_id`). The rule is read in
+`backend/internal/modules/consent/confirmrules.go`.
+
 ## Windows
 
 A reply stays a reply for **12 months**; a live deal supports a follow-up no one asked for during

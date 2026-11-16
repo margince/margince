@@ -34002,9 +34002,18 @@ export interface components {
             company_id?: string | null;
             /** @description The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain. */
             company_name?: string | null;
+            /** @description Where the contact came from, as the user creating it states. The contact's privacy page prints it. `other` needs `acquisition_note`. */
+            acquisition_source?: components["schemas"]["ContactStatedSource"];
+            /** @description Their own words about the source, printed on the contact's privacy page beside it. */
+            acquisition_note?: string | null;
         } & {
             [key: string]: unknown;
         };
+        /**
+         * @description Where a contact created by hand came from, as the user who created it stated.
+         * @enum {string}
+         */
+        ContactStatedSource: "met_in_person" | "business_card" | "referral" | "website" | "other";
         /**
          * @description One contact as a reader of their public profile can state them. Deliberately
          *     flatter than CreateContactRequest: one email and one phone rather than the
@@ -53688,14 +53697,22 @@ export interface components {
              * @enum {string}
              */
             class?: "business_correspondence" | "transactional" | "marketing" | "phone_outreach";
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /** Format: date-time */
             created_at: string;
         };
+        /**
+         * @description How often the purpose's mail goes out, roughly. The subscription question states it.
+         * @enum {string}
+         */
+        ConsentPurposeFrequency: "weekly" | "monthly" | "quarterly";
         CreateConsentPurposeRequest: {
             key: string;
             label: string;
             /** @default false */
             requires_double_opt_in: boolean;
+            /** @description Absent means monthly. */
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
         };
         ExistingCustomerNotice: {
             /** Format: uuid */
@@ -54562,6 +54579,8 @@ export interface components {
             postal_address?: string;
             /** @description How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists. */
             privacy_contact?: string;
+            /** @description Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty. */
+            privacy_page?: string;
             /**
              * @description How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
              *     message rather than only the first. The one-click unsubscribe this product mints is
@@ -55228,6 +55247,10 @@ export interface components {
              * @description When the acquisition happened, absent where the door could not say.
              */
             acquired_at?: string | null;
+            /** @description Where the contact came from, as the user who created it by hand stated. Absent when nothing was given. */
+            stated_source?: components["schemas"]["ContactStatedSource"];
+            /** @description Their own words beside `stated_source`. Absent when none were given. */
+            stated_source_note?: string;
             /** @description What the installation uses this contact's data for, by published name. */
             purposes?: string[];
             /**
@@ -55262,6 +55285,8 @@ export interface components {
             privacy_contact?: string;
             /** @description How to object, where the installation states a way of its own. */
             objection_route?: string;
+            /** @description Where the installation publishes its own privacy information. Absent when not stated. */
+            privacy_page?: string;
         };
         /** @description One retention rule that acts on the reader's data. */
         PrivacyInformationRetention: {
@@ -55293,6 +55318,7 @@ export interface components {
             purpose_key: string;
             /** @description Its published name, for the page to show. */
             purpose_label: string;
+            frequency?: components["schemas"]["ConsentPurposeFrequency"];
             /**
              * @description Their answer today, so somebody who already said yes is not asked as though they had not.
              * @enum {string}
@@ -55331,6 +55357,11 @@ export interface components {
             language?: components["schemas"]["MailLanguage"];
             controller?: components["schemas"]["PrivacyInformationController"];
             question?: components["schemas"]["ConfirmQuestion"];
+            /**
+             * @description False when the recipient's country bars asking about news in a details check. The page
+             *     then shows no news question, and a submit carrying a marketing answer is a 422.
+             */
+            asks_news?: boolean;
         };
         /**
          * @description The question this link pinned, in the link's language and resolved with its purpose. The

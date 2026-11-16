@@ -146,3 +146,6 @@
 1794701221_the_capture_label_check_is_validated.down.sql | * | the down migration is a single SELECT 1; validation changes no row
 1794701222_signature_read_state_checks_its_text.up.sql | * | installs two text-limit triggers on contact_signature_enrich_state; the guards apply to later writes and change no existing row
 1794766200_a_company_field_can_cite_a_meeting.down.sql | company_profile_field | the down migration deletes only the rows whose source is meeting, which this migration introduced; one row per company and field, written only from workspace-wide meeting transcripts
+1794835258_a_consent_names_its_request_and_its_frequency.up.sql | * | adds columns that are empty or take a constant default, checks and foreign keys NOT VALID, and replaces two text-bound triggers; no existing row is read or changed
+1794835258_a_consent_names_its_request_and_its_frequency.down.sql | * | drops the columns this migration added and restores the two text-bound triggers; no existing row is changed
+1794835259_the_consent_request_and_frequency_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
