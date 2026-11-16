@@ -492,7 +492,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `app_issuer` | `text` |  |  |
 | `app_subject` | `text` |  |  |
-| `expires_at` | `timestamp with time zone` | yes |  |
+| `expires_at` | `timestamp with time zone` |  |  |
 | `granted_by` | `uuid` | yes | Points at `app_user.id`. |
 | `label` | `text` |  |  |
 | `last_used_at` | `timestamp with time zone` |  |  |

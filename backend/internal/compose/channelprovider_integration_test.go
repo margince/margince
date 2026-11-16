@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -518,5 +520,36 @@ func emptyTheSendableSets(t *testing.T) {
 	comms.SetChannelProviders(nil)
 	if activities.CanSendOnProvider(capture.ProviderTelegram) {
 		t.Fatal("the sendable set survived being emptied — this run could not tell a reconcile from a no-op")
+	}
+}
+
+func TestReconcileRegistersPersonalChannelsAsAPerMemberCoreTransport(t *testing.T) {
+	e := integration.Setup(t)
+	owner := integration.OwnerConn(t)
+	ctx := context.Background()
+	defer activities.SetChannelProviders([]string{capture.ProviderTelegram})
+	defer comms.SetChannelProviders([]string{capture.ProviderTelegram})
+	if err := reconcileChannelProviders(ctx, e.Pool, []string{capture.ProviderTelegram}); err != nil {
+		t.Fatalf("reconcileChannelProviders: %v", err)
+	}
+	var transport, credential string
+	var supplies bool
+	if err := owner.QueryRow(ctx,
+		`SELECT transport, credential_model, supplies_transport FROM channel_provider WHERE provider = $1`,
+		personalchannels.Provider).Scan(&transport, &credential, &supplies); err != nil {
+		t.Fatalf("reading the personal_channels row: %v", err)
+	}
+	if transport != "core" || credential != "per_member" || !supplies {
+		t.Fatalf("personal_channels = (%s, %s, supplies %v), want (core, per_member, supplies true)", transport, credential, supplies)
+	}
+	if err := owner.QueryRow(ctx,
+		`SELECT credential_model FROM channel_provider WHERE provider = $1`, capture.ProviderTelegram).Scan(&credential); err != nil {
+		t.Fatalf("reading telegram: %v", err)
+	}
+	if credential != "workspace_bot" {
+		t.Fatalf("telegram credential_model = %q, want workspace_bot unchanged", credential)
+	}
+	if !slices.Contains(activities.SendableChannelProviders(), personalchannels.Provider) {
+		t.Fatal("a reply cannot leave on personal_channels: it is missing from the sendable set")
 	}
 }
