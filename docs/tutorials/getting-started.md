@@ -26,8 +26,9 @@ make db-up
 ```
 
 This starts a `pgvector/pgvector:pg16` container on port 15432 and a
-`redis:7` container on port 16379. It waits until Postgres is ready,
-then applies `scripts/db-init.sql`. That file makes the
+`redis:7` container on port 16379. It also starts `postgres-test` on port 15433, a second Postgres that
+keeps its data in RAM for the integration tests. It waits until both are ready,
+then applies `scripts/db-init.sql` to each. That file makes the
 app role the API runs as, so the API never runs as the owner of the schema.
 
 ## 2. Apply the migrations
