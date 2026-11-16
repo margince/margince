@@ -317,13 +317,19 @@ export function DealsScreen({
   // won/lost are reached through the confirmed advance, never at create.
   const openStages = stages.filter((stage) => stage.semantic === "open");
 
-  const { openDeal, cardDragHandlers, columnDropHandlers, requestAdvance } =
-    useBoardInteractions({
-      stages,
-      loadedDeals: stageColumns.deals,
-      advance,
-      setPending,
-    });
+  const {
+    openDeal,
+    cardDragHandlers,
+    columnDropHandlers,
+    requestAdvance,
+    confirmPending,
+    dismissPending,
+  } = useBoardInteractions({
+    stages,
+    loadedDeals: stageColumns.deals,
+    advance,
+    setPending,
+  });
 
   // Shared between the board and the table surface: whichever view is
   // showing, the action lives in the surface's own header, not a wrap sibling.
@@ -455,8 +461,8 @@ export function DealsScreen({
       <ErrorLine error={advanceErrorBehind(advance.error, pending !== null)} />
       <ConfirmAdvanceModal
         pending={pending}
-        onClose={() => setPending(null)}
-        onConfirm={(input) => advance.mutateAsync(input)}
+        onClose={dismissPending}
+        onConfirm={confirmPending}
         onClosed={(deal, reason) => setClosed(closedDealOf(deal, reason))}
       />
       {/* Offered the moment a deal closes, from the list as from the record

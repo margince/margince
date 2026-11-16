@@ -5,10 +5,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
-import { deal, render, stubBackend } from "./deals.testkit";
+import { deal, jsonResponse, render, stubBackend } from "./deals.testkit";
 
-// A card's menu moves a deal through the board's one advance, as a drop does:
-// the same pinned version, and the same confirm before a terminal stage.
+// A card's menu moves a deal as a drop does: pinned, and confirmed when terminal.
 
 afterEach(() => {
   cleanup();
@@ -27,6 +26,26 @@ async function openCardMenu(user: ReturnType<typeof userEvent.setup>) {
   );
   if (!panel) throw new Error("the card's menu drew no panel");
   return within(panel);
+}
+
+// The deal's link, once the board draws it in that stage's column.
+function cardLinkIn(stageId: string) {
+  return waitFor(() => {
+    const column = document.querySelector<HTMLElement>(
+      `[data-stage="${stageId}"]`,
+    );
+    if (!column) throw new Error(`no column for stage ${stageId}`);
+    return within(column).getByRole("link", { name: "Fleet retrofit" });
+  });
+}
+
+// The board's drag, which happy-dom cannot perform, as its drop handler sees it.
+function dropOnStage(stageId: string) {
+  const drop = new Event("drop", { bubbles: true });
+  Object.assign(drop, {
+    dataTransfer: { getData: () => "d1", setData: () => undefined },
+  });
+  document.querySelector(`[data-stage="${stageId}"]`)?.dispatchEvent(drop);
 }
 
 describe("deal card menu on the deals board", () => {
@@ -66,12 +85,63 @@ describe("deal card menu on the deals board", () => {
     (await menu.findByRole("button", { name: "Move to Proposal" })).focus();
     await user.keyboard("{Enter}");
 
-    const proposal = await waitFor(() => {
-      const column = document.querySelector<HTMLElement>('[data-stage="s2"]');
-      if (!column) throw new Error("no Proposal column");
-      return within(column).getByRole("link", { name: "Fleet retrofit" });
-    });
+    const proposal = await cardLinkIn("s2");
     await waitFor(() => expect(document.activeElement).toBe(proposal));
+  });
+
+  // A move put away or refused is no move: a later drag that lands the deal
+  // there leaves focus where it was.
+  it("does not follow a deal whose terminal move was cancelled", async () => {
+    const rows = [deal({})];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend(rows, {
+        onAdvance: () => {
+          rows[0] = deal({ stage_id: "s3", status: "won", version: 5 });
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(await menu.findByRole("button", { name: "Mark won" }));
+    await askedToClose("Won");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    dropOnStage("s3");
+    await askedToClose("Won");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    expect(document.activeElement).not.toBe(await cardLinkIn("s3"));
+  });
+
+  it("does not follow a deal whose move was refused", async () => {
+    const rows = [deal({})];
+    const backend = stubBackend(rows, {
+      onAdvance: () => {
+        rows[0] = deal({ stage_id: "s2", version: 5 });
+      },
+    });
+    let refused = false;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (!refused && url.includes("/advance")) {
+        refused = true;
+        return Promise.resolve(
+          jsonResponse({ status: 409, title: "Conflict" }, 409),
+        );
+      }
+      return backend(input, init);
+    });
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(
+      await menu.findByRole("button", { name: "Move to Proposal" }),
+    );
+    await waitFor(() => expect(refused).toBe(true));
+
+    dropOnStage("s2");
+    expect(document.activeElement).not.toBe(await cardLinkIn("s2"));
   });
 
   it("asks before marking a deal won, and posts only after the confirm", async () => {

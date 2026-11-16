@@ -119,7 +119,7 @@ const cardMenu: ComponentProps<typeof DealPipelineBoard>["menu"] = {
     }),
   ),
   stages: pipelineStages,
-  onAdvance: () => undefined,
+  onAdvance: () => Promise.resolve(true),
 };
 
 function board() {
@@ -200,8 +200,7 @@ export const SummaryOpenDark: Story = {
   play: openSummary,
 };
 
-// A card's menu open, with its deal's moves first: the way to move a deal with
-// no pointer to drag it by, on a phone as at a desk.
+// The way to move a deal with no pointer to drag it by.
 const openCardMenu: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   const trigger = await canvas.findByRole("button", {

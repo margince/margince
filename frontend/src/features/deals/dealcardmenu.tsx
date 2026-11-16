@@ -153,7 +153,8 @@ function CopyDealLink({ dealId }: Readonly<{ dealId: string }>) {
   return <Button onClick={clipboard.copy}>{t("deal.card.copyLink")}</Button>;
 }
 
-// The board stays where it is: the "deals" read it invalidates drops the card.
+// Nothing to do once archived: the board stays, and the "deals" read the
+// archive invalidates drops the card.
 function ArchiveDeal({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   return (

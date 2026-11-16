@@ -40,8 +40,7 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
 
 // Each state a card can be in, at the board's own column width: the slots stay
 // level from card to card, and only a card that needs the reader carries
-// colour. Every card is handed the verbs the deals board would give it, so an
-// archived one gets the summary, and a menu of the summary and its link.
+// colour. Every card gets the verbs the deals board would give it.
 const menu = (
   <>
     <Button>Move to Proposal</Button>

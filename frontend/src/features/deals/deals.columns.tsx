@@ -19,6 +19,11 @@ import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";
 
+/** A pipeline's stages by `position`, which is not the order the server lists. */
+export function stagesInOrder(stages: readonly Stage[]): Stage[] {
+  return [...stages].sort((a, b) => a.position - b.position);
+}
+
 export function buildColumns(
   stages: Stage[],
   deals: Deal[],
@@ -34,36 +39,34 @@ export function buildColumns(
   // Why a card's deal has its probability, shown on hover over its ring.
   probabilityReason?: (deal: Deal, stageName: string) => string | undefined,
 ): BoardMoneyColumn[] {
-  return [...stages]
-    .sort((a, b) => a.position - b.position)
-    .map((stage) => {
-      const stageDeals = deals.filter((deal) => deal.stage_id === stage.id);
-      const stageTotals = totals.get(stage.id);
-      return {
-        stage: stage.id,
-        label: stage.name,
-        probabilityPct: stage.win_probability,
-        // No totals row yet: the report is still in flight, or this stage was
-        // not in it. Either way the figure is unknown rather than zero, and the
-        // column draws it as absent while still stating the count below.
-        rawMinor: stageTotals?.baseMinor ?? null,
-        weightedMinor: stageTotals?.weightedBaseMinor ?? null,
-        currency: stageTotals?.currency ?? null,
-        deals: stageDeals.map((deal) => ({
-          ...toBoardDeal(deal, naming, owners, ownerPhotos),
-          probabilityReason: probabilityReason?.(deal, stage.name),
-        })),
-        count: columnCount(
-          stageTotals,
-          uncounted.has(stage.id) ? null : stageDeals.length,
-        ),
-        asOf: stageTotals?.asOf ?? null,
-        timezone: stageTotals?.timezone ?? null,
-        unpricedCount: stageTotals?.unpricedCount ?? null,
-        sumHidden: totalsWithheld !== undefined,
-        sumHiddenReason: totalsWithheld,
-      };
-    });
+  return stagesInOrder(stages).map((stage) => {
+    const stageDeals = deals.filter((deal) => deal.stage_id === stage.id);
+    const stageTotals = totals.get(stage.id);
+    return {
+      stage: stage.id,
+      label: stage.name,
+      probabilityPct: stage.win_probability,
+      // No totals row yet: the report is still in flight, or this stage was
+      // not in it. Either way the figure is unknown rather than zero, and the
+      // column draws it as absent while still stating the count below.
+      rawMinor: stageTotals?.baseMinor ?? null,
+      weightedMinor: stageTotals?.weightedBaseMinor ?? null,
+      currency: stageTotals?.currency ?? null,
+      deals: stageDeals.map((deal) => ({
+        ...toBoardDeal(deal, naming, owners, ownerPhotos),
+        probabilityReason: probabilityReason?.(deal, stage.name),
+      })),
+      count: columnCount(
+        stageTotals,
+        uncounted.has(stage.id) ? null : stageDeals.length,
+      ),
+      asOf: stageTotals?.asOf ?? null,
+      timezone: stageTotals?.timezone ?? null,
+      unpricedCount: stageTotals?.unpricedCount ?? null,
+      sumHidden: totalsWithheld !== undefined,
+      sumHiddenReason: totalsWithheld,
+    };
+  });
 }
 
 // The report's count over every matching deal. While the report is pending,

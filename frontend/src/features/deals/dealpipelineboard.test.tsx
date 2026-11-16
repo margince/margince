@@ -1,7 +1,9 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  type BoundFunctions,
   cleanup,
+  type queries,
   render as rtlRender,
   screen,
   within,
@@ -19,7 +21,7 @@ import {
   WriteToProvider,
   type WriteToTarget,
 } from "../../lib/writeto";
-import { meFixture } from "../../testing/mefixture";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { DealPipelineBoard } from "./dealpipelineboard";
 import { deal, stages as openThenWon, type Stage } from "./deals.testkit";
 
@@ -52,7 +54,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 // The grants the verbs wait on, and nothing else: every other read the
 // summary drawer makes answers 404, which its own panels already state.
-function stubGrants(allow: Parameters<typeof meFixture>[0]["allow"]) {
+function stubGrants(allow: GrantSpec) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -190,8 +192,8 @@ describe("DealPipelineBoard", () => {
       win_probability: 0,
     };
     const pipeline = [...openThenWon, lost];
-    const onAdvance = vi.fn();
-    afterEach(() => onAdvance.mockReset());
+    const onAdvance = vi.fn(() => Promise.resolve(false));
+    afterEach(() => onAdvance.mockClear());
     beforeEach(() => {
       stubGrants({ activity: ["create"], deal: ["read", "update", "delete"] });
     });
@@ -210,7 +212,7 @@ describe("DealPipelineBoard", () => {
       await within(panel).findByRole("button", { name: "Add task" });
       return { user, panel: within(panel) };
     }
-    const itemNames = (panel: ReturnType<typeof within>) =>
+    const itemNames = (panel: BoundFunctions<typeof queries>) =>
       panel.getAllByRole("button").map((item) => item.textContent);
 
     it("offers an open deal its moves, then the card's verbs and the record's", async () => {
@@ -328,11 +330,13 @@ describe("DealPipelineBoard", () => {
     // With two won stages, no one stage is what "won" means.
     it("offers Mark won only where one stage means won", async () => {
       const secondWin: Stage = {
-        ...openThenWon[2],
         id: "s5",
+        pipeline_id: "pl",
         name: "Won with partner",
         position: 5,
-      } as Stage;
+        semantic: "won",
+        win_probability: 100,
+      };
       renderBoard([openDeal], null, {
         deals: [deal({})],
         stages: [...pipeline, secondWin],

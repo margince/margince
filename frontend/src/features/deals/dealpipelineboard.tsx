@@ -37,7 +37,8 @@ type DealPipelineBoardProps = Omit<
     deals: readonly Deal[];
     /** In position order. */
     stages: readonly Stage[];
-    onAdvance: (dealId: string, stageId: string) => void;
+    /** Answers whether the move was saved. */
+    onAdvance: (dealId: string, stageId: string) => Promise<boolean>;
   }>;
 };
 
@@ -79,8 +80,12 @@ export function DealPipelineBoard({
           stages={menu.stages}
           verbs={verbs}
           onAdvance={(dealId, stageId) => {
-            followMove(dealId, stageId);
-            menu.onAdvance(dealId, stageId);
+            const from = record.stage_id ?? "";
+            void menu.onAdvance(dealId, stageId).then((landed) => {
+              if (landed) {
+                followMove({ dealId, from, to: stageId });
+              }
+            });
           }}
         />
       ),
@@ -111,25 +116,31 @@ export function DealPipelineBoard({
   );
 }
 
-// A moved card is drawn anew in its new column, and the menu trigger that held
-// focus goes with the old one; focus follows the card unless it went elsewhere.
+type SavedMove = Readonly<{ dealId: string; from: string; to: string }>;
+
+// A saved move redraws the card in its new column, which drops the focus its
+// old menu trigger held. Focus follows it there, unless the reader moved on.
 function useFocusFollowsMove() {
-  const moving = useRef<{ dealId: string; stageId: string } | null>(null);
+  const moving = useRef<SavedMove | null>(null);
   useEffect(() => {
     const move = moving.current;
-    if (move === null || document.activeElement !== document.body) {
+    if (move === null) {
       return;
     }
-    const link = document.querySelector<HTMLElement>(
-      `[data-stage="${move.stageId}"] [data-deal="${move.dealId}"] .deal-open`,
-    );
-    if (link) {
-      moving.current = null;
-      link.focus();
+    const card = [
+      ...document.querySelectorAll<HTMLElement>("[data-deal]"),
+    ].find((each) => each.dataset.deal === move.dealId);
+    const stage = card?.closest<HTMLElement>("[data-stage]")?.dataset.stage;
+    if (stage === undefined || stage === move.from) {
+      return;
+    }
+    moving.current = null;
+    if (stage === move.to && document.activeElement === document.body) {
+      card?.querySelector<HTMLElement>(".deal-open")?.focus();
     }
   });
-  return (dealId: string, stageId: string) => {
-    moving.current = { dealId, stageId };
+  return (move: SavedMove) => {
+    moving.current = move;
   };
 }
 

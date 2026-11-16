@@ -337,8 +337,7 @@
 /* The ring follows the LINK's focus, drawn on the card: the anchor is what
    takes the tab stop, and a ring around its text alone would mark the deal's
    name rather than the card a reader is about to open. */
-.deal-card:focus-within,
-.deal-card:has(.deal-actions .overflow-menu > [aria-expanded="true"]) {
+.deal-card:focus-within {
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
@@ -568,9 +567,11 @@
 .deal-card .deal-actions .btn:hover:not(:disabled) svg {
   color: var(--textPrimary);
 }
-/* The open menu's panel is portalled, so focus leaves the card; the card keeps
-   its ring (above) and lifts, so the reader still sees which deal it acts on. */
+/* Focus leaves for the portalled panel, so the card keeps its ring and lifts.
+   Its edge firms as on hover, and spares a staged card's edge as hover does. */
 .deal-card:has(.deal-actions .overflow-menu > [aria-expanded="true"]) {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
   box-shadow: var(--shadow-pop);
 }
 .deal-card:not(.staged):has(

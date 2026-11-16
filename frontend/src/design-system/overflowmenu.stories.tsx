@@ -119,8 +119,7 @@ export const InsideADrawerPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// An item that opens a list of its own: the menu stays open over the list, and
-// a pick in it closes both, as choosing an item does (`useCloseOverflowMenu`).
+// A pick in a list an item opened closes the menu too (`useCloseOverflowMenu`).
 function MoveToStage() {
   const closeMenu = useCloseOverflowMenu();
   return (
