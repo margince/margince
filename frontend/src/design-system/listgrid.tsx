@@ -8,6 +8,7 @@
 import { type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
 import { opensRow } from "../lib/linkclick";
+import { useFoldedViewport } from "../lib/viewport";
 import { AppLink } from "./applink";
 import { Checkbox, type useScrollRegion } from "./atoms";
 import type { ListColumn, ListSelection } from "./listcolumn";
@@ -213,6 +214,8 @@ type RowProps<Row> = Readonly<{
   onRowClick?: (row: Row) => void;
   rowHref?: (row: Row) => string;
   selection?: ListSelection<Row>;
+  /** The rows are phone rows: `shown` is the phone row's columns, and a cell says what `folded` gives. */
+  phone: boolean;
 }>;
 
 /** The body's rows: placeholders while loading, then the page, the problem or the empty line. */
@@ -275,6 +278,7 @@ function DataRow<Row>({
   onRowClick,
   rowHref,
   selection,
+  phone,
 }: RowProps<Row> & Readonly<{ row: Row }>) {
   return (
     <tr
@@ -290,28 +294,33 @@ function DataRow<Row>({
           : undefined
       }
     >
-      {shown.map((column) => (
-        <td
-          key={column.key}
-          role="cell"
-          className={cellClass(column)}
-          // On a phone the rows become cards and the header row is gone, so
-          // each value carries its own label. The identity cell is the heading.
-          data-label={column.fixed ? undefined : column.header}
-        >
-          {column.fixed ? (
-            <IdentityCell
-              row={row}
-              rowKey={rowKey}
-              rowHref={rowHref}
-              selection={selection}
-              cell={column.cell}
-            />
-          ) : (
-            column.cell(row)
-          )}
-        </td>
-      ))}
+      {shown.map((column) => {
+        if (column.fixed) {
+          return (
+            <td key={column.key} role="cell" className={cellClass(column)}>
+              <IdentityCell
+                row={row}
+                rowKey={rowKey}
+                rowHref={rowHref}
+                selection={selection}
+                cell={column.cell}
+              />
+            </td>
+          );
+        }
+        const said = phone ? column.folded?.(row) : undefined;
+        const content = said === undefined ? column.cell(row) : said;
+        return (
+          <td
+            key={column.key}
+            role="cell"
+            className={cellClass(column)}
+            data-phone={phone ? phoneSlot(column, content) : undefined}
+          >
+            {content}
+          </td>
+        );
+      })}
       <td className="lt-slack" aria-hidden="true" />
     </tr>
   );
@@ -364,6 +373,55 @@ function ClearFilters({
       {label}
     </button>
   );
+}
+
+type PhonePlace = "title" | "end" | "menu" | "caption";
+
+function phonePlace<Row>(column: ListColumn<Row>): PhonePlace | undefined {
+  if (column.fixed) {
+    return "title";
+  }
+  return column.verbs === "menu" ? "menu" : column.phone;
+}
+
+/**
+ * The columns the grid draws. A phone row reads the identity, its one end item,
+ * the row menu, then the caption facts, in declared order: a phone has no Columns step.
+ */
+export function useDrawnColumns<Row>(
+  columns: readonly ListColumn<Row>[],
+  placed: readonly ListColumn<Row>[],
+  hidden: ReadonlySet<string>,
+): { phone: boolean; shown: readonly ListColumn<Row>[] } {
+  const phone = useFoldedViewport();
+  if (!phone) {
+    return { phone, shown: placed.filter((column) => !hidden.has(column.key)) };
+  }
+  const at = (place: PhonePlace) =>
+    columns.filter((column) => phonePlace(column) === place);
+  return {
+    phone,
+    shown: [
+      ...at("title"),
+      ...at("end").slice(0, 1),
+      ...at("menu"),
+      ...at("caption"),
+    ],
+  };
+}
+
+/** Where the phone row lays a cell out; a fact with nothing to say is left out. */
+function phoneSlot<Row>(
+  column: ListColumn<Row>,
+  content: ReactNode,
+): "end" | "caption" | "blank" | undefined {
+  const place = phonePlace(column);
+  if (place !== "end" && place !== "caption") {
+    return undefined;
+  }
+  return content == null || content === false || content === ""
+    ? "blank"
+    : place;
 }
 
 /**

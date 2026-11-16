@@ -1276,18 +1276,10 @@
   visibility: hidden;
 }
 
-/* ---- phone: rows become cards ---- */
+/* ---- phone: a row holds the facts that find a record ---- */
 
-/*
- * A phone list is read to FIND a record and act on it, not to compare values
- * across rows, so the row stops being a row: each one becomes a card with the
- * identity as its heading and every remaining field as a labelled line. That
- * shows the whole record without a horizontal scrollbar hiding half of it, and
- * without dropping columns the reader might have needed.
- *
- * The table element keeps its markup and its explicit roles, so what changes
- * here is the layout, not the semantics.
- */
+/* Line one is the identity, the one `phone: "end"` item and the row menu; line
+ * two is the `phone: "caption"` facts, unlabelled. ListTable draws no other column. */
 @media (max-width: 720px) {
   .lt-table,
   .lt-table thead,
@@ -1297,9 +1289,6 @@
   .lt-table td {
     display: block;
   }
-
-  /* The header row has nothing to label once the columns are stacked; each cell
-   * carries its own label instead. */
   .lt-table thead {
     display: none;
   }
@@ -1308,6 +1297,9 @@
     padding: var(--space-3);
     border-bottom: 1px solid var(--borderSubtle);
   }
+  .lt-table.dense tbody tr {
+    padding-block: var(--space-2);
+  }
   .lt-table tbody tr:last-child {
     border-bottom: 0;
   }
@@ -1315,106 +1307,79 @@
     background: none;
   }
 
-  /* No verticals in a stack: the label/value pairs already read as rows. */
   .lt-table td:not(:last-child),
   .lt-table th:not(:last-child) {
     border-right: 0;
   }
 
-  /* A card has vertical room, so its values wrap instead of being clipped. */
-  .lt-table td {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-3);
-    padding: var(--space-1) 0;
+  .lt-table:not(.dense) td,
+  .lt-table.dense td {
+    block-size: auto;
+    padding: 0;
     border-bottom: 0;
     text-align: left;
     white-space: normal;
     overflow: visible;
   }
-  /* A block takes `block-size` as a height, not as a table cell's floor, and a
-   * value that wraps past it runs over the field below. */
-  .lt-table:not(.dense) td {
-    block-size: auto;
-    min-block-size: var(--lt-row-h);
-  }
-
-  /* A field with no value has nothing to label: on a desktop row the empty cell
-   * holds the grid together, but in a card it would read as a missing answer to
-   * a question nobody asked. A cell renderer may wrap nothing in an element, so
-   * a cell counts as empty when nothing in it holds text or draws itself. Bare
-   * text (the empty list's own line) counts as content. A loading row's bone
-   * is a placeholder, not a missing answer, so it keeps its cells. */
-  .lt-table
-    tr:not(.lt-loading)
-    > td:is(:empty, :not(:has(:not(:empty), img, svg, input)):has(> :empty)) {
-    display: none;
-  }
-
-  /* The value beside a label shrinks to the card and breaks a long run, such as
-   * an e-mail address, rather than running past the card's edge. */
   .lt-table td > * {
     min-width: 0;
     overflow-wrap: anywhere;
   }
 
-  /* The field name, taken from the column header the card no longer shows. */
-  .lt-table td::before {
-    content: attr(data-label);
-    flex: 0 0 38%;
+  .lt-table tr.lt-loading > td + td {
+    margin-block-start: var(--space-2);
   }
 
-  /* The identity cell is the card's heading: no label, full width, and it reads
-   * as the thing you tapped rather than as one field among several.
-   *
-   * Nothing is frozen in a stack — there is no sideways scroll for a cell to
-   * slide under — so the desktop column's chrome comes off here. Its opaque
-   * ground was still being painted over the card's translucent one, which put a
-   * patch of a slightly different white behind every card's title. */
+  .lt-table tbody tr:not(.lt-loading, .lt-empty) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--space-1);
+  }
+  .lt-table td[data-phone="blank"] {
+    display: none;
+  }
+
+  /* Nothing scrolls sideways, so the frozen column's ground comes off. Basis 0
+   * wraps a long name inside line one rather than pushing the end item down. */
   .lt-table td.lt-identity {
-    display: block;
+    flex: 1 1 0%;
+    max-inline-size: 100%;
     position: static;
     background: none;
-    padding-bottom: var(--space-2);
     color: var(--textPrimary);
   }
-  .lt-table td.lt-identity::before {
-    content: none;
-  }
-
-  /* The heading wraps like the card's other values; a run with no break stays
-   * inside the card. */
   .lt-table td.lt-identity .avatar-row > :not(.avatar, .badge) {
     white-space: normal;
     overflow: visible;
     overflow-wrap: anywhere;
   }
-
-  /* A number in a stack belongs beside its label, not against the far edge. */
-  .lt-table td.lt-num {
-    text-align: left;
+  .lt-table td:is([data-phone="end"], .lt-rowmenu) {
+    flex: none;
+    margin-inline-start: var(--space-2);
   }
 
-  /* The "…" sits beside the card's heading rather than on a labelled line. */
-  .lt-table tbody tr:has(> td.lt-rowmenu) {
-    position: relative;
+  .lt-table tr:has(> td[data-phone="caption"])::after {
+    content: "";
+    flex-basis: 100%;
+    order: 1;
   }
-  .lt-table tbody td.lt-rowmenu {
-    position: absolute;
-    top: var(--space-2);
-    right: var(--space-2);
-    padding: 0;
+  .lt-table td[data-phone="caption"] {
+    order: 2;
+    flex: 0 1 auto;
+    min-inline-size: 0;
+    margin-block-start: var(--space-1);
+    font: var(--fontBodySmall);
+    color: var(--textSecondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .lt-table td.lt-rowmenu::before {
-    content: none;
-  }
-  .lt-table tr:has(> td.lt-rowmenu) td.lt-identity {
-    padding-right: calc(var(--controlHeight) + var(--space-2));
-  }
-
-  /* Cards are already tight; the density control governs the desktop grid. */
-  .lt-table.dense td {
-    padding: var(--space-1) 0;
+  /* The dot ends each fact but the last, as a timeline head's does, so a
+   * wrapped line never opens on one. */
+  .lt-table td[data-phone="caption"]:has(~ td[data-phone="caption"])::after {
+    content: "·";
+    margin-inline-start: var(--space-1);
   }
 
   /* Cards are read by scrolling down past the toolbar, so the page scrolls and
@@ -1439,16 +1404,13 @@
 
   /* A card is as wide as the screen, so there is no slack to take — and an
      empty cell in a stack is an empty line at the bottom of every card. */
-  .lt-slack {
+  .lt-table .lt-slack {
     display: none;
   }
 
   .lt-empty td {
     display: block;
     text-align: center;
-  }
-  .lt-empty td::before {
-    content: none;
   }
 
   .lt-foot {
@@ -1745,9 +1707,6 @@
 @media (max-width: 720px) {
   .panel > .lt .lt-table tbody tr {
     padding-inline: var(--padPanel);
-  }
-  .panel > .lt .lt-table tbody td.lt-rowmenu {
-    right: var(--padPanel);
   }
 }
 

@@ -54,7 +54,7 @@ export { narrowingSignature } from "./listtable.paging";
 // contacts, companies, leads, deals, products and partners share it.
 import type { ListColumn, ListSelection } from "./listcolumn";
 import { useDisplayRows } from "./listdisplaymenu";
-import { EmptyRow, GridBody, ListGrid } from "./listgrid";
+import { EmptyRow, GridBody, ListGrid, useDrawnColumns } from "./listgrid";
 
 export type { ListColumn, ListSelection } from "./listcolumn";
 export { CellStrip } from "./listgrid";
@@ -317,7 +317,7 @@ export function ListTable<Row>({
   const placed = orderedColumns(columns, order.order);
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
-  const shown = placed.filter((column) => !display.hidden.has(column.key));
+  const { phone, shown } = useDrawnColumns(columns, placed, display.hidden);
   // The width observer re-attaches when the scroller comes or goes.
   const drawsOwnTable = body === undefined || body === null;
   const layout = useColumnWidths(
@@ -371,7 +371,7 @@ export function ListTable<Row>({
   });
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
   const displayDials = useDisplayRows({
-    optional: placed.filter((column) => !column.fixed),
+    optional: phone ? [] : placed.filter((column) => !column.fixed),
     declared: columns.flatMap((column) => (column.fixed ? [] : [column.key])),
     onReorder: order.onReorder,
     ...display,
@@ -486,6 +486,7 @@ export function ListTable<Row>({
             onRowClick={onRowClick}
             rowHref={rowHref}
             selection={selection}
+            phone={phone}
             pending={pending}
             problem={problem}
             empty={emptyLine}

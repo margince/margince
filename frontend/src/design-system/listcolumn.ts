@@ -31,6 +31,16 @@ export type ListColumn<Row> = {
   holds?: "date" | "colleague";
   /** Starts unticked in the Display menu: offered rather than drawn. */
   initiallyHidden?: boolean;
+  /**
+   * Its place in a phone row: "end" on the end edge of the name's line (one per list), "caption"
+   * a fact on the muted line under it. A column with neither is not drawn on a phone.
+   */
+  phone?: "end" | "caption";
+  /**
+   * What the cell says in a phone row: `null` says nothing, so the fact and its
+   * separator go; `undefined` keeps the cell.
+   */
+  folded?: (row: Row) => ReactNode | undefined;
 };
 
 export type ListSelection<Row> = {
