@@ -2086,7 +2086,7 @@ export const en = {
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
   "brief.schedule.notConnected":
-    "No calendar is connected, so today’s meetings cannot be shown.",
+    "No calendar connected. Showing meetings booked, logged or imported in Margince.",
   "brief.schedule.unreadable":
     "Your calendar is not syncing, so today’s meetings cannot be shown.",
   "brief.schedule.connect": "Connect a calendar",
@@ -7088,9 +7088,8 @@ export const en = {
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "Prep not checked",
   "brief.readings.prepared": "All prepared",
-  "brief.readings.calendarNotConnected": "Not connected",
   "brief.readings.calendarNotConnectedWhy":
-    "Connect your calendar to count meetings.",
+    "Connect your calendar to count its meetings too.",
   "brief.readings.calendarUnreadable": "Not syncing",
   "brief.readings.calendarUnreadableWhy":
     "Reconnect your calendar to count meetings.",
@@ -19204,6 +19203,15 @@ export const en = {
   "lists.saveFilterConflict":
     "Someone changed this list after you opened it. Open the list again to see their change, then edit the filter.",
   "lists.history.someone": "Someone",
+  "lists.history.created": "Made the list",
+  "lists.history.renamed": "Renamed it from {before} to {after}",
+  "lists.history.repurposed": "Changed what it is for",
+  "lists.history.reshared": "Changed who can find it",
+  "lists.history.handedOver": "Gave it a new steward",
+  "lists.history.refiltered": "Changed the filter",
+  "lists.history.filterBefore": "Before: {sentence}",
+  "lists.history.filterAfter": "After: {sentence}",
+  "lists.history.noFilter": "no conditions",
   "lists.changes.since": "Since your visit on {when}:",
   "lists.changes.joined_one": "{count} joined",
   "lists.changes.joined_other": "{count} joined",

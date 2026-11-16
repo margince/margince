@@ -165,7 +165,7 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **External meetings** and **Numbers**.
-- **External meetings** lists today's meetings with someone from outside your company, by start time. A meeting among colleagues is not on it. Each row names the account and the contacts you meet, each a link to their record. The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
+- **External meetings** lists today's meetings with someone from outside your company, by start time. A meeting among colleagues is not on it. Each row names the account and the contacts you meet, each a link to their record. The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home. With no calendar connected, the panel says so and shows the meetings booked, logged or imported in Margince.
 
 Also called: morning brief, daily brief, today, priorities, top cards.
 
@@ -186,7 +186,7 @@ A customer who waits for your reply, and a reply deadline that comes close, come
 Today names each source it could not read, with **Refresh brief**, and never shows it as a zero.
 - **Flagged pipeline value** adds up deal value without the deals that have no price, and says how many those are.
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
-- Meetings count calendar entries still to come. Margince does not say you are prepared unless the source says so.
+- Meetings count calendar entries still to come. With no calendar connected, they count the meetings Margince knows. Margince does not say you are prepared unless the source says so.
 
 The work counts come from the current Worklist read. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. For a few seconds, Home may show a copy up to 15 minutes old. It then reads your day again and shows the new copy on its own. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 

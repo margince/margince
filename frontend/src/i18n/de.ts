@@ -2177,7 +2177,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
   "brief.schedule.notConnected":
-    "Die heutigen Termine können nicht angezeigt werden, da kein Kalender verbunden ist.",
+    "Kein Kalender verbunden. Angezeigt werden Termine, die in Margince gebucht, erfasst oder importiert wurden.",
   "brief.schedule.unreadable":
     "Die heutigen Termine können nicht angezeigt werden, da dein Kalender nicht synchronisiert ist.",
   "brief.schedule.connect": "Kalender verbinden",
@@ -7088,9 +7088,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",
   "brief.readings.prepUnknown": "Vorbereitung nicht geprüft",
   "brief.readings.prepared": "Alle vorbereitet",
-  "brief.readings.calendarNotConnected": "Nicht verbunden",
   "brief.readings.calendarNotConnectedWhy":
-    "Verbinde deinen Kalender, um Termine zu zählen.",
+    "Verbinde deinen Kalender, um auch seine Termine zu zählen.",
   "brief.readings.calendarUnreadable": "Synchronisiert nicht",
   "brief.readings.calendarUnreadableWhy":
     "Verbinde deinen Kalender neu, um Termine zu zählen.",
@@ -19382,6 +19381,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.saveFilterConflict":
     "Jemand hat diese Liste geändert, nachdem du sie geöffnet hast. Öffne die Liste erneut, um die Änderung zu sehen, und bearbeite dann den Filter.",
   "lists.history.someone": "Jemand",
+  "lists.history.created": "Liste angelegt",
+  "lists.history.renamed": "Umbenannt von {before} in {after}",
+  "lists.history.repurposed": "Zweck geändert",
+  "lists.history.reshared": "Geändert, wer sie findet",
+  "lists.history.handedOver": "Zuständigkeit neu vergeben",
+  "lists.history.refiltered": "Filter geändert",
+  "lists.history.filterBefore": "Vorher: {sentence}",
+  "lists.history.filterAfter": "Danach: {sentence}",
+  "lists.history.noFilter": "keine Bedingungen",
   "lists.changes.since": "Seit deinem Besuch am {when}:",
   "lists.changes.joined_one": "{count} hinzugekommen",
   "lists.changes.joined_other": "{count} hinzugekommen",
