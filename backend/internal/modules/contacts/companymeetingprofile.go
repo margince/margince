@@ -29,18 +29,46 @@ const CompanySourceMeeting = "meeting"
 const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at IS NULL AND t.archived_at IS NULL
 	AND cardinality(t.redacted_fields) = 0`
 
-// StaleMeetingTranscriptsTx names up to limit transcripts whose company fields
-// stand although the transcript may no longer fill them: it was narrowed,
-// restricted, archived or redacted since. ApplyMeetingProfileTx retracts them.
-func StaleMeetingTranscriptsTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.ActivityID, error) {
-	rows, err := tx.Query(ctx, `SELECT DISTINCT f.source_activity_id FROM company_profile_field f
-		JOIN activity t ON t.id = f.source_activity_id
-		WHERE f.source = 'meeting' AND NOT (`+meetingTranscriptSharedSQL+`)
-		ORDER BY f.source_activity_id LIMIT $1`, limit)
-	if err != nil {
-		return nil, fmt.Errorf("read the meetings whose company fields no longer stand: %w", err)
+// RetractStaleMeetingProfilesTx removes up to limit company fields whose
+// transcript may no longer fill them: narrowed, restricted, archived or redacted
+// since. One statement tests and deletes, so a transcript that qualifies again
+// meanwhile keeps its fields. It returns how many it removed.
+func RetractStaleMeetingProfilesTx(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
+	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+		return 0, err
 	}
-	return pgx.CollectRows(rows, pgx.RowTo[ids.ActivityID])
+	rows, err := tx.Query(ctx, `DELETE FROM company_profile_field f USING activity t
+		WHERE f.id IN (SELECT s.id FROM company_profile_field s JOIN activity t ON t.id = s.source_activity_id
+		                WHERE s.source = 'meeting' AND NOT (`+meetingTranscriptSharedSQL+`)
+		                ORDER BY s.id LIMIT $1 FOR UPDATE OF s SKIP LOCKED)
+		  AND f.source = 'meeting' AND t.id = f.source_activity_id AND NOT (`+meetingTranscriptSharedSQL+`)
+		RETURNING f.company_id, f.field, f.value`, limit)
+	if err != nil {
+		return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)
+	}
+	changed := map[ids.CompanyID]*meetingFieldImages{}
+	removed := 0
+	for rows.Next() {
+		var company ids.UUID
+		var field string
+		var was *string
+		if err := rows.Scan(&company, &field, &was); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)
+		}
+		changedOf(changed, ids.From[ids.CompanyKind](company)).note(field, was, nil)
+		removed++
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)
+	}
+	for company, images := range changed {
+		if err := recordMeetingProfile(ctx, tx, company, images); err != nil {
+			return 0, err
+		}
+	}
+	return removed, nil
 }
 
 // MeetingProfileField is one field a meeting states about the company.

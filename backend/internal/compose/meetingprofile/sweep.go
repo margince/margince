@@ -29,15 +29,7 @@ type Sweep struct {
 func (s Sweep) Workspace(ctx context.Context, workspace ids.UUID) error {
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), "system:meeting-profile")
 	return database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error {
-		stale, err := contacts.StaleMeetingTranscriptsTx(ctx, tx, sweepBatch)
-		if err != nil {
-			return err
-		}
-		for _, transcript := range stale {
-			if err := contacts.ApplyMeetingProfileTx(ctx, tx, transcript, nil); err != nil {
-				return err
-			}
-		}
-		return nil
+		_, err := contacts.RetractStaleMeetingProfilesTx(ctx, tx, sweepBatch)
+		return err
 	})
 }
