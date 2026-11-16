@@ -34,4 +34,13 @@ describe("addressedAPathWeDoNotServe", () => {
     at("/settings");
     expect(addressedAPathWeDoNotServe()).toBe(true);
   });
+
+  it("serves the story frame of a static build, whose base is relative", () => {
+    vi.stubEnv("STORYBOOK", "true");
+    vi.stubEnv("BASE_URL", "./");
+    at("/iframe.html?id=story#/onboarding");
+    expect(addressedAPathWeDoNotServe()).toBe(false);
+    at("/settings");
+    expect(addressedAPathWeDoNotServe()).toBe(true);
+  });
 });
