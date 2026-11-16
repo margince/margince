@@ -82,4 +82,12 @@ func TestAnUnassignedQualifyTaskGoesToTheLeadsOwner(t *testing.T) {
 	if n := qualifyTasks(t, e, lead, true); n != 1 || qualifyTasks(t, e, lead, false) != 1 {
 		t.Errorf("the owner has %d qualify task(s); the unassigned one %s should be theirs and the only one", n, task)
 	}
+	var adopted bool
+	if err := e.Owner.QueryRow(context.Background(), `SELECT NOT a.is_done AND a.assignee_id IS NOT DISTINCT FROM l.owner_id
+		FROM activity a, lead l WHERE a.id = $1 AND l.id = $2`, task, lead).Scan(&adopted); err != nil {
+		t.Fatalf("reading the seeded task back: %v", err)
+	}
+	if !adopted {
+		t.Errorf("the seeded task %s was replaced or left unassigned instead of handed to the owner", task)
+	}
 }
