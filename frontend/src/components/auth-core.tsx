@@ -98,12 +98,19 @@ export function AuthExperience({
   children,
   phase,
   notice = false,
+  wide = false,
+  core = true,
 }: Readonly<{
   children: ReactNode;
   phase: AuthPhase;
   // A notice the signed-in reader is held at, not a sign-in. The system does
   // not introduce itself to someone already inside, and access is not the point.
   notice?: boolean;
+  // A form with sections of its own, which the sign-in measure would wrap
+  // line by line.
+  wide?: boolean;
+  // Off where a signed-in reader is asked for a decision rather than a sign-in.
+  core?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -111,7 +118,13 @@ export function AuthExperience({
   const intro = useDocumentIntro();
   return (
     <div
-      className="auth-surface"
+      className={[
+        "auth-surface",
+        wide && "auth-surface-wide",
+        !core && "auth-surface-coreless",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-auth-phase={phase}
       data-auth-intro={intro ? "play" : "done"}
     >
@@ -132,7 +145,7 @@ export function AuthExperience({
         <div className="auth-task-in">{children}</div>
         <LegalFooter notice={notice} />
       </div>
-      <IdentityRegion phase={phase} greeting={!notice} />
+      {core && <IdentityRegion phase={phase} greeting={!notice} />}
     </div>
   );
 }

@@ -196,6 +196,11 @@ const attackDeadline = 5 * time.Second
 // than hanging the suite until the whole package times out.
 func readWithin(t *testing.T, raw []byte) error {
 	t.Helper()
+	// The deadline times the document, not the one module compile the first
+	// reading pays. Which test reads first depends on the order the tests run in.
+	if _, err := reader.Read(t.Context(), fixture(t, "chrome-order-confirmation.pdf"), generous); err != nil {
+		t.Fatalf("starting the engine on a valid document: %v", err)
+	}
 	ctx, cancel := context.WithTimeout(t.Context(), attackDeadline)
 	defer cancel()
 

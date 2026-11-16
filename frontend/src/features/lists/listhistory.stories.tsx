@@ -10,7 +10,9 @@ import {
   listsMe,
   liveHistory,
   liveList,
+  liveVocabulary,
   MEMBER_ID,
+  revisionHistory,
   shortlist,
 } from "../../testing/lists.fixtures";
 import {
@@ -47,6 +49,7 @@ function panel(list: List, rows: readonly ListHistoryEntry[]) {
   return () => {
     installFetchStub({
       "GET /me": listsMe(true),
+      "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
       [`GET /lists/${list.id}/history`]: () =>
         jsonResponse({ data: rows, page: { has_more: false } }),
     });
@@ -81,6 +84,15 @@ export const TooLarge: Story = {
 // change. A record a rule added says so in plain ink.
 export const ShortlistWithNote: Story = {
   render: panel(shortlist, [addedByRule, ...history]),
+};
+
+// The list made, then renamed and refiltered, with the filter before and after
+// in words. A record an agent added says an agent added it.
+export const Revisions: Story = { render: panel(liveList, revisionHistory) };
+
+export const RevisionsDark: Story = {
+  ...Revisions,
+  globals: { theme: "dark" },
 };
 
 export const Empty: Story = { render: panel(shortlist, []) };

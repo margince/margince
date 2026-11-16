@@ -44,7 +44,7 @@ import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
 import { probabilityReason, probabilitySetNote } from "./dealprobability";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
-import { boardDealCount, buildColumns } from "./deals.columns";
+import { boardDealCount, buildColumns, stagesInOrder } from "./deals.columns";
 
 /**
  * What a terminal advance says about how the deal closed, on top of the stage
@@ -72,8 +72,8 @@ function closingFields(input: AdvanceInput) {
 }
 
 /**
- * The one way this screen advances a deal, shared by the board's drag and the
- * record page's stepper.
+ * The one way this screen advances a deal, shared by the board's drag, each
+ * card's menu and the record page's stepper.
  *
  * An advance is pinned like any other write: the version the reader's card or
  * record was drawn from rides the variables. When two readers move one deal at
@@ -231,6 +231,7 @@ export function DealBoardBody({
   openDeal,
   cardDragHandlers,
   columnDropHandlers,
+  requestAdvance,
   totalsWithheld,
 }: Readonly<{
   stageColumns: ReturnType<typeof useStageColumns>;
@@ -248,6 +249,7 @@ export function DealBoardBody({
   columnDropHandlers: ComponentProps<
     typeof PipelineBoard
   >["columnDropHandlers"];
+  requestAdvance: (dealId: string, stageId: string) => Promise<boolean>;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -313,6 +315,11 @@ export function DealBoardBody({
             cardDragHandlers={cardDragHandlers}
             columnDropHandlers={columnDropHandlers}
             columnExtras={columnExtras}
+            menu={{
+              deals: loadedDeals,
+              stages: stagesInOrder(effectivePipeline.stages ?? []),
+              onAdvance: requestAdvance,
+            }}
           />
         ) : null
       }
@@ -336,7 +343,7 @@ export function useBoardInteractions({
   stages: Stage[];
   loadedDeals: Deal[];
   advance: ReturnType<typeof useAdvanceDeal>;
-  setPending: (pending: PendingAdvance) => void;
+  setPending: (pending: PendingAdvance | null) => void;
 }>) {
   // Which card is in flight, and which card a drag last ended on, with when.
   // A drop and a click arrive as the same event pair, so the board tells them
@@ -345,23 +352,45 @@ export function useBoardInteractions({
   // that second click, and a link that does nothing looks broken.
   const dragging = useRef<string | null>(null);
   const lastDrop = useRef<{ dealId: string; at: number } | null>(null);
+  // Answers the last request once it settles: saved, or refused or put away.
+  const landing = useRef<((landed: boolean) => void) | null>(null);
+  const settle = (landed: boolean) => {
+    landing.current?.(landed);
+    landing.current = null;
+  };
 
   const requestAdvance = (dealId: string, stageId: string) => {
+    settle(false);
     const toStage = stages.find((stage) => stage.id === stageId);
-    if (!toStage) {
-      return;
-    }
     // The version the reader saw. The cards and this lookup read the one deal
     // array this render was handed. So the precondition names the row as drawn
     // on the board, not as it has become since: the claim optimistic
-    // concurrency makes.
-    const version = loadedDeals.find((deal) => deal.id === dealId)?.version;
-    if (toStage.semantic === "open") {
-      advance.mutate({ dealId, version, toStage });
-    } else {
-      // Terminal-stage advance is a 🟡 confirm (AC-deal-6).
-      setPending({ dealId, version, toStage });
+    // concurrency makes. Text dropped on a column names no card here.
+    const drawn = loadedDeals.find((deal) => deal.id === dealId);
+    if (!toStage || !drawn) {
+      return Promise.resolve(false);
     }
+    const version = drawn.version;
+    if (toStage.semantic === "open") {
+      return advance.mutateAsync({ dealId, version, toStage }).then(
+        () => true,
+        () => false,
+      );
+    }
+    // Terminal-stage advance is a 🟡 confirm (AC-deal-6).
+    setPending({ dealId, version, toStage });
+    return new Promise<boolean>((resolve) => {
+      landing.current = resolve;
+    });
+  };
+  const confirmPending = (input: AdvanceInput) =>
+    advance.mutateAsync(input).then((deal) => {
+      settle(true);
+      return deal;
+    });
+  const dismissPending = () => {
+    setPending(null);
+    settle(false);
   };
 
   // Board interactions are hoisted here so the render-prop tree below doesn't
@@ -379,6 +408,14 @@ export function useBoardInteractions({
   const cardDragHandlers = (deal: BoardDeal) => ({
     draggable: true as const,
     onDragStart: (event: DragEvent) => {
+      // React bubbles a drag from the card's portalled panels here too: text
+      // dragged out of the stage picker's search is not the card.
+      if (
+        !(event.target instanceof Node) ||
+        !event.currentTarget.contains(event.target)
+      ) {
+        return;
+      }
       dragging.current = deal.id;
       event.dataTransfer.setData("text/plain", deal.id);
     },
@@ -400,10 +437,17 @@ export function useBoardInteractions({
       dragging.current = null;
       if (dealId) {
         lastDrop.current = { dealId, at: Date.now() };
-        requestAdvance(dealId, column.stage);
+        void requestAdvance(dealId, column.stage);
       }
     },
   });
 
-  return { openDeal, cardDragHandlers, columnDropHandlers };
+  return {
+    openDeal,
+    cardDragHandlers,
+    columnDropHandlers,
+    requestAdvance,
+    confirmPending,
+    dismissPending,
+  };
 }

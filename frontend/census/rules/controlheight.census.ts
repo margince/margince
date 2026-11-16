@@ -133,6 +133,11 @@ export const ACCEPTED = new Map<string, string>([
       "--controlHeight square inside it (app/topbar.css)",
   ],
   [
+    ".oauthconsent-form .oauthconsent-actions .btn",
+    "the consent screen's row of CTAs from 701px stands at --controlHeight " +
+      "for a mouse and takes the coarse-pointer 44px floor",
+  ],
+  [
     ".segmented button",
     "a segment takes the coarse-pointer 44px floor; the strip is --controlHeight " +
       "for a mouse, which is what makes it read as one control",

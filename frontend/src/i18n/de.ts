@@ -2177,7 +2177,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
   "brief.schedule.notConnected":
-    "Die heutigen Termine können nicht angezeigt werden, da kein Kalender verbunden ist.",
+    "Kein Kalender verbunden. Angezeigt werden Termine, die in Margince gebucht, erfasst oder importiert wurden.",
   "brief.schedule.unreadable":
     "Die heutigen Termine können nicht angezeigt werden, da dein Kalender nicht synchronisiert ist.",
   "brief.schedule.connect": "Kalender verbinden",
@@ -3072,6 +3072,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.summary": "Deal-Zusammenfassung: {name}",
   "deal.card.email": "E-Mail schreiben: {name}",
   "deal.card.addTask": "Aufgabe hinzufügen: {name}",
+  "deal.card.summaryItem": "Deal-Zusammenfassung",
+  "deal.card.moveTo": "Nach {stage} verschieben",
+  "deal.card.markWon": "Als gewonnen markieren",
+  "deal.card.markLost": "Als verloren markieren",
+  "deal.card.closedReopen":
+    "Dieser Deal ist abgeschlossen. Öffne ihn auf seiner Seite wieder, um ihn zu verschieben.",
+  "deal.card.copyLink": "Link kopieren",
+  "deal.card.linkCopied": "Link kopiert",
+  "deal.card.copyFailed":
+    "Der Link konnte nicht kopiert werden. Öffne den Deal und kopiere die Adresse aus der Adressleiste des Browsers.",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
   "deal.mail.sentOn": "Gesendet am {date}",
@@ -6528,7 +6538,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":
-    "Du kannst diesen Deal nicht ändern. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst Aktivitäten erfassen und Aufgaben hinzufügen. Um diesen Deal zu ändern, muss die verantwortliche Person ihn mit dir teilen.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
   "deal.reopen": "Wieder öffnen",
@@ -7109,9 +7119,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",
   "brief.readings.prepUnknown": "Vorbereitung nicht geprüft",
   "brief.readings.prepared": "Alle vorbereitet",
-  "brief.readings.calendarNotConnected": "Nicht verbunden",
   "brief.readings.calendarNotConnectedWhy":
-    "Verbinde deinen Kalender, um Termine zu zählen.",
+    "Verbinde deinen Kalender, um auch seine Termine zu zählen.",
   "brief.readings.calendarUnreadable": "Synchronisiert nicht",
   "brief.readings.calendarUnreadableWhy":
     "Verbinde deinen Kalender neu, um Termine zu zählen.",
@@ -9270,25 +9279,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "workArea.hint.admin_settings":
     "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
   "workArea.hint.own_account": "Dein Profil und deine Präferenzen",
-  "workArea.legend": "Wo er arbeiten darf",
+  "workArea.legend": "Wo gearbeitet werden darf",
   "workArea.mode.all": "Alle Bereiche",
   "workArea.mode.allNote":
     "Alles, was deine Rolle erreicht, auch später hinzugefügte Bereiche",
   "workArea.mode.custom": "Bereiche auswählen",
   "workArea.mode.customNote":
     "Nur die ausgewählten Bereiche. Ein neuer Bereich ist zunächst deaktiviert",
-  "workArea.pickLegend": "Bereiche, in denen er arbeiten darf",
+  "workArea.pickLegend": "Bereiche, in denen gearbeitet werden darf",
   "workArea.pickOne": "Wähle mindestens einen Bereich aus.",
   "passportAreas.open": "Bereiche ändern",
   "passportAreas.openNamed": "Bereiche für {name} ändern",
-  "passportAreas.for":
-    "Für {name}. Seine Berechtigungen bleiben, wie sie sind.",
-  "passportAreas.gains": "Er arbeitet dann auch in: {areas}.",
+  "passportAreas.for": "Für {name}. Die Berechtigungen bleiben, wie sie sind.",
+  "passportAreas.gains": "Dann auch erlaubt: {areas}.",
   "passportAreas.loses":
-    "Er arbeitet dann nicht mehr in: {areas}. Sein nächster Aufruf dort wird abgelehnt.",
+    "Dann nicht mehr erlaubt: {areas}. Der nächste Aufruf dort wird abgelehnt.",
   "passportAreas.unchanged": "Ändere zuerst einen Bereich.",
   "passportAreas.closesLater":
-    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben für ihn deaktiviert.",
+    "Später hinzugefügte Bereiche und neue Werkzeuge aus Erweiterungen bleiben dafür deaktiviert.",
   "passportAreas.refusalTitle":
     "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
   "passportAreas.refusal":
@@ -18210,13 +18218,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.redirectsTo": "Margince sendet die Autorisierung zurück an {host}.",
   "consent.redirectsToLoopback":
     "Das ist eine Adresse auf diesem Computer, und diese Verbindung kann nicht belegen, welches Programm dort lauscht.",
-  "consent.scopeNote.read": "sieht, was du sehen kannst",
-  "consent.scopeNote.draft": "bereitet Nachrichten zu deiner Prüfung vor",
+  "consent.scopeNote.read": "Sieht, was du sehen kannst",
+  "consent.scopeNote.draft": "Bereitet Nachrichten zu deiner Prüfung vor",
   "consent.scopeNote.write":
-    "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
+    "Erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
-    "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
-  "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
+    "Sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+  "consent.scopeNote.enrich": "Führt KI-Arbeit aus und kauft Kontaktdaten",
+  "consent.scopesLegend": "Was das Tool tun darf",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",
   "consent.preset.label": "Assistentenrechte",
@@ -19455,6 +19464,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.saveFilterConflict":
     "Jemand hat diese Liste geändert, nachdem du sie geöffnet hast. Öffne die Liste erneut, um die Änderung zu sehen, und bearbeite dann den Filter.",
   "lists.history.someone": "Jemand",
+  "lists.history.created": "Liste angelegt",
+  "lists.history.renamed": "Umbenannt von {before} in {after}",
+  "lists.history.repurposed": "Zweck geändert",
+  "lists.history.reshared": "Geändert, wer sie findet",
+  "lists.history.handedOver": "Zuständigkeit neu vergeben",
+  "lists.history.refiltered": "Filter geändert",
+  "lists.history.filterBefore": "Vorher: {sentence}",
+  "lists.history.filterAfter": "Danach: {sentence}",
+  "lists.history.noFilter": "keine Bedingungen",
   "lists.changes.since": "Seit deinem Besuch am {when}:",
   "lists.changes.joined_one": "{count} hinzugekommen",
   "lists.changes.joined_other": "{count} hinzugekommen",
@@ -21440,12 +21458,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.create_lead": "Lead erstellt:",
   "magic.action.create_project": "Projekt erstellt:",
   "magic.action.create_activity": "E-Mail oder Termin gespeichert:",
+  "magic.action.create_activity_email": "E-Mail gespeichert:",
+  "magic.action.create_activity_meeting": "Termin gespeichert:",
+  "magic.action.create_activity_call": "Anruf erfasst:",
+  "magic.action.create_activity_note": "Notiz gespeichert:",
+  "magic.action.create_activity_task": "Aufgabe erstellt:",
+  "magic.action.create_activity_message": "Nachricht gespeichert:",
   "magic.action.archive_contact": "Kontakt archiviert:",
   "magic.action.archive_company": "Unternehmen archiviert:",
   "magic.action.archive_deal": "Deal archiviert:",
   "magic.action.archive_lead": "Lead archiviert:",
   "magic.action.archive_project": "Projekt archiviert:",
   "magic.action.archive_activity": "E-Mail oder Termin archiviert:",
+  "magic.action.archive_activity_email": "E-Mail archiviert:",
+  "magic.action.archive_activity_meeting": "Termin archiviert:",
+  "magic.action.archive_activity_call": "Anruf archiviert:",
+  "magic.action.archive_activity_note": "Notiz archiviert:",
+  "magic.action.archive_activity_task": "Aufgabe archiviert:",
+  "magic.action.archive_activity_message": "Nachricht archiviert:",
   "magic.why.mail_filed": "Die Absendeadresse gehört zu diesem Kontakt.",
   "magic.why.data_correction": "Ein Update hat ältere Datensätze korrigiert.",
   "magic.why.public_records":

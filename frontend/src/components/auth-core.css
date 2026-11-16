@@ -32,6 +32,8 @@
      rungs the tablet was already using. */
   --authPadBlock: calc(var(--space-6) * 1.5);
   --authPadInline: calc(var(--space-6) + var(--space-1));
+  --authMeasure: 400px;
+  --authWordmark: 132px;
   min-height: 100vh;
   /* A COLUMN, not a grid. A grid sizes its tracks against a definite height,
      and stacked that gave the greeting a track shorter than the greeting: it
@@ -81,6 +83,14 @@
       transparent 68%
     ),
     var(--bgElevated);
+}
+.auth-surface-wide {
+  --authMeasure: 560px;
+}
+/* A wide form outgrows the window and scrolls the surface itself, and a ground
+   sized to the surface's box would scroll away from under it. */
+.auth-surface-wide > .ambient-waves {
+  position: fixed;
 }
 @supports (min-height: 100dvh) {
   .auth-surface {
@@ -145,14 +155,14 @@
      than a panel of its own: no inset, no ground. An opaque region would stop
      the ribbons dead at its edge. */
   width: 100%;
-  max-width: 400px;
+  max-width: var(--authMeasure);
   flex: 0 0 auto;
 }
 .auth-task-in {
-  /* §6.2: 380 minimum, 400 preferred, 440 maximum. */
+  /* 400px for a sign-in form, 560px for a form with sections of its own. */
   width: 100%;
   min-width: 0;
-  max-width: 400px;
+  max-width: var(--authMeasure);
   display: flex;
   flex-direction: column;
   /* Centred, and the whole column with it: the heading, the sentence under it,
@@ -189,7 +199,7 @@
    the same first look; the wordmark's job here is to say WHERE you are, and the
    heading's is to say what to do. */
 .auth-wordmark img {
-  width: 132px;
+  width: var(--authWordmark);
   max-width: 70vw;
   height: auto;
 }
@@ -420,7 +430,7 @@
   text-align: center;
   gap: var(--space-2);
   width: 100%;
-  max-width: 400px;
+  max-width: var(--authMeasure);
   padding-top: calc(var(--space-6) * 1.5);
 }
 .auth-legal > p {
@@ -620,6 +630,22 @@
   top: var(--authPadBlock);
   left: var(--authPadInline);
 }
+/* While the pane would reach under the corner name, the heading starts below it.
+   Scaling the difference by 100 makes the padding step rather than slide. */
+.auth-surface-coreless {
+  --authPaneStart: calc((100vw - var(--authMeasure)) / 2);
+  --authMarkEnd: calc(
+    var(--authPadInline) +
+    var(--authWordmark) +
+    var(--space-2)
+  );
+  padding-top: clamp(
+    var(--space-6),
+    (var(--authMarkEnd) - var(--authPaneStart)) *
+    100,
+    calc(var(--authPadBlock) * 2 + var(--space-6))
+  );
+}
 @media (max-width: 560px) {
   /* Smaller, and tighter to the corner, on a phone: the Core sits at the top
      of the column there, and the name must stay clear of its halo. */
@@ -629,6 +655,9 @@
   }
   .auth-wordmark img {
     width: 112px;
+  }
+  .auth-surface-coreless {
+    padding-top: calc(var(--authPadBlock) * 2);
   }
 }
 

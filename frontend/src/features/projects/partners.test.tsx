@@ -16,6 +16,7 @@ import { LocaleProvider } from "../../i18n";
 import { openFilterValues } from "../../testing/listquery.testkit";
 import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { PartnersScreen, PartnerTab } from "./partners";
 
 // The Partner tab on a company and the #/partners list. The tab reads a 404
@@ -483,6 +484,33 @@ describe("PartnersScreen", () => {
     await user.click(screen.getByText("o-1"));
 
     expect(window.location.hash).toBe("#/companies/o-1");
+  });
+});
+
+describe("PartnersScreen — a row on a phone", () => {
+  function listPartners(rows: readonly Record<string, unknown>[]) {
+    stubFetch(async () =>
+      jsonResponse({
+        data: rows,
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<PartnersScreen />);
+  }
+
+  it("ends the name's line in the stage, then the kinds as words and the certification", async () => {
+    stubWindowWidth(390);
+    listPartners([partner]);
+    const row = await phoneRowOf("o-1");
+    expect(row.end).toEqual(["Live"]);
+    expect(row.caption).toEqual(["Hosting, Referral", "Certified"]);
+    expect(row.row.querySelector("td[data-phone] .badge")).toBeNull();
+  });
+
+  it("leaves out kinds the partner does not hold", async () => {
+    stubWindowWidth(390);
+    listPartners([{ ...partner, partner_kinds: [] }]);
+    expect((await phoneRowOf("o-1")).caption).toEqual(["Certified"]);
   });
 });
 

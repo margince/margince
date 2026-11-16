@@ -326,6 +326,9 @@ func taskFromActivity(row crmcontracts.Activity, reader ids.UUID, asOf time.Time
 	if row.SourceSystem != nil && row.SourceId != nil {
 		task.WebsiteInquiry = provenance.IsWebsiteInquiryTask(*row.SourceSystem, *row.SourceId)
 	}
+	if contentReadable(row) {
+		task.Why = attention.TaskGrounds(row)
+	}
 	if row.SourceActivityId != nil {
 		task.SourceActivityID = new(ids.UUID(*row.SourceActivityId))
 	}

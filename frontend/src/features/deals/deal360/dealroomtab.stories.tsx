@@ -203,7 +203,7 @@ function wholeTab(
   fullStub(state, filled, needsSteward);
   return (
     <StoryProviders>
-      <DealRoomTab dealId="deal-1" dealName="Fleet telematics" />
+      <DealRoomTab dealWritable dealId="deal-1" dealName="Fleet telematics" />
     </StoryProviders>
   );
 }
@@ -300,7 +300,7 @@ export const OpeningARoom: Story = {
     });
     return (
       <StoryProviders>
-        <DealRoomTab dealId="deal-1" dealName="Fleet telematics" />
+        <DealRoomTab dealWritable dealId="deal-1" dealName="Fleet telematics" />
       </StoryProviders>
     );
   },

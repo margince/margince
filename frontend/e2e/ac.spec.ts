@@ -15,6 +15,8 @@ import {
   taskFromCall,
   typedTask,
 } from "./mockapi/calls";
+import { brandt } from "./mockapi/fixtures";
+import { page as listPage } from "./mockapi/server";
 import { anna, mockApi, servePrincipal } from "./seed";
 import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
 
@@ -169,6 +171,16 @@ test.beforeEach(async ({ page }) => {
  * shorter census.
  */
 const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
+
+// The record lists whose rows fold to a phone row at 390px; the deals list as its table.
+const PHONE_ROW_LISTS = [
+  "contacts",
+  "companies",
+  "leads",
+  "projects",
+  "deals?view=table",
+  "partners",
+];
 
 const CORE_SCREENS = [
   "home",
@@ -1200,6 +1212,144 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
+/** A board card's "…" trigger, reached from the card's own link with Tab. */
+async function tabToCardMenu(page: Page, dealId: string, name: string) {
+  const card = page.locator(`[data-deal="${dealId}"]`);
+  const trigger = card.getByRole("button", {
+    name: copy(de["record.moreActionsFor"], { subject: name }),
+  });
+  await card.locator(".deal-open").focus();
+  for (let presses = 0; presses < 12; presses++) {
+    if (await trigger.evaluate((el) => el === document.activeElement)) {
+      return trigger;
+    }
+    await page.keyboard.press("Tab");
+  }
+  throw new Error(`Tab never reached the "…" menu of ${name}`);
+}
+
+test("AC-deal-7: a card's menu moves a deal to the next stage with the keyboard alone", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  await expect(page.locator('[data-deal="d-fleet"]')).toBeVisible();
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await page
+    .getByRole("button", {
+      name: de["deal.card.moveTo"].replace("{stage}", "Negotiation"),
+    })
+    .press("Enter");
+
+  await expect(page.getByText("Nach Negotiation verschoben")).toBeVisible();
+  const moved = page.locator('[data-stage="s3"] [data-deal="d-fleet"]');
+  await expect(moved).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s2"] [data-deal="d-fleet"]'),
+  ).toHaveCount(0);
+  await expect(moved.locator(".deal-open")).toBeFocused();
+});
+
+test("AC-deal-7: a card's menu asks the terminal confirm for Mark won, and Cancel moves nothing", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await page
+    .getByRole("button", { name: de["deal.card.markWon"], exact: true })
+    .click();
+  await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
+  await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
+  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Abbrechen" }).click();
+  await expect(page.getByText("In die Phase Won verschieben?")).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.locator('[data-stage="s2"] [data-deal="d-fleet"]'),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s4"] [data-deal="d-fleet"]'),
+  ).toHaveCount(0);
+});
+
+test("AC-deal-7: a card's menu picks any stage by searching the stage picker", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await page
+    .getByRole("button", { name: de["deals.bulkStage"], exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: de["deals.bulkStagePick"] })
+    .fill("Neg");
+  await page.getByRole("option", { name: "Negotiation" }).click();
+
+  await expect(page.getByText("Nach Negotiation verschoben")).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s3"] [data-deal="d-fleet"]'),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s2"] [data-deal="d-fleet"]'),
+  ).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+});
+
+test("AC-deal-7: Escape closes a card's menu and returns focus to its trigger", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
+});
+
+test.describe("AC-deal-7: a card's menu, in light mode", () => {
+  test.use({ colorScheme: "light" });
+
+  test("meets WCAG 2.2 AA with the menu open", async ({ page }) => {
+    await page.goto("/#/deals");
+    const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+    await page.keyboard.press("Enter");
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "deals, card menu open");
+  });
+});
+
+test.describe("AC-deal-7: a card's menu at 390px", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+  test("opens by tap and moves the deal to the next stage", async ({
+    page,
+  }) => {
+    await page.goto("/#/deals");
+    const card = page.locator('[data-deal="d-fleet"]');
+    await expect(card).toBeAttached();
+    await card
+      .getByRole("button", {
+        name: copy(de["record.moreActionsFor"], { subject: "Fleet retrofit" }),
+      })
+      .tap();
+    await page
+      .getByRole("button", {
+        name: de["deal.card.moveTo"].replace("{stage}", "Negotiation"),
+      })
+      .tap();
+    await expect(page.getByText("Nach Negotiation verschoben")).toBeVisible();
+    await expect(
+      page.locator('[data-stage="s3"] [data-deal="d-fleet"]'),
+    ).toBeAttached();
+  });
+});
+
 test("AC-inbox: the staged decision is in the Decisions view", async ({
   page,
 }) => {
@@ -1577,6 +1727,42 @@ test.describe("§3.8: 390px mobile", () => {
       // this that something is 169px too wide and nothing about what.
       expect(await pageOverflow(page)).toEqual([]);
       expect(await listClipping(page)).toEqual([]);
+    });
+  }
+
+  // A phone row draws an end badge and a muted caption line that no wide sweep reaches.
+  for (const list of PHONE_ROW_LISTS) {
+    test(`no AA violations on the phone rows of #/${list}`, async ({
+      page,
+    }) => {
+      // The mock API serves no partner, and an empty list draws no row.
+      if (list === "partners") {
+        await page.route(/\/v1\/partners(\?.*)?$/, (route) =>
+          route.fulfill({
+            json: listPage([
+              {
+                company_id: brandt.id,
+                partner_kinds: ["hosting", "referral"],
+                cert_status: "certified",
+                relationship_stage: "active",
+                stage_label: "Live",
+                stage_meaning: "active",
+                version: 1,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-06-01T00:00:00Z",
+              },
+            ]),
+          }),
+        );
+      }
+      await page.goto(`/#/${list}`);
+      await page.waitForLoadState("networkidle");
+      await expectShellRendered(page);
+      await expect(
+        page.locator(".lt-table.lt-phonerows tbody tr").first(),
+      ).toBeVisible();
+      await settleAnimations(page);
+      await expectNoAaViolations(page, `${list} (390px)`);
     });
   }
 
@@ -3324,25 +3510,20 @@ test.describe("filters and views", () => {
   }) => {
     await page.goto("/#/filters/deals");
     await expectShellRendered(page);
-    const objects = page.getByRole("group", {
-      name: "Datensatztyp",
-    });
-    await expect(
-      objects.getByRole("button", { name: "Deals", pressed: true }),
-    ).toBeVisible();
+    const objects = page.getByRole("combobox", { name: "Datensatztyp" });
+    await expect(objects).toHaveText("Deals");
 
     // "Kontakte": `filters.tab.contacts` is a different KEY from the nav's, and
     // a key is not a word — the catalog moved this one with it. The tab says
     // what every other surface says.
-    await objects.getByRole("button", { name: "Kontakte" }).click();
+    await objects.click();
+    await page.getByRole("option", { name: "Kontakte" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
     // Reloaded, not just navigated: the tab is where you ARE, so a shared link
     // and a refresh have to land on the same object.
     await page.reload();
-    await expect(
-      objects.getByRole("button", { name: "Kontakte", pressed: true }),
-    ).toBeVisible();
+    await expect(objects).toHaveText("Kontakte");
   });
 });
 
@@ -3695,4 +3876,142 @@ test.describe("calling a contact", () => {
       await expect(callVerb(dialog)).toHaveAttribute("href", tel);
     });
   });
+});
+
+// Authorize access is reached from an AI tool's redirect, never from the rail,
+// so neither route list above sweeps it.
+test.describe("Authorize access on the sign-in surface", () => {
+  const consentAddress = (extra: Record<string, string>) =>
+    `/#/oauth-consent?${new URLSearchParams({
+      response_type: "code",
+      client_id: "https://claude.ai/oauth/mcp-oauth-client-metadata",
+      redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+      scope: "read",
+      code_challenge: "x",
+      code_challenge_method: "S256",
+      resource: "https://margince.example/mcp",
+      state: "s",
+      ...extra,
+    }).toString()}`;
+
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/v1/oauth/consent-request**", (route) =>
+      route.fulfill({
+        json: {
+          client_name: "Claude",
+          offline: true,
+          scopes: ["read", "draft", "write", "send", "enrich"],
+          areas: ["business", "compliance", "own_account"],
+        },
+      }),
+    );
+  });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const width of [390, 1440]) {
+      test(`the prompt meets AA at ${width}px in ${colorScheme}`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme });
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(consentAddress({ consent: "nonce" }));
+        await expect(
+          page.getByRole("heading", { level: 1, name: de["consent.title"] }),
+        ).toBeVisible();
+        await expect(page.locator(".auth-wordmark")).toBeVisible();
+        await expect(
+          page.getByRole("button", {
+            name: de["consent.approve"],
+            exact: true,
+          }),
+        ).toBeVisible();
+        await settleAnimations(page);
+        await expectNoAaViolations(page, `oauth-consent (${colorScheme})`);
+        expect(await pageOverflow(page)).toEqual([]);
+      });
+    }
+  }
+
+  test("Deny sits before Authorize on the end edge, and a phone stacks them in the same order", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    const deny = page.getByRole("button", { name: de["consent.deny"] });
+    const authorize = page.getByRole("button", {
+      name: de["consent.approve"],
+      exact: true,
+    });
+    const wide = {
+      deny: await deny.boundingBox(),
+      authorize: await authorize.boundingBox(),
+    };
+    expect(wide.deny?.x).toBeLessThan(wide.authorize?.x ?? 0);
+    expect(wide.deny?.y).toBe(wide.authorize?.y);
+    const contentEnd = await page
+      .locator(".oauthconsent-pane")
+      .evaluate((pane) => {
+        const style = getComputedStyle(pane);
+        return (
+          pane.getBoundingClientRect().right -
+          Number.parseFloat(style.borderRightWidth) -
+          Number.parseFloat(style.paddingRight)
+        );
+      });
+    expect(
+      Math.abs(
+        (wide.authorize?.x ?? 0) + (wide.authorize?.width ?? 0) - contentEnd,
+      ),
+    ).toBeLessThanOrEqual(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const phone = {
+      deny: await deny.boundingBox(),
+      authorize: await authorize.boundingBox(),
+    };
+    expect(phone.deny?.y).toBeLessThan(phone.authorize?.y ?? 0);
+    expect(phone.authorize?.width).toBe(phone.deny?.width);
+  });
+
+  test("the wordmark stays clear of the pane at a tablet width", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 700, height: 800 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    await expect(
+      page.getByRole("button", { name: de["consent.approve"], exact: true }),
+    ).toBeVisible();
+    const mark = await page.locator(".auth-wordmark").boundingBox();
+    const pane = await page.locator(".oauthconsent-pane").boundingBox();
+    expect(pane?.y ?? 0).toBeGreaterThanOrEqual(
+      (mark?.y ?? Number.POSITIVE_INFINITY) + (mark?.height ?? 0),
+    );
+  });
+
+  test("a laptop keeps the pane at the top, beside the wordmark", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    await expect(
+      page.getByRole("radio", { name: de["workArea.mode.all"] }),
+    ).toBeVisible();
+    const mark = await page.locator(".auth-wordmark").boundingBox();
+    const pane = await page.locator(".oauthconsent-pane").boundingBox();
+    expect(pane?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(mark?.y ?? 0);
+  });
+
+  for (const error of ["invalid_request", "method_off", "stale_consent"]) {
+    test(`the ${error} refusal meets AA on the same surface`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(consentAddress({ error }));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.locator(".auth-surface .auth-wordmark")).toBeVisible();
+      await settleAnimations(page);
+      await expectNoAaViolations(page, `oauth-consent ${error}`);
+      expect(await pageOverflow(page)).toEqual([]);
+    });
+  }
 });

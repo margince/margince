@@ -54,6 +54,7 @@ function center(routes: RouteMap) {
 const meta: Meta<typeof PreferenceCenterScreen> = {
   title: "Signed out/Email preference centre/Page",
   component: PreferenceCenterScreen,
+  parameters: { layout: "fullscreen" },
 };
 export default meta;
 
@@ -63,6 +64,13 @@ export const Default: Story = {
   render: center({
     "GET /public/preferences/tok-123": () => jsonResponse(CENTER),
   }),
+};
+
+// A phone, where the list runs past the window and the band follows it down.
+export const DefaultPhone: Story = {
+  ...Default,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 // A staged (unsaved) toggle: the save bar names exactly what would be sent.

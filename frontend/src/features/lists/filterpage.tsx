@@ -10,9 +10,9 @@
 
 import { useState } from "react";
 import { useGuardedLeave } from "../../components/unsaved";
-import { SegmentedControl } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Panel, PanelBody } from "../../design-system/panel";
+import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useFilterVocabulary } from "../../lib/filterdata";
 import {
@@ -76,18 +76,18 @@ export function FilterPage({ tab }: Readonly<{ tab: ObjectTab }>) {
       <FocusedHead
         title={current.newFilter}
         control={
-          <SegmentedControl<string>
-            options={tabs}
+          <Select
+            options={tabs.map((option) => ({
+              value: option,
+              label: wordsOf(option).tab,
+            }))}
             value={tab}
             onChange={(next) => {
               if (isObjectTab(next)) {
                 switchTab(next);
               }
             }}
-            labels={Object.fromEntries(
-              tabs.map((option) => [option, wordsOf(option).tab]),
-            )}
-            label={t("filters.objectLabel")}
+            aria-label={t("filters.objectLabel")}
           />
         }
       />

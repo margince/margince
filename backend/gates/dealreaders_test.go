@@ -59,6 +59,7 @@ var dealGate = objectGate{
 // the gated set: removing the deal condition could only WIDEN the result the
 // caller already sees.
 var predicateDealReads = gatekit.Waive(map[string]string{
+	"internal/platform/auth/sharedwith.go:ActivityWorksOnClause":                     "the done-for-you filter (compose/magic): whether a machine change on an activity is the reader's own work, asked through the owner and grants of the records it is linked to. No column of the record is selected, and the clause only narrows a read the activity audience gate already admitted",
 	"internal/modules/contacts/mergecontractguard.go:refuseCrossCompanyContracts":    "Checks whether merging two authorized companies would preserve contract filing. Only a boolean reaches a generic refusal; no deal reference, amount or stage leaves the query. A viewer filter would miss an inaccessible deal and permit the merge to expose its contract through another company.",
 	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":                  "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
 	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":                      "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",

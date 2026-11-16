@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
@@ -59,6 +65,9 @@ function mount(preview?: {
   });
 }
 
+const recordType = () =>
+  screen.getByRole("combobox", { name: en["filters.objectLabel"] });
+
 const previews = (seen: readonly Sent[]) =>
   seen.filter((sent) => sent.url.includes("/filters/preview"));
 
@@ -80,7 +89,7 @@ describe("the calm start", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "New contact filter" }),
     ).toBeTruthy();
-    expect(screen.getByRole("group", { name: "Record type" })).toBeTruthy();
+    expect(recordType().textContent).toContain("Contacts");
     expect(
       screen.getByLabelText("Describe the contacts you want"),
     ).toBeTruthy();
@@ -342,10 +351,36 @@ describe("switching the record type", () => {
     const user = userEvent.setup();
     render(<FiltersScreen id="contacts" />, { wrapper });
 
-    await user.click(await screen.findByRole("button", { name: "Companies" }));
+    await screen.findByRole("button", { name: ADD });
+    await pickOption(user, recordType(), "Companies");
 
     expect(window.location.hash).toBe("#/filters/companies");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("offers the kinds installed extensions declare after the core four", async () => {
+    const { client, wrapper } = mount();
+    client.setQueryData(["record-kinds"], {
+      data: [{ name: "ext:hotel:room", display_name: "Room" }],
+    });
+    const user = userEvent.setup();
+    render(<FiltersScreen id="contacts" />, { wrapper });
+
+    await screen.findByRole("button", { name: ADD });
+    await user.click(recordType());
+    const offered = within(await screen.findByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toEqual([
+      "Contacts",
+      "Companies",
+      "Deals",
+      "Leads",
+      "Room",
+    ]);
+
+    await user.click(screen.getByRole("option", { name: "Room" }));
+    expect(window.location.hash).toBe("#/filters/ext:hotel:room");
   });
 
   it("asks before clearing conditions that name the other type's fields", async () => {
@@ -354,7 +389,7 @@ describe("switching the record type", () => {
     const { rerender } = render(<FiltersScreen id="contacts" />, { wrapper });
 
     await user.click(await screen.findByRole("button", { name: ADD }));
-    await user.click(screen.getByRole("button", { name: "Companies" }));
+    await pickOption(user, recordType(), "Companies");
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog.textContent).toContain("Switch to companies?");
@@ -364,7 +399,7 @@ describe("switching the record type", () => {
     expect(screen.getByLabelText("Value")).toBeTruthy();
     expect(window.location.hash).toBe("");
 
-    await user.click(screen.getByRole("button", { name: "Companies" }));
+    await pickOption(user, recordType(), "Companies");
     await user.click(
       await screen.findByRole("button", { name: "Switch and clear" }),
     );
@@ -594,7 +629,7 @@ describe("leaving a filter", () => {
     guarded();
     const user = userEvent.setup();
     await complete(user);
-    await user.click(screen.getByRole("button", { name: "Companies" }));
+    await pickOption(user, recordType(), "Companies");
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: "Switch and clear" }));
 
@@ -729,7 +764,5 @@ it("names itself once, with the record type beside its name", async () => {
   await screen.findByRole("button", { name: ADD });
   expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   // The record type stays: everything on the page reads from it.
-  expect(
-    screen.getByRole("button", { name: en["filters.tab.contacts"] }),
-  ).toBeTruthy();
+  expect(recordType().textContent).toContain(en["filters.tab.contacts"]);
 });

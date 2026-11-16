@@ -1,16 +1,71 @@
-.oauthconsent-scopes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: var(--space-3) 0;
+/* The task column centres its items, so a pane with no width shrinks to its content. */
+.oauthconsent-pane {
+  width: 100%;
+  padding: var(--padPane);
 }
 
-.oauthconsent-verbs {
+.oauthconsent-body {
+  margin-top: var(--space-2);
+}
+.oauthconsent-body > p {
+  text-wrap: balance;
+}
+
+.oauthconsent-form {
   display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+  text-align: start;
+}
+
+.oauthconsent-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* The gap spaces these lines; the prose rule between paragraphs would add to it. */
+.oauthconsent-section p {
+  margin-block-start: 0;
+}
+
+/* The container also wears `auth-actions`, so at phone width the buttons are
+   the sign-in surface's own; from 701px they sit in a right-aligned row. */
+.oauthconsent-form .oauthconsent-actions {
+  margin-top: 0;
+}
+@media (min-width: 701px) {
+  .oauthconsent-form .oauthconsent-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .oauthconsent-form .oauthconsent-actions .btn {
+    width: auto;
+    min-height: var(--controlHeight);
+    white-space: nowrap;
+  }
+}
+@media (min-width: 701px) and (pointer: coarse) {
+  .oauthconsent-form .oauthconsent-actions .btn {
+    min-height: max(var(--controlHeight), 44px);
+  }
+}
+
+.oauthconsent-hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: end;
+}
+.oauthconsent-hints:empty {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .oauthconsent-hints {
+    text-align: start;
+  }
 }
 
 .oauthconsent-facts {

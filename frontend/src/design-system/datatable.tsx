@@ -349,6 +349,7 @@ export type DataTableColumn<Row> = Readonly<{
   // still read, so it must not hold a control. "lead" and "trail" keep their
   // width empty or not, so every title and every last control sits on one edge.
   // "only" is hide's mirror: absent until the table folds, then a line of its own.
+  // Not ListTable's `phone`: a phone row drops a column without one, a fold keeps it.
   fold?: "title" | "end" | "hide" | "lead" | "trail" | "only";
   /** The cell once its table folds and the heading is out of sight: a bare figure says its unit. Undefined keeps the cell. */
   folded?: (row: Row) => ReactNode | undefined;

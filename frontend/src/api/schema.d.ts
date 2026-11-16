@@ -46692,11 +46692,15 @@ export interface components {
             reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | "evaluated" | "filter_changed" | "automation" | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description The principal behind the change (`human:<uuid>`, `agent:<id>`, `connector:<name>` or `system:<job>`), so a machine write is named as the machine it was. */
             actor: string;
+            /** @description Display name of a human actor; null for any other. */
             actor_name?: string | null;
             entity_type?: string | null;
             /** Format: uuid */
             entity_id?: string | null;
+            /** @description What the record that joined or left is called now. Null on a revision and for a record type with no name. A change about a record the reader cannot see is not in the history. */
+            entity_name?: string | null;
             note?: string | null;
             /** Format: int64 */
             version?: number | null;
@@ -46705,6 +46709,14 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             sharing?: string | null;
+            /** @description What a revision changed against the version before it; empty when it changed none of these. Null on a membership change and when no earlier version is kept, which on version 1 means the list was made. */
+            changes?: ("name" | "purpose" | "filter" | "sharing" | "steward")[] | null;
+            /** @description The name before a revision. */
+            previous_name?: string | null;
+            /** @description The filter before a revision, so a reader sees it beside `definition`. */
+            previous_definition?: {
+                [key: string]: unknown;
+            } | null;
         };
         RecordListsResponse: {
             data: components["schemas"]["List"][];
@@ -59132,6 +59144,11 @@ export interface components {
             /** @enum {string} */
             status: "open" | "done" | "dismissed";
         };
+        /** @description Why a piece of work exists, written when the work was made: who did or said what, about which record, and when. A sender's words in it are quoted exactly. */
+        WorkGrounds: {
+            /** @description The reason, in the reader's language where Margince wrote it, else in its author's. */
+            text: string;
+        };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
          *     the record that owns it. The client routes a verb to that owner's endpoint — this
@@ -59202,6 +59219,8 @@ export interface components {
              *     the sentence in the reader's own language.
              */
             detail?: string;
+            /** @description Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence. */
+            why?: components["schemas"]["WorkGrounds"];
             /** @description On an approval, its title taken apart, so the row can show the proposed values as a list. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             staged?: components["schemas"]["AttentionStagedFacts"];
@@ -60939,6 +60958,8 @@ export interface components {
              *     as zero the day somebody rewords the sentence.
              */
             detail?: string;
+            /** @description Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence. */
+            why?: components["schemas"]["WorkGrounds"];
             /** @description The facts that put this item at this level, in the order they were weighed. */
             because: components["schemas"]["WorklistReason"][];
             above_next?: components["schemas"]["WorklistComparison"];
