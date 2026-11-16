@@ -431,6 +431,7 @@
     "personal_channels": {
       "field": "action",
       "actions": {
+        "push_messages": "push_personal_channel_messages",
         "upload_file": "upload_personal_channel_file"
       }
     },

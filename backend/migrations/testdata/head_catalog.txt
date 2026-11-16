@@ -8114,6 +8114,21 @@ public.personal_channel_connection.user_id uuid NOT NULL gen=- def=-
 public.personal_channel_connection.version bigint NOT NULL gen=- def=1
 public.personal_channel_connection_pkey CREATE UNIQUE INDEX personal_channel_connection_pkey ON public.personal_channel_connection USING btree (id)
 public.personal_channel_connection_user_key CREATE UNIQUE INDEX personal_channel_connection_user_key ON public.personal_channel_connection USING btree (user_id)
+public.personal_channel_message acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.personal_channel_message.activity_id uuid NOT NULL gen=- def=-
+public.personal_channel_message.connection_id uuid NOT NULL gen=- def=-
+public.personal_channel_message.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.personal_channel_message.network text NOT NULL gen=- def=-
+public.personal_channel_message.origin_id uuid gen=- def=-
+public.personal_channel_message.origin_kind text NOT NULL gen=- def=-
+public.personal_channel_message.personal_channel_message_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.personal_channel_message.personal_channel_message_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES personal_channel_connection(id) ON DELETE CASCADE
+public.personal_channel_message.personal_channel_message_origin_check CHECK ((origin_kind = ANY (ARRAY['passport'::text, 'connection'::text, 'session'::text])))
+public.personal_channel_message.personal_channel_message_origin_id_check CHECK (((origin_kind = 'session'::text) = (origin_id IS NULL)))
+public.personal_channel_message.personal_channel_message_pkey PRIMARY KEY (activity_id)
+public.personal_channel_message.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.personal_channel_message FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"network": 120, "origin_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"network":120,"origin_kind":20000}')
+public.personal_channel_message.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.personal_channel_message FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"network": 120, "origin_kind": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"network":120,"origin_kind":20000}')
+public.personal_channel_message_pkey CREATE UNIQUE INDEX personal_channel_message_pkey ON public.personal_channel_message USING btree (activity_id)
 public.personal_channel_reply acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.personal_channel_reply.activity_id uuid NOT NULL gen=- def=-
 public.personal_channel_reply.attempt integer NOT NULL gen=- def=0

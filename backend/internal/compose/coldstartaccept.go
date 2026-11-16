@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -51,10 +50,7 @@ func NewApprovalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // lead is told through. An empty lane refuses every site lead, which is right
 // for the services that only stage.
 func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *approvals.Service {
-	captureConfig := CaptureConfig{}
-	if loaded := config.Bound(); loaded != nil {
-		captureConfig = CaptureConfigFromDeploy(loaded, slog.Default())
-	}
+	captureConfig := boundCaptureConfig()
 	svc := NewApprovalsService(InstallationDB(pool)).
 		WithUndoableRelease(undoableAgentRelease(activities.FilingsStayUndoable))
 	store := newCounterpartyStore(pool)

@@ -377,6 +377,7 @@ var tableOwners = map[string]string{
 	// there.
 	"chat_link":                   "internal/modules/chatlinks",
 	"personal_channel_connection": "internal/modules/personalchannels",
+	"personal_channel_message":    "internal/modules/personalchannels",
 	"personal_channel_reply":      "internal/modules/personalchannels",
 	"personal_channel_upload":     "internal/modules/personalchannels",
 	"chat_post_item":              "internal/modules/chatlinks",

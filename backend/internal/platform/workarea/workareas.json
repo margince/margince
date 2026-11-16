@@ -688,6 +688,7 @@
     "publishCapturedContact": "business",
     "publishReportingFramework": "business",
     "publishReportingReportDraft": "business",
+    "pushPersonalChannelMessages": "capture",
     "putAnchorCompany": "admin_settings",
     "putOnboardingState": "own_account",
     "putProductTranslation": "workspace_settings",
@@ -1715,6 +1716,7 @@
     "publishReportingReportDraft": "reports",
     "publishSalesGoalPlan": "reports",
     "purgeCaptureExclusion": "capture_rules",
+    "pushPersonalChannelMessages": "connectors",
     "putAnchorCompany": "company_profile",
     "putOnboardingState": "own_profile",
     "putProductTranslation": "catalog",
@@ -3400,6 +3402,9 @@
     ],
     "publish_reporting_report_draft": [
       "reports"
+    ],
+    "push_personal_channel_messages": [
+      "connectors"
     ],
     "put_anchor_company": [
       "company_profile"
@@ -5502,6 +5507,9 @@
     ],
     "publish_reporting_report_draft": [
       "business"
+    ],
+    "push_personal_channel_messages": [
+      "capture"
     ],
     "put_anchor_company": [
       "admin_settings"

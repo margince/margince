@@ -35,7 +35,6 @@ type personalChannelSweepWorker struct {
 	log      *slog.Logger
 }
 
-// Work runs one pass; a fault is retried by the next tick.
 func (w *personalChannelSweepWorker) Work(ctx context.Context, _ *river.Job[PersonalChannelSweepArgs]) error {
 	passCtx, err := installationJobCtx(ctx, w.identity)
 	passCtx = principal.SystemActing(passCtx, personalchannels.SweepActor)

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 49,
     "system_frame_tokens": 672,
-    "tokens": 51469,
+    "tokens": 51533,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1049
+    "mean_tool_tokens": 1051
   },
   "agents": [
     {
@@ -228,6 +228,10 @@
       "tokens": 395
     },
     {
+      "name": "personal_channels",
+      "tokens": 393
+    },
+    {
       "name": "read_attention",
       "tokens": 365
     },
@@ -246,10 +250,6 @@
     {
       "name": "list_documents",
       "tokens": 331
-    },
-    {
-      "name": "personal_channels",
-      "tokens": 329
     },
     {
       "name": "read_project",

@@ -10,7 +10,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 34 | 427 | 28 | 38 | 18 |
+| [activities](activities.md) | 34 | 427 | 29 | 38 | 18 |
 | [agents](agents.md) | 3 | 35 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 207 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 25 | 0 | 2 | 0 |
@@ -40,7 +40,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
 | [migration](migration.md) | 2 | 41 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
-| [personalchannels](personalchannels.md) | 3 | 32 | 0 | 2 | 1 |
+| [personalchannels](personalchannels.md) | 4 | 38 | 0 | 3 | 2 |
 | [platform](platform.md) | 13 | 95 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
@@ -159,6 +159,7 @@ No outbound foreign keys.
 ### personalchannels
 
 - `personal_channel_connection.personal_channel_connection_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `personal_channel_message.personal_channel_message_activity_id_fkey`: `FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE`
 - `personal_channel_reply.personal_channel_reply_activity_id_fkey`: `FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE`
 
 ### privacy

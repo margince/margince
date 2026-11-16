@@ -753,6 +753,7 @@
     "POST /v1/offers/{id}/render": "render_offer",
     "POST /v1/offers/{id}/send": "send_offer",
     "POST /v1/partner-stages": "create_partner_stage",
+    "POST /v1/personal-channels/chats": "push_personal_channel_messages",
     "POST /v1/personal-channels/uploads": "upload_personal_channel_file",
     "POST /v1/pipelines": "create_pipeline",
     "POST /v1/pipelines/{id}/restore": "restore_pipeline",

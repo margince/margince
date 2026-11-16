@@ -9,10 +9,8 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// corePerMemberTransports are the core transports whose credential is one
-// member's own rather than one bot the installation shares. They are not capture
-// connectors: nothing polls them, a member's own client calls in. Each carries
-// text only.
+// corePerMemberTransports are core transports whose credential is one member's
+// own. Nothing polls them (a member's client calls in), and each carries text only.
 func corePerMemberTransports() []channelProviderFacts {
 	return []channelProviderFacts{{
 		provider:          personalchannels.Provider,

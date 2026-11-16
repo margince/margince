@@ -3219,6 +3219,10 @@ func (stubs) SetPassportAreas(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "SetPassportAreas")
 }
 
+func (stubs) PushPersonalChannelMessages(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.PushPersonalChannelMessagesParams) {
+	httperr.NotImplemented(w, r, "PushPersonalChannelMessages")
+}
+
 func (stubs) GetPersonalChannelConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetPersonalChannelConnection")
 }

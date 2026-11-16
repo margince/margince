@@ -68,9 +68,8 @@ func uploadCeilings(limits UploadLimits) map[string]int64 {
 		"/v1/me/avatar": avatarUploadBytes, // uploadMyAvatar
 		// A website form post. Its contract takes multipart because a browser's
 		// FormData sends it. File parts are skipped, so the bound is the form's.
-		"/v1/public/forms/{form_key}": webforms.MaxBody, // submitWebForm
-		// One chat file, bounded as a captured file is, plus the form's framing.
-		"/v1/personal-channels/uploads": personalchannels.UploadBodyBytes, // uploadPersonalChannelFile
+		"/v1/public/forms/{form_key}":   webforms.MaxBody,                 // submitWebForm
+		"/v1/personal-channels/uploads": personalchannels.UploadBodyBytes, // uploadPersonalChannelFile: one captured-size file
 	}
 }
 

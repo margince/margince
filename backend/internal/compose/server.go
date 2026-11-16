@@ -9,6 +9,7 @@ package compose
 // recovery) is platform/httpserver; what lives here is the wiring.
 
 import (
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"log/slog"
 	"net/http"
 	"time"
@@ -36,7 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/notices"
-	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/recordlinks"
@@ -205,7 +205,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
 		dealroomsHandlers:       dealrooms.NewHandlers(InstallationDB(pool)),
-		personalChannelHandlers: personalchannels.NewHandlers(personalchannels.NewStore(InstallationDB(pool))),
+		personalChannelHandlers: personalchannelwire.NewHandlers(pool, InstallationDB(pool), newCaptureSink(pool, boundCaptureConfig())),
 		commissionsHandlers:     commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:      newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
 		// The ranking lane is the one read a page limit does not bound.

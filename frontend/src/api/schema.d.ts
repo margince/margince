@@ -11142,6 +11142,35 @@ export interface paths {
         patch: operations["replaceChannelToken"];
         trace?: never;
     };
+    "/personal-channels/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send your own chat messages in, each onto its contact's timeline.
+         * @description Always the CALLER's own. Each message lands at once and answers what became of it, in
+         *     the order sent: `landed` with its activity, `duplicate` when its message_id already
+         *     landed, `skipped` when capture did not keep it (an erased contact, for one), `refused`
+         *     with a reason the client can act on, or `deferred` when the request ran out of time
+         *     (send those again). One message's refusal does not refuse the rest.
+         *
+         *     A party carries an `account` and a `name` and never an address. `network` names the
+         *     chat it came from (`whatsapp`, `zalo`, …; absent means `generic`). `direction` is
+         *     `outbound` for a message the member sent from their phone. Each landed message shows
+         *     who sent it in. Refused while the caller's personal channels are off.
+         */
+        post: operations["pushPersonalChannelMessages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/personal-channels/uploads": {
         parameters: {
             query?: never;
@@ -32197,6 +32226,47 @@ export interface components {
          * @enum {string}
          */
         ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
+        PersonalChannelParty: {
+            /** @description The party's id on the chat, as the chat gives it. No ':'. */
+            account: string;
+            name?: string;
+        };
+        PersonalChannelMessage: {
+            /** @description The chat's own id for the message; a resend with the same id lands nothing new. */
+            message_id: string;
+            thread_id?: string;
+            /** @description The group the message was sent in. No ':'. */
+            group_id?: string;
+            /** @description The chat it came from: lower-case letters, digits and _. Absent means generic. */
+            network?: string;
+            /** @enum {string} */
+            direction?: "inbound" | "outbound";
+            subject?: string;
+            body?: string;
+            /** Format: date-time */
+            occurred_at?: string;
+            from: components["schemas"]["PersonalChannelParty"];
+            to?: components["schemas"]["PersonalChannelParty"];
+            participants?: components["schemas"]["PersonalChannelParty"][];
+            files?: {
+                /** Format: uuid */
+                upload_id: string;
+            }[];
+        };
+        PushPersonalChannelMessagesRequest: {
+            messages: components["schemas"]["PersonalChannelMessage"][];
+        };
+        PushPersonalChannelMessagesResponse: {
+            results: components["schemas"]["PersonalChannelPushResult"][];
+        };
+        PersonalChannelPushResult: {
+            message_id: string;
+            /** @enum {string} */
+            status: "landed" | "duplicate" | "skipped" | "refused" | "deferred";
+            /** Format: uuid */
+            activity_id?: string | null;
+            reason?: string | null;
+        };
         /** @description One staged file, named by its upload_id in the next message's files. */
         PersonalChannelUpload: {
             /** Format: uuid */
@@ -81139,6 +81209,57 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    pushPersonalChannelMessages: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushPersonalChannelMessagesRequest"];
+            };
+        };
+        responses: {
+            /** @description One result per message, in the order sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushPersonalChannelMessagesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     uploadPersonalChannelFile: {

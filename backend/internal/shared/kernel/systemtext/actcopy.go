@@ -178,6 +178,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.import_linkedin_connections":        {Words: langcopy.Phrase{En: "Import linkedin connections", De: "LinkedIn-Kontakte importieren", Vi: "Nhập kết nối LinkedIn"}},
 	"act.verbs.import_vcards":                      {Words: langcopy.Phrase{En: "Import vcards", De: "vCard-Datei importieren", Vi: "Nhập tệp vCard"}},
 	"act.verbs.file_channel_message":               {Words: langcopy.Phrase{En: "File channel message", De: "Chat-Nachricht als Notiz ablegen", Vi: "Lưu tin nhắn kênh chat thành ghi chú"}},
+	"act.verbs.push_personal_channel_messages":     {Words: langcopy.Phrase{En: "Send chats in", De: "Chats übermitteln", Vi: "Gửi đoạn chat vào"}},
 	"act.verbs.upload_personal_channel_file":       {Words: langcopy.Phrase{En: "Stage a chat file", De: "Chat-Datei bereitstellen", Vi: "Chuẩn bị tệp chat"}},
 	"act.verbs.link_channel":                       {Words: langcopy.Phrase{En: "Link channel", De: "Chat-Kanal verknüpfen", Vi: "Liên kết kênh chat"}},
 	"act.verbs.set_channel_verbosity":              {Words: langcopy.Phrase{En: "Set channel verbosity", De: "Festlegen, was im Chat-Kanal gepostet wird", Vi: "Chọn nội dung đăng vào kênh chat"}},

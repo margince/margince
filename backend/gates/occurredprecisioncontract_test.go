@@ -54,6 +54,7 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml PersonalChannelMessage.occurred_at":                     "the instant a chat app stamped on a message it sent; chats carry no day-only times",
 	"api/crm.yaml PersonalChannelConnection.last_pull_at":                 "when a member's client last picked replies up, a server instant, not an activity time",
 	"api/crm.yaml CustomerPayments.last_synced_at":                        "when the accounting import finished; always an instant, never an activity date",
 	"api/crm.yaml LicenseTrial.ends_at":                                   "when an unlicensed installation's trial ends, a server instant derived from the workspace's creation, not an activity time",
