@@ -5801,5 +5801,8 @@
   "progress.myTitle": "Fortschritt",
   "progress.teamTitle": "Team-Fortschritt",
   "progress.setGoals": "Umsatzziele festlegen",
-  "progress.completion": "{percent} % des Ziels"
+  "progress.completion": "{percent} % des Ziels",
+  "compose.contentFinding.title": "Werberegeln für diese E-Mail",
+  "compose.contentFinding.claim": "„{words}“ darfst du nur mit Nachweis behaupten. Ergänze Name, Nummer und Datum des Nachweises in der E-Mail.",
+  "compose.contentFinding.language": "Schreibe diese E-Mail zuerst auf {language}. Text in einer anderen Sprache steht darunter und ist nicht größer als der Text auf {language}."
 }

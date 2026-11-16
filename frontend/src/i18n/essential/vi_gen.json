@@ -5801,5 +5801,8 @@
   "progress.myTitle": "Tiến độ",
   "progress.teamTitle": "Tiến độ nhóm",
   "progress.setGoals": "Đặt mục tiêu doanh số",
-  "progress.completion": "{percent}% mục tiêu"
+  "progress.completion": "{percent}% mục tiêu",
+  "compose.contentFinding.title": "Quy định quảng cáo cho email này",
+  "compose.contentFinding.claim": "Chỉ được dùng “{words}” khi có bằng chứng. Hãy thêm tên, số và ngày của tài liệu chứng minh vào email.",
+  "compose.contentFinding.language": "Viết email này bằng {language} trước. Nội dung bằng ngôn ngữ khác đặt bên dưới và không lớn hơn phần bằng {language}."
 }
