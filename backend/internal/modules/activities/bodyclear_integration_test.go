@@ -47,8 +47,7 @@ func TestClearingTheOnlyTextOfANoteIsRefused(t *testing.T) {
 	}
 
 	_, err = meetingStore(e).UpdateActivity(meetingCtx(e), ids.From[ids.ActivityKind](ids.UUID(note.Id)), UpdateActivityInput{Clear: []string{fieldBody}})
-	var empty *EmptyEntryError
-	if !errors.As(err, &empty) {
+	if _, ok := errors.AsType[*EmptyEntryError](err); !ok {
 		t.Errorf("clearing the only text of a note answered %v, want EmptyEntryError", err)
 	}
 }
