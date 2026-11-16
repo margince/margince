@@ -2071,6 +2071,11 @@ components:
           type: string
           format: date-time
           description: The first-response deadline that passed.
+        lead_name:
+          type: string
+          description: >-
+            The lead's name at breach time. The escalation names the lead it is about
+            without reading it back.
         escalation_target:
           type: string
           format: uuid

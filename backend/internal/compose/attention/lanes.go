@@ -194,7 +194,9 @@ type Task struct {
 	LeadResponseEscalation bool
 	ID                     ids.UUID
 	Subject                string
-	DueAt                  *time.Time
+	// Why is the reason its maker gave for the task, nil when they gave none.
+	Why   *crmcontracts.WorkGrounds
+	DueAt *time.Time
 	// DueHasTime is true when DueAt names an agreed time of day.
 	DueHasTime bool
 	DueIntent  *crmcontracts.IntentTime
