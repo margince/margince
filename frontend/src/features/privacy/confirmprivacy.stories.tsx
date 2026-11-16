@@ -58,6 +58,7 @@ function notice(
 const meta: Meta<typeof PrivacyNotice> = {
   title: "Signed out/Privacy notice",
   component: PrivacyNotice,
+  parameters: { layout: "fullscreen" },
 };
 export default meta;
 
