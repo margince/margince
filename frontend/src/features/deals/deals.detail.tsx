@@ -59,6 +59,7 @@ import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
 import { useAdvanceDeal } from "./deals.board";
+import { stagesInOrder } from "./deals.columns";
 import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
 import { useDealStatusCard } from "./dealstatus";
@@ -252,9 +253,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     <div className="wrap">
       <QueryGate query={dealQuery} pendingLabel={t("nav.deals")}>
         {(deal) => {
-          const stages = [...(pipelineQuery.data?.stages ?? [])].sort(
-            (a, b) => a.position - b.position,
-          );
+          const stages = stagesInOrder(pipelineQuery.data?.stages ?? []);
           const openStages = stages.filter(
             (stage) => stage.semantic === "open",
           );

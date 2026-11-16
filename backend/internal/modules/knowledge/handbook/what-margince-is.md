@@ -286,7 +286,7 @@ Its license is BUSL-1.1, and you get the source.
 
 ### Is there a Margince mobile app?
 There is no Margince app to get from an app store. Margince runs in the browser on a phone as well as on a computer. On a phone, a bar at the foot of the screen holds **Home**, **Contacts** and **Deals**, the agent between them, and **More** for everything else.
-Dragging deal cards on the board does not work on touch screens; use the deal's **Stage** ladder instead.
+Dragging deal cards on the board does not work on touch screens; use the card's **…** menu or the deal's **Stage** ladder instead.
 Also called: iPhone app, Android app, phone app, use Margince on mobile.
 
 ## Where to go next
