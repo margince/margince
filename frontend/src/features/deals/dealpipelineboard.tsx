@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useIsFetching } from "@tanstack/react-query";
 import { type ComponentProps, useEffect, useId, useRef, useState } from "react";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { AppLink } from "../../design-system/applink";
@@ -80,10 +81,9 @@ export function DealPipelineBoard({
           stages={menu.stages}
           verbs={verbs}
           onAdvance={(dealId, stageId) => {
-            const from = record.stage_id ?? "";
             void menu.onAdvance(dealId, stageId).then((landed) => {
               if (landed) {
-                followMove({ dealId, from, to: stageId });
+                followMove({ dealId, to: stageId });
               }
             });
           }}
@@ -116,27 +116,36 @@ export function DealPipelineBoard({
   );
 }
 
-type SavedMove = Readonly<{ dealId: string; from: string; to: string }>;
+type SavedMove = Readonly<{ dealId: string; to: string }>;
 
 // A saved move redraws the card in its new column, which drops the focus its
 // old menu trigger held. Focus follows it there, unless the reader moved on.
 function useFocusFollowsMove() {
   const moving = useRef<SavedMove | null>(null);
+  // Waits only for the reads the save started. A card they leave undrawn, by a
+  // filter or past a loaded page, is not followed later.
+  const reading = useIsFetching({ queryKey: ["deals"] }) > 0;
   useEffect(() => {
     const move = moving.current;
     if (move === null) {
       return;
     }
-    const card = [
+    const cards = [
       ...document.querySelectorAll<HTMLElement>("[data-deal]"),
-    ].find((each) => each.dataset.deal === move.dealId);
-    const stage = card?.closest<HTMLElement>("[data-stage]")?.dataset.stage;
-    if (stage === undefined || stage === move.from) {
+    ].filter((each) => each.dataset.deal === move.dealId);
+    const landed = cards.find(
+      (each) =>
+        each.closest<HTMLElement>("[data-stage]")?.dataset.stage === move.to,
+    );
+    const held = cards.some(
+      (each) => each !== landed && each.contains(document.activeElement),
+    );
+    if (held || (landed === undefined && reading)) {
       return;
     }
     moving.current = null;
-    if (stage === move.to && document.activeElement === document.body) {
-      card?.querySelector<HTMLElement>(".deal-open")?.focus();
+    if (landed && document.activeElement === document.body) {
+      landed.querySelector<HTMLElement>(".deal-open")?.focus();
     }
   });
   return (move: SavedMove) => {

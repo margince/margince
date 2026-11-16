@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId } from "react";
+import { useEffect, useEffectEvent, useId } from "react";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
 import { Button } from "../../design-system/button";
@@ -9,9 +9,10 @@ import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import type { DealCardActions } from "../../design-system/dealcard";
 import { ListPopover } from "../../design-system/listpopover";
 import { useCloseOverflowMenu } from "../../design-system/overflowmenu";
-import { useToast } from "../../design-system/toast";
+import { useOwnToast, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { appHref } from "../../lib/recordaddress";
 import { routeHash } from "../../lib/router";
 import type { Deal, Stage } from "./deals";
 import { archiveDeal } from "./deals.write";
@@ -129,12 +130,12 @@ function DealMoves({
 }
 
 // The menu closes on the press, so both answers go to a toast, and a refusal
-// stays until it is read.
+// stays until it is read. One refusal at a time: a new press withdraws it.
 function CopyDealLink({ dealId }: Readonly<{ dealId: string }>) {
   const t = useT();
   const toast = useToast();
-  const { origin, pathname } = globalThis.location;
-  const link = `${origin}${pathname}${routeHash({ screen: "deals", id: dealId })}`;
+  const refusal = useOwnToast();
+  const link = `${globalThis.location.origin}${appHref(routeHash({ screen: "deals", id: dealId }))}`;
   const clipboard = useClipboardCopy(
     link,
     {
@@ -145,12 +146,24 @@ function CopyDealLink({ dealId }: Readonly<{ dealId: string }>) {
     () => toast.show(t("deal.card.linkCopied")),
   );
   const failed = clipboard.notice !== null;
+  const refuse = useEffectEvent(() =>
+    refusal.show(t("deal.card.copyFailed"), { tone: "danger", sticky: true }),
+  );
   useEffect(() => {
     if (failed) {
-      toast.show(t("deal.card.copyFailed"), { tone: "danger", sticky: true });
+      refuse();
     }
-  }, [failed, toast, t]);
-  return <Button onClick={clipboard.copy}>{t("deal.card.copyLink")}</Button>;
+  }, [failed]);
+  return (
+    <Button
+      onClick={() => {
+        refusal.withdraw();
+        clipboard.copy();
+      }}
+    >
+      {t("deal.card.copyLink")}
+    </Button>
+  );
 }
 
 // Nothing to do once archived: the board stays, and the "deals" read the

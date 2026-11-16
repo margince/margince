@@ -407,6 +407,14 @@ export function useBoardInteractions({
   const cardDragHandlers = (deal: BoardDeal) => ({
     draggable: true as const,
     onDragStart: (event: DragEvent) => {
+      // React bubbles a drag from the card's portalled panels here too: text
+      // dragged out of the stage picker's search is not the card.
+      if (
+        !(event.target instanceof Node) ||
+        !event.currentTarget.contains(event.target)
+      ) {
+        return;
+      }
       dragging.current = deal.id;
       event.dataTransfer.setData("text/plain", deal.id);
     },

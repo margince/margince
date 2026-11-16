@@ -115,7 +115,7 @@ describe("DealCard menu", () => {
         <DealCard
           deal={deal}
           href="#/deals/d1"
-          zone="UTC"
+          zone={browserZone()}
           onOpen={onOpen}
           actions={{
             onSummary: () => undefined,
@@ -143,7 +143,7 @@ describe("DealCard menu", () => {
         <DealCard
           deal={quiet}
           href="#/deals/d1"
-          zone="UTC"
+          zone={browserZone()}
           actions={{ menu: <Button>Copy link</Button> }}
         />
       </LocaleProvider>,

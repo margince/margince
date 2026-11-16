@@ -222,6 +222,7 @@ export const CardMenuOpenDark: Story = {
   play: openCardMenu,
 };
 export const CardMenuOpenPhone: Story = {
+  globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: board,
   play: openCardMenu,

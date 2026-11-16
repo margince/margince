@@ -1,20 +1,45 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../../design-system/clipboard-testing";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
-import { deal, jsonResponse, render, stubBackend } from "./deals.testkit";
+import {
+  deal,
+  dropOnStage,
+  jsonResponse,
+  render,
+  stubBackend,
+} from "./deals.testkit";
 
 // A card's menu moves a deal as a drop does: pinned, and confirmed when terminal.
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
-  window.location.hash = "";
+  window.history.replaceState(null, "", "/");
   localStorage.clear();
 });
+
+function newClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+// Every read and write the board started has answered.
+async function settled(client: QueryClient) {
+  await waitFor(() =>
+    expect(client.isFetching() + client.isMutating()).toBe(0),
+  );
+}
 
 async function openCardMenu(user: ReturnType<typeof userEvent.setup>) {
   const trigger = await screen.findByRole("button", {
@@ -37,15 +62,6 @@ function cardLinkIn(stageId: string) {
     if (!column) throw new Error(`no column for stage ${stageId}`);
     return within(column).getByRole("link", { name: "Fleet retrofit" });
   });
-}
-
-// The board's drag, which happy-dom cannot perform, as its drop handler sees it.
-function dropOnStage(stageId: string) {
-  const drop = new Event("drop", { bubbles: true });
-  Object.assign(drop, {
-    dataTransfer: { getData: () => "d1", setData: () => undefined },
-  });
-  document.querySelector(`[data-stage="${stageId}"]`)?.dispatchEvent(drop);
 }
 
 describe("deal card menu on the deals board", () => {
@@ -89,8 +105,6 @@ describe("deal card menu on the deals board", () => {
     await waitFor(() => expect(document.activeElement).toBe(proposal));
   });
 
-  // A move put away or refused is no move: a later drag that lands the deal
-  // there leaves focus where it was.
   it("does not follow a deal whose terminal move was cancelled", async () => {
     const rows = [deal({})];
     vi.stubGlobal(
@@ -102,7 +116,8 @@ describe("deal card menu on the deals board", () => {
       }),
     );
     const user = userEvent.setup();
-    render(<DealsScreen />);
+    const client = newClient();
+    render(<DealsScreen />, client);
     const menu = await openCardMenu(user);
     await user.click(await menu.findByRole("button", { name: "Mark won" }));
     await askedToClose("Won");
@@ -111,6 +126,8 @@ describe("deal card menu on the deals board", () => {
     dropOnStage("s3");
     await askedToClose("Won");
     await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await cardLinkIn("s3");
+    await settled(client);
     expect(document.activeElement).not.toBe(await cardLinkIn("s3"));
   });
 
@@ -133,15 +150,102 @@ describe("deal card menu on the deals board", () => {
       return backend(input, init);
     });
     const user = userEvent.setup();
-    render(<DealsScreen />);
+    const client = newClient();
+    render(<DealsScreen />, client);
     const menu = await openCardMenu(user);
     await user.click(
       await menu.findByRole("button", { name: "Move to Proposal" }),
     );
     await waitFor(() => expect(refused).toBe(true));
+    await settled(client);
 
     dropOnStage("s2");
+    await cardLinkIn("s2");
+    await settled(client);
     expect(document.activeElement).not.toBe(await cardLinkIn("s2"));
+  });
+
+  it("forgets a saved move once the board's reads leave the card undrawn", async () => {
+    const rows = [deal({})];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend(rows, {
+        onAdvance: () => {
+          rows[0] = deal({ stage_id: "s-hidden", version: 5 });
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(
+      await menu.findByRole("button", { name: "Move to Proposal" }),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-deal="d1"]')).toBeNull(),
+    );
+    await settled(client);
+
+    rows[0] = deal({ stage_id: "s2", version: 5 });
+    await client.invalidateQueries({ queryKey: ["deals"] });
+    await cardLinkIn("s2");
+    await settled(client);
+    expect(document.activeElement).not.toBe(await cardLinkIn("s2"));
+  });
+
+  it("takes no drag out of the stage list for the card's own", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Move to stage" }));
+    const search = await screen.findByRole("combobox", {
+      name: "Pick a stage",
+    });
+    const setData = vi.fn();
+    fireEvent.dragStart(search, { dataTransfer: { setData } });
+
+    dropOnStage("s2", "");
+    expect(setData).not.toHaveBeenCalled();
+    expect(client.isMutating()).toBe(0);
+  });
+
+  // A chat preview reads the path and the page opens the fragment: both name
+  // this deal, whatever record page the board was reached from.
+  it("copies the deal's own record address", async () => {
+    const id = "0b8f6c1e-2a3b-4c5d-8e9f-0a1b2c3d4e5f";
+    const other = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    window.history.replaceState(null, "", `/r/deals/${other}#/deals`);
+    vi.stubGlobal("fetch", stubBackend([deal({ id })]));
+    const user = userEvent.setup();
+    const clipboard = stubClipboard("accepts");
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Copy link" }));
+
+    await waitFor(() =>
+      expect(clipboard.written).toEqual([
+        `${window.location.origin}/r/deals/${id}#/deals/${id}`,
+      ]),
+    );
+    expect(await screen.findByText("Link copied")).toBeTruthy();
+  });
+
+  it("says a refused copy once, however often it is pressed", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    render(<DealsScreen />);
+    const refusal =
+      "Could not copy the link. Open the deal and copy the address from the browser’s address bar.";
+    for (const _press of [1, 2]) {
+      const menu = await openCardMenu(user);
+      await user.click(menu.getByRole("button", { name: "Copy link" }));
+      await screen.findByText(refusal);
+    }
+    expect(screen.getAllByText(refusal)).toHaveLength(1);
   });
 
   it("asks before marking a deal won, and posts only after the confirm", async () => {

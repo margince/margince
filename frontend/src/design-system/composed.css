@@ -579,8 +579,8 @@
 ) {
   border-color: var(--borderStrong);
 }
-/* A thumb gets the 44px target `.overflow-menu-labelled` has, from a layer
-   around each glyph; the glyphs keep the size they are drawn at. */
+/* A thumb gets a 44px target from a layer around each glyph, on every side;
+   the glyphs keep the size they are drawn at. */
 @media (pointer: coarse) {
   .deal-card .deal-actions .btn {
     position: relative;
