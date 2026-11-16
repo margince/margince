@@ -18,6 +18,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+// exampleRefusal is the refusal the receipt template prints in these tests.
+var exampleRefusal = RefusalTimes{
+	ReceivedAt: time.Date(2026, time.March, 4, 2, 5, 0, 0, time.UTC),
+	StoppedAt:  time.Date(2026, time.March, 4, 3, 30, 0, 0, time.UTC),
+	UTCOffset:  7 * time.Hour,
+}
+
+// renderAnyTemplate renders key whichever renderer it takes, so a loop over
+// the catalog reaches the receipt too.
+func renderAnyTemplate(key string, expiresAt time.Time, language, purpose string) (Rendered, commsauthz.Category, error) {
+	if controllerTemplates[key].refusalTimes {
+		return RenderOptOutAcknowledgement(language, exampleRefusal)
+	}
+	return renderTemplateContext(key, expiresAt, language, purpose)
+}
+
 // TestEveryControllerTemplateCarriesExactlyOnePlaceholder holds the rendered
 // body to the material it will be staged with.
 //
@@ -31,7 +47,7 @@ func TestEveryControllerTemplateCarriesExactlyOnePlaceholder(t *testing.T) {
 	// English stayed green.
 	for key := range controllerTemplates {
 		for _, language := range mailcopy.Languages() {
-			rendered, _, err := RenderControllerTemplate(key, time.Now().Add(72*time.Hour), string(language))
+			rendered, _, err := renderAnyTemplate(key, time.Now().Add(72*time.Hour), string(language), "")
 			if err != nil {
 				t.Fatalf("rendering %q in %s: %v", key, language, err)
 			}
@@ -74,7 +90,7 @@ func TestEveryControllerTemplateCarriesExactlyOnePlaceholder(t *testing.T) {
 // a message that can never be sent.
 func TestEveryControllerTemplateResolvesToASubjectServingCategory(t *testing.T) {
 	for key := range controllerTemplates {
-		_, category, err := RenderControllerTemplate(key, time.Time{}, string(mailcopy.Fallback))
+		_, category, err := renderAnyTemplate(key, time.Time{}, string(mailcopy.Fallback), "")
 		if err != nil {
 			t.Fatalf("rendering %q: %v", key, err)
 		}
@@ -132,7 +148,7 @@ func TestAnUnregisteredTemplateIsRefused(t *testing.T) {
 func TestTheRenderedBodyNeverCarriesTheLink(t *testing.T) {
 	for key := range controllerTemplates {
 		for _, language := range mailcopy.Languages() {
-			rendered, _, err := RenderControllerTemplate(key, time.Now().Add(72*time.Hour), string(language))
+			rendered, _, err := renderAnyTemplate(key, time.Now().Add(72*time.Hour), string(language), "")
 			if err != nil {
 				t.Fatalf("rendering %q in %s: %v", key, language, err)
 			}
@@ -193,9 +209,9 @@ var pinnedWording = map[string]string{
 	"privacy_notice@4@de":         "afd5793238fb2ed046bafb2e7b39c42fedba0ef885f9e966e3609adf0b7e06f9",
 	"privacy_notice@4@en":         "57940dbb8dbf58affde9b4f1fcf8026951c2112f2a64fd9fbab5f326534b1eec",
 	"privacy_notice@4@vi":         "a5049a2fe4c29bb62dcc3a44f729d827dd3fd17318d25d3485d937ecd9b1062e",
-	"optout_acknowledgement@3@de": "e7c1a1b705acc9fc43860cff63f4de049a694ca8d66734d9ecec54e489f54b8f",
-	"optout_acknowledgement@3@en": "1e536284d3200b99a38a349e55aa65cdc8b7e0482e1b2f4559c546830751500b",
-	"optout_acknowledgement@3@vi": "4ce293fb0948756cc75f2b27a1ba054e7364c347a6e6ab71f250de5a922c32b8",
+	"optout_acknowledgement@4@de": "cb7308c7283d83567b0f3991f42fb81a28888dc1b837e242368783b7ba0ac0fb",
+	"optout_acknowledgement@4@en": "2f5760fb0dcab412c24a11e2d0c31f0998d5ec4729511ff2de3524c312f12d0d",
+	"optout_acknowledgement@4@vi": "f923d73de53266ad7d29874c8ca4ec3eb1118778984e07a86c5fc2730d49a63f",
 	"restriction_lift@2@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
 	"restriction_lift@2@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
 	"restriction_lift@2@vi":       "3903eb642861db8d8a8f30329aff02a23d64577e4146435ce26dca84868bc257",
@@ -227,7 +243,7 @@ func TestEveryControllerTemplateIsPinnedToItsWording(t *testing.T) {
 	seen := map[string]bool{}
 	for _, key := range keys {
 		for _, language := range mailcopy.Languages() {
-			rendered, _, err := renderTemplateContext(key, expires, string(language), "Example subscription")
+			rendered, _, err := renderAnyTemplate(key, expires, string(language), "Example subscription")
 			if err != nil {
 				t.Errorf("rendering %s in %s: %v", key, language, err)
 				continue
@@ -373,6 +389,49 @@ func TestOnlyTheSubscriptionTemplateNamesASubscription(t *testing.T) {
 		}
 		if got := strings.Contains(rendered.Body, "Thema: Produktneuigkeiten"); got != (key == TemplateConsentConfirmation) {
 			t.Fatalf("subscription and correction contexts crossed: %s", rendered.Body)
+		}
+	}
+}
+
+// TestTheReceiptPrintsBothTimesInVietnamTime holds Decree 91/2020/ND-CP Art.
+// 20.4(a) and the wording the Vietnamese receipt is required to carry.
+func TestTheReceiptPrintsBothTimesInVietnamTime(t *testing.T) {
+	rendered, _, err := RenderOptOutAcknowledgement("vi", exampleRefusal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "Xác nhận đã nhận yêu cầu từ chối nhận thư điện tử quảng cáo"; rendered.Subject != want {
+		t.Errorf("subject = %q, want %q", rendered.Subject, want)
+	}
+	want := "Chúng tôi đã nhận được yêu cầu từ chối nhận thư điện tử quảng cáo của quý khách lúc 09:05, 04/03/2026 (giờ Việt Nam). " +
+		"Chúng tôi đã ngừng gửi thư điện tử quảng cáo cho các mục đích quảng cáo quý khách đã từ chối kể từ 10:30, 04/03/2026 (giờ Việt Nam). " +
+		"Thư đã gửi trước thời điểm này vẫn có thể đến hộp thư của quý khách.\n\n" +
+		"Quý khách không cần trả lời hay thực hiện thêm thao tác nào.\n"
+	if rendered.Body != want {
+		t.Errorf("body =\n%q\nwant\n%q", rendered.Body, want)
+	}
+	if _, _, err := RenderOptOutAcknowledgement("vi", RefusalTimes{StoppedAt: exampleRefusal.StoppedAt}); err == nil {
+		t.Error("a receipt rendered with no received time; Art. 20.4(a) requires it")
+	}
+}
+
+// TestOnlyTheReceiptDropsThePoweredByLine. Art. 20.4(b) bars advertising in the
+// receipt; every other controller mail keeps the attribution.
+func TestOnlyTheReceiptDropsThePoweredByLine(t *testing.T) {
+	for key := range controllerTemplates {
+		for _, language := range mailcopy.Languages() {
+			rendered, _, err := renderAnyTemplate(key, exampleRefusal.StoppedAt.Add(72*time.Hour), string(language), "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			markup := RenderControllerPresentation(rendered, "Example Company", "")
+			attributed := strings.Contains(markup, mailcopy.For(string(language)).PoweredBy)
+			if key == TemplateOptOutAcknowledgement && (attributed || strings.Contains(markup+rendered.Subject+rendered.Body, "Margince")) {
+				t.Errorf("the %s receipt names Margince:\n%s", language, markup)
+			}
+			if key != TemplateOptOutAcknowledgement && !attributed {
+				t.Errorf("%s in %s lost its attribution line", key, language)
+			}
 		}
 	}
 }

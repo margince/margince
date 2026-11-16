@@ -131,8 +131,13 @@ type Rules struct {
 	// Held by the same gate as Disclosures.
 	OptOutAcknowledgement bool
 
-	// OptOutAcknowledgementWithin bounds receipt delivery from the recorded refusal; zero declares no deadline.
+	// OptOutAcknowledgementWithin is how long after the refusal an unsent receipt
+	// raises an alarm. The receipt itself is queued with the refusal. Zero sets none.
 	OptOutAcknowledgementWithin time.Duration
+
+	// OptOutAcknowledgementUTCOffset is the offset from UTC at which the
+	// receipt prints when the refusal arrived and when sending stopped. Zero is UTC.
+	OptOutAcknowledgementUTCOffset time.Duration
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -293,6 +298,9 @@ func (c FrequencyCap) Validate() error {
 	return nil
 }
 
+// maxUTCOffset is the widest offset any civil time zone uses.
+const maxUTCOffset = 14 * time.Hour
+
 // Validate checks a whole rule set. The boot preflight refuses a pack whose
 // rules it cannot apply, rather than composing an installation that believes it
 // is following a country's law and is not.
@@ -313,6 +321,9 @@ func (r Rules) Validate() error {
 	}
 	if r.OptOutAcknowledgementWithin < 0 || (r.OptOutAcknowledgementWithin > 0 && !r.OptOutAcknowledgement) {
 		return errors.New("messaging rules declare an invalid opt-out receipt deadline")
+	}
+	if r.OptOutAcknowledgementUTCOffset.Abs() > maxUTCOffset || (r.OptOutAcknowledgementUTCOffset != 0 && !r.OptOutAcknowledgement) {
+		return errors.New("messaging rules declare an invalid opt-out receipt time zone: a receipt must be owed, and the offset within 14 hours of UTC")
 	}
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))

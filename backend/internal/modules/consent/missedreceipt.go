@@ -164,3 +164,24 @@ func AgedOutMissedReceiptsTx(ctx context.Context, tx pgx.Tx, from, to time.Time,
 	}
 	return n, nil
 }
+
+// MissedReceiptsSinceTx counts the receipts missed since since that are still
+// unsettled: an alarm notice not yet taken back, or an owed alarm no notice
+// raised. One receipt counts once, however many operators were told.
+func MissedReceiptsSinceTx(ctx context.Context, tx pgx.Tx, since time.Time) (int, error) {
+	var n int
+	err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM (
+		  SELECT substr(n.dedupe_key, length($1) + 1) FROM notice n
+		   WHERE starts_with(n.dedupe_key, $1) AND n.retracted_at IS NULL AND n.created_at > $3
+		  UNION
+		  SELECT l.detail->>'message_id' FROM system_log l
+		   WHERE l.action = $2 AND l.occurred_at > $3
+		     AND NOT EXISTS (SELECT 1 FROM notice n WHERE n.dedupe_key = $1 || (l.detail->>'message_id'))
+		) missed`,
+		noticekeys.OptOutReceiptPrefix, missedReceiptOwedAction, since).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("consent: counting the missed opt-out receipts: %w", err)
+	}
+	return n, nil
+}

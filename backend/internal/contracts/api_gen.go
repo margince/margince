@@ -58208,6 +58208,60 @@ type OperationSettings struct {
 	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds" maximum:"3600" minimum:"10"`
 }
 
+// OptOutReceiptRecord defines model for OptOutReceiptRecord.
+type OptOutReceiptRecord struct {
+	// Body The plain-text body. Null once an erasure removed it.
+	Body *string `json:"body,omitempty"`
+
+	// MessageId The receipt's Message-ID. One refusal has one.
+	MessageId string     `json:"message_id"`
+	QueuedAt  time.Time  `json:"queued_at"`
+	SentAt    *time.Time `json:"sent_at,omitempty"`
+
+	// Status The delivery's state, such as `queued`, `sent` or `parked`.
+	Status string `json:"status"`
+
+	// Subject Null once an erasure removed it.
+	Subject *string `json:"subject,omitempty"`
+
+	// TemplateVersion The version of the receipt wording it carries.
+	TemplateVersion int `json:"template_version"`
+}
+
+// OptOutRecordStop defines model for OptOutRecordStop.
+type OptOutRecordStop struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`.
+	Kind string `json:"kind"`
+
+	// PurposeKey The one purpose a narrow stop binds.
+	PurposeKey *string `json:"purpose_key,omitempty"`
+
+	// ReceivedAt When the refusal reached the controller.
+	ReceivedAt time.Time `json:"received_at"`
+
+	// RevokedAt When the stop was lifted. Null while it stands.
+	RevokedAt *time.Time `json:"revoked_at,omitempty"`
+
+	// StoppedAt When sending stopped.
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+// OptOutRecords One contact's registrations, refusals and opt-out receipts, as kept for an inspection.
+type OptOutRecords struct {
+	// ConsentEvents Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`.
+	ConsentEvents []ConsentEvent     `json:"consent_events"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+	GeneratedAt   time.Time          `json:"generated_at"`
+
+	// Receipts Every opt-out receipt filed under the contact.
+	Receipts []OptOutReceiptRecord `json:"receipts"`
+
+	// Stops Every stop recorded on the contact, lifted ones included.
+	Stops []OptOutRecordStop `json:"stops"`
+}
+
 // OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
 // stored option stays the value written on records; only its display changes. On a write
 // the map replaces the stored one, and an option the field does not offer is 422
@@ -75904,6 +75958,12 @@ type SuppressContactJSONBody struct {
 	// Reason What the contact was told, in their words. Stored because a suppression somebody
 	// later asks to lift is only reviewable if the record says why it was made.
 	Reason *string `json:"reason,omitempty"`
+
+	// ReceivedAt When the refusal reached you: the arrival time of the mail that said so, or the
+	// time of the call. Never the time you record it. Left out, it is the time of
+	// recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+	// so a later time than now is refused.
+	ReceivedAt *time.Time `json:"received_at,omitempty"`
 }
 
 // SuppressContactJSONBodyKind defines parameters for SuppressContact.
@@ -97066,6 +97126,9 @@ type ServerInterface interface {
 	// Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
 	// (GET /contacts/{id}/consent/mail-preview)
 	PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams)
+	// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+	// (GET /contacts/{id}/consent/optout-records)
+	ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id)
 	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
 	// (POST /contacts/{id}/consent/privacy-notice)
 	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
@@ -101590,6 +101653,12 @@ func (_ Unimplemented) GetContactConsentGuard(w http.ResponseWriter, r *http.Req
 // Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
 // (GET /contacts/{id}/consent/mail-preview)
 func (_ Unimplemented) PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+// (GET /contacts/{id}/consent/optout-records)
+func (_ Unimplemented) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124406,6 +124475,38 @@ func (siw *ServerInterfaceWrapper) PreviewControllerMail(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewControllerMail(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportContactOptOutRecords operation middleware
+func (siw *ServerInterfaceWrapper) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportContactOptOutRecords(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -155508,6 +155609,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/consent/mail-preview", wrapper.PreviewControllerMail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/consent/optout-records", wrapper.ExportContactOptOutRecords)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/privacy-notice", wrapper.SendPrivacyNotice)

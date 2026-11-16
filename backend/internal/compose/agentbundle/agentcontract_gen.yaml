@@ -18568,6 +18568,14 @@ paths:
                   description: |-
                     What the contact was told, in their words. Stored because a suppression somebody
                     later asks to lift is only reviewable if the record says why it was made.
+                received_at:
+                  type: string
+                  format: date-time
+                  description: |-
+                    When the refusal reached you: the arrival time of the mail that said so, or the
+                    time of the call. Never the time you record it. Left out, it is the time of
+                    recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+                    so a later time than now is refused.
       responses:
         '204': {description: Recorded.}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -48748,7 +48756,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete]}
         sources:
           type: array
-          maxItems: 8
+          maxItems: 9
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array

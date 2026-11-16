@@ -201,6 +201,10 @@ func stricter(a, b Rules) Rules {
 	out.ConsentOnly = a.ConsentOnly || b.ConsentOnly
 	out.OptOutAcknowledgement = a.OptOutAcknowledgement || b.OptOutAcknowledgement
 	out.OptOutAcknowledgementWithin = shorterWindow(a.OptOutAcknowledgementWithin, b.OptOutAcknowledgementWithin)
+	// One receipt prints one zone. The first declared wins, as the prefix does.
+	if out.OptOutAcknowledgementUTCOffset == 0 {
+		out.OptOutAcknowledgementUTCOffset = b.OptOutAcknowledgementUTCOffset
+	}
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.

@@ -17,6 +17,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -46,8 +47,8 @@ const (
 	// and only CategoryPrivacyNotice survives that stop.
 	TemplatePrivacyNotice = "privacy_notice"
 	// TemplateOptOutAcknowledgement confirms that a refusal of advertising was
-	// received. Decree 91/2020/ND-CP Art. 16 owes a Vietnamese recipient one
-	// within twenty-four hours.
+	// received. Decree 91/2020/ND-CP Art. 20 owes a Vietnamese recipient one at
+	// once, stating when the refusal arrived and when sending stopped.
 	//
 	// THE ONE TEMPLATE THAT CARRIES NO LINK. It goes to somebody who has just
 	// told the product to stop, so anything beyond "we heard you" is the thing
@@ -124,6 +125,12 @@ type controllerTemplate struct {
 	// linkless says this template carries no one-time link, so the renderer
 	// writes no placeholder and comms stages it with no material.
 	linkless bool
+	// refusalTimes says the intro prints when a refusal arrived and when
+	// sending stopped. RenderOptOutAcknowledgement fills them in.
+	refusalTimes bool
+	// unbranded drops the "Powered by Margince" line. A receipt that must hold
+	// no advertising (Decree 91/2020/ND-CP Art. 20.4(b)) names no third product.
+	unbranded bool
 }
 
 // controllerTemplates is the closed catalog.
@@ -155,7 +162,7 @@ var controllerTemplates = map[string]controllerTemplate{
 		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
 	},
 	TemplateOptOutAcknowledgement: {
-		version:  3,
+		version:  4,
 		category: commsauthz.CategoryOptoutConfirmation,
 		subject:  func(w mailcopy.Copy) string { return w.OptOutAckSubject },
 		intro:    func(w mailcopy.Copy) string { return w.OptOutAckBody },
@@ -163,7 +170,9 @@ var controllerTemplates = map[string]controllerTemplate{
 		// The one template with nothing to click. comms refuses a body whose
 		// placeholder count disagrees with the material it was staged with, and
 		// this is staged with none.
-		linkless: true,
+		linkless:     true,
+		refusalTimes: true,
+		unbranded:    true,
 	},
 	TemplateRestrictionLift: {
 		version:  2,
@@ -215,24 +224,70 @@ func RenderControllerTemplate(key string, expiresAt time.Time, language string) 
 	return renderTemplateContext(key, expiresAt, language, "")
 }
 
+// RefusalTimes are the two instants an opt-out receipt prints, and the offset
+// from UTC it prints them at.
+type RefusalTimes struct {
+	// ReceivedAt is when the refusal reached the controller.
+	ReceivedAt time.Time
+	// StoppedAt is when sending of advertising to the subject stopped.
+	StoppedAt time.Time
+	UTCOffset time.Duration
+}
+
+// refusalInstantLayout is "hour:minute, day/month/year", the form the
+// Vietnamese receipt wording names.
+const refusalInstantLayout = "15:04, 02/01/2006"
+
+// RenderOptOutAcknowledgement resolves the opt-out receipt with the times of
+// the refusal it answers.
+func RenderOptOutAcknowledgement(language string, times RefusalTimes) (Rendered, commsauthz.Category, error) {
+	if times.ReceivedAt.IsZero() || times.StoppedAt.IsZero() {
+		return Rendered{}, "", errors.New("consent: an opt-out receipt states when the refusal arrived and when sending stopped")
+	}
+	zone := time.FixedZone("", int(times.UTCOffset.Seconds()))
+	return renderLinkless(TemplateOptOutAcknowledgement, language,
+		times.ReceivedAt.In(zone).Format(refusalInstantLayout), times.StoppedAt.In(zone).Format(refusalInstantLayout))
+}
+
+// refusalInstantMarker stands for each time in the receipt's template wording,
+// which belongs to no one refusal.
+const refusalInstantMarker = "[HH:MM, DD/MM/YYYY]"
+
+// renderLinkless writes a template with nothing to click. Its intro takes args
+// when the wording has places for them.
+func renderLinkless(key, language string, args ...any) (Rendered, commsauthz.Category, error) {
+	t := controllerTemplates[key]
+	language = string(mailcopy.Carried(language))
+	words := mailcopy.For(language)
+	intro := t.intro(words)
+	if len(args) > 0 {
+		intro = fmt.Sprintf(intro, args...)
+	}
+	return Rendered{
+		Key: key, Version: t.version, Subject: t.subject(words),
+		Body: intro + "\n\n" + t.closing(words) + "\n", Language: language,
+	}, t.category, nil
+}
+
 func renderTemplateContext(key string, expiresAt time.Time, language, purpose string) (Rendered, commsauthz.Category, error) {
 	t, ok := controllerTemplates[key]
 	if !ok {
 		return Rendered{}, "", fmt.Errorf("consent: %q is not a registered controller template", key)
 	}
-	language = string(mailcopy.Carried(language))
-	words := mailcopy.For(language)
-	var body strings.Builder
+	if t.refusalTimes {
+		// The template's own wording, as published. A receipt that is sent
+		// prints one refusal's times through RenderOptOutAcknowledgement.
+		return renderLinkless(key, language, refusalInstantMarker, refusalInstantMarker)
+	}
 	if t.linkless {
 		// NOTHING TO CLICK and nothing about a link's life, so the personal-link
 		// sentence and the expiry line are both absent rather than rendered
 		// about a link that does not exist.
-		body.WriteString(t.intro(words) + "\n\n" + t.closing(words) + "\n")
-		return Rendered{
-			Key: key, Version: t.version, Subject: t.subject(words),
-			Body: body.String(), Language: language,
-		}, t.category, nil
+		return renderLinkless(key, language)
 	}
+	language = string(mailcopy.Carried(language))
+	words := mailcopy.For(language)
+	var body strings.Builder
 	subject := t.subject(words)
 	body.WriteString(t.intro(words) + "\n\n")
 	if key == TemplateConsentConfirmation && purpose != "" {
@@ -274,7 +329,7 @@ func RenderControllerPresentation(rendered Rendered, brand, logoContentID string
 		}
 		message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
 		message.Text = rendered.Body
-		return emailview.Render(message, controllerLetterhead(brand, logoContentID, words))
+		return emailview.Render(message, controllerLetterhead(rendered.Key, brand, logoContentID, words))
 	}
 	var content emailview.Content
 	for paragraph := range strings.SplitSeq(before, "\n\n") {
@@ -286,13 +341,18 @@ func RenderControllerPresentation(rendered Rendered, brand, logoContentID string
 	}
 	message := content.Message(rendered.Subject, rendered.Language, words.Preview(rendered.Subject))
 	message.Text, message.ActionPlaceholder = rendered.Body, linkPlaceholder
-	return emailview.Render(message, controllerLetterhead(brand, logoContentID, words))
+	return emailview.Render(message, controllerLetterhead(rendered.Key, brand, logoContentID, words))
 }
 
 // controllerLetterhead is the letterhead a privacy notice is drawn under: the
-// installation's logo or name, over the attribution every system mail carries.
-func controllerLetterhead(brand, logoContentID string, words mailcopy.Copy) emailview.Letterhead {
-	return emailview.Letterhead{Name: brand, Attribution: words.PoweredBy, LogoContentID: logoContentID}
+// installation's logo or name, over the attribution line. An unbranded
+// template leaves that line out.
+func controllerLetterhead(key, brand, logoContentID string, words mailcopy.Copy) emailview.Letterhead {
+	head := emailview.Letterhead{Name: brand, LogoContentID: logoContentID}
+	if !controllerTemplates[key].unbranded {
+		head.Attribution = words.PoweredBy
+	}
+	return head
 }
 
 func historicalControllerVersion(key string, version int) bool {
@@ -304,7 +364,7 @@ func historicalControllerVersion(key string, version int) bool {
 	case TemplatePrivacyNotice:
 		return version >= 1 && version <= 3
 	case TemplateOptOutAcknowledgement:
-		return version == 1 || version == 2
+		return version >= 1 && version <= 3
 	case TemplateRestrictionLift:
 		return version == 1
 	}

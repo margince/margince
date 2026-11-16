@@ -3664,6 +3664,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mails, die die Sperre zurückgehalten hat, können wieder gesendet werden.",
   "consent.stopReason": "Grund (bleibt im Verlauf des Datensatzes)",
   "consent.manage": "Einwilligungen und Nachweisverlauf verwalten",
+  "consent.optOutRecords": "Abmeldenachweise herunterladen",
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
   "consent.operatorWording":
@@ -22568,6 +22569,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die normale CRM-Arbeit kann weitergehen. Bei einem Ausfall kann die Wiederherstellung länger dauern oder mehr neue Daten verlieren, als die Ziele vorsehen.",
   "health.effect.automatic":
     "Automatische Aufgaben erreichen möglicherweise die falschen Teammitglieder. Folgeaufgaben bleiben dann bis zur Korrektur falsch zugewiesen.",
+  "health.effect.receipts":
+    "Die Widersprüche gelten, und Werbung an diese Kontakte bleibt gestoppt. Die Kontakte wurden nicht informiert, was das vietnamesische Recht sofort verlangt.",
   "health.effect.readFailed":
     "Diese Prüfung kann den aktuellen Zustand nicht anzeigen. Eine fehlgeschlagene Prüfung belegt keinen Ausfall der eigentlichen Funktion.",
   "health.reportCopyFailed": "Technischer Bericht konnte nicht kopiert werden",
@@ -22661,6 +22664,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.source.updates": "Datenaktualisierungen",
   "health.source.recovery": "Wiederherstellungsnachweise",
   "health.source.automatic": "Qualität automatischer Arbeit",
+  "health.source.receipts": "Bestätigungen von Werbewidersprüchen",
   "health.scope": "Betroffener Umfang",
   "health.window": "Berichtszeitraum",
   "health.observed": "Letzte Beobachtung",
@@ -22687,6 +22691,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einen erfolgreichen Wiederherstellungstest innerhalb der Zeit- und Datenverlustziele erfassen.",
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
+  "health.recovery.receipts":
+    "Zu jedem Widerspruch der letzten 30 Tage muss eine Bestätigung versendet oder die Warnung erledigt sein.",
   "health.ownerHandoff":
     "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Verbindungen im Bereich Aktivität geprüft.",
   "health.operatorHandoff":
@@ -22767,6 +22773,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Schwelle zur Zuweisungsprüfung in der Stichprobe überschritten",
   "health.code.automatic_routing":
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
+  "health.code.receipts_sent":
+    "Jede Bestätigung der letzten 30 Tage wurde versendet",
+  "health.code.receipts_missed":
+    "Einige Bestätigungen von Werbewidersprüchen wurden nicht versendet",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
   "health.code.capture_thread_uncertain": "Private Gespräche prüfen",
   "health.queueCoverage":
@@ -22789,6 +22799,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wiederherstellungstest hat seine Ziele verfehlt. Frage den Systembetreiber, die Ursache zu beheben und erneut zu testen.",
   "health.impact.automatic":
     "Aufgaben werden möglicherweise falsch zugewiesen. Prüfe die Weiterleitung und korrigiere die Zuweisung.",
+  "health.impact.receipts":
+    "Kontakte, die Werbung widersprochen haben, haben die gesetzlich geforderte Bestätigung nicht erhalten. Öffne die Benachrichtigungen zu fehlenden Bestätigungen und korrigiere die Adresse oder die E-Mail-Einrichtung.",
   "analytics.outlook.calledAt": "Prognose vom {at}",
   "analytics.prospect.weeksByQualification":
     "Jeder Lead zählt in der Woche seiner ersten Qualifizierung.",

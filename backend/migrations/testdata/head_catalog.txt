@@ -3299,6 +3299,7 @@ public.communication_suppression.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_suppression.kind text NOT NULL gen=- def=-
 public.communication_suppression.lead_id uuid gen=- def=-
 public.communication_suppression.purpose_id uuid gen=- def=-
+public.communication_suppression.received_at timestamp with time zone gen=- def=-
 public.communication_suppression.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_suppression.recorded_for_addresses text[] gen=- def=-
 public.communication_suppression.recorded_through text NOT NULL gen=- def='unknown'::text

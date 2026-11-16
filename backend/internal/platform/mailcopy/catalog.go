@@ -330,13 +330,13 @@ func recordNoticeLines(line writeLine) {
 		"Sie müssen weder antworten noch etwas bestätigen.",
 		"Quý khách không cần trả lời hay xác nhận.")
 	line(func(c *Copy) *string { return &c.OptOutAckSubject },
-		"Your advertising opt-out is confirmed",
-		"Ihre Abmeldung von Werbung ist bestätigt",
-		"Yêu cầu ngừng nhận quảng cáo đã được xác nhận")
+		"We received your refusal of advertising email",
+		"Ihr Widerspruch gegen Werbe-E-Mails ist eingegangen",
+		"Xác nhận đã nhận yêu cầu từ chối nhận thư điện tử quảng cáo")
 	line(func(c *Copy) *string { return &c.OptOutAckBody },
-		"Your opt-out is recorded. We will not send further messages for the advertising purposes you opted out of. Messages already sent may still reach you.",
-		"Ihre Abmeldung ist gespeichert. Zu den abgemeldeten Werbezwecken erhalten Sie keine weiteren Nachrichten. Bereits versendete Nachrichten können Sie noch erreichen.",
-		"Yêu cầu ngừng nhận đã được ghi nhận. Chúng tôi sẽ không gửi thêm thư cho các mục đích quảng cáo quý khách đã từ chối. Những thư đã gửi vẫn có thể đến sau đó.")
+		"We received your request to stop advertising email at %[1]s (Vietnam time). We stopped sending advertising email for the advertising purposes you refused from %[2]s (Vietnam time). Messages sent before then may still reach your inbox.",
+		"Ihr Widerspruch gegen Werbe-E-Mails ist um %[1]s (vietnamesische Zeit) bei uns eingegangen. Seit %[2]s (vietnamesische Zeit) senden wir Ihnen für die Werbezwecke, denen Sie widersprochen haben, keine Werbe-E-Mails mehr. Zuvor versendete Nachrichten können Ihr Postfach noch erreichen.",
+		"Chúng tôi đã nhận được yêu cầu từ chối nhận thư điện tử quảng cáo của quý khách lúc %[1]s (giờ Việt Nam). Chúng tôi đã ngừng gửi thư điện tử quảng cáo cho các mục đích quảng cáo quý khách đã từ chối kể từ %[2]s (giờ Việt Nam). Thư đã gửi trước thời điểm này vẫn có thể đến hộp thư của quý khách.")
 	line(func(c *Copy) *string { return &c.OptOutAckIgnore },
 		"No reply or further action is needed.",
 		"Sie müssen nichts weiter tun und nicht antworten.",
