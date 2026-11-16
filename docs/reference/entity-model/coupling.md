@@ -10,7 +10,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 34 | 427 | 27 | 38 | 18 |
+| [activities](activities.md) | 34 | 427 | 28 | 38 | 18 |
 | [agents](agents.md) | 3 | 35 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 207 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 25 | 0 | 2 | 0 |
@@ -33,13 +33,14 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [deals](deals.md) | 29 | 422 | 26 | 19 | 5 |
 | [finance](finance.md) | 5 | 87 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 98 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 206 | 159 | 6 | 5 |
+| [identity](identity.md) | 22 | 206 | 160 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 45 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 39 | 0 | 0 | 0 |
 | [migration](migration.md) | 2 | 41 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
+| [personalchannels](personalchannels.md) | 3 | 32 | 0 | 2 | 1 |
 | [platform](platform.md) | 13 | 95 | 2 | 3 | 1 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
 | [projects](projects.md) | 3 | 42 | 11 | 3 | 0 |
@@ -154,6 +155,11 @@ No outbound foreign keys.
 - `notice.notice_recipient_user_id_fkey`: `FOREIGN KEY (recipient_user_id) REFERENCES app_user(id) ON DELETE CASCADE`
 - `notification_digest_run.notification_digest_run_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE`
 - `notification_preference.notification_preference_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE`
+
+### personalchannels
+
+- `personal_channel_connection.personal_channel_connection_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT`
+- `personal_channel_reply.personal_channel_reply_activity_id_fkey`: `FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE`
 
 ### privacy
 

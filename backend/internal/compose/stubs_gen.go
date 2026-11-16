@@ -3219,6 +3219,14 @@ func (stubs) SetPassportAreas(w nethttp.ResponseWriter, r *nethttp.Request, id c
 	httperr.NotImplemented(w, r, "SetPassportAreas")
 }
 
+func (stubs) GetPersonalChannelConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetPersonalChannelConnection")
+}
+
+func (stubs) UpdatePersonalChannelConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UpdatePersonalChannelConnection")
+}
+
 func (stubs) ListPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPipelinesParams) {
 	httperr.NotImplemented(w, r, "ListPipelines")
 }

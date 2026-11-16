@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 672,
-    "tokens": 51129,
+    "tokens": 51134,
     "median_tool_tokens": 797,
     "mean_tool_tokens": 1064
   },
@@ -101,7 +101,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2775
+      "tokens": 2780
     },
     {
       "name": "change_state",

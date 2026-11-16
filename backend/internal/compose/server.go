@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/recordlinks"
@@ -203,9 +204,10 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		projectsHandlers: projects.HandlersOver(ProjectsStore(pool)),
 		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
-		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
-		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
-		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
+		dealroomsHandlers:       dealrooms.NewHandlers(InstallationDB(pool)),
+		personalChannelHandlers: personalchannels.NewHandlers(personalchannels.NewStore(InstallationDB(pool))),
+		commissionsHandlers:     commissions.NewHandlers(InstallationDB(pool)),
+		activitiesHandlers:      newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
 		// The ranking lane is the one read a page limit does not bound.
 		// search_tsv is built with the 'simple' configuration and keeps
 		// stopwords, so a high-frequency token matches nearly every row of

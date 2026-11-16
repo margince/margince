@@ -5,6 +5,8 @@
 // Margince and pull their replies back out, through a client they run (an AI
 // assistant over MCP, or their own program with a passport). Margince never
 // reads a chat network itself. Handlers→Store.
+//
+// Tables owned: docs/reference/entity-model/personalchannels.md.
 package personalchannels
 
 // Provider is the one core channel provider these messages travel on. The

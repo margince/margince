@@ -17282,6 +17282,50 @@ paths:
   # keeps a card in the channel and posts what happens on the record; what the
   # channel decides comes back as summarised notes. Linking needs the right to
   # edit the record, and reading needs the right to see it.
+  /personal-channels/connection:
+    get:
+      tags: [Connectors]
+      operationId: getPersonalChannelConnection
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: read_personal_channel, router: read_workspace, action: personal_channel, tier: auto_execute, scope: read, served_by: route }
+      summary: Your personal channels connection and the replies waiting on it.
+      description: |
+        Always the CALLER's own. While it is off, Margince takes no chat in from any of the
+        caller's clients and hands no reply out. The counts describe replies the caller wrote in
+        Margince that their client has not yet picked up.
+      responses:
+        '200':
+          description: The caller's connection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalChannelConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      tags: [Connectors]
+      operationId: updatePersonalChannelConnection
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # a member decides whether their own chats may come in
+      summary: Turn your personal channels on or off.
+      description: |
+        Always the CALLER's own. Turning it off stops every client from sending chats in or
+        pulling replies; replies already waiting stay queued and still expire after 7 days.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdatePersonalChannelConnectionRequest' }
+      responses:
+        '200':
+          description: The caller's connection after the change.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalChannelConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /channel-links/{record_type}/{id}:
     parameters:
       - name: record_type
@@ -45919,6 +45963,23 @@ components:
       enum: [everything, important, milestones, silent]
       x-extensible-enum: true
       description: How much Margince posts into a linked channel.
+    PersonalChannelConnection:
+      type: object
+      description: A member's personal channels connection.
+      required: [enabled, replies_waiting]
+      properties:
+        enabled: { type: boolean, description: Whether chats may come in and replies be pulled. }
+        replies_waiting: { type: integer, minimum: 0, description: Replies written in Margince that the client has not acked. }
+        oldest_reply_waiting_at: { type: [string, 'null'], format: date-time, description: When the oldest of those was written; it expires 7 days later. }
+        last_pull_at: { type: [string, 'null'], format: date-time, description: When a client last picked replies up. }
+
+    UpdatePersonalChannelConnectionRequest:
+      type: object
+      additionalProperties: false
+      required: [enabled]
+      properties:
+        enabled: { type: boolean }
+
     ChannelLinkState:
       type: object
       additionalProperties: false
@@ -68943,7 +69004,7 @@ components:
          knowledge_corpus, knowledge_document, introduction, weekly_plan, forecast, data_coverage,
          user_admin, role_admin, team_admin, privacy_request, audit_log, job_health, data_task,
          extension_access, system_reset, ai_diagnostics, consent_config, communication_exception,
-         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative, tax_rate]
+         authentication_policy, oauth_application, agent_client, seat_usage, team_oversight, team_lead, report_definition, sales_target, reporting_framework, report_schedule, report_edition, reporting_credit, legal_review, legal_entity, sales_initiative, tax_rate, personal_channel]
 
     RbacAction:
       type: string

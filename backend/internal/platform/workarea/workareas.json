@@ -413,6 +413,7 @@
     "getOwnershipRequest": "business",
     "getPartner": "business",
     "getPendingMarginceChanges": "business",
+    "getPersonalChannelConnection": "capture",
     "getPipeline": "workspace_settings",
     "getProduct": "workspace_settings",
     "getProject": "business",
@@ -1370,6 +1371,7 @@
     "getOwnershipRequest": "sharing",
     "getPartner": "companies",
     "getPendingMarginceChanges": "deals",
+    "getPersonalChannelConnection": "connectors",
     "getPipeline": "pipelines",
     "getPreferenceCenter": "public_links",
     "getProduct": "catalog",
@@ -1977,6 +1979,7 @@
     "updateOfferLineItem": "offers",
     "updateOfferTemplate": "catalog",
     "updatePartnerStage": "pipelines",
+    "updatePersonalChannelConnection": "connectors",
     "updatePipeline": "pipelines",
     "updatePreferences": "public_links",
     "updateProduct": "catalog",
@@ -3488,6 +3491,9 @@
     ],
     "read_onboarding_state": [
       "own_profile"
+    ],
+    "read_personal_channel": [
+      "connectors"
     ],
     "read_project_360": [
       "projects"
@@ -5584,6 +5590,9 @@
     ],
     "read_onboarding_state": [
       "own_account"
+    ],
+    "read_personal_channel": [
+      "capture"
     ],
     "read_project_360": [
       "business"

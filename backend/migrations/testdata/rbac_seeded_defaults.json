@@ -271,6 +271,12 @@
         "read": true,
         "update": true
       },
+      "personal_channel": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "pipeline": {
         "create": true,
         "delete": true,
@@ -705,6 +711,12 @@
       "partner": {
         "create": true,
         "delete": true,
+        "read": true,
+        "update": true
+      },
+      "personal_channel": {
+        "create": true,
+        "delete": false,
         "read": true,
         "update": true
       },
@@ -1145,6 +1157,12 @@
         "read": true,
         "update": true
       },
+      "personal_channel": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "pipeline": {
         "create": false,
         "delete": false,
@@ -1581,6 +1599,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "personal_channel": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
       },
       "pipeline": {
         "create": true,
@@ -2019,6 +2043,12 @@
         "read": true,
         "update": false
       },
+      "personal_channel": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "pipeline": {
         "create": false,
         "delete": false,
@@ -2455,6 +2485,12 @@
         "delete": false,
         "read": true,
         "update": false
+      },
+      "personal_channel": {
+        "create": true,
+        "delete": false,
+        "read": true,
+        "update": true
       },
       "pipeline": {
         "create": false,

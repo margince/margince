@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 273.5 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71428 |
+| Approx. wire tokens | 71433 |
 | Largest tool | `read_details` (17.2 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1889 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2775 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2780 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 484 |
@@ -12269,6 +12269,7 @@ and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_
         "onboarding_company_proposal",
         "onboarding_state",
         "owner_identities",
+        "personal_channel",
         "pipelines",
         "provider_connections",
         "provider_locations",

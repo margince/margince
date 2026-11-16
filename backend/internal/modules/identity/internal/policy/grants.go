@@ -308,6 +308,8 @@ const (
 	// archives them, every other seat reads them. Assigning a user to one also
 	// asks objUserAdmin.
 	objLegalEntity = "legal_entity"
+	// objPersonalChannel is a member's own chat connection and the replies waiting on it.
+	objPersonalChannel = "personal_channel"
 )
 
 // AdministrationObjects are the grants that reach back and change who may do

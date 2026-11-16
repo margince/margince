@@ -147,3 +147,5 @@
 1794801914_a_passport_may_never_expire.down.sql | passport | runs only on a rollback and touches only passports minted to never expire, which a member makes by hand one at a time, so the set is small
 1794803190_personal_channels_is_a_per_member_core_transport.up.sql | channel_provider | writes the one personal_channels row of a table that holds one row per transport
 1794803190_personal_channels_is_a_per_member_core_transport.down.sql | channel_provider | runs only on a rollback and deletes the one personal_channels row
+1794804055_a_member_may_bring_their_own_chats_in.up.sql | *, role | the trigger statements change no row; updates only the fixed set of system roles, at most six rows per workspace; the three tables it creates are empty
+1794804055_a_member_may_bring_their_own_chats_in.down.sql | role | runs only on a rollback and updates only the fixed set of system roles

@@ -128,6 +128,7 @@ type Server struct {
 	channelHandlers
 	chatLinkHandlers
 	chatEventHandlers
+	personalChannelHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers

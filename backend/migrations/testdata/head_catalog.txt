@@ -8100,6 +8100,65 @@ public.passport.work_areas text[] gen=- def=-
 public.passport_oauth_grant_ix CREATE INDEX passport_oauth_grant_ix ON public.passport USING btree (oauth_grant_id)
 public.passport_pkey CREATE UNIQUE INDEX passport_pkey ON public.passport USING btree (id)
 public.passport_token_hash_key CREATE UNIQUE INDEX passport_token_hash_key ON public.passport USING btree (token_hash)
+public.personal_channel_connection acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.personal_channel_connection.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.personal_channel_connection.enabled boolean NOT NULL gen=- def=false
+public.personal_channel_connection.id uuid NOT NULL gen=- def=uuidv7()
+public.personal_channel_connection.last_pull_at timestamp with time zone gen=- def=-
+public.personal_channel_connection.personal_channel_connection_pkey PRIMARY KEY (id)
+public.personal_channel_connection.personal_channel_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
+public.personal_channel_connection.personal_channel_connection_user_key UNIQUE (user_id)
+public.personal_channel_connection.personal_channel_connection_version_check CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint)))
+public.personal_channel_connection.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.personal_channel_connection.user_id uuid NOT NULL gen=- def=-
+public.personal_channel_connection.version bigint NOT NULL gen=- def=1
+public.personal_channel_connection_pkey CREATE UNIQUE INDEX personal_channel_connection_pkey ON public.personal_channel_connection USING btree (id)
+public.personal_channel_connection_user_key CREATE UNIQUE INDEX personal_channel_connection_user_key ON public.personal_channel_connection USING btree (user_id)
+public.personal_channel_reply acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.personal_channel_reply.activity_id uuid NOT NULL gen=- def=-
+public.personal_channel_reply.attempt integer NOT NULL gen=- def=0
+public.personal_channel_reply.body text gen=- def=-
+public.personal_channel_reply.connection_id uuid NOT NULL gen=- def=-
+public.personal_channel_reply.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.personal_channel_reply.delivery_key text NOT NULL gen=- def=-
+public.personal_channel_reply.id uuid NOT NULL gen=- def=uuidv7()
+public.personal_channel_reply.leased_until timestamp with time zone gen=- def=-
+public.personal_channel_reply.network text NOT NULL gen=- def=-
+public.personal_channel_reply.personal_channel_reply_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.personal_channel_reply.personal_channel_reply_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES personal_channel_connection(id) ON DELETE CASCADE
+public.personal_channel_reply.personal_channel_reply_delivery_key UNIQUE (delivery_key)
+public.personal_channel_reply.personal_channel_reply_pkey PRIMARY KEY (id)
+public.personal_channel_reply.personal_channel_reply_settled_check CHECK (((state = ANY (ARRAY['sent'::text, 'failed'::text, 'expired'::text])) = (settled_at IS NOT NULL)))
+public.personal_channel_reply.personal_channel_reply_state_check CHECK ((state = ANY (ARRAY['waiting'::text, 'pulled'::text, 'sent'::text, 'failed'::text, 'expired'::text])))
+public.personal_channel_reply.provider_message_id text gen=- def=-
+public.personal_channel_reply.reason text gen=- def=-
+public.personal_channel_reply.recipient_account text gen=- def=-
+public.personal_channel_reply.reply_to text gen=- def=-
+public.personal_channel_reply.settled_at timestamp with time zone gen=- def=-
+public.personal_channel_reply.state text NOT NULL gen=- def='waiting'::text
+public.personal_channel_reply.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.personal_channel_reply FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "reason": 500, "network": 120, "reply_to": 500, "thread_id": 500, "delivery_key": 500, "recipient_account": 500, "provider_message_id": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"delivery_key":500,"network":120,"provider_message_id":500,"reason":500,"recipient_account":500,"reply_to":500,"state":20000,"thread_id":500}')
+public.personal_channel_reply.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.personal_channel_reply FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "reason": 500, "network": 120, "reply_to": 500, "thread_id": 500, "delivery_key": 500, "recipient_account": 500, "provider_message_id": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"delivery_key":500,"network":120,"provider_message_id":500,"reason":500,"recipient_account":500,"reply_to":500,"state":20000,"thread_id":500}')
+public.personal_channel_reply.thread_id text NOT NULL gen=- def=-
+public.personal_channel_reply.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.personal_channel_reply_delivery_key CREATE UNIQUE INDEX personal_channel_reply_delivery_key ON public.personal_channel_reply USING btree (delivery_key)
+public.personal_channel_reply_open_idx CREATE INDEX personal_channel_reply_open_idx ON public.personal_channel_reply USING btree (connection_id, created_at) WHERE (state = ANY (ARRAY['waiting'::text, 'pulled'::text]))
+public.personal_channel_reply_pkey CREATE UNIQUE INDEX personal_channel_reply_pkey ON public.personal_channel_reply USING btree (id)
+public.personal_channel_upload acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.personal_channel_upload.byte_size bigint NOT NULL gen=- def=-
+public.personal_channel_upload.connection_id uuid NOT NULL gen=- def=-
+public.personal_channel_upload.content_type text NOT NULL gen=- def=-
+public.personal_channel_upload.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.personal_channel_upload.filename text NOT NULL gen=- def=-
+public.personal_channel_upload.id uuid NOT NULL gen=- def=uuidv7()
+public.personal_channel_upload.object_key text NOT NULL gen=- def=-
+public.personal_channel_upload.personal_channel_upload_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES personal_channel_connection(id) ON DELETE CASCADE
+public.personal_channel_upload.personal_channel_upload_pkey PRIMARY KEY (id)
+public.personal_channel_upload.personal_channel_upload_size_check CHECK (((byte_size >= 1) AND (byte_size <= '9007199254740991'::bigint)))
+public.personal_channel_upload.sha256 text NOT NULL gen=- def=-
+public.personal_channel_upload.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.personal_channel_upload FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"sha256": 120, "filename": 500, "object_key": 500, "content_type": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}')
+public.personal_channel_upload.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.personal_channel_upload FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sha256": 120, "filename": 500, "object_key": 500, "content_type": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}')
+public.personal_channel_upload_age_idx CREATE INDEX personal_channel_upload_age_idx ON public.personal_channel_upload USING btree (created_at)
+public.personal_channel_upload_pkey CREATE UNIQUE INDEX personal_channel_upload_pkey ON public.personal_channel_upload USING btree (id)
 public.pipeline acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.pipeline.archived_at timestamp with time zone gen=- def=-
 public.pipeline.created_at timestamp with time zone NOT NULL gen=- def=now()

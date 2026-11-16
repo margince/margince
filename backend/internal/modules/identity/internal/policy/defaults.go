@@ -96,6 +96,7 @@ var managerObjects = grid(crud, map[string]grant{
 	objRetentionPolicy:      none,
 	"tag":                   readOnly,
 	"webhook_subscription":  readOnly,
+	objPersonalChannel:      writeNoDelete,
 
 	// A team lead administers records, never the installation. Every
 	// administration object is spelled out rather than left to the crud base,
@@ -203,6 +204,7 @@ var defaults = map[string]Document{
 			objTeamOversight:        readOnly,
 			objTeamLead:             createRead,
 			objLegalReview:          readUpdate,
+			objPersonalChannel:      writeNoDelete,
 		}),
 		RowScope: principal.RowScopeAll,
 	},
@@ -286,6 +288,7 @@ var defaults = map[string]Document{
 			objDataCoverage:     none,
 			"deal":              writeNoDelete,
 			"deal_room":         writeNoDelete,
+			objPersonalChannel:  writeNoDelete,
 			objEmbeddingReindex: none,
 			objFxRate:           none,
 			objTaxRate:          none,
@@ -340,6 +343,7 @@ var defaults = map[string]Document{
 		// grants are the same set the rep holds nothing on, for the same
 		// reasons.
 		Objects: grid(readOnly, map[string]grant{
+			objPersonalChannel:  none,
 			objAiModelRate:      none,
 			objAiRouting:        none,
 			objAiBudget:         none,
@@ -385,6 +389,8 @@ var defaults = map[string]Document{
 	// grant here expresses.
 	"ops": {
 		Objects: grid(crud, map[string]grant{
+			// A member's own chat connection; an operator runs the installation.
+			objPersonalChannel:        none,
 			reportingReportDefinition: readOnly,
 			// An initiative is a commercial decision; an operator reads it.
 			"sales_initiative":       readOnly,

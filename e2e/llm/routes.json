@@ -713,6 +713,7 @@
         "onboarding_company_proposal": "read_onboarding_company_proposal",
         "onboarding_state": "read_onboarding_state",
         "owner_identities": "list_capture_owner_identities",
+        "personal_channel": "read_personal_channel",
         "pipelines": "list_pipelines",
         "provider_connections": "list_provider_connections",
         "provider_locations": "list_provider_locations",

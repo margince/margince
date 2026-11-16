@@ -54,6 +54,7 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml PersonalChannelConnection.last_pull_at":                 "when a member's client last picked replies up, a server instant, not an activity time",
 	"api/crm.yaml CustomerPayments.last_synced_at":                        "when the accounting import finished; always an instant, never an activity date",
 	"api/crm.yaml LicenseTrial.ends_at":                                   "when an unlicensed installation's trial ends, a server instant derived from the workspace's creation, not an activity time",
 	"api/crm.yaml EmailCalendarChange.ends_at":                            "a meeting's end, read with the same starts_precision: an all-day meeting's end is a date as its start is",
@@ -184,12 +185,13 @@ const (
 // instantTimeNames are the names that are never an activity's time, wherever a
 // schema declares them, each with the reason.
 var instantTimeNames = gatekit.Waive(map[string]string{
-	"handling_cutover_at": "server timestamp of the policy conversion, not an activity occurrence",
-	"example_due_at":      "computed deadline for the preview receipt time and selected local-day policy",
-	"expected_updated_at": rowStamp,
-	"queued_at":           rowStamp,
-	"enrolled_at":         "server timestamp of source enrollment, never an activity occurrence",
-	"opened_at":           actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
+	"handling_cutover_at":     "server timestamp of the policy conversion, not an activity occurrence",
+	"example_due_at":          "computed deadline for the preview receipt time and selected local-day policy",
+	"expected_updated_at":     rowStamp,
+	"queued_at":               rowStamp,
+	"oldest_reply_waiting_at": "server timestamp a reply was queued, never an activity occurrence",
+	"enrolled_at":             "server timestamp of source enrollment, never an activity occurrence",
+	"opened_at":               actStamp, "enabled_at": actStamp, "suspended_at": actStamp,
 	"created_at": rowStamp, "updated_at": rowStamp, "archived_at": rowStamp, "restricted_at": rowStamp,
 	"content_erased_at": rowStamp, "superseded_at": rowStamp, "revoked_at": rowStamp,
 	"activated_at": rowStamp, "partner_accepted_at": rowStamp, "added_at": rowStamp, "entered_at": rowStamp,

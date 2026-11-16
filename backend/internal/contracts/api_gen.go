@@ -58568,6 +58568,21 @@ type PassportSummary struct {
 	Usage *AgentUsage `json:"usage,omitempty"`
 }
 
+// PersonalChannelConnection A member's personal channels connection.
+type PersonalChannelConnection struct {
+	// Enabled Whether chats may come in and replies be pulled.
+	Enabled bool `json:"enabled"`
+
+	// LastPullAt When a client last picked replies up.
+	LastPullAt *time.Time `json:"last_pull_at,omitempty"`
+
+	// OldestReplyWaitingAt When the oldest of those was written; it expires 7 days later.
+	OldestReplyWaitingAt *time.Time `json:"oldest_reply_waiting_at,omitempty"`
+
+	// RepliesWaiting Replies written in Margince that the client has not acked.
+	RepliesWaiting int `json:"replies_waiting" minimum:"0"`
+}
+
 // Pipeline A pipeline. Mirrors the `pipeline` table (with embedded stages on GET).
 type Pipeline struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -68693,6 +68708,11 @@ type UpdatePartnerStageRequest struct {
 	// active and went quiet. `ended`: the partnership is over or never fit.
 	Meaning   *PartnerStageMeaning `json:"meaning,omitempty"`
 	SortOrder *int                 `json:"sort_order,omitempty"`
+}
+
+// UpdatePersonalChannelConnectionRequest defines model for UpdatePersonalChannelConnectionRequest.
+type UpdatePersonalChannelConnectionRequest struct {
+	Enabled bool `json:"enabled"`
 }
 
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
@@ -82141,6 +82161,9 @@ type IssuePassportJSONRequestBody = IssuePassportRequest
 
 // SetPassportAreasJSONRequestBody defines body for SetPassportAreas for application/json ContentType.
 type SetPassportAreasJSONRequestBody = PassportAreas
+
+// UpdatePersonalChannelConnectionJSONRequestBody defines body for UpdatePersonalChannelConnection for application/json ContentType.
+type UpdatePersonalChannelConnectionJSONRequestBody = UpdatePersonalChannelConnectionRequest
 
 // CreatePipelineJSONRequestBody defines body for CreatePipeline for application/json ContentType.
 type CreatePipelineJSONRequestBody = CreatePipelineRequest
@@ -98258,6 +98281,12 @@ type ServerInterface interface {
 	// Choose the work areas one of the caller's own passports may act in.
 	// (PUT /passports/{id}/areas)
 	SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id)
+	// Your personal channels connection and the replies waiting on it.
+	// (GET /personal-channels/connection)
+	GetPersonalChannelConnection(w http.ResponseWriter, r *http.Request)
+	// Turn your personal channels on or off.
+	// (PATCH /personal-channels/connection)
+	UpdatePersonalChannelConnection(w http.ResponseWriter, r *http.Request)
 	// List pipelines.
 	// (GET /pipelines)
 	ListPipelines(w http.ResponseWriter, r *http.Request, params ListPipelinesParams)
@@ -103967,6 +103996,18 @@ func (_ Unimplemented) ReleasePassportAppBinding(w http.ResponseWriter, r *http.
 // Choose the work areas one of the caller's own passports may act in.
 // (PUT /passports/{id}/areas)
 func (_ Unimplemented) SetPassportAreas(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your personal channels connection and the replies waiting on it.
+// (GET /personal-channels/connection)
+func (_ Unimplemented) GetPersonalChannelConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Turn your personal channels on or off.
+// (PATCH /personal-channels/connection)
+func (_ Unimplemented) UpdatePersonalChannelConnection(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -140881,6 +140922,48 @@ func (siw *ServerInterfaceWrapper) SetPassportAreas(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// GetPersonalChannelConnection operation middleware
+func (siw *ServerInterfaceWrapper) GetPersonalChannelConnection(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPersonalChannelConnection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdatePersonalChannelConnection operation middleware
+func (siw *ServerInterfaceWrapper) UpdatePersonalChannelConnection(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdatePersonalChannelConnection(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPipelines operation middleware
 func (siw *ServerInterfaceWrapper) ListPipelines(w http.ResponseWriter, r *http.Request) {
 
@@ -156700,6 +156783,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/passports/{id}/areas", wrapper.SetPassportAreas)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/personal-channels/connection", wrapper.GetPersonalChannelConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/personal-channels/connection", wrapper.UpdatePersonalChannelConnection)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/pipelines", wrapper.ListPipelines)

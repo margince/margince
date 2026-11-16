@@ -82,6 +82,7 @@ var memberReferences = map[string]memberReference{
 	"capture_thread_verdict.user_id":           {disposition: referenceRetain},
 	"channel_connection.connected_by":          {disposition: referenceRetain},
 	"chat_link.linked_by":                      {disposition: referenceRetain},
+	"personal_channel_connection.user_id":      {disposition: referenceRetain},
 	"comms_outbound.user_id":                   {disposition: referenceRetain},
 	"communication_instruction.directed_by":    {disposition: referenceRetain},
 	"communication_instruction.revoked_by":     {disposition: referenceRetain},

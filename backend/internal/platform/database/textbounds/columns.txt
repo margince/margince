@@ -1144,6 +1144,19 @@ public.passport.label label
 public.passport.scopes document
 public.passport.token_hash document
 public.passport.work_areas document
+public.personal_channel_reply.body exempt carries the reply a member wrote, already bounded by the activity it copies
+public.personal_channel_reply.delivery_key line
+public.personal_channel_reply.network label
+public.personal_channel_reply.provider_message_id line
+public.personal_channel_reply.reason line
+public.personal_channel_reply.recipient_account line
+public.personal_channel_reply.reply_to line
+public.personal_channel_reply.state document
+public.personal_channel_reply.thread_id line
+public.personal_channel_upload.content_type line
+public.personal_channel_upload.filename line
+public.personal_channel_upload.object_key line
+public.personal_channel_upload.sha256 label
 public.pipeline.name label
 public.preference_token.revoked_reason note
 public.preference_token.token document

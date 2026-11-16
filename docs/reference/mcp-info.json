@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 280093,
+    "tool_catalog_bytes": 280112,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71428,
+    "approx_wire_tokens_total": 71433,
     "largest_tool_bytes": 17633,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 54713,
-      "input_schema_bytes": 160554,
+      "input_schema_bytes": 160573,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 215267
+      "description_plus_input_schema_bytes": 215286
     }
   },
   "tools": {
@@ -11376,6 +11376,7 @@
                 "onboarding_company_proposal",
                 "onboarding_state",
                 "owner_identities",
+                "personal_channel",
                 "pipelines",
                 "provider_connections",
                 "provider_locations",
