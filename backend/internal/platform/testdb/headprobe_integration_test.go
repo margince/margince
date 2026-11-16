@@ -48,6 +48,7 @@ func coreNamespace(t *testing.T) dbmigrate.Namespace {
 }
 
 func TestAnAtHeadLedgerIsAccepted(t *testing.T) {
+	t.Parallel()
 	ns := coreNamespace(t)
 	if reason := namespaceAtHead(ns, atHead(t, ns)); reason != "" {
 		t.Fatalf("a ledger recording exactly this binary's migrations was refused: %s", reason)
@@ -58,6 +59,7 @@ func TestAnAtHeadLedgerIsAccepted(t *testing.T) {
 // migrator reconciles, so the probe must not rebuild it. The same row with
 // content the source does not prove is the migrator's refusal, and the probe's.
 func TestADeclaredRenumberIsJudgedAsTheMigratorLeavesIt(t *testing.T) {
+	t.Parallel()
 	ns := coreNamespace(t)
 	if len(ns.Renumbered) == 0 {
 		t.Fatal("the embedded core namespace declares no renumber — this test would pass vacuously")
@@ -93,6 +95,7 @@ func TestADeclaredRenumberIsJudgedAsTheMigratorLeavesIt(t *testing.T) {
 // built, which is at head for that branch and carries objects this one never
 // created.
 func TestEveryWayALedgerCanLieIsRefused(t *testing.T) {
+	t.Parallel()
 	ns := coreNamespace(t)
 	newest := ns.Migrations[len(ns.Migrations)-1]
 
@@ -160,6 +163,7 @@ func TestEveryWayALedgerCanLieIsRefused(t *testing.T) {
 // with them concatenate into the same bytes as the pair that splits them
 // differently, and two different migrations would share one fingerprint.
 func TestTheDigestSeparatesTheMigrationsParts(t *testing.T) {
+	t.Parallel()
 	a := dbmigrate.Migration{Version: "0001", Name: "ab", UpSQL: "u", DownSQL: "d"}
 	b := dbmigrate.Migration{Version: "0001a", Name: "b", UpSQL: "u", DownSQL: "d"}
 	if dbmigrate.Digest(a) == dbmigrate.Digest(b) {
@@ -186,6 +190,7 @@ func TestTheDigestSeparatesTheMigrationsParts(t *testing.T) {
 // binary last built the template, so a probe of it would keep passing over a
 // migrator that had stopped stamping until somebody rebuilt.
 func TestUpStampsTheDigestOfWhatItApplied(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := ownerConn(t)
 
@@ -231,6 +236,7 @@ func TestUpStampsTheDigestOfWhatItApplied(t *testing.T) {
 // for any column list, and the probe would then read an unverifiable ledger as
 // a verified one.
 func TestThePreflightCountsTheLedgerColumnsByName(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := ownerConn(t)
 
@@ -255,63 +261,22 @@ func TestThePreflightCountsTheLedgerColumnsByName(t *testing.T) {
 	}
 }
 
-// TestAnUndeclaredDatabaseIsNeverReused holds the direction that keeps the skip
-// safe. make test-integration-serial runs every package against the TEMPLATE
-// itself, and tools/extmigrategate migrates a database it made mid-process:
-// both reach EnsureSchema, neither may take the skip, and both must be silent
-// about it because neither is a mistake.
-func TestAnUndeclaredDatabaseIsNeverReused(t *testing.T) {
-	ctx := context.Background()
-	owner := ownerConn(t)
-
-	for _, tc := range []struct {
-		name    string
-		declare string
-	}{
-		{name: "no lane declared a clone", declare: ""},
-		{name: "the declared clone is a different database", declare: "margince_some_other_database"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(CloneDBEnv, tc.declare)
-			reusable, reason, err := reusableClone(ctx, owner)
-			if err != nil {
-				t.Fatalf("probing: %v", err)
-			}
-			if reusable {
-				t.Fatal("the probe offered the skip for a database no lane declared — the serial lane would leave one package's residue in the template every clone is copied from")
-			}
-			if reason != "" {
-				t.Errorf("refusing a database that was never declared reported %q; that refusal is about the caller, not about a template anybody has to fix", reason)
-			}
-		})
-	}
-}
-
-// TestAPopulatedCloneIsNeverReused is the emptiness proof. EnsureSchema records
-// emptySizes immediately after the probe agrees, and every later reset measures
-// growth against that baseline — so a baseline taken over rows misreports the
-// reclaim for the life of the process. Until #1994 the bench targets seeded a
-// quarter of a million rows into the template every clone is copied from, which
-// is the shape this refuses.
+// TestAPopulatedCloneIsNeverReused is the emptiness proof: a template that holds
+// rows hands them to every test's copy.
 func TestAPopulatedCloneIsNeverReused(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := ownerConn(t)
 
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES (gen_random_uuid())`); err != nil {
 		t.Fatalf("seeding a row: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := Reset(context.Background(), owner); err != nil {
-			t.Errorf("resetting after the populated-clone arm: %v", err)
-		}
-	})
-
 	reason, err := schemaEmpty(ctx, owner)
 	if err != nil {
 		t.Fatalf("probing for rows: %v", err)
 	}
 	if reason == "" {
-		t.Fatal("the probe called a database holding a workspace row empty — EnsureSchema would baseline every table size over those rows")
+		t.Fatal("the probe called a database holding a workspace row empty — every test's copy would start with those rows")
 	}
 	if !strings.Contains(reason, "public.workspace") {
 		t.Errorf("the refusal does not name what it found: %q", reason)
@@ -320,28 +285,8 @@ func TestAPopulatedCloneIsNeverReused(t *testing.T) {
 		t.Errorf("a populated clone needs a data or reference-table fix: %s", reason)
 	}
 
-	// And through the whole probe, not only its emptiness step: a version that
-	// proved the schema empty and then forgot to consult the answer would pass
-	// every assertion above.
-	if declared, ok := lookupCloneDB(); ok {
-		t.Setenv(CloneDBEnv, declared)
-		reusable, reason, err := reusableClone(ctx, owner)
-		if err != nil {
-			t.Fatalf("probing: %v", err)
-		}
-		if reusable {
-			t.Fatal("reusableClone offered the skip for a populated clone — EnsureSchema would baseline every table size over those rows")
-		}
-		if !strings.Contains(reason, "public.workspace") {
-			t.Errorf("the whole probe did not report what the emptiness step found: %q", reason)
-		}
-	}
-
-	if err := Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting: %v", err)
-	}
-	if reason, err := schemaEmpty(ctx, owner); err != nil || reason != "" {
-		t.Fatalf("a reset database was still called populated (err=%v): %s", err, reason)
+	if reason, err := headAndEmpty(ctx, owner, 2*len(ledgerColumns)); err != nil || !strings.Contains(reason, "public.workspace") {
+		t.Errorf("the whole check did not report what the emptiness step found (err=%v): %q", err, reason)
 	}
 }
 
@@ -358,6 +303,7 @@ func TestAPopulatedCloneIsNeverReused(t *testing.T) {
 // A throwaway database, because the point is a database with no schema and the
 // clone every other test in this package shares must keep its own.
 func TestASchemalessDatabaseIsNotMistakenForAnEmptyOne(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := ownerConn(t)
 
@@ -398,47 +344,6 @@ func TestASchemalessDatabaseIsNotMistakenForAnEmptyOne(t *testing.T) {
 	}
 }
 
-// TestTheLaneRunsOnTheCloneItDeclares is the wiring gate. The skip is silent
-// when the declared name does not match, which is right for a suite that made
-// its own database and wrong for a lane that exported the wrong one — that
-// second case would turn the saving off across every package with nothing in
-// any log to say so. This process is not one of those suites, so the two must
-// agree here.
-func TestTheLaneRunsOnTheCloneItDeclares(t *testing.T) {
-	ctx := context.Background()
-	owner := ownerConn(t)
-
-	declared, ok := lookupCloneDB()
-	if !ok {
-		// The serial lane, by design — it runs on the template and declares
-		// nothing. Assert that rather than skipping: a skip here reads exactly
-		// like a pass.
-		reusable, _, err := reusableClone(ctx, owner)
-		if err != nil {
-			t.Fatalf("probing: %v", err)
-		}
-		if reusable {
-			t.Fatal("no clone was declared and the probe still offered the skip")
-		}
-		return
-	}
-	var current string
-	if err := owner.QueryRow(ctx, `SELECT current_database()`).Scan(&current); err != nil {
-		t.Fatalf("asking which database this is: %v", err)
-	}
-	if current != declared {
-		t.Fatalf("the lane declared clone %q but this package is running on %q — every package would silently rebuild the schema it was just handed", declared, current)
-	}
-	reusable, reason, err := reusableClone(ctx, owner)
-	if err != nil {
-		t.Fatalf("probing: %v", err)
-	}
-	if !reusable {
-		t.Fatalf("the lane's own clone was refused: %s\n"+
-			"A template migrated before content digests existed reads this way; `make test-db-up` rebuilds it.", reason)
-	}
-}
-
 // TestACloneCarryingARowRuleIsNeverReused holds the readability half of the
 // emptiness proof. EXISTS over a table with row-level security enabled answers
 // about the ROLE running the probe rather than about the table — a bypassing
@@ -447,6 +352,7 @@ func TestTheLaneRunsOnTheCloneItDeclares(t *testing.T) {
 // one lane and populated to the next, while EnsureSchema baselines every table
 // size on whichever answer it happened to get.
 func TestACloneCarryingARowRuleIsNeverReused(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := ownerConn(t)
 
@@ -454,15 +360,6 @@ func TestACloneCarryingARowRuleIsNeverReused(t *testing.T) {
 	if _, err := owner.Exec(ctx, `CREATE TABLE `+planted+` (id integer PRIMARY KEY)`); err != nil {
 		t.Fatalf("planting a table a reset acts on: %v", err)
 	}
-	dropped := false
-	t.Cleanup(func() {
-		if dropped {
-			return
-		}
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS `+planted); err != nil {
-			t.Errorf("dropping the planted table: %v", err)
-		}
-	})
 	if _, err := owner.Exec(ctx, `ALTER TABLE `+planted+` ENABLE ROW LEVEL SECURITY, FORCE ROW LEVEL SECURITY`); err != nil {
 		t.Fatalf("arming the planted table with a row rule: %v", err)
 	}
@@ -496,7 +393,7 @@ func TestACloneCarryingARowRuleIsNeverReused(t *testing.T) {
 		t.Fatalf("probing for rows: %v", err)
 	}
 	if reason == "" {
-		t.Fatalf("the probe vouched for a clone carrying a row rule on %s — EnsureSchema would baseline every table size on an answer that changes with the role reading it", planted)
+		t.Fatalf("the probe vouched for a clone carrying a row rule on %s — its emptiness answer changes with the role reading it", planted)
 	}
 	if !strings.Contains(reason, planted) {
 		t.Errorf("the refusal does not name what it found: %q", reason)
@@ -508,7 +405,6 @@ func TestACloneCarryingARowRuleIsNeverReused(t *testing.T) {
 	if _, err := owner.Exec(ctx, `DROP TABLE `+planted); err != nil {
 		t.Fatalf("dropping the planted table: %v", err)
 	}
-	dropped = true
 	if reason, err := schemaEmpty(ctx, owner); err != nil || reason != "" {
 		t.Fatalf("with the row rule gone the same clone was still refused (err=%v): %s", err, reason)
 	}

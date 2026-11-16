@@ -40,7 +40,7 @@ import (
 )
 
 const (
-	harnessList = "internal/platform/testdb/reset.go"
+	harnessList = "internal/platform/testdb/emptyschema.go"
 	sweepList   = "internal/compose/datasweep.go"
 )
 

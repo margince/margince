@@ -31,6 +31,7 @@ import (
 // parameter types from the Go values and would fail on this slice. jit is the
 // half that catches the construction regressing.
 func TestSharedPoolKeepsTheProductionConnectionSetup(t *testing.T) {
+	t.Parallel()
 	pool := sharedAppPool(t)
 	ctx := context.Background()
 
@@ -62,6 +63,7 @@ func TestSharedPoolKeepsTheProductionConnectionSetup(t *testing.T) {
 // DSN must be the same pool, or every fixture is back to a pool per test and the
 // connection cost this package exists to remove comes back unannounced.
 func TestSharedPoolIsOneObjectPerDSN(t *testing.T) {
+	t.Parallel()
 	if first, second := sharedAppPool(t), sharedAppPool(t); first != second {
 		t.Error("two asks for the same DSN returned different pools — the pool is no longer shared per process")
 	}

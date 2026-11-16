@@ -18,13 +18,14 @@ import (
 // It is an internal test because the state it needs to reach is internal:
 // EnsureSchema's sync.Once has already fired by the time any test in this binary
 // runs, so the unmigrated case is unreachable from outside. Clearing the flag for
-// one call is safe — tests within a package run serially under the lane's -p 1
-// and nothing here calls t.Parallel — and Pool returns before it touches the pool
-// map, so the process keeps whatever pools it already had.
+// one call is safe: this test runs alone, and Pool returns before it touches the
+// pool map, so the process keeps whatever pools it already had.
 //
 // Without this, deleting the check leaves every suite green while a session from
 // a too-early pool blocks the migration's DROP SCHEMA — see ErrSchemaNotReady for
 // why that costs the package rather than the one test.
+//
+//testdb:serial sets schemaReady, which every Pool call in the process reads
 func TestPoolRefusesBeforeTheSchemaIsMigrated(t *testing.T) {
 	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
 	if appDSN == "" {

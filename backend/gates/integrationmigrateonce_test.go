@@ -5,13 +5,9 @@
 
 package gates
 
-// Every file the integration lane compiles migrates the schema once per test
-// process and resets between tests, rather than migrating on every setup. A
-// suite migrates the schema once per test process
-// (internal/platform/testdb.EnsureSchema) and resets between tests with a fast
-// data-only reset (testdb.Reset); one that instead runs its own DROP SCHEMA +
-// dbmigrate.Up on every setup reintroduces a per-test migrate that costs orders
-// of magnitude more than the reset it replaces. The obligation is module-wide,
+// No file the integration lane compiles migrates the schema itself. A test
+// takes a copy of the migrated template (testdb.New); one that instead runs its
+// own DROP SCHEMA + dbmigrate.Up costs orders of magnitude more than the copy. The obligation is module-wide,
 // so the walk is: a gate that judges one subtree also claims, silently, that
 // the subtree is where the obligated code lives, and that second claim is the
 // one nothing checks.
@@ -117,9 +113,9 @@ func TestIntegrationSuitesMigrateOncePerProcess(t *testing.T) {
 	}
 
 	if len(offenders) > 0 {
-		t.Errorf("%d integration-lane file(s) migrate inline instead of riding testdb.EnsureSchema — "+
+		t.Errorf("%d integration-lane file(s) migrate inline instead of taking a copy of the template — "+
 			"a suite or a shared fixture in a build-tagged non-test file counts alike. Replace the "+
-			"DROP SCHEMA + dbmigrate.Up block with testdb.EnsureSchema + testdb.Reset "+
+			"DROP SCHEMA + dbmigrate.Up block with testdb.New "+
 			"(see internal/compose/integration/harness.go):\n\t%s",
 			len(offenders), strings.Join(offenders, "\n\t"))
 	}

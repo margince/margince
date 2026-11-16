@@ -20,16 +20,10 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// This file gives the lane one pool per DSN per test PROCESS, rather than one
-// per test. The connections are the cost: a package's tests run sequentially
-// against one clone database, and each test was opening a pool that eagerly
-// dialled MinConns backends, using them once and closing them — while the lane
-// runs several packages at once against ONE server. How many connections that
-// server has is not a fact this file may assume: it is the lane's arithmetic,
-// declared in scripts/lib-testdb.sh and provisioned in
-// docker-compose.dev.yml, and this pool's part in it is the ceiling it is
-// handed (see PoolMaxConnsEnv). Naming a figure here instead puts a second copy
-// of it in the file a reader opens first.
+// This file hands out pools sized to the lane's connection budget. How many
+// connections the server has is the lane's arithmetic, declared in
+// scripts/lib-testdb.sh and checked against docker-compose.dev.yml; this file's
+// part is the ceiling it is handed (see PoolMaxConnsEnv).
 
 // ErrSchemaNotReady is returned when a pool is asked for before EnsureSchema has
 // migrated the database.
@@ -44,11 +38,8 @@ import (
 //
 // A pool that predated the drop would also hold statements typed against the old
 // schema. Refusing it here is what lets the shared pool cache statements.
-//
-// Unrecoverable within the package either way, because the pool is memoized for
-// the process: nothing after the mistake re-opens it.
 var ErrSchemaNotReady = errors.New(
-	"testdb: the shared pool was requested before EnsureSchema migrated the database — call Setup (or EnsureSchema) first; a session open across the migration's DROP SCHEMA blocks it, and the pool is memoized for the process so nothing later recovers")
+	"testdb: a pool was requested on a database that is neither a test's copy nor migrated by EnsureSchema — take the DSN from testdb.New or testdb.For")
 
 var (
 	poolsMu sync.Mutex
@@ -119,24 +110,16 @@ func poolParams() (map[string]string, error) {
 	return params, nil
 }
 
-// Pool returns the process-wide pool for dsn, opening it on first use. Keyed by
-// DSN, so the app-role and owner-role pools are distinct pools with the same
-// lifetime.
+// Pool returns the shared pool for dsn, opening it on first use. Keyed by DSN,
+// so the app-role and owner-role pools are distinct pools with the same
+// lifetime. A pool on a test's own database is closed when the test ends;
+// callers must not close it.
 //
-// Deliberately NOT closed per test: it is closed when the test process exits,
-// which is what makes it shared. Callers must not close it — a closed shared pool
-// fails every later test in the package with a use-after-close that names nothing.
-//
-// A shared connection caches its statements, as a cmd/api connection does. Two
-// things keep that sound across this package's schema changes. EnsureSchema runs
-// once per process and Pool refuses to open before it, so no shared connection
-// predates a rebuild. And the cf_ columns Reset drops are the runtime columns
-// production also changes under cached statements, which
-// gates/runtimeddlwholerow_test.go holds by refusing whole-row reads of them.
-//
-// A suite that drops the schema while this pool is live is outside both. It gets
-// XX000 "cache lookup failed for type N", so it opens an OwnPool or its own
-// connection instead.
+// A pooled connection caches its statements, as a cmd/api connection does. A
+// test's database is at head before any pool opens on it, and a rebuilt one is
+// refused here until EnsureSchema has run, so no connection predates a schema
+// change. A suite that drops the schema while this pool is live gets XX000
+// "cache lookup failed for type N", so it opens an OwnPool instead.
 func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	if !schemaReady.Load() && !onCopy(dsn) {
 		return nil, ErrSchemaNotReady
@@ -187,7 +170,7 @@ func closePoolsOn(name string) {
 // OwnPool opens a pool the CALLER owns and closes, tuned by the same lane
 // ceiling the shared one takes, and dials nothing until the caller uses it.
 //
-// Most suites want Pool: one pool per DSN per process, memoized, which is the
+// Most suites want Pool: one pool per DSN, memoized until the test ends, which is the
 // cheapest thing that works. A few genuinely cannot — a suite that asserts what
 // happens when a pool is closed, one that needs a DSN of its own with extra
 // parameters, one that hands a pool to a component that will close it — and
@@ -204,15 +187,8 @@ func closePoolsOn(name string) {
 // answer two pools, and closing one does not affect the other. The caller closes
 // it — nothing here will.
 //
-// It does NOT carry the shared pool's ErrSchemaNotReady check, and that is a
-// decision rather than an omission. The check is a proxy for "this process has
-// called EnsureSchema", which for a MEMOIZED pool is the right question: it
-// outlives every test, so one opened beforehand is still open across the
-// migration's DROP SCHEMA and blocks it. An owned pool's lifetime is its
-// test's. And the proxy is wrong here in the direction that matters: a suite
-// running in a package the lane already migrated has never called EnsureSchema
-// itself, so the flag is false while the schema is perfectly ready — refusing
-// there would refuse working suites for a hazard they do not have.
+// It does not carry Pool's ErrSchemaNotReady check: an owned pool lives only as
+// long as its test, so it cannot be open across a rebuild it did not cause.
 func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	return OwnPoolWith(ctx, dsn, nil)
 }

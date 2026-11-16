@@ -43,6 +43,7 @@ import (
 const laneConnBudgetEnv = "LANE_CONN_BUDGET"
 
 func TestTheClusterSeatsTheBudgetTheLaneComputed(t *testing.T) {
+	t.Parallel()
 	raw, ok := os.LookupEnv(laneConnBudgetEnv)
 	if !ok || raw == "" {
 		t.Fatalf("%s is unset — every lane declares it through scripts/lib-testdb.sh's declare_lane_budget (the parallel lane with its concurrency, the one-package and serial lanes with 1), so reaching this test without it means the harness was entered by a route that never sized the cluster", laneConnBudgetEnv)
@@ -85,6 +86,7 @@ func TestTheClusterSeatsTheBudgetTheLaneComputed(t *testing.T) {
 // still budgeting for 8. That is a lane whose demand is twice its own arithmetic
 // and whose gate reads green.
 func TestTheSharedPoolTakesTheCeilingTheLaneHandedIt(t *testing.T) {
+	t.Parallel()
 	raw, ok := os.LookupEnv(testdb.PoolMaxConnsEnv)
 	if !ok || raw == "" {
 		t.Fatalf("%s is unset — declare_lane_budget exports it for every lane, so an absent ceiling means the pools are back on database.NewPool's fallback while the budget above still says otherwise", testdb.PoolMaxConnsEnv)

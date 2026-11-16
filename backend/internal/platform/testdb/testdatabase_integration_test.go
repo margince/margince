@@ -14,6 +14,7 @@ import (
 )
 
 func TestASubtestReadsItsParentsDatabaseAndASecondFixtureGetsAFreshOne(t *testing.T) {
+	t.Parallel()
 	seeded := New(t)
 	t.Run("helper", func(t *testing.T) {
 		if got := For(t); got != seeded {
@@ -26,6 +27,7 @@ func TestASubtestReadsItsParentsDatabaseAndASecondFixtureGetsAFreshOne(t *testin
 }
 
 func TestAPoolOpenedBeforeTheFixtureSharesItsDatabase(t *testing.T) {
+	t.Parallel()
 	early := For(t)
 	if seeded := New(t); seeded != early {
 		t.Errorf("the fixture seeded %s, but the pool opened before it is on %s", seeded.Name, early.Name)
@@ -33,6 +35,7 @@ func TestAPoolOpenedBeforeTheFixtureSharesItsDatabase(t *testing.T) {
 }
 
 func TestATestsDatabaseIsAtHeadEmptyAndDroppedWhenItEnds(t *testing.T) {
+	t.Parallel()
 	var name string
 	t.Run("owner", func(t *testing.T) {
 		db := New(t)
@@ -71,4 +74,10 @@ func connect(t *testing.T, dsn string) *pgx.Conn {
 		}
 	})
 	return conn
+}
+
+// ownerConn is an owner connection to the test's own database.
+func ownerConn(t *testing.T) *pgx.Conn {
+	t.Helper()
+	return connect(t, For(t).OwnerDSN)
 }

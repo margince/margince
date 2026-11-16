@@ -47,6 +47,7 @@ var (
 )
 
 func TestRedisDBCountAgreesWithTheLaneAndTheServer(t *testing.T) {
+	t.Parallel()
 	t.Run("the parallel runner assigns from the same range", func(t *testing.T) {
 		if got := declaredInt(t, laneRunnerPath, laneRunnerDecl); got != testdb.RedisDBs {
 			t.Errorf("REDIS_DBS=%d in %s but testdb.RedisDBs=%d — the runner would assign a db this package rejects, or reject one it would accept",
