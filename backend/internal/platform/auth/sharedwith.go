@@ -56,8 +56,7 @@ func WorksOnClause(ctx context.Context, table, alias string, arg func(any) int) 
 }
 
 // ActivityWorksOnClause is WorksOnClause for a message or meeting: one the
-// caller captured, hosts or is assigned, or one linked to a record they work
-// on. It filters and never widens: the audience gate still applies.
+// caller captured or is assigned, or one linked to a record they work on. It filters and never widens: the audience gate still applies.
 func ActivityWorksOnClause(ctx context.Context, alias string, arg func(any) int) (string, error) {
 	p, err := rbacActor(ctx)
 	if err != nil {
@@ -67,7 +66,7 @@ func ActivityWorksOnClause(ctx context.Context, alias string, arg func(any) int)
 		return "FALSE", nil
 	}
 	me, teams := arg(p.UserID), arg(p.TeamIDs)
-	return fmt.Sprintf(`(%[1]s OR %[2]s.assignee_id IN (%[3]s) OR %[2]s.host_user_id IN (%[3]s)
+	return fmt.Sprintf(`(%[1]s OR %[2]s.assignee_id IN (%[3]s)
 		OR EXISTS (SELECT 1 FROM activity_link worked
 		  LEFT JOIN deal wd ON wd.id = worked.deal_id
 		  LEFT JOIN contact wc ON wc.id = worked.contact_id
