@@ -369,7 +369,7 @@ const routingDefsTemplate = `{
     "required": ["provider", "model"],
     "properties": {
       "provider": {
-        "description": "jev (TypeSafe's own API; key TYPESAFE_API_KEY, required; base_url optional, default https://api.typesafe.ai/v1/systemone) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; key JEV_COMPATIBLE_API_KEY, sent when set and never required; base_url required) | gemini_decision (Google's Decisions API on the Gemini Developer API v1beta; key GEMINI_API_KEY, the gemini provider's, required; base_url optional, default https://generativelanguage.googleapis.com/v1beta/decisions; no EU hosting, so not for eu_hosted or sovereign).",
+        "description": "jev (TypeSafe's own API; key TYPESAFE_API_KEY, required; base_url optional, default https://api.typesafe.ai/v1/systemone) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; key JEV_COMPATIBLE_API_KEY, sent when set and never required; base_url required) | gemini_decision (Google's Decisions API on the Gemini Developer API v1beta; key GEMINI_API_KEY, the gemini provider's, required; base_url optional, default https://generativelanguage.googleapis.com/v1beta/decisions; no EU hosting: do not bind it under eu_hosted, and sovereign refuses it).",
         "enum": [__DECISION_PROVIDERS__]
       },
       "model":    { "type": "string", "minLength": 1, "description": "The decision model id, e.g. jev-1.13.0 on jev, typesafe/jev-1.13 on OpenRouter, or gemini-decision-1 on gemini_decision." },

@@ -19,7 +19,7 @@ const googleDecisionPrice = "core/1794796825_google_decisions_are_priced"
 func decisionRate(ctx context.Context, t *testing.T, conn *pgx.Conn) (input, output int64, lane string) {
 	t.Helper()
 	err := conn.QueryRow(ctx, `SELECT input_per_mtok_microusd, output_per_mtok_microusd, lane FROM ai_model_rate
-		WHERE provider = 'gemini_decision' AND model_id = 'gemini-decision-1'
+		WHERE provider = 'gemini_decision' AND model_id = 'gemini-decision-1' AND effective_date <= CURRENT_DATE
 		ORDER BY effective_date DESC LIMIT 1`).Scan(&input, &output, &lane)
 	if err != nil && err != pgx.ErrNoRows {
 		t.Fatal(err)
@@ -48,6 +48,10 @@ func TestAnInstalledSheetGainsTheSeededGoogleDecisionPrice(t *testing.T) {
 		{"a price set by hand", func(c *pgx.Conn) {
 			seedRate(ctx, t, c, "gemini_decision", "gemini-decision-1", "2026-11-01", 90_000)
 		}, 90_000, "chat"},
+		{"a price set only for a later day", func(c *pgx.Conn) {
+			seedRate(ctx, t, c, "gemini", "gemini-3.5-flash", "2026-08-01", 1_500_000)
+			seedRate(ctx, t, c, "gemini_decision", "gemini-decision-1", "2099-01-01", 90_000)
+		}, decisionInputMicroUSD, "decisions"},
 		{"an empty sheet", func(*pgx.Conn) {}, 0, ""},
 	}
 	for _, c := range cases {

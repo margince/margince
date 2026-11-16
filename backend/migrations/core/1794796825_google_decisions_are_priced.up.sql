@@ -3,8 +3,9 @@ SET LOCAL lock_timeout = '3s';
 -- installation provisioned before the gemini_decision provider existed has no
 -- row for it, so its calls would read as unpriced.
 --
--- An installation whose sheet prices anything gets the seeded row when it has
--- none for the model. One it already has, from a seed or an admin, stays. The
+-- An installation whose sheet prices anything gets the seeded row when no row
+-- for the model is in force today. One in force, from a seed or an admin,
+-- stays; a future-dated one leaves today unpriced, so it does not count. The
 -- write is audited as the migration's.
 WITH added AS (
   INSERT INTO ai_model_rate (provider, model_id, lane, input_per_mtok_microusd, output_per_mtok_microusd,
@@ -12,7 +13,8 @@ WITH added AS (
   SELECT 'gemini_decision', 'gemini-decision-1', 'decisions', 100000, 0, 0, 0, CURRENT_DATE, 'seed'
    WHERE EXISTS (SELECT 1 FROM ai_model_rate)
      AND NOT EXISTS (SELECT 1 FROM ai_model_rate r
-                      WHERE r.provider = 'gemini_decision' AND r.model_id = 'gemini-decision-1')
+                      WHERE r.provider = 'gemini_decision' AND r.model_id = 'gemini-decision-1'
+                        AND r.effective_date <= CURRENT_DATE)
   ON CONFLICT (provider, model_id, effective_date) DO NOTHING
   RETURNING id, effective_date
 )

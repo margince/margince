@@ -260,7 +260,9 @@ against the profile, because its corpus is not real data.
 
 `gemini_decision` binds the decisions lane to the Decisions API of Google, which picks one answer from
 a closed set and writes no text. It sends the key of `gemini` (`GEMINI_API_KEY`, or the `gemini` row
-under Providers) and has no row of its own. Its endpoint is fixed, so it takes no `base_url`. Pick it
+under Providers) and has no row of its own. Its default endpoint is
+`https://generativelanguage.googleapis.com/v1beta/decisions`. A `base_url` replaces it, written as
+the full endpoint URL. Pick it
 on the decision model row under **Model tiers**, or take the `#` off its block in
 [`config/presets/gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml):
 
@@ -275,9 +277,11 @@ models.dev lists the model, and until then keeps the sheet price.
 What it does not cover:
 
 - It is a `v1beta` API of the Gemini Developer API alone. Vertex AI does not serve it.
-- Google runs it in no EU region, so do not bind it under `eu_hosted`. `sovereign` refuses it.
-- No decision site is certified on it yet, so every site keeps to its ladder. See
-  [certify-a-decision-site.md](certify-a-decision-site.md).
+- Google runs it in no EU region, so do not bind it under `eu_hosted`. That profile does not refuse
+  it, as it does not refuse `gemini`; `sovereign` refuses it.
+- The three decision sites are certified on `gemini-decision-1`. Certification is advisory: a bound
+  lane asks every site with a decision form, and a site falls back to its ladder when the answer does
+  not stand. See [certify-a-decision-site.md](certify-a-decision-site.md).
 
 ## The sovereign profile refuses every cloud provider
 
