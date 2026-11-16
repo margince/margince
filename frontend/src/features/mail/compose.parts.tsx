@@ -171,8 +171,7 @@ export function ComposeFrame({
   );
 }
 
-// The footer: files and the draft's state on the left. The send and its other
-// moments sit at the end, where the hand ends up.
+// The footer: files and draft state on the left, the send at the end where the hand is.
 export function ComposeFoot({
   scheduling,
   send,
