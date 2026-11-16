@@ -2,12 +2,10 @@
   "verb": "explain_report_run_cell",
   "checks": [
     "activity.read",
-    "company.read",
     "deal.read",
     "installation_settings.read",
     "lead.read",
-    "project.read",
-    "relationship.read"
+    "project.read"
   ],
   "takes": [
     "report_run"
