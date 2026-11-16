@@ -166,7 +166,7 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 	}
 	// Only the company-kind row moved, so only it records the move.
 	for kind, want := range map[string]int{"company": 1, "contact": 0} {
-		if n := e.WsCount(t, movedAudits, kind, src.UUID.String()); n != want {
+		if n := e.WsCount(t, movedAudits, kind, src.String()); n != want {
 			t.Errorf("the %s-kind unit note has %d move audit row(s), want %d", kind, n, want)
 		}
 	}
@@ -193,7 +193,7 @@ func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 	for company, want := range map[ids.UUID]int{tgt.UUID: 1, bystander: 0} {
 		if n := e.WsCount(t, `SELECT count(*) FROM audit_log a JOIN ext.ext_reachtest_note n ON n.id = a.entity_id
 			WHERE a.entity_type = 'ext_reachtest_note' AND a.action = 'update' AND n.company_id = $1
-			  AND a.before->>'company_id' = $2 AND a.after->>'company_id' = n.company_id::text`, company, src.UUID.String()); n != want {
+			  AND a.before->>'company_id' = $2 AND a.after->>'company_id' = n.company_id::text`, company, src.String()); n != want {
 			t.Errorf("the unit note now on %s has %d move audit row(s), want %d", company, n, want)
 		}
 	}
