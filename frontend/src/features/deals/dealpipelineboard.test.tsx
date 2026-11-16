@@ -7,7 +7,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   BoardDeal,
@@ -21,6 +21,7 @@ import {
 } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
 import { DealPipelineBoard } from "./dealpipelineboard";
+import { deal, stages as openThenWon, type Stage } from "./deals.testkit";
 
 // What a card on the deals board offers without leaving the board, and that
 // each verb opens what the deal page opens rather than a copy of it.
@@ -49,20 +50,24 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-beforeEach(() => {
-  // The grant the task verb waits on, and nothing else: every other read the
-  // summary drawer makes answers 404, which its own panels already state.
+// The grants the verbs wait on, and nothing else: every other read the
+// summary drawer makes answers 404, which its own panels already state.
+function stubGrants(allow: Parameters<typeof meFixture>[0]["allow"]) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
         input instanceof Request ? input : new Request(String(input), init);
       if (req.url.endsWith("/v1/me")) {
-        return jsonResponse(meFixture({ allow: { activity: ["create"] } }));
+        return jsonResponse(meFixture({ allow }));
       }
       return jsonResponse({ title: "Not found", status: 404 }, 404);
     }),
   );
+}
+
+beforeEach(() => {
+  stubGrants({ activity: ["create"] });
 });
 
 afterEach(() => {
@@ -70,7 +75,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderBoard(deals: BoardDeal[], writeTo: WriteTo | null) {
+function renderBoard(
+  deals: BoardDeal[],
+  writeTo: WriteTo | null,
+  menu?: ComponentProps<typeof DealPipelineBoard>["menu"],
+) {
   const column: BoardMoneyColumn = {
     stage: "s1",
     label: "Proposal",
@@ -88,6 +97,7 @@ function renderBoard(deals: BoardDeal[], writeTo: WriteTo | null) {
       columns={[column]}
       cardHref={(deal) => `#/deals/${deal.id}`}
       zone="Europe/Berlin"
+      menu={menu}
     />
   );
   return rtlRender(
@@ -168,5 +178,153 @@ describe("DealPipelineBoard", () => {
     ).toBeTruthy();
     expect(archived.queryByRole("button", { name: /^Write email/ })).toBeNull();
     expect(archived.queryByRole("button", { name: /^Add task/ })).toBeNull();
+  });
+
+  describe("card menu", () => {
+    const lost: Stage = {
+      id: "s4",
+      pipeline_id: "pl",
+      name: "Lost",
+      position: 4,
+      semantic: "lost",
+      win_probability: 0,
+    };
+    const pipeline = [...openThenWon, lost];
+    const onAdvance = vi.fn();
+    afterEach(() => onAdvance.mockReset());
+    beforeEach(() => {
+      stubGrants({ activity: ["create"], deal: ["read", "update", "delete"] });
+    });
+
+    // The panel, once the grants have answered: the task verb waits on them.
+    async function openMenu(name: string) {
+      const user = userEvent.setup();
+      const trigger = screen.getByRole("button", {
+        name: `More actions for ${name}`,
+      });
+      await user.click(trigger);
+      const panel = document.getElementById(
+        trigger.getAttribute("aria-controls") ?? "",
+      );
+      if (!panel) throw new Error(`no menu for ${name}`);
+      await within(panel).findByRole("button", { name: "Add task" });
+      return { user, panel: within(panel) };
+    }
+    const itemNames = (panel: ReturnType<typeof within>) =>
+      panel.getAllByRole("button").map((item) => item.textContent);
+
+    it("offers an open deal its moves, then the card's verbs and the record's", async () => {
+      renderBoard([openDeal], null, {
+        deals: [deal({ archivable: true })],
+        stages: pipeline,
+        onAdvance,
+      });
+      const { panel } = await openMenu("Fleet retrofit");
+      expect(itemNames(panel)).toEqual([
+        "Move to Proposal",
+        "Move to stage…",
+        "Mark won…",
+        "Mark lost…",
+        "Deal summary",
+        "Add task",
+        "Copy link",
+        "Archive deal",
+      ]);
+    });
+
+    it("hands the next stage to the board's one advance", async () => {
+      renderBoard([openDeal], null, {
+        deals: [deal({})],
+        stages: pipeline,
+        onAdvance,
+      });
+      const { user, panel } = await openMenu("Fleet retrofit");
+      await user.click(panel.getByRole("button", { name: "Move to Proposal" }));
+      expect(onAdvance).toHaveBeenCalledWith("d1", "s2");
+    });
+
+    it("hands a stage picked from the list to the board's one advance", async () => {
+      renderBoard([openDeal], null, {
+        deals: [deal({})],
+        stages: pipeline,
+        onAdvance,
+      });
+      const { user, panel } = await openMenu("Fleet retrofit");
+      await user.click(panel.getByRole("button", { name: "Move to stage…" }));
+      await user.click(await screen.findByRole("option", { name: "Won" }));
+      expect(onAdvance).toHaveBeenCalledWith("d1", "s3");
+    });
+
+    // The deal page refuses to move a closed deal and offers Reopen; the card
+    // points there.
+    it("refuses a closed deal's moves and says where it is reopened", async () => {
+      renderBoard([openDeal], null, {
+        deals: [deal({ status: "won", stage_id: "s3" })],
+        stages: pipeline,
+        onAdvance,
+      });
+      const { panel } = await openMenu("Fleet retrofit");
+      const reason = "This deal is closed. Reopen it on its page to move it.";
+      expect(panel.getByText(reason)).toBeTruthy();
+      for (const name of ["Move to Lost", "Move to stage…", "Mark lost…"]) {
+        const item = panel.getByRole("button", { name });
+        expect(item).toHaveProperty("disabled", true);
+        expect(item.getAttribute("aria-describedby")).toBe(
+          panel.getByText(reason).id,
+        );
+      }
+      expect(panel.queryByRole("button", { name: "Mark won…" })).toBeNull();
+    });
+
+    it("offers an archived deal its summary and its link alone", async () => {
+      const user = userEvent.setup();
+      renderBoard([archivedDeal], null, {
+        deals: [deal({ id: "d2", archived_at: "2026-09-01T00:00:00Z" })],
+        stages: pipeline,
+        onAdvance,
+      });
+      const trigger = screen.getByRole("button", {
+        name: "More actions for Old retrofit",
+      });
+      await user.click(trigger);
+      const panel = within(
+        document.getElementById(trigger.getAttribute("aria-controls") ?? "") ??
+          document.body,
+      );
+      expect(itemNames(panel)).toEqual(["Deal summary", "Copy link"]);
+    });
+
+    it("offers no move to a seat that may not change the deal", async () => {
+      renderBoard([openDeal], null, {
+        deals: [deal({ writable: false })],
+        stages: pipeline,
+        onAdvance,
+      });
+      const { panel } = await openMenu("Fleet retrofit");
+      expect(itemNames(panel)).toEqual([
+        "Deal summary",
+        "Add task",
+        "Copy link",
+        "Archive deal",
+      ]);
+    });
+
+    // With two won stages, no one stage is what "won" means.
+    it("offers Mark won only where one stage means won", async () => {
+      const secondWin: Stage = {
+        ...openThenWon[2],
+        id: "s5",
+        name: "Won with partner",
+        position: 5,
+      } as Stage;
+      renderBoard([openDeal], null, {
+        deals: [deal({})],
+        stages: [...pipeline, secondWin],
+        onAdvance,
+      });
+      const { panel } = await openMenu("Fleet retrofit");
+      expect(panel.queryByRole("button", { name: "Mark won…" })).toBeNull();
+      expect(panel.getByRole("button", { name: "Mark lost…" })).toBeTruthy();
+    });
   });
 });

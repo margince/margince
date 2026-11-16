@@ -72,8 +72,8 @@ function closingFields(input: AdvanceInput) {
 }
 
 /**
- * The one way this screen advances a deal, shared by the board's drag and the
- * record page's stepper.
+ * The one way this screen advances a deal, shared by the board's drag, each
+ * card's menu and the record page's stepper.
  *
  * An advance is pinned like any other write: the version the reader's card or
  * record was drawn from rides the variables. When two readers move one deal at
@@ -231,6 +231,7 @@ export function DealBoardBody({
   openDeal,
   cardDragHandlers,
   columnDropHandlers,
+  requestAdvance,
   totalsWithheld,
 }: Readonly<{
   stageColumns: ReturnType<typeof useStageColumns>;
@@ -248,6 +249,7 @@ export function DealBoardBody({
   columnDropHandlers: ComponentProps<
     typeof PipelineBoard
   >["columnDropHandlers"];
+  requestAdvance: (dealId: string, stageId: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -313,6 +315,13 @@ export function DealBoardBody({
             cardDragHandlers={cardDragHandlers}
             columnDropHandlers={columnDropHandlers}
             columnExtras={columnExtras}
+            menu={{
+              deals: loadedDeals,
+              stages: [...(effectivePipeline.stages ?? [])].sort(
+                (a, b) => a.position - b.position,
+              ),
+              onAdvance: requestAdvance,
+            }}
           />
         ) : null
       }
@@ -405,5 +414,5 @@ export function useBoardInteractions({
     },
   });
 
-  return { openDeal, cardDragHandlers, columnDropHandlers };
+  return { openDeal, cardDragHandlers, columnDropHandlers, requestAdvance };
 }

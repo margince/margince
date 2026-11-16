@@ -317,7 +317,7 @@ export function DealsScreen({
   // won/lost are reached through the confirmed advance, never at create.
   const openStages = stages.filter((stage) => stage.semantic === "open");
 
-  const { openDeal, cardDragHandlers, columnDropHandlers } =
+  const { openDeal, cardDragHandlers, columnDropHandlers, requestAdvance } =
     useBoardInteractions({
       stages,
       loadedDeals: stageColumns.deals,
@@ -391,6 +391,7 @@ export function DealsScreen({
         openDeal={openDeal}
         cardDragHandlers={cardDragHandlers}
         columnDropHandlers={columnDropHandlers}
+        requestAdvance={requestAdvance}
       />
     ) : undefined;
 

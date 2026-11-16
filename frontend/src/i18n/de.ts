@@ -3051,6 +3051,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.card.summary": "Deal-Zusammenfassung: {name}",
   "deal.card.email": "E-Mail schreiben: {name}",
   "deal.card.addTask": "Aufgabe hinzufügen: {name}",
+  "deal.card.summaryItem": "Deal-Zusammenfassung",
+  "deal.card.moveTo": "Nach {stage} verschieben",
+  "deal.card.moveToStage": "In Phase verschieben…",
+  "deal.card.markWon": "Als gewonnen markieren…",
+  "deal.card.markLost": "Als verloren markieren…",
+  "deal.card.closedReopen":
+    "Dieser Deal ist abgeschlossen. Öffne ihn auf seiner Seite wieder, um ihn zu verschieben.",
+  "deal.card.copyLink": "Link kopieren",
+  "deal.card.linkCopied": "Link kopiert",
+  "deal.card.copyFailed":
+    "Der Link konnte nicht kopiert werden. Öffne den Deal und kopiere die Adresse aus der Adressleiste des Browsers.",
   "deal.mail.sent": "Gesendet {ago}",
   "deal.mail.received": "Erhalten {ago}",
   "deal.mail.sentOn": "Gesendet am {date}",

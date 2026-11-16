@@ -31,8 +31,7 @@ afterEach(() => {
 });
 
 // Drops deal d1 on a stage column the way the board's drag does. jsdom carries
-// no drag-and-drop, so the drop handler is dispatched directly. On touch the
-// reader takes the stepper, which its own tests cover.
+// no drag-and-drop, so the drop handler is dispatched directly.
 function dropOnStage(stageId: string, dealId = "d1") {
   const column = document.querySelector(
     `[data-stage="${stageId}"]`,

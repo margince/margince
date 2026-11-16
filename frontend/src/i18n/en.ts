@@ -2962,6 +2962,17 @@ export const en = {
   "deal.card.summary": "Deal summary: {name}",
   "deal.card.email": "Write email: {name}",
   "deal.card.addTask": "Add task: {name}",
+  "deal.card.summaryItem": "Deal summary",
+  "deal.card.moveTo": "Move to {stage}",
+  "deal.card.moveToStage": "Move to stage…",
+  "deal.card.markWon": "Mark won…",
+  "deal.card.markLost": "Mark lost…",
+  "deal.card.closedReopen":
+    "This deal is closed. Reopen it on its page to move it.",
+  "deal.card.copyLink": "Copy link",
+  "deal.card.linkCopied": "Link copied",
+  "deal.card.copyFailed":
+    "Could not copy the link. Open the deal and copy the address from the browser’s address bar.",
   "deal.mail.sent": "Sent {ago}",
   "deal.mail.received": "Received {ago}",
   "deal.mail.sentOn": "Sent on {date}",

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ComponentProps, useId, useState } from "react";
+import { type ComponentProps, useEffect, useId, useRef, useState } from "react";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { AppLink } from "../../design-system/applink";
 import { Modal } from "../../design-system/atoms";
@@ -15,7 +15,9 @@ import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useWriteTo } from "../../lib/writeto";
+import { DealCardMenu } from "./dealcardmenu";
 import { dealMailAside } from "./dealmailaside";
+import type { Deal, Stage } from "./deals";
 import { DealStatusCardPanel } from "./dealstatus";
 
 // The pipeline board as the deals screen draws it: the design-system board
@@ -29,9 +31,20 @@ import { DealStatusCardPanel } from "./dealstatus";
 type DealPipelineBoardProps = Omit<
   ComponentProps<typeof PipelineBoard>,
   "mailAside" | "cardActions"
->;
+> & {
+  /** What each card's "…" menu acts on; absent, the cards draw no menu. */
+  menu?: Readonly<{
+    deals: readonly Deal[];
+    /** In position order. */
+    stages: readonly Stage[];
+    onAdvance: (dealId: string, stageId: string) => void;
+  }>;
+};
 
-export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
+export function DealPipelineBoard({
+  menu,
+  ...props
+}: Readonly<DealPipelineBoardProps>) {
   // Null when the reader has no mailbox the product can send from: the card
   // then offers no mail verb rather than one that opens onto a refusal.
   const writeTo = useWriteTo();
@@ -41,7 +54,7 @@ export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
   const canFileTask = useCanWrite("activity", "create");
   const [summary, setSummary] = useState<SummaryState | null>(null);
   const [taskFor, setTaskFor] = useState<string | null>(null);
-  const cardActions = (deal: BoardDeal): DealCardActions => ({
+  const cardVerbs = (deal: BoardDeal): DealCardActions => ({
     onSummary: () => setSummary({ deal, open: true }),
     // An archived deal takes no new mail and no new work, which the deal page
     // says by refusing both verbs; a card has no room for the sentence, so it
@@ -53,6 +66,26 @@ export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
     onAddTask:
       canFileTask && !deal.archived ? () => setTaskFor(deal.id) : undefined,
   });
+  const followMove = useFocusFollowsMove();
+  const records = new Map(menu?.deals.map((deal) => [deal.id, deal]));
+  const cardActions = (deal: BoardDeal): DealCardActions => {
+    const verbs = cardVerbs(deal);
+    const record = records.get(deal.id);
+    return {
+      ...verbs,
+      menu: menu && record && (
+        <DealCardMenu
+          deal={record}
+          stages={menu.stages}
+          verbs={verbs}
+          onAdvance={(dealId, stageId) => {
+            followMove(dealId, stageId);
+            menu.onAdvance(dealId, stageId);
+          }}
+        />
+      ),
+    };
+  };
   return (
     <>
       <PipelineBoard
@@ -76,6 +109,28 @@ export function DealPipelineBoard(props: Readonly<DealPipelineBoardProps>) {
       )}
     </>
   );
+}
+
+// A moved card is drawn anew in its new column, and the menu trigger that held
+// focus goes with the old one; focus follows the card unless it went elsewhere.
+function useFocusFollowsMove() {
+  const moving = useRef<{ dealId: string; stageId: string } | null>(null);
+  useEffect(() => {
+    const move = moving.current;
+    if (move === null || document.activeElement !== document.body) {
+      return;
+    }
+    const link = document.querySelector<HTMLElement>(
+      `[data-stage="${move.stageId}"] [data-deal="${move.dealId}"] .deal-open`,
+    );
+    if (link) {
+      moving.current = null;
+      link.focus();
+    }
+  });
+  return (dealId: string, stageId: string) => {
+    moving.current = { dealId, stageId };
+  };
 }
 
 // The deal stays in state after the drawer closes, so the closing drawer still

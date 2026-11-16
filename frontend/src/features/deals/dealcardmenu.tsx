@@ -1,0 +1,178 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useEffect, useId } from "react";
+import { api } from "../../api/client";
+import { ifMatch, requireVersion } from "../../api/version";
+import { AddToShortlistAction } from "../../components/addtoshortlist";
+import { ArchiveAction } from "../../components/archive";
+import { Button } from "../../design-system/button";
+import { useClipboardCopy } from "../../design-system/clipboardcopy";
+import type { DealCardActions } from "../../design-system/dealcard";
+import { ListPopover } from "../../design-system/listpopover";
+import { useToast } from "../../design-system/toast";
+import { useT } from "../../i18n";
+import { useCanWriteRecord } from "../../lib/capability";
+import { unwrap } from "../../lib/problem";
+import { routeHash } from "../../lib/router";
+import type { Deal, Stage } from "./deals";
+
+type CardVerbs = Pick<DealCardActions, "onSummary" | "onEmail" | "onAddTask">;
+
+// A board card's "…" items: the moves a drag makes, for a reader with no
+// pointer to drag with, then the card's verbs and the record's.
+export function DealCardMenu({
+  deal,
+  stages,
+  verbs,
+  onAdvance,
+}: Readonly<{
+  deal: Deal;
+  /** The pipeline's stages, in position order. */
+  stages: readonly Stage[];
+  verbs: CardVerbs;
+  onAdvance: (dealId: string, stageId: string) => void;
+}>) {
+  const t = useT();
+  // An archived deal takes no change, so it keeps only what reads it.
+  const live = !deal.archived_at;
+  return (
+    <>
+      {live && <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />}
+      {verbs.onSummary && (
+        <Button onClick={verbs.onSummary}>{t("deal.card.summaryItem")}</Button>
+      )}
+      {verbs.onEmail && (
+        <Button onClick={verbs.onEmail}>{t("compose.writeEmail")}</Button>
+      )}
+      {verbs.onAddTask && (
+        <Button onClick={verbs.onAddTask}>{t("log.addTask")}</Button>
+      )}
+      <CopyDealLink dealId={deal.id} />
+      {live && (
+        <>
+          <AddToShortlistAction entityType="deal" entityId={deal.id} />
+          <ArchiveDeal deal={deal} />
+        </>
+      )}
+    </>
+  );
+}
+
+// A closed deal keeps its moves refused, as its page does; it is reopened there.
+function DealMoves({
+  deal,
+  stages,
+  onAdvance,
+}: Readonly<{
+  deal: Deal;
+  stages: readonly Stage[];
+  onAdvance: (dealId: string, stageId: string) => void;
+}>) {
+  const t = useT();
+  const reasonId = useId();
+  const writable = useCanWriteRecord("deal", deal);
+  if (!writable) {
+    return null;
+  }
+  const refused = deal.status === "open" ? undefined : reasonId;
+  const here = stages.findIndex((stage) => stage.id === deal.stage_id);
+  const next = here < 0 ? undefined : stages[here + 1];
+  // A pipeline with two won stages has no one stage "won" means.
+  const closers = (["won", "lost"] as const).flatMap((semantic) => {
+    const matching = stages.filter((stage) => stage.semantic === semantic);
+    const only = matching.length === 1 ? matching[0] : undefined;
+    return only && only.id !== deal.stage_id ? [{ semantic, stage: only }] : [];
+  });
+  const move = (stageId: string) => onAdvance(deal.id, stageId);
+  return (
+    <>
+      {refused && (
+        <p id={reasonId} className="t-caption">
+          {t("deal.card.closedReopen")}
+        </p>
+      )}
+      {next && (
+        <Button reasonId={refused} onClick={() => move(next.id)}>
+          {t("deal.card.moveTo", { stage: next.name })}
+        </Button>
+      )}
+      <ListPopover
+        label={t("deal.card.moveToStage")}
+        title={t("deals.bulkStage")}
+        searchLabel={t("deals.bulkStagePick")}
+        reasonId={refused}
+        options={stages.map((stage) => ({ id: stage.id, name: stage.name }))}
+        selected={deal.stage_id ?? undefined}
+        onPick={(stage, done) => {
+          done();
+          if (stage.id !== deal.stage_id) {
+            move(stage.id);
+          }
+        }}
+      />
+      {closers.map(({ semantic, stage }) => (
+        <Button
+          key={semantic}
+          reasonId={refused}
+          onClick={() => move(stage.id)}
+        >
+          {t(semantic === "won" ? "deal.card.markWon" : "deal.card.markLost")}
+        </Button>
+      ))}
+    </>
+  );
+}
+
+// The menu closes on the press, so both answers go to a toast, and a refusal
+// stays until it is read.
+function CopyDealLink({ dealId }: Readonly<{ dealId: string }>) {
+  const t = useT();
+  const toast = useToast();
+  const { origin, pathname } = globalThis.location;
+  const link = `${origin}${pathname}${routeHash({ screen: "deals", id: dealId })}`;
+  const clipboard = useClipboardCopy(
+    link,
+    {
+      copy: t("deal.card.copyLink"),
+      copied: t("deal.card.linkCopied"),
+      remedy: t("deal.card.copyFailed"),
+    },
+    () => toast.show(t("deal.card.linkCopied")),
+  );
+  const failed = clipboard.notice !== null;
+  useEffect(() => {
+    if (failed) {
+      toast.show(t("deal.card.copyFailed"), { tone: "danger", sticky: true });
+    }
+  }, [failed, toast, t]);
+  return <Button onClick={clipboard.copy}>{t("deal.card.copyLink")}</Button>;
+}
+
+// The board stays where it is: the "deals" read it invalidates drops the card.
+function ArchiveDeal({ deal }: Readonly<{ deal: Deal }>) {
+  const t = useT();
+  return (
+    <ArchiveAction
+      requires={{ object: "deal", action: "delete" }}
+      archivable={deal.archivable ?? false}
+      refusedReason={t("deal.archiveRefused")}
+      label={t("deal.archive")}
+      confirmText={t("deal.archiveConfirm")}
+      archivedMessage={t("record.archiveDone", { name: deal.name })}
+      archive={async () => {
+        return unwrap(
+          await api.DELETE("/deals/{id}", {
+            params: {
+              path: { id: deal.id },
+              ...ifMatch(requireVersion(deal.version)),
+            },
+          }),
+        );
+      }}
+      invalidate="deals"
+      recordKey="deal"
+      onArchived={() => undefined}
+    />
+  );
+}
