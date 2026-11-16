@@ -54,11 +54,11 @@ func TestAdvertisingNeedsPriorConsent(t *testing.T) {
 // decree requires, and nothing else in the tree would notice.
 func TestTheAdvertisingLabelIsTheDecreesOwn(t *testing.T) {
 	if got := messagingRules().SubjectPrefix; got != "[QC]" {
-		t.Fatalf("SubjectPrefix = %q, want the Art. 12 advertising label [QC]", got)
+		t.Fatalf("SubjectPrefix = %q, want the Art. 18 advertising label [QC]", got)
 	}
 }
 
-// TestTheDailyCeilingIsThreePerAddress pins Art. 22(2).
+// TestTheDailyCeilingIsThreePerAddress pins Art. 13.5.
 func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
 	ceiling := messagingRules().FrequencyCap
 	if ceiling == nil {
@@ -72,17 +72,23 @@ func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
 	}
 }
 
-// TestAnOptOutIsAcknowledged pins Art. 16.
+// TestAnOptOutIsAcknowledged pins Art. 20.
 func TestAnOptOutIsAcknowledged(t *testing.T) {
 	if !messagingRules().OptOutAcknowledgement {
-		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 16 requires a confirmation within 24 hours")
+		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 20 requires a receipt at once")
 	}
-	if within := messagingRules().OptOutAcknowledgementWithin; within != 24*time.Hour {
-		t.Errorf("the acknowledgement is due within %s, want 24h", within)
+	if within := messagingRules().OptOutAcknowledgementWithin; within != time.Hour {
+		t.Errorf("an unsent receipt raises its alarm after %s, want 1h: Art. 20.3 owes it at once", within)
+	}
+	if keep := messagingRules().OptOutRecordsKeep; keep < 366*24*time.Hour {
+		t.Errorf("opt-out records are kept %s, want at least a year in every year: Art. 11.7", keep)
+	}
+	if offset := messagingRules().OptOutAcknowledgementUTCOffset; offset != 7*time.Hour {
+		t.Errorf("the receipt prints its times at UTC%+v, want UTC+7: Art. 20.4(a) times are read in Vietnam", offset)
 	}
 }
 
-// TestAnAdvertisingMessageNamesItsAdvertiser holds Art. 13 alongside the
+// TestAnAdvertisingMessageNamesItsAdvertiser holds Art. 19 alongside the
 // controller disclosures. Advertiser contact binds ADVERTISING only: an
 // operational message carries who is processing the data, not who is selling.
 func TestAnAdvertisingMessageNamesItsAdvertiser(t *testing.T) {
