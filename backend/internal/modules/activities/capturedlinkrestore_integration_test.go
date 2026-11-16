@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A link the calendar lists again comes back as the same file, so a subscriber
-// counting uploads must see one created and then a restore, never two creates.
+// A link the calendar lists again comes back as the same file. A subscriber
+// counting uploads sees it archived, then restored, and never created twice.
 func TestARelistedMeetingDocumentIsAnnouncedAsRestoredNotCreated(t *testing.T) {
 	e := setupSend(t)
 	meeting := e.seedAnchor(t, "", "")

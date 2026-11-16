@@ -391,7 +391,7 @@ func writeDerivedAudienceTx(
 	}); err != nil {
 		return err
 	}
-	return followRecordedMeetingTx(ctx, tx, activityID)
+	return keepTranscriptReadersTx(ctx, tx, activityID)
 }
 
 func deref(s *string) string {

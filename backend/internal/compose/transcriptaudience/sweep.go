@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+// Package transcriptaudience runs the sweep that keeps each meeting
+// transcript readable by the readers of its meeting and no one else.
 package transcriptaudience
 
 import (

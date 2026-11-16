@@ -100,7 +100,10 @@ func authorizeAudienceWriteTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 		return false, "", err
 	}
 	if !internalMail {
-		return false, ReasonManual, auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held)
+		if err := auth.EnsureActivityWritableIn(ctx, tx, id.UUID, !held); err != nil {
+			return false, "", err
+		}
+		return false, ReasonManual, refuseTranscriptAudienceTx(ctx, tx, id, in)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
 		return false, "", err

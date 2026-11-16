@@ -60,9 +60,9 @@ func colleagueReads(t *testing.T, e *sendEnv, id ids.ActivityID) bool {
 	return err == nil
 }
 
-// A transcript is read by whoever reads its meeting, as the meeting changes:
-// a narrowing by hand reaches it at once, and a guest any writer adds or takes
-// off reaches it on the next sweep.
+// A transcript is read by whoever reads its meeting, as the meeting changes.
+// A narrowing by hand reaches it at once. A guest any writer adds or takes off
+// reaches it on the next sweep.
 func TestATranscriptKeepsTheReadersOfTheMeetingItRecords(t *testing.T) {
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
@@ -80,6 +80,11 @@ func TestATranscriptKeepsTheReadersOfTheMeetingItRecords(t *testing.T) {
 	}
 	if colleagueReads(t, e, transcript) {
 		t.Fatal("the colleague reads the transcript of a meeting limited to guests they are not one of")
+	}
+	var refused *InvalidAudienceError
+	if _, err := meetingStore(e).SetAudience(meetingCtx(e), transcript,
+		SetAudienceInput{Audience: string(crmcontracts.ActivityAudienceWorkspace)}); !errors.As(err, &refused) {
+		t.Fatalf("widening the transcript alone answered %v, want the audience refused", err)
 	}
 
 	if _, err := e.owner.Exec(context.Background(), `INSERT INTO activity_participant (activity_id, user_id, role)
