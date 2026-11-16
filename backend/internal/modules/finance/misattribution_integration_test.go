@@ -11,7 +11,6 @@ package finance
 
 import (
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -31,7 +30,7 @@ func (e *financeEnv) linkOf(t *testing.T) ids.UUID {
 
 func (e *financeEnv) ownerScalar(t *testing.T, query string, args ...any) ids.UUID {
 	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(e.ctx, e.db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
 	}
@@ -51,7 +50,7 @@ func (e *financeEnv) ownerScalar(t *testing.T, query string, args ...any) ids.UU
 // that refused it, or "" when it committed.
 func (e *financeEnv) ownerRefused(t *testing.T, statement string, args ...any) string {
 	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(e.ctx, e.db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
 	}
@@ -96,7 +95,7 @@ func TestTheSyncWritesEveryMirroredRowThroughItsCustomerLink(t *testing.T) {
 
 func (e *financeEnv) ownerScalarCount(t *testing.T, query string, args ...any) int {
 	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(e.ctx, e.db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
 	}

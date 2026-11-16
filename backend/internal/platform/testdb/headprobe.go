@@ -102,23 +102,28 @@ func reusableClone(ctx context.Context, owner *pgx.Conn) (bool, string, error) {
 		// headprobe_integration_test.go instead.
 		return false, "", nil
 	}
+	reason, err := headAndEmpty(ctx, owner, columns)
+	return reason == "" && err == nil, reason, err
+}
+
+// headAndEmpty proves that a copy of the template carries this binary's
+// migration ledger and no rows. columns is the preflight's ledger column count.
+func headAndEmpty(ctx context.Context, owner *pgx.Conn, columns int) (string, error) {
 	if want := 2 * len(ledgerColumns); columns != want {
-		return false, ledgerRebuildReason(fmt.Sprintf("the migration ledger has %d of the %d columns the probe reads; this database did not record content digests", columns, want)), nil
+		return ledgerRebuildReason(fmt.Sprintf("the migration ledger has %d of the %d columns the probe reads; this database did not record content digests", columns, want)), nil
 	}
-	if reason, err := ledgerAtHead(ctx, owner); err != nil {
-		return false, "", err
-	} else if reason != "" {
-		return false, ledgerRebuildReason(reason), nil
+	if reason, err := ledgerAtHead(ctx, owner); err != nil || reason != "" {
+		if reason != "" {
+			reason = ledgerRebuildReason(reason)
+		}
+		return reason, err
 	}
 	// A role that cannot read a relation cannot prove the clone empty.
 	reason, err := schemaEmpty(ctx, owner)
 	if err != nil {
-		return false, fmt.Sprintf("the clone could not be proved empty; check the template owner’s SELECT privileges and the schema: %v", err), nil
+		return fmt.Sprintf("the clone could not be proved empty; check the template owner’s SELECT privileges and the schema: %v", err), nil
 	}
-	if reason != "" {
-		return false, reason, nil
-	}
-	return true, "", nil
+	return reason, nil
 }
 
 func ledgerRebuildReason(reason string) string {

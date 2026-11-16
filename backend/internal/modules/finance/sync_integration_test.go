@@ -18,7 +18,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"os"
 	"testing"
 	"time"
 
@@ -41,6 +40,7 @@ type financeEnv struct {
 	company    ids.CompanyID
 	external   string
 	connection ids.UUID
+	db         testdb.Database
 }
 
 // setLifecycle moves the fixture account's relationship state, which is the one
@@ -58,7 +58,7 @@ func (e *financeEnv) setLifecycle(t *testing.T, state string) {
 // app role may not write.
 func (e *financeEnv) ownerExec(t *testing.T, statement string, args ...any) {
 	t.Helper()
-	owner, err := pgx.Connect(e.ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(e.ctx, e.db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("owner connection: %v", err)
 	}
@@ -74,13 +74,9 @@ func (e *financeEnv) ownerExec(t *testing.T, statement string, args ...any) {
 
 func setupFinance(t *testing.T) *financeEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,19 +85,13 @@ func setupFinance(t *testing.T) *financeEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &financeEnv{
 		ws:         ids.NewV7(),
 		company:    ids.New[ids.CompanyKind](),
 		external:   "ACME-01",
 		connection: ids.NewV7(),
+		db:         db,
 	}
 	connID := e.connection
 	if _, err := owner.Exec(ctx,
@@ -135,14 +125,12 @@ func setupFinance(t *testing.T) *financeEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	// The currency arithmetic is a fixed input here. This suite tests the sync
 	// pass: the hash discipline, the derived status, the credit-note placement.
@@ -556,10 +544,6 @@ func TestEveryMirroredRowWritesItsAuditRowAndASecondPassWritesNone(t *testing.T)
 	e := setupFinance(t)
 	ctx, provider, store := e.ctx, e.provider(), e.store
 
-	// Taken BEFORE the sync: the assertions below are about what THIS sync
-	// wrote, and the fixture has already written history of its own.
-	mark := auditWatermark(ctx, t, e)
-
 	first, err := store.SyncConnection(ctx, provider)
 	if err != nil {
 		t.Fatalf("first sync: %v", err)
@@ -569,7 +553,7 @@ func TestEveryMirroredRowWritesItsAuditRowAndASecondPassWritesNone(t *testing.T)
 			first.InvoicesInsert, first.PaymentsWrite)
 	}
 
-	audits := auditRowsByEntity(ctx, t, e, mark)
+	audits := auditRowsByEntity(ctx, t, e)
 	for _, want := range []struct {
 		entity string
 		count  int
@@ -590,7 +574,7 @@ func TestEveryMirroredRowWritesItsAuditRowAndASecondPassWritesNone(t *testing.T)
 	if _, err := store.SyncConnection(ctx, provider); err != nil {
 		t.Fatalf("second sync: %v", err)
 	}
-	again := auditRowsByEntity(ctx, t, e, mark)
+	again := auditRowsByEntity(ctx, t, e)
 	for entity, before := range audits {
 		if again[entity] != before {
 			t.Errorf("a second pass over an unchanged source wrote history for %s: %d→%d",
@@ -603,44 +587,15 @@ func TestEveryMirroredRowWritesItsAuditRowAndASecondPassWritesNone(t *testing.T)
 	}
 }
 
-// auditWatermark is the highest audit_log id before the work under test runs.
-// audit_log ids are minted by this process under a monotonic counter, so a row
-// written after the mark always compares greater. UUIDv7 orders by millisecond
-// and the counter breaks ties WITHIN a process — which is enough here because
-// the lane gives each package its own database and runs it single-threaded, so
-// the only writers racing this mark are earlier tests in the same process.
-func auditWatermark(ctx context.Context, t *testing.T, e *financeEnv) ids.UUID {
-	t.Helper()
-	var high ids.UUID
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		// ORDER BY ... LIMIT 1 rather than max(): Postgres has no max(uuid), and
-		// this is the same ordering the > comparison below relies on.
-		return tx.QueryRow(ctx, `
-			SELECT coalesce(
-				(SELECT id FROM audit_log ORDER BY id DESC LIMIT 1),
-				'00000000-0000-0000-0000-000000000000'::uuid)`).Scan(&high)
-	}); err != nil {
-		t.Fatalf("reading the audit watermark: %v", err)
-	}
-	return high
-}
-
-// auditRowsByEntity counts the finance audit rows written SINCE the watermark.
-//
-// It counted this run's workspace until ADR-0091 §8 phase D took the tenant
-// column off audit_log. The predicate was never about tenancy here — this
-// package's tests share one database, so it was keeping one test's rows out of
-// another's count, and a bare count would pass or fail on test order. The
-// watermark says the same thing more directly: these are the rows the work
-// under test wrote.
-func auditRowsByEntity(ctx context.Context, t *testing.T, e *financeEnv, since ids.UUID) map[string]int {
+// auditRowsByEntity counts the finance audit rows in this test's database.
+func auditRowsByEntity(ctx context.Context, t *testing.T, e *financeEnv) map[string]int {
 	t.Helper()
 	out := map[string]int{}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT entity_type, count(*) FROM audit_log
-			 WHERE entity_type LIKE 'finance\_%' AND id > $1
-			 GROUP BY entity_type`, since)
+			 WHERE entity_type LIKE 'finance\_%'
+			 GROUP BY entity_type`)
 		if err != nil {
 			return err
 		}
@@ -693,8 +648,7 @@ func outboxRowsForFinance(ctx context.Context, t *testing.T, e *financeEnv) int 
 func TestAConnectionAuditsItsStateChangesAndNotItsHeartbeat(t *testing.T) {
 	e := setupFinance(t)
 	ctx, provider, store := e.ctx, e.provider(), e.store
-	mark := auditWatermark(ctx, t, e)
-	connectionAudits := func() int { return auditRowsByEntity(ctx, t, e, mark)[entityConnection] }
+	connectionAudits := func() int { return auditRowsByEntity(ctx, t, e)[entityConnection] }
 
 	// The fixture seeds the connection active, so a pass that succeeds leaves
 	// it exactly as it was: a heartbeat, and nothing to record.
@@ -738,7 +692,6 @@ func TestAConnectionAuditsItsStateChangesAndNotItsHeartbeat(t *testing.T) {
 func TestAFailedSyncMarksOnlyTheConnectionItRanAgainst(t *testing.T) {
 	e := setupFinance(t)
 	other := e.plantSecondConnection(t)
-	mark := auditWatermark(e.ctx, t, e)
 
 	cause := errors.New("the accounting source refused the read")
 	if err := e.store.RecordSyncFailure(e.ctx, cause); !errors.Is(err, cause) {
@@ -747,7 +700,7 @@ func TestAFailedSyncMarksOnlyTheConnectionItRanAgainst(t *testing.T) {
 	if status := e.connectionStatus(t, other); status != "active" {
 		t.Errorf("the bystander connection reads %q after another source failed, want \"active\"", status)
 	}
-	if got := auditRowsByEntity(e.ctx, t, e, mark)[entityConnection]; got != 1 {
+	if got := auditRowsByEntity(e.ctx, t, e)[entityConnection]; got != 1 {
 		t.Errorf("%d connection audit rows for one failed source, want 1", got)
 	}
 }
@@ -792,17 +745,14 @@ func (e *financeEnv) connectionStatus(t *testing.T, id ids.UUID) string {
 // not left to a reader to notice years later.
 func TestTheMirrorsAuditRowsNameNoGrantTheSweepDoesNotHold(t *testing.T) {
 	e := setupFinance(t)
-	mark := auditWatermark(e.ctx, t, e)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatalf("sync: %v", err)
 	}
 	var rules []string
-	// Fenced to this pass: an administrator's connect or link is a finance
-	// audit row too, and it does name the grant that admitted it.
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `
 			SELECT array_agg(DISTINCT authorization_rule) FROM audit_log
-			 WHERE entity_type LIKE 'finance\_%' AND id > $1`, mark).Scan(&rules)
+			 WHERE entity_type LIKE 'finance\_%'`).Scan(&rules)
 	}); err != nil {
 		t.Fatalf("reading the mirror's authorization rules: %v", err)
 	}
@@ -814,7 +764,7 @@ func TestTheMirrorsAuditRowsNameNoGrantTheSweepDoesNotHold(t *testing.T) {
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `
 			SELECT array_agg(DISTINCT actor_type) FROM audit_log
-			 WHERE entity_type LIKE 'finance\_%' AND id > $1`, mark).Scan(&actorTypes)
+			 WHERE entity_type LIKE 'finance\_%'`).Scan(&actorTypes)
 	}); err != nil {
 		t.Fatalf("reading the mirror's actor types: %v", err)
 	}

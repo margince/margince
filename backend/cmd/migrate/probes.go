@@ -98,3 +98,21 @@ func rotateSetupToken(ctx context.Context, dsn string, stdout io.Writer) error {
 	}
 	return nil
 }
+
+// testCopiesOf lists the per-test copies testdb named <name>_<pid>_<n>. A test
+// drops its own copy when it ends, so one still here is from a killed process.
+func testCopiesOf(ctx context.Context, conn *pgx.Conn, name string) ([]string, error) {
+	rows, err := conn.Query(ctx, `
+		SELECT datname FROM pg_database
+		 WHERE left(datname, length($1) + 1) = $1 || '_'
+		   AND substr(datname, length($1) + 2) ~ '^[0-9]+_[0-9]+$'
+		 ORDER BY datname`, name)
+	if err != nil {
+		return nil, fmt.Errorf("migrate drop-db: listing the test copies of %q: %w", name, err)
+	}
+	copies, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return nil, fmt.Errorf("migrate drop-db: listing the test copies of %q: %w", name, err)
+	}
+	return copies, nil
+}

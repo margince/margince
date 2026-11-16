@@ -346,20 +346,11 @@ func recreateDB(ctx context.Context, conn *pgx.Conn, name, template string, stdo
 	if _, err := conn.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
 		return fmt.Errorf("migrate recreate-db: dropping %q: %w", name, err)
 	}
-	create := "CREATE DATABASE " + pgx.Identifier{name}.Sanitize()
 	if template != "" {
-		// FILE_COPY forces a checkpoint, which costs nothing when the server does not sync to disk.
-		var unsynced bool
-		if err := conn.QueryRow(ctx, "SELECT current_setting('fsync') = 'off'").Scan(&unsynced); err != nil {
-			return fmt.Errorf("migrate recreate-db: reading fsync: %w", err)
+		if err := dbmigrate.CopyDatabase(ctx, conn, name, template); err != nil {
+			return fmt.Errorf("migrate recreate-db: %w", err)
 		}
-		strategy := "WAL_LOG"
-		if unsynced {
-			strategy = "FILE_COPY"
-		}
-		create += " TEMPLATE " + pgx.Identifier{template}.Sanitize() + " STRATEGY " + strategy
-	}
-	if _, err := conn.Exec(ctx, create); err != nil {
+	} else if _, err := conn.Exec(ctx, "CREATE DATABASE "+pgx.Identifier{name}.Sanitize()); err != nil {
 		return fmt.Errorf("migrate recreate-db: creating %q: %w", name, err)
 	}
 	if _, err := fmt.Fprintf(stdout, "recreated %s\n", name); err != nil {
@@ -372,7 +363,8 @@ func recreateDB(ctx context.Context, conn *pgx.Conn, name, template string, stdo
 // lingering sessions: the verb tears down throwaway clones right after a
 // test process exits, when its backends may not have noticed yet, and a
 // teardown that can lose that race would fail flakily. Dropping an absent
-// database succeeds (IF EXISTS), so teardown paths need no pre-check.
+// database succeeds (IF EXISTS), so teardown paths need no pre-check. It also
+// drops the test copies a killed process left (testCopiesOf).
 func dropDB(ctx context.Context, conn *pgx.Conn, name string, stdout io.Writer) error {
 	if name == "" {
 		return errors.New("migrate drop-db: --name is required")
@@ -380,8 +372,19 @@ func dropDB(ctx context.Context, conn *pgx.Conn, name string, stdout io.Writer) 
 	if err := fitsIdentifier(ctx, conn, "migrate drop-db: --name", name); err != nil {
 		return err
 	}
-	if _, err := conn.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{name}.Sanitize()+" WITH (FORCE)"); err != nil {
-		return fmt.Errorf("migrate drop-db: dropping %q: %w", name, err)
+	leaked, err := testCopiesOf(ctx, conn, name)
+	if err != nil {
+		return err
+	}
+	for _, copied := range append(leaked, name) {
+		if _, err := conn.Exec(ctx, "DROP DATABASE IF EXISTS "+pgx.Identifier{copied}.Sanitize()+" WITH (FORCE)"); err != nil {
+			return fmt.Errorf("migrate drop-db: dropping %q: %w", copied, err)
+		}
+	}
+	for _, copied := range leaked {
+		if _, err := fmt.Fprintf(stdout, "dropped leaked test copy %s\n", copied); err != nil {
+			return fmt.Errorf("migrate drop-db: writing the confirmation: %w", err)
+		}
 	}
 	if _, err := fmt.Fprintf(stdout, "dropped %s\n", name); err != nil {
 		return fmt.Errorf("migrate drop-db: writing the confirmation: %w", err)

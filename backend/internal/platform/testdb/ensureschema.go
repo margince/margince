@@ -34,6 +34,10 @@ func EnsureSchema(ctx context.Context, owner *pgx.Conn) error {
 	// A suite merges and erases on a test database without booting; one that
 	// needs the declared tables installs them itself (integration.Setup).
 	sweepreach.InstallForTestDatabase()
+	// The template was proved at head before this copy of it was handed out.
+	if isCopy(owner.Config().Database) {
+		return nil
+	}
 	migrateOnce.Do(func() {
 		reusable, reason, err := reusableClone(ctx, owner)
 		if err != nil {

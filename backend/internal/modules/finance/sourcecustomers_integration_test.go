@@ -138,8 +138,8 @@ func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 	a.syncDirectory(t)
 	ctx := a.admin()
 	beta := a.seedCompany(t, "Beta GmbH", nil)
-	mark := auditWatermark(a.ctx, t, a.financeEnv)
-	linkAudits := func() int { return auditRowsByEntity(a.ctx, t, a.financeEnv, mark)[entityCustomerLink] }
+	synced := auditRowsByEntity(a.ctx, t, a.financeEnv)[entityCustomerLink]
+	linkAudits := func() int { return auditRowsByEntity(a.ctx, t, a.financeEnv)[entityCustomerLink] - synced }
 
 	rec := a.link(ctx, "BETA-02", beta)
 	expect(t, rec, http.StatusOK, "")

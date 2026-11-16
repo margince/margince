@@ -626,8 +626,9 @@ test-integration-serial: composition ## Escape hatch: the old sequential lane, a
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && ensure_template'
 	@log=$$(mktemp); st=$$(mktemp); manifest=$$(mktemp); \
 	trap 'rm -f "$$manifest"' EXIT; \
+	template=$$(cd .. && bash -c 'source scripts/lib-testdb.sh && echo "$$TEMPLATE_NAME"') || exit $$?; \
 	$(GOWORK_COMPOSED) $(GO) run ./cmd/migrate extension-manifest >"$$manifest" || exit $$?; \
-	{ $(GOWORK_COMPOSED) env MARGINCE_TEST_EXTENSION_MANIFEST="$$manifest" $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
+	{ $(GOWORK_COMPOSED) env MARGINCE_TEST_EXTENSION_MANIFEST="$$manifest" MARGINCE_TEST_TEMPLATE="$$template" $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
 	code=$$(cat "$$st"); rm -f "$$st"; \
 	if [ "$$code" -ne 0 ]; then rm -f "$$log"; exit "$$code"; fi; \
 	if grep -q -- '--- SKIP' "$$log"; then \
