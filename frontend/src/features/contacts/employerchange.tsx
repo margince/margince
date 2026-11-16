@@ -74,7 +74,7 @@ export function EmployerValue({
       {adding.modal}
       {employer && (
         <ChangeEmployerModal
-          key={changing.seq}
+          key={`change-employer-${changing.seq}`}
           open={changing.open}
           onClose={() => setChanging((prior) => ({ ...prior, open: false }))}
           contactId={contactId}

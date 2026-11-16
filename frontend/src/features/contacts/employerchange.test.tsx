@@ -257,6 +257,17 @@ describe("the About column's employer", () => {
     ).toHaveProperty("checked", true);
   });
 
+  it("keys its two dialogs apart, so React draws each once", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    mount(viewWith([brandt]));
+    await screen.findByRole("button", { name: "Change Employer" });
+    const duplicateKeys = errors.mock.calls.filter((call) =>
+      String(call[0]).includes("same key"),
+    );
+    errors.mockRestore();
+    expect(duplicateKeys).toEqual([]);
+  });
+
   it("stays read-only for a reader who cannot change the contact", async () => {
     mount(viewWith([brandt], false));
     await screen.findByText("Brandt Automotive GmbH");
