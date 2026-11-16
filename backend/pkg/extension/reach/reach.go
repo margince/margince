@@ -82,6 +82,10 @@ type Table struct {
 	// writes an audit row for each row it moves.
 	Links []Link
 
+	// Entity is the audit entity a row is recorded under, when it is not the
+	// table's name. The merge and the erasure audit each row they touch under it.
+	Entity string
+
 	// Erase are the columns the erasure clears on every row a contact link
 	// names the subject in. List every column a CHECK constraint ties to
 	// another, or the statement fails and the whole erasure rolls back. A
@@ -97,6 +101,9 @@ var identifier = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 func (t Table) Validate() error {
 	if !identifier.MatchString(t.Name) || len(t.Name) > 63 {
 		return fmt.Errorf("reach table %q is not an identifier", t.Name)
+	}
+	if t.Entity != "" && !identifier.MatchString(t.Entity) {
+		return fmt.Errorf("reach table %q: audit entity %q is not an identifier", t.Name, t.Entity)
 	}
 	if len(t.Links) == 0 {
 		return fmt.Errorf("reach table %q declares no link, so neither the merge nor the erasure can find its rows", t.Name)

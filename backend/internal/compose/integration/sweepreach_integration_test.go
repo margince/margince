@@ -143,6 +143,8 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 	withUnitNoteTable(t)
 	src, tgt := seedMergePair(t, e, "Same id")
 	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (record_type, record_id, body) VALUES ('company', $1, 'a'), ('contact', $1, 'b')`, src)
+	const movedAudits = `SELECT count(*) FROM audit_log a JOIN ext.ext_reachtest_note n ON n.id = a.entity_id
+		WHERE a.entity_type = 'ext_reachtest_note' AND n.record_type = $1 AND a.before->>'record_id' = $2`
 
 	if _, err := e.Contacts.MergeCompany(e.Admin(), src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
@@ -160,6 +162,12 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 	} {
 		if n := e.WsCount(t, naming, c.kind, c.record); n != c.want {
 			t.Errorf("%d %s-kind unit notes name %s, want %d", n, c.kind, c.record, c.want)
+		}
+	}
+	// Only the company-kind row moved, so only it records the move.
+	for kind, want := range map[string]int{"company": 1, "contact": 0} {
+		if n := e.WsCount(t, movedAudits, kind, src.UUID.String()); n != want {
+			t.Errorf("the %s-kind unit note has %d move audit row(s), want %d", kind, n, want)
 		}
 	}
 }

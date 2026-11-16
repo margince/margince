@@ -75,11 +75,18 @@ func moveKindIDSingles(ctx context.Context, tx pgx.Tx, entityType string, source
 	if err != nil {
 		return err
 	}
+	return auditDeclaredMoves(ctx, tx, relinked, sourceID, targetID)
+}
+
+// auditDeclaredMoves writes one audit row for each row the declared relink
+// moved, from the retired record to the survivor. The merge's own event is
+// what a subscriber acts on.
+func auditDeclaredMoves(ctx context.Context, tx pgx.Tx, relinked []sweepreach.Relinked, sourceID, targetID ids.UUID) error {
 	for _, moved := range relinked {
 		before, after := map[string]any{moved.Column: sourceID}, map[string]any{moved.Column: targetID}
 		for _, row := range moved.Rows {
-			if _, err := storekit.Audit(ctx, tx, "update", moved.Table, row, before, after); err != nil {
-				return fmt.Errorf("audit a %s row moving to the merge survivor: %w", moved.Table, err)
+			if _, err := storekit.Audit(ctx, tx, "update", moved.Entity, row, before, after); err != nil {
+				return fmt.Errorf("audit a %s moving to the merge survivor: %w", moved.Entity, err)
 			}
 		}
 	}

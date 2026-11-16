@@ -89,6 +89,9 @@ func Tables() ([]Owned, error) {
 	return slices.Clone(installed.tables), nil
 }
 
+// entity is the audit entity a row of the table is recorded under.
+func (o Owned) entity() string { return cmp.Or(o.Table.Entity, o.Table.Name) }
+
 func (o Owned) qualified() string {
 	if o.Schema == "" {
 		return pgx.Identifier{o.Table.Name}.Sanitize()
@@ -96,10 +99,11 @@ func (o Owned) qualified() string {
 	return pgx.Identifier{o.Schema, o.Table.Name}.Sanitize()
 }
 
-// Relinked is one declared column the merge moved and the rows it moved there.
+// Relinked is one declared column the merge moved, the audit entity of its
+// table, and the rows it moved there.
 type Relinked struct {
-	Table, Column string
-	Rows          []ids.UUID
+	Entity, Column string
+	Rows           []ids.UUID
 }
 
 // Relink moves every declared column holding the retired record's id onto the
@@ -133,7 +137,7 @@ func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target 
 				return nil, fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
 			}
 			if len(moved) > 0 {
-				out = append(out, Relinked{Table: o.Table.Name, Column: l.Column, Rows: moved})
+				out = append(out, Relinked{Entity: o.entity(), Column: l.Column, Rows: moved})
 			}
 		}
 	}
@@ -182,10 +186,11 @@ func MovedColumns(record reach.Record) (map[Column]Moved, error) {
 	return moved, nil
 }
 
-// Cleared is one table the erasure wrote and the rows it cleared there.
+// Cleared is the audit entity of one table the erasure wrote, and the rows it
+// cleared there.
 type Cleared struct {
-	Table string
-	Rows  []ids.UUID
+	Entity string
+	Rows   []ids.UUID
 }
 
 // Erase clears the declared columns on every row a contact link names the
@@ -210,7 +215,7 @@ func Erase(ctx context.Context, tx pgx.Tx, subject ids.UUID, tombstone string) (
 		if err != nil {
 			return nil, fmt.Errorf("read %s's cleared %s rows: %w", o.Owner, o.Table.Name, err)
 		}
-		out = append(out, Cleared{Table: o.Table.Name, Rows: cleared})
+		out = append(out, Cleared{Entity: o.entity(), Rows: cleared})
 	}
 	return out, nil
 }
