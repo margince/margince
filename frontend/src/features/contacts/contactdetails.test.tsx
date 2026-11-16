@@ -24,10 +24,7 @@ import { ContactDetails, useContactAboutSections } from "./contactdetails";
 
 afterEach(cleanup);
 const contact = { ...view.contact, version: 3, title: "Director" };
-function mount(
-  patch: (body: unknown, request?: Request) => Response,
-  current = contact,
-) {
+function mount(patch: (body: unknown) => Response, current = contact) {
   installFetchStub({
     "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
     "PATCH /contacts/p-1": patch,

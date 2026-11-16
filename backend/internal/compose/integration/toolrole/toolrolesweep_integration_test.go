@@ -6,6 +6,7 @@
 package toolrole
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -45,7 +46,18 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	}
 	seats := roleSeats(t, d.E, roles)
 	swept := make([][]sweptCall, len(seats))
-	eachSeat(t, "roles", seats, func(t *testing.T, i int, seat roleSeat) {
+	control := slices.IndexFunc(seats, func(seat roleSeat) bool { return seat.role.Key == "admin" })
+	if control < 0 {
+		t.Fatal("the seeded roles have no admin control")
+	}
+	// Other seats mutate this workspace, so the control's recorded checks must
+	// be measured before their progress can change which records its calls read.
+	swept[control] = sweepSeat(t, seats[control], recorded, calls, elsewhere)
+	others := slices.Delete(slices.Clone(seats), control, control+1)
+	eachSeat(t, "roles", others, func(t *testing.T, i int, seat roleSeat) {
+		if i >= control {
+			i++
+		}
 		swept[i] = sweepSeat(t, seat, recorded, calls, elsewhere)
 	})
 	if t.Failed() {

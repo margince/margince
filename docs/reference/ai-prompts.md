@@ -7323,6 +7323,40 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 {
   "additionalProperties": false,
   "properties": {
+    "company_profile": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "confidence": {
+            "type": "number"
+          },
+          "field": {
+            "type": "string"
+          },
+          "source_lines": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "speaker_ref": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "speaker_ref",
+          "field",
+          "value",
+          "source_lines",
+          "confidence"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
     "meeting_summary": {
       "additionalProperties": false,
       "properties": {
@@ -7463,7 +7497,8 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
   },
   "required": [
     "proposals",
-    "meeting_summary"
+    "meeting_summary",
+    "company_profile"
   ],
   "type": "object"
 }

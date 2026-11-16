@@ -453,6 +453,7 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 	return slices.Concat(
 		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
+		periodicFor(cfg, MeetingProfileRetractSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
 		periodicFor(cfg, InitiativeEnrolmentSweepArgs{}),

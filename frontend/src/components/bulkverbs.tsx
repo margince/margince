@@ -10,7 +10,7 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
-import { mayOwnRecords } from "./assigneepicker";
+import { useRecordOwnerOptions } from "./assigneepicker";
 import {
   BulkChangeDialog,
   type BulkChangeRequest,
@@ -24,7 +24,6 @@ import { TaskVerb } from "./bulktask";
 import {
   RosterFailedLine,
   RosterPartialNote,
-  useRoster,
   useRosterPartial,
 } from "./entityref";
 
@@ -67,7 +66,7 @@ export function BulkVerbs({
   const { locale } = useLocale();
   const [ownerId, setOwnerId] = useState("");
   const [request, setRequest] = useState<BulkChangeRequest | null>(null);
-  const roster = useRoster("user", true);
+  const { options: ownerOptions, roster } = useRecordOwnerOptions();
   const rosterPartial = useRosterPartial("user", true);
   const partialNoteId = useId();
 
@@ -113,10 +112,7 @@ export function BulkVerbs({
         onChange={setOwnerId}
         // The caveat sits last in the row (below), so the picker names it.
         aria-describedby={rosterPartial ? partialNoteId : undefined}
-        options={(roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
-          value: entry.id,
-          label: "display_name" in entry ? entry.display_name : entry.id,
-        }))}
+        options={ownerOptions}
       />
       <Button
         variant="primary"

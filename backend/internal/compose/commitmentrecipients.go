@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -26,7 +27,7 @@ const commitmentRecipientsKey = "recipient_refs"
 func validateCommitmentRecipients(refs []string, parties []commitmentParty) string {
 	seen := map[string]bool{}
 	for _, ref := range refs {
-		party, found := referencedPromiser(ref, parties)
+		party, found := commitmentparty.Referenced(ref, parties)
 		if !found || party.Contact == nil || seen[ref] {
 			return "a promise's recipients must be distinct verified contact participants"
 		}
@@ -45,7 +46,7 @@ func attributeCommitmentRecipients(c *Commitment, refs []string, parties []commi
 	}
 	c.PromisedTo = nil
 	for _, ref := range refs {
-		party, found := referencedPromiser(ref, parties)
+		party, found := commitmentparty.Referenced(ref, parties)
 		if !found || party.Contact == nil {
 			continue
 		}

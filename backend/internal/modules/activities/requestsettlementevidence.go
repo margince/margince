@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // RequestSettlementActor is the principal the settlement pass writes as. A
@@ -134,3 +135,19 @@ func SettlementThreadSQL(row, request string) string {
 func tiedContextSQL(row, request string) string {
 	return `(` + row + `.occurred_at = ` + request + `.occurred_at AND ` + CapturedInboundSQL(row) + `)`
 }
+
+// settlementEvidenceCompleteSQL keeps a request off the candidate list when its
+// evidence holds a body that was not read in full. The settlement pass would
+// refuse to judge it. A refused request left on the list comes back first on
+// every pass, so a few of them would starve every other request. It covers at
+// least what the pass reads. That is the request, its later thread messages
+// with the same correspondent, and the answers off its thread.
+var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
+ AND NOT EXISTS (SELECT 1 FROM activity later
+   WHERE later.thread_key = a.thread_key AND later.kind = a.kind
+     AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
+     AND ` + occurredday.BegunSQL("later", "$1") + ` AND ` + SettlementThreadSQL("later", "a") + ` AND later.id <> a.id
+     AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
+ AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
+   JOIN activity answer ON answer.id = off.id
+   WHERE NOT ` + provenance.MailBodyCompleteSQL("answer") + `)`

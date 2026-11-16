@@ -156,7 +156,7 @@ it("stays open when the reader clicks inside the panel", async () => {
   expect(screen.getByRole("link", { name: "The three invoices" })).toBeTruthy();
 });
 
-function SelectInPopover() {
+function SelectInPopover({ long = false }: { long?: boolean }) {
   const [colleague, setColleague] = useState("");
   return (
     <Popover label="Access">
@@ -166,6 +166,12 @@ function SelectInPopover() {
         options={[
           { value: "rep-one", label: "Rep One" },
           { value: "rep-two", label: "Rep Two" },
+          ...(long
+            ? Array.from({ length: 12 }, (_, i) => ({
+                value: `rep-${i}`,
+                label: `Colleague ${i}`,
+              }))
+            : []),
         ]}
         value={colleague}
         onChange={setColleague}
@@ -184,6 +190,20 @@ it("keeps the panel and the pick when an option of a select inside it is clicked
 
   await user.click(screen.getByRole("option", { name: "Rep Two" }));
 
+  expect(
+    screen.getByRole("combobox", { name: "Hand over to" }).textContent,
+  ).toContain("Rep Two");
+});
+
+it("keeps the parent panel open when the long select filter is clicked", async () => {
+  const user = userEvent.setup();
+  render(<SelectInPopover long />);
+  await user.click(screen.getByRole("button", { name: "Access" }));
+  await user.click(screen.getByRole("combobox", { name: "Hand over to" }));
+  const filter = screen.getByRole("combobox", { name: "Filter the list" });
+  await user.click(filter);
+  await user.type(filter, "Rep Two");
+  await user.click(screen.getByRole("option", { name: "Rep Two" }));
   expect(
     screen.getByRole("combobox", { name: "Hand over to" }).textContent,
   ).toContain("Rep Two");

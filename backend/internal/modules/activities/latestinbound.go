@@ -129,13 +129,17 @@ func markLatestInboundTasks(ctx context.Context, tx pgx.Tx, items []crmcontracts
 	args := []any{}
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	in, instant := arg(wanted), fmt.Sprintf("$%d", arg(now))
+	ownDomains, err := bindColleagueDomains(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
 	// A task that is no longer current work stands for nothing.
 	current := storekit.CurrentTaskClause("task", now, "'[]'::jsonb", arg)
 	rows, err := tx.Query(ctx, storekit.SQLf(`SELECT a.id,
  %s OR EXISTS (SELECT 1 FROM activity task WHERE task.kind = 'task'
    AND task.source_activity_id = a.id AND NOT task.is_done AND task.archived_at IS NULL AND %s),
  coalesce((%s) AND %s, false)
- FROM activity a WHERE a.id = ANY($%d)`, openRequestReminderSQL, current, reviewableRequestSQL(instant),
+ FROM activity a WHERE a.id = ANY($%d)`, openRequestReminderSQL, current, reviewableRequestSQL(instant, ownDomains),
 		occurredday.BegunSQL("a", instant), in), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading what stands for the latest inbound: %w", err)

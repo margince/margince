@@ -48,7 +48,7 @@ export const emptyPage = {
 // confusing error state.
 export type RouteMap = Record<
   string,
-  (body: unknown) => Response | Promise<Response>
+  (body: unknown, url: URL) => Response | Promise<Response>
 >;
 
 // The session probe is the ONE route the fallback must not answer, and the
@@ -155,15 +155,7 @@ export function stubWithSession(
 // "METHOD /path", with the /v1 prefix stripped so a RouteMap key reads as the
 // contract path. The base is a placeholder: a relative request URL needs one,
 // and no story ever reaches a host.
-function routeKey(
-  input: RequestInfo | URL,
-  request: Request | null,
-  method: string,
-): string {
-  const url = new URL(
-    request ? request.url : String(input),
-    "https://storybook.local",
-  );
+function routeKey(url: URL, method: string): string {
   return `${method} ${url.pathname.replace(/^\/v1/, "")}`;
 }
 
@@ -206,7 +198,11 @@ export function installFetchStub(
   ): Promise<Response> => {
     const request = input instanceof Request ? input : null;
     const method = request?.method ?? init?.method ?? "GET";
-    const key = routeKey(input, request, method);
+    const url = new URL(
+      request ? request.url : String(input),
+      "https://storybook.local",
+    );
+    const key = routeKey(url, method);
     const handler = routes[key];
     if (handler) {
       // A GET handler is invoked WITHOUT awaiting first. The await is not
@@ -214,8 +210,8 @@ export function installFetchStub(
       // captures a deferred resolver inside its handler then races the
       // assertion that resolves it.
       return method === "GET"
-        ? handler(null)
-        : handler(await requestBody(request, init, method));
+        ? handler(null, url)
+        : handler(await requestBody(request, init, method), url);
     }
     return key === SESSION_PROBE ? unroutedSessionProbe() : fallback();
   };

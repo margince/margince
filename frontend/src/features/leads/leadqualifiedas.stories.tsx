@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -17,6 +18,7 @@ const meta: Meta<typeof LeadQualifyPreviewCard> = {
   decorators: [
     (Story) => {
       installFetchStub({
+        ...recordNamesRoutes({ contact: { "c-1": "Dana Buyer" } }),
         "GET /contacts/c-1": () =>
           jsonResponse({ id: "c-1", full_name: "Dana Buyer" }),
       });

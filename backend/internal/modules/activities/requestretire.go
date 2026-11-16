@@ -32,11 +32,8 @@ func (s *Store) retireAgedReminders(ctx context.Context, tx pgx.Tx, asOf time.Ti
 // retireNeverOwedReminders archives the reminders this pass filed for a
 // calendar invitation no verdict can make owed: a colleague's, or one whose
 // meeting has begun. It settles reminders filed before that rule existed too.
-// An invitation from one of our own domains counts as a colleague's, as in the
-// Worklist. The seat stamp is missing on older mail and on non-seat senders.
 func (s *Store) retireNeverOwedReminders(ctx context.Context, tx pgx.Tx, asOf time.Time, ownDomains []string) error {
-	never := `(` + invitationNeverOwedSQL("@asOf::timestamptz") + ` OR (` + calendarInvitationSQL + ` AND ` +
-		ownDomainSenderAtSQL("a", "@ownDomains") + `))`
+	never := invitationNeverOwedSQL("@asOf::timestamptz", "@ownDomains")
 	return retirePristineRemindersTx(ctx, tx, asOf, never,
 		pgx.NamedArgs{"asOf": asOf, "ownDomains": ownDomains}, "for an invitation")
 }

@@ -81,6 +81,7 @@ it("saves the full selected graph layout and context", async () => {
         layout: layoutOf(reportingStoryEvaluation.selection),
       },
     }),
+    expect.any(URL),
   );
 });
 it("draws a saved layout's sections under their titles", async () => {

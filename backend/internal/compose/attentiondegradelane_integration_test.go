@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -102,7 +103,7 @@ func TestAStuckWaitingLaneIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *test
 // the page's snapshot, as the visibility clause the list and count share can.
 // The list always runs; the count runs only when the page is not complete.
 type stuckSuggestions struct {
-	attentionDealSuggestions
+	attention.DealSuggestions
 	pool *pgxpool.Pool
 }
 
@@ -116,7 +117,7 @@ func (s stuckSuggestions) OpenSuggestions(
 	if err != nil {
 		return nil, false, err
 	}
-	return s.attentionDealSuggestions.OpenSuggestions(ctx, owners, limit)
+	return s.DealSuggestions.OpenSuggestions(ctx, owners, limit)
 }
 
 func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {
@@ -126,8 +127,8 @@ func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *t
 	db := InstallationDB(e.Pool)
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now).
 		WithDealSuggestions(stuckSuggestions{
-			store: deals.NewStore(db, DealsInstallation()),
-			pool:  e.Pool,
+			DealSuggestions: suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())},
+			pool:            e.Pool,
 		}).
 		WithSnapshots(shortLaneBudget{attentionSnapshots{pool: e.Pool}})
 

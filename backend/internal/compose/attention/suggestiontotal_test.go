@@ -18,8 +18,8 @@ func suggestionItems(count int, source crmcontracts.AttentionItemSource) []crmco
 	return rows
 }
 
-// Scrolling ends at the ranked rows for suggestions, so a cut suggestion lane
-// leaves the decisions category a floor, though the store counted every one.
+// An unbound suggestion tail ends at the ranked rows. A cut lane therefore
+// leaves the decisions total a floor despite the store's count.
 func TestACutSuggestionLaneLeavesTheDecisionsAFloor(t *testing.T) {
 	for _, source := range []crmcontracts.AttentionItemSource{sourceDealSuggestion, sourceTagSuggestion} {
 		t.Run(string(source), func(t *testing.T) {
