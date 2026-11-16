@@ -251,8 +251,8 @@ const requestFirstCountry = "xr"
 var registerRequestFirstCountry sync.Once
 
 // TestARepsBookingCannotAskForConsentNobodyRequested. A signed-in user's booking
-// is that user asking. Under that rule its newsletter tick is refused like the
-// double-opt-in door, and no link is minted.
+// is that user asking, so under that rule its newsletter tick mints no link. As
+// with every other refused question, the meeting is still booked.
 func TestARepsBookingCannotAskForConsentNobodyRequested(t *testing.T) {
 	registerRequestFirstCountry.Do(func() {
 		messagingrules.Register(messagingrules.Rules{
@@ -286,16 +286,21 @@ func TestARepsBookingCannotAskForConsentNobodyRequested(t *testing.T) {
 				"wording": "Send me your newsletter.",
 			},
 		},
-	}), nil, nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("a rep's newsletter tick for a contact who never asked → %d, want 422", status)
+	}), nil, nil); status != http.StatusCreated {
+		t.Fatalf("a rep's booking with a tick for a contact who never asked → %d, want 201", status)
 	}
-	var tokens int
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM confirm_token WHERE contact_id = $1 AND purpose_id = $2`,
-		contact.ID, marketing).Scan(&tokens); err != nil {
+	var meetings, tokens, outbound int
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM activity WHERE kind = 'meeting'),
+		       (SELECT count(*) FROM confirm_token WHERE contact_id = $1 AND purpose_id = $2),
+		       (SELECT count(*) FROM comms_outbound WHERE sender_kind = 'controller')`,
+		contact.ID, marketing).Scan(&meetings, &tokens, &outbound); err != nil {
 		t.Fatal(err)
 	}
-	if tokens != 0 {
-		t.Errorf("%d confirmation token(s) minted for a contact who never asked, want 0", tokens)
+	if meetings != 1 {
+		t.Errorf("%d meeting(s) booked, want 1: a refused question must not cost the meeting", meetings)
+	}
+	if tokens != 0 || outbound != 0 {
+		t.Errorf("%d token(s) and %d controller mail(s) for a contact who never asked, want none", tokens, outbound)
 	}
 }
