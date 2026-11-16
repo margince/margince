@@ -24,5 +24,6 @@ func RefusalCodes() []string {
 		ReasonMarketingConsentRequired,
 		ReasonMarketingPermissionRequired,
 		ReasonDealNotRequested,
+		ReasonLawfulBasisUnconfirmed,
 	}
 }

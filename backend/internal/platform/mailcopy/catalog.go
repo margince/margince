@@ -341,6 +341,14 @@ func recordNoticeLines(line writeLine) {
 		"No reply or further action is needed.",
 		"Sie müssen nichts weiter tun und nicht antworten.",
 		"Quý khách không cần trả lời hay thực hiện thêm thao tác nào.")
+	line(func(c *Copy) *string { return &c.RequestAckSubject },
+		"We received your request about your personal data",
+		"Ihre Anfrage zu Ihren personenbezogenen Daten ist eingegangen",
+		"Xác nhận đã nhận yêu cầu về dữ liệu cá nhân")
+	line(func(c *Copy) *string { return &c.RequestAckBody },
+		"We received your request about your personal data at %[1]s (%[3]s). We will carry it out by %[2]s (%[3]s). If we need more time, we will tell you why.",
+		"Ihre Anfrage zu Ihren personenbezogenen Daten ist um %[1]s (%[3]s) bei uns eingegangen. Wir setzen sie bis %[2]s (%[3]s) um. Brauchen wir mehr Zeit, teilen wir Ihnen die Gründe mit.",
+		"Chúng tôi đã nhận được yêu cầu về dữ liệu cá nhân của quý khách lúc %[1]s (giờ Việt Nam). Chúng tôi sẽ thực hiện yêu cầu trước %[2]s (giờ Việt Nam). Nếu cần thêm thời gian, chúng tôi sẽ báo lý do cho quý khách.")
 	line(func(c *Copy) *string { return &c.RestrictionLiftSubject },
 		"The restriction on your personal data will be lifted",
 		"Die Einschränkung der Verarbeitung Ihrer Daten wird aufgehoben",

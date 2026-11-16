@@ -62,6 +62,9 @@ type Store struct {
 	// missedReceipts tells the controller about a required opt-out receipt
 	// that will not go out on its own. Nil leaves only the log line.
 	missedReceipts MissedReceipts
+	// requestTasks writes the task a request from a subject owes
+	// (requesttask.go).
+	requestTasks RequestTasks
 }
 
 // NewStore binds the store to the pool every read and write runs through.

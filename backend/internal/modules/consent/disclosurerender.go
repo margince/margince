@@ -97,9 +97,10 @@ func (s *Store) Disclosures(
 // installation can say it.
 //
 // Two selectors meet here. Who the controller is and who answers about the
-// data are data protection, owed under the sending entity's pack. How to
-// object and who advertises are marketing rules, owed under each recipient's
-// pack. One body goes to all recipients, so it carries every recipient's.
+// data are data protection, owed under the sending entity's pack. A recipient
+// whose pack follows the recipient owes them too. How to object and who
+// advertises are marketing rules, owed under each recipient's pack. One body
+// goes to all recipients, so it carries every recipient's.
 //
 // Answers an empty slice where no pack applies. That is not a claim that
 // nothing is owed; it is the baseline, and the caller treats it the same way.
@@ -125,6 +126,9 @@ func (s *Store) DisclosuresFor(
 		}
 		if rules, _, found := applicableRules(country.Code); found {
 			owed = appendOwed(owed, rules.Disclosures, false)
+		}
+		if rules, follows := recipientDataProtection(country.Code); follows {
+			owed = appendOwed(owed, rules.Disclosures, true)
 		}
 	}
 	if len(owed) == 0 {

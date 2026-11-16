@@ -10703,6 +10703,41 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /lawful-basis-confirmations:
+    post:
+      tags: [Communication]
+      operationId: confirmSendWithoutLawfulBasis
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # a user's own answer to a legal warning; an agent's would record a confirmation nobody gave
+      summary: Record that a user read the no-lawful-basis warning and chose to send anyway.
+      description: |
+        A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
+        legitimate-interest basis and the record holds no basis that pack accepts for the use. This
+        records, in the audit log, that the signed-in user read the warning and chose to send, and
+        leaves one confirmation per record. Staging spends it on the first send by this user, or by
+        an agent acting for them, to that record within 15 minutes. A send with none is refused as
+        `lawful_basis_unconfirmed`, which a recorded human decision may still direct.
+
+        It needs the authority to send (`activity` at `create`) and read access to each record. A
+        record the warning does not apply to is left out of `confirmed`. A retry while a
+        confirmation is open records nothing new.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LawfulBasisConfirmationRequest' }
+      responses:
+        '200':
+          description: The addresses whose warning this user confirmed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LawfulBasisConfirmation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /emails:sign-off:
     post:
       tags: [Activities]
@@ -61298,6 +61333,31 @@ components:
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
 
+    LawfulBasisConfirmationRequest:
+      type: object
+      required: [subjects]
+      additionalProperties: false
+      properties:
+        subjects:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: |
+            The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+            them. A pinned lead is named as the lead, never as a contact sharing its address.
+          items: { $ref: '#/components/schemas/CommunicationEvidenceSubject' }
+
+    LawfulBasisConfirmation:
+      type: object
+      required: [confirmed]
+      properties:
+        confirmed:
+          type: array
+          description: |
+            The records whose warning was confirmed by the signed-in user. Each confirmation waits
+            15 minutes for its send and is spent by the first send to that record.
+          items: { $ref: '#/components/schemas/CommunicationEvidenceSubject' }
+
     SendAuthorizationPreview:
       type: object
       required: [allowed, recipients]
@@ -61335,6 +61395,13 @@ components:
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
         address: { type: string, format: email }
+        lawful_basis_missing:
+          type: boolean
+          description: |
+            The recipient's country has no legitimate-interest basis, and the record holds neither
+            their consent nor an agreement with them. A privacy notice they were sent is neither.
+            Not a refusal: a surface shows a warning and records the sender's confirmation through
+            `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
         evidence_subject:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidenceSubject' }]
           description: |
@@ -75353,10 +75420,12 @@ components:
           type: array
           description: |
             The basis on record for each entry in `purposes`, at the same index: `consent` for a
-            purpose the reader agreed to, else the kind of a live communication basis.
+            purpose the reader agreed to, else the kind of a live communication basis. `none` says
+            no basis is recorded, for a reader whose country has no legitimate-interest basis and
+            whose record holds neither their consent nor an agreement with them.
           items:
             type: string
-            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement]
+            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement, none]
             x-extensible-enum: true
         data_categories:
           type: array
@@ -75402,6 +75471,14 @@ components:
             product seeds in its reader's language by its key, and shows the published name of any
             other.
           items: { type: string }
+        purpose_since:
+          type: array
+          description: |
+            When the reader gave the consent each entry in `purposes` rests on, at the same index.
+            Null for an entry whose basis is not consent.
+          items:
+            type: [string, 'null']
+            format: date-time
         rights:
           type: array
           description: |
