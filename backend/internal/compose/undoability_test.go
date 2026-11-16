@@ -377,6 +377,28 @@ func TestAMergedObjectFieldIsRestoredWithEveryKeyTheEntryWrote(t *testing.T) {
 	}
 }
 
+// A list the record held none of goes back as the empty list. That is how the
+// update says "none", and a null would read as a field it cannot clear.
+func TestAListTheRecordHeldNoneOfIsRestoredAsEmpty(t *testing.T) {
+	for _, tc := range []struct{ entity, key string }{
+		{"contact", "phones"}, {"contact", "emails"}, {"company", "domains"},
+	} {
+		t.Run(tc.entity+" "+tc.key, func(t *testing.T) {
+			patch, unspellable, err := filterImage(tc.entity,
+				json.RawMessage(`{"`+tc.key+`":null}`), json.RawMessage(`{"`+tc.key+`":[{"value":"x"}]}`))
+			if err != nil || len(unspellable) > 0 {
+				t.Fatalf("filter: unspellable %v, err %v", unspellable, err)
+			}
+			if string(patch[tc.key]) != "[]" {
+				t.Errorf("%s = %s, want []", tc.key, patch[tc.key])
+			}
+			if _, _, unclearable := splitNulls(tc.entity, patch); len(unclearable) > 0 {
+				t.Errorf("the list still reads as an unclearable null: %v", unclearable)
+			}
+		})
+	}
+}
+
 // Only the derived stamps are excluded from comparison here. WHICH keys are
 // comparable is decided by the row itself — a field kept in its own table is
 // absent from the row's jsonb and the query skips it — so this holds the one
