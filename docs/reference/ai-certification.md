@@ -1240,7 +1240,7 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | … best state `stale` | 4 |
 | … `absent` on every binding | 0 |
 | Scenarios in the corpus | 329 |
-| Committed records | 397 |
+| Committed records | 400 |
 | Bindings measured | 18 |
 
 #### Why the stale records went stale
@@ -1728,6 +1728,9 @@ trust the binding on. `make gen` writes those rows into
 
 | Site | Binding | State | Verdict | Serves | Runs | Kept | Kept wrong | Fallback rate | Fallbacks by reason | Served pass rate |
 |---|---|---|---|---|---:|---:|---:|---:|---|---:|
+| `capture_confidentiality_verdict/thread` | `gemini_decision · gemini-decision-1 · cloud_frontier` | `current` | `certified` | yes | 288 | 243 | 0 | 0.16 | `below_floor` 45 | 1.00 |
+| `capture_counterparty_verdict/verdict` | `gemini_decision · gemini-decision-1 · cloud_frontier` | `current` | `certified` | yes | 147 | 144 | 0 | 0.02 | `below_floor` 3 | 1.00 |
+| `site_triage/triage` | `gemini_decision · gemini-decision-1 · cloud_frontier` | `current` | `certified` | yes | 15 | 15 | 0 | 0.00 | - | 1.00 |
 | `site_triage/triage` | `jev_compatible · typesafe/jev-1.13 · cloud_frontier` | `current` | `certified` | yes | 15 | 15 | 0 | 0.00 | - | 1.00 |
 
 </details>
