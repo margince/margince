@@ -141,13 +141,16 @@ func bookMeetingFor(
 }
 
 // An empty day names the soonest booked customer meeting past it, skipping the
-// internal one and the cancelled one before it, with only the attendees the
+// internal ones and the cancelled one before it, with only the attendees the
 // reader may see in the room.
 func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testing.T) {
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
 	visible, hidden := horizonContacts(t, e)
 	bookOwnMeeting(t, e, "Team sync", now.Add(48*time.Hour), "")
+	// Linked to a record, but only a colleague is on it.
+	trustOwnDomain(t, e)
+	bookOwnMeeting(t, e, "One to one", now.Add(50*time.Hour), "", addressedContact(t, e, "Colleague Bea", "bea@"+colleagueTestDomain))
 	bookOwnMeeting(t, e, "Called off", now.Add(60*time.Hour), "canceled", visible)
 	// Booked by the colleague who owns the private buyer, onto Rep1's calendar.
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AccountRepPerms)

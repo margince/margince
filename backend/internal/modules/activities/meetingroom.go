@@ -19,6 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
@@ -105,7 +106,8 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 	// live human is a colleague. An address also held by a contact or a seat on
 	// this meeting is that attendee, not a second one. A contact whose email is
 	// the address a listed colleague attends by is that colleague, never a
-	// second entry; names alone never merge two attendees.
+	// second entry; names alone never merge two attendees. An address on a
+	// trusted own domain is a colleague without a seat, never an outside guest.
 	return fmt.Sprintf(`(SELECT dl.deal_id FROM activity_link dl
 		          JOIN deal d ON d.id = dl.deal_id AND d.archived_at IS NULL
 		         WHERE dl.activity_id = a.id AND (%[1]s) LIMIT 1),
@@ -130,8 +132,11 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 		                      AND ap.role IN (%[3]s) AND %[4]s) seats
 		             JOIN app_user u ON u.id = seats.user_id AND %[5]s
 		           UNION ALL
-		           SELECT 2, '`+roomAddress+`', NULL, addressed.name, addressed.address
+		           SELECT 2, CASE WHEN EXISTS (SELECT 1 FROM (%[8]s) own_domain(domain) WHERE %[9]s)
+		                          THEN '`+roomColleague+`' ELSE '`+roomAddress+`' END,
+		                  NULL, addressed.name, addressed.address
 		             FROM (SELECT DISTINCT ON (lower(ap.address)) lower(ap.address) AS address,
+		                          ap.address_domain_folded AS domain_folded,
 		                          COALESCE(NULLIF(btrim(ap.display_name), ''), ap.address) AS name
 		                     FROM activity_participant ap
 		                    WHERE ap.activity_id = a.id AND ap.contact_id IS NULL AND ap.user_id IS NULL
@@ -144,7 +149,8 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 		         ) room
 		       ), '[]'::json))`, dealScope, contactScope, storekit.MeetingAttendingRolesSQL,
 		auth.ParticipantStandsSQL("ap", "a"), workforce.LiveHumanSQL("u"),
-		auth.ParticipantStandsSQL("seat", "a"), workforce.LiveHumanSQL("su")), nil
+		auth.ParticipantStandsSQL("seat", "a"), workforce.LiveHumanSQL("su"),
+		auth.TrustedOwnDomainsFoldedSQL, owndomain.CoversSQL("addressed.domain_folded", "own_domain.domain")), nil
 }
 
 // readableScope is one record kind's visibility for MeetingRoomColumns: nothing
