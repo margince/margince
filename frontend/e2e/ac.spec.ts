@@ -3733,6 +3733,12 @@ test.describe("Authorize access on the sign-in surface", () => {
           page.getByRole("heading", { level: 1, name: de["consent.title"] }),
         ).toBeVisible();
         await expect(page.locator(".auth-wordmark")).toBeVisible();
+        await expect(
+          page.getByRole("button", {
+            name: de["consent.approve"],
+            exact: true,
+          }),
+        ).toBeVisible();
         await settleAnimations(page);
         await expectNoAaViolations(page, `oauth-consent (${colorScheme})`);
         expect(await pageOverflow(page)).toEqual([]);
