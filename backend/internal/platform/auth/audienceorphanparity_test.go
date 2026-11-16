@@ -41,11 +41,7 @@ import (
 // the principal. Each is a claim, not an exemption: if one of these ever starts
 // deciding who may read, it belongs in the read clause too and this list is
 // where the next author is told to look.
-var resolutionOnlyRelations = gatekit.Waive(map[string]string{
-	// The existential is a standalone query and names its own subject; the read
-	// clause is a fragment composed into somebody else's FROM.
-	"activity": "the existential is a whole query and names the row it is about",
-})
+var resolutionOnlyRelations = gatekit.Waive(map[string]string{})
 
 // sqlOf reads a function's query out of its own source.
 //

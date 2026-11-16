@@ -84,10 +84,8 @@ func moveKindIDSingles(ctx context.Context, tx pgx.Tx, entityType string, source
 func auditDeclaredMoves(ctx context.Context, tx pgx.Tx, relinked []sweepreach.Relinked, sourceID, targetID ids.UUID) error {
 	for _, moved := range relinked {
 		before, after := map[string]any{moved.Column: sourceID}, map[string]any{moved.Column: targetID}
-		for _, row := range moved.Rows {
-			if _, err := storekit.Audit(ctx, tx, "update", moved.Entity, row, before, after); err != nil {
-				return fmt.Errorf("audit a %s moving to the merge survivor: %w", moved.Entity, err)
-			}
+		if err := storekit.AuditEach(ctx, tx, "update", moved.Entity, moved.Rows, before, after); err != nil {
+			return fmt.Errorf("audit the %s rows moving to the merge survivor: %w", moved.Entity, err)
 		}
 	}
 	return nil
