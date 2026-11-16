@@ -11,7 +11,7 @@ import (
 )
 
 // The history statement spells each change in SQL, where the contract's enum
-// cannot reach it, so every word it can answer is held against that enum here.
+// cannot reach it. So each word it can answer is held against that enum here.
 func TestEveryChangeARevisionNamesIsOneTheContractKnows(t *testing.T) {
 	words := regexp.MustCompile(`THEN '([a-z_]+)' END`).FindAllStringSubmatch(revisionChangesSQL, -1)
 	if len(words) == 0 {

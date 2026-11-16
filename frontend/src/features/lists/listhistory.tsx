@@ -69,8 +69,8 @@ function isObserved(row: ListHistoryEntry): boolean {
 }
 
 /**
- * Who made a change. A person is named; an agent, a connector or a system task
- * is called what it is, never "Someone", which says a person did it.
+ * Who made a change. A member is named; an agent, a connector or a system task
+ * is called what it is, never "Someone", which says a member did it.
  */
 function useWhoActed(): (row: ListHistoryEntry) => ReactNode {
   const t = useT();

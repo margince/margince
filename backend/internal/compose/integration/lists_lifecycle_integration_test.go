@@ -147,7 +147,7 @@ func TestAListsHistoryNamesTheRecordAndWhatEachRevisionChanged(t *testing.T) {
 	}
 }
 
-// sameChanges reports whether a history entry's changes are exactly want.
+// sameChanges reports whether a history entry's changes are want, in order.
 //
 //craft:ignore naked-any the entry is decoded JSON, whose arrays arrive untyped
 func sameChanges(got any, want ...string) bool {
