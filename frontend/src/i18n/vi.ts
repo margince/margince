@@ -7270,7 +7270,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.companyName": "Công ty",
   "create.companyPicked": "Thêm liên hệ vào công ty có sẵn này.",
   "create.companyNew":
-    "Tạo công ty mới nếu không chọn công ty có sẵn trong danh sách.",
+    "Liên kết công ty có tên này, hoặc tạo công ty mới nếu chưa có.",
   "create.companyPrefilled":
     "Đã khớp với công ty có sẵn theo tên miền email công việc.",
   "create.dealName": "Tên deal",
