@@ -374,9 +374,7 @@ export const CardObjectPickerPhone: Story = {
 const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
   await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
-  await userEvent.click(
-    canvas.getByRole("button", { name: "Multiple choice" }),
-  );
+  await pickType(canvasElement, "Multiple choice");
   const [first] = await canvas.findAllByLabelText("Option label");
   if (first === undefined) throw new Error("the choice list drew no option");
   await userEvent.type(first, "Fit, scope");
