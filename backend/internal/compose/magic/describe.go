@@ -79,6 +79,11 @@ func describe(e entry) (description, bool) {
 		if !ok {
 			return description{}, false
 		}
+		if e.ActivityKind != nil {
+			if byKind, named := activityKindSentences[e.Action][*e.ActivityKind]; named {
+				key = byKind
+			}
+		}
 		return description{summary: crmcontracts.MagicSentence{Key: key}}, true
 	}
 	after := objectOf(e.After)
