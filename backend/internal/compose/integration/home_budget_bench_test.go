@@ -33,8 +33,8 @@ const (
 	homeColdBudget = 3 * time.Second
 	homeWarmBudget = 250 * time.Millisecond
 	// homeColdRounds is how many cold reads the cold p95 is taken over. At ten
-	// the p95 is the slowest read, so one slow boot on a shared runner failed
-	// the comparison; at thirty it takes a second slow read to move it.
+	// the p95 is the slowest read. At thirty a single slow boot no longer moves
+	// it; a second one is needed.
 	homeColdRounds = 30
 	// homeMissBudget holds the read a running server assembles after a write
 	// forgot the reader's kept answer, its plans already chosen.
