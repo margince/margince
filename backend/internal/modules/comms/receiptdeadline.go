@@ -180,3 +180,16 @@ func requireSystemReader(ctx context.Context) error {
 	}
 	return auth.Require(ctx, "activity", principal.ActionRead)
 }
+
+// UnraisedOverdueReceiptCountTx counts the overdue receipts no notice under
+// raisedPrefix covers yet. It reads no content, so the caller's own gate on
+// the health read is the gate.
+func UnraisedOverdueReceiptCountTx(ctx context.Context, tx pgx.Tx, now time.Time, raisedPrefix string) (int, error) {
+	var count int
+	err := tx.QueryRow(ctx, `SELECT count(*) FROM comms_outbound o WHERE `+overdueReceiptSQL+`$1
+		AND NOT EXISTS (SELECT 1 FROM notice n WHERE n.dedupe_key = $2 || o.message_id)`, now, raisedPrefix).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("comms: counting unraised overdue controller receipts: %w", err)
+	}
+	return count, nil
+}

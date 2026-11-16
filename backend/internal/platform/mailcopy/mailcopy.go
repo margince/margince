@@ -169,6 +169,7 @@ type Copy struct {
 	ConfirmRecordPreview   string
 	ConfirmConsentPreview  string
 	OptOutAckPreview       string
+	RequestAckPreview      string
 	RestrictionLiftPreview string
 
 	MailPersonal    string
@@ -365,9 +366,11 @@ type Copy struct {
 	PreviewLinkMarker string
 	SentLinkMarker    string
 
-	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 16 owes a
-	// Vietnamese recipient who refuses further advertising: a confirmation
-	// that their refusal was received, within twenty-four hours.
+	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 20 owes a
+	// Vietnamese recipient who refuses advertising email: a receipt sent at once.
+	// OptOutAckBody takes the time the refusal arrived (%[1]s), the time
+	// sending stopped (%[2]s) and their offset from UTC (%[3]s). The Vietnamese
+	// wording names Vietnam time instead, as the decree's receipt reads.
 	//
 	// IT CARRIES NO LINK and no advertising of its own. This is the one message
 	// the product sends to somebody who has just told it to stop, so anything
@@ -377,6 +380,14 @@ type Copy struct {
 	OptOutAckSubject string
 	OptOutAckBody    string
 	OptOutAckIgnore  string
+
+	// The request receipt: the first answer a data-subject request is owed
+	// under a pack that sets one, such as Decree 356/2025/ND-CP Art. 5.
+	// RequestAckBody takes the time the request arrived (%[1]s), the date it
+	// is carried out by (%[2]s) and their offset from UTC (%[3]s). It carries
+	// no link, as the opt-out receipt does not.
+	RequestAckSubject string
+	RequestAckBody    string
 
 	// The notice GDPR Art. 18(3) owes a contact before their restriction of
 	// processing is lifted. It carries no link: it tells, and asks nothing.

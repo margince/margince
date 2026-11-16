@@ -74,12 +74,18 @@ func TestThePageNamesOnlyTheUsesOnRecordWithTheirRecordedBasis(t *testing.T) {
 	}
 }
 
+// An unwired reader names no categories and no retention, and still names
+// the business correspondence purpose every page owes.
 func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
 	e := setupChannelConsent(t)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
-	if len(info.Purposes)+len(info.DataCategories)+len(info.Retention) != 0 {
-		t.Errorf("an unwired page claims purposes %v, categories %v, retention %v",
-			info.Purposes, info.DataCategories, info.Retention)
+	if len(info.DataCategories)+len(info.Retention) != 0 {
+		t.Errorf("an unwired page claims categories %v, retention %v", info.DataCategories, info.Retention)
+	}
+	if !slices.Equal(info.PurposeKeys, []string{PurposeBusinessCorrespondence}) ||
+		!slices.Equal(info.PurposeBases, []string{"legitimate_interests"}) {
+		t.Errorf("an unwired page names purposes %v on %v, want business correspondence on legitimate interests",
+			info.PurposeKeys, info.PurposeBases)
 	}
 }

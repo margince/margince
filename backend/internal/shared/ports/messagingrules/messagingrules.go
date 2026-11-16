@@ -201,6 +201,17 @@ func stricter(a, b Rules) Rules {
 	out.ConsentOnly = a.ConsentOnly || b.ConsentOnly
 	out.OptOutAcknowledgement = a.OptOutAcknowledgement || b.OptOutAcknowledgement
 	out.OptOutAcknowledgementWithin = shorterWindow(a.OptOutAcknowledgementWithin, b.OptOutAcknowledgementWithin)
+	// A floor either side requires holds, so the longer one wins.
+	out.OptOutRecordsKeep = max(a.OptOutRecordsKeep, b.OptOutRecordsKeep)
+	// One receipt prints one zone. The first declared wins, as the prefix does.
+	if out.OptOutAcknowledgementUTCOffset == 0 {
+		out.OptOutAcknowledgementUTCOffset = b.OptOutAcknowledgementUTCOffset
+	}
+	out.DataProtectionFollowsRecipient = a.DataProtectionFollowsRecipient || b.DataProtectionFollowsRecipient
+	out.NoLegitimateInterests = a.NoLegitimateInterests || b.NoLegitimateInterests
+	if out.DisclosureLanguage == "" {
+		out.DisclosureLanguage = b.DisclosureLanguage
+	}
 	out.RecordConfirmationWithoutNews = a.RecordConfirmationWithoutNews || b.RecordConfirmationWithoutNews
 	out.ConsentConfirmationNeedsRequest = a.ConsentConfirmationNeedsRequest || b.ConsentConfirmationNeedsRequest
 	// An exception only where BOTH grant it: a route to advertising without

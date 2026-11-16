@@ -129,7 +129,10 @@ func (s *Store) issueLinkTx(
 		}
 		// The mail below is rendered in this same language, so the row and the
 		// page cannot disagree about which one.
-		questionLocale := s.sendLanguage(ctx, tx, req.language)
+		questionLocale, err := s.subjectSendLanguage(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()}, req.language)
+		if err != nil {
+			return err
+		}
 		tokenRowID, err := insertContactLinkTx(ctx, tx, contactLink{
 			contactID: contactID, tokenHash: req.tokenHash, deliveredTo: deliveredTo,
 			issued: issued, expires: expires, kind: kind, purposeID: purposeID, language: questionLocale,

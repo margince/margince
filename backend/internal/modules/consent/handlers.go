@@ -258,6 +258,7 @@ func (h Handlers) SuppressContact(w http.ResponseWriter, r *http.Request, id crm
 	if req.Reason != nil {
 		in.Reason = *req.Reason
 	}
+	in.ReceivedAt = req.ReceivedAt
 	if err := h.store.Suppress(r.Context(), in); err != nil {
 		httperr.Write(w, r, err)
 		return

@@ -6,9 +6,11 @@ package consent
 // When a data-subject request must be answered, and which rule says so.
 //
 // A deadline is data protection, so the country of the controller decides: the
-// installation's default legal entity, which is who a request reaches. Its pack
-// may declare a deadline per request kind. A kind it leaves out gets the GDPR
-// month (Art. 12(3)), and so does an installation with no country selected.
+// installation's default legal entity, which is who a request reaches. A
+// subject whose own pack follows the recipient takes that pack instead
+// (recipientpack.go). The pack may declare a deadline per request kind. A kind
+// it leaves out gets the GDPR month (Art. 12(3)), and so does an installation
+// with no country selected.
 
 import (
 	"context"
@@ -24,13 +26,17 @@ import (
 // requestDeadlineFunc resolves one request's deadline inside the caller's
 // transaction. The confirm-link writer is a package function, so the store's
 // resolver travels to it as a value.
-type requestDeadlineFunc func(ctx context.Context, tx pgx.Tx, kind string, received time.Time) (due time.Time, rule string, err error)
+type requestDeadlineFunc func(ctx context.Context, tx pgx.Tx, who ruleSubject, kind string, received time.Time) (due time.Time, rule string, err error)
 
 // requestDeadlineTx is the one resolver both request writers use. A failed
 // country read is returned, never treated as "no jurisdiction": the GDPR month
-// can be later than the selected pack's deadline.
-func (s *Store) requestDeadlineTx(ctx context.Context, tx pgx.Tx, kind string, received time.Time) (time.Time, string, error) {
-	code, err := s.defaultEntityCountry(ctx, tx)
+// can be later than the selected pack's deadline. A zero subject is a request
+// no record names yet, which the installation's country decides.
+func (s *Store) requestDeadlineTx(ctx context.Context, tx pgx.Tx, who ruleSubject, kind string, received time.Time) (time.Time, string, error) {
+	code, err := subjectDataProtectionTx(ctx, tx, who)
+	if err == nil && code == "" {
+		code, err = s.defaultEntityCountry(ctx, tx)
+	}
 	if err != nil {
 		return time.Time{}, "", fmt.Errorf("consent: reading the jurisdiction a request deadline comes from: %w", err)
 	}
@@ -59,7 +65,7 @@ func (s *Store) RequestDeadline(ctx context.Context, kind string, stated *time.T
 	var rule string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		due, rule, err = s.requestDeadlineTx(ctx, tx, kind, received)
+		due, rule, err = s.requestDeadlineTx(ctx, tx, ruleSubject{}, kind, received)
 		return err
 	})
 	return due, rule, err

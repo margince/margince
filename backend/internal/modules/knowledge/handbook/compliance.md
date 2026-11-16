@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -91,6 +91,7 @@ passing around inside the company; the German versions are the ones to sign.
 | What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
+| Can we show an authority a contact's opt-out history? | On the contact's **Research** tab, **Download opt-out records** in the consent panel: every consent given or withdrawn, every stop with when the refusal arrived and when sending stopped, and every opt-out receipt. Under Vietnamese law no retention rule removes them within a year |
 | Can a manager see each colleague's sales figures? | Not in reports and forecasts while **Show individual performance** is off. Each member sees their own figures. The compliance answer above lists what the switch does not cover |
 
 Margince cannot tell you whether your own way of working is within the law: the
@@ -114,6 +115,21 @@ Some laws change what the mails to a contact about their own data may ask:
 - Under Vietnamese law, Margince sends the mail that asks a contact to confirm a subscription only when the contact asked for it first. Log the request on the contact first: their call, the form they sent, or their mail.
 
 When you create a contact by hand, say where it came from. The contact's privacy page shows your answer. It says the source is unknown only when you leave the answer empty.
+
+Under Vietnamese law, a contact who refuses marketing email gets a receipt at once. It states when the refusal reached you and when sending stopped, in the contact's local time, and carries no "Powered by Margince" line. A refusal can come by phone or mail. Then tell your agent when it reached you. The receipt prints that time, not the time it was recorded. A receipt not sent within an hour shows in **Settings → System health** under **Opt-out receipts**.
+
+Vietnamese data-protection law also follows the recipient. When a contact's or lead's address is a Vietnamese one, the Vietnamese rules apply to them whatever law you chose:
+
+- the privacy notice, the record confirmation and the privacy page are written in Vietnamese, with the Vietnamese rights text;
+- the foot of their mail says who your company is and whom to ask about data;
+- a request to fix their details is due in 10 days, to delete them in 20 days, and to stop using them in 15 days. Margince makes a task for each request, due on that date;
+- the first answer to a request is due in 2 working days, counted in Vietnamese time from Monday to Friday;
+- when they object to the use of their data or take back their consent, Margince makes a task due in 15 days;
+- a request to stop using their data, or to take back consent to anything other than marketing, also gets an email at once. It says when the request arrived and when it will be done;
+- the reason recorded for using their data is their consent to that use, with its date. Your own business need is never enough;
+- without that consent, the send screen and the approval card show a warning. You can still send once you confirm it. The audit log records your confirmation, and one confirmation covers one send. A send nobody confirmed is held for a colleague to decide.
+
+Margince learns where a contact is only from the addresses above. A Vietnamese contact whose address is not a Vietnamese one is not found. The Vietnamese rules do not apply to that contact.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
 

@@ -1,17 +1,19 @@
-import { useQuery } from "@tanstack/react-query";
-import { Ban, Check, Mail } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Ban, Check, Download, Mail } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ContactStops } from "../../components/stops";
 import { Badge, Button, Modal, Skeleton } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import type { DetailRow } from "../../design-system/recorddetails";
 import { type Translator, useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useProviderLabel } from "../../lib/channelproviders";
-import { unwrap } from "../../lib/problem";
+import { downloadBytes } from "../../lib/download";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ConfirmDetailsAction, ConsentSection } from "../privacy/consent";
 import { consentPurposeName, consentReason } from "./consentreason";
@@ -245,6 +247,7 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
         />
         <ContactStops contactId={view.contact.id} />
         <StandingExceptions key={view.contact.id} contactId={view.contact.id} />
+        <OptOutRecordsDownload contactId={view.contact.id} />
         <p className="panel-intro">{t("consent.permissionScope")}</p>
         <Button
           variant="ghost"
@@ -286,5 +289,42 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
         )}
       </Modal>
     </Panel>
+  );
+}
+
+/** The contact's registrations, refusals and opt-out receipts as one file, the
+ *  records an inspector may ask to see. The server decides who may read them. */
+function OptOutRecordsDownload({ contactId }: Readonly<{ contactId: string }>) {
+  const t = useT();
+  const download = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await api.GET(
+        "/contacts/{id}/consent/optout-records",
+        { params: { path: { id: contactId } } },
+      );
+      if (error) throwProblem(error);
+      return data;
+    },
+    onSuccess: (records) =>
+      downloadBytes(
+        JSON.stringify(records, null, 2),
+        `optout-records-${contactId}.json`,
+        "application/json",
+      ),
+  });
+  return (
+    <div>
+      <Button
+        variant="ghost"
+        pending={download.isPending}
+        onClick={() => download.mutate()}
+      >
+        <Download aria-hidden />
+        {t("consent.optOutRecords")}
+      </Button>
+      {download.isError && (
+        <ErrorLine>{problemMessageOf(download.error, t)}</ErrorLine>
+      )}
+    </div>
   );
 }

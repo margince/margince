@@ -21,7 +21,7 @@ The consent itself must be provable in three ways. These are what was agreed to,
 and how often the recipient agreed to hear from us. The core consent engine records all three on the proof
 row; this pack does not state them again.
 
-## The `[QC]` subject label (Art. 12)
+## The `[QC]` subject label (Art. 18)
 
 An advertising email is labelled as advertising in its subject line, with the label the decree
 fixes: `[QC]`.
@@ -31,7 +31,7 @@ subject does not begin with `[QC]` (in any case) is parked and not sent. The che
 advertising only: a message that is not advertising but has an advertising label would describe
 itself wrong to the recipient.
 
-## Who is advertising (Art. 13)
+## Who is advertising (Art. 19)
 
 An advertising message names the advertiser and gives a way to reach them: name, phone, email,
 address and website.
@@ -47,7 +47,7 @@ come from different laws.
 | Objection route | advertising |
 | Advertiser contact: name, phone, email, address, website | advertising |
 
-## Three per address per day (Art. 22(2))
+## Three per address per day (Art. 13.5)
 
 At most **3** advertising emails reach one address in any rolling **24 hours**, unless that recipient
 has agreed to a different frequency.
@@ -73,18 +73,44 @@ country states which law it sends under. A setting that let it pass that country
 would make the declaration false. Waiting clears it, because the window rolls and the same message
 becomes lawful. So to refuse costs a delay, not the message.
 
-## An opt-out is acknowledged (Art. 16)
+## An opt-out is acknowledged (Art. 20)
 
-A recipient who refuses more advertising is owed a confirmation that the refusal was received. It
-comes within 24 hours, and holds no advertising of its own.
+A recipient who refuses advertising email is owed a receipt at once (Art. 20.3). It states when the
+refusal reached the sender and when sending stopped (Art. 20.4(a)), and holds no advertising
+(Art. 20.4(b)).
 
-The acknowledgement goes out through the controller lane. That is the one lane that may write to
-someone who has just suppressed themselves, because the message serves the subject and not the
-sender. The consent module queues it from the `optout_acknowledgement` controller template, in the
-same transaction as the refusal.
+The consent module queues the receipt from the `optout_acknowledgement` controller template, in the
+same transaction as the refusal. The send job runs once that transaction commits. It goes
+out through the controller lane. That is the one lane that may write to someone who has just
+suppressed themselves, because the message serves the subject and not the sender.
 
-No gate holds the 24 hours. Nothing measures the gap or alerts on it. So a worker outage longer than
-a day sends the acknowledgement late, with no error.
+The receipt prints two times, both in Vietnam time (UTC+07:00), which this pack declares:
+
+- **Received**: when the refusal reached the sender. For a link press it is the press. For a reply
+  mail or a call that a colleague records, it is the `received_at` they enter, never the time they
+  record it.
+- **Stopped**: when the stop was recorded, which is when sending stopped.
+
+The receipt carries no "Powered by Margince" line, since Art. 3.1 counts a line that names a third
+party's product as advertising. The other controller mails keep it.
+
+One refusal has one receipt: its message id comes from the refusal, and the delivery ledger refuses a
+second row with the same id.
+
+The pack sets the receipt's alert time to one hour. A receipt not sent by then raises a
+notice to the privacy operators, and **Settings → System health** counts it under **Opt-out
+receipts** for 30 days.
+
+## Records kept (Art. 11)
+
+Consents given, refusals and receipts stay at least one year (Art. 11.7). The pack declares the year as
+`OptOutRecordsKeep`.
+
+Consent stamps its end on each stop and receipt (`kept_until`). Until that
+date, no retention policy changes, deletes or archives the contact, lead or receipt. After it, the
+usual policies apply. A request to delete the subject still removes their details.
+**Download opt-out records** on a contact's consent panel exports all three when the state asks to
+see them (Art. 11.3).
 
 ## A consent request answers the contact's own request (Art. 11.2)
 

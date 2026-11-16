@@ -2183,9 +2183,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kalender verbinden",
   "brief.schedule.reconnect": "Kalender neu verbinden",
   "brief.schedule.nextAt": "Nächster Termin um {time}",
-  "brief.schedule.now": "Jetzt",
-  "brief.schedule.freeUntil": "Frei bis {time}",
-  "brief.schedule.clearRest": "Heute sonst nichts gebucht",
+  "brief.schedule.clearRest": "Heute keine externen Termine mehr",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
   "brief.readings.unpricedCount_one":
     "{count} Deal ohne Preis · nicht enthalten",
@@ -2379,6 +2377,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.brief_overnight": "Nächtliche Zusammenfassung",
   "systemJob.captured_deal_refile": "Erfasste Gespräche zuordnen",
   "systemJob.capture": "E-Mail-Erfassung",
+  "systemJob.privacy_request_task": "Aufgaben zu Datenanfragen",
   "systemJob.capture_auto_enrich":
     "Anreicherung von Unternehmensdaten aus E-Mails",
   "systemJob.capture_classify": "E-Mail-Sortierung",
@@ -3664,6 +3663,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mails, die die Sperre zurückgehalten hat, können wieder gesendet werden.",
   "consent.stopReason": "Grund (bleibt im Verlauf des Datensatzes)",
   "consent.manage": "Einwilligungen und Nachweisverlauf verwalten",
+  "consent.optOutRecords": "Abmeldenachweise herunterladen",
   "contact.consent": "Einwilligung",
   "consent.grant": "Einwilligung erfassen",
   "consent.operatorWording":
@@ -7071,7 +7071,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
-  "brief.panel.schedule": "Dein Tag",
+  "brief.panel.schedule": "Externe Termine",
   "brief.readings.label": "Zahlen von heute",
   "brief.readings.floorTip":
     "Diese Zahl ist ein Mindestwert, da eine Quelle ihr Limit erreicht hat.",
@@ -8024,6 +8024,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":
@@ -8044,6 +8046,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
+  "lawfulBasis.title": "Für diesen Kontakt ist keine Einwilligung erfasst",
+  "lawfulBasis.body":
+    "Nach vietnamesischem Recht darfst du diese Daten ohne Einwilligung nicht verarbeiten. Du sendest auf eigenes Risiko.",
+  "lawfulBasis.confirm": "Trotzdem senden",
+  "lawfulBasis.failed":
+    "Deine Bestätigung wurde nicht gespeichert. Versuche es erneut.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "Ihre Einwilligung vom {date}",
+  "privacynotice.basisOn.agreement":
+    "Erfüllung der Vereinbarung zwischen Ihnen und {controller}",
+  "privacynotice.basisOn.us": "uns",
+  "privacynotice.basis.none":
+    "Für diese Nutzung ist keine Rechtsgrundlage erfasst.",
+  "privacynotice.basisOn.none": "keine Rechtsgrundlage erfasst",
+  "confirm.done.bodyNamed":
+    "Ihre Antwort wurde erfasst. Das Team von {controller} bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
@@ -8229,6 +8247,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.privacy_request":
+    "Erstellt, als der Kontakt die Korrektur, Löschung oder das Ende der Nutzung seiner Daten verlangt hat. Das Recht seines Landes legt die Fristen dieser Aufgabe fest.",
   "tasks.origin.analytics_decision":
     "Aus einem Vertriebstermin festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus dem letzten Termin fest.",
   "tasks.origin.overnight_reconcile":
@@ -11114,7 +11134,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wir haben Ihre Daten auf einer Website gefunden.",
   "privacynotice.source.stated.other": "Eine andere Quelle, unten beschrieben.",
   "privacynotice.source.statedNote": "Unsere Angabe dazu: {note}",
-  "privacynotice.purposes.title": "Wofür wir Ihre Daten nutzen",
+  "privacynotice.purposes.title":
+    "Wofür wir Ihre Daten nutzen und auf welcher Grundlage",
   "privacynotice.rights.title": "Ihre Rechte an diesen Daten",
   "privacynotice.rights.how":
     "Um eines dieser Rechte zu nutzen, antworten Sie auf die Nachricht, die Sie hierher geführt hat, oder kontaktieren Sie uns über die Adresse auf unserer Website.",
@@ -11190,7 +11211,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.anonymize": "{scope}: nach {days} anonymisiert.",
   "privacynotice.retention.erase": "{scope}: nach {days} gelöscht.",
   "privacynotice.retention.rest":
-    "Alles andere speichern wir, solange wir es für die oben genannten Zwecke nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
+    "Alles andere speichern wir, solange wir es für die Zwecke unter „Wofür wir Ihre Daten nutzen und auf welcher Grundlage“ nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
   "privacynotice.retention.scope.activity":
     "E-Mails, Termine und Anrufe mit Ihnen",
   "privacynotice.retention.scope.activityTranscript":
@@ -13520,7 +13541,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.receipt.rectify": "Korrektur angefordert",
   "confirm.receipt.erasure": "Löschung angefordert",
   "confirm.done.body":
-    "Ihre Antwort wurde erfasst. Änderungen gehen zur Übernahme an eine Person aus dem Team. Dieser Link kann nun nicht mehr verwendet werden.",
+    "Ihre Antwort wurde erfasst. Das zuständige Team bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
   "confirm.questionChanged":
@@ -22598,6 +22619,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die normale CRM-Arbeit kann weitergehen. Bei einem Ausfall kann die Wiederherstellung länger dauern oder mehr neue Daten verlieren, als die Ziele vorsehen.",
   "health.effect.automatic":
     "Automatische Aufgaben erreichen möglicherweise die falschen Teammitglieder. Folgeaufgaben bleiben dann bis zur Korrektur falsch zugewiesen.",
+  "health.effect.receipts":
+    "Die Widersprüche gelten, und Werbung an diese Kontakte bleibt gestoppt. Die Kontakte wurden nicht informiert, was die Regeln ihres Landes sofort verlangen.",
   "health.effect.readFailed":
     "Diese Prüfung kann den aktuellen Zustand nicht anzeigen. Eine fehlgeschlagene Prüfung belegt keinen Ausfall der eigentlichen Funktion.",
   "health.reportCopyFailed": "Technischer Bericht konnte nicht kopiert werden",
@@ -22691,6 +22714,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.source.updates": "Datenaktualisierungen",
   "health.source.recovery": "Wiederherstellungsnachweise",
   "health.source.automatic": "Qualität automatischer Arbeit",
+  "health.source.receipts": "Bestätigungen von Werbewidersprüchen",
   "health.scope": "Betroffener Umfang",
   "health.window": "Berichtszeitraum",
   "health.observed": "Letzte Beobachtung",
@@ -22717,6 +22741,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einen erfolgreichen Wiederherstellungstest innerhalb der Zeit- und Datenverlustziele erfassen.",
   "health.recovery.automatic":
     "Die Ergebnisse der Zuweisung anhand einer ausreichend großen Stichprobe prüfen.",
+  "health.recovery.receipts":
+    "Zu jedem Widerspruch der letzten 30 Tage muss eine Bestätigung versendet oder die Warnung erledigt sein.",
   "health.ownerHandoff":
     "Postfachinhaber nehmen vorgeschlagene Kontakte unter Worklist → Entscheidungen an oder lehnen sie ab. Zurückgehaltene Gespräche werden unter Verbindungen im Bereich Aktivität geprüft.",
   "health.operatorHandoff":
@@ -22797,6 +22823,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Keine Schwelle zur Zuweisungsprüfung in der Stichprobe überschritten",
   "health.code.automatic_routing":
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
+  "health.code.receipts_sent":
+    "Jede Bestätigung der letzten 30 Tage wurde versendet",
+  "health.code.receipts_missed":
+    "Einige Bestätigungen von Werbewidersprüchen wurden nicht versendet",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",
   "health.code.capture_thread_uncertain": "Private Gespräche prüfen",
   "health.queueCoverage":
@@ -22819,6 +22849,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wiederherstellungstest hat seine Ziele verfehlt. Frage den Systembetreiber, die Ursache zu beheben und erneut zu testen.",
   "health.impact.automatic":
     "Aufgaben werden möglicherweise falsch zugewiesen. Prüfe die Weiterleitung und korrigiere die Zuweisung.",
+  "health.impact.receipts":
+    "Kontakte, die Werbung widersprochen haben, haben die gesetzlich geforderte Bestätigung nicht erhalten. Öffne die Benachrichtigungen zu fehlenden Bestätigungen und korrigiere die Adresse oder die E-Mail-Einrichtung.",
   "analytics.outlook.calledAt": "Prognose vom {at}",
   "analytics.prospect.weeksByQualification":
     "Jeder Lead zählt in der Woche seiner ersten Qualifizierung.",

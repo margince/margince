@@ -131,8 +131,33 @@ type Rules struct {
 	// Held by the same gate as Disclosures.
 	OptOutAcknowledgement bool
 
-	// OptOutAcknowledgementWithin bounds receipt delivery from the recorded refusal; zero declares no deadline.
+	// OptOutAcknowledgementWithin is how long after the refusal an unsent receipt
+	// raises an alarm. The receipt itself is queued with the refusal. Zero sets none.
 	OptOutAcknowledgementWithin time.Duration
+
+	// OptOutAcknowledgementUTCOffset is the offset from UTC at which the
+	// receipt prints when the refusal arrived and when sending stopped. Zero is UTC.
+	OptOutAcknowledgementUTCOffset time.Duration
+
+	// OptOutRecordsKeep is how long a refusal and its receipt are kept from the
+	// refusal, out of every retention policy's reach. Zero sets no floor.
+	OptOutRecordsKeep time.Duration
+
+	// DataProtectionFollowsRecipient says this jurisdiction's data-protection
+	// law reaches a recipient here whatever country the controller is in. The
+	// disclosures, the privacy page and the request deadlines then follow the
+	// recipient's pack instead of the sender's. False keeps the sender's.
+	DataProtectionFollowsRecipient bool
+
+	// NoLegitimateInterests says the law has no legitimate-interest basis: each
+	// use rests on the recipient's consent or on a case the law names. The
+	// engine then never records legitimate interests for a recipient here.
+	NoLegitimateInterests bool
+
+	// DisclosureLanguage is the language the recipient's disclosures and
+	// privacy pages are written in, as a lower-case ISO 639-1 code. It applies
+	// only with DataProtectionFollowsRecipient. Empty keeps the installation's.
+	DisclosureLanguage string
 
 	// RecordConfirmationWithoutNews says the mail that asks a recipient to
 	// check their details must not also ask whether they want news. The link
@@ -303,6 +328,9 @@ func (c FrequencyCap) Validate() error {
 	return nil
 }
 
+// maxUTCOffset is the widest offset any civil time zone uses.
+const maxUTCOffset = 14 * time.Hour
+
 // Validate checks a whole rule set. The boot preflight refuses a pack whose
 // rules it cannot apply, rather than composing an installation that believes it
 // is following a country's law and is not.
@@ -323,6 +351,12 @@ func (r Rules) Validate() error {
 	}
 	if r.OptOutAcknowledgementWithin < 0 || (r.OptOutAcknowledgementWithin > 0 && !r.OptOutAcknowledgement) {
 		return errors.New("messaging rules declare an invalid opt-out receipt deadline")
+	}
+	if r.OptOutAcknowledgementUTCOffset.Abs() > maxUTCOffset || (r.OptOutAcknowledgementUTCOffset != 0 && !r.OptOutAcknowledgement) {
+		return errors.New("messaging rules declare an invalid opt-out receipt time zone: a receipt must be owed, and the offset within 14 hours of UTC")
+	}
+	if r.OptOutRecordsKeep < 0 {
+		return fmt.Errorf("messaging rules for %q keep opt-out records for a negative time", string(r.Jurisdiction))
 	}
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))
@@ -357,6 +391,24 @@ func (r Rules) Validate() error {
 		if err := r.FrequencyCap.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 		}
+	}
+	return r.validateDisclosureLanguage()
+}
+
+// validateDisclosureLanguage refuses a language that is not two lower-case
+// letters, or one stated where the recipient's pack does not apply.
+func (r Rules) validateDisclosureLanguage() error {
+	language := r.DisclosureLanguage
+	if language == "" {
+		return nil
+	}
+	if !r.DataProtectionFollowsRecipient {
+		return fmt.Errorf("messaging rules for %q name a disclosure language and do not follow the recipient, so nothing would use it",
+			string(r.Jurisdiction))
+	}
+	if len(language) != 2 || strings.Trim(language, "abcdefghijklmnopqrstuvwxyz") != "" {
+		return fmt.Errorf("messaging rules for %q name disclosure language %q; use a lower-case ISO 639-1 code",
+			string(r.Jurisdiction), language)
 	}
 	return nil
 }

@@ -9,8 +9,8 @@ package consent
 //
 // gates/messagingruleapplied_test.go carried OptOutAcknowledgement in its
 // register of declared-and-unapplied obligations: the Vietnamese pack has said
-// since it shipped that Decree 91/2020 Art. 16 owes a recipient who refuses
-// advertising a confirmation within twenty-four hours, and nothing sent one.
+// since it shipped that Decree 91/2020 Art. 20 owes a recipient who refuses
+// advertising email a receipt, and nothing sent one.
 // That register is empty now, and this is the last entry to leave it.
 
 import (
@@ -58,7 +58,7 @@ func TestAMarketingObjectionIsAcknowledged(t *testing.T) {
 
 	if stager.calls != 1 {
 		t.Fatalf("the stop staged %d acknowledgements, want 1 — a Vietnamese recipient who "+
-			"refuses advertising is owed one within twenty-four hours", stager.calls)
+			"refuses advertising is owed one at once", stager.calls)
 	}
 	if stager.seen.Category != commsauthz.CategoryOptoutConfirmation {
 		t.Errorf("the acknowledgement went out as %q, want optout_confirmation — that is the "+

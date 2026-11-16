@@ -19118,6 +19118,7 @@ const (
 	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
 	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
 	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesNone                           PrivacyInformationPagePurposeBases = "none"
 	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
 	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
 	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
@@ -19136,6 +19137,8 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 	case PrivacyInformationPagePurposeBasesLegalObligation:
 		return true
 	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	case PrivacyInformationPagePurposeBasesNone:
 		return true
 	case PrivacyInformationPagePurposeBasesPrecontractRequest:
 		return true
@@ -53995,6 +53998,20 @@ type LatestInboundList struct {
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
 }
 
+// LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
+type LawfulBasisConfirmation struct {
+	// Confirmed The records whose warning was confirmed by the signed-in user. Each confirmation waits
+	// 15 minutes for its send and is spent by the first send to that record.
+	Confirmed []CommunicationEvidenceSubject `json:"confirmed"`
+}
+
+// LawfulBasisConfirmationRequest defines model for LawfulBasisConfirmationRequest.
+type LawfulBasisConfirmationRequest struct {
+	// Subjects The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+	// them. A pinned lead is named as the lead, never as a contact sharing its address.
+	Subjects []CommunicationEvidenceSubject `json:"subjects"`
+}
+
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -58276,6 +58293,60 @@ type OperationSettings struct {
 	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds" maximum:"3600" minimum:"10"`
 }
 
+// OptOutReceiptRecord defines model for OptOutReceiptRecord.
+type OptOutReceiptRecord struct {
+	// Body The plain-text body. Null once an erasure removed it.
+	Body *string `json:"body,omitempty"`
+
+	// MessageId The receipt's Message-ID. One refusal has one.
+	MessageId string     `json:"message_id"`
+	QueuedAt  time.Time  `json:"queued_at"`
+	SentAt    *time.Time `json:"sent_at,omitempty"`
+
+	// Status The delivery's state, such as `queued`, `sent` or `parked`.
+	Status string `json:"status"`
+
+	// Subject Null once an erasure removed it.
+	Subject *string `json:"subject,omitempty"`
+
+	// TemplateVersion The version of the receipt wording it carries.
+	TemplateVersion int `json:"template_version"`
+}
+
+// OptOutRecordStop defines model for OptOutRecordStop.
+type OptOutRecordStop struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`.
+	Kind string `json:"kind"`
+
+	// PurposeKey The one purpose a narrow stop binds.
+	PurposeKey *string `json:"purpose_key,omitempty"`
+
+	// ReceivedAt When the refusal reached the controller.
+	ReceivedAt time.Time `json:"received_at"`
+
+	// RevokedAt When the stop was lifted. Null while it stands.
+	RevokedAt *time.Time `json:"revoked_at,omitempty"`
+
+	// StoppedAt When sending stopped.
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+// OptOutRecords One contact's registrations, refusals and opt-out receipts, as kept for an inspection.
+type OptOutRecords struct {
+	// ConsentEvents Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`.
+	ConsentEvents []ConsentEvent     `json:"consent_events"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+	GeneratedAt   time.Time          `json:"generated_at"`
+
+	// Receipts Every opt-out receipt filed under the contact.
+	Receipts []OptOutReceiptRecord `json:"receipts"`
+
+	// Stops Every stop recorded on the contact, lifted ones included.
+	Stops []OptOutRecordStop `json:"stops"`
+}
+
 // OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
 // stored option stays the value written on records; only its display changes. On a write
 // the map replaces the stored one, and an option the field does not offer is 422
@@ -58964,13 +59035,19 @@ type PrivacyInformationPage struct {
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
-	// purpose the reader agreed to, else the kind of a live communication basis.
+	// purpose the reader agreed to, else the kind of a live communication basis. `none` says
+	// no basis is recorded, for a reader whose country has no legitimate-interest basis and
+	// whose record holds neither their consent nor an agreement with them.
 	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
 	// product seeds in its reader's language by its key, and shows the published name of any
 	// other.
 	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
+
+	// PurposeSince When the reader gave the consent each entry in `purposes` rests on, at the same index.
+	// Null for an entry whose basis is not consent.
+	PurposeSince *[]*time.Time `json:"purpose_since,omitempty"`
 
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
@@ -64706,6 +64783,12 @@ type SendAuthorizationPreviewRecipient struct {
 	// can read it. Absent for newly filed addresses and records unavailable to the
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
+
+	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
+	// their consent nor an agreement with them. A privacy notice they were sent is neither.
+	// Not a refusal: a surface shows a warning and records the sender's confirmation through
+	// `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+	LawfulBasisMissing *bool `json:"lawful_basis_missing,omitempty"`
 
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
@@ -72020,6 +72103,11 @@ type WorklistItem struct {
 	// RequestCheck On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
 	RequestCheck *TaskRequestCheck `json:"request_check,omitempty"`
 
+	// Room Who is in a `meeting` row's room, as this reader may see them: the same room
+	// `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+	// reader may not read the meeting.
+	Room *WorklistMeetingRoom `json:"room,omitempty"`
+
 	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
 	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
 	// engine's English sentence.
@@ -72184,6 +72272,22 @@ type WorklistMayBeDone struct {
 
 	// WrotePrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 	WrotePrecision OccurredPrecision `json:"wrote_precision"`
+}
+
+// WorklistMeetingRoom Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+// meeting today and the next one name their attendees by one rule.
+type WorklistMeetingRoom struct {
+	// OtherParticipants The attendees who are not contacts, named after the contacts within the same eight.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
+	// Participants The attendees who are contacts this reader may see, named first.
+	Participants []struct {
+		ContactId openapi_types.UUID `json:"contact_id"`
+		FullName  string             `json:"full_name"`
+	} `json:"participants"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named. Absent when every attendee is named.
+	ParticipantsMore *int `json:"participants_more,omitempty" minimum:"1"`
 }
 
 // WorklistMove The next step this row suggests, and what it would act on.
@@ -75988,6 +76092,12 @@ type SuppressContactJSONBody struct {
 	// Reason What the contact was told, in their words. Stored because a suppression somebody
 	// later asks to lift is only reviewable if the record says why it was made.
 	Reason *string `json:"reason,omitempty"`
+
+	// ReceivedAt When the refusal reached you: the arrival time of the mail that said so, or the
+	// time of the call. Never the time you record it. Left out, it is the time of
+	// recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+	// so a later time than now is refused.
+	ReceivedAt *time.Time `json:"received_at,omitempty"`
 }
 
 // SuppressContactJSONBodyKind defines parameters for SuppressContact.
@@ -82026,6 +82136,9 @@ type AskCorpusJSONRequestBody AskCorpusJSONBody
 
 // UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
 type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
+
+// ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
+type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
 
 // CreateLeadDisqualifyReasonJSONRequestBody defines body for CreateLeadDisqualifyReason for application/json ContentType.
 type CreateLeadDisqualifyReasonJSONRequestBody = CreateLeadDisqualifyReasonRequest
@@ -97180,6 +97293,9 @@ type ServerInterface interface {
 	// Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
 	// (GET /contacts/{id}/consent/mail-preview)
 	PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams)
+	// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+	// (GET /contacts/{id}/consent/optout-records)
+	ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id)
 	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
 	// (POST /contacts/{id}/consent/privacy-notice)
 	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
@@ -97906,6 +98022,9 @@ type ServerInterface interface {
 	// Download a document's own bytes.
 	// (GET /knowledge/documents/{id})
 	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that a user read the no-lawful-basis warning and chose to send anyway.
+	// (POST /lawful-basis-confirmations)
+	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -101707,6 +101826,12 @@ func (_ Unimplemented) PreviewControllerMail(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+// (GET /contacts/{id}/consent/optout-records)
+func (_ Unimplemented) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Mail this contact the Art. 14 disclosure, which asks them for nothing.
 // (POST /contacts/{id}/consent/privacy-notice)
 func (_ Unimplemented) SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id) {
@@ -103156,6 +103281,12 @@ func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Reque
 // Download a document's own bytes.
 // (GET /knowledge/documents/{id})
 func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that a user read the no-lawful-basis warning and chose to send anyway.
+// (POST /lawful-basis-confirmations)
+func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124529,6 +124660,40 @@ func (siw *ServerInterfaceWrapper) PreviewControllerMail(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// ExportContactOptOutRecords operation middleware
+func (siw *ServerInterfaceWrapper) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportContactOptOutRecords(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // SendPrivacyNotice operation middleware
 func (siw *ServerInterfaceWrapper) SendPrivacyNotice(w http.ResponseWriter, r *http.Request) {
 
@@ -134579,6 +134744,26 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DownloadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmSendWithoutLawfulBasis operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmSendWithoutLawfulBasis(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -155624,6 +155809,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/contacts/{id}/consent/mail-preview", wrapper.PreviewControllerMail)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/consent/optout-records", wrapper.ExportContactOptOutRecords)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/privacy-notice", wrapper.SendPrivacyNotice)
 	})
 	r.Group(func(r chi.Router) {
@@ -156348,6 +156536,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)

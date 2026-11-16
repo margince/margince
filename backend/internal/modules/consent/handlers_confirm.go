@@ -220,6 +220,7 @@ func wirePrivacyInformation(info PrivacyInformation) crmcontracts.PrivacyInforma
 		Purposes:       &purposes,
 		PurposeKeys:    &keys,
 		PurposeBases:   wireCodes[crmcontracts.PrivacyInformationPagePurposeBases](info.PurposeBases),
+		PurposeSince:   &info.PurposeSince,
 		Rights:         rights,
 		Controller:     wireController(info.Controller),
 		DataCategories: wireCodes[crmcontracts.PrivacyInformationPageDataCategories](info.DataCategories),

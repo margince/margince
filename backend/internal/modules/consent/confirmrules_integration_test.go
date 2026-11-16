@@ -36,7 +36,7 @@ func placeUnderConfirmRules(t *testing.T, e *channelConsentEnv) {
 			RecordConfirmationWithoutNews: true, ConsentConfirmationNeedsRequest: true,
 		})
 	})
-	placeContact(t, e, string(confirmRulesCountry.code))
+	placeContact(t, e.owner, e.contact, confirmRulesCountry.code)
 }
 
 // publishQuestions publishes the questions a link pins, as the boot does.
@@ -52,14 +52,6 @@ func publishQuestions(t *testing.T, e *channelConsentEnv) {
 	}
 	if err := tx.Commit(ctx); err != nil {
 		t.Fatal(err)
-	}
-}
-
-func placeContact(t *testing.T, e *channelConsentEnv, code string) {
-	t.Helper()
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, code); err != nil {
-		t.Fatalf("placing the contact in %s: %v", code, err)
 	}
 }
 

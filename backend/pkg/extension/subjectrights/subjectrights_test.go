@@ -87,3 +87,49 @@ func TestADeadlineCountsHoursExactlyAndMonthsToTheMonthEnd(t *testing.T) {
 		t.Errorf("a month and two days after %s = %s, want %s", december, got, want)
 	}
 }
+
+// A first answer owed in two working days, asked on a Friday, is owed on the
+// Tuesday after.
+func TestAReplyInWorkingDaysSkipsTheWeekend(t *testing.T) {
+	friday := time.Date(2026, time.November, 13, 10, 0, 0, 0, time.UTC)
+	if got, want := ReplyBy(friday, 2, 0), time.Date(2026, time.November, 17, 10, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("two working days after %s = %s, want %s", friday, got, want)
+	}
+	saturday := time.Date(2026, time.November, 14, 10, 0, 0, 0, time.UTC)
+	if got, want := ReplyBy(saturday, 2, 0), time.Date(2026, time.November, 17, 10, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("two working days after %s = %s, want %s", saturday, got, want)
+	}
+	monday := time.Date(2026, time.November, 16, 10, 0, 0, 0, time.UTC)
+	if got, want := ReplyBy(monday, 2, 0), time.Date(2026, time.November, 18, 10, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("two working days after %s = %s, want %s", monday, got, want)
+	}
+}
+
+func TestAReplyDeadlineNeedsItsSourceAndABound(t *testing.T) {
+	if err := (Rules{Jurisdiction: "zz", Version: 1, ReplyWithinWorkingDays: 2}).Validate(); err == nil {
+		t.Error("a reply deadline that cites no instrument was accepted")
+	}
+	if err := (Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), ReplyWithinWorkingDays: -1}).Validate(); err == nil {
+		t.Error("a negative reply deadline was accepted")
+	}
+	if err := (Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), ReplyWithinWorkingDays: 2}).Validate(); err != nil {
+		t.Errorf("a cited two-day reply deadline was refused: %v", err)
+	}
+}
+
+// Late on a Friday in UTC is already Saturday in Vietnam. The two working days
+// start on the Monday there, so the reply falls a day earlier than a count in
+// UTC would put it.
+func TestWorkingDaysAreCountedOnTheJurisdictionsCalendar(t *testing.T) {
+	friday := time.Date(2026, time.November, 13, 18, 0, 0, 0, time.UTC)
+	vietnam := 7 * time.Hour
+	if got, want := ReplyBy(friday, 2, vietnam), time.Date(2026, time.November, 16, 18, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("two Vietnamese working days after %s = %s, want %s", friday, got, want)
+	}
+	if got := ReplyBy(friday, 2, vietnam); got.Location() != time.UTC {
+		t.Errorf("the reply date is in %s, want the received instant's zone", got.Location())
+	}
+	if err := (Rules{Jurisdiction: "zz", Version: 1, UTCOffset: 15 * time.Hour}).Validate(); err == nil {
+		t.Error("an offset past 14 hours was accepted")
+	}
+}

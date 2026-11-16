@@ -23,6 +23,16 @@ func (h Handlers) ListContactStops(w http.ResponseWriter, r *http.Request, id cr
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"stops": stops})
 }
 
+// ExportContactOptOutRecords serves GET /contacts/{id}/consent/optout-records.
+func (h Handlers) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	records, err := h.store.OptOutRecords(r.Context(), ids.From[ids.ContactKind](ids.UUID(id)))
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, records)
+}
+
 // ListLeadStops serves GET /leads/{id}/consent/stops.
 func (h Handlers) ListLeadStops(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	stops, err := h.store.ListLeadStops(r.Context(), ids.From[ids.LeadKind](ids.UUID(id)))

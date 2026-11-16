@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // TestNewDeclaresTheJurisdictionAndNoRetentionClass pins the two structural
@@ -54,11 +55,11 @@ func TestAdvertisingNeedsPriorConsent(t *testing.T) {
 // decree requires, and nothing else in the tree would notice.
 func TestTheAdvertisingLabelIsTheDecreesOwn(t *testing.T) {
 	if got := messagingRules().SubjectPrefix; got != "[QC]" {
-		t.Fatalf("SubjectPrefix = %q, want the Art. 12 advertising label [QC]", got)
+		t.Fatalf("SubjectPrefix = %q, want the Art. 18 advertising label [QC]", got)
 	}
 }
 
-// TestTheDailyCeilingIsThreePerAddress pins Art. 22(2).
+// TestTheDailyCeilingIsThreePerAddress pins Art. 13.5.
 func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
 	ceiling := messagingRules().FrequencyCap
 	if ceiling == nil {
@@ -72,17 +73,23 @@ func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
 	}
 }
 
-// TestAnOptOutIsAcknowledged pins Art. 16.
+// TestAnOptOutIsAcknowledged pins Art. 20.
 func TestAnOptOutIsAcknowledged(t *testing.T) {
 	if !messagingRules().OptOutAcknowledgement {
-		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 16 requires a confirmation within 24 hours")
+		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 20 requires a receipt at once")
 	}
-	if within := messagingRules().OptOutAcknowledgementWithin; within != 24*time.Hour {
-		t.Errorf("the acknowledgement is due within %s, want 24h", within)
+	if within := messagingRules().OptOutAcknowledgementWithin; within != time.Hour {
+		t.Errorf("an unsent receipt raises its alarm after %s, want 1h: Art. 20.3 owes it at once", within)
+	}
+	if keep := messagingRules().OptOutRecordsKeep; keep < 366*24*time.Hour {
+		t.Errorf("opt-out records are kept %s, want at least a year in every year: Art. 11.7", keep)
+	}
+	if offset := messagingRules().OptOutAcknowledgementUTCOffset; offset != 7*time.Hour {
+		t.Errorf("the receipt prints its times at UTC%+v, want UTC+7: Art. 20.4(a) times are read in Vietnam", offset)
 	}
 }
 
-// TestAnAdvertisingMessageNamesItsAdvertiser holds Art. 13 alongside the
+// TestAnAdvertisingMessageNamesItsAdvertiser holds Art. 19 alongside the
 // controller disclosures. Advertiser contact binds ADVERTISING only: an
 // operational message carries who is processing the data, not who is selling.
 func TestAnAdvertisingMessageNamesItsAdvertiser(t *testing.T) {
@@ -158,9 +165,45 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 // TestTheVersionMovedWithTheInstruments. The number exists to tell two records
 // apart, so it is meaningless if it stays put when the law it names changes.
 func TestTheVersionMovedWithTheInstruments(t *testing.T) {
-	if got := messagingRules().Version; got != 3 {
-		t.Errorf("ruleset version = %d, want 3 — the pack now states the 2025 "+
+	if got := messagingRules().Version; got != 4 {
+		t.Errorf("ruleset version = %d, want 4 — the pack applies the 2025 "+
 			"instruments and the request a consent mail needs, and a decision must "+
 			"be able to say which set judged it", got)
+	}
+}
+
+func TestDataProtectionFollowsAVietnameseRecipient(t *testing.T) {
+	rules := messagingRules()
+	if !rules.DataProtectionFollowsRecipient {
+		t.Error("the pack does not follow the recipient; Law 91/2025 Art. 1.2(c) reaches a foreign controller")
+	}
+	if rules.DisclosureLanguage != "vi" {
+		t.Errorf("disclosure language = %q, want vi", rules.DisclosureLanguage)
+	}
+	if !rules.NoLegitimateInterests {
+		t.Error("the pack allows legitimate interests; Vietnamese law has no such basis")
+	}
+}
+
+func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
+	rules := subjectRights()
+	if err := rules.Validate(); err != nil {
+		t.Fatalf("the declared deadlines do not validate: %v", err)
+	}
+	for kind, days := range map[subjectrights.RequestKind]int{
+		subjectrights.Rectify: 10, subjectrights.Erasure: 20, subjectrights.Restriction: 15,
+	} {
+		if got := rules.Deadlines[kind].Period.Days; got != days {
+			t.Errorf("%s is due in %d days, want %d", kind, got, days)
+		}
+	}
+	if rules.UTCOffset != 7*time.Hour {
+		t.Errorf("working days are counted at offset %s, want Vietnam time, UTC+07:00", rules.UTCOffset)
+	}
+	if rules.ReplyWithinWorkingDays != 2 {
+		t.Errorf("a first answer is owed in %d working days, want 2", rules.ReplyWithinWorkingDays)
+	}
+	if _, declared := rules.Deadlines[subjectrights.Access]; declared {
+		t.Error("the pack declares an access deadline the decree does not set")
 	}
 }

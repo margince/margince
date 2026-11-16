@@ -2124,9 +2124,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kết nối lịch",
   "brief.schedule.reconnect": "Kết nối lại lịch",
   "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
-  "brief.schedule.now": "Bây giờ",
-  "brief.schedule.freeUntil": "Rảnh đến {time}",
-  "brief.schedule.clearRest": "Hôm nay không còn lịch nào khác",
+  "brief.schedule.clearRest": "Hôm nay không còn cuộc họp bên ngoài nào",
   "brief.readings.riskPartial": "Chỉ tính deal đã có giá",
   "brief.readings.unpricedCount_one": "{count} deal chưa định giá · không tính",
   "brief.readings.unpricedCount_other":
@@ -2314,6 +2312,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.brief_overnight": "Tóm tắt qua đêm",
   "systemJob.captured_deal_refile": "Gắn cuộc trò chuyện đã thu thập",
   "systemJob.capture": "Thu thập thư",
+  "systemJob.privacy_request_task": "Việc xử lý yêu cầu về dữ liệu",
   "systemJob.capture_auto_enrich": "Bổ sung dữ liệu công ty từ thư",
   "systemJob.capture_classify": "Phân loại thư",
   "systemJob.capture_credential_backfill": "Cập nhật kết nối hộp thư",
@@ -3551,6 +3550,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.stopLiftBody": "Thư bị lệnh này giữ lại có thể được gửi lại.",
   "consent.stopReason": "Lý do (lưu trong lịch sử hồ sơ)",
   "consent.manage": "Quản lý sự đồng ý và lịch sử bằng chứng",
+  "consent.optOutRecords": "Tải xuống hồ sơ từ chối nhận quảng cáo",
   "contact.consent": "Sự đồng ý",
   "consent.grant": "Ghi nhận sự đồng ý",
   "consent.operatorWording":
@@ -6900,7 +6900,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",
   "brief.panel.decisions": "Phê duyệt",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
-  "brief.panel.schedule": "Ngày của bạn",
+  "brief.panel.schedule": "Cuộc họp bên ngoài",
   "brief.readings.label": "Số liệu hôm nay",
   "brief.readings.floorTip":
     "Một nguồn đã chạm giới hạn, nên con số này là mức tối thiểu.",
@@ -7832,6 +7832,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Tin nhắn này còn thiếu một thông tin",
   "sendPermission.missingPermission": "Cần được phép gửi thư này",
   "sendPermission.reason.chooseDeal": "Chọn giao dịch cho lần liên hệ lại này.",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
   "sendPermission.appliesTo": "Điều này áp dụng cho {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":
@@ -7851,6 +7853,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.ready": "Đã kiểm tra người nhận",
   "sendPermission.markName": "Trạng thái liên lạc của tin nhắn này",
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
+  "lawfulBasis.title": "Chưa có sự đồng ý của liên hệ này",
+  "lawfulBasis.body":
+    "Theo pháp luật Việt Nam, bạn không được xử lý dữ liệu này khi chưa có sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",
+  "lawfulBasis.confirm": "Vẫn gửi",
+  "lawfulBasis.failed": "Chưa ghi nhận được xác nhận. Hãy thử lại.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "sự đồng ý của quý khách ngày {date}",
+  "privacynotice.basisOn.agreement":
+    "thực hiện thỏa thuận giữa quý khách và {controller} theo Điều 19.1(d) Luật Bảo vệ dữ liệu cá nhân",
+  "privacynotice.basisOn.us": "chúng tôi",
+  "privacynotice.basis.none":
+    "Chưa có căn cứ xử lý được ghi nhận cho việc sử dụng này.",
+  "privacynotice.basisOn.none": "chưa có căn cứ xử lý được ghi nhận",
+  "confirm.done.bodyNamed":
+    "Đã ghi nhận câu trả lời. Nhân viên của {controller} sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, quý khách sẽ được báo lý do. Liên kết này đã hết lượt dùng.",
   "sendPermission.unanswered":
     "Lần kiểm tra trước khi gửi chưa hoàn tất. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":
@@ -8023,6 +8040,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc này được tạo vì lead này đã gửi thư hoặc đặt lịch hẹn. Một câu trả lời không tự chuyển đổi ai: hãy xác nhận lead đủ điều kiện khi họ sẵn sàng.",
   "tasks.origin.assurance":
     "Bước kiểm tra dự báo hằng đêm đã tạo việc này: dữ liệu đầu vào của deal này cần xem lại. Trang deal liệt kê các dữ liệu đó.",
+  "tasks.origin.privacy_request":
+    "Được tạo khi liên hệ yêu cầu chỉnh sửa, xóa hoặc ngừng sử dụng dữ liệu của họ. Pháp luật nước họ quy định thời hạn của việc này.",
   "tasks.origin.analytics_decision":
     "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
@@ -10816,7 +10835,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chúng tôi tìm thấy thông tin của quý khách trên một trang web.",
   "privacynotice.source.stated.other": "Nguồn khác, được mô tả dưới đây.",
   "privacynotice.source.statedNote": "Ghi chú của chúng tôi: {note}",
-  "privacynotice.purposes.title": "Mục đích sử dụng thông tin",
+  "privacynotice.purposes.title": "Mục đích sử dụng và căn cứ xử lý",
   "privacynotice.rights.title": "Quyền của quý khách đối với thông tin này",
   "privacynotice.rights.how":
     "Để sử dụng bất kỳ quyền nào, vui lòng trả lời tin nhắn đã đưa quý khách đến đây, hoặc liên hệ qua địa chỉ trên trang web của chúng tôi. Chúng tôi phản hồi trong 02 ngày làm việc kể từ khi nhận được yêu cầu.",
@@ -10892,7 +10911,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.anonymize": "{scope}: ẩn danh sau {days}.",
   "privacynotice.retention.erase": "{scope}: xóa sau {days}.",
   "privacynotice.retention.rest":
-    "Các thông tin khác được lưu khi còn dùng cho các mục đích trên. Khi quý khách yêu cầu xóa, chúng tôi xóa những gì pháp luật cho phép.",
+    "Các thông tin khác được lưu khi còn dùng cho các mục đích nêu tại mục “Mục đích sử dụng và căn cứ xử lý”.",
   "privacynotice.retention.scope.activity":
     "Email, cuộc họp và cuộc gọi với quý khách",
   "privacynotice.retention.scope.activityTranscript":
@@ -10904,7 +10923,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Thông tin của quý khách, nếu sau đó không có liên hệ thêm",
   "privacynotice.objection.title": "Quyền phản đối",
   "privacynotice.objection.body":
-    "Quý khách có thể phản đối bất cứ lúc nào việc dùng dữ liệu dựa trên lợi ích chính đáng của chúng tôi. Khi đó việc dùng dữ liệu sẽ dừng, trừ khi có lý do bắt buộc. Nếu quý khách phản đối quảng cáo, quảng cáo sẽ dừng mà không cần nêu lý do.",
+    "Quý khách có thể phản đối việc xử lý dữ liệu cá nhân hoặc rút lại sự đồng ý bất cứ lúc nào. Chúng tôi phản hồi trong 02 ngày làm việc và ngừng xử lý trong 15 ngày, trừ trường hợp pháp luật cho phép xử lý không cần sự đồng ý của quý khách. Nếu quý khách từ chối nhận quảng cáo, chúng tôi ngừng gửi quảng cáo ngay mà không cần quý khách nêu lý do.",
   "privacynotice.objection.how": "Cách phản đối: {route}",
   "notice.ownerOf": "Phụ trách {duty}",
   "notice.excuse": "Kết thúc mà không gửi",
@@ -13160,12 +13179,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã xác nhận đăng ký nhận {purpose}. Quý khách có thể dừng bất cứ lúc nào từ bất kỳ email nào đã nhận.",
   "confirm.done.title": "Xin cảm ơn",
   "confirm.receipt.title": "Bước tiếp theo",
-  "confirm.receipt.body":
-    "Nêu mã tham chiếu này trong mọi câu hỏi về yêu cầu. Phản hồi sẽ được gửi trong vòng một tháng.",
+  "confirm.receipt.body": "Nêu mã tham chiếu này trong mọi câu hỏi về yêu cầu.",
   "confirm.receipt.rectify": "Đã yêu cầu chỉnh sửa",
   "confirm.receipt.erasure": "Đã yêu cầu xóa",
   "confirm.done.body":
-    "Đã ghi nhận câu trả lời. Mọi thay đổi sẽ được chuyển cho một nhân viên ở đây áp dụng, và liên kết này giờ đã hết lượt dùng.",
+    "Đã ghi nhận câu trả lời. Nhân viên phụ trách sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, quý khách sẽ được báo lý do. Liên kết này đã hết lượt dùng.",
   "confirm.invalidLink":
     "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
   "confirm.questionChanged":
@@ -22003,6 +22021,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công việc CRM bình thường vẫn có thể tiếp tục. Khi xảy ra sự cố, khôi phục có thể lâu hơn hoặc mất nhiều dữ liệu mới hơn mức mục tiêu cho phép.",
   "health.effect.automatic":
     "Công việc tự động có thể đến sai đồng nghiệp, khiến việc theo dõi bị giao sai người cho đến khi sửa cách phân công.",
+  "health.effect.receipts":
+    "Yêu cầu từ chối vẫn có hiệu lực và việc gửi quảng cáo đến các liên hệ này vẫn dừng. Các liên hệ chưa được thông báo, trong khi quy định của quốc gia họ yêu cầu thông báo ngay.",
   "health.effect.readFailed":
     "Kiểm tra này không hiển thị được trạng thái hiện tại. Kiểm tra thất bại không có nghĩa tính năng bên dưới đã dừng.",
   "health.reportCopyFailed": "Không thể sao chép báo cáo kỹ thuật",
@@ -22095,6 +22115,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.source.updates": "Cập nhật dữ liệu",
   "health.source.recovery": "Bằng chứng khôi phục",
   "health.source.automatic": "Chất lượng công việc tự động",
+  "health.source.receipts": "Xác nhận từ chối nhận quảng cáo",
   "health.scope": "Phạm vi ảnh hưởng",
   "health.window": "Khoảng báo cáo",
   "health.observed": "Quan sát mới nhất",
@@ -22120,6 +22141,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.recovery.recovery":
     "Ghi nhận diễn tập khôi phục thành công trong mục tiêu thời gian và mức mất dữ liệu.",
   "health.recovery.automatic": "Đánh giá kết quả phân công trên mẫu đủ lớn.",
+  "health.recovery.receipts":
+    "Mỗi yêu cầu từ chối trong 30 ngày qua phải có xác nhận đã gửi, hoặc cảnh báo của nó đã được xử lý.",
   "health.ownerHandoff":
     "Chủ hộp thư chấp nhận hoặc từ chối liên hệ được đề xuất trong Danh sách công việc → Quyết định. Hội thoại bị giữ được xem xét trong Kết nối, phần Hoạt động.",
   "health.operatorHandoff":
@@ -22193,6 +22216,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.automatic_checked":
     "Mẫu đã kiểm tra chưa vượt ngưỡng cần xem lại phân công",
   "health.code.automatic_routing": "Cần xem lại phân công công việc tự động",
+  "health.code.receipts_sent":
+    "Mọi xác nhận từ chối trong 30 ngày qua đã được gửi",
+  "health.code.receipts_missed": "Một số xác nhận từ chối chưa được gửi",
   "health.code.capture_thread_processing": "Đang phân loại chuỗi thư",
   "health.code.capture_thread_uncertain": "Xem xét hội thoại riêng",
   "health.queueCoverage":
@@ -22215,6 +22241,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lần thử khôi phục không đạt mục tiêu. Nhờ người vận hành khắc phục và thử lại.",
   "health.impact.automatic":
     "Công việc có thể được giao sai người. Xem xét cách phân công và sửa người chịu trách nhiệm.",
+  "health.impact.receipts":
+    "Liên hệ đã từ chối nhận quảng cáo chưa nhận được xác nhận theo luật định. Mở các thông báo về xác nhận bị thiếu và sửa địa chỉ hoặc cấu hình gửi thư.",
   "analytics.outlook.calledAt": "Dự báo ngày {at}",
   "analytics.prospect.weeksByQualification":
     "Mỗi lead được tính vào tuần đủ điều kiện lần đầu.",

@@ -51,6 +51,8 @@ type PrivacyInformation struct {
 	PurposeKeys []string
 	// PurposeBases is why each purpose may use the data, at the same index.
 	PurposeBases []string
+	// PurposeSince is when each consent basis was granted, at the same index.
+	PurposeSince []*time.Time
 	// Rights are the codes a page renders in its own language.
 	Rights []string
 	// Controller is who answers for the data; DataCategories, Recipients and
@@ -66,7 +68,7 @@ type PrivacyInformation struct {
 func newDisclosure() PrivacyInformation {
 	return PrivacyInformation{
 		Rights: subjectRights(), Recipients: disclosureRecipients(),
-		Purposes: []string{}, PurposeKeys: []string{}, PurposeBases: []string{},
+		Purposes: []string{}, PurposeKeys: []string{}, PurposeBases: []string{}, PurposeSince: []*time.Time{},
 		DataCategories: []string{}, Retention: []RetentionRule{},
 	}
 }

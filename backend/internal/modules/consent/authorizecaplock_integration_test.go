@@ -82,6 +82,7 @@ func releaseCapLock(t *testing.T, holder *pgx.Conn, address string) {
 const capWindow = 24 * time.Hour
 
 // The ISO user-assigned QM–QZ and XA–XZ ranges keep these tests separate from sibling Z codes.
+// KA–KZ follows them: no test here registers a K code, and no pack is compiled in.
 var capJurisdictions = struct {
 	mu   sync.Mutex
 	next int
@@ -89,7 +90,8 @@ var capJurisdictions = struct {
 
 const (
 	reservedQSlots        = int('z' - 'm' + 1)
-	testJurisdictionSlots = reservedQSlots + int('z'-'a'+1)
+	reservedXSlots        = int('z' - 'a' + 1)
+	testJurisdictionSlots = reservedQSlots + reservedXSlots + int('z'-'a'+1)
 )
 
 // Jurisdictions are process-wide and cannot be registered twice.
@@ -102,7 +104,10 @@ func testJurisdiction(t *testing.T) jurisdiction.Code {
 		t.Fatalf("this package exhausted its %d distinct test jurisdictions", testJurisdictionSlots)
 	}
 	prefix, suffix := 'q', rune('m'+index)
-	if index >= reservedQSlots {
+	switch {
+	case index >= reservedQSlots+reservedXSlots:
+		prefix, suffix = 'k', rune('a'+index-reservedQSlots-reservedXSlots)
+	case index >= reservedQSlots:
 		prefix, suffix = 'x', rune('a'+index-reservedQSlots)
 	}
 	capJurisdictions.next++

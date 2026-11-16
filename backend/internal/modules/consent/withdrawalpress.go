@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -129,6 +130,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// the address, so the bare-address arm matches either.
 	lowered, hashes := storekit.StopAddressArgs(ref.Address)
 	var stopID ids.UUID
+	var pressedAt time.Time
 	err = tx.QueryRow(ctx, `
 		INSERT INTO communication_suppression
 		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id, recorded_through)
@@ -140,10 +142,10 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		          AND (live.purpose_id IS NULL OR live.purpose_id = $7)
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND `+storekit.StopOnAddressesSQL("live", "$9", "$10")+`)))
-		RETURNING id`,
+		RETURNING id, recorded_at`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
 		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject),
-		lowered, hashes).Scan(&stopID)
+		lowered, hashes).Scan(&stopID, &pressedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Already stopped. The press succeeded the first time and this one
 		// changes nothing, which is what a replayed one-click POST is.
@@ -156,7 +158,12 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// An address no record names has no country to ask.
 	if !ref.LeadID.IsZero() {
 		lead := subject{id: ref.LeadID.UUID, entityType: entityLead}
-		if err := s.acknowledgeOptOutTx(ctx, tx, lead, commsauthz.ReasonObjection, stopID); err != nil {
+		if err := s.acknowledgeOptOutTx(ctx, tx, lead, commsauthz.ReasonObjection, stopID,
+			RefusalTimes{ReceivedAt: pressedAt, StoppedAt: pressedAt}); err != nil {
+			return false, err
+		}
+		who := ruleSubject{Kind: entityLead, ID: ref.LeadID.String()}
+		if err := s.openRequestTaskTx(ctx, tx, who, RequestTaskObjection, stopID.String(), s.now()); err != nil {
 			return false, err
 		}
 	}
