@@ -144,7 +144,7 @@ function ConsentFrame({
 }: Readonly<{ phase: AuthPhase; wide?: boolean; children: ReactNode }>) {
   const t = useT();
   return (
-    <AuthExperience phase={phase} notice wide={wide}>
+    <AuthExperience phase={phase} notice wide={wide} core={false}>
       <Wordmark alt={t("auth.title")} />
       {children}
     </AuthExperience>
@@ -252,8 +252,7 @@ function ConsentSelector({
           <p className="t-caption">{t("consent.ceiling")}</p>
           {data.offline && <p>{t("consent.offline")}</p>}
           <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
-          {/* Deny first, as a dialog's footer reads; a phone turns over the
-              stack, not the tab order. */}
+          {/* Deny first, as a dialog's footer reads, at every width. */}
           <div className="oauthconsent-actions">
             <form method="post" action="/oauth/authorize">
               <HiddenAuthorizeFields params={params} consent={consent} />

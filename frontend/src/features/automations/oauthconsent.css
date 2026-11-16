@@ -42,7 +42,7 @@
 
 @media (max-width: 700px) {
   .oauthconsent-actions {
-    flex-direction: column-reverse;
+    flex-direction: column;
   }
   .oauthconsent-actions .btn {
     width: 100%;

@@ -108,7 +108,7 @@ export const ConsentPrompt: Story = {
   render: story(consentHash({ consent: NONCE }), everyScope),
 };
 
-// On a phone the two verbs stack full width, Authorize on top.
+// On a phone the two verbs stack full width, Deny above Authorize.
 export const ConsentPromptPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

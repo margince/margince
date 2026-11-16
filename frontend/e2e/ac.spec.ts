@@ -3744,7 +3744,7 @@ test.describe("Authorize access on the sign-in surface", () => {
     }
   }
 
-  test("Deny sits before Authorize on the end edge, and a phone stacks Authorize on top", async ({
+  test("Deny sits before Authorize on the end edge, and a phone stacks them in the same order", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
@@ -3766,7 +3766,7 @@ test.describe("Authorize access on the sign-in surface", () => {
       deny: await deny.boundingBox(),
       authorize: await authorize.boundingBox(),
     };
-    expect(phone.authorize?.y).toBeLessThan(phone.deny?.y ?? 0);
+    expect(phone.deny?.y).toBeLessThan(phone.authorize?.y ?? 0);
     expect(phone.authorize?.width).toBe(phone.deny?.width);
   });
 

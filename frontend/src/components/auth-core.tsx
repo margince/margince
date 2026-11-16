@@ -99,6 +99,7 @@ export function AuthExperience({
   phase,
   notice = false,
   wide = false,
+  core = true,
 }: Readonly<{
   children: ReactNode;
   phase: AuthPhase;
@@ -108,6 +109,8 @@ export function AuthExperience({
   // A form with sections of its own, which the sign-in measure would wrap
   // line by line.
   wide?: boolean;
+  // Off where the screen's own form needs the height the Core would take.
+  core?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -115,7 +118,13 @@ export function AuthExperience({
   const intro = useDocumentIntro();
   return (
     <div
-      className={wide ? "auth-surface auth-surface-wide" : "auth-surface"}
+      className={[
+        "auth-surface",
+        wide && "auth-surface-wide",
+        !core && "auth-surface-coreless",
+      ]
+        .filter(Boolean)
+        .join(" ")}
       data-auth-phase={phase}
       data-auth-intro={intro ? "play" : "done"}
     >
@@ -136,7 +145,7 @@ export function AuthExperience({
         <div className="auth-task-in">{children}</div>
         <LegalFooter notice={notice} />
       </div>
-      <IdentityRegion phase={phase} greeting={!notice} />
+      {core && <IdentityRegion phase={phase} greeting={!notice} />}
     </div>
   );
 }

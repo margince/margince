@@ -639,9 +639,9 @@
   .auth-wordmark img {
     width: 112px;
   }
-  /* A wide form is taller than a phone, so nothing centres the Core down past
-     the name in the corner. */
-  .auth-surface-wide {
+  /* With no Core above it, a form taller than a phone starts its heading where
+     the name sits in the corner. */
+  .auth-surface-coreless {
     padding-top: calc(var(--authPadBlock) * 2);
   }
 }
