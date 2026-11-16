@@ -23,6 +23,7 @@ import (
 )
 
 func TestMovingASharedMailboxToOtherReadersNeedsTheAdminsConfirm(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := s.connect(t, e.Team1)
@@ -71,6 +72,7 @@ func TestMovingASharedMailboxToOtherReadersNeedsTheAdminsConfirm(t *testing.T) {
 }
 
 func TestOnlyAnAdminStartsASharedMailboxsHistoryImport(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := ids.UUID(s.connect(t, e.Team1).Id)
@@ -127,6 +129,7 @@ func historyImportAnnouncements(t *testing.T, s *sharedMailboxSuite, box ids.UUI
 }
 
 func TestApplyingAHeldVisibilityToHistoryNarrowsEvenWhenTheMailboxIsAlreadyHeld(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := s.connect(t, e.Team1)

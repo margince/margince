@@ -28,6 +28,7 @@ import (
 )
 
 func TestASettledVerdictMovesTheMessageOutOfTheWaitingCount(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -83,6 +84,7 @@ func TestASettledVerdictMovesTheMessageOutOfTheWaitingCount(t *testing.T) {
 // about one window, printed one above the other — which is how the screen came
 // to say `SENT FOR A VERDICT 49` over forty-nine rows reading `judged noise`.
 func TestTheCountersAgreeWithTheRowsTheyHead(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -127,6 +129,7 @@ func TestTheCountersAgreeWithTheRowsTheyHead(t *testing.T) {
 // The schedule reaches the wire, and a deployment that cannot read it says so
 // by omission rather than by printing midnight in 1970.
 func TestTheAnswerCarriesTheSenderVerdictSchedule(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, _ := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -154,6 +157,7 @@ func TestTheAnswerCarriesTheSenderVerdictSchedule(t *testing.T) {
 }
 
 func TestAnAnswerWithNoQueueReaderCarriesNoSchedule(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, _ := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -174,6 +178,7 @@ func TestAnAnswerWithNoQueueReaderCarriesNoSchedule(t *testing.T) {
 // asked for, and on the deployment where the queue is the thing that is broken
 // that is the screen an operator is trying to look at.
 func TestAScheduleReadThatFailsStillAnswersWithTheWindow(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, _ := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)

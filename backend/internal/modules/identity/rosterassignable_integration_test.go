@@ -17,6 +17,7 @@ import (
 // A rep may hand a record to the admin outside their scope, but may not name the
 // admin as an owner an automation runs as. Nobody may own the work of one who left.
 func TestTheRosterSaysWhoTheCallerMayMakeAnOwner(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-assignable")
 	ctx := context.Background()
 

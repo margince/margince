@@ -202,6 +202,7 @@ func gcalMeeting(t *testing.T, e *integration.SearchEnv) ids.UUID {
 // Every human on an ordinary invitation is on the meeting, whatever they
 // answered and whether or not they are a contact yet. A room is not a guest.
 func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleagueA, colleagueB := seatFor(t, e, guestColleagueA), seatFor(t, e, guestColleagueB)
@@ -266,6 +267,7 @@ func TestEveryGuestOnAnInvitationIsOnTheMeeting(t *testing.T) {
 // guest. A roster never retires a row a member relinked, so the next sync
 // cannot undo what the member chose.
 func TestTheRosterDoesNotRetireALinkAMemberMoved(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seatFor(t, e, guestColleagueA)
@@ -302,6 +304,7 @@ func TestTheRosterDoesNotRetireALinkAMemberMoved(t *testing.T) {
 // A link a member moved still follows the guest's answer on the calendar. The
 // move keeps the row out of the roster's reach, not out of its answers.
 func TestAMovedLinkStillTakesTheGuestsAnswer(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seatFor(t, e, guestColleagueA)
@@ -353,6 +356,7 @@ func rosterWithout(address string) []map[string]any {
 // a sync that finds no change adds nothing. A guest already on the meeting keeps
 // one row, and a link a member moved away stays moved.
 func TestAGuestAddedToAnEventJoinsTheMeetingOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seatFor(t, e, guestColleagueA)
@@ -402,6 +406,7 @@ func TestAGuestAddedToAnEventJoinsTheMeetingOnce(t *testing.T) {
 // An event that resolves onto a meeting an import filed brings its guests to
 // that meeting. The import named one contact; the calendar names everybody.
 func TestACalendarEventMatchedOntoAnImportBringsItsGuests(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
@@ -527,6 +532,7 @@ func seatReads(t *testing.T, e *integration.SearchEnv, seat, meeting ids.UUID) b
 
 // A colleague who declined is on the meeting by address, and reads nothing.
 func TestADeclinedColleagueIsShownAndGrantedNothing(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declined := seatFor(t, e, guestColleagueA)
@@ -547,6 +553,7 @@ func TestADeclinedColleagueIsShownAndGrantedNothing(t *testing.T) {
 
 // A colleague the organizer takes off the event loses what the roster gave them.
 func TestAColleagueRemovedFromTheEventLosesTheMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
@@ -577,6 +584,7 @@ func TestAColleagueRemovedFromTheEventLosesTheMeeting(t *testing.T) {
 
 // A member's narrowing of the audience wins over a colleague the calendar adds.
 func TestAMembersNarrowingWinsOverALaterColleague(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
@@ -603,6 +611,7 @@ func TestAMembersNarrowingWinsOverALaterColleague(t *testing.T) {
 // A guest's contact the reader cannot see, or one past the link ceiling, is
 // still on the meeting's guest list.
 func TestAGuestNoVisibleLinkShowsIsStillListed(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	var guests []map[string]any

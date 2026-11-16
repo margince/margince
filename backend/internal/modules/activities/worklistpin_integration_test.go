@@ -61,6 +61,7 @@ func pinsNow(ctx context.Context, t *testing.T, e *sendEnv) map[WorklistRowRef]b
 
 // The whole point: a row the rep pinned comes back as pinned.
 func TestAPinnedRowIsReadBackAsPinned(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	row := WorklistRowRef{Source: "customer_waiting", RowID: ids.NewV7().String()}
@@ -81,6 +82,7 @@ func TestAPinnedRowIsReadBackAsPinned(t *testing.T) {
 // would silently pin the task beside it — a row the reader never touched
 // jumping to the top of their day with nothing to explain it.
 func TestAPinNamesOneLanesRowAndNotAnotherWithTheSameID(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	shared := ids.NewV7().String()
@@ -107,6 +109,7 @@ func TestAPinNamesOneLanesRowAndNotAnotherWithTheSameID(t *testing.T) {
 // task beside the waiting message, so a rep clearing one pin would silently
 // lose another they had made deliberately.
 func TestUnpinningOneLanesRowLeavesAnotherWithTheSameID(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	shared := ids.NewV7().String()
@@ -134,6 +137,7 @@ func TestUnpinningOneLanesRowLeavesAnotherWithTheSameID(t *testing.T) {
 // It binds ONE reader. Pinning reorders the caller's own morning, and applying
 // it to a colleague would reorder a day whose owner never asked.
 func TestAPinBindsOnlyTheReaderWhoMadeIt(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	row := WorklistRowRef{Source: "task", RowID: ids.NewV7().String()}
 	if err := pinStore(e).PinWorklistRow(e.as(principal.RowScopeAll), row); err != nil {
@@ -147,6 +151,7 @@ func TestAPinBindsOnlyTheReaderWhoMadeIt(t *testing.T) {
 
 // Unpinning gives the row back to the ranking.
 func TestUnpinningReturnsTheRowToTheRanking(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	row := WorklistRowRef{Source: "task", RowID: ids.NewV7().String()}
@@ -165,6 +170,7 @@ func TestUnpinningReturnsTheRowToTheRanking(t *testing.T) {
 
 // Pinning twice is the same success, so a double-click is not an error.
 func TestPinningTheSameRowAgainSucceeds(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	row := WorklistRowRef{Source: "task", RowID: ids.NewV7().String()}
@@ -187,6 +193,7 @@ func TestPinningTheSameRowAgainSucceeds(t *testing.T) {
 // how often a rep overrides the order as a rep who double-clicked being twice
 // as opinionated. The unpin path always made this test; the pin path did not.
 func TestPinningTwiceRecordsOneJudgement(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	row := WorklistRowRef{Source: "task", RowID: ids.NewV7().String()}
@@ -222,6 +229,7 @@ func pinAudits(t *testing.T, e *sendEnv, row WorklistRowRef) int {
 
 // The trail names WHICH row was pinned, which the subject cannot always carry.
 func TestThePinTrailNamesTheRowAndTheReader(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	// A synthetic id, the shape a folded group carries: not a uuid, so the
@@ -243,6 +251,7 @@ func TestThePinTrailNamesTheRowAndTheReader(t *testing.T) {
 // because only its author can remove it, and is read on every assembly of that
 // reader's page.
 func TestASourceTheQueueDoesNotProduceIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 
@@ -261,6 +270,7 @@ func TestASourceTheQueueDoesNotProduceIsRefused(t *testing.T) {
 // And unpinning a row nobody pinned is the same success: the reader's goal
 // state already holds.
 func TestUnpinningARowNobodyPinnedSucceeds(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 
 	if err := pinStore(e).UnpinWorklistRow(e.as(principal.RowScopeAll),
@@ -275,6 +285,7 @@ func TestUnpinningARowNobodyPinnedSucceeds(t *testing.T) {
 // forever and the read could not tell it from a pin whose row is simply not on
 // today's page.
 func TestAnUnnamedRowIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 
@@ -291,6 +302,7 @@ func TestAnUnnamedRowIsRefused(t *testing.T) {
 // The database refuses it too, which is what holds the rule when a future
 // caller reaches the table without going through the store.
 func TestTheDatabaseRefusesAnUnnamedPin(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 
 	if _, err := e.owner.Exec(context.Background(), `

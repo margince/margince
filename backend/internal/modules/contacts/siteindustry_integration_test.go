@@ -15,6 +15,7 @@ import (
 // A site read's industry lands as a code, or not at all: free words reach
 // neither the industry column nor the evidence row.
 func TestASiteReadStoresAnIndustryCodeOrNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	for raw, want := range map[string]string{"hospitality_tourism": "hospitality_tourism", "Restaurant": "hospitality_tourism", "Hospitality and Tourism": "hospitality_tourism", "casual dining restaurant": ""} {
 		company, err := e.store.CreateCompany(e.as(), CreateCompanyInput{DisplayName: "Site " + raw, Source: "manual"})

@@ -52,6 +52,7 @@ func colleagueInvite(from, msgID string) []byte {
 // An invitation a colleague organised stays received mail, and every reader
 // names the colleague as its author rather than the other side.
 func TestAColleaguesInvitationNamesTheColleagueAsItsAuthor(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	claimOwnDomain(t, e, "search.test")

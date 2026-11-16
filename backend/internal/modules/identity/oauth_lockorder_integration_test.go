@@ -107,6 +107,7 @@ func consentInput(consenter Identity, clientID string) issueGrantInput {
 // true deadlock cannot be forced from outside without observing the other
 // transaction's locks, so this suite proves the absence, not the presence.
 func TestARevokeRacingARotationNeverDeadlocksOrLeavesACredentialLive(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "oauth-lock-order")
 
 	const attempts = 12
@@ -159,6 +160,7 @@ func TestARevokeRacingARotationNeverDeadlocksOrLeavesACredentialLive(t *testing.
 // replaces the named credential a moment earlier must not leave the connection
 // serving calls under the successor.
 func TestAPassportRevokeRacingARotationNeverDeadlocksOrSparesTheConnection(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-revoke-lock-order")
 
 	const attempts = 12
@@ -205,6 +207,7 @@ func TestAPassportRevokeRacingARotationNeverDeadlocksOrSparesTheConnection(t *te
 // after a human deliberately cut it off — the successor credential is live and
 // the grant beneath it is untouched.
 func TestRevokingAPassportARotationAlreadyReplacedStillEndsTheConnection(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-revoke-after-rotation")
 	fixture := e.connectOAuth(t)
 	replaced := e.mintUnderGrant(t, fixture.grantID)
@@ -224,6 +227,7 @@ func TestRevokingAPassportARotationAlreadyReplacedStillEndsTheConnection(t *test
 // An admin deleting a client while a consent to it commits queues on the client
 // row, the lock both take first. The connection the consent made then dies too.
 func TestDeletingAClientWhileAConsentCommitsEndsTheConnectionItMade(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "client-delete-behind-consent")
 	clientID := e.registerOAuthClient(t, "deleted mid-consent")
 	rowID := e.oauthClientRowID(t, clientID)
@@ -255,6 +259,7 @@ func TestDeletingAClientWhileAConsentCommitsEndsTheConnectionItMade(t *testing.T
 // The other order: the delete holds the client row. The consent queued behind
 // it finds the client gone and is refused the way a spent code is.
 func TestAConsentQueuedBehindAClientDeleteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "consent-behind-client-delete")
 	clientID := e.registerOAuthClient(t, "deleted before consent")
 	rowID := e.oauthClientRowID(t, clientID)

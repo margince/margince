@@ -142,6 +142,7 @@ func (d preRuleDuplicates) pairs() [][2]ids.UUID {
 }
 
 func TestTheDuplicateScanFilesEveryPairWrittenBeforeTheRuleOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	seeded := e.seedPreRuleDuplicates(ctx, t)
@@ -174,6 +175,7 @@ func TestTheDuplicateScanFilesEveryPairWrittenBeforeTheRuleOnce(t *testing.T) {
 }
 
 func TestTheDuplicateScanNeverFilesADecidedPairAgain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	seeded := e.seedPreRuleDuplicates(ctx, t)
@@ -209,6 +211,7 @@ func TestTheDuplicateScanNeverFilesADecidedPairAgain(t *testing.T) {
 }
 
 func TestTheDuplicateScanSkipsArchivedRecordsAndTheAnchor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	seeded := e.seedPreRuleDuplicates(ctx, t)

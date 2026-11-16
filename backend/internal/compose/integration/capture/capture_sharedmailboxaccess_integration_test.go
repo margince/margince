@@ -19,6 +19,7 @@ import (
 // The email drawer names the shared mailbox a message came in through, and the
 // team that reads it. Only a reader of the message is told.
 func TestTheEmailAccessNamesTheSharedMailboxAndItsReaderTeam(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	_, syncShared := sharedMailbox(t, env, e.Team1, capturemod.PostureHeld)
@@ -50,6 +51,7 @@ func TestTheEmailAccessNamesTheSharedMailboxAndItsReaderTeam(t *testing.T) {
 // empty rather than absent, because the reader may read it and the answer is
 // "none".
 func TestPersonalMailNamesNoSharedMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	env.sync(t, mailTo("personal-access-1@acme.example", "Hello.", captureOwner))

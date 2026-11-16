@@ -50,6 +50,7 @@ func (e *dedupeEnv) accountRows(ctx context.Context, t *testing.T, user ids.UUID
 }
 
 func TestReachNamesTheColleaguesToAskHighestFirst(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.seedAcmeCompany(t)
@@ -78,6 +79,7 @@ func TestReachNamesTheColleaguesToAskHighestFirst(t *testing.T) {
 }
 
 func TestReachLeavesOutAColleagueWhoWithheldIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.seedAcmeCompany(t)
@@ -106,6 +108,7 @@ func TestReachLeavesOutAColleagueWhoWithheldIt(t *testing.T) {
 // is to be listed. Read from Go's zero value this would be withheld, which
 // would empty the answer for most of a workspace.
 func TestReachListsAColleagueWhoNeverAnsweredTheSetting(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.seedAcmeCompany(t)
@@ -127,6 +130,7 @@ func TestReachListsAColleagueWhoNeverAnsweredTheSetting(t *testing.T) {
 // The answer says which functions a colleague's connections work in, and only
 // where two or more do: one would name the contact behind the title.
 func TestReachNamesTheFunctionsTwoOrMoreConnectionsWorkIn(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.seedAcmeCompany(t)

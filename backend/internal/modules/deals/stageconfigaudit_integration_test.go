@@ -21,7 +21,6 @@ package deals
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -43,13 +42,9 @@ type configEnv struct {
 
 func setupConfigEnv(t *testing.T) *configEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,10 +53,6 @@ func setupConfigEnv(t *testing.T) *configEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// EnsureSchema must verify the empty clone before the fixture seeds any rows.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &configEnv{owner: owner, ws: ids.NewV7(), admin: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
@@ -72,7 +63,7 @@ func setupConfigEnv(t *testing.T) *configEnv {
 		e.admin, "admin-"+e.admin.String()+"@config.test"); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -160,6 +151,7 @@ func requireAbsent(t *testing.T, before, after map[string]any, columns ...string
 }
 
 func TestARenamedPipelineRecordsTheNameItHadBefore(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
@@ -185,6 +177,7 @@ func TestARenamedPipelineRecordsTheNameItHadBefore(t *testing.T) {
 }
 
 func TestARenamedStageRecordsTheNameItHadBefore(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
@@ -208,6 +201,7 @@ func TestARenamedStageRecordsTheNameItHadBefore(t *testing.T) {
 // caller sent. The after-image is judged against the ROW, because an image that
 // merely echoed the input would be a record of something that never happened.
 func TestAWonStageRecordsTheProbabilityTheRowActuallyHolds(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 

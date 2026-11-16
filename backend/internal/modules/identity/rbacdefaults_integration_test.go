@@ -81,6 +81,7 @@ func (e *revocationEnv) defaultAuditRows(t *testing.T) int {
 	return n
 }
 
+//testdb:serial registers into the process-wide RBAC object registry
 func TestTheFillGivesEachSystemRoleItsDefaultOnceAndAuditsIt(t *testing.T) {
 	e := setupRevocationEnv(t, "rbac-defaults-fill")
 	// Registered after the installation exists, so the seed did not write them.
@@ -134,6 +135,7 @@ func TestTheFillGivesEachSystemRoleItsDefaultOnceAndAuditsIt(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into the process-wide RBAC object registry
 func TestAnAdminsRevocationSurvivesTheNextBoot(t *testing.T) {
 	e := setupRevocationEnv(t, "rbac-defaults-revoked")
 	registerRolesitDefaults(t)
@@ -158,6 +160,7 @@ func TestAnAdminsRevocationSurvivesTheNextBoot(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into the process-wide RBAC object registry
 func TestACustomRoleAndTheRestOfTheDocumentAreLeftAlone(t *testing.T) {
 	e := setupRevocationEnv(t, "rbac-defaults-custom")
 	ctx := e.wsCtx(e.admin)
@@ -194,6 +197,7 @@ func TestACustomRoleAndTheRestOfTheDocumentAreLeftAlone(t *testing.T) {
 	}
 }
 
+//testdb:serial registers into the process-wide RBAC object registry
 func TestAnInstallationCreatedWhileTheUnitIsComposedStartsWithItsGrants(t *testing.T) {
 	// Registered before the installation, so the seed writes the entries.
 	registerRolesitDefaults(t)
@@ -221,6 +225,8 @@ func TestAnInstallationCreatedWhileTheUnitIsComposedStartsWithItsGrants(t *testi
 
 // A seeded default reads back through the grant editor's own decode, so it is
 // not a second spelling of the document.
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestASeededDefaultIsTheEntryTheEditorReads(t *testing.T) {
 	registerRolesitDefaults(t)
 	e := setupRevocationEnv(t, "rbac-defaults-editor")

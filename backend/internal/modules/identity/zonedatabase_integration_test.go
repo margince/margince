@@ -18,6 +18,7 @@ import (
 // A zone the database cannot read is refused as an invalid installation zone,
 // so it never reaches the SQL every activity write runs. One it reads passes.
 func TestAZoneTheDatabaseLacksIsRefused(t *testing.T) {
+	t.Parallel()
 	_, pool := setupIdentityDB(t)
 	ctx := context.Background()
 	for zone, refused := range map[string]bool{"Margince/Nowhere": true, "Pacific/Kiritimati": false} {

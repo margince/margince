@@ -189,6 +189,7 @@ func (s *sharedMailboxSuite) connectAs(t *testing.T, body map[string]any) ids.UU
 }
 
 func TestAMicrosoftSharedMailboxConnectsSyncsByItsObjectIDAndNeverCallsMe(t *testing.T) {
+	t.Parallel()
 	ms := &microsoftTenant{}
 	s, _ := newProviderSuite(t, ms)
 	box := s.connectAs(t, graphBody(s.e.Team1, "authz.test", "app-secret"))
@@ -211,6 +212,7 @@ func TestAMicrosoftSharedMailboxConnectsSyncsByItsObjectIDAndNeverCallsMe(t *tes
 }
 
 func TestARefusedSubscriptionLeavesTheSharedMailboxOnThePoll(t *testing.T) {
+	t.Parallel()
 	ms := &microsoftTenant{refuseSubscriptions: true}
 	s, _ := newProviderSuite(t, ms)
 	box := s.connectAs(t, graphBody(s.e.Team1, "authz.test", "app-secret"))
@@ -229,6 +231,7 @@ func TestARefusedSubscriptionLeavesTheSharedMailboxOnThePoll(t *testing.T) {
 }
 
 func TestARefusedMicrosoftProbeStoresNothingAndNamesItsClass(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		denyInbox      bool
 		tenant, secret string
@@ -256,6 +259,7 @@ func TestARefusedMicrosoftProbeStoresNothingAndNamesItsClass(t *testing.T) {
 }
 
 func TestAGoogleSharedMailboxMustBeOnAnOwnDomainAndSyncsWithADelegatedToken(t *testing.T) {
+	t.Parallel()
 	s, google := newProviderSuite(t, &microsoftTenant{})
 	body := map[string]any{
 		"provider": "gmail", "address": salesMailbox, "reader_team_id": s.e.Team1,

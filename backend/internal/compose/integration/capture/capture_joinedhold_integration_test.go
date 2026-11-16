@@ -93,6 +93,7 @@ func threadKeyOf(t *testing.T, e *integration.SearchEnv, sourceID string) string
 // holds it; the join then files it under the opener's thread, which the classifier
 // is holding. The thread is held and one message in it is not.
 func TestAReplyJoiningAHeldThreadIsHeldWithIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setMailSharing(t, e, true)
@@ -129,6 +130,7 @@ func TestAReplyJoiningAHeldThreadIsHeldWithIt(t *testing.T) {
 // And it only ever closes. A reply born held keeps its hold when the thread it
 // joins says nothing: that hold was placed for something other than the filing.
 func TestAHeldReplyJoiningAnOpenThreadStaysHeld(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setMailSharing(t, e, true)
@@ -152,6 +154,7 @@ func TestAHeldReplyJoiningAnOpenThreadStaysHeld(t *testing.T) {
 // changes nothing about a message that lands in it — and the branch that decides
 // this is the one a fix that closed on any verdict would get wrong.
 func TestAReplyJoiningAClearedThreadStaysOpen(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setMailSharing(t, e, true)
@@ -180,6 +183,7 @@ func TestAReplyJoiningAClearedThreadStaysOpen(t *testing.T) {
 // so a narrowing recorded only on the activity is one the next recompute undoes —
 // and recomputes are routine: alias adoption runs one for every message it adopts.
 func TestAJoinedHoldSurvivesAnAudienceRecompute(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setMailSharing(t, e, true)

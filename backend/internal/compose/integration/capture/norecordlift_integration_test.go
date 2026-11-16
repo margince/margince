@@ -48,6 +48,7 @@ import (
 // whole workspace. The counterparty shape is what tells the two apart, because
 // nothing a caller writes can make a named sender unnamed.
 func TestTheLimiterStillHoldsAMeetingThatNamesAJudgedSender(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, syncAsKind := env.e, env.syncAsKind
 
@@ -88,6 +89,7 @@ func fileUnder(t *testing.T, e *integration.SearchEnv, activity ids.UUID, contac
 // A suppressed sender's message is held because of WHO SENT IT. Filing it under
 // a record later says nothing about that, and must not open it.
 func TestASuppressedSendersHoldSurvivesBeingFiled(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -124,6 +126,7 @@ func TestASuppressedSendersHoldSurvivesBeingFiled(t *testing.T) {
 // This drives the recompute against a row stamped the way that ladder stamps
 // one, which is the state the two paths differ on.
 func TestAJudgedHoldSurvivesBeingFiledWhateverTheKind(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 

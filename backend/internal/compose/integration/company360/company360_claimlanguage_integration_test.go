@@ -16,6 +16,7 @@ import (
 )
 
 func TestAccountClaimTranslatesExplanationAndPreservesQuotedEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)

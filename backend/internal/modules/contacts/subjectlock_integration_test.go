@@ -30,6 +30,7 @@ import (
 )
 
 func TestALockedSubjectMakesTheEraserWait(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -83,6 +84,7 @@ func TestALockedSubjectMakesTheEraserWait(t *testing.T) {
 }
 
 func TestLockSubjectLiveRefusesWhatItCannotHold(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,

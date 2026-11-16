@@ -134,6 +134,7 @@ func (re *runnerEnv) recordDecision(
 
 // A rep who said yes is enumerable by the nightly fan-out.
 func TestAGrantedRepIsFoundByTheNightlyFanOut(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	passport := e.mintPassportFor(t)
 	rep := e.sessionUser(t)
@@ -162,6 +163,7 @@ func TestAGrantedRepIsFoundByTheNightlyFanOut(t *testing.T) {
 
 // A rep who said no is remembered, and is not asked again.
 func TestADecliningRepIsRememberedAndNotEnumerated(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	rep := e.colleague(t, "declines@grant.test")
 	if err := e.recordDecision(t, rep, runner.GrantStateDeclined, nil); err != nil {
@@ -197,6 +199,7 @@ func TestADecliningRepIsRememberedAndNotEnumerated(t *testing.T) {
 
 // A rep nobody asked has no row, and that is not a failure.
 func TestARepWhoWasNeverAskedHasNoGrant(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	_, found, err := e.store.MyGrant(e.asRep(e.colleague(t, "unasked@grant.test")), grantSpec)
 	if err != nil {
@@ -215,6 +218,7 @@ func TestARepWhoWasNeverAskedHasNoGrant(t *testing.T) {
 // pins that — an exported read taking a user id would make the cross-rep call
 // expressible, and then only a reviewer stands between it and a caller.
 func TestARepReadsTheirOwnDecisionAndNobodyElses(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	passport := e.mintPassportFor(t)
 	mine := e.sessionUser(t)
@@ -249,6 +253,7 @@ func TestARepReadsTheirOwnDecisionAndNobodyElses(t *testing.T) {
 // Answering "never asked" would invite the caller to offer it the confirmation,
 // and a machine principal has no standing decision of its own to make.
 func TestAPrincipalWithNoHumanHasNoStandingGrantToRead(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	if _, _, err := e.store.MyGrant(e.wsCtx, grantSpec); err == nil {
 		t.Fatal("a principal with no human behind it was answered — it has no " +
@@ -265,6 +270,7 @@ func TestAPrincipalWithNoHumanHasNoStandingGrantToRead(t *testing.T) {
 // then runs for the named rep under the named credential — acting as the
 // passport's owner, on the say-so of somebody who never asked them.
 func TestAGrantCannotNameACredentialBelongingToSomebodyElse(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	// A passport minted correctly, by and for the session user.
 	mine := e.mintPassportFor(t)
@@ -298,6 +304,7 @@ func TestAGrantCannotNameACredentialBelongingToSomebodyElse(t *testing.T) {
 // turned it on for you" expressible — which is the whole thing this feature
 // exists not to be.
 func TestAPrincipalWithNoHumanCannotRecordAStandingDecision(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	passport := e.mintPassportFor(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.wsID))
@@ -329,6 +336,7 @@ func TestAPrincipalWithNoHumanCannotRecordAStandingDecision(t *testing.T) {
 // authority to anything checking the state, while carrying nothing to act
 // with. The database refuses it, and so does the writer.
 func TestAGrantCannotClaimAuthorityItHasNoCredentialFor(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	rep := e.colleague(t, "nocredential@grant.test")
 	if err := e.recordDecision(t, rep, runner.GrantStateGranted, nil); err == nil {
@@ -356,6 +364,7 @@ func TestAGrantCannotClaimAuthorityItHasNoCredentialFor(t *testing.T) {
 // need next is the renewal question, not the first-time one. Getting that wrong
 // reads as the product having forgotten them.
 func TestARevokedPassportEndsTheAuthorityAndKeepsTheDecision(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	passport := e.mintPassportFor(t)
 	rep := e.sessionUser(t)
@@ -404,6 +413,7 @@ func TestARevokedPassportEndsTheAuthorityAndKeepsTheDecision(t *testing.T) {
 // state alone would queue a night's work that fails at claim time, and the rep
 // sees a broken morning instead of the honest "your authority lapsed".
 func TestAnExpiredPassportIsNotEnumeratedEvenThoughTheGrantStands(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	passport := e.mintPassportFor(t)
 	rep := e.sessionUser(t)
@@ -438,6 +448,7 @@ func TestAnExpiredPassportIsNotEnumeratedEvenThoughTheGrantStands(t *testing.T) 
 
 // Changing your mind replaces the answer; it does not add a second one.
 func TestARepWhoChangesTheirMindHasOneAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupRunner(t)
 	rep := e.sessionUser(t)
 	if err := e.recordDecision(t, rep, runner.GrantStateDeclined, nil); err != nil {

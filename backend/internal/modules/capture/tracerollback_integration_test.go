@@ -27,6 +27,7 @@ import (
 )
 
 func TestAnInvisibleIncumbentIsTracedOnItsOwnTransaction(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t)
 	sink := capture.NewSink(db)
 	ws, _ := principal.WorkspaceID(ctx)

@@ -40,6 +40,7 @@ func (e *loadEnv) asCapturedForRep(t *testing.T, activity ids.UUID) {
 }
 
 func TestAGuessedSenderOwesNoFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	guessed, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
@@ -56,6 +57,7 @@ func TestAGuessedSenderOwesNoFollowUp(t *testing.T) {
 }
 
 func TestAGuessedSeatIsNoColleagueAndNoParty(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.customerAt(t, "customer")
 	guessed, _ := e.sentTo(t, contact, "", time.Hour)
@@ -95,6 +97,7 @@ func TestAGuessedSeatIsNoColleagueAndNoParty(t *testing.T) {
 // A held activity names no colleagues, even through a write's read-back, which
 // reaches held rows. Who sat on it is part of what the hold withholds.
 func TestAHeldActivityNamesNoColleagues(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	held, _ := e.sentTo(t, e.customerAt(t, "customer"), "", time.Hour)
 	e.asCapturedForRep(t, held)

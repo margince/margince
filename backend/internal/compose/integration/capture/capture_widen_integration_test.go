@@ -30,6 +30,7 @@ import (
 )
 
 func TestSharingHistoryReleasesWhatOnlyThisSeatsHoldCaught(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -54,6 +55,7 @@ func TestSharingHistoryReleasesWhatOnlyThisSeatsHoldCaught(t *testing.T) {
 }
 
 func TestSharingHistoryLeavesAMessageAColleagueAlsoHolds(t *testing.T) {
+	t.Parallel()
 	// A hold is a seat's own decision, and re-opening it is that seat's to make
 	// — but only over their own imports. The derivation still takes the
 	// strictest answer across every import row, so a colleague's hold on the
@@ -80,6 +82,7 @@ func TestSharingHistoryLeavesAMessageAColleagueAlsoHolds(t *testing.T) {
 }
 
 func TestSharingHistoryLeavesAMessageTheSenderMarkedConfidential(t *testing.T) {
+	t.Parallel()
 	// The case the whole provenance change was built for. The birth ladder
 	// checks the counterparty hold BEFORE the subject marker, so before
 	// verdict_reasons existed this message recorded 'counterparty' alone and a
@@ -112,6 +115,7 @@ func TestSharingHistoryLeavesAMessageTheSenderMarkedConfidential(t *testing.T) {
 }
 
 func TestSharingHistoryLeavesAMessageCapturedBeforeReasonsWereRecorded(t *testing.T) {
+	t.Parallel()
 	// A pre-migration row records the first rule that matched and says nothing
 	// about the rest, so it is not PROVABLY counterparty-only. Refusing it costs
 	// a bulk re-open of old mail; admitting it would guess, in the direction
@@ -137,6 +141,7 @@ func TestSharingHistoryLeavesAMessageCapturedBeforeReasonsWereRecorded(t *testin
 }
 
 func TestSharingHistoryLeavesAnotherSeatsOwnImports(t *testing.T) {
+	t.Parallel()
 	// Whose mail a colleague keeps private is itself private, so this operation
 	// has no id and no admin arm. The seat scoping is what enforces that: one
 	// seat sharing their history must not touch a message only a colleague
@@ -161,6 +166,7 @@ func TestSharingHistoryLeavesAnotherSeatsOwnImports(t *testing.T) {
 }
 
 func TestSharingHistoryLeavesAMessageAHeldMailboxTookIn(t *testing.T) {
+	t.Parallel()
 	// The mailbox's own posture is a standing instruction that outlives any one
 	// counterparty hold. Before the ladder recorded it, decideBirthTx returned
 	// at the counterparty rung and never asked mailboxPostureTx — so a `held`
@@ -190,6 +196,7 @@ func TestSharingHistoryLeavesAMessageAHeldMailboxTookIn(t *testing.T) {
 }
 
 func TestSharingHistoryLeavesAMessageOnAThreadAlreadyHeld(t *testing.T) {
+	t.Parallel()
 	// An inherited verdict is NOT opening-only: inheritedVerdictTx returns held,
 	// unsure and held_by_owner for any sender at all. Before the ladder recorded
 	// it, a message on an already-held thread that also matched a counterparty
@@ -225,6 +232,7 @@ func TestSharingHistoryLeavesAMessageOnAThreadAlreadyHeld(t *testing.T) {
 }
 
 func TestACounterpartyHoldSurvivesAnOpeningVerdictOnTheSameMessage(t *testing.T) {
+	t.Parallel()
 	// An opening verdict opens only a message nothing else held. The ladder
 	// evaluates every rung rather than returning at the first, so a message a
 	// counterparty hold already caught now reaches inheritedVerdictTx too — and

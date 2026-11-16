@@ -54,6 +54,7 @@ func columnNames(cols []fieldcatalog.Column) []string {
 }
 
 func TestActiveColumns_ActiveOnly_ExcludesRetired(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -90,6 +91,7 @@ func TestActiveColumns_ActiveOnly_ExcludesRetired(t *testing.T) {
 }
 
 func TestActiveColumns_PerObject_DoesNotLeakAcrossObjects(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -123,6 +125,7 @@ func TestActiveColumns_PerObject_DoesNotLeakAcrossObjects(t *testing.T) {
 }
 
 func TestActiveColumns_NoActiveFields_ReturnsEmptyNotError(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -150,6 +153,7 @@ func hasColumn(cols []fieldcatalog.Column, name string) bool {
 // FILTER vocabulary sees it while the WRITE vocabulary does not: two questions,
 // two methods, and conflating them would let a retired field become writable.
 func TestFilterableColumnsSeesRetiredFieldsAndActiveColumnsDoesNot(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)

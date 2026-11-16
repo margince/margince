@@ -38,6 +38,7 @@ import (
 // sealed in the vault, and the acting admin is captured for audit and nothing
 // else — the connection belongs to the workspace, not to them.
 func TestAC_TG_1_ConnectValidatesSealsAndRecordsAuditOnly(t *testing.T) {
+	t.Parallel()
 	c := setupTelegram(t)
 
 	// Observed from inside getMe: the one moment at which "before anything is
@@ -183,6 +184,7 @@ func (c *telegramEnv) assertConnectionIsWorkspaceOwned(t *testing.T) {
 // calls. The credential goes with it, and the audit row names the agent. A
 // read-only passport does not reach it.
 func TestAnAgentDisconnectsARealChannel(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	path := "/v1/channel-connections/" + c.conn.ID.String()
 	readOnly := apptest.PassportBearer(t, c.AppEnv, "channel reader", "read")

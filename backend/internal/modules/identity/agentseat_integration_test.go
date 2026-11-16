@@ -134,6 +134,7 @@ func theAgentSeat(t *testing.T, owner *pgx.Conn) agentSeatRow {
 // The absence is the point. A seeded agent is a full seat metered against the
 // licence on every installation, for a row nothing in the product reads.
 func TestBootstrapMintsNoAgentSeat(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupIdentityDB(t)
 	bootstrapForAgentSeat(t, pool)
 
@@ -159,6 +160,7 @@ func TestBootstrapMintsNoAgentSeat(t *testing.T) {
 // under it must arrive with this door already shut rather than have it re-opened
 // and re-closed.
 func TestNoSetPasswordLinkCanBeIssuedForAnAgentIdentity(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupIdentityDB(t)
 	wsID, slug := bootstrapForAgentSeat(t, pool)
 	seedAgentIdentity(t, owner, "agent@"+slug+".gradion.local")

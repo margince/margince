@@ -45,6 +45,7 @@ func (b *accountBoundaryBarrier) TraceQueryStart(ctx context.Context, _ *pgx.Con
 func (*accountBoundaryBarrier) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 func TestHistoryAccountCohortsFollowConnectionLockOrder(t *testing.T) {
+	t.Parallel()
 	for _, rebindStartsFirst := range []bool{false, true} {
 		t.Run(map[bool]string{false: "import_transaction_starts_first", true: "rebind_transaction_starts_first"}[rebindStartsFirst], func(t *testing.T) {
 			ctx, _, vault, workspace := newCaptureRegistryFixture(t)
@@ -130,6 +131,7 @@ func TestHistoryAccountCohortsFollowConnectionLockOrder(t *testing.T) {
 }
 
 func TestConcurrentFirstGrantsStillRecordAnAccountChange(t *testing.T) {
+	t.Parallel()
 	ctx, _, vault, workspace := newCaptureRegistryFixture(t)
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()

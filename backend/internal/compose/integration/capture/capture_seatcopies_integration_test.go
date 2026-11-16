@@ -129,6 +129,7 @@ func newSeatCopyEnv(t *testing.T, shared seatCopyPostures) seatCopyEnv {
 }
 
 func TestAReaderOfBothMailboxCopiesSeesOneEntry(t *testing.T) {
+	t.Parallel()
 	s := newSeatCopyEnv(t, seatCopyPostures{first: true, second: true})
 	s.first(t)
 	s.second(t)
@@ -246,6 +247,7 @@ func contactPage(e *integration.SearchEnv) *contact360.Service {
 // The sender types the Message-ID. A mail reusing one that differs in subject,
 // sender or body is a different message and keeps its own row.
 func TestACopyThatDiffersInSubjectSenderOrBodyIsNotCollapsed(t *testing.T) {
+	t.Parallel()
 	for name, mail := range map[string]struct{ from, subject, body string }{
 		"subject": {seatCopySender, "Updated bank details", seatCopyBody},
 		"sender":  {"billing@acme-payments.example", "Telematics renewal", seatCopyBody},
@@ -269,6 +271,7 @@ func TestACopyThatDiffersInSubjectSenderOrBodyIsNotCollapsed(t *testing.T) {
 }
 
 func TestAReaderOfOneCopySeesItWithoutACount(t *testing.T) {
+	t.Parallel()
 	s := newSeatCopyEnv(t, seatCopyPostures{first: true, second: false})
 	s.first(t)
 	s.second(t)
@@ -292,6 +295,7 @@ func TestAReaderOfOneCopySeesItWithoutACount(t *testing.T) {
 }
 
 func TestASecondMailboxCopyAddsNoExchange(t *testing.T) {
+	t.Parallel()
 	s := newSeatCopyEnv(t, seatCopyPostures{first: true, second: true})
 	s.first(t)
 	before := exchanges(t, s.e, s.contact)
@@ -303,6 +307,7 @@ func TestASecondMailboxCopyAddsNoExchange(t *testing.T) {
 }
 
 func TestSharedMailKeySQLAgreesWithSharedMailKey(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	for _, key := range []string{seatCopyKey, connector.SeatScopedMailKey(seatCopyKey, ids.NewV7().String())} {
 		var got string

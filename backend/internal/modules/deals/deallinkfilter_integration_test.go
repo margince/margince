@@ -15,6 +15,7 @@ import (
 )
 
 func TestADealListNarrowsToDealsHoldingALinkOfOneType(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stage := openStage(t, e, SemanticOpen)
 	first, second, third := seedDealInStage(t, e, stage), seedDealInStage(t, e, stage), seedDealInStage(t, e, stage)

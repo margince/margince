@@ -34,6 +34,7 @@ import (
 // as the write leaves them both live — which the index refuses. Archiving
 // before inserting is what makes that window not exist.
 func TestReplacingTheWorkPhoneCorrectsIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -63,6 +64,7 @@ func TestReplacingTheWorkPhoneCorrectsIt(t *testing.T) {
 // half a nil-vs-empty mistake breaks silently: every patch of an unrelated
 // field would strip the record's numbers.
 func TestAPatchThatNamesNoNumberLeavesThemAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -91,6 +93,7 @@ func TestAPatchThatNamesNoNumberLeavesThemAlone(t *testing.T) {
 // An empty list is a real answer and removes them all — a contact who no longer
 // has a number anybody can reach is a fact worth recording.
 func TestAnEmptyPhoneListRemovesThem(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -121,6 +124,7 @@ func TestAnEmptyPhoneListRemovesThem(t *testing.T) {
 // primary is two live work primaries for the length of a statement unless the
 // loop demotes before it promotes.
 func TestSwappingWhichWorkPhoneIsPrimary(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -165,6 +169,7 @@ func TestSwappingWhichWorkPhoneIsPrimary(t *testing.T) {
 // before any write, and the refusal names the type rather than the bare
 // conflict uq_contact_phone_primary would answer with.
 func TestTwoPrimaryPhonesOfOneTypeIsRefusedByType(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -197,6 +202,7 @@ func TestTwoPrimaryPhonesOfOneTypeIsRefusedByType(t *testing.T) {
 // that re-sends both rows unchanged — an ordinary rename that replaces the
 // phone set every save — must not collapse them onto the last type.
 func TestReplacingLeavesTwoTypesOfOneNumberIntact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -241,6 +247,7 @@ func TestReplacingLeavesTwoTypesOfOneNumberIntact(t *testing.T) {
 // observed_at could be overwritten by a fill that should have been skipped. Any
 // row pointing at the archived id then named a number that was still live.
 func TestDroppingOneTypeKeepsTheSurvivorsIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -284,6 +291,7 @@ func TestDroppingOneTypeKeepsTheSurvivorsIdentity(t *testing.T) {
 // a statement, which uq_contact_phone_primary refused. Landing every retained row
 // demoted before raising any primary is what makes this valid change go through.
 func TestRetypingAPrimaryWhileAnotherTakesItsSlot(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

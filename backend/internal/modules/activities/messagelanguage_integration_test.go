@@ -14,6 +14,7 @@ import (
 )
 
 func TestAHandLoggedNoteStoresTheLanguageItIsWrittenIn(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	subject := "Gespräch mit dem Einkauf"

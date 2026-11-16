@@ -96,6 +96,7 @@ func factValue(ctx context.Context, t *testing.T, e *dedupeEnv, companyID ids.Co
 }
 
 func TestCorrectingAProfileFieldMovesTheCompanyRecordNotOnlyItsReceipt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -125,6 +126,7 @@ func TestCorrectingAProfileFieldMovesTheCompanyRecordNotOnlyItsReceipt(t *testin
 }
 
 func TestCorrectingAProfileFieldWithNoCanonicalColumnTouchesNoCompanyColumn(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -142,6 +144,7 @@ func TestCorrectingAProfileFieldWithNoCanonicalColumnTouchesNoCompanyColumn(t *t
 }
 
 func TestConfirmingAProfileFieldKeepsTheValueAndTheMachinesEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -181,6 +184,7 @@ func TestConfirmingAProfileFieldKeepsTheValueAndTheMachinesEvidence(t *testing.T
 }
 
 func TestAProfileFieldCorrectionWithoutAValueIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -192,6 +196,7 @@ func TestAProfileFieldCorrectionWithoutAValueIsRefused(t *testing.T) {
 }
 
 func TestAStaleProfileFieldVersionIsRefusedRatherThanOverwriting(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -233,6 +238,7 @@ func readProfileFieldValue(ctx context.Context, t *testing.T, e *dedupeEnv, comp
 // by value_key alone would reach whichever of them the scan returned first —
 // correcting the phone number by overwriting the founding year.
 func TestCorrectingOneSingleValueFactLeavesItsSiblingsAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -251,6 +257,7 @@ func TestCorrectingOneSingleValueFactLeavesItsSiblingsAlone(t *testing.T) {
 }
 
 func TestAMultiValueFactIsAddressedByItsValueKey(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -272,6 +279,7 @@ func TestAMultiValueFactIsAddressedByItsValueKey(t *testing.T) {
 // The refusal's shape is a unit test (company_fact_write_test.go). What
 // needs a database is that it happens before anything is written.
 func TestAMalformedFactKeyIsRefusedBeforeTheWrite(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -288,6 +296,7 @@ func TestAMalformedFactKeyIsRefusedBeforeTheWrite(t *testing.T) {
 }
 
 func TestAFactKeyNamingNoRowIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -301,6 +310,7 @@ func TestAFactKeyNamingNoRowIsNotFound(t *testing.T) {
 }
 
 func TestConfirmingAFactKeepsTheExtractionsClaimInTheAuditTrail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -341,6 +351,7 @@ func TestConfirmingAFactKeepsTheExtractionsClaimInTheAuditTrail(t *testing.T) {
 // edit a company the ordinary path says is gone. The refusal does not depend on
 // whether the field has a canonical column behind it.
 func TestAnArchivedCompaniesEvidenceIsReadableButNotCorrectable(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -397,6 +408,7 @@ func TestAnArchivedCompaniesEvidenceIsReadableButNotCorrectable(t *testing.T) {
 // stops the next enrichment run overwriting the human, and the duplicate
 // recheck that notices the new name colliding with an existing company.
 func TestCorrectingTheDisplayNameIsTreatedAsAHumanRename(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -420,6 +432,7 @@ func TestCorrectingTheDisplayNameIsTreatedAsAHumanRename(t *testing.T) {
 // domain-derived name is frozen for good with nothing in the record saying a
 // contact never chose it.
 func TestResendingTheSameDisplayNameIsNotARename(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -454,6 +467,7 @@ func TestResendingTheSameDisplayNameIsNotARename(t *testing.T) {
 // under a provisional name derived from its mail domain while somebody
 // corrects the legal name the site states.
 func TestCorrectingTheLegalNameLeavesTheDisplayNamePromotable(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)

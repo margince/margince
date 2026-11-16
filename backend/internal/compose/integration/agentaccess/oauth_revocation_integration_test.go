@@ -167,6 +167,7 @@ func (o *oauthEnv) cut(t *testing.T, statement string, args ...any) {
 // can be cut off. Each must bind on the NEXT call — a passport that outlives
 // its grant or its client is a live credential nobody can see.
 func TestEveryRevocationPathStopsTheCredential(t *testing.T) {
+	t.Parallel()
 	for name, cut := range map[string]func(t *testing.T, c *connectedClient){
 		"passport revoked": func(t *testing.T, c *connectedClient) { c.revokePassport(t) },
 		"grant revoked":    func(t *testing.T, c *connectedClient) { c.revokeGrant(t) },
@@ -195,6 +196,7 @@ func TestEveryRevocationPathStopsTheCredential(t *testing.T) {
 // call is refused anyway. Delete the two LEFT JOINs and this is the test that
 // goes red while every cascade test stays green.
 func TestARevokedGrantStopsAPassportRowTheCascadeNeverTouched(t *testing.T) {
+	t.Parallel()
 	c := setupConnectedClient(t)
 	c.revokeGrant(t)
 
@@ -214,6 +216,7 @@ func TestARevokedGrantStopsAPassportRowTheCascadeNeverTouched(t *testing.T) {
 // mint a replacement seconds after the human pressed the button, which is
 // indistinguishable from the revocation never happening.
 func TestRevokingAConnectorsPassportRevokesTheGrantBeneathIt(t *testing.T) {
+	t.Parallel()
 	c := setupConnectedClient(t)
 	c.revokePassport(t)
 
@@ -238,6 +241,7 @@ func TestRevokingAConnectorsPassportRevokesTheGrantBeneathIt(t *testing.T) {
 // off, and mints a grant, a refresh chain and a passport beneath it that every
 // later call then refuses for reasons the human cannot see.
 func TestAKilledClientCanNeitherWinConsentNorRedeemACode(t *testing.T) {
+	t.Parallel()
 	for name, kill := range map[string]func(t *testing.T, o *oauthEnv){
 		"disabled": func(t *testing.T, o *oauthEnv) { o.disableClient(t) },
 		"deleted":  func(t *testing.T, o *oauthEnv) { o.deleteClient(t) },
@@ -285,6 +289,7 @@ func TestAKilledClientCanNeitherWinConsentNorRedeemACode(t *testing.T) {
 // connector says nothing about it — and the whole local surface would go dark
 // if the joins were read as a requirement rather than a condition.
 func TestALocallyMintedPassportIsUnaffectedByADeadConnector(t *testing.T) {
+	t.Parallel()
 	c := setupConnectedClient(t)
 
 	var minted struct {
@@ -338,6 +343,7 @@ func (o *oauthEnv) sessionlessGet(t *testing.T, path string) int {
 // revocation_endpoint. The credential a client hands back IS its
 // authentication here; there is no cookie in a client process to send.
 func TestRFC7009RevocationIsReachableWithoutASession(t *testing.T) {
+	t.Parallel()
 	c := setupConnectedClient(t)
 
 	// The client the revocation goes through genuinely carries no session:
@@ -362,6 +368,7 @@ func TestRFC7009RevocationIsReachableWithoutASession(t *testing.T) {
 // disconnects from ITS side: the whole connection dies, not just that one
 // credential, so a racing refresh cannot mint a replacement seconds later.
 func TestRevokingTheAccessTokenEndsTheWholeConnection(t *testing.T) {
+	t.Parallel()
 	c := setupConnectedClient(t)
 	if code := c.callMCP(t); code != http.StatusOK {
 		t.Fatalf("precondition: connected call → %d", code)
@@ -384,6 +391,7 @@ func TestRevokingTheAccessTokenEndsTheWholeConnection(t *testing.T) {
 // a client that only ever touches its refresh token still ends the whole
 // connection, not just that one row.
 func TestRevokingTheRefreshTokenEndsTheWholeConnection(t *testing.T) {
+	t.Parallel()
 	c := setupConnectedClient(t)
 	if code := c.callMCP(t); code != http.StatusOK {
 		t.Fatalf("precondition: connected call → %d", code)
@@ -407,6 +415,7 @@ func TestRevokingTheRefreshTokenEndsTheWholeConnection(t *testing.T) {
 // the status code — a 200 that happened to also kill the wrong grant would
 // pass a status-only check and fail every client relying on this endpoint.
 func TestRevokingAnUnknownTokenStillAnswersSuccess(t *testing.T) {
+	t.Parallel()
 	c := setupConnectedClient(t)
 
 	if status := c.revoke(t, "mgp_this-token-was-never-issued", "access_token"); status != http.StatusOK {
@@ -425,6 +434,7 @@ func TestRevokingAnUnknownTokenStillAnswersSuccess(t *testing.T) {
 // it: RFC 7009 is opt-in advertisement, not a well-known path a client is
 // expected to guess.
 func TestDiscoveryAdvertisesTheRevocationEndpoint(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	var metadata struct {

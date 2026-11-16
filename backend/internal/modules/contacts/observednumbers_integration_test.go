@@ -24,6 +24,7 @@ import (
 // one per number. Restoring without naming one is refused rather than guessed,
 // and naming one brings back that number alone.
 func TestTwoReplacedNumbersEachKeepTheirOwnUndo(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -75,6 +76,7 @@ func seedOldWorkNumbers(ctx context.Context, t *testing.T, e *dedupeEnv, contact
 // number to replace, so the new mobile replaces the old mobile and not the desk
 // number it happens to precede.
 func TestAChangedNumberListedFirstDoesNotRetireAnUnchangedOneOfItsCountry(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -100,6 +102,7 @@ func TestAChangedNumberListedFirstDoesNotRetireAnUnchangedOneOfItsCountry(t *tes
 // the undo must still name A, whether research spelled B the canonical way or
 // its own.
 func TestAReplacementOntoExistingEvidenceKeepsItsUndo(t *testing.T) {
+	t.Parallel()
 	for name, researched := range map[string]string{
 		"canonical": "+49302222222",
 		"formatted": "+49 (30) 222-2222",
@@ -138,6 +141,7 @@ func TestAReplacementOntoExistingEvidenceKeepsItsUndo(t *testing.T) {
 // The same number in another spelling is not a replacement: a signature
 // stating the number research already recorded leaves no undo behind.
 func TestARespelledNumberIsNotAReplacement(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,

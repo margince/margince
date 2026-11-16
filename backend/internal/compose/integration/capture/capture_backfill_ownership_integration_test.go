@@ -44,6 +44,7 @@ func (p *heldHistoryPage) BackfillPage(ctx context.Context, auth connector.Auth,
 }
 
 func TestAReplacedHistoryExecutionCannotWriteMailOrCompleteItsSuccessor(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	vault := newTestKeyvault(t, e)

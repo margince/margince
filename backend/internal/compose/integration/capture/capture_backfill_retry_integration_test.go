@@ -79,6 +79,7 @@ func startFlakyBackfill(t *testing.T, e *integration.SearchEnv, faults []error) 
 }
 
 func TestBackfillSurvivesATransientProviderFault(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{&connector.RateLimitedError{}})
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -142,6 +143,7 @@ func (c *dyingJobConnector) BackfillPage(context.Context, connector.Auth, time.T
 // the run row is the only thing that can bring the import back, and every write
 // that decides its fate has to outlive the context that killed the page.
 func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	fake := &dyingJobConnector{pagedConnector: &pagedConnector{messages: 25, pageSize: 10}}
@@ -210,6 +212,7 @@ func TestABackfillPageWhoseJobContextDiedNeverWedgesTheRun(t *testing.T) {
 }
 
 func TestBackfillEndsOnAFaultNoRetryCanFix(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{connector.ErrAuthRejected})
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)

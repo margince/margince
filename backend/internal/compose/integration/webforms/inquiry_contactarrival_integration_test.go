@@ -63,6 +63,7 @@ func setupContactArrivalBeforeHandling(t *testing.T) contactArrivalFixture {
 }
 
 func TestWebsiteHandlingPreservesAnEarlierManualTaskAssignment(t *testing.T) {
+	t.Parallel()
 	f := setupContactArrivalBeforeHandling(t)
 	actor := apptest.SessionUserID(t, f.e)
 	var preview crmcontracts.WebsiteInquiryAssignment
@@ -85,6 +86,7 @@ func TestWebsiteHandlingPreservesAnEarlierManualTaskAssignment(t *testing.T) {
 }
 
 func TestWebsiteHandlingPreservesAnEarlierManualTaskDeadline(t *testing.T) {
+	t.Parallel()
 	f := setupContactArrivalBeforeHandling(t)
 	due := f.receipt.CreatedAt.Add(48 * time.Hour)
 	if status := f.e.Call(t, "PATCH", "/v1/activities/"+f.task.Id.String(), integration.AnyMap{"due_at": due, "due_has_time": true}, map[string]string{"If-Match": strconv.FormatInt(int64(*f.task.Version), 10)}, nil); status != http.StatusOK {

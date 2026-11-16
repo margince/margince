@@ -25,6 +25,7 @@ func (e *dedupeEnv) user(ctx context.Context, t *testing.T, email string) ids.UU
 
 // A draft, a verdict and a notice follow the survivor.
 func TestMergingACompanyMovesDraftsVerdictsAndNotices(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
@@ -67,6 +68,7 @@ func TestMergingACompanyMovesDraftsVerdictsAndNotices(t *testing.T) {
 
 // An inherited industry keeps the author it had on the retired company.
 func TestMergingACompanyCarriesTheAuthorOfAnInheritedValue(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
@@ -90,6 +92,7 @@ func TestMergingACompanyCarriesTheAuthorOfAnInheritedValue(t *testing.T) {
 
 // A file filed under the retired contact is filed under the survivor now.
 func TestMergingAContactMovesTheFilesNamingIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "keeper@files.test", "Keeper", "files.test"))

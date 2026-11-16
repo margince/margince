@@ -67,6 +67,7 @@ func newestReplyID(t *testing.T, e *loadEnv, request ids.UUID) ids.UUID {
 }
 
 func TestAVerdictOverChangedEvidenceIsDroppedForEveryOutcome(t *testing.T) {
+	t.Parallel()
 	changes := map[string]func(t *testing.T, e *loadEnv, request ids.UUID){
 		"the answer was edited": func(t *testing.T, e *loadEnv, request ids.UUID) {
 			body := "Edited: nothing was sent after all."
@@ -114,6 +115,7 @@ func TestAVerdictOverChangedEvidenceIsDroppedForEveryOutcome(t *testing.T) {
 
 // A verdict that read unchanged evidence commits and records what it read.
 func TestAVerdictOverUnchangedEvidenceRecordsWhatItRead(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Unchanged evidence", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Here is the report.", requestInstant.Add(time.Hour))
@@ -153,6 +155,7 @@ func settleThroughPass(t *testing.T, e *loadEnv, request ids.UUID, at time.Time,
 // An answer that arrives after a settled verdict is judged, not lost. A
 // still-owed verdict over it reopens the reminder the pass itself completed.
 func TestALaterAnswerToASettledRequestIsJudgedAndReopensThePassesReminder(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Settled then reopened", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Here is the first half.", requestInstant.Add(time.Hour))
@@ -171,6 +174,7 @@ func TestALaterAnswerToASettledRequestIsJudgedAndReopensThePassesReminder(t *tes
 // A human reopening the pass's completion is a decision; the same evidence
 // is not judged again, so the reminder cannot flap back to done.
 func TestAHumanReopeningIsNotSettledAgainOnTheSameEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Human undo", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Here it is.", requestInstant.Add(time.Hour))
@@ -192,6 +196,7 @@ func TestAHumanReopeningIsNotSettledAgainOnTheSameEvidence(t *testing.T) {
 // A reminder a human completed is never reopened by a later verdict, and a
 // request older than the waiting horizon stays done as record information.
 func TestALaterVerdictNeverReopensHumanOrAgedWork(t *testing.T) {
+	t.Parallel()
 	for name, aged := range map[string]bool{"human completed": false, "past the horizon": true} {
 		t.Run(name, func(t *testing.T) {
 			e := setupLoad(t)
@@ -315,6 +320,7 @@ func verdictBehind(t *testing.T, e *loadEnv, holder int32, release func() error,
 // An answer edit still uncommitted at the verdict's final check makes the
 // verdict wait. Once the edit commits, the verdict sees it and is dropped.
 func TestAVerdictWaitsForAnAnswerEditInFlightAndDropsItself(t *testing.T) {
+	t.Parallel()
 	for _, verdict := range []string{RequestSettled, RequestStillOwed, RequestUnsure} {
 		t.Run(verdict, func(t *testing.T) {
 			e := setupLoad(t)
@@ -349,6 +355,7 @@ func TestAVerdictWaitsForAnAnswerEditInFlightAndDropsItself(t *testing.T) {
 // cases are a backdated answer and an edit to the answer it read. Unchanged
 // evidence stays skipped.
 func TestChangedEvidenceBringsABoundVerdictBack(t *testing.T) {
+	t.Parallel()
 	for name, change := range map[string]func(t *testing.T, e *loadEnv, request ids.UUID){
 		"a backdated answer": func(t *testing.T, e *loadEnv, request ids.UUID) {
 			replyTo(t, e, request, "Also, the appendix.", requestInstant.Add(2*time.Hour))
@@ -380,6 +387,7 @@ func TestChangedEvidenceBringsABoundVerdictBack(t *testing.T) {
 // final check makes the verdict wait for it. Once the reply commits, the
 // verdict sees it and is dropped, whatever it said.
 func TestAVerdictWaitsForAReplyBeingWrittenAndDropsItself(t *testing.T) {
+	t.Parallel()
 	for _, verdict := range []string{RequestSettled, RequestStillOwed, RequestUnsure} {
 		t.Run(verdict, func(t *testing.T) {
 			e := setupLoad(t)
@@ -419,6 +427,7 @@ func TestAVerdictWaitsForAReplyBeingWrittenAndDropsItself(t *testing.T) {
 // A reply written while a verdict holds its evidence waits for that verdict
 // to commit. The verdict never commits over a reply it did not see.
 func TestAReplyWrittenAfterTheFinalCheckWaitsForTheVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Reply after the check", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Here is the report.", requestInstant.Add(time.Hour))
@@ -449,6 +458,7 @@ func TestAReplyWrittenAfterTheFinalCheckWaitsForTheVerdict(t *testing.T) {
 // reminder the pass closed stays closed. A verdict with an answer left is not
 // touched; it is judged again instead.
 func TestASettledVerdictWhoseLastAnswerIsGoneIsWithdrawn(t *testing.T) {
+	t.Parallel()
 	for name, answers := range map[string]int{"its only answer": 1, "one of two answers": 2} {
 		t.Run(name, func(t *testing.T) {
 			e := setupLoad(t)

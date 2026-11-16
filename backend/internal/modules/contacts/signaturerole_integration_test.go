@@ -17,6 +17,7 @@ import (
 // contact list names the same role the contact page shows. A role a user set
 // is never replaced.
 func TestASignatureTitleFillsTheCurrentJobsRole(t *testing.T) {
+	t.Parallel()
 	for name, humanRole := range map[string]string{"empty role": "", "role a user set": "Head of Buying", "no relationship grant": ""} {
 		t.Run(name, func(t *testing.T) {
 			e := setupDedupe(t)

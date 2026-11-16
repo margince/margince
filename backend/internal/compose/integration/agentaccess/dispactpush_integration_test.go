@@ -122,6 +122,7 @@ func messageNotice(team string) string {
 	return fmt.Sprintf(`{"type":"message.created","workspace_id":%q,"channel_slug":%q,"seq":7,"message_id":"0c2f5a1e-6d3b-4e7a-9b1f-2a4d6c8e0f12","event_id":"1794620204214-0","ts":"2026-11-13T10:00:00.123Z"}`, team, pushSlug)
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestTenNoticesQueueOnePullWithNoSession(t *testing.T) {
 	e := setupDispactPush(t)
 	for i := range 10 {
@@ -135,6 +136,7 @@ func TestTenNoticesQueueOnePullWithNoSession(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheURLCheckIsAnsweredOverTheRoute(t *testing.T) {
 	e := setupDispactPush(t)
 	got := postNotice(t, e, "msg_check", pushSecret, `{"type":"url_verification","challenge":"c-77"}`)
@@ -143,6 +145,7 @@ func TestTheURLCheckIsAnsweredOverTheRoute(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestAnotherTeamsNoticeNeverPullsThisInstallationsLink(t *testing.T) {
 	e := setupDispactPush(t)
 	got := postNotice(t, e, "msg_other", pushSecret, messageNotice("team-someone-else"))

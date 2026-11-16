@@ -14,6 +14,7 @@ import (
 // The contract declares scopes as unique items and a label of at most 120
 // characters; a locally minted passport must refuse what the schema forbids.
 func TestAPassportIsRefusedAnAmbiguousScopeListOrAnOverlongLabel(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-admission")
 	human := e.admin
 

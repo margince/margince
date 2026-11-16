@@ -14,6 +14,7 @@ import "testing"
 // does. Each incumbent below is the real company the matcher named when it told
 // an operator that a company of that name was already in the CRM.
 func TestTheNineRefusedCompaniesNoLongerCollide(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

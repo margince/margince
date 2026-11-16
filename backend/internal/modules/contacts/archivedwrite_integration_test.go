@@ -33,6 +33,7 @@ import (
 )
 
 func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,
@@ -210,6 +211,7 @@ func derefOrEmpty(value *string) string {
 }
 
 func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, companyID := e.seedEmployedContact(ctx, t,
@@ -282,6 +284,7 @@ func TestTheCompanyColumnStatementsRefuseAnArchivedCompany(t *testing.T) {
 // Both arms of one upsert, on one archived company: the row that would be
 // INSERTED where none stands, and the row that would be UPDATED where one does.
 func TestTheProfileFieldUpsertRefusesAnArchivedCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, companyID := e.seedEmployedContact(ctx, t,

@@ -35,6 +35,7 @@ import (
 const gmailPushTopic = "projects/margince/topics/gmail-push"
 
 func TestGmailWatchRegistersRenewsAndLeavesCursor(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	const owner = "rep@ws.example"
 	stub := gmailStub(t, owner)
@@ -122,6 +123,7 @@ func TestGmailWatchRegistersRenewsAndLeavesCursor(t *testing.T) {
 // the watch on RunOnStart and writes watch_expires_at — the scheduled path,
 // not a direct RenewWatch call.
 func TestGmailWatchJobRenewsOnSchedule(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	integration.ApplyRiverSchema(t)
 	const owner = "rep@ws.example"

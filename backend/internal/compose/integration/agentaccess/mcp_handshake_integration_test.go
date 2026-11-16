@@ -28,6 +28,7 @@ import (
 // is dereferenced from — so a chain that quietly crossed origins fails here
 // rather than inside a client nobody can debug.
 func TestAConnectorCompletesTheWholeHandshakeOnOneOrigin(t *testing.T) {
+	t.Parallel()
 	e := setupConnector(t)
 	advertised := e.discover(t)
 

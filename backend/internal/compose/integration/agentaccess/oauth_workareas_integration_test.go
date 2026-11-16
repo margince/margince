@@ -57,6 +57,7 @@ func (o *oauthEnv) readsAdminSettings(t *testing.T, tokens map[string]any) int {
 }
 
 func TestTheAreasChosenAtConsentHoldAcrossARenewalUntilTheHumanChangesThem(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	tokens := o.consentWithAreas(t, "business")
 	if status := o.readsAdminSettings(t, tokens); status != http.StatusForbidden {
@@ -97,6 +98,7 @@ func TestTheAreasChosenAtConsentHoldAcrossARenewalUntilTheHumanChangesThem(t *te
 // A choice the screen never renders is refused like a scope outside the
 // vocabulary: back to the screen, with no code minted.
 func TestAConsentNamingAnAreaNoScreenOffersMintsNoCode(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	form := o.armConsent(t, url.Values{"scope": {"read"}})
 	form.Set("scopes", "read")
@@ -111,6 +113,7 @@ func TestAConsentNamingAnAreaNoScreenOffersMintsNoCode(t *testing.T) {
 // A rep's screen never offers admin settings, so a consent naming it is refused
 // as a hand-built form is.
 func TestAConsentNamingAnAreaTheRoleDoesNotReachMintsNoCode(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	var email string
 	if err := o.Owner.QueryRow(t.Context(), `SELECT email FROM app_user WHERE id = $1`, apptest.SessionUserID(t, o.AppEnv)).Scan(&email); err != nil {

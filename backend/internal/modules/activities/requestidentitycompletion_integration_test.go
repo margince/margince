@@ -16,6 +16,7 @@ import (
 )
 
 func TestCompletingOneSourceRequestPreservesOtherDocumentsAndRecipients(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct{ name, subject, first, second, otherParty string }{
 		{"different documents", "Signature requested", "Please sign document alpha.", "Please sign document beta.", requestCounterparty},
 		{"missing document identity", "Signature requested", "Please sign the form.", "Please sign the form.", requestCounterparty},

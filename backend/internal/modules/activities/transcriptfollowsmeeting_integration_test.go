@@ -64,6 +64,7 @@ func colleagueReads(t *testing.T, e *sendEnv, id ids.ActivityID) bool {
 // A narrowing by hand reaches it at once. A guest any writer adds or takes off
 // reaches it on the next sweep.
 func TestATranscriptKeepsTheReadersOfTheMeetingItRecords(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
@@ -127,6 +128,7 @@ func TestATranscriptKeepsTheReadersOfTheMeetingItRecords(t *testing.T) {
 // when a connector with no mailbox stamped the transcript. Leaving the meeting
 // ends the access at once.
 func TestATranscriptIsReadByTheMeetingsGuestsJudgedOnTheMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
@@ -166,6 +168,7 @@ func TestATranscriptIsReadByTheMeetingsGuestsJudgedOnTheMeeting(t *testing.T) {
 
 // A transcript that cites a task, not a meeting, is read by its own guests.
 func TestATranscriptCitingATaskIsReadByItsOwnGuests(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)

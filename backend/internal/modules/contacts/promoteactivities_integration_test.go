@@ -76,6 +76,7 @@ func (e *promoteConsentEnv) linkTargetsOf(t *testing.T, activity ids.UUID) map[s
 // The ordinary case: a lead nobody knew becomes a contact, and everything logged
 // against it while it was a lead is now on that contact's timeline.
 func TestPromotionCarriesTheLeadsActivitiesToTheContact(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "carry@example.test")
 	activity := e.seedLeadActivity(t, lead, "Called about the Q4 rollout")
@@ -106,6 +107,7 @@ func TestPromotionCarriesTheLeadsActivitiesToTheContact(t *testing.T) {
 // converted duplicate, so the lead-side row is dropped and the contact keeps the
 // link it had.
 func TestPromotionDropsALeadLinkTheContactAlreadyHas(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const shared = "known@example.test"
 

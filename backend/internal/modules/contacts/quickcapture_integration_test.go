@@ -26,6 +26,7 @@ import (
 )
 
 func TestQuickCaptureWritesTheContactAndTheirEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -74,6 +75,7 @@ func TestQuickCaptureWritesTheContactAndTheirEmployer(t *testing.T) {
 // frontend's own webUrl refuses it, and the row is permanently unlinkable —
 // which defeats the profile-as-a-link work this path exists to feed.
 func TestQuickCaptureStoresAProfileURLTheProductCanLink(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -99,6 +101,7 @@ func TestQuickCaptureStoresAProfileURLTheProductCanLink(t *testing.T) {
 }
 
 func TestQuickCaptureAttachesAnExistingEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -134,6 +137,7 @@ func TestQuickCaptureAttachesAnExistingEmployer(t *testing.T) {
 }
 
 func TestQuickCaptureWithoutAnEmployerIsStillAContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -158,6 +162,7 @@ func TestQuickCaptureWithoutAnEmployerIsStillAContact(t *testing.T) {
 // refusal has to roll the contact back, or the list keeps a contact the reader
 // was told did not save.
 func TestQuickCaptureLeavesNoContactWhenTheEmployerIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

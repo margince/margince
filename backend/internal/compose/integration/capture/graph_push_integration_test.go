@@ -43,6 +43,7 @@ func graphNotification(email string) []byte {
 }
 
 func TestGraphNotificationRoutesToTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	const mailbox = "outlook-owner@ws.example"
 

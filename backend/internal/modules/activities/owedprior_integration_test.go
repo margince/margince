@@ -56,6 +56,7 @@ func fromCounterparty(t *testing.T, e *loadEnv, id ids.UUID, address string) {
 
 // The newest of our earlier messages in the thread is the one carried.
 func TestTheCandidateCarriesOurLastMessageBeforeIt(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	activity := e.waitingFrom(t, "Re: the plan", "buyer@customer.test", e.buyer(t))
 	fromCounterparty(t, e, activity, "buyer@customer.test")
@@ -83,6 +84,7 @@ func TestTheCandidateCarriesOurLastMessageBeforeIt(t *testing.T) {
 // Thread keys are never NULL-matched: one unthreaded outbound of ours would
 // otherwise become the context for every unthreaded question in the workspace.
 func TestAThreadlessCandidateCarriesNoPriorMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := ids.NewV7()
@@ -106,6 +108,7 @@ func TestAThreadlessCandidateCarriesNoPriorMessage(t *testing.T) {
 
 // Context never crosses a thread.
 func TestAPriorMessageIsNeverReadAcrossThreads(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	activity := e.waitingFrom(t, "Re: the plan", "buyer@customer.test", e.buyer(t))
 	e.ourReply(t, "another conversation entirely", "Unrelated.", "thread-somewhere-else", 3)
@@ -121,6 +124,7 @@ func TestAPriorMessageIsNeverReadAcrossThreads(t *testing.T) {
 // answered — but the ordering matters on its own terms: context is what the
 // customer was answering, not what we said next.
 func TestALaterMessageOfOursIsNotContext(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingAgedFrom(t, "Re: the plan", "buyer@customer.test", e.buyer(t), 30)
@@ -158,6 +162,7 @@ func TestALaterMessageOfOursIsNotContext(t *testing.T) {
 // ship it to the model as context. capture refuses the same forgery on the same
 // column; this holds that this read does too.
 func TestAForgedThreadRootCarriesNoContext(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	thread := "thread-forged-root"
@@ -194,6 +199,7 @@ func TestAForgedThreadRootCarriesNoContext(t *testing.T) {
 // cover this one, which a rep sets by hand about their dentist or their lawyer
 // and which nothing about re-judging can feed back into.
 func TestADismissedThreadIsNotSwept(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	activity := e.waitingFrom(t, "About your appointment", "dentist@practice.test", e.buyer(t))
@@ -219,6 +225,7 @@ func TestADismissedThreadIsNotSwept(t *testing.T) {
 // the whole block for such a message — a failure that reads as the model simply
 // judging worse, with nothing to point at.
 func TestAPriorMessageWithNoSubjectStillCarries(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	activity := e.waitingFrom(t, "Re: the plan", "buyer@customer.test", e.buyer(t))
 	fromCounterparty(t, e, activity, "buyer@customer.test")

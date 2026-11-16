@@ -92,6 +92,7 @@ func (c *telegramEnv) grantConsent(t *testing.T, contactID, purposeKey string) {
 // TestInboundThenReplyRoundTrip is the whole loop, in the order a customer and
 // a rep actually live it.
 func TestInboundThenReplyRoundTrip(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	inbound := telegramUpdate{
 		updateID: 5901, messageID: 91, senderID: 770901,
@@ -166,6 +167,7 @@ func TestInboundThenReplyRoundTrip(t *testing.T) {
 // address at all, which is what makes contact_id load-bearing too — resolved
 // from the channel identity, it is nil for every mail-shaped lookup.
 func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	opening := telegramUpdate{
 		updateID: 6101, messageID: 11, senderID: 771101,
@@ -243,6 +245,7 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 // TestCustomerReplyNamesTheChannelItArrivedOn, which asserts exactly one event.
 // Only the archive differs between them.
 func TestAnArchivedOutboundIsNotAConversationToReplyInto(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	opening := telegramUpdate{
 		updateID: 6201, messageID: 21, senderID: 771201,
@@ -322,6 +325,7 @@ func (c *telegramEnv) mailConnectorCtx(t *testing.T) context.Context {
 // they were never part of, and every consumer of that event — sequence
 // exit-on-reply, warm-room scoring, an answering automation — acts on it.
 func TestAForgedThreadKeyCannotReplyIntoAnotherMediumsConversation(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	opening := telegramUpdate{
 		updateID: 6301, messageID: 31, senderID: 771301,

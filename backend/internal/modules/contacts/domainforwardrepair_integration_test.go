@@ -17,6 +17,7 @@ import (
 )
 
 func TestForwardedBindingReviewUsesStoredDossierEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	domain := "review-source.test"
@@ -63,6 +64,7 @@ func TestForwardedBindingReviewUsesStoredDossierEvidence(t *testing.T) {
 }
 
 func TestForwardedIdentityRequiresExplicitMatchAndKeepsProvenance(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	target := e.resolveSiteVerdict(ctx, t, "target@destination.test", "destination.test", "Destination Company")

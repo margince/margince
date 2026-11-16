@@ -68,6 +68,8 @@ func badgeAndWorklist(t *testing.T, e *loadEnv, id ids.UUID, domain string) (crm
 
 // A colleague's invitation without the seat stamp is owed nothing on the History
 // badge, as on the Worklist. Both test the sender against our own domains.
+//
+//testdb:serial binds the process-wide colleague-domain reader (UseColleagueDomains)
 func TestTheBadgeAndTheWorklistAgreeAColleaguesUnstampedInvitationIsNotOwed(t *testing.T) {
 	e := setupLoad(t)
 	domain := colleagueDomainBound(t)
@@ -107,6 +109,8 @@ func openOnRequestReads(t *testing.T, e *loadEnv, id ids.UUID, sender, domain st
 
 // The colleague test reads the sender, so a customer's invitation stays owed on
 // both surfaces.
+//
+//testdb:serial binds the process-wide colleague-domain reader (UseColleagueDomains)
 func TestAnOutsideInvitationStaysOwedOnTheBadgeAndTheWorklist(t *testing.T) {
 	e := setupLoad(t)
 	domain := colleagueDomainBound(t)
@@ -122,6 +126,8 @@ func TestAnOutsideInvitationStaysOwedOnTheBadgeAndTheWorklist(t *testing.T) {
 
 // The invitation rule is about invitations. A colleague's plain mail keeps the
 // badge it had: the badge applies no sender test to it.
+//
+//testdb:serial binds the process-wide colleague-domain reader (UseColleagueDomains)
 func TestAColleaguesPlainMailKeepsItsBadge(t *testing.T) {
 	e := setupLoad(t)
 	domain := colleagueDomainBound(t)

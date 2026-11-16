@@ -82,6 +82,7 @@ var company360NoDealPerms = principal.Permissions{
 }
 
 func TestCompany360OmitsSectionsTheCallerMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -120,6 +121,7 @@ func TestCompany360OmitsSectionsTheCallerMayNotRead(t *testing.T) {
 }
 
 func TestCompany360HidesACapturePrivateAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	// Accounts are readable by every seat; the one state that still hides one
@@ -141,6 +143,7 @@ func TestCompany360HidesACapturePrivateAccount(t *testing.T) {
 }
 
 func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -211,6 +214,7 @@ func TestCompany360ContactsCarryStrengthRolesAndConsent(t *testing.T) {
 // outbound is default-deny per purpose, and a missing key would let a
 // caller read absence as permission.
 func TestCompany360ConsentReportsEveryPurposeEvenWithoutARow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -241,6 +245,7 @@ func TestCompany360ConsentReportsEveryPurposeEvenWithoutARow(t *testing.T) {
 // contributes nothing: not to the list, not to the count, and not to the
 // account's warmth.
 func TestCompany360ContactsHideACapturePrivateContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -272,6 +277,7 @@ func TestCompany360ContactsHideACapturePrivateContact(t *testing.T) {
 // The transport is thin, but "thin" is a claim: it has to bind the path id,
 // let the service's gates decide, and hand back the assembled body.
 func TestCompany360TransportServesAWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	handlers := company360svc.NewHandlers(company360Service(e))
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -314,6 +320,7 @@ func TestCompany360TransportServesAWorkspace(t *testing.T) {
 // also being linked to another team's deal. Deals are readable by every seat
 // regardless of row scope, so the page names both the contact and the deal.
 func TestCompany360NextStepsNameALinkedDealOfAnotherTeam(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -352,6 +359,7 @@ func TestCompany360NextStepsNameALinkedDealOfAnotherTeam(t *testing.T) {
 // sentences, and a page that renders them the same tells a rep to book a
 // meeting that already exists. The section proves it holds the distinction.
 func TestCompany360NextMeetingSeparatesNoneFromWithheld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -420,6 +428,7 @@ func TestCompany360NextMeetingSeparatesNoneFromWithheld(t *testing.T) {
 // contact — otherwise the composite becomes the side channel that hands out a
 // colleague's capture-private contacts.
 func TestCompany360NextMeetingParticipantsHideACapturePrivateContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -478,6 +487,7 @@ func TestCompany360NextMeetingParticipantsHideACapturePrivateContact(t *testing.
 // fact this caller does hold, so the attendee list comes back empty rather
 // than the whole section disappearing.
 func TestCompany360NextMeetingWithholdsAttendeesWithoutTheContactGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -548,6 +558,7 @@ func seedMeeting(t *testing.T, owner *pgx.Conn, ws ids.UUID, subject string, at 
 // facts, and a page that renders them alike tells a rep an account is
 // unreachable when in truth nobody has picked up the phone.
 func TestCompany360ContactRoutesSeparateUntriedFromCold(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -598,6 +609,7 @@ func TestCompany360ContactRoutesSeparateUntriedFromCold(t *testing.T) {
 // names the few worth naming and counts the rest, rather than growing a column
 // per colleague.
 func TestCompany360ContactRoutesNameThreeAndCountTheRest(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -655,6 +667,7 @@ func TestCompany360ContactRoutesNameThreeAndCountTheRest(t *testing.T) {
 // can reach them" — and giving that answer to a caller who was not allowed to
 // ask is the same disclosure the gate exists to refuse, merely inverted.
 func TestCompany360OmitsRoutesWithoutTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -732,6 +745,7 @@ func seedConsentPurpose(t *testing.T, owner *pgx.Conn, key, label string) ids.UU
 }
 
 func TestCompany360_StateStripPricesOpenDealsAndNamesTheirCloseDate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, stage, _ := integration.DealFixture(t, e)
 	companyID := e.SeedCompany(t, "Priced Account", nil)
@@ -780,6 +794,7 @@ func TestCompany360_StateStripPricesOpenDealsAndNamesTheirCloseDate(t *testing.T
 // from a message is listed with its words while the message is readable. It
 // drops off the list once the reader may no longer open the message.
 func TestCompany360NextStepsCarryTheTaskOwnWordsOnlyWithTheirSource(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -840,6 +855,7 @@ func TestCompany360NextStepsCarryTheTaskOwnWordsOnlyWithTheirSource(t *testing.T
 // contacts, and counts whoever is past the eight it names. A booking stores a
 // colleague by seat and a lead or a typed address by its address.
 func TestCompany360NextMeetingNamesColleaguesAndAddresses(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)

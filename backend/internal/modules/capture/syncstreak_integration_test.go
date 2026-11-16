@@ -83,6 +83,7 @@ func streakState(ctx context.Context, t *testing.T) (failingSince, lastSynced *t
 }
 
 func TestAPostponingConnectionReportsAGrowingFailureDuration(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	recovered := false
 	reg.Register(haltingConnector{recovered: &recovered})
@@ -129,6 +130,7 @@ func TestAPostponingConnectionReportsAGrowingFailureDuration(t *testing.T) {
 }
 
 func TestASuccessfulSyncEndsTheFailureStreak(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	recovered := false
 	reg.Register(haltingConnector{recovered: &recovered})

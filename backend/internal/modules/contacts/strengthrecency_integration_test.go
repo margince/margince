@@ -39,6 +39,7 @@ func (e *dedupeEnv) seedHeldMeeting(t *testing.T, contactID ids.ContactID, at ti
 }
 
 func TestAnUnansweredSendLeavesTheBandWhereItWas(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.June, 1, 12, 0, 0, 0, time.UTC)
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
@@ -80,6 +81,7 @@ func TestAnUnansweredSendLeavesTheBandWhereItWas(t *testing.T) {
 // Nor does it balance the exchange: 10 in and 9 out stay moderate after one
 // more send of ours, and their reply then raises the band.
 func TestAnUnansweredSendDoesNotBalanceTheExchange(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.June, 1, 12, 0, 0, 0, time.UTC)
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
@@ -114,6 +116,7 @@ func TestAnUnansweredSendDoesNotBalanceTheExchange(t *testing.T) {
 
 // A meeting the contact declined is not them taking part.
 func TestADeclinedMeetingDoesNotRefreshRecency(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.June, 1, 12, 0, 0, 0, time.UTC)
 	contact := e.seedVisibleContact(t, "Declining Contact")

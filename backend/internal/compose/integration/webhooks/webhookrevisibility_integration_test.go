@@ -32,6 +32,7 @@ import (
 )
 
 func TestARetryStopsWhenTheSubjectLeavesTheOwnersSight(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusInternalServerError) // endpoint is down
 	now := time.Now().UTC()
@@ -74,6 +75,7 @@ func TestARetryStopsWhenTheSubjectLeavesTheOwnersSight(t *testing.T) {
 }
 
 func TestAReplayStopsWhenTheSubjectLeavesTheOwnersSight(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusInternalServerError)
 	now := time.Now().UTC()
@@ -123,6 +125,7 @@ func TestAReplayStopsWhenTheSubjectLeavesTheOwnersSight(t *testing.T) {
 }
 
 func TestADeliveryWithNoRecordedSubjectIsRefused(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusInternalServerError)
 	now := time.Now().UTC()
@@ -154,6 +157,7 @@ func TestADeliveryWithNoRecordedSubjectIsRefused(t *testing.T) {
 }
 
 func TestARetryStillShipsWhenTheSubjectIsStillVisible(t *testing.T) {
+	t.Parallel()
 	// The direction that catches a gate refusing everything. Three tests above
 	// prove deliveries stop; this one proves the ones that should not stop do
 	// not — a re-check wired to return false always would pass all three.
@@ -197,6 +201,7 @@ func TestARetryStillShipsWhenTheSubjectIsStillVisible(t *testing.T) {
 // for the second half, so any path that let the delivery through would deliver
 // it, and the count would move.
 func TestARevocationHoldsAgainstALaterSweepAndReplay(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusInternalServerError)
 	now := time.Now().UTC()

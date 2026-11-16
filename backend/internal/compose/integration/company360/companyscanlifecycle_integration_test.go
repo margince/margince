@@ -122,6 +122,7 @@ func readOnce(rep context.Context, t *testing.T, svc *companyscan.Service, compa
 }
 
 func TestAnUnchangedAccountIsServedFromWhatWasReadAndAChangedOneIsMarkedStale(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -179,6 +180,7 @@ func TestAnUnchangedAccountIsServedFromWhatWasReadAndAChangedOneIsMarkedStale(t 
 }
 
 func TestAChangedAccountPastTheFloorIsReadAgainOnItsOwn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -227,6 +229,7 @@ func scanAttempt(t *testing.T, scanID ids.UUID) int {
 // Inside the lease the open joins the read — a real worker may hold it —
 // and past it the open re-arms the same occurrence as a later attempt.
 func TestAReadWhoseWorkerDiedIsReadAgainWhenTheAccountIsOpened(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -263,6 +266,7 @@ func TestAReadWhoseWorkerDiedIsReadAgainWhenTheAccountIsOpened(t *testing.T) {
 // holder inside its lease is left alone — reading the account twice bills it
 // twice — and one past it is taken over as a new attempt and read to the end.
 func TestTheWorkerReclaimsAReadItsDeadPredecessorLeftRunning(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -306,6 +310,7 @@ func TestTheWorkerReclaimsAReadItsDeadPredecessorLeftRunning(t *testing.T) {
 }
 
 func TestWithNoWorkerTheOpenSettlesOnTheRulesFloorAtOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	view := company360Service(e)
@@ -325,6 +330,7 @@ func TestWithNoWorkerTheOpenSettlesOnTheRulesFloorAtOnce(t *testing.T) {
 }
 
 func TestALaneThatBreaksLeavesTheRulesAdviceStanding(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -343,6 +349,7 @@ func TestALaneThatBreaksLeavesTheRulesAdviceStanding(t *testing.T) {
 }
 
 func TestABudgetDeferralPutsTheReadOffRatherThanFailingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -379,6 +386,7 @@ func TestABudgetDeferralPutsTheReadOffRatherThanFailingIt(t *testing.T) {
 // A provider outage is not the budget: the read waits just the same, but its
 // reason must not say the budget put it off.
 func TestAProviderOutageNamesItselfAsTheReasonTheReadWaits(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -405,6 +413,7 @@ func TestAProviderOutageNamesItselfAsTheReasonTheReadWaits(t *testing.T) {
 }
 
 func TestAReaderTheAccountRefusesGetsNoRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -470,6 +479,7 @@ func permsWithout(object string) principal.Permissions {
 }
 
 func TestAReaderWithoutTheActivityGrantIsReadFromTheRecordsAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))
@@ -497,6 +507,7 @@ func TestAReaderWithoutTheActivityGrantIsReadFromTheRecordsAlone(t *testing.T) {
 // orb amber until somebody acknowledges it, so every new company would wear a
 // warning for being new.
 func TestAnAccountWithNothingSaidToItYetIsReadCleanly(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	lane := &quotingLane{}
@@ -531,6 +542,7 @@ func TestAnAccountWithNothingSaidToItYetIsReadCleanly(t *testing.T) {
 }
 
 func TestPuttingOffAFindingNobodyRaisedStoresNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", company360Clock)
@@ -561,6 +573,7 @@ func TestPuttingOffAFindingNobodyRaisedStoresNothing(t *testing.T) {
 // correspondence, not only their own team's: the words are scoped the way
 // the timeline is for the same reader.
 func TestAReaderWithEveryRowReadsTheWholeCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", databaseNow(t, e))

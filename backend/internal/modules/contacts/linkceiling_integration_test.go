@@ -84,6 +84,7 @@ func linkACompany(ctx context.Context, e *dedupeEnv, activityID ids.ActivityID) 
 }
 
 func TestTwoWritersCannotPushOneActivityPastTheCeiling(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	// One short of the ceiling: both writers below would see room.
@@ -166,6 +167,7 @@ func TestTwoWritersCannotPushOneActivityPastTheCeiling(t *testing.T) {
 // And a writer with room still writes: without this the case above would pass
 // on a trigger that refused everything.
 func TestAnActivityUnderTheCeilingStillTakesALink(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	activityID := seedActivityAtTheCeiling(ctx, t, e, 3)

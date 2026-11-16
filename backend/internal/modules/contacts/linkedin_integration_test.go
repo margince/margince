@@ -63,6 +63,7 @@ func (e *dedupeEnv) ghostStatus(t *testing.T, name string) (status string, conta
 }
 
 func TestTheRealLinkedInExportParses(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	res := e.importExport(t)
 
@@ -87,6 +88,7 @@ func TestTheRealLinkedInExportParses(t *testing.T) {
 }
 
 func TestAnExactNameAtAMatchedEmployerConfirmsWithoutAsking(t *testing.T) {
+	t.Parallel()
 	// The export says "Andreas Müller" and so does the contact — the same
 	// string, at an employer that resolved, with nobody else here called that.
 	// Asking a human about it teaches them to click through the queue without
@@ -107,6 +109,7 @@ func TestAnExactNameAtAMatchedEmployerConfirmsWithoutAsking(t *testing.T) {
 }
 
 func TestAnAddressMatchConfirmsAndANameMatchOnlySuggests(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 
@@ -142,6 +145,7 @@ func TestAnAddressMatchConfirmsAndANameMatchOnlySuggests(t *testing.T) {
 }
 
 func TestTwoContactsOfTheSameNameAtOneEmployerAreNotGuessedBetween(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	// The case the whole suggest/confirm split exists for.
@@ -160,6 +164,7 @@ func TestTwoContactsOfTheSameNameAtOneEmployerAreNotGuessedBetween(t *testing.T)
 }
 
 func TestImportingConnectionsCreatesNoContacts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	var before, after int
 	ctx := e.as()
@@ -228,6 +233,7 @@ func (e *dedupeEnv) employ(t *testing.T, contact ids.ContactID, company ids.Comp
 }
 
 func TestAnUnmatchedGhostStillNamesTheSubject(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	// Andreas is a contact at Acme. The export names him, but carries no
@@ -280,6 +286,7 @@ func TestAnUnmatchedGhostStillNamesTheSubject(t *testing.T) {
 // Measured on a real 5,064-row export: 54 contacts appeared in it by name and
 // the upload-time pass matched 13.
 func TestAContactTheWorkspaceLearnsAboutLaterIsStillMatched(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 
 	// The import happens FIRST, on an empty workspace. Nothing to match.
@@ -322,6 +329,7 @@ func TestAContactTheWorkspaceLearnsAboutLaterIsStillMatched(t *testing.T) {
 // correction sticks. Nothing here reaches another member's row — there is no
 // parameter that could.
 func TestAMemberOwnsAndCanCorrectTheirLinkedInProfile(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 
 	// Never asked: not connected, and that is not an error.
@@ -410,6 +418,7 @@ func TestAMemberOwnsAndCanCorrectTheirLinkedInProfile(t *testing.T) {
 // The backfill is what makes a normalizer change safe: recompute the stored
 // keys, collapse what collides, and keep the row a human has decided on.
 func TestRenormalizingCollapsesTheDuplicatesAnOldKeyLeft(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -484,6 +493,7 @@ func TestRenormalizingCollapsesTheDuplicatesAnOldKeyLeft(t *testing.T) {
 // Dropping the copy that carried the address would silently downgrade a
 // confirmable match to a guess.
 func TestCollapsingADuplicateKeepsWhatEachCopyKnew(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

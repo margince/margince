@@ -45,6 +45,7 @@ func captureSettingsCtx(e *integration.SearchEnv, grant principal.ObjectGrant) c
 }
 
 func TestCaptureSettingsStore(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 
@@ -122,6 +123,7 @@ func TestCaptureSettingsStore(t *testing.T) {
 // them, each change is audited, and one PATCH commits all of its fields or
 // none of them.
 func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})
@@ -186,6 +188,7 @@ func TestTheWebsiteReadingLimitsAreSettingsOnlyTheUpdateGrantChanges(t *testing.
 // update grant changes it. A change is one audit row, and a value outside its
 // range is refused.
 func TestTheConfidentialityPassCapIsASettingOnlyTheUpdateGrantChanges(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := captureSettingsCtx(e, principal.ObjectGrant{Read: true, Update: true})

@@ -24,6 +24,7 @@ func (e *loadEnv) stampBulk(t *testing.T, activity ids.UUID) {
 }
 
 func TestOurOwnNewsletterAwaitsNoReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	newsletter, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
@@ -39,6 +40,7 @@ func TestOurOwnNewsletterAwaitsNoReply(t *testing.T) {
 }
 
 func TestANewsletterDoesNotAnswerOurMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	contact := e.customerAt(t, "prospect")
@@ -54,6 +56,7 @@ func TestANewsletterDoesNotAnswerOurMessage(t *testing.T) {
 // A classifier's asks_us verdict alone does not put a newsletter on the
 // waiting lane. A human who takes it on as a request does.
 func TestANewsletterIsOwedAReplyOnlyOnceAHumanAcceptsIt(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	newsletter := seedCalendarMailSaying(t, e, "", OwedVerdictAsksUs, "Our spring offer: reply to book a demo.")
 	e.stampBulk(t, newsletter)

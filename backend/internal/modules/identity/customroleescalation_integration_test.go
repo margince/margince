@@ -40,6 +40,7 @@ func (e *revocationEnv) memberVerbs(caller Identity, target ids.UserID, toRole s
 }
 
 func TestADelegatedMemberAdministratorActsOnlyOnSeatsTheirAuthorityContains(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "contain")
 	caller := e.seat(t, "delegate", e.customRole(t, "Member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant}))
 	repCopy := e.customRole(t, "Rep copy", "rep", nil)
@@ -77,6 +78,7 @@ func TestADelegatedMemberAdministratorActsOnlyOnSeatsTheirAuthorityContains(t *t
 // A field the caller cannot read and the target can is access the target has
 // and the caller lacks.
 func TestAPasswordLinkNeedsEveryFieldTheTargetReads(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "contain-mask")
 	callerRole := e.customRole(t, "Masked member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant})
 	e.maskRole(t, callerRole)
@@ -84,7 +86,6 @@ func TestAPasswordLinkNeedsEveryFieldTheTargetReads(t *testing.T) {
 	// A copy carries the source's mask; taking user_admin away leaves a rep
 	// who withholds the same field the caller does.
 	maskedRep := e.customRole(t, "Masked rep", callerRole, map[string]storedGrant{objectUserAdmin: {}})
-	e.dropMasksAfter(t, maskedRep)
 
 	unmasked := e.seat(t, "unmasked", "rep")
 	if _, _, err := e.svc.IssuePasswordLink(e.wsCtx(caller), caller, unmasked.UserID); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -99,6 +100,7 @@ func TestAPasswordLinkNeedsEveryFieldTheTargetReads(t *testing.T) {
 // A team-scoped target on a team the caller is not on reads records the caller
 // cannot, and a lead on such a team coaches colleagues the caller cannot.
 func TestAPasswordLinkNeedsTheTeamsTheTargetReaches(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "contain-team")
 	ctx := e.wsCtx(e.admin)
 	north, err := e.svc.CreateTeam(ctx, e.admin, "North")
@@ -170,6 +172,7 @@ func TestAPasswordLinkNeedsTheTeamsTheTargetReaches(t *testing.T) {
 // A copy of the admin role contains everything the admin holds and is still
 // not an admin: only a literal admin acts on one.
 func TestAnAdminCopyNeverActsOnTheAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "contain-admin")
 	caller := e.seat(t, "deputy", e.customRole(t, "Deputy admin", roleAdmin, nil))
 	rep := e.seat(t, "rep", "rep")
@@ -185,6 +188,7 @@ func TestAnAdminCopyNeverActsOnTheAdmin(t *testing.T) {
 // The pickers' list and the invite agree: every role offered is accepted, and
 // every live role withheld is refused.
 func TestTheAssignableRolesAreExactlyTheRolesAnInviteAccepts(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "assignable")
 	caller := e.seat(t, "delegate", e.customRole(t, "Member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant}))
 	e.customRole(t, "Field sales", "rep", nil)
@@ -225,6 +229,8 @@ func TestTheAssignableRolesAreExactlyTheRolesAnInviteAccepts(t *testing.T) {
 // The account an invite or a role change produces is held against everything
 // the delegate holds, read off the stored role: a record grant, an extension
 // grant this build no longer composes, and a field the delegate cannot read.
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestADelegateProducesNoAccountWiderThanTheirOwn(t *testing.T) {
 	e := setupRevocationEnv(t, "assign-whole")
 	registerExtObject(t)
@@ -275,6 +281,7 @@ func TestADelegateProducesNoAccountWiderThanTheirOwn(t *testing.T) {
 // account on a role wider than theirs. It stops at reactivation, and a member
 // on an archived role gets no link and no passport either.
 func TestAMemberOnAnArchivedRoleIsNotHandedBack(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "archived-held")
 	ctx := e.wsCtx(e.admin)
 	strong := e.customRole(t, "Strong", "management", nil)
@@ -312,6 +319,7 @@ func TestAMemberOnAnArchivedRoleIsNotHandedBack(t *testing.T) {
 // admin may create and rename a team, and may not add anybody — themselves
 // included — take anybody off, or archive or restore the team.
 func TestOnlyAnAdminChangesWhoIsOnATeam(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "team-members")
 	delegate := e.seat(t, "delegate", e.customRole(t, "Team admin", "rep", map[string]storedGrant{
 		objectTeamAdmin: {Create: true, Read: true, Update: true},

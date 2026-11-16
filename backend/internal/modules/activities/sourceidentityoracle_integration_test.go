@@ -45,6 +45,7 @@ func importedEmail(sourceID, messageID string) LogActivityInput {
 }
 
 func TestAGuessedMessageIDTellsTheGuesserNothing(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 	ctx := context.Background()
 
@@ -104,6 +105,7 @@ func TestAGuessedMessageIDTellsTheGuesserNothing(t *testing.T) {
 // The same seat's own two rows DO bind: that is the case the feature exists for
 // — an import and a mailbox sync of one message, by one colleague.
 func TestOneSeatsOwnImportAndCaptureAreOneMessage(t *testing.T) {
+	t.Parallel()
 	e := setupFacts(t)
 
 	seat := ids.NewV7()

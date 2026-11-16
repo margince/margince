@@ -18,6 +18,7 @@ import (
 // The transaction-held reads and the outside-id lookup answer only a caller who
 // may read activities, and a missing activity is an error.
 func TestActivityReadsInATransactionRefuseWhatTheyMust(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	noRead := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, UserID: e.rep})

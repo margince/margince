@@ -162,6 +162,7 @@ func (r *connectedRule) wantStopped(t *testing.T, appliedSoFar int) {
 
 // The setter's passport is revoked by the refresh, and the rule keeps running.
 func TestARuleKeepsRunningAcrossItsSettersRefresh(t *testing.T) {
+	t.Parallel()
 	r := newConnectedRule(t)
 	r.fire(t)
 	r.renew(t)
@@ -178,6 +179,7 @@ func TestARuleKeepsRunningAcrossItsSettersRefresh(t *testing.T) {
 // A connection is judged by what it can still do. Its access token lapsing leaves
 // the rule running while the grant can refresh, and the refresh window closing stops it.
 func TestARuleOutlivesALapsedAccessTokenWhileItsGrantCanRefresh(t *testing.T) {
+	t.Parallel()
 	r := newConnectedRule(t)
 	r.fire(t)
 	r.engine.SetClock(func() time.Time { return clocktest.Now(t).AddDate(0, 0, 45) })
@@ -193,6 +195,7 @@ func TestARuleOutlivesALapsedAccessTokenWhileItsGrantCanRefresh(t *testing.T) {
 
 // A grant that never allowed refresh ends with the passports it holds.
 func TestARuleStopsWhenAConnectionThatCannotRefreshLapses(t *testing.T) {
+	t.Parallel()
 	r := newConnectedRuleWithScope(t, "read write")
 	r.fire(t)
 	r.engine.SetClock(func() time.Time { return clocktest.Now(t).AddDate(0, 0, 45) })
@@ -201,6 +204,7 @@ func TestARuleStopsWhenAConnectionThatCannotRefreshLapses(t *testing.T) {
 
 // Ending the connection stops the rule, however many refreshes came before.
 func TestARuleStopsWhenItsSettersConnectionIsRevoked(t *testing.T) {
+	t.Parallel()
 	r := newConnectedRule(t)
 	r.renew(t)
 	r.fire(t)
@@ -212,6 +216,7 @@ func TestARuleStopsWhenItsSettersConnectionIsRevoked(t *testing.T) {
 
 // An admin disabling the tool ends what every passport of that tool may do.
 func TestARuleStopsWhenItsSettersClientIsDisabled(t *testing.T) {
+	t.Parallel()
 	r := newConnectedRule(t)
 	r.fire(t)
 	var row string
@@ -227,6 +232,7 @@ func TestARuleStopsWhenItsSettersClientIsDisabled(t *testing.T) {
 // Work queued under a connected agent runs after a refresh, on the newer passport.
 // It stops when the connection does.
 func TestStoredWorkFollowsItsAgentsConnection(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	access, refresh := o.connect(t)
 	ctx := context.Background()

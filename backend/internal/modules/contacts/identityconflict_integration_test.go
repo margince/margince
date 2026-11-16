@@ -63,6 +63,7 @@ func (e *dedupeEnv) resolveConflict(ctx context.Context, t *testing.T, candidate
 }
 
 func TestExactLaneConflictEnqueuesOneIdentityReviewNamingBothContactsAndLanes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "770401"}
@@ -119,6 +120,7 @@ func TestExactLaneConflictEnqueuesOneIdentityReviewNamingBothContactsAndLanes(t 
 }
 
 func TestExactLaneConflictEnqueueWritesNothingOntoTheRival(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "770402"}
@@ -147,6 +149,7 @@ func TestExactLaneConflictEnqueueWritesNothingOntoTheRival(t *testing.T) {
 }
 
 func TestRepeatedConflictingMessageDoesNotEnqueueASecondReview(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "770403"}

@@ -51,6 +51,7 @@ func (e *loadEnv) threadless(t *testing.T, subject, address string, contact ids.
 // again on every later pass. Nothing failed and nothing was logged; the queue
 // simply reported that nobody was waiting.
 func TestAThreadlessCustomerMailIsWaiting(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.threadless(t, "Dienstag 14 Uhr würde bei uns passen", "buyer@customer.test", contact)
@@ -69,6 +70,7 @@ func TestAThreadlessCustomerMailIsWaiting(t *testing.T) {
 // question in the workspace. Admitting the rows is only correct while the
 // reply anti-joins still refuse to match two unknown keys.
 func TestAThreadlessReplyDoesNotSettleAnotherThreadlessQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	first := e.buyer(t)
 	second := e.buyer(t)
@@ -96,6 +98,7 @@ func TestAThreadlessReplyDoesNotSettleAnotherThreadlessQuestion(t *testing.T) {
 // so a flood of it cannot displace a customer. Held here because the widening
 // is what makes this reachable: before it, the row never got this far.
 func TestAThreadlessMachineSenderIsNotWaiting(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	noise := e.threadless(t, "Your build has finished", "noreply@ci.example", contact)
@@ -117,6 +120,7 @@ func TestAThreadlessMachineSenderIsNotWaiting(t *testing.T) {
 // The change widens what counts as waiting, so the case it must not break is
 // the ordinary one: a question answered inside its own thread is finished.
 func TestAnAnsweredThreadStaysAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	asked := e.waitingFrom(t, "Can you confirm the price?", "buyer@customer.test", contact)

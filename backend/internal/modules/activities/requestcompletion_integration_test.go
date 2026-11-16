@@ -11,6 +11,7 @@ import (
 )
 
 func TestAssertedInboundNeverOffersARequestForSettlement(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name, sender string
 		delay        time.Duration

@@ -89,6 +89,7 @@ func observation(field, valueKey, value string) TechnicalObservation {
 // both providers forever, and a rep reading the record cannot tell which one
 // answers their mail today.
 func TestACompletedLaneReplacesItsOwnRows(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Beispiel GmbH", "beispiel.de")
@@ -125,6 +126,7 @@ func TestACompletedLaneReplacesItsOwnRows(t *testing.T) {
 // on, and the next run puts it back — so the record flickers with the log's
 // uptime rather than with what the company runs.
 func TestAFailedLaneChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Laden GmbH", "laden.de")
@@ -167,6 +169,7 @@ func TestAFailedLaneChangesNothing(t *testing.T) {
 // correction that lasts until the next pass, which is worse than not offering
 // the correction at all.
 func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Korrektur GmbH", "korrektur.de")
@@ -224,6 +227,7 @@ func TestAHumanCorrectionSurvivesEveryLaterLookup(t *testing.T) {
 // the same guard would remove it instead, which is the same defect arriving
 // through the other door.
 func TestAHumanHeldRowIsNeverReconciledAway(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Bestand GmbH", "bestand.de")
@@ -267,6 +271,7 @@ func TestAHumanHeldRowIsNeverReconciledAway(t *testing.T) {
 // A company that takes its webshop down publishes nothing where the shop was,
 // and the record must say so — otherwise a rep calls about a shop that closed.
 func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Leer GmbH", "leer.de")
@@ -310,6 +315,7 @@ func TestACompletedLaneWithNothingClearsItsRows(t *testing.T) {
 
 // TestEveryTechnicalWriteCommitsItsAuditAndItsEvent holds the write shape.
 func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Spur GmbH", "spur.de")
@@ -359,6 +365,7 @@ func TestEveryTechnicalWriteCommitsItsAuditAndItsEvent(t *testing.T) {
 // homepage lane hit this shape on nearly every site read in an installation —
 // a no-op event each time, which every subscriber had to learn to ignore.
 func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Leerlauf GmbH", "leerlauf.de")
@@ -403,6 +410,7 @@ func TestALaneThatChangedNothingRecordsItAndAnnouncesNothing(t *testing.T) {
 // Most companies that declare a recognisable technology declare the same one
 // they declared yesterday, so this is the nightly case, not an edge.
 func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Gleichstand GmbH", "gleichstand.de")
@@ -468,6 +476,7 @@ func TestARefreshThatFoundTheSameStackAnnouncesNothing(t *testing.T) {
 // carries, and it is the product promise in constraint form: a rep asking "how
 // do you know they run Microsoft 365?" is owed the MX host.
 func TestATechnicalFactMustNameWhatProvedIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Beweis GmbH", "beweis.de")
@@ -489,6 +498,7 @@ func TestATechnicalFactMustNameWhatProvedIt(t *testing.T) {
 // TestTheObservationTimeIsWhatTheSourceWasRead holds retrieved_at, which is the
 // column the record's freshness is read from.
 func TestTheObservationTimeIsWhatTheSourceWasRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Zeit GmbH", "zeit.de")
@@ -520,6 +530,7 @@ func TestTheObservationTimeIsWhatTheSourceWasRead(t *testing.T) {
 // TestTheLaneLedgerRecordsEachSourceSeparately holds the per-lane ledger, which
 // is what lets one source be stale while another is fresh.
 func TestTheLaneLedgerRecordsEachSourceSeparately(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Buch GmbH", "buch.de")
@@ -560,6 +571,7 @@ func TestTheLaneLedgerRecordsEachSourceSeparately(t *testing.T) {
 // the row would insert beside their answer — and the record would then claim
 // two mail systems, one of them the one a contact had just rejected.
 func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Entschieden GmbH", "entschieden.de")
@@ -618,6 +630,7 @@ func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
 // happens HERE: an incomplete lane marked complete deletes the mail posture it
 // simply did not read this time.
 func TestAPartialDNSReadIsNotAuthoritative(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedTechnicalCompany(ctx, t, e, "Teilweise GmbH", "teilweise.de")

@@ -99,6 +99,8 @@ func (e *revocationEnv) callsAllowed(t *testing.T, meter *agentvolume.Meter, pas
 // A custom role takes part in the highest-of-the-roles rule like a seeded one,
 // by its key. Once the user no longer holds it and it is archived, its saved
 // value binds nobody, and having one did not stop the archive.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestACustomRolesHigherValueBindsItsHolderUntilTheRoleGoes(t *testing.T) {
 	e := setupRevocationEnv(t, "role-allowance")
 	custom := e.customRole(t, "Field research", "rep", nil)
@@ -140,6 +142,8 @@ func TestACustomRolesHigherValueBindsItsHolderUntilTheRoleGoes(t *testing.T) {
 
 // Admin taken away through the member screens lowers the limit on the next
 // call of a passport the member already holds. The count it spent stays.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestLosingAdminLowersARealPassportsLimitAndKeepsItsCount(t *testing.T) {
 	e := setupRevocationEnv(t, "role-allowance-admin")
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, adminRoleKey); err != nil {
@@ -169,6 +173,8 @@ func TestLosingAdminLowersARealPassportsLimitAndKeepsItsCount(t *testing.T) {
 
 // A connected app's renewed passport counts on where the last one stopped, and
 // against the limit its human's role gives.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestARenewedPassportKeepsItsCountUnderARoleLimit(t *testing.T) {
 	e := setupRevocationEnv(t, "role-allowance-renewal")
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
@@ -193,6 +199,7 @@ func TestARenewedPassportKeepsItsCountUnderARoleLimit(t *testing.T) {
 // A save of other roles leaves an archived role's value alone, so restoring
 // the role brings its value back with it.
 func TestAnArchivedRolesValueOutlivesASaveAndComesBackOnRestore(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-allowance-restore")
 	custom := e.customRole(t, "Seasonal research", "rep", nil)
 	e.saveRoleCalls(t, custom, 4000)

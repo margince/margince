@@ -78,6 +78,7 @@ func eraseActivity(e *integration.SearchEnv, blob blobstore.Store, activity ids.
 }
 
 func TestIdenticalFilesInSeveralMessagesAreStoredAsOneObject(t *testing.T) {
+	t.Parallel()
 	blob := &putCountingBlob{Store: blobstore.NewMemory()}
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	env.sync(t,
@@ -99,6 +100,7 @@ func TestIdenticalFilesInSeveralMessagesAreStoredAsOneObject(t *testing.T) {
 }
 
 func TestAnErasureKeepsAnObjectAnotherRowStillNamesAndTakesItWithTheLastRow(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	env.sync(t,
@@ -137,6 +139,7 @@ func queuedForDeletion(t *testing.T, e *integration.SearchEnv, key string) int {
 }
 
 func TestAnErasureWaitingOnACaptureThatReusesItsObjectKeepsTheObject(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	e := env.e
@@ -178,6 +181,7 @@ func TestAnErasureWaitingOnACaptureThatReusesItsObjectKeepsTheObject(t *testing.
 }
 
 func TestAReusedCopyWhoseRowWentAwayBeforeItsOwnRowIsRefusedForARetry(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	e := env.e
@@ -204,6 +208,7 @@ func TestAReusedCopyWhoseRowWentAwayBeforeItsOwnRowIsRefusedForARetry(t *testing
 }
 
 func TestAFileWhoseOnlyCopyWasWithheldIsStoredAfresh(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	env := newCaptureEnvWithBlob(t, captureNow, blob)
 	e := env.e

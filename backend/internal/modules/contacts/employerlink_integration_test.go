@@ -22,6 +22,7 @@ import (
 )
 
 func TestAContactCreatedWithACompanyHasACurrentEmployment(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -58,6 +59,7 @@ func TestAContactCreatedWithACompanyHasACurrentEmployment(t *testing.T) {
 // The edge is refused after the contact is written, so the refusal must take
 // the contact with it. A missing company and an unreadable one answer alike.
 func TestACreateWhoseCompanyCannotBeReadLeavesNoContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	hidden := e.createNamedCompany(e.asOther(), t, "Hidden Employer GmbH")
 	if _, err := e.store.UpdateCompany(e.asOther(), hidden, UpdateCompanyInput{Visibility: new("owner")}); err != nil {
@@ -87,6 +89,7 @@ func TestACreateWhoseCompanyCannotBeReadLeavesNoContact(t *testing.T) {
 }
 
 func TestCreateAndLinkGivesTheNewCompanyTheWorkDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID := e.contactWithEmail(ctx, t, "Dana Domain", "dana@linkco.test")
@@ -110,6 +113,7 @@ func TestCreateAndLinkGivesTheNewCompanyTheWorkDomain(t *testing.T) {
 }
 
 func TestCreateAndLinkFromConsumerMailGivesNoDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID := e.contactWithEmail(ctx, t, "Gina Gmail", "gina.gmail@gmail.com")
@@ -128,6 +132,7 @@ func TestCreateAndLinkFromConsumerMailGivesNoDomain(t *testing.T) {
 }
 
 func TestCreateAndLinkOnAHeldDomainReusesTheHolder(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder := e.createNamedCompany(ctx, t, "Heldco", "heldco.test")
@@ -146,6 +151,7 @@ func TestCreateAndLinkOnAHeldDomainReusesTheHolder(t *testing.T) {
 }
 
 func TestCreateAndLinkOnAContactTheCallerCannotSeeIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	private := e.contactWithEmail(e.asOther(), t, "Priya Private", "priya@privateco.test")
 	if _, err := e.store.UpdateContact(e.asOther(), private, UpdateContactInput{Visibility: new("owner")}); err != nil {
@@ -164,6 +170,7 @@ func TestCreateAndLinkOnAContactTheCallerCannotSeeIsNotFound(t *testing.T) {
 // A holder the caller cannot read is never named: the company is created
 // without the domain, and the answer carries no hint of the holder.
 func TestCreateAndLinkOnADomainAHiddenCompanyHoldsCreatesItWithoutTheDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	holder := e.createNamedCompany(e.asOther(), t, "Hiddenholder", "hiddenholder.test")
 	if _, err := e.store.UpdateCompany(e.asOther(), holder, UpdateCompanyInput{Visibility: new("owner")}); err != nil {
@@ -186,6 +193,7 @@ func TestCreateAndLinkOnADomainAHiddenCompanyHoldsCreatesItWithoutTheDomain(t *t
 }
 
 func TestCreateAndLinkOnASuppressedDomainGivesNoDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.SetDomainAdmission(ctx, "blockedvendor.test", DomainSuppressed, "a tool we use"); err != nil {
@@ -206,6 +214,7 @@ func TestCreateAndLinkOnASuppressedDomainGivesNoDomain(t *testing.T) {
 }
 
 func TestAnAgentContactCreateResolvesItsEmployer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

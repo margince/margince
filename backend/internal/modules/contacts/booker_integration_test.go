@@ -81,6 +81,7 @@ func (f bookerFacts) employedOnlyAt(company ids.CompanyID) bool {
 }
 
 func TestANewBookerIsTheHostsAtTheDomainsCompanyAndCameThroughABooking(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.createNamedCompany(e.as(), t, "Booked Works", "booked-works.test")
 
@@ -122,6 +123,7 @@ func (e *dedupeEnv) domainQuestionRows(t *testing.T, domain string) (questions, 
 }
 
 func TestABookingGivesAContactWithNoOwnerOrCompanyTheHostAndTheDomainsCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	// Made before any company holds the domain, by a door that names no owner,
 	// so the contact starts with neither.
@@ -149,6 +151,7 @@ func TestABookingGivesAContactWithNoOwnerOrCompanyTheHostAndTheDomainsCompany(t 
 }
 
 func TestABookingKeepsTheOwnerAndCompanyAColleagueAlreadySet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	chosen := e.createNamedCompany(e.as(), t, "Chosen Employer")
 	created, err := e.store.CreateContact(e.as(), CreateContactInput{
@@ -178,6 +181,7 @@ func TestABookingKeepsTheOwnerAndCompanyAColleagueAlreadySet(t *testing.T) {
 }
 
 func TestABookingGivesTheHostsOwnContactTheDomainsCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	existing := e.contactWithEmail(e.asOther(), t, "Contact D", "contact.d@owned-works.test")
 	company := e.createNamedCompany(e.as(), t, "Owned Works", "owned-works.test")
@@ -197,6 +201,7 @@ func TestABookingGivesTheHostsOwnContactTheDomainsCompany(t *testing.T) {
 }
 
 func TestABookingGivesAnOwnerlessContactTheHostAndKeepsItsCompany(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	chosen := e.createNamedCompany(e.as(), t, "Picked Employer")
 	created, err := e.store.CreateContact(e.asPublicBooking(), CreateContactInput{
@@ -225,6 +230,7 @@ func TestABookingGivesAnOwnerlessContactTheHostAndKeepsItsCompany(t *testing.T) 
 }
 
 func TestABookingFromALiveLeadsAddressMakesNoContactAndLeavesTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	const address = "lead.f@lead-works.test"
 	held := e.createLead(e.as(), t, "Lead F", address, "Lead Works")

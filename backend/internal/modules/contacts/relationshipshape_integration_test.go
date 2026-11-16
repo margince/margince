@@ -128,6 +128,7 @@ func endpointColumnsIn(ctx context.Context, t *testing.T, tx pgx.Tx) []string {
 // added to the table and not to that list would be an end no kind declares and
 // nothing refuses — the same shape as the gap this change closes, one level up.
 func TestTheEndpointColumnsAreTheSchemasOwn(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := context.Background()
 	var fromDB []string
@@ -147,6 +148,7 @@ func TestTheEndpointColumnsAreTheSchemasOwn(t *testing.T) {
 }
 
 func TestTheEndpointShapesAgreeWithTheDatabase(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := context.Background()
 	var fromDB map[string][]string
@@ -206,6 +208,7 @@ func (e *dedupeEnv) seedShapeCompany(ctx context.Context, t *testing.T, name str
 }
 
 func TestAnEdgeCannotCarryAnEndpointItsKindDoesNotTake(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	employer := e.seedShapeCompany(ctx, t, "Brandt GmbH")

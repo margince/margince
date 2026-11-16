@@ -32,6 +32,7 @@ func edgeAuditRows(ctx context.Context, t *testing.T, s *Store, edge ids.UUID, a
 }
 
 func TestAContactMergeRecordsEachEdgeItMovesOrArchives(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	fx := e.seedFlipFixture(ctx, t, "Vera Lindqvist", "Halden Works", "Corvane Group")
@@ -67,6 +68,7 @@ func TestAContactMergeRecordsEachEdgeItMovesOrArchives(t *testing.T) {
 }
 
 func TestACompanyMergeRecordsEachEdgeItMoves(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Ilse Drummond", "Pellow Old", "Pellow New")

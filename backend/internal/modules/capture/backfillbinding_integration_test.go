@@ -24,6 +24,7 @@ type boundHistory struct {
 }
 
 func TestALegacyRunAheadOfTheClockCannotBindTheNextAccount(t *testing.T) {
+	t.Parallel()
 	provider := &checkpointHistory{}
 	ctx, registry, previous := admissionRunWith(t, provider)
 	owner, _ := setupCaptureDB(t)
@@ -55,6 +56,7 @@ func TestALegacyRunAheadOfTheClockCannotBindTheNextAccount(t *testing.T) {
 }
 
 func TestSyncRevivesOnlyTheCurrentAccountsHistory(t *testing.T) {
+	t.Parallel()
 	for _, sameAccount := range []bool{false, true} {
 		t.Run(fmt.Sprintf("same_account_%v", sameAccount), func(t *testing.T) {
 			provider := &boundHistory{mailbox: "first@mail.example"}
@@ -85,6 +87,7 @@ func TestSyncRevivesOnlyTheCurrentAccountsHistory(t *testing.T) {
 }
 
 func TestAccountChangesCancelHistoryEvenWhileAdmissionIsHeld(t *testing.T) {
+	t.Parallel()
 	for _, admitted := range []bool{false, true} {
 		t.Run(fmt.Sprintf("admitted_%v", admitted), func(t *testing.T) {
 			provider := &checkpointHistory{}
@@ -119,6 +122,7 @@ func (p *boundHistory) AccountLabel(connector.Auth) (string, error) {
 }
 
 func TestHistoryPagesKeepTheAccountThatStartedTheirWindow(t *testing.T) {
+	t.Parallel()
 	for _, phase := range []struct {
 		name                   string
 		admitted, betweenPages bool

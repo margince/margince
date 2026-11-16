@@ -84,6 +84,7 @@ func owedIDs(ctx context.Context, t *testing.T, tx pgx.Tx, where string, asOf ti
 }
 
 func TestOwedReadsATakenRequestOnceAndAdmitsWhatEveryRuleReadingItAdmits(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)

@@ -87,6 +87,7 @@ func readinessTrail(t *testing.T, e *sendEnv, meeting ids.ActivityID) (audited, 
 }
 
 func TestAnAttendeeConfirmsTheyAreReadyAtTheRevisionTheyRead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	meeting := sharedMeeting(t, e, clocktest.Now(t).Add(time.Hour))
 	rep := meetingCtx(e)
@@ -114,6 +115,7 @@ func TestAnAttendeeConfirmsTheyAreReadyAtTheRevisionTheyRead(t *testing.T) {
 }
 
 func TestAStaleRevisionIsRefusedAndTheMovedStartIsNamed(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := clocktest.Now(t).Add(time.Hour)
 	meeting := sharedMeeting(t, e, start)
@@ -138,6 +140,7 @@ func TestAStaleRevisionIsRefusedAndTheMovedStartIsNamed(t *testing.T) {
 }
 
 func TestUndoTakesBackOnlyTheConfirmationItWasFor(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := clocktest.Now(t).Add(time.Hour)
 	meeting := sharedMeeting(t, e, start)
@@ -166,6 +169,7 @@ func TestUndoTakesBackOnlyTheConfirmationItWasFor(t *testing.T) {
 }
 
 func TestOneAttendeesReadinessLeavesTheOtherUnprepared(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	meeting := sharedMeeting(t, e, clocktest.Now(t).Add(time.Hour))
 	rep, colleague := meetingCtx(e), e.seatCtx(e.other)
@@ -180,6 +184,7 @@ func TestOneAttendeesReadinessLeavesTheOtherUnprepared(t *testing.T) {
 }
 
 func TestOnlyAnAttendeeCanSayTheyAreReady(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	meeting := bookMeeting(t, e, "Rep alone", clocktest.Now(t).Add(time.Hour))
 	read, _ := preparationOf(meetingCtx(e), t, e, meeting)
@@ -195,6 +200,7 @@ func TestOnlyAnAttendeeCanSayTheyAreReady(t *testing.T) {
 }
 
 func TestAnAgentConfirmsForItsUserAndTheTrailNamesTheAgent(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	meeting := sharedMeeting(t, e, clocktest.Now(t).Add(time.Hour))
 	read, _ := preparationOf(meetingCtx(e), t, e, meeting)
@@ -219,6 +225,7 @@ func TestAnAgentConfirmsForItsUserAndTheTrailNamesTheAgent(t *testing.T) {
 // The rep minutes a meeting that names the colleague as host, then keeps it to
 // the rep alone. Hosting makes the colleague an attendee; it does not let them read.
 func TestAHostOutsideTheMeetingsAudienceIsNotFoundAndKeepsNoReadiness(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	subject, booked := "Pricing review", string(crmcontracts.ActivityMeetingStatusBooked)
 	start, host := clocktest.Now(t).Add(time.Hour), ids.From[ids.UserKind](e.other)
@@ -261,6 +268,7 @@ func TestAHostOutsideTheMeetingsAudienceIsNotFoundAndKeepsNoReadiness(t *testing
 }
 
 func TestATaskHasNoPreparationToBeReadyFor(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	subject := "Send the deck"
 	out, _, err := meetingStore(e).LogActivity(meetingCtx(e), LogActivityInput{

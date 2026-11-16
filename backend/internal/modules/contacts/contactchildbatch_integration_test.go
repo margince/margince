@@ -77,6 +77,7 @@ func childBatchFixture(t *testing.T) (*privacyEnv, context.Context, ids.ContactI
 }
 
 func TestContactChildBatchUsesOneExchangeForFourReads(t *testing.T) {
+	t.Parallel()
 	e, ctx, id, empty := childBatchFixture(t)
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		var one int
@@ -118,6 +119,7 @@ func TestContactChildBatchUsesOneExchangeForFourReads(t *testing.T) {
 // their own children and sends the batch as the transaction's first statement.
 // That first send carries the deferred transaction setup in the same batch.
 func TestContactChildBatchKeepsChildrenWithTheirOwnContact(t *testing.T) {
+	t.Parallel()
 	e, ctx, id, empty := childBatchFixture(t)
 	other := secondChildContact(ctx, t, e)
 	rows := []crmcontracts.Contact{
@@ -175,6 +177,7 @@ func secondChildContact(ctx context.Context, t *testing.T, e *privacyEnv) ids.Co
 }
 
 func TestContactChildBatchReachesStoreReadsAndReplaceSetEchoes(t *testing.T) {
+	t.Parallel()
 	e, ctx, id, empty := childBatchFixture(t)
 	got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
 	if err != nil {
@@ -216,6 +219,7 @@ func TestContactChildBatchReachesStoreReadsAndReplaceSetEchoes(t *testing.T) {
 }
 
 func TestContactChildBatchStaysBehindVisibilityAndReadGrant(t *testing.T) {
+	t.Parallel()
 	e, ctx, id, _ := childBatchFixture(t)
 	ownerOnly := "owner"
 	if _, err := e.store.UpdateContact(ctx, id, UpdateContactInput{Visibility: &ownerOnly}); err != nil {

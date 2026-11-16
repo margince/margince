@@ -151,6 +151,7 @@ func colleagueInvitation(msgID string) []byte {
 // A solo block, a meeting within the owner's domain, a declined meeting and a
 // cancelled one are never captured.
 func TestAColleaguesMeetingWithOutsideGuestsIsFiledOnGuestsWhoArriveLater(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	held := captureNow.AddDate(0, 0, -16)

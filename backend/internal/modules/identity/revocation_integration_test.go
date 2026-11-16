@@ -18,8 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -36,78 +34,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// identityDB connects once per test binary and brings the database to head
-// through testdb.EnsureSchema — the lane's one migrate-once mechanism, which on
-// a lane clone is a probe rather than a rebuild; every test then bootstraps its
-// own installation, so the suites stay independent.
-//
-// The pool is testdb's process-shared one. What that buys is not the pool
-// object but the connections: the lane's per-pool ceiling reaches a suite only
-// through that constructor (scripts/lib-testdb.sh, #1744).
-var identityDB struct {
-	once  sync.Once
-	owner *pgx.Conn
-	pool  *pgxpool.Pool
-	err   error
-}
-
+// setupIdentityDB answers an owner connection and the shared pool on the
+// test's own database. Every call in one test reaches the same database, so a
+// test that seeds a second workspace keeps its first.
 func setupIdentityDB(t *testing.T) (*pgx.Conn, *pgxpool.Pool) {
 	t.Helper()
-	identityDB.once.Do(func() {
-		ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-		appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-		if ownerDSN == "" || appDSN == "" {
-			identityDB.err = errors.New("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-			return
+	db := testdb.For(t)
+	ctx := context.Background()
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing owner connection: %v", err)
 		}
-		ctx := context.Background()
-		owner, err := pgx.Connect(ctx, ownerDSN)
-		if err != nil {
-			identityDB.err = err
-			return
-		}
-		identityDB.owner = owner
-		// To head before anything else touches this database: testdb.Pool
-		// refuses until EnsureSchema has run, and EnsureSchema still REBUILDS
-		// whenever it cannot prove the database is a fresh lane clone — so a
-		// seed written before it would be dropped rather than reset.
-		if identityDB.err = testdb.EnsureSchema(ctx, owner); identityDB.err != nil {
-			return
-		}
-		identityDB.pool, identityDB.err = testdb.Pool(ctx, appDSN)
 	})
-	if identityDB.err != nil {
-		t.Fatal(identityDB.err)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
+	if err != nil {
+		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	// Every test in this package bootstraps its own installation into ONE shared
-	// connection, so the separation between them has to be real: reset before
-	// seeding, as compose/integration's harness does. Once per TEST, not per call
-	// — a test that seeds a second workspace on purpose must not lose its first.
-	identityResetMu.Lock()
-	defer identityResetMu.Unlock()
-	if !identityResetFor[t.Name()] {
-		if err := testdb.Reset(context.Background(), identityDB.owner); err != nil {
-			t.Fatal(err)
-		}
-		identityResetFor[t.Name()] = true
-		t.Cleanup(func() {
-			identityResetMu.Lock()
-			defer identityResetMu.Unlock()
-			delete(identityResetFor, t.Name())
-		})
-	}
-	return identityDB.owner, identityDB.pool
+	return owner, pool
 }
-
-var (
-	identityResetMu  sync.Mutex
-	identityResetFor = map[string]bool{}
-)
 
 // revocationEnv is one bootstrapped workspace: an admin (with session)
 // plus a plain second user with a known password.
@@ -136,6 +87,7 @@ const bootstrapPassword = "a bootstrap password!"
 // Stored work asks whether its passport is live now, even from inside a snapshot
 // that predates the revocation.
 func TestStoredWorkSeesARevocationAfterTheSnapshotBegan(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "stored-snapshot")
 	ctx := e.wsCtx(e.member)
 	issued, err := e.svc.IssuePassport(ctx, e.member, IssuePassportInput{Scopes: []string{"read"}})
@@ -274,6 +226,7 @@ func (e *revocationEnv) identityEvents(t *testing.T, eventType string, entity id
 }
 
 func TestDeactivateUserRevokesSessionsAndPassportsAndEmits(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "revoke-cascade")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 
@@ -353,6 +306,7 @@ func TestDeactivateUserRevokesSessionsAndPassportsAndEmits(t *testing.T) {
 // binds on the immediately following call — structurally within one bus
 // cycle, with no cache to invalidate.
 func TestRevokedPassportRefusedOnNextCall(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "revoke-passport")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 
@@ -396,6 +350,7 @@ func TestRevokedPassportRefusedOnNextCall(t *testing.T) {
 }
 
 func TestChangeUserRoleReplacesAssignmentAndEmits(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-change")
 
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
@@ -444,6 +399,7 @@ func TestChangeUserRoleReplacesAssignmentAndEmits(t *testing.T) {
 }
 
 func TestLoginLockoutEndToEnd(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "lockout")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 
@@ -510,6 +466,7 @@ func TestLoginLockoutEndToEnd(t *testing.T) {
 // other caller is refused exactly as TestLoginLockoutEndToEnd pins, and a
 // wrong password from the owner's browser still counts.
 func TestALockedAccountStillAdmitsTheBrowserThatSignedInBefore(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "lockout-device")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 	var offset time.Duration
@@ -568,6 +525,7 @@ func TestALockedAccountStillAdmitsTheBrowserThatSignedInBefore(t *testing.T) {
 }
 
 func TestNonActiveStatusesCannotLogIn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "status-gate")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 
@@ -604,6 +562,7 @@ func TestNonActiveStatusesCannotLogIn(t *testing.T) {
 // is asserted here is the SHIPPED posture: a seat gets what its grants admit,
 // with no column quietly missing from it.
 func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "field-mask")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 	for _, role := range []string{"rep", "manager"} {
@@ -630,15 +589,6 @@ func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
 		 VALUES ('rep', 'deal', 'amount_minor', 'always')`); err != nil {
 		t.Fatal(err)
 	}
-	// Removed again before the test ends: field_mask has no workspace column, so
-	// the row would outlive this test and every sibling asserting the shipped
-	// posture would then read this test's fixture as the product's own.
-	t.Cleanup(func() {
-		if _, err := e.owner.Exec(context.Background(),
-			`DELETE FROM field_mask WHERE role_key = 'rep' AND condition = 'always'`); err != nil {
-			t.Errorf("removing this test's own mask: %v", err)
-		}
-	})
 	if err := e.svc.ChangeUserRole(e.wsCtx(e.admin), e.admin, e.member.UserID, "rep"); err != nil {
 		t.Fatal(err)
 	}
@@ -661,6 +611,7 @@ func TestNoSeededRoleWithholdsAColumn(t *testing.T) {
 // role carries, and the teams, for a seat that does not exist yet and for one
 // that does.
 func TestTeamsAreAdministeredAndTheAccessPreviewTellsTheTruth(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "teams")
 	ctx := e.wsCtx(e.admin)
 

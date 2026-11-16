@@ -25,7 +25,6 @@ package channels
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgerrcode"
@@ -52,7 +51,7 @@ import (
 // transaction below stays open across the whole call.
 func lockWaitBoundedPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	cfg, err := pgxpool.ParseConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := pgxpool.ParseConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -104,6 +103,7 @@ func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, contact ids.UUI
 // transaction, so the overlap is a window of seconds, not microseconds, for a
 // subject who keeps messaging while their own erasure runs.
 func TestErasureWaitsForAnInFlightDeliveryOfTheSubjectsAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Locked Subject", nil)
 	seedChannelIdentity(t, e, contact, "10108", "locked")
@@ -125,6 +125,7 @@ func TestErasureWaitsForAnInFlightDeliveryOfTheSubjectsAccount(t *testing.T) {
 // per ACCOUNT, so a delivery for someone else never delays an erasure — and the
 // failure above is the lock, not the bounded pool.
 func TestErasureIsUnaffectedByALockOnAnotherAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Unrelated Subject", nil)
 	seedChannelIdentity(t, e, contact, "10109", "unrelated")
@@ -189,6 +190,7 @@ func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, contact ids.UUI
 // certified-erased subject reachable, and unerasable a second time because the
 // address the next erasure would need has already been destroyed.
 func TestErasureWaitsForAnInFlightDeliveryCorroboratedByTheSubjectsAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const email = "mail.only.subject@client.io"
 	contact := seedMailOnlySubject(t, e, "Mail Only Subject", email)
@@ -205,6 +207,7 @@ func TestErasureWaitsForAnInFlightDeliveryCorroboratedByTheSubjectsAddress(t *te
 // message never delays an erasure, and the failure above is the lock rather
 // than the bounded pool.
 func TestErasureIsUnaffectedByALockOnAnotherAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := seedMailOnlySubject(t, e, "Unrelated Mail Subject", "erased@client.io")
 

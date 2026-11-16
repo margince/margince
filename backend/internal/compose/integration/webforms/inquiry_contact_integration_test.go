@@ -18,6 +18,7 @@ import (
 )
 
 func TestAContactInquiryReusesTheImmediateTaskAndKeepsCompletedWorkClosed(t *testing.T) {
+	t.Parallel()
 	for _, completed := range []bool{false, true} {
 		name := "open"
 		if completed {

@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -44,6 +43,7 @@ import (
 // Postgres blocks the loser on the speculative-insert lock until the winner
 // commits, so the database is the synchronizer.
 func TestTwoConcurrentFirstChannelMessagesConvergeOnOneContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const name = "Concurrent Channel Sender"
@@ -115,7 +115,7 @@ func TestTwoConcurrentFirstChannelMessagesConvergeOnOneContact(t *testing.T) {
 // across the whole call below.
 func lockWaitBoundedStore(t *testing.T, ws ids.UUID) *Store {
 	t.Helper()
-	cfg, err := pgxpool.ParseConfig(os.Getenv("MARGINCE_TEST_APP_DSN"))
+	cfg, err := pgxpool.ParseConfig(testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -145,6 +145,7 @@ func lockWaitBoundedStore(t *testing.T, ws ids.UUID) *Store {
 // uq_contact_channel_identity is partial on archived_at IS NULL — the account is
 // free for a second live binding.
 func TestEnsureRefusesToCreateARivalDuringErasure(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const subjectName = "Erasing Subject"
@@ -200,6 +201,7 @@ func TestEnsureRefusesToCreateARivalDuringErasure(t *testing.T) {
 // transactions really interleave — the resolve, then the whole merge, then the
 // link — so the outcome depends on the code and not on scheduling.
 func TestAnInboundMessageConcurrentWithAMergeLinksTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880701", Username: "merging"}
@@ -489,6 +491,7 @@ func mustBlockOn(t *testing.T, probe pgx.Tx, pid int, done <-chan error) {
 // dialled afterwards. That makes this test fail on a laptop against the bug it
 // describes, instead of only on a loaded runner.
 func TestTheProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder, pid := e.holdCompanyNameLock(ctx, t)
@@ -503,7 +506,8 @@ func TestTheProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 	}
 
 	done := make(chan error, 1)
-	go func() { done <- takeCompanyNameLockOnAFreshConnection(ctx) }()
+	appDSN := testdb.For(t).AppDSN
+	go func() { done <- takeCompanyNameLockOnAFreshConnection(ctx, appDSN) }()
 
 	// A budget of its own, and a short one. This racer dials and blocks in
 	// milliseconds, so a longer wait only delays the report — and it keeps this
@@ -522,8 +526,8 @@ func TestTheProbeSeesABackendThatDialsAfterItsFirstLook(t *testing.T) {
 // call began, and returns once it holds it — which is only after the holder
 // lets go. Its own connection is the point: a pooled one may pre-date the
 // probe's first look, and then it proves nothing about a racer that does not.
-func takeCompanyNameLockOnAFreshConnection(ctx context.Context) (err error) {
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_APP_DSN"))
+func takeCompanyNameLockOnAFreshConnection(ctx context.Context, appDSN string) (err error) {
+	conn, err := pgx.Connect(ctx, appDSN)
 	if err != nil {
 		return fmt.Errorf("dialling the racer's own connection: %w", err)
 	}
@@ -548,6 +552,7 @@ func takeCompanyNameLockOnAFreshConnection(ctx context.Context) (err error) {
 // from that pre-block read names a handle the account had two writes ago, so
 // the trail shows a rename that never happened and hides the one that did.
 func TestConcurrentUsernameRefreshesAuditTheRealPriorValue(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880801", Username: "handle_a"}
@@ -595,6 +600,7 @@ func TestConcurrentUsernameRefreshesAuditTheRealPriorValue(t *testing.T) {
 // audit row and one contact.updated — a second envelope for a change already
 // published is a rename subscribers see twice and a version bump nobody made.
 func TestTwoMessagesReportingTheSameRenameAuditItOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	ci := connector.ChannelIdentity{Provider: telegramProvider, ChannelUserID: "880901", Username: "handle_a"}
@@ -634,6 +640,7 @@ func TestTwoMessagesReportingTheSameRenameAuditItOnce(t *testing.T) {
 // puts the probe on its timeout path on the first query, with the racer's answer
 // already waiting.
 func TestAFinishedRacerIsNotReportedAsAMissAtTheBudgetBoundary(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

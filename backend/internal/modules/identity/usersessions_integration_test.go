@@ -20,6 +20,7 @@ import (
 )
 
 func TestAdminListsAndRevokesAMembersSession(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "admin-sessions")
 
 	memberToken := e.signIn(t, "member's laptop")
@@ -44,6 +45,7 @@ func TestAdminListsAndRevokesAMembersSession(t *testing.T) {
 }
 
 func TestManagingSessionsNeedsTheUserAdminGrant(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "admin-sessions-rbac")
 
 	// The member holds no user_admin grant. Acting as themselves against the
@@ -57,6 +59,7 @@ func TestManagingSessionsNeedsTheUserAdminGrant(t *testing.T) {
 }
 
 func TestAdminSessionActionsOnAnUnknownUserAreNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "admin-sessions-unknown")
 
 	ghost := ids.New[ids.UserKind]()
@@ -69,6 +72,7 @@ func TestAdminSessionActionsOnAnUnknownUserAreNotFound(t *testing.T) {
 }
 
 func TestAdminRevokeOfAnUnknownSessionForAKnownUserIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "admin-sessions-nosession")
 
 	if err := e.svc.RevokeUserSession(e.wsOnlyCtx(), e.admin, e.member.UserID, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {

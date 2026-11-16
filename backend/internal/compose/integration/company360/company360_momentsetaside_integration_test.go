@@ -21,6 +21,7 @@ import (
 )
 
 func TestSettingTheAccountMomentAsideHandsTheCardToTheNextPromise(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))

@@ -26,6 +26,7 @@ func testMailboxLedgerDB(t *testing.T) (context.Context, *capture.TestMailboxLed
 }
 
 func TestTestMailboxLedgerRecordsAndEchoesOnce(t *testing.T) {
+	t.Parallel()
 	ctx, ledger := testMailboxLedgerDB(t)
 	userID := ids.NewV7()
 
@@ -63,6 +64,7 @@ func TestTestMailboxLedgerRecordsAndEchoesOnce(t *testing.T) {
 // RecordSent must accept a nil To and a nil Cc without erroring — both bind
 // as SQL NULL, not the column default, against columns that are NOT NULL.
 func TestRecordSentAcceptsANilToAndCc(t *testing.T) {
+	t.Parallel()
 	ctx, ledger := testMailboxLedgerDB(t)
 	userID := ids.NewV7()
 
@@ -89,6 +91,7 @@ func TestRecordSentAcceptsANilToAndCc(t *testing.T) {
 // ledger has no workspace_id, so user_id is the only boundary it has, and it
 // has to hold on its own.
 func TestTestMailboxLedgerIsolatesByUser(t *testing.T) {
+	t.Parallel()
 	ctx, ledger := testMailboxLedgerDB(t)
 	me, other := ids.NewV7(), ids.NewV7()
 
@@ -112,6 +115,7 @@ func TestTestMailboxLedgerIsolatesByUser(t *testing.T) {
 // guard belongs to the store, not to whichever caller happens to have
 // already filtered by user_id.
 func TestMarkEchoedRefusesAnotherUsersRow(t *testing.T) {
+	t.Parallel()
 	ctx, ledger := testMailboxLedgerDB(t)
 	owner, attacker := ids.NewV7(), ids.NewV7()
 
@@ -141,6 +145,7 @@ func TestMarkEchoedRefusesAnotherUsersRow(t *testing.T) {
 // retry of the same send must not create a second ledger row, which would
 // echo the same message twice.
 func TestRecordSentIsIdempotentOnMessageID(t *testing.T) {
+	t.Parallel()
 	ctx, ledger := testMailboxLedgerDB(t)
 	userID := ids.NewV7()
 

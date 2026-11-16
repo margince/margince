@@ -22,6 +22,7 @@ import (
 // Vietnamese reader reads it in Vietnamese. A subject no template renders is
 // left as it was.
 func TestOlderQualifyTasksLearnTheirTemplate(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := provenance.LeadRepliedSource
 	seed := func(subject string) ids.UUID {
@@ -36,7 +37,6 @@ func TestOlderQualifyTasksLearnTheirTemplate(t *testing.T) {
 	booked := seed("Review qualification for Lena Prospect after booking")
 	held := seed("Review qualification for Lena Prospect after the meeting")
 	other := seed("Call Lena about the budget")
-	// Other tests in the package leave qualify tasks too, so every page is read.
 	for after := ids.Nil; ; {
 		var scanned []ids.UUID
 		if err := database.WithWorkspaceTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {

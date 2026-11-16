@@ -72,6 +72,7 @@ func (p *pairEnv) wantSharedInstance(t *testing.T, live int, in instance) ids.UU
 }
 
 func TestAnInstanceMovedBetweenTwoSeatsSyncsStaysOneMeeting(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	slot := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	before := instance{slot.AddDate(0, 0, -7), slot.AddDate(0, 0, -7)}
@@ -89,6 +90,7 @@ func TestAnInstanceMovedBetweenTwoSeatsSyncsStaysOneMeeting(t *testing.T) {
 }
 
 func TestInstancesMovedOntoOneSlotStayTheirOwnMeetings(t *testing.T) {
+	t.Parallel()
 	day := captureNow.AddDate(0, 0, -3).Truncate(24 * time.Hour).Add(10 * time.Hour)
 	monday, tuesday, wednesday := day.AddDate(0, 0, -1), day, day.AddDate(0, 0, 1)
 	for name, series := range map[string][]instance{
@@ -110,6 +112,7 @@ func TestInstancesMovedOntoOneSlotStayTheirOwnMeetings(t *testing.T) {
 // A replay of a moved instance still filed under its start key re-keys it by
 // its slot, and the start key no longer names it.
 func TestAReplayRetiresAMovedInstancesStartKey(t *testing.T) {
+	t.Parallel()
 	p := newPairEnv(t)
 	slot := captureNow.AddDate(0, 0, -3).Truncate(time.Hour)
 	moved := instance{slot, slot.Add(26 * time.Hour)}

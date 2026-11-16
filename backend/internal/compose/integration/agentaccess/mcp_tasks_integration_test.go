@@ -49,6 +49,7 @@ const tasksMeta = `"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-2
 // The extension is advertised where a client can act on it, and the three
 // methods refuse a request that did not declare it.
 func TestTheExtensionIsAdvertisedAndItsMethodsRequireIt(t *testing.T) {
+	t.Parallel()
 	e := setupConnector(t)
 	bearer := apptest.PassportBearer(t, e.AppEnv, "task client", "read")
 

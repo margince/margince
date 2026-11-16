@@ -19,6 +19,7 @@ import (
 )
 
 func TestContactChildBatchDrainsAfterPhoneDecodingFailure(t *testing.T) {
+	t.Parallel()
 	e, ctx, id, _ := childBatchFixture(t)
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		// Corrupt one database projection without changing the real writer's rows.
@@ -63,6 +64,7 @@ func TestContactChildBatchDrainsAfterPhoneDecodingFailure(t *testing.T) {
 // TestContactChildBatchServerErrorAttachesNothing breaks the batch's first query at
 // the server. Nothing may be attached, and the connection must stay usable.
 func TestContactChildBatchServerErrorAttachesNothing(t *testing.T) {
+	t.Parallel()
 	e, ctx, id, _ := childBatchFixture(t)
 	err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		// A savepoint keeps the outer transaction usable after the server error.
@@ -95,6 +97,7 @@ func TestContactChildBatchServerErrorAttachesNothing(t *testing.T) {
 // TestContactChildBatchRidesPendingSnapshotSetup sends the batch as the first
 // statement of a workspace snapshot, while its setup is still deferred.
 func TestContactChildBatchRidesPendingSnapshotSetup(t *testing.T) {
+	t.Parallel()
 	e, ctx, id, empty := childBatchFixture(t)
 	rows := []crmcontracts.Contact{{Id: openapi_types.UUID(id.UUID)}, {Id: openapi_types.UUID(empty.UUID)}}
 	err := database.WithWorkspaceSnapshot(ctx, e.store.db.Pool(), func(snap context.Context) error {

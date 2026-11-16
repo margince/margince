@@ -13,6 +13,7 @@ import (
 )
 
 func TestPrivateContactCannotClearItsOwnerIndependently(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	id := e.captureContact(t, "owner")
 	ctx := e.as(e.owner, principal.RowScopeOwn)

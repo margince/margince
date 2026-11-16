@@ -17,6 +17,7 @@ import (
 // contact already carries is put to a human as a duplicate — the pair a create
 // could not see, because at create time the name was "sahner".
 func TestRenamingAContactToAnExistingNameQueuesThePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -62,6 +63,7 @@ func TestRenamingAContactToAnExistingNameQueuesThePair(t *testing.T) {
 // Re-sending the same name, or renaming to a name nobody shares, files nothing
 // and never pairs the contact with itself.
 func TestARenameNobodySharesLeavesTheQueueEmpty(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	c, err := e.store.CreateContact(ctx, CreateContactInput{

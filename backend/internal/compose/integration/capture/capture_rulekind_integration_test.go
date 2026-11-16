@@ -17,6 +17,7 @@ import (
 // an exclusion takes, is refused on kind before the value is read. So the caller
 // is never taught a value format the store then refuses.
 func TestAHoldOrOwnerAddressRefusesAContainerNamingTheKindsItTakes(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	ctx := seatContext(e, e.Rep1)
 	adds := map[string]func(kind, value string) error{

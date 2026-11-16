@@ -156,6 +156,7 @@ func seedOneHop(t *testing.T, e *integration.Env) oneHopFixture {
 // the account is the root node, its employees, open deals, deal stakeholders,
 // parent and partner all arrive, and nothing two hops out does.
 func TestCompanyGraphCentresOnTheAccountAndWalksOneHop(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	f := seedOneHop(t, e)
 
@@ -247,6 +248,7 @@ func assertNoDanglingEdge(t *testing.T, graph crmcontracts.CompanyGraph) {
 // where the card allows ten, silently, because dropped_count comes off the whole
 // set either way.
 func TestCompanyGraphRelatedCapCountsCompaniesNotEdges(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -307,6 +309,7 @@ func TestCompanyGraphRelatedCapCountsCompaniesNotEdges(t *testing.T) {
 // against the real column, not against the placement helper: a child drawn as
 // its parent's parent would invert the whole card.
 func TestCompanyGraphHierarchyEdgePointsParentToChild(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -341,6 +344,7 @@ func TestCompanyGraphHierarchyEdgePointsParentToChild(t *testing.T) {
 // The transport is thin, but "thin" is a claim: it has to bind the path id,
 // let the service's gates decide and hand back the assembled body.
 func TestCompanyGraphTransportServesAWorkspace(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	handlers := company360svc.NewHandlers(company360Service(e))
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))

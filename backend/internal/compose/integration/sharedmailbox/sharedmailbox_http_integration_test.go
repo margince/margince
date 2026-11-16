@@ -229,6 +229,7 @@ func orderMail(msgID string, to ...string) []byte {
 }
 
 func TestOnlyASignedInAdminConnectsASharedMailbox(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	for who, ctx := range map[string]context.Context{
@@ -265,6 +266,7 @@ func TestOnlyASignedInAdminConnectsASharedMailbox(t *testing.T) {
 }
 
 func TestASharedConnectRefusesWhatCouldNotBeRead(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	empty := ids.NewV7()
@@ -353,6 +355,7 @@ func (s *sharedMailboxSuite) deliverToBoth(t *testing.T, box ids.UUID) ids.UUID 
 }
 
 func TestEachReaderSeesWhatTheSharedMailboxAndTheRepReceived(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := s.connect(t, e.Team1)
@@ -385,6 +388,7 @@ func TestEachReaderSeesWhatTheSharedMailboxAndTheRepReceived(t *testing.T) {
 }
 
 func TestADisconnectAndAReconnectKeepTheMailboxItsMailAndItsReaders(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	box := s.connect(t, e.Team1)

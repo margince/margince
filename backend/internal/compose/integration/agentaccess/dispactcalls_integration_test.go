@@ -93,6 +93,7 @@ func toolNames(t *testing.T, body string) []string {
 	return names
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestDispactListsTheAgreedToolsAndNothingElse(t *testing.T) {
 	e := setupDispact(t)
 	resp := listTools(t, e.AppEnv, e.token(t, dispactAdmin, nil))
@@ -113,6 +114,7 @@ func TestDispactListsTheAgreedToolsAndNothingElse(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestADispactCallActsThroughTheCallersOwnPassport(t *testing.T) {
 	e := setupDispact(t)
 	resp := e.call(t, e.token(t, dispactAdmin, nil), "whoami")
@@ -131,6 +133,7 @@ func TestADispactCallActsThroughTheCallersOwnPassport(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestADispactCallCannotReachAToolOutsideTheList(t *testing.T) {
 	e := setupDispact(t)
 	resp := e.call(t, e.token(t, dispactAdmin, nil), "create_record")
@@ -139,6 +142,7 @@ func TestADispactCallCannotReachAToolOutsideTheList(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheRouteRefusesABadCallToken(t *testing.T) {
 	e := setupDispact(t)
 	replayed := e.token(t, dispactAdmin, nil)
@@ -157,6 +161,7 @@ func TestTheRouteRefusesABadCallToken(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestACallerWithNoMemberIsListedButRefusedA403(t *testing.T) {
 	e := setupDispact(t)
 	if resp := listTools(t, e.AppEnv, e.token(t, "stranger@elsewhere.test", nil)); resp.StatusCode != http.StatusOK {
@@ -169,6 +174,7 @@ func TestACallerWithNoMemberIsListedButRefusedA403(t *testing.T) {
 }
 
 func TestTheManifestNamesThisInstallationsMCPAddress(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorWith(t, compose.WithPublicBaseURL("https://crm.example.test"), compose.WithChatLinks(nil, true, nil))
 	resp := mcpRaw(t, e.AppEnv, http.MethodGet, "/v1/integrations/dispact/manifest", "", nil)
 	if resp.StatusCode != http.StatusOK || !strings.Contains(resp.Body, `"endpoint":"https://crm.example.test/mcp"`) {

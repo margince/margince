@@ -26,6 +26,7 @@ import (
 )
 
 func TestAContactAnAgentCreatesBelongsToTheWorkspace(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 
 	created, err := e.store.CreateContact(e.asAgent(e.owner), CreateContactInput{
@@ -48,6 +49,7 @@ func TestAContactAnAgentCreatesBelongsToTheWorkspace(t *testing.T) {
 // of the change is that the two doors now agree — so a test that only checked
 // the agent could pass against a store that published nothing at all.
 func TestAContactAHumanCreatesBelongsToTheWorkspace(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 
 	created, err := e.store.CreateContact(e.as(e.owner, principal.RowScopeAll), CreateContactInput{
@@ -74,6 +76,7 @@ func TestAContactAHumanCreatesBelongsToTheWorkspace(t *testing.T) {
 // drives the real verdict engine; a second version calling createContact with a
 // hand-written spec would pass whatever the production wiring did.
 func TestAColleagueCanReadTheContactAnAgentCreated(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 
 	created, err := e.store.CreateContact(e.asAgent(e.owner), CreateContactInput{

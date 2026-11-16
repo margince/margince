@@ -53,6 +53,7 @@ func liveCodesOf(t *testing.T, e *revocationEnv, userID ids.UserID) int {
 }
 
 func TestAConsentOnALiveSessionMintsACode(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "consent-live")
 	id, sessionHash := signedInConsenter(t, e)
 	clientID := e.registerOAuthClient(t, "consent live")
@@ -68,6 +69,7 @@ func TestAConsentOnALiveSessionMintsACode(t *testing.T) {
 }
 
 func TestAConsentWaitingOnARevocationMintsNoCode(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "consent-after-revoke")
 	id, sessionHash := signedInConsenter(t, e)
 	clientID := e.registerOAuthClient(t, "consent after revoke")
@@ -98,6 +100,7 @@ func TestAConsentWaitingOnARevocationMintsNoCode(t *testing.T) {
 }
 
 func TestARevocationWaitingOnAConsentEndsItsCode(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "revoke-after-consent")
 	id, sessionHash := signedInConsenter(t, e)
 	clientID := e.registerOAuthClient(t, "revoke after consent")

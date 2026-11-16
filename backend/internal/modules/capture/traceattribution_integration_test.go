@@ -45,6 +45,7 @@ func traceOwnerFor(ctx context.Context, t *testing.T, db *database.DB, sourceID 
 // A personal connection's capture is attributed to the member whose credential
 // produced it — the value that keeps it out of every manager's view.
 func TestAPersonalCaptureIsAttributedToItsMember(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t)
 	ws, _ := principal.WorkspaceID(ctx)
 	member := ids.NewV7()
@@ -73,6 +74,7 @@ func TestAPersonalCaptureIsAttributedToItsMember(t *testing.T) {
 // If the derivation stopped using it, personal rows would silently become
 // workspace-readable — which no other test would notice.
 func TestAPrincipalWithOnlyAUserIdStillAttributes(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t)
 	ws, _ := principal.WorkspaceID(ctx)
 	member := ids.NewV7()
@@ -94,6 +96,7 @@ func TestAPrincipalWithOnlyAUserIdStillAttributes(t *testing.T) {
 // An internal drop is traced too, and attributed: it is the case a member most
 // often comes to this screen to ask about.
 func TestAnInternalDropIsTracedAndAttributed(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	member := ids.NewV7()

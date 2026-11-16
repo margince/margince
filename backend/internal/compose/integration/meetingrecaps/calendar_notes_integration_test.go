@@ -24,6 +24,7 @@ import (
 )
 
 func TestCalendarAgendaNeedsAuthoredNotesBeforeARecap(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{"gcal", "graphcal"} {
 		t.Run(provider, func(t *testing.T) {
 			e := integration.Setup(t)

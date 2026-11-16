@@ -40,6 +40,7 @@ func (e *configEnv) seedRate(t *testing.T, from string, rate string, on time.Tim
 // TestTheEngineReadsTheNewestRateOnOrBeforeTheAsOfDay holds the two decisions
 // the lookup makes, and the decode that carries the answer back.
 func TestTheEngineReadsTheNewestRateOnOrBeforeTheAsOfDay(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
@@ -84,6 +85,7 @@ func TestTheEngineReadsTheNewestRateOnOrBeforeTheAsOfDay(t *testing.T) {
 // error or an invented rate. The caller's policy decides what that means, and
 // both callers have a different one.
 func TestTheEngineAnswersNotFoundForAnUnpricedCurrency(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
@@ -104,6 +106,7 @@ func TestTheEngineAnswersNotFoundForAnUnpricedCurrency(t *testing.T) {
 // query. Every caller would otherwise compare currencies itself, which is how
 // one of them comes to compare them differently.
 func TestTheBaseCurrencyNeedsNoStoredRate(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 

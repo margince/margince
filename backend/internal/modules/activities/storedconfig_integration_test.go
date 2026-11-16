@@ -19,8 +19,8 @@ import (
 // row. The endpoint refuses any other value before it judges it. Not parallel:
 // the binding is the process's own.
 func TestABootSetFollowUpWindowBindsTheWorklistAndRefusesAChange(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	e.restoreFollowUpWindow(t)
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	admin := e.settingsAdmin(true)
 	if code, _ := followUpCall(admin, t, NewHandlers(db).WithSettings(configtest.StoredOver(t, e.pool, ConfigSettings())),

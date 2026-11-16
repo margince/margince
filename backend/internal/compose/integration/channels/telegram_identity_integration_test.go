@@ -75,6 +75,7 @@ func (c *telegramEnv) adminStoreCtx(t *testing.T) context.Context {
 // message still lands, deterministically, on the contact the higher-precedence
 // lane names. Both records must survive untouched.
 func TestAC_TG_6_IdentityPhoneDisagreementIsAConflictNotAMerge(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	const account = "770601"
 	phone := "+4915100000601"
@@ -312,6 +313,7 @@ func (c *telegramEnv) channelConnectorCtx(t *testing.T) context.Context {
 // exactly the asymmetry the test is asserting: the contact converges, the
 // conversation does not collapse.
 func TestTwoConcurrentFirstMessagesYieldOneContactAndTwoActivities(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	first := telegramUpdate{updateID: 5701, messageID: 71, senderID: 770701, username: "racer", firstName: "Nadia", text: "first"}
 	second := telegramUpdate{updateID: 5702, messageID: 72, senderID: 770701, username: "racer", firstName: "Nadia", text: "second"}
@@ -391,6 +393,7 @@ func TestTwoConcurrentFirstMessagesYieldOneContactAndTwoActivities(t *testing.T)
 // one: a replay would be absorbed by the raw layer's own dedupe and would prove
 // nothing about the suppression list.
 func TestErasedSubjectsNextMessageIsAcceptedAndPersistsNothing(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	before := telegramUpdate{updateID: 5801, messageID: 81, senderID: 770801, username: "forgetme", firstName: "Iris", text: "please delete me"}
 

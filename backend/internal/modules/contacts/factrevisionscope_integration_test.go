@@ -19,6 +19,7 @@ import (
 // A seat that may not see a company cannot move its fact counter through the
 // merge's settle step, in either role. Both counters stay as they were.
 func TestFactRevisionsSettleOnlyForCompaniesTheCallerSees(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	hidden := e.captureCompany(t, "owner")
 	visibleOwner := ids.From[ids.UserKind](e.teammate)

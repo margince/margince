@@ -73,6 +73,7 @@ func loggedNote(ctx context.Context, t *testing.T, e *sendEnv) crmcontracts.Acti
 // text the patch replaced rather than a flag that it changed. A flag says an
 // edit happened and leaves nobody able to say what it undid.
 func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	activity := loggedNote(ctx, t, e)
@@ -96,6 +97,7 @@ func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
 // reads every key in the pair, so an untouched column carried through publishes
 // a change nobody made.
 func TestAnUntouchedFieldStaysOutOfBothImages(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	activity := loggedNote(ctx, t, e)
@@ -121,6 +123,7 @@ func TestAnUntouchedFieldStaysOutOfBothImages(t *testing.T) {
 // The column keeps microseconds, so a start resent with nanoseconds past the
 // stored microsecond names the instant the row holds, and saving it moves nothing.
 func TestAStartDifferingBelowAMicrosecondIsNoMove(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	id := ids.From[ids.ActivityKind](ids.UUID(loggedNote(ctx, t, e).Id))
@@ -149,6 +152,7 @@ func TestAStartDifferingBelowAMicrosecondIsNoMove(t *testing.T) {
 // moment the row actually holds, and reopening records its removal, neither of
 // which the incoming patch could have supplied.
 func TestCompletingATaskRecordsTheStampTheRowReceived(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	subject := "Send the deck"
@@ -189,6 +193,7 @@ func TestCompletingATaskRecordsTheStampTheRowReceived(t *testing.T) {
 // from the row so it records the canonical form actually stored, not the raw
 // text the caller sent.
 func TestATranscriptPatchRecordsTheNormalizedBodyTheRowHolds(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	raw, sourceSystem := "Anna: hello", "transcript"
@@ -220,6 +225,7 @@ func TestATranscriptPatchRecordsTheNormalizedBodyTheRowHolds(t *testing.T) {
 // what the audience became would leave the row unable to say who lost sight of
 // the conversation.
 func TestAnAudienceChangeRecordsWhatItNarrowedFrom(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	activity := loggedNote(ctx, t, e)
@@ -251,6 +257,7 @@ func TestAnAudienceChangeRecordsWhatItNarrowedFrom(t *testing.T) {
 // did not move belongs in neither image: field history reads every key in the
 // pair, so carrying it through would publish a narrowing nobody performed.
 func TestAnUnchangedAudienceStaysOutOfBothImages(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	activity := loggedNote(ctx, t, e)
@@ -333,6 +340,7 @@ func loggedMeeting(ctx context.Context, t *testing.T, e *sendEnv) (*Store, crmco
 // over — was the one moment the API could not be told. A rep whose meeting was
 // a no-show had to log a second activity saying so in prose.
 func TestHowAMeetingWentCanBeRecordedAfterIt(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store, meeting := loggedMeeting(ctx, t, e)
@@ -356,6 +364,7 @@ func TestHowAMeetingWentCanBeRecordedAfterIt(t *testing.T) {
 // for. A column the update can change and the diff cannot see leaves an audit
 // row saying nothing happened.
 func TestRecordingAMeetingsOutcomeReachesTheAuditImages(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store, meeting := loggedMeeting(ctx, t, e)
@@ -384,6 +393,7 @@ func TestRecordingAMeetingsOutcomeReachesTheAuditImages(t *testing.T) {
 // a meeting-shaped fact about something that was not one — the pairing create
 // already refuses, and which the database CHECK does not constrain.
 func TestOnlyAMeetingMayBeToldHowItWent(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	note := loggedNote(ctx, t, e)

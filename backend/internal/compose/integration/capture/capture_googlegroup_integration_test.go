@@ -35,6 +35,7 @@ func groupDeliveredMail(msgID string) []byte {
 // Captured as the author's correspondence: not dropped as the group writing to
 // itself, not filed under the group, and not a newsletter.
 func TestMailAnOutsiderSentThroughAGroupIsCapturedAsTheirs(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 
 	env.sync(t, groupDeliveredMail("group-1@shop.example"))

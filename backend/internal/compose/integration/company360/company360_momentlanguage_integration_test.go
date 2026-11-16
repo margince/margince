@@ -15,6 +15,7 @@ import (
 )
 
 func TestAccountMomentLanguagePreservesDismissalAndEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Example Company", &e.Rep1))

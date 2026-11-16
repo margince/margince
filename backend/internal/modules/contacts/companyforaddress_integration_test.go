@@ -14,6 +14,7 @@ import (
 // An address answers the company on its own domain or the narrowest parent covering it.
 // Consumer mail, a refused domain and a hidden company never answer.
 func TestAnAddressAnswersTheCompanyOnItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	parent := e.createNamedCompany(ctx, t, "Addrco", "addrco.test")

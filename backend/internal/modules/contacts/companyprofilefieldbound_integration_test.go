@@ -18,6 +18,7 @@ import (
 // A site read is the model's text, and nobody can shorten it before it lands.
 // So a value and quote past their columns are cut, and the read still applies.
 func TestASiteReadValuePastTheLimitLandsCut(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	limit := textbounds.LimitOf("public.company_profile_field.value")
@@ -46,6 +47,7 @@ func TestASiteReadValuePastTheLimitLandsCut(t *testing.T) {
 
 // A user correcting a field can shorten it, so one past the limit is refused.
 func TestAProfileFieldCorrectionPastTheLimitIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)

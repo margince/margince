@@ -53,6 +53,7 @@ func meetingUpdates(t *testing.T, e *integration.SearchEnv, meetingID string) in
 // change. An agenda attached by hand is not one of them. Syncing again adds
 // nothing.
 func TestTheNotesGoogleAttachesToAMeetingAreRecordedOnIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seatFor(t, e, guestColleagueA)
@@ -98,6 +99,7 @@ func TestTheNotesGoogleAttachesToAMeetingAreRecordedOnIt(t *testing.T) {
 // A meeting not held on Google Meet has no Google notes, so a document titled
 // like one is not read.
 func TestADocumentOnAMeetingOffGoogleMeetIsNotRecorded(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seatFor(t, e, guestColleagueA)
@@ -117,6 +119,7 @@ func TestADocumentOnAMeetingOffGoogleMeetIsNotRecorded(t *testing.T) {
 // An event first synced after Google attached its notes records them with the
 // meeting, under the meeting's own capture event.
 func TestNotesPresentAtFirstSyncAreRecordedWithTheMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seatFor(t, e, guestColleagueA)
@@ -139,6 +142,7 @@ func TestNotesPresentAtFirstSyncAreRecordedWithTheMeeting(t *testing.T) {
 // An outside organizer's Doc titled like a transcript is not the meeting's
 // transcript: a title proves nothing without an organizer of our own.
 func TestAnOutsideOrganizersTranscriptTitledDocIsNotRecorded(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	ensureGuestContact(t, e, guestKnown)

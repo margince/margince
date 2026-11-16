@@ -26,6 +26,7 @@ import (
 // ascend in creation order, so seeding that contact last is what places them
 // outside the old cut.
 func TestCompany360RanksContactsBeforeTruncatingTheSection(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 

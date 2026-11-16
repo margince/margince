@@ -44,6 +44,7 @@ func (c *overlappingPull) Sync(context.Context, connector.Auth, connector.Cursor
 }
 
 func TestAnOlderPullCannotReplaceANewerSyncOutcome(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		err  error
@@ -96,6 +97,7 @@ func TestAnOlderPullCannotReplaceANewerSyncOutcome(t *testing.T) {
 }
 
 func TestACompletedPullCanRecoverAFailureFromItsStartingSnapshot(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	at := time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC)
 	reg.SetClock(func() time.Time { return at })
@@ -147,6 +149,7 @@ func endCaptureSyncSession(ctx context.Context, t *testing.T, connection ids.UUI
 }
 
 func TestALiveSyncOwnerSuppressesASecondPull(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	pull := &overlappingPull{finishNewer: func() error { return reg.SyncOnce(ctx, connectionOf(ctx, t)) }}
 	reg.Register(pull)

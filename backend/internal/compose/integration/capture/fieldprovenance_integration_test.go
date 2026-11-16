@@ -27,6 +27,7 @@ import (
 )
 
 func TestFieldProvenanceCoversCaptureAcrossObjectTypes(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
 
@@ -124,6 +125,7 @@ func assertCaptureStampedBothObjectTypes(t *testing.T, e *integration.SearchEnv)
 // JSONB provenance column (gate Q1) — derived from the live schema so a
 // future object cannot quietly reintroduce the rejected shape.
 func TestNoPerObjectJSONBProvenanceBacking(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	var offenders int
 	err := e.Owner.QueryRow(context.Background(), `

@@ -65,6 +65,7 @@ func contactOwnerOf(t *testing.T, e *integration.SearchEnv, email string) ids.UU
 }
 
 func TestAContactTheSinkMintsBelongsToTheMailboxOwnerAlone(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, syncSent := env.e, env.syncSent
 
@@ -88,6 +89,7 @@ func TestAContactTheSinkMintsBelongsToTheMailboxOwnerAlone(t *testing.T) {
 }
 
 func TestAVerdictPromotesTheContactItJudged(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, syncSent := env.e, env.syncSent
 

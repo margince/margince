@@ -47,6 +47,7 @@ func (e *revocationEnv) wsOnlyCtx() context.Context {
 }
 
 func TestPasswordResetFlowEndToEnd(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-e2e")
 	ctx := e.wsOnlyCtx()
 	mail := &capturedMail{}
@@ -121,6 +122,7 @@ func TestPasswordResetFlowEndToEnd(t *testing.T) {
 // reset must end every credential that could act as the account, not just
 // the session cookie that prompted the recovery.
 func TestPasswordResetRevokesPassportsToo(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-passport-cascade")
 	ctx := e.wsOnlyCtx()
 
@@ -158,6 +160,7 @@ func TestPasswordResetRevokesPassportsToo(t *testing.T) {
 // cascade proven over the operator-CLI recovery path (reset.go's
 // OperatorResetPassword).
 func TestOperatorResetPasswordRevokesPassportsToo(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "operator-reset-passport-cascade")
 	ctx := e.wsOnlyCtx()
 
@@ -194,6 +197,7 @@ func TestOperatorResetPasswordRevokesPassportsToo(t *testing.T) {
 // passport never reaches that branch (it carries no grant), so it cannot
 // stand in for this case.
 func TestOperatorResetPasswordRevokesALiveOAuthGrantToo(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "operator-reset-oauth-cascade")
 	ctx := context.Background()
 
@@ -250,6 +254,7 @@ func TestOperatorResetPasswordRevokesALiveOAuthGrantToo(t *testing.T) {
 }
 
 func TestPasswordResetRequestIsEnumerationResistant(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-enum")
 	ctx := e.wsOnlyCtx()
 	mail := &capturedMail{}
@@ -272,6 +277,7 @@ func TestPasswordResetRequestIsEnumerationResistant(t *testing.T) {
 }
 
 func TestPasswordResetSupersedesAndExpires(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-ttl")
 	ctx := e.wsOnlyCtx()
 
@@ -316,6 +322,7 @@ func TestPasswordResetSupersedesAndExpires(t *testing.T) {
 }
 
 func TestOperatorResetPasswordRecoversTheAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-operator")
 	ctx := e.wsOnlyCtx()
 
@@ -375,6 +382,7 @@ func OperatorResetPasswordSmoke(ctx context.Context, e *revocationEnv, email str
 // for. The read runs as the system principal for that reason, and this is what
 // says so.
 func TestAResetMailIsWrittenInTheInstallationsLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-lang")
 	ctx := e.wsOnlyCtx()
 	// Written as a row, the way an administrator's save leaves it. Through
@@ -419,6 +427,7 @@ func TestAResetMailIsWrittenInTheInstallationsLanguage(t *testing.T) {
 }
 
 func TestAResetMailUsesTheRecipientsSavedLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reset-recipient-lang")
 	ctx := e.wsOnlyCtx()
 	if _, err := e.svc.SaveMyLocale(principal.WithCorrelationID(withHumanPrincipal(ctx, e.member), ids.NewV7()), "vi"); err != nil {

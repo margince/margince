@@ -16,6 +16,7 @@ import (
 )
 
 func TestTheSweepAttachesAContactWhoseAddressSpellsTheDomainOtherwise(t *testing.T) {
+	t.Parallel()
 	// A company domain is stored as a host name, so it is punycode. The
 	// address is what may arrive in Unicode.
 	for _, tc := range []struct{ name, address, companyDomain string }{
@@ -62,6 +63,7 @@ func TestTheSweepAttachesAContactWhoseAddressSpellsTheDomainOtherwise(t *testing
 // Two leads at differently named companies share only a mail domain, spelled
 // two ways. That is the employer term, and it puts the pair on the queue.
 func TestTwoLeadsAtOneDomainInTwoSpellingsAreProposed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.createLead(ctx, t, "Jonas Petersen", "jonas@bücher.example", "Bücher")

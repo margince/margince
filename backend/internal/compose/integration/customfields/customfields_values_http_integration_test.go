@@ -242,6 +242,7 @@ func assertPicklistOutsideOptions422(t *testing.T, e *apptest.AppEnv, col string
 }
 
 func TestCustomFieldValuesHTTP(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 
 	status, tier, problem := createCustomField(t, e, integration.AnyMap{

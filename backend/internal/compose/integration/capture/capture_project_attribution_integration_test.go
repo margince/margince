@@ -229,6 +229,7 @@ func stampOfCaptured(t *testing.T, e *integration.SearchEnv, sourceID string) ca
 // reaches an erasure unclassified — and the stamp commits with the link rather
 // than trailing it, so there is no window at all.
 func TestCaptureStampsTheMessageItFilesUnderAProject(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)
@@ -269,6 +270,7 @@ func TestCaptureStampsTheMessageItFilesUnderAProject(t *testing.T) {
 // The subject-key rung and every way it refuses: a key only counts bracketed,
 // never as a bare word, never as a substring, and never when two are named.
 func TestCaptureFilesAMessageUnderTheProjectItsSubjectNames(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)
@@ -319,6 +321,7 @@ func TestCaptureFilesAMessageUnderTheProjectItsSubjectNames(t *testing.T) {
 // The thread rung: a conversation is about one body of work, so the reply
 // inherits its sibling's project even though its own subject names none.
 func TestCaptureFilesAReplyUnderItsThreadsProject(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)
@@ -355,6 +358,7 @@ func revokeCaptureGrant(t *testing.T, e *integration.SearchEnv, object string) {
 // is a different question from whether this role may open the project table at
 // all — so the ladder asks the object grant itself, up front.
 func TestCaptureAttributesNothingWithoutTheProjectReadGrant(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)
@@ -398,6 +402,7 @@ func TestCaptureAttributesNothingWithoutTheProjectReadGrant(t *testing.T) {
 // by every test that matters, and the audit row claims that grant — so the
 // write has to actually hold it.
 func TestCaptureAttributesNothingWithoutTheActivityUpdateGrant(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)
@@ -438,6 +443,7 @@ func TestCaptureAttributesNothingWithoutTheActivityUpdateGrant(t *testing.T) {
 // medium's conversation must not file the forger's mail onto that
 // conversation's project.
 func TestCaptureDoesNotInheritAProjectAcrossMedia(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seed := newProjectSeeder(t, e)
@@ -462,6 +468,7 @@ func TestCaptureDoesNotInheritAProjectAcrossMedia(t *testing.T) {
 // key must still be read, rather than the message ending up filed under nothing
 // because a rung above it matched something dead.
 func TestCaptureFallsThroughAnArchivedThreadProject(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)
@@ -487,6 +494,7 @@ func TestCaptureFallsThroughAnArchivedThreadProject(t *testing.T) {
 // project belongs to that project too. The subject names no project here, so
 // the rollup is the only evidence there is.
 func TestCaptureFilesAMessageUnderTheProjectOfItsDeal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	seed := newProjectSeeder(t, e)
@@ -541,6 +549,7 @@ func TestCaptureFilesAMessageUnderTheProjectOfItsDeal(t *testing.T) {
 // mirror-image reason — audit_log is append-only, so a row naming a rule the
 // write never checked is a lie nobody can correct later.
 func TestCaptureFilingBumpsTheActivityVersionAndAuditsIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)
@@ -579,6 +588,7 @@ func TestCaptureFilingBumpsTheActivityVersionAndAuditsIt(t *testing.T) {
 // it, even when the provider hands back a subject that now names a different
 // project. Replacement is a human's relink alone.
 func TestCaptureDecidesAMessagesProjectOnlyOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	seed := newProjectSeeder(t, e)

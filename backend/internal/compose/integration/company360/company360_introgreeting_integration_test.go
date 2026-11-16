@@ -18,6 +18,7 @@ import (
 )
 
 func TestAnIntroDraftGreetsTheColleagueByTheirGreetingName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company, contact := seedIntroducibleContact(t, e, "Ute Sommer")
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)

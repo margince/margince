@@ -112,6 +112,7 @@ func (s *sharedMailboxSuite) ownAnna(t *testing.T, owner *ids.UUID) {
 }
 
 func TestAKnownSendersOwnerGetsTheReplyTask(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.connectOpen(t)
 	s.ownAnna(t, &s.e.Rep1)
@@ -123,6 +124,7 @@ func TestAKnownSendersOwnerGetsTheReplyTask(t *testing.T) {
 }
 
 func TestAContactWithNoOwnerSendsTheWorkToItsCompanysOwner(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.connectOpen(t)
 	s.ownAnna(t, nil)
@@ -140,6 +142,7 @@ func TestAContactWithNoOwnerSendsTheWorkToItsCompanysOwner(t *testing.T) {
 }
 
 func TestAnOwnerWhoCannotReadHeldMailGetsNoWorkAndTheBackupOwnerDoes(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := ids.UUID(s.connect(t, s.e.Team1).Id)
 	// Rep3 sits outside the reader team and is not on the mail.
@@ -158,6 +161,7 @@ func TestAnOwnerWhoCannotReadHeldMailGetsNoWorkAndTheBackupOwnerDoes(t *testing.
 }
 
 func TestAStrangerWithNoBackupOwnerMakesNoContactAndNoTask(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.connectOpen(t)
 	mail := s.syncOne(t, box, strangerMail("nobody@stranger.example"), "a question")
@@ -171,6 +175,7 @@ func TestAStrangerWithNoBackupOwnerMakesNoContactAndNoTask(t *testing.T) {
 }
 
 func TestABackupOwnerWhoLeftTheReaderTeamGetsNoMoreWork(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := s.connectOpen(t)
 	if code := s.setBackup(t, box, &s.e.Rep2); code != http.StatusOK {
@@ -193,6 +198,7 @@ func TestABackupOwnerWhoLeftTheReaderTeamGetsNoMoreWork(t *testing.T) {
 }
 
 func TestOnlyAReaderTeamMemberMayBeTheBackupOwner(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	box := ids.UUID(s.connect(t, s.e.Team1).Id)
 	rec := s.call(s.admin(), t, http.MethodPatch, "/shared-mailboxes/"+box.String(), map[string]any{"backup_owner_id": s.e.Rep3, "confirm": false})

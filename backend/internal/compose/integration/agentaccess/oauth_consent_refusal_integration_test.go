@@ -76,6 +76,7 @@ func consentScreenRefusal(t *testing.T, status int, location, spentNonce string)
 // open past the cookie's five minutes produces — the ordinary case, not an
 // attack. The screen gets them back, and re-entry arms a fresh nonce.
 func TestAStaleConsentNonceComesBackToTheScreen(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	form := o.armConsent(t, nil)
 	armed := form.Get("consent")
@@ -98,6 +99,7 @@ func TestAStaleConsentNonceComesBackToTheScreen(t *testing.T) {
 // on their way out, which is what stops one armed authorization from being
 // submitted over and over for the rest of its five minutes.
 func TestACommittedConsentCannotBeSubmittedTwice(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	for name, decision := range map[string]struct {
 		decide func(*testing.T, *oauthEnv, url.Values)
@@ -148,6 +150,7 @@ func TestACommittedConsentCannotBeSubmittedTwice(t *testing.T) {
 // the screen; the specific OAuth code is a client developer's vocabulary and
 // stays on the GET, where a client developer looks.
 func TestAConsentPostThatFailsValidationComesBackToTheScreen(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	form := o.armConsent(t, nil)
 	armed := form.Get("consent")
@@ -170,6 +173,7 @@ func TestAConsentPostThatFailsValidationComesBackToTheScreen(t *testing.T) {
 // and oauth.go's consent handler turns that into the same invalid_request the
 // screen shows for any other malformed POST.
 func TestAConsentPostWithNoScopesTickedComesBackToTheScreen(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	form := o.armConsent(t, nil)
 	armed := form.Get("consent")
@@ -192,6 +196,7 @@ func TestAConsentPostWithNoScopesTickedComesBackToTheScreen(t *testing.T) {
 // same case as no scopes at all: this server rendered five checkboxes over a
 // fixed vocabulary, so a POST naming a sixth did not come from that screen.
 func TestAConsentPostWithAnOutOfVocabularyScopeComesBackToTheScreen(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	form := o.armConsent(t, nil)
 	armed := form.Get("consent")
@@ -213,6 +218,7 @@ func TestAConsentPostWithAnOutOfVocabularyScopeComesBackToTheScreen(t *testing.T
 // carrying the request and nothing this endpoint has not yet done. After signing
 // in the screen re-enters /oauth/authorize, which is where a nonce comes from.
 func TestAnUnauthenticatedAuthorizeGetRoutesTheHumanToSignIn(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	req, err := http.NewRequest(http.MethodGet,
@@ -286,6 +292,7 @@ func (o *oauthEnv) denyRaw(t *testing.T, extra url.Values) (int, string) {
 // its replacement by ticked scopes unchanged, because a deny never reaches
 // that decision at all.
 func TestDenyRedirectsToTheClientWithAccessDenied(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	status, location := o.denyRaw(t, url.Values{"scope": {"read"}})

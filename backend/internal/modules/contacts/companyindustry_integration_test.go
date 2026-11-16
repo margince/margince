@@ -47,6 +47,7 @@ func industryOf[T ~string](v *T) string {
 }
 
 func TestACreateStoresTheCodeAnyMappableSpellingNames(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	for name, text := range map[string]string{"Alpha GmbH": "Healthcare", "Beta GmbH": "health care", "Gamma GmbH": "Gesundheitswesen"} {
 		_, description, code := companyIndustryCreate(t, e, name, &text, nil)
@@ -57,6 +58,7 @@ func TestACreateStoresTheCodeAnyMappableSpellingNames(t *testing.T) {
 }
 
 func TestACreateWithTextThatNamesNoIndustryStoresNoCodeAndKeepsTheText(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	text := "pumps, valves and seals"
 	written := "Industrial fluid handling."
@@ -70,6 +72,7 @@ func TestACreateWithTextThatNamesNoIndustryStoresNoCodeAndKeepsTheText(t *testin
 }
 
 func TestAPatchWithUnmappableTextLeavesTheCodeAndAddsTheNoteOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	known := "software"
 	id, _, _ := companyIndustryCreate(t, e, "Epsilon GmbH", &known, nil)
@@ -103,6 +106,7 @@ func TestAPatchWithUnmappableTextLeavesTheCodeAndAddsTheNoteOnce(t *testing.T) {
 }
 
 func TestAPatchStoresTheCodeForMappableText(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	id, _, _ := companyIndustryCreate(t, e, "Zeta GmbH", nil, nil)
 	text := "Marketing And Advertising"
@@ -116,6 +120,7 @@ func TestAPatchStoresTheCodeForMappableText(t *testing.T) {
 }
 
 func TestAMergeGivesTheSurvivorTheCodeOfALegacyText(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	survivor, _, _ := companyIndustryCreate(t, e, "Eta GmbH", nil, nil)
 	retired, _, _ := companyIndustryCreate(t, e, "Theta GmbH", nil, nil)
@@ -163,6 +168,7 @@ func remapAll(t *testing.T, e *dedupeEnv, limit int) (scanned, changed int) {
 }
 
 func TestTheRepairMapsLegacyTextOncePagedAndLeavesHumanWork(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	human := "Written by a contact."

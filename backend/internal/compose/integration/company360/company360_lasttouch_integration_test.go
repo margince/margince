@@ -24,6 +24,7 @@ import (
 // them, and a follow-up offered on the wrong side of that is a rep writing
 // again to someone already waiting on them.
 func TestStrengthFoldDatesEachDirectionSeparately(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 
@@ -67,6 +68,7 @@ func TestStrengthFoldDatesEachDirectionSeparately(t *testing.T) {
 // absence is the fact: offering a "follow up" on a thread that does not exist
 // is the composer opening a reply to nothing.
 func TestStrengthFoldLeavesTheInboundAnchorEmptyWhenNobodyWroteIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 
@@ -102,6 +104,7 @@ func TestStrengthFoldLeavesTheInboundAnchorEmptyWhenNobodyWroteIn(t *testing.T) 
 // and colder than an unanswered follow-up — offering to answer a thread from
 // last year would still contradict the same page's own summary.
 func TestStrengthFoldDropsAnInboundAnchorOlderThanTheWindow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 

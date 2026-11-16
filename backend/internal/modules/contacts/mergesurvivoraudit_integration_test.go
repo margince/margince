@@ -64,6 +64,7 @@ func (e *dedupeEnv) requireMergedFrom(t *testing.T, rows []map[string]any, sourc
 }
 
 func TestAContactMergeIsToldOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	title := "Chief Merge Officer"
@@ -105,6 +106,7 @@ func TestAContactMergeIsToldOnTheSurvivor(t *testing.T) {
 }
 
 func TestACompanyMergeIsToldOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	source := e.seedCompanyOnDomain(ctx, t, "Newco", "newco.test")
@@ -121,6 +123,7 @@ func TestACompanyMergeIsToldOnTheSurvivor(t *testing.T) {
 }
 
 func TestALeadMergeIsToldOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor := e.createLead(ctx, t, "Karin Vogt", "karin@vogt.test", "Vogt KG")
@@ -139,6 +142,7 @@ func TestALeadMergeIsToldOnTheSurvivor(t *testing.T) {
 // A colleague folding a record into an imported contact is a human act on it.
 // Undoing the import therefore leaves the contact alone.
 func TestAMergeIntoAContactCountsAsAHumanActOnIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	survivor := e.seedContact(ctx, t, "Ann Smith", []string{"ann@newco.test"}, nil)

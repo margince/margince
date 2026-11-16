@@ -59,9 +59,7 @@ func seedOverageLead(t *testing.T, owner *pgx.Conn, ws ids.UUID) ids.UUID {
 // A trigger is the fault seam because nothing in the fixture data can produce
 // this failure: the retention pass fails on SQL errors, not on record shapes,
 // so a test that only varied the seed could never reach the path where a pass
-// fails. It is dropped in cleanup — the integration lane resets rows between
-// tests but keeps the schema, so a surviving trigger would fail every later
-// suite that writes a lead.
+// fails.
 func failLeadWrites(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()
@@ -73,16 +71,6 @@ func failLeadWrites(t *testing.T, owner *pgx.Conn) {
 		END $$`); err != nil {
 		t.Fatalf("creating the fault-injection function: %v", err)
 	}
-	// Registered before the trigger is armed, not after both: a failure to
-	// arm would otherwise leave the function behind, which is the leak this
-	// helper's whole cleanup exists to prevent. Cleanups run LIFO, so the
-	// trigger below still drops first.
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP FUNCTION retention_fault_injection()`); err != nil {
-			t.Errorf("dropping the fault-injection function: %v", err)
-		}
-	})
 	// Every lead write, not one tenant's: the pass under test is the
 	// installation's only one, so a WHEN clause would select the same rows the
 	// trigger already reaches.
@@ -91,12 +79,6 @@ func failLeadWrites(t *testing.T, owner *pgx.Conn) {
 		FOR EACH ROW EXECUTE FUNCTION retention_fault_injection()`); err != nil {
 		t.Fatalf("arming the fault-injection trigger: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP TRIGGER lead_retention_fault ON lead`); err != nil {
-			t.Errorf("dropping the fault-injection trigger: %v", err)
-		}
-	})
 }
 
 // leadName reads one workspace's lead by owner connection — the victim
@@ -117,6 +99,7 @@ func leadName(t *testing.T, owner *pgx.Conn, lead ids.UUID) string {
 // A pass that reported success is indistinguishable from a pass that had
 // nothing to do — and what it hides is subject data kept past its policy.
 func TestRetentionReportsAPassThatCouldNotWrite(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	seedRetentionPolicy(t, owner, e.WS)
@@ -170,6 +153,7 @@ func startRetentionRunner(t *testing.T, e *integration.Env, interval time.Durati
 // left to pin is that the scheduled pass DOES the work, and that a pass which
 // cannot reports as a failed row rather than a completed one.
 func TestPrivacyRetentionRunsThePassAndRecordsAFailureAsAFailedRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	owner := integration.OwnerConn(t)
@@ -195,6 +179,7 @@ func TestPrivacyRetentionRunsThePassAndRecordsAFailureAsAFailedRow(t *testing.T)
 // due, and what it hides is subject data kept past its policy with a green job
 // row over it.
 func TestPrivacyRetentionRecordsAFailedPassAsAFailedRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	owner := integration.OwnerConn(t)
@@ -223,6 +208,7 @@ func TestPrivacyRetentionRecordsAFailedPassAsAFailedRow(t *testing.T) {
 // pass ends. Only a cadence far shorter than any constant in reach keeps that
 // under jobtest.DispatchGapBound.
 func TestPrivacyRetentionDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 

@@ -75,6 +75,7 @@ func (e *dedupeEnv) participantContactsOn(ctx context.Context, t *testing.T, act
 // The ordinary case, plus the collision: the two halves sat on the same
 // activity, so after the merge that activity names ONE contact once.
 func TestAMergeMovesTheParticipantRowsOntoTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

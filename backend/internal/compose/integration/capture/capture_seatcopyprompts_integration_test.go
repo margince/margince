@@ -50,6 +50,7 @@ func bothCopies(t *testing.T, entityType string, entity func(seatCopyEnv) ids.UU
 }
 
 func TestTheDealStatusCardHandsTheModelTheMailOnce(t *testing.T) {
+	t.Parallel()
 	var deal ids.DealID
 	s, own := bothCopies(t, "deal", func(s seatCopyEnv) ids.UUID {
 		deal = seedDeals(t, s, "Telematics renewal")[0]
@@ -68,6 +69,7 @@ func TestTheDealStatusCardHandsTheModelTheMailOnce(t *testing.T) {
 }
 
 func TestTheMeetingBriefHistoryHandsTheModelTheMailOnce(t *testing.T) {
+	t.Parallel()
 	s, own := bothCopies(t, "contact", func(s seatCopyEnv) ids.UUID { return s.contact.UUID })
 	meeting := seedMeetingWithSender(t, s)
 	for reader := range own {
@@ -78,6 +80,7 @@ func TestTheMeetingBriefHistoryHandsTheModelTheMailOnce(t *testing.T) {
 // A copy the brief shows stands for every copy the reader may open. The mail
 // is on the brief's deal when any of them is filed there.
 func TestTheMeetingBriefReadsDealFilingOverEveryCopy(t *testing.T) {
+	t.Parallel()
 	s, own := bothCopies(t, "contact", func(s seatCopyEnv) ids.UUID { return s.contact.UUID })
 	filed := seedDeals(t, s, "Fleet telematics", "Hangar booking")
 	other, briefed := filed[0], filed[1]
@@ -120,6 +123,7 @@ func briefPrompt(t *testing.T, s seatCopyEnv, reader, meeting ids.UUID) *promptL
 // The context graph walks every copy the reader may open, wherever it is
 // filed, and none they may not.
 func TestTheContextGraphWalksEveryReadableCopy(t *testing.T) {
+	t.Parallel()
 	for name, c := range map[string]struct {
 		postures seatCopyPostures
 		reader   func(seatCopyEnv) ids.UUID
@@ -166,6 +170,7 @@ func TestTheContextGraphWalksEveryReadableCopy(t *testing.T) {
 }
 
 func TestAThreadReadThroughTheDatasourceShowsOneCopy(t *testing.T) {
+	t.Parallel()
 	for name, postures := range map[string]seatCopyPostures{
 		"both shared": {first: true, second: true}, "second private": {first: true, second: false},
 	} {

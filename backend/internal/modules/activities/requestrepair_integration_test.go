@@ -15,6 +15,7 @@ import (
 )
 
 func TestReviewedRequestRepairUsesTheRetirementHorizon(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Send the signed proposal", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)

@@ -43,6 +43,7 @@ func (e *dedupeEnv) staleDisplayName(ctx context.Context, t *testing.T, display,
 }
 
 func TestTheRepairShowsTheNameTheRecordAlreadyKnows(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -67,6 +68,7 @@ func TestTheRepairShowsTheNameTheRecordAlreadyKnows(t *testing.T) {
 // A contact a contact added by hand keeps the name they typed, whatever the split
 // columns say. captured_by is what says a human made this record.
 func TestTheRepairLeavesAContactAContactCreatedAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -93,6 +95,7 @@ func TestTheRepairLeavesAContactAContactCreatedAlone(t *testing.T) {
 // would put one audit row and one contact.updated event on the bus per pass, for
 // a change that already happened.
 func TestTheRepairWritesNothingTheSecondTime(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

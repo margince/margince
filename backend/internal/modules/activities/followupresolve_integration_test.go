@@ -17,7 +17,6 @@ package activities
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"testing"
 	"time"
 
@@ -42,14 +41,9 @@ type resolveEnv struct {
 
 func setupResolve(t *testing.T) *resolveEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,17 +52,13 @@ func setupResolve(t *testing.T) *resolveEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	emptyDatabase(t)
 	e := &resolveEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), lead: ids.NewV7()}
 	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`,
 		e.rep, "rep-"+e.rep.String()+"@resolve.test")
 	e.exec(t, `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
 		VALUES ($1, 'Resolve Lead', 'new', 'manual', $2, $3)`, e.lead, "human:"+e.rep.String(), e.rep)
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -241,6 +231,7 @@ func capturedEvent(t *testing.T, activity ids.UUID, kind string) workflow.Event 
 }
 
 func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	systemTask := e.seedTask(t, "system", "system")
@@ -279,6 +270,7 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 }
 
 func TestACapturedTaskResolvesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	systemTask := e.seedTask(t, "system", "system")
@@ -297,6 +289,7 @@ func TestACapturedTaskResolvesNothing(t *testing.T) {
 // becomes a contact, so its follow-up task's link keeps its lead_id, and the
 // resolver's original lead-keyed lookup still finds it.
 func TestADisqualifiedLeadCompletesItsSystemTasks(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	systemTask := e.seedTask(t, "system", "system")
@@ -321,6 +314,7 @@ func TestADisqualifiedLeadCompletesItsSystemTasks(t *testing.T) {
 // sees a lead-linked row for a genuinely promoted lead. It has to complete the
 // task through the contact the event names instead.
 func TestAPromotedLeadCompletesItsSystemTasksCarriedToTheContact(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	contact := e.seedContact(t)
@@ -352,6 +346,7 @@ func TestAPromotedLeadCompletesItsSystemTasksCarriedToTheContact(t *testing.T) {
 // happened. The resolver only completes the carried task on a genuinely NEW
 // contact, where nothing else could exist to collide with yet.
 func TestAMergedPromotionDoesNotClaimTheContactsUnrelatedTasks(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	contact := e.seedContact(t)
@@ -376,6 +371,7 @@ func TestAMergedPromotionDoesNotClaimTheContactsUnrelatedTasks(t *testing.T) {
 // completion to the tasks that existed when the contact did is what keeps "a
 // fresh contact cannot yet carry anything else" true instead of merely assumed.
 func TestAPromotedLeadDoesNotCompleteATaskMintedAfterThePromotion(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	contact := e.seedContact(t)
@@ -409,6 +405,7 @@ func TestAPromotedLeadDoesNotCompleteATaskMintedAfterThePromotion(t *testing.T) 
 // forever — the silent direction, which is why an hour of skew is asserted
 // here rather than left to a deployment's luck.
 func TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	contact := e.seedContact(t)
@@ -437,6 +434,7 @@ func TestAPromotedLeadCompletesItsCarriedTaskWhenTheHostClockTrails(t *testing.T
 // outcomes: the carried task completes and the survivor's own reminder does
 // not.
 func TestAMergedPromotionCompletesTheTaskItCarriedAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	contact := e.seedContact(t)
@@ -464,6 +462,7 @@ func TestAMergedPromotionCompletesTheTaskItCarriedAndNothingElse(t *testing.T) {
 // which activities moved, not which may be ticked — the system-minted
 // predicate still decides that, and it is the same one both doors apply.
 func TestACarriedHumanTaskIsNotCompletedByThePromotion(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	contact := e.seedContact(t)
@@ -490,6 +489,7 @@ func TestACarriedHumanTaskIsNotCompletedByThePromotion(t *testing.T) {
 // A replayed old event is then no worse than it was, and a MERGED one still
 // completes nothing rather than guessing at the contact's whole task list.
 func TestAnOldPayloadStillCompletesOnlyForAFreshContact(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	contact := e.seedContact(t)
@@ -523,6 +523,7 @@ func TestAnOldPayloadStillCompletesOnlyForAFreshContact(t *testing.T) {
 // proves nothing here — it re-runs the open-task query, finds nothing, and
 // writes nothing whatever the completion path does.
 func TestAFiringThatSelectedBeforeSomebodyElseFinishedWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	task := e.seedTask(t, "system", "system")
 
@@ -549,6 +550,7 @@ func TestAFiringThatSelectedBeforeSomebodyElseFinishedWritesNothing(t *testing.T
 // lead — treating every version change as "somebody else did it" trades a noisy
 // history for a follow-up that stays open forever.
 func TestAnEditUnderTheFiringDoesNotLeaveTheTaskOpen(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	task := e.seedTask(t, "system", "system")
 
@@ -574,6 +576,7 @@ func TestAnEditUnderTheFiringDoesNotLeaveTheTaskOpen(t *testing.T) {
 // failing the firing on it would strand every OTHER task the same call
 // selected, which is what the sibling below is here to catch.
 func TestATaskArchivedUnderTheFiringIsNotAFailure(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	task := e.seedTask(t, "system", "system")
 	sibling := e.seedTask(t, "system", "system")

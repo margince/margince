@@ -124,6 +124,7 @@ func (e *sendEnv) reconcileExpectingRefusal(t *testing.T, id ids.ActivityID) err
 // that kept the minted key would be invisible to the reply that quotes the
 // stamped one — reply detection joins outbound activities on thread_key.
 func TestReconcileReKeysARootSendOntoTheStampedIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := e.seedSentEmail(t, mintedIdentity)
 
@@ -174,6 +175,7 @@ func TestReconcileReKeysARootSendOntoTheStampedIdentity(t *testing.T) {
 // would file that conversation under this message and break the join the
 // thread key exists for.
 func TestReconcileLeavesAReplysThreadKeyOnItsAnchorsRoot(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	const root = "root@buyer.test"
 	id := e.seedSentEmail(t, root)
@@ -193,6 +195,7 @@ func TestReconcileLeavesAReplysThreadKeyOnItsAnchorsRoot(t *testing.T) {
 // Rewriting source would relabel the workspace's own correspondence as
 // connector-ingested.
 func TestReconcileLeavesSourceManual(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := e.seedSentEmail(t, mintedIdentity)
 
@@ -212,6 +215,7 @@ func TestReconcileLeavesSourceManual(t *testing.T) {
 // an UPDATE writing the same values back would still bump version and emit an
 // event about a change nobody made.
 func TestReconcileIsANoOpWhenTheProviderHonouredTheIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := e.seedSentEmail(t, mintedIdentity)
 	before := e.sentRow(t, id)
@@ -247,6 +251,7 @@ func TestReconcileIsANoOpWhenTheProviderHonouredTheIdentity(t *testing.T) {
 // anchor. A forged key manufactured a subject_initiated_correspondence basis
 // for somebody who never wrote to us.
 func TestAnAnchorsSourceIDDoesNotBecomeTheThreadKey(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 
@@ -297,6 +302,7 @@ func TestAnAnchorsSourceIDDoesNotBecomeTheThreadKey(t *testing.T) {
 // question the window creates — does the second read accept what the first
 // refuses — without an injected seam standing in for either of them.
 func TestAnArchivedAnchorYieldsNoThreadingChain(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "root@corp.example", "root@corp.example")

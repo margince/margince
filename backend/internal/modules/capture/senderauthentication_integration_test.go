@@ -16,6 +16,7 @@ import (
 )
 
 func TestCapturedInboundKeepsReceivingServerAuthentication(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")

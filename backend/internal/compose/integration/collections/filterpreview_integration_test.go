@@ -93,6 +93,7 @@ type previewBody struct {
 // The count counts everything and the page is bounded, which is the whole point:
 // a builder says "showing 3 of 12" from one call.
 func TestAFilterPreviewCountsEveryMatchAndReturnsABoundedPage(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	column := seedContactsWithTier(t, e, 12, 4)
@@ -131,6 +132,7 @@ func TestAFilterPreviewCountsEveryMatchAndReturnsABoundedPage(t *testing.T) {
 // A filter matching everything it selects fits in one page: truncated is false
 // and the count equals the rows, so the flag is not simply always true.
 func TestAFilterPreviewThatFitsIsNotTruncated(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	column := seedContactsWithTier(t, e, 2, 1)
@@ -154,6 +156,7 @@ func TestAFilterPreviewThatFitsIsNotTruncated(t *testing.T) {
 // the SAME filter describe the same slice. If these ever diverge, a human decides
 // from a preview and receives something else.
 func TestAFilterPreviewDescribesTheSameSliceTheExportWrites(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	column := seedContactsWithTier(t, e, 3, 2)
@@ -216,6 +219,7 @@ func TestAFilterPreviewDescribesTheSameSliceTheExportWrites(t *testing.T) {
 // export targets no single record, so it does not belong in the audit spine —
 // from a comment into an assertion.
 func TestAFilterPreviewWritesNoLedgerRowWhereAnExportDoes(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	column := seedContactsWithTier(t, e, 2, 0)
@@ -257,6 +261,7 @@ func TestAFilterPreviewWritesNoLedgerRowWhereAnExportDoes(t *testing.T) {
 // generic red banner. Asserting only the status code would leave that promise
 // untested — an empty field, or the wrong one, would pass.
 func TestAFilterPreviewRefusalNamesTheOffendingInput(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	limitTooLarge := 5000

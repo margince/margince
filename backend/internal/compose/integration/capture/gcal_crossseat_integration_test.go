@@ -60,6 +60,7 @@ func liveMeetingsAt(t *testing.T, e *integration.SearchEnv, start time.Time) int
 // The guest row comes in two shapes. Capture bound this seat to it, or it names
 // only the address, since the seat's login is not the calendar's address.
 func TestAColleaguesStoredMeetingThatNamesThisSeatIsOneMeeting(t *testing.T) {
+	t.Parallel()
 	for name, bound := range map[string]bool{"seat bound": true, "address only": false} {
 		t.Run(name, func(t *testing.T) {
 			env := newCaptureEnv(t)
@@ -97,6 +98,7 @@ func TestAColleaguesStoredMeetingThatNamesThisSeatIsOneMeeting(t *testing.T) {
 // reached one meeting. Two rows are the safe answer: binding would let a seat
 // that only knows an iCal UID reach a colleague's meeting.
 func TestAColleaguesStoredMeetingThatDoesNotNameThisSeatStaysItsOwn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
@@ -118,6 +120,7 @@ func TestAColleaguesStoredMeetingThatDoesNotNameThisSeatStaysItsOwn(t *testing.T
 
 // Another occurrence of the same series is another meeting.
 func TestAnotherOccurrenceOfTheSeriesIsNotBound(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
@@ -137,6 +140,7 @@ func TestAnotherOccurrenceOfTheSeriesIsNotBound(t *testing.T) {
 // Deleting the sync cursor replays the whole calendar. The event finds the
 // meeting it bound to again, and nothing new is filed.
 func TestACalendarReplayAfterTheCursorIsDeletedFilesNoSecondMeeting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)
@@ -164,6 +168,7 @@ func TestACalendarReplayAfterTheCursorIsDeletedFilesNoSecondMeeting(t *testing.T
 // An archived holder is a meeting someone erased or merged away. The arrival
 // does not write onto it, and files its own row.
 func TestAnArchivedStoredMeetingIsNotBoundTo(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	colleague := seatFor(t, e, guestColleagueA)

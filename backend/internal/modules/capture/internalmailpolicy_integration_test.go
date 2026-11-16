@@ -25,6 +25,7 @@ import (
 )
 
 func TestInternalMailSourceEnrollmentRequiresHumanAdminAndAuditsAtomically(t *testing.T) {
+	t.Parallel()
 	ctx, _, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	actor, ok := principal.Actor(ctx)

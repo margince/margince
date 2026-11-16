@@ -20,6 +20,7 @@ import (
 )
 
 func TestDomainEvidenceSeeksPastAnEntireMatchingHistory(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedHistoryReadBackground(ctx, t, time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC))

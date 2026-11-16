@@ -38,6 +38,7 @@ func probabilityInSQL(t *testing.T, e *configEnv, deal ids.DealID) (int, Source)
 // A probability set by hand wins over the stage until the deal moves; the move
 // sets it back to the new stage's and says so.
 func TestAStageMoveSetsAHandSetProbabilityBackToTheStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, next := seedOwnedDeal(t, e)
 	if p, source := probabilityInSQL(t, e, deal); p != 0 || source != SourceStage {
@@ -80,6 +81,7 @@ func TestAStageMoveSetsAHandSetProbabilityBackToTheStage(t *testing.T) {
 
 // A won or lost deal takes its stage's probability; a hand-set one is refused.
 func TestAClosedDealRefusesAProbabilityOfItsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, from, _ := seedOwnedDeal(t, e)
 	var pipeline ids.PipelineID

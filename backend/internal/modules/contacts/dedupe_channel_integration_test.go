@@ -95,6 +95,7 @@ func assertNoChannelIdentityFor(ctx context.Context, t *testing.T, tx pgx.Tx, co
 }
 
 func TestExactContactByChannelIdentityMatchesOnProviderAndUserID(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	jane := e.seedContact(ctx, t, "Jane Doe", []string{"jane@ci.test"}, nil)
@@ -129,6 +130,7 @@ func TestExactContactByChannelIdentityMatchesOnProviderAndUserID(t *testing.T) {
 }
 
 func TestExactContactByPhoneMatchesOnE164(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	sam := e.seedContact(ctx, t, "Sam Reed", []string{"sam@ph.test"}, []string{"+4915100000001"})
@@ -157,6 +159,7 @@ func TestExactContactByPhoneMatchesOnE164(t *testing.T) {
 }
 
 func TestLadderPrefersChannelIdentityOverEmail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	bound := e.seedContact(ctx, t, "Bound Contact", []string{"bound@ladder.test"}, nil)
@@ -185,6 +188,7 @@ func TestLadderPrefersChannelIdentityOverEmail(t *testing.T) {
 }
 
 func TestBlockedIdentityStillResolves(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	returning := e.seedContact(ctx, t, "Returning Customer", []string{"back@blocked.test"}, nil)
@@ -207,6 +211,7 @@ func TestBlockedIdentityStillResolves(t *testing.T) {
 }
 
 func TestLaneConflictRoutesDeterministicallyAndReportsRival(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactA := e.seedContact(ctx, t, "Contact A", []string{"a@conflict.test"}, nil)

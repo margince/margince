@@ -35,6 +35,7 @@ type grantingFake struct {
 func (f *grantingFake) GrantedScopes(connector.Auth) ([]string, error) { return f.granted, nil }
 
 func TestConnectPersistsTheProviderGrantedScopes(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	granted := []string{"offline_access", "User.Read", "Mail.Read"}
 	registry := capturemod.NewRegistry(e.DB(), capturemod.NewSink(e.DB()), fakeAuthority{}, newTestKeyvault(t, e))
@@ -75,6 +76,7 @@ func TestConnectPersistsTheProviderGrantedScopes(t *testing.T) {
 }
 
 func TestAConnectorThatCannotReportItsGrantRecordsNoClaim(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := capturemod.NewRegistry(e.DB(), capturemod.NewSink(e.DB()), fakeAuthority{}, newTestKeyvault(t, e))
 	registry.Register(&mailFake{})

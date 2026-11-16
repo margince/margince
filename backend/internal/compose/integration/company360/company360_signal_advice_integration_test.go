@@ -23,6 +23,7 @@ import (
 )
 
 func TestAnUnprovenContractEndingStaysASignalWithoutAnAccountConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	e.WsExec(t, `UPDATE company SET lifecycle='customer' WHERE id=$1`, company.UUID)
@@ -45,6 +46,7 @@ func TestAnUnprovenContractEndingStaysASignalWithoutAnAccountConflict(t *testing
 // says so; it is that mail's conclusion. Firing there would hand every closed
 // account a permanent card nobody can clear.
 func TestAnEndedContractDoesNotContradictAnEndedRelationship(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -79,6 +81,7 @@ func kindsOf(found []crmcontracts.Company360Suggestion) []string {
 // is nothing. The rule reads a record the reader has no right to, so it stays
 // silent rather than leaking its existence through advice.
 func TestTheConflictStaysSilentWithoutTheSignalGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -116,6 +119,7 @@ func seedSignal(t *testing.T, company ids.UUID, kind, severity, summary, at stri
 // states the most serious, and among equals the newest — an old warning that
 // has been sitting there is less news than the one that just arrived.
 func TestTheStripStatesTheWorstOpenSignal(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -149,6 +153,7 @@ func TestTheStripStatesTheWorstOpenSignal(t *testing.T) {
 // there is nothing. The tile is absent, and the difference is what the signals
 // card is for.
 func TestTheStripStatesNoSignalWithoutTheGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))

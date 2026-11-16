@@ -48,6 +48,7 @@ func seedPersonalThread(t *testing.T, e *integration.SearchEnv, user ids.UUID, t
 // A thread judged the owner's private life creates nobody, however much the
 // workspace has written to that address.
 func TestAPrivateThreadMintsNoContact(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	const aunt = "aunt@family.example"
@@ -95,6 +96,7 @@ func TestAPrivateThreadMintsNoContact(t *testing.T) {
 // wrote about something private — would be refused forever by a decision that
 // was never about them as a sender.
 func TestAPrivateThreadDoesNotSettleTheAddressForever(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	const both = "cousin@family.example"
@@ -127,6 +129,7 @@ func TestAPrivateThreadDoesNotSettleTheAddressForever(t *testing.T) {
 // privately, and its parties are genuine contacts. A lawyer on a legal thread is
 // somebody the workspace deals with; the hold is about who may READ the mail.
 func TestAThreadHeldForBusinessReasonsStillMintsItsContact(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	const counsel = "counsel@kanzlei.example"
@@ -164,6 +167,7 @@ func TestAThreadHeldForBusinessReasonsStillMintsItsContact(t *testing.T) {
 // record — quietly keeping themselves out of the CRM by borrowing somebody
 // else's private conversation.
 func TestAStrangerCannotBorrowSomebodyElsesPrivateThread(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync, syncSent := env.e, env.sync, env.syncSent
 	const family = "sibling@family.example"

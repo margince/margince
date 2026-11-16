@@ -19,6 +19,7 @@ import (
 )
 
 func TestInvitationConflictIsAnActionableHTTPResponse(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	booked := f.book(t)
 	handlers := Handlers{store: f.store}
@@ -60,6 +61,7 @@ func assertSlotConflict(t *testing.T, reply *httptest.ResponseRecorder) {
 }
 
 func TestAuthoritativeProviderAbsenceCompletesCancellation(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	f.calendar.fail = true
 	meeting, err := f.store.CreateInvitation(f.ctx, f.request)
@@ -92,6 +94,7 @@ func TestAuthoritativeProviderAbsenceCompletesCancellation(t *testing.T) {
 }
 
 func TestUnchangedProviderReconciliationPreservesVersionAndHistory(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting := f.book(t)
 	var before int
@@ -116,6 +119,7 @@ func TestUnchangedProviderReconciliationPreservesVersionAndHistory(t *testing.T)
 }
 
 func TestPublicRequestRecoveryReturnsTheSameMeetingAndCapability(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	body := crmcontracts.BookPublicMeetingJSONRequestBody{}
 	body.Booker.Email = "guest@example.test"
@@ -147,6 +151,7 @@ func TestPublicRequestRecoveryReturnsTheSameMeetingAndCapability(t *testing.T) {
 }
 
 func TestCalendarReceiptDoesNotTakeAnAttendeeCopiesNaturalKey(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting, err := f.store.CreateInvitation(f.ctx, f.request)
 	if err != nil {
@@ -167,6 +172,7 @@ func TestCalendarReceiptDoesNotTakeAnAttendeeCopiesNaturalKey(t *testing.T) {
 }
 
 func TestRetryStartsANewBoundedDeliveryAttempt(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	f.calendar.lookupErr = connector.ErrUnreachable
 	meeting, err := f.store.CreateInvitation(f.ctx, f.request)
@@ -196,6 +202,7 @@ func TestRetryStartsANewBoundedDeliveryAttempt(t *testing.T) {
 }
 
 func TestCancellationOvertakingProviderAcceptanceCancelsTheLateEvent(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	created, err := f.store.CreateInvitation(f.ctx, f.request)
 	if err != nil {
@@ -233,6 +240,7 @@ func TestCancellationOvertakingProviderAcceptanceCancelsTheLateEvent(t *testing.
 }
 
 func TestCalendarAuthorityLossRequiresAttentionWithoutCancelingTheMeeting(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	meeting := f.book(t)
 	f.calendar.inspectErr = connector.ErrAuthRejected

@@ -22,6 +22,7 @@ import (
 // The whole point: a rehearsal leaves evidence, and both published numbers
 // come out of it.
 func TestADrillLeavesTheTwoNumbersItWasRunToProduce(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
@@ -59,6 +60,7 @@ func TestADrillLeavesTheTwoNumbersItWasRunToProduce(t *testing.T) {
 // case the published numbers are least true of, and a surface that could not
 // express it would read as a drill that passed.
 func TestAnInstallationThatHasNeverDrilledSaysSo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	_, ever, err := continuity.NewStore(compose.InstallationDB(e.Pool)).Latest(e.Admin())
@@ -74,6 +76,7 @@ func TestAnInstallationThatHasNeverDrilledSaysSo(t *testing.T) {
 // would be a record of nothing, and the failure is the reading somebody most
 // needs before relying on the procedure.
 func TestAFailedDrillIsRecorded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
@@ -100,6 +103,7 @@ func TestAFailedDrillIsRecorded(t *testing.T) {
 // A drill still running has no recovery window — which is different from a
 // window of zero, and different again from never having drilled.
 func TestARunningDrillReportsNoRecoveryWindowYet(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
@@ -121,6 +125,7 @@ func TestARunningDrillReportsNoRecoveryWindowYet(t *testing.T) {
 // The first answer is the one that happened. Letting a second close overwrite
 // it would make the ledger whatever its last writer preferred.
 func TestADrillCannotBeClosedTwice(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
@@ -146,6 +151,7 @@ func TestADrillCannotBeClosedTwice(t *testing.T) {
 
 // Recording a rehearsal is an operator's act, not a reader's.
 func TestRecordingADrillNeedsTheSettingsGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
@@ -159,6 +165,7 @@ func TestRecordingADrillNeedsTheSettingsGrant(t *testing.T) {
 // An outcome the ledger does not define is refused rather than stored: a
 // vocabulary nobody agreed to is one nothing can read back.
 func TestADrillRefusesAnOutcomeItDoesNotDefine(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 
@@ -173,6 +180,7 @@ func TestADrillRefusesAnOutcomeItDoesNotDefine(t *testing.T) {
 
 // A drill nobody is named on is evidence of nothing, so the ledger refuses it.
 func TestADrillWithNoOperatorIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := continuity.NewStore(compose.InstallationDB(e.Pool))
 

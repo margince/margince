@@ -39,6 +39,7 @@ func liveTokenCount(t *testing.T, e *revocationEnv, userID ids.UserID) int {
 }
 
 func TestIssuePasswordLinkSupersedesTheMembersOutstandingTokens(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-supersede")
 	// An invite already leaves one live token behind, so this starts from the
 	// realistic state rather than an empty one.
@@ -67,6 +68,7 @@ func TestIssuePasswordLinkSupersedesTheMembersOutstandingTokens(t *testing.T) {
 }
 
 func TestIssuePasswordLinkWritesAnAuditRowAndAnEventCarryingNoToken(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-ledger")
 	member, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
 		Email: "ledger@acme.test", DisplayName: "Ledger Target", Role: "rep",
@@ -115,6 +117,7 @@ func TestIssuePasswordLinkWritesAnAuditRowAndAnEventCarryingNoToken(t *testing.T
 }
 
 func TestAdminIssuedLinkIsRedeemableAndRevokesSessions(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-redeem")
 	member, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
 		Email: "redeemer@acme.test", DisplayName: "Redeemer", Role: "rep",
@@ -142,6 +145,7 @@ func TestAdminIssuedLinkIsRedeemableAndRevokesSessions(t *testing.T) {
 }
 
 func TestIssuePasswordLinkRefusesANonAdminAndANonActiveMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-refusals")
 	member, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
 		Email: "refused@acme.test", DisplayName: "Refused", Role: "rep",
@@ -185,6 +189,7 @@ func TestIssuePasswordLinkRefusesANonAdminAndANonActiveMember(t *testing.T) {
 }
 
 func TestConcurrentIssuesLeaveExactlyOneLiveToken(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-concurrent")
 	member, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
 		Email: "concurrent@acme.test", DisplayName: "Concurrent", Role: "rep",
@@ -218,6 +223,7 @@ func TestConcurrentIssuesLeaveExactlyOneLiveToken(t *testing.T) {
 // The HTTP surface, over a real service: the success body and its cache
 // posture, the 429 ceiling, and the not-active refusal only exist on this path.
 func TestPasswordLinkHandlerServesTheLinkAndHoldsItsCeiling(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-http")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test/")
 	member, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -273,6 +279,7 @@ func TestPasswordLinkHandlerServesTheLinkAndHoldsItsCeiling(t *testing.T) {
 }
 
 func TestPasswordLinkHandlerRefusesANonActiveMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-http-inactive")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 	member, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -306,6 +313,7 @@ func TestPasswordLinkHandlerRefusesANonActiveMember(t *testing.T) {
 // and an admin who tries to issue a link for the workspace's agent identity is
 // told nothing about why it can never have one.
 func TestPasswordLinkHandlerRefusesTheAgentSeat(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "link-http-agent")
 	h := NewHandlers(e.svc).WithPasswordLinkBase("https://crm.example.test")
 

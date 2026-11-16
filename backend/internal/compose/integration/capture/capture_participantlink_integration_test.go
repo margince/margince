@@ -76,6 +76,7 @@ func filedUnder(filed []ids.UUID, want ids.UUID) bool {
 // walks activity_link — their timeline, and the consent gate's qualifying
 // event — could see a message they were plainly on.
 func TestACcdContactIsFiledUnderTheirOwnRecord(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -104,6 +105,7 @@ func TestACcdContactIsFiledUnderTheirOwnRecord(t *testing.T) {
 // put a bulk sender's mail on a contact's timeline and hand it the Art 6(1)(f)
 // qualifying event that judgement just refused.
 func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -135,6 +137,7 @@ func TestASuppressedMessageIsFiledUnderNobodyItCopies(t *testing.T) {
 // links ARE written, so the assertion is about a message that was actually
 // filed.
 func TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 

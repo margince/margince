@@ -59,6 +59,7 @@ func (e *privacyEnv) withoutContactGrant() context.Context {
 }
 
 func TestVisibleAddressesResolvesAnAddressOnAContactTheCallerCanRead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	contact := e.captureContact(t, "workspace")
 	e.seedAddress(t, contact, "buyer@resolve.test")
@@ -80,6 +81,7 @@ func TestVisibleAddressesResolvesAnAddressOnAContactTheCallerCanRead(t *testing.
 }
 
 func TestVisibleAddressesRefusesACallerWithNoContactGrant(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	contact := e.captureContact(t, "workspace")
 	e.seedAddress(t, contact, "buyer@resolve.test")
@@ -99,6 +101,7 @@ func TestVisibleAddressesRefusesACallerWithNoContactGrant(t *testing.T) {
 // like an address nobody has. Telling the two apart would disclose the
 // existence of a record through a composer field.
 func TestVisibleAddressesHidesAnAddressOnAnUnreachableContact(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	// Owner-visible and owned by e.owner, so capture privacy hides it from
 	// everyone else — even the admin, who is not on the owner's team.

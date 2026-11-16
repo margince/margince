@@ -23,6 +23,7 @@ import (
 )
 
 func TestCombinedActivityAndFollowUpCommitOnce(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	sourceSystem, sourceID := "manual", "review-with-follow-up"
@@ -64,6 +65,7 @@ func TestCombinedActivityAndFollowUpCommitOnce(t *testing.T) {
 }
 
 func TestInvalidFollowUpRollsBackItsSourceAndTrace(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	missing := ids.New[ids.UserKind]()
 	_, _, err := e.store(nil).LogActivity(e.as(principal.RowScopeAll), LogActivityInput{
@@ -83,6 +85,7 @@ func TestInvalidFollowUpRollsBackItsSourceAndTrace(t *testing.T) {
 }
 
 func TestFollowUpContentTracksItsSourceAudience(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	source := loggedNote(ctx, t, e)
@@ -125,6 +128,7 @@ func TestFollowUpContentTracksItsSourceAudience(t *testing.T) {
 }
 
 func TestSourceFilteredListAndCountShareTheSourceAudience(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	source := loggedNote(ctx, t, e)
@@ -159,6 +163,7 @@ func TestSourceFilteredListAndCountShareTheSourceAudience(t *testing.T) {
 }
 
 func TestFollowUpCannotUseAnotherTaskAsItsSource(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	task, _, err := store.LogActivity(ctx, LogActivityInput{Kind: "task", Subject: new("Original"), Source: "manual"})
@@ -172,6 +177,7 @@ func TestFollowUpCannotUseAnotherTaskAsItsSource(t *testing.T) {
 }
 
 func TestFollowUpRefusesASourceOutsideTheInstallation(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	source := ids.NewV7()
 	_, _, err := e.store(nil).LogActivity(e.as(principal.RowScopeAll), LogActivityInput{
@@ -190,6 +196,7 @@ func TestFollowUpRefusesASourceOutsideTheInstallation(t *testing.T) {
 }
 
 func TestFollowUpRefusesAnAssigneeOutsideItsSourceAudience(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	source := loggedNote(ctx, t, e)
@@ -210,6 +217,7 @@ func TestFollowUpRefusesAnAssigneeOutsideItsSourceAudience(t *testing.T) {
 }
 
 func TestCombinedHTTPFollowUpAcceptsAnExplicitInvitedAssignee(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	args := []any{e.other}
@@ -236,6 +244,7 @@ func TestCombinedHTTPFollowUpAcceptsAnExplicitInvitedAssignee(t *testing.T) {
 }
 
 func TestHeldOutcomeFilesItsOptionalNextStepAtomically(t *testing.T) {
+	t.Parallel()
 	for _, withTask := range []bool{false, true} {
 		t.Run(fmt.Sprintf("task=%t", withTask), func(t *testing.T) {
 			e := setupSend(t)
@@ -279,6 +288,7 @@ func TestHeldOutcomeFilesItsOptionalNextStepAtomically(t *testing.T) {
 }
 
 func TestInvalidHeldFollowUpLeavesTheMeetingUnanswered(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store, meeting := loggedMeeting(ctx, t, e)

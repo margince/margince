@@ -32,6 +32,7 @@ import (
 )
 
 func TestALoggedMeetingKeepsTheDurationItWasGiven(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 

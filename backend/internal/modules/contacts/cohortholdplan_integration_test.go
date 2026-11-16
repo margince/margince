@@ -51,6 +51,7 @@ func (e *dedupeEnv) seedUnrelatedMeetings(ctx context.Context, t *testing.T, cou
 }
 
 func TestTheCohortHoldSeeksPastAnUnrelatedInstallation(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	connected := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)

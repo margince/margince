@@ -16,6 +16,7 @@ import (
 // A stage carries its name per UI language. A names-only save is audited, a
 // rename leaves the names alone, and an unknown language is refused.
 func TestAStageNamesItselfPerLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales"})

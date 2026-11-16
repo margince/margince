@@ -84,6 +84,7 @@ var (
 )
 
 func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
+	t.Parallel()
 	registerOnce.Do(func() {
 		registerErr = compose.RegisterExtensions([]extension.Extension{syntheticUnit()}, nil, nil)
 	})

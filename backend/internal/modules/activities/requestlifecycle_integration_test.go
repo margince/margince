@@ -18,6 +18,7 @@ import (
 )
 
 func TestSchedulingRequestSurvivesAcknowledgementAndCreatesOneTask(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send meeting slots", "meeting", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -53,6 +54,7 @@ func TestSchedulingRequestSurvivesAcknowledgementAndCreatesOneTask(t *testing.T)
 // A request past the waiting horizon leaves the queue, and its record still
 // offers it, so a human can take it back on deliberately.
 func TestAHistoricalRequestLeavesTheQueueAndStaysTakeableOnItsRecord(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send slots", "meeting", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -169,6 +171,7 @@ func TestAHistoricalRequestLeavesTheQueueAndStaysTakeableOnItsRecord(t *testing.
 // settles duplicate assurance tasks reads that refusal as "somebody wrote to
 // this; leave it alone".
 func TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	actor, ok := principal.Actor(e.as())
@@ -229,6 +232,7 @@ func TestArchivingAStaleTaskRefusesRatherThanHidingTheAnswer(t *testing.T) {
 // the vanished row's answer would be one indistinguishable error and the sweep
 // would have to abort a whole pass on either.
 func TestArchivingATaskSomebodyAlreadyArchivedSaysItIsGone(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	actor, ok := principal.Actor(e.as())

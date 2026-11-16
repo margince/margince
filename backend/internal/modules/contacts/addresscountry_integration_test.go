@@ -20,6 +20,7 @@ import (
 // Create and edit, on a contact and on a company, hold one country rule: a name
 // is refused and a code lands upper-case.
 func TestAnAddressCountryIsHeldToAlpha2OnEveryContactAndCompanyWrite(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.as(e.owner, principal.RowScopeAll)
 	var invalid *InvalidCountryError
@@ -70,6 +71,7 @@ func TestAnAddressCountryIsHeldToAlpha2OnEveryContactAndCompanyWrite(t *testing.
 // The edit form and a CSV update carry the stored country back. An undo replays
 // a value the row held itself.
 func TestALegacyCountryDoesNotBlockAnUnrelatedEditOrAnUndo(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	ctx := e.as(e.owner, principal.RowScopeAll)
 	var invalid *InvalidCountryError

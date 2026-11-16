@@ -54,6 +54,7 @@ func modernHeaders(bearer map[string]string, method, name string) map[string]str
 // TestBothFramingsConnectAndLandTheSameEffect is the headline claim: one
 // server, two eras, and a record created through either one.
 func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
+	t.Parallel()
 	e := setupConnector(t)
 	bearer := apptest.PassportBearer(t, e.AppEnv, "dual-era client", "read", "write")
 
@@ -197,6 +198,7 @@ func legacyHeaders(bearer map[string]string, negotiated string) map[string]strin
 // looks for a recognized modern error inside it, so a bare 400 would send a
 // working client back to the handshake.
 func TestAModernRequestWhoseHeaderContradictsItsBodyRunsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupConnector(t)
 	bearer := apptest.PassportBearer(t, e.AppEnv, "mismatching client", "read", "write")
 

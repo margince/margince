@@ -59,6 +59,7 @@ func emailWithFiles(from, to, msgID, refs, filename string, files ...[]byte) []b
 }
 
 func TestASeenSendersReplyCarryingADocumentIsJudgedAgain(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -92,6 +93,7 @@ func TestASeenSendersReplyCarryingADocumentIsJudgedAgain(t *testing.T) {
 }
 
 func TestAClearedSendersNewDocumentWaitsForItsOwnVerdict(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -116,6 +118,7 @@ func TestAClearedSendersNewDocumentWaitsForItsOwnVerdict(t *testing.T) {
 }
 
 func TestAReopenedThreadHoldsRepliesWhileItsDocumentIsPending(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -164,6 +167,7 @@ func assertDocumentQuestion(t *testing.T, env captureEnv, activity ids.UUID) {
 }
 
 func TestASharedMailboxDoesNotInheritAnIdlePendingQuestion(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -179,6 +183,7 @@ func TestASharedMailboxDoesNotInheritAnIdlePendingQuestion(t *testing.T) {
 }
 
 func TestASharedMailboxDoesNotCommissionADocumentVerdict(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())
 	e, sync := env.e, env.sync
 	allowSharedPosture(t, e)
@@ -193,6 +198,7 @@ func TestASharedMailboxDoesNotCommissionADocumentVerdict(t *testing.T) {
 }
 
 func TestANonclassifiedReopenKeepsTheTriggeringMessage(t *testing.T) {
+	t.Parallel()
 	for _, posture := range []string{capturemod.PostureShared, capturemod.PostureHeld} {
 		t.Run(posture, func(t *testing.T) {
 			env := newCaptureEnvWithBlob(t, captureNow, blobstore.NewMemory())

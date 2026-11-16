@@ -27,6 +27,7 @@ func init() { jurisdiction.Register(countryTestPack{}) }
 // The claim form asks for a jurisdiction, so a claim that sends none is a
 // client that stopped asking. It is refused and the token stays usable.
 func TestAClaimNamingNoJurisdictionIsRefused(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 	token, err := svc.MintSetupToken(ctx)
@@ -48,6 +49,7 @@ func TestAClaimNamingNoJurisdictionIsRefused(t *testing.T) {
 // Choosing no pack is an answer, and it is stored, so a later deployment file
 // naming a country does not override what the admin chose.
 func TestAClaimChoosingNoPackStoresTheChoice(t *testing.T) {
+	t.Parallel()
 	_, pool := setupIdentityDB(t)
 	svc := NewService(pool)
 	ctx := context.Background()

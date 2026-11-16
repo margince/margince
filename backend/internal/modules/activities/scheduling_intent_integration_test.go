@@ -20,6 +20,7 @@ import (
 // The chosen local start governs the booked instant, travels to the provider,
 // and stays on the meeting until a reschedule names only an instant.
 func TestABookedMeetingKeepsTheHostsChosenClockUntilAnInstantMovesIt(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	clock := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
@@ -104,6 +105,7 @@ func TestABookedMeetingKeepsTheHostsChosenClockUntilAnInstantMovesIt(t *testing.
 }
 
 func TestOnlyAnInstantMeetingTakesAChosenLocalStart(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -146,6 +148,7 @@ func TestOnlyAnInstantMeetingTakesAChosenLocalStart(t *testing.T) {
 // A zone rule change leaves a cached instant that no longer matches the chosen
 // clock. The read and the delivery both resolve the clock again.
 func TestAnInvitationReadsAndDeliversItsChosenClockUnderCurrentRules(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	clock := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)

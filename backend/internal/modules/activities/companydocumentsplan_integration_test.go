@@ -101,6 +101,7 @@ func seedBusyAccountFiles(ctx context.Context, t *testing.T, tx pgx.Tx) {
 var attachmentKey = regexp.MustCompile(`[( ](?:entity_id|company_id|id) = `)
 
 func TestABusyAccountsDocumentsListStartsFromTheAccount(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)

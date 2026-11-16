@@ -19,6 +19,8 @@ import (
 // The mailbox gate and the sink read the two mail postures inside their own
 // writes. A boot value wins there over a row that says the opposite. Not
 // parallel: the binding is the process's own.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestBootSetMailPosturesWinInsideTheMailboxGateAndTheSink(t *testing.T) {
 	apptest.BindEnv(t, []string{
 		"MARGINCE_CAPTURE_SHARED_POSTURE_ALLOWED=true",

@@ -22,6 +22,7 @@ import (
 )
 
 func TestWrongSecondFactorCodesLockTheAccount(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-lockout")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -58,6 +59,7 @@ func TestWrongSecondFactorCodesLockTheAccount(t *testing.T) {
 }
 
 func TestAMistypedCodeCanBeRetypedOnTheSameChallenge(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-retype")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)
@@ -79,6 +81,7 @@ func TestAMistypedCodeCanBeRetypedOnTheSameChallenge(t *testing.T) {
 }
 
 func TestConcurrentWrongCodesCannotOutrunTheLockout(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "mfa-lockout-burst")
 	e.withVault()
 	base := time.Unix(1_760_000_000, 0)

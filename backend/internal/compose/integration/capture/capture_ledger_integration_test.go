@@ -30,6 +30,7 @@ import (
 // mailbox: without it, a stranger sending from fresh addresses decides how much
 // the workspace spends on model calls.
 func TestCaptureLedgerStopsDeferringAtTheWorkspaceCeiling(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 
@@ -81,6 +82,7 @@ func TestCaptureLedgerStopsDeferringAtTheWorkspaceCeiling(t *testing.T) {
 // compare-and-set accepts the zombie's answer and silently overwrites the live
 // one. The claim token is what makes the second write lose.
 func TestCaptureLedgerRefusesAVerdictFromAnExpiredClaim(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	store := capturemod.NewPendingStore(e.DB())
@@ -193,6 +195,7 @@ func fillLedgerToCeiling(t *testing.T, e *integration.SearchEnv, activityID, own
 // corporate sender is ever deferred again. The per-domain share is what keeps a
 // flood inside its own lane.
 func TestCaptureLedgerStopsDeferringOneFloodingDomain(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 

@@ -20,6 +20,7 @@ import (
 )
 
 func TestGetCompanyVatCheckHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	h := Handlers{store: e.store}
@@ -93,6 +94,7 @@ func TestGetCompanyVatCheckHandler(t *testing.T) {
 }
 
 func TestAVatCheckWithNoReceiptOmitsItRatherThanSendingEmpty(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	h := Handlers{store: e.store}

@@ -21,6 +21,7 @@ import (
 )
 
 func TestEveryRecipientOfMailSentFromMarginceWasWrittenTo(t *testing.T) {
+	t.Parallel()
 	for _, role := range []string{"to", "cc", "bcc"} {
 		t.Run(role, func(t *testing.T) { recipientWasWrittenTo(t, role) })
 	}
@@ -74,6 +75,7 @@ func recipientWasWrittenTo(t *testing.T, role string) {
 // stops at two proofs, so the repeat must neither count as a second send nor
 // hide one.
 func TestOneSendSeenFromTwoMailboxesIsOneSend(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		later string
 		want  bool
@@ -144,6 +146,7 @@ func captureSentMail(ctx context.Context, tx pgx.Tx, copied, body string, mailbo
 // A send from Margince to its counterparty is reached two ways, by the
 // counterparty and by the recipients. A declining one is still one send.
 func TestADecliningSendReachedTwoWaysIsOneSend(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	buyer := "buyer-" + ids.NewV7().String() + "@buyer.example"
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -183,6 +186,7 @@ func TestADecliningSendReachedTwoWaysIsOneSend(t *testing.T) {
 // A captured send stored before capture folded its counterparty still proves
 // the send to that address.
 func TestAnUnfoldedCounterpartyStillProvesASend(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	local := "buyer-" + ids.NewV7().String()
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {

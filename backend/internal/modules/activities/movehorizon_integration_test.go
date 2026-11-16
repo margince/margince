@@ -35,6 +35,7 @@ func moveAt(t *testing.T, e *loadEnv, id ids.UUID, instant time.Time) crmcontrac
 // Mutation: drop withinWaitingHorizonSQL from moveSQL and the old request still
 // reads needs_reply.
 func TestARequestPastTheWaitingHorizonNeedsNoReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send the price list", "commitment", OwedVerdictAsksUs)
 	current := requestInstant.AddDate(0, 0, 1)
@@ -62,6 +63,7 @@ func TestARequestPastTheWaitingHorizonNeedsNoReply(t *testing.T) {
 }
 
 func TestASeatsWaitingMailKeepsLegacyNullEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send the figures", "commitment", OwedVerdictAsksUs)
 	store := storeKnowing(e)
@@ -116,6 +118,7 @@ func filteredAt(t *testing.T, e *loadEnv, id ids.UUID, instant time.Time) bool {
 // the boundary is the Worklist's whichever side it falls on. Past it the badge
 // reads none.
 func TestTheBadgeAndTheLaneShareTheHorizonsEdge(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please confirm the delivery date", "commitment", OwedVerdictAsksUs)
 	for days := 28; days <= 32; days++ {
@@ -138,6 +141,7 @@ func TestTheBadgeAndTheLaneShareTheHorizonsEdge(t *testing.T) {
 // Mutation: read the filter's horizon at the store's own clock instead of
 // WaitingReplyAsOf and the filter lists a mail its badge calls none.
 func TestTheFilterAndTheBadgeReadOneStoredHorizon(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send the signed order", "commitment", OwedVerdictAsksUs)
 	at := requestInstant.AddDate(0, 0, 10)
@@ -158,6 +162,7 @@ func TestTheFilterAndTheBadgeReadOneStoredHorizon(t *testing.T) {
 // A chat message follows the mail rule through message_move: owed while
 // current, none past the horizon.
 func TestAChatMessagePastTheHorizonNeedsNoReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	direction, subject := "inbound", "Chat with the buyer"
 	logged, _, err := storeKnowing(e).LogActivity(asClassifier(e), LogActivityInput{

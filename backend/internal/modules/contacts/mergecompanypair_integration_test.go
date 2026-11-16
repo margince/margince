@@ -14,6 +14,7 @@ import (
 // the way the queue does. The pair stays, marked merged by the caller. The
 // merged list shows it, and an undo is refused as not undoable.
 func TestADirectCompanyMergeKeepsTheOpenPairAsMerged(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")

@@ -41,11 +41,6 @@ func hiddenNow(t *testing.T, e *loadEnv) HiddenBacklog {
 }
 
 // moved is what THIS test's seeding changed, figure by figure.
-//
-// Absolute counts are the wrong assertion here and the file next door says why:
-// the lane template is shared across this package's tests, so a message another
-// test seeded is present too and a total would pass or fail on which tests ran.
-// A difference is the test's own contribution whatever else is in the database.
 func moved(before, after HiddenBacklog) HiddenBacklog {
 	return HiddenBacklog{
 		Shown:       after.Shown - before.Shown,
@@ -63,6 +58,7 @@ func moved(before, after HiddenBacklog) HiddenBacklog {
 // departure from this, and without it a figure of zero could equally mean "the
 // read is broken" — which is the failure this whole file exists to catch.
 func TestAQueueHidingNothingReportsAClearBacklog(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -86,6 +82,7 @@ func TestAQueueHidingNothingReportsAClearBacklog(t *testing.T) {
 // customer not-theirs removes them from that rep's day until they withdraw it.
 // The rep's page cannot show that; this is what does.
 func TestAMessageSetAsideIsCountedAsHidden(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -114,6 +111,7 @@ func TestAMessageSetAsideIsCountedAsHidden(t *testing.T) {
 // A thread judged not-sales is counted, and it is the judgement worth watching:
 // it hides the conversation from the WHOLE workspace and never lifts.
 func TestAThreadJudgedNotSalesIsCountedAsHidden(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -148,6 +146,7 @@ func TestAThreadJudgedNotSalesIsCountedAsHidden(t *testing.T) {
 // queue on a date, with no rep having judged anything. The page reads as clear
 // and the customer is still waiting.
 func TestAWaitPastTheHorizonIsCountedAsHidden(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -177,6 +176,7 @@ func TestAWaitPastTheHorizonIsCountedAsHidden(t *testing.T) {
 // cover. Asserted so the bound is a decision with a test on it rather than a
 // number somebody can move without noticing what it stops answering.
 func TestAWaitPastTheGuardrailsOwnReachIsNotCounted(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -196,6 +196,7 @@ func TestAWaitPastTheGuardrailsOwnReachIsNotCounted(t *testing.T) {
 // ambiguous: usually a rep's dentist, sometimes a real customer whose thread
 // capture failed to link. Its own figure for exactly that reason.
 func TestUnlinkedInboundIsCountedSeparately(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -232,6 +233,7 @@ func TestUnlinkedInboundIsCountedSeparately(t *testing.T) {
 // the only thing that would show it, so it has to move when the rule fires and
 // stay still when another rule does the hiding.
 func TestMailFromOurOwnDomainIsCountedSeparately(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	before := hiddenKnowing(t, e, "ourco.test")
@@ -270,6 +272,7 @@ func hiddenKnowing(t *testing.T, e *loadEnv, domains ...string) HiddenBacklog {
 // into a reassuring zero — the under-reporting direction again. This asserts the
 // property directly instead of trusting the clamp.
 func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -317,6 +320,7 @@ func TestEveryRelaxationAdmitsAtLeastWhatTheQueueShows(t *testing.T) {
 
 // A colleague's request must not enter this reader's personal hidden figures.
 func TestAColleagueRequestDoesNotEnterPersonalHiddenFigures(t *testing.T) {
+	t.Parallel()
 	colleague := setupLoad(t)
 	first, firstAddress := colleague.mailContact(t, "first", "workspace")
 	second, secondAddress := colleague.mailContact(t, "second", "workspace")
@@ -359,6 +363,7 @@ func TestAColleagueRequestDoesNotEnterPersonalHiddenFigures(t *testing.T) {
 // Seeded past the cap rather than mocked, because the clipping is the LIMIT's
 // and a fake would prove only that the flag can be set.
 func TestAQueueAtTheScanCapRefusesToCallItselfClear(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -401,14 +406,8 @@ func TestAQueueAtTheScanCapRefusesToCallItselfClear(t *testing.T) {
 // say "what the queue itself would carry" and a reader comparing this figure
 // against the rows on their screen would find it larger with nothing to explain
 // the gap. If the two are ever reconciled, this test is what says so.
-//
-// Asserted on the ROWS the query returns rather than on a difference in
-// `Shown`. This package's tests share one database and the activity table is
-// unit-scoped, so a neighbour that fills the scan cap — there is one — leaves
-// every later count pinned at the bound, where adding a row moves nothing. A
-// difference would then read as "the query dropped it", which is the opposite
-// of what happened.
 func TestShownCountsWhatTheQueryFoundRatherThanWhatThePageDraws(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)

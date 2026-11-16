@@ -51,6 +51,7 @@ func (contactVerdict) Complete(_ context.Context, req model.Request) (model.Resp
 }
 
 func TestABackfillCountsTheContactTheVerdictMakesFromItsMail(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})

@@ -36,6 +36,7 @@ func slotHolder(ctx context.Context, t *testing.T, e *dedupeEnv, contact ids.Con
 }
 
 func TestACompanyMergeMovesThePrimarySlotToTheKeptDuplicate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Ada Pellinger", "Norrvik Old", "Norrvik New")
@@ -52,6 +53,7 @@ func TestACompanyMergeMovesThePrimarySlotToTheKeptDuplicate(t *testing.T) {
 }
 
 func TestAContactMergeMovesThePrimarySlotToTheKeptDuplicate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Bo Starling", "Quell Ltd", "Unused Ltd")
@@ -69,6 +71,7 @@ func TestAContactMergeMovesThePrimarySlotToTheKeptDuplicate(t *testing.T) {
 }
 
 func TestAContactMergeKeepsTheSurvivorsOwnPrimary(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Cyra Hollis", "Shared Works", "Own Works")
@@ -90,6 +93,7 @@ func TestAContactMergeKeepsTheSurvivorsOwnPrimary(t *testing.T) {
 }
 
 func TestThePromotedHeirIsAudited(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Dag Ostrander", "Fenwick Old", "Fenwick New")
@@ -119,6 +123,7 @@ func TestThePromotedHeirIsAudited(t *testing.T) {
 }
 
 func TestACompanyMergeFilesTwinsForAContactWhoseEmployerMoved(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	survivor := mustEmployer(t, e, "Halberd Robotics GmbH")
@@ -184,6 +189,7 @@ func (e *dedupeEnv) lapsePrimary(ctx context.Context, t *testing.T, edge ids.UUI
 }
 
 func TestACompanyMergeHandsTheSlotOnlyBetweenCurrentEmployments(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	ends := monthStart(ctx, t, e)
@@ -212,6 +218,7 @@ func TestACompanyMergeHandsTheSlotOnlyBetweenCurrentEmployments(t *testing.T) {
 }
 
 func TestAContactMergeHandsTheSlotOnlyBetweenCurrentEmployments(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	ends := monthStart(ctx, t, e)

@@ -39,6 +39,7 @@ func listedLeadNames(ctx context.Context, t *testing.T, e *dedupeEnv, partner Le
 }
 
 func TestALeadNamesItsReferringPartnerWhenCreated(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	partnerID, _ := newPartnerCompany(ctx, t, e, "Referrer GmbH", UpsertPartnerInput{PartnerRole: "referral"})
@@ -68,6 +69,7 @@ func TestALeadNamesItsReferringPartnerWhenCreated(t *testing.T) {
 }
 
 func TestTheLeadListNarrowsToAPartnersReferrals(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	first, _ := newPartnerCompany(ctx, t, e, "First Partner AG", UpsertPartnerInput{PartnerRole: "referral", RelationshipStage: new("ready")})
@@ -102,6 +104,7 @@ func TestTheLeadListNarrowsToAPartnersReferrals(t *testing.T) {
 // The lead's own read blanks a partner the caller cannot open. Filtering by
 // that partner's id must not give back the link the read withholds.
 func TestALeadListFilterByAnUnseenPartnerMatchesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	admin := asStageAdmin(e, stageAdminGrants())
 	owned, err := e.store.CreateCompany(admin, CreateCompanyInput{
@@ -171,6 +174,7 @@ func TestALeadListFilterByAnUnseenPartnerMatchesNothing(t *testing.T) {
 // Whether a company is a partner is partner data. A seat without partner read
 // cannot name one on a lead, so the refusal does not answer that question.
 func TestNamingALeadsPartnerTakesPartnerRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	admin := asStageAdmin(e, stageAdminGrants())
 	partnerID, _ := newPartnerCompany(admin, t, e, "Referrer GmbH", UpsertPartnerInput{PartnerRole: "referral"})

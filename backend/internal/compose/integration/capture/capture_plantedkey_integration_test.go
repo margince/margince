@@ -83,6 +83,7 @@ func capturedMailRows(t *testing.T, e *integration.SearchEnv) []mailRow {
 }
 
 func TestAMailboxHoldingTheMessageIDDoesNotDenyAnotherSeatTheirOwnMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -142,6 +143,7 @@ func TestAMailboxHoldingTheMessageIDDoesNotDenyAnotherSeatTheirOwnMessage(t *tes
 // there — so the seat used to lose the message without any arm of the proof
 // having answered. It keeps its own message here for the same reason.
 func TestAMailboxDeniedByAnIncumbentItCannotSeeStillKeepsItsMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -191,6 +193,7 @@ func TestAMailboxDeniedByAnIncumbentItCannotSeeStillKeepsItsMessage(t *testing.T
 // parties from somebody else's message, and the redaction purge deletes by that
 // same link and would destroy the other mailbox's bytes.
 func TestTheSeatsOwnRowNamesItsOwnProviderOriginal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -240,6 +243,7 @@ func rawOriginalOf(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) 
 // The seat's own key is deterministic, so its next sync of the same message is
 // the ordinary replay it always was rather than a second row every pass.
 func TestTheSeatsOwnCopyIsStillAReplayOnTheNextSync(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)

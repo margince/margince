@@ -76,6 +76,7 @@ func seedSeat(ctx context.Context, t *testing.T, db *database.DB, email, status 
 // customer. It is outbound, to the first outside recipient. The colleague wrote
 // it, not the seat whose mailbox held the copy. Nobody attested it.
 func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
@@ -116,6 +117,7 @@ func TestAColleaguesCopiedMailIsOurMailToTheCustomer(t *testing.T) {
 // A colleague whose login names its domain in Unicode wrote the mail its
 // punycode spelling sent. Both spellings are one mailbox.
 func TestAColleaguesLoginInEitherSpellingIsTheSender(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com", "bücher.example")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
@@ -135,6 +137,7 @@ func TestAColleaguesLoginInEitherSpellingIsTheSender(t *testing.T) {
 // Only a seat's exact address is a colleague. An archived seat, or another
 // address at the own domain, stays the inbound mail capture always filed.
 func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
@@ -162,6 +165,7 @@ func TestOnlyALiveSeatsAddressIsAColleague(t *testing.T) {
 // A second, outside From address is a co-author, not the customer the
 // colleague wrote to. The counterparty is the first outside recipient.
 func TestAColleaguesCoAuthorIsNotTheCustomer(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
@@ -182,6 +186,7 @@ func TestAColleaguesCoAuthorIsNotTheCustomer(t *testing.T) {
 // A copy to a distribution list names more recipients than capture keeps as
 // participants. They are withheld, and the first of them is still the customer.
 func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
@@ -206,6 +211,7 @@ func TestAColleaguesMailToAListIsStillOurs(t *testing.T) {
 // A From the receiving server did not authenticate is the sender's word alone,
 // and the copy stays the inbound mail capture always filed.
 func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")
@@ -235,6 +241,7 @@ func TestAnUnauthenticatedColleagueIsNotTrusted(t *testing.T) {
 // not whom they wrote to. It stays inbound, but its From names the colleague,
 // so no reader credits it to the other side. Invited seats count.
 func TestAColleaguesInvitationIsCreditedToTheColleague(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")

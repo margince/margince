@@ -26,6 +26,7 @@ import (
 )
 
 func TestASecondReviewersDifferentDecisionIsRefused(t *testing.T) {
+	t.Parallel()
 	ctx, _, db, _ := traceReadWorkspace(t)
 	pending := capture.NewPendingStore(db)
 	id := seedUnsureDisposition(ctx, t, db, "contested@review.test")
@@ -71,6 +72,7 @@ func TestASecondReviewersDifferentDecisionIsRefused(t *testing.T) {
 // A disposition that is gone answers not-found rather than conflict: there is
 // no competing decision, there is no row.
 func TestResolvingAMissingDispositionIsNotFound(t *testing.T) {
+	t.Parallel()
 	ctx, _, db, _ := traceReadWorkspace(t)
 	pending := capture.NewPendingStore(db)
 
@@ -115,6 +117,7 @@ func inTx(ctx context.Context, t *testing.T, db *database.DB, fn func(pgx.Tx) er
 //
 // The review queue is never left pointing at an offer for a settled question.
 func TestLinkingAProposalToADecidedRowIsRefused(t *testing.T) {
+	t.Parallel()
 	ctx, _, db, _ := traceReadWorkspace(t)
 	pending := capture.NewPendingStore(db)
 	id := seedUnsureDisposition(ctx, t, db, "decided@review.test")
@@ -137,6 +140,7 @@ func TestLinkingAProposalToADecidedRowIsRefused(t *testing.T) {
 // The verdict it carries is not discarded while the caller counts the attempt
 // as spent.
 func TestRetiringWithALostClaimIsRefused(t *testing.T) {
+	t.Parallel()
 	ctx, _, db, _ := traceReadWorkspace(t)
 	pending := capture.NewPendingStore(db)
 	id := seedUnsureDisposition(ctx, t, db, "raced@review.test")

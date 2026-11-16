@@ -37,6 +37,7 @@ func timezoneRow(t *testing.T, svc *Service, user ids.UUID) (zone *string, chose
 }
 
 func TestAChosenTimezoneIsStoredWithItsFlagAndOneAuditRow(t *testing.T) {
+	t.Parallel()
 	svc, ctx, user := seatChoosingALanguage(t)
 	seat, err := svc.SaveMyTimezone(ctx, "America/New_York", TimezoneChosen)
 	if err != nil {
@@ -85,6 +86,7 @@ func TestAChosenTimezoneIsStoredWithItsFlagAndOneAuditRow(t *testing.T) {
 }
 
 func TestABrowserGuessFillsOnlyAnEmptyZone(t *testing.T) {
+	t.Parallel()
 	svc, ctx, user := seatChoosingALanguage(t)
 	if err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE app_user SET timezone = NULL WHERE id = $1`, user)
@@ -112,6 +114,7 @@ func TestABrowserGuessFillsOnlyAnEmptyZone(t *testing.T) {
 }
 
 func TestTheTimezoneWriterRefusesWhatItMayNotStore(t *testing.T) {
+	t.Parallel()
 	svc, ctx, user := seatChoosingALanguage(t)
 	var fault apperrors.FieldFault
 	if _, err := svc.SaveMyTimezone(ctx, "Etc/Nowhere", TimezoneChosen); !errors.As(err, &fault) {
@@ -142,6 +145,7 @@ func TestTheTimezoneWriterRefusesWhatItMayNotStore(t *testing.T) {
 // An agent repeating a browser's guess becomes its setter. An agent repeating a zone
 // the user chose leaves it theirs. Either way the answer says who set it.
 func TestAnAgentRepeatingAZoneTakesOnlyAGuess(t *testing.T) {
+	t.Parallel()
 	svc, ctx, user := seatChoosingALanguage(t)
 	agent := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:zone", UserID: user, OnBehalfOf: user, PassportID: ids.NewV7(),
@@ -170,6 +174,7 @@ func TestAnAgentRepeatingAZoneTakesOnlyAGuess(t *testing.T) {
 
 // The other self-service writers answer the seat's zone too, and who set it.
 func TestASelfServiceAnswerKeepsWhoSetTheZone(t *testing.T) {
+	t.Parallel()
 	svc, ctx, user := seatChoosingALanguage(t)
 	agent := principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:zone", UserID: user, OnBehalfOf: user, PassportID: ids.NewV7(),
@@ -193,6 +198,7 @@ func TestASelfServiceAnswerKeepsWhoSetTheZone(t *testing.T) {
 // carrying the zone and whether it was chosen. An unchanged save announces
 // nothing.
 func TestAStoredTimezoneIsAnnouncedOnce(t *testing.T) {
+	t.Parallel()
 	svc, ctx, user := seatChoosingALanguage(t)
 	events := func() (n int, zone string, chosen bool) {
 		t.Helper()

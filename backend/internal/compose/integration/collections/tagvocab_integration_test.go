@@ -67,6 +67,7 @@ func createContactWithTag(t *testing.T, e *apptest.AppEnv, name string, tagIDs .
 // single total would tell an admin the wrong number. The fixture is built so
 // the two differ: one contact carries only the source, one carries both.
 func TestMergeCountsWhatMovedApartFromWhatCollapsed(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	source := createTag(t, e, "Keyaccount")
 	target := createTag(t, e, "Key Account")
@@ -126,6 +127,7 @@ type detail0 struct {
 // the reuse succeeds is what stops a future change quietly reintroducing an
 // alias nobody asked for.
 func TestMergeArchivesTheSourceAndReleasesItsName(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	source := createTag(t, e, "Churnrisk")
 	target := createTag(t, e, "Churn Risk")
@@ -158,6 +160,7 @@ func TestMergeArchivesTheSourceAndReleasesItsName(t *testing.T) {
 // Merging a tag into itself would archive the only survivor and take every
 // tagging with it. It is refused at the door, naming the field that carried it.
 func TestMergeRefusesATagIntoItself(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Inbound")
 	createContactWithTag(t, e, "Tagged", tag)
@@ -187,6 +190,7 @@ func TestMergeRefusesATagIntoItself(t *testing.T) {
 // taken the name meanwhile — two words a reader cannot tell apart is the state
 // the vocabulary exists to prevent.
 func TestRestoreRefusesWhenALiveTagHasTakenTheName(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	original := createTag(t, e, "Parked")
 
@@ -207,6 +211,7 @@ func TestRestoreRefusesWhenALiveTagHasTakenTheName(t *testing.T) {
 }
 
 func TestRestoreBringsBackAWordNobodyElseTook(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Trade Fair 2026")
 	createContactWithTag(t, e, "Met At The Fair", tag)
@@ -241,6 +246,7 @@ func TestRestoreBringsBackAWordNobodyElseTook(t *testing.T) {
 // A rename onto a name another live tag holds is a conflict, not a silent
 // second row: the uniqueness index folds case, and so must the refusal.
 func TestRenamingOntoALiveNameIsRefused(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	first := createTag(t, e, "Champion")
 	createTag(t, e, "Detractor")
@@ -257,6 +263,7 @@ func TestRenamingOntoALiveNameIsRefused(t *testing.T) {
 // project taggings exist in storage; counting them would report a weight no
 // screen in V1 can explain.
 func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Cross Type")
 	createContactWithTag(t, e, "A Contact", tag)
@@ -294,6 +301,7 @@ func TestUsageCountsOnlyTheAdvertisedRecordTypes(t *testing.T) {
 // CreateTagRequest, so dropping it is the server throwing away a value the
 // published contract accepted, with a 201 that says nothing went wrong.
 func TestCreatingATagKeepsTheDescriptionItWasGiven(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 
 	var created struct {
@@ -327,6 +335,7 @@ func TestCreatingATagKeepsTheDescriptionItWasGiven(t *testing.T) {
 // The update door spells clearing as "", and a create that stored the empty
 // string would leave a tag whose description reads as present and says nothing.
 func TestCreatingATagWithAnEmptyDescriptionStoresNone(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 
 	var created struct {
@@ -345,6 +354,7 @@ func TestCreatingATagWithAnEmptyDescriptionStoresNone(t *testing.T) {
 // The rename path itself, which the conflict test above cannot reach: a
 // handler that always answered 409 would pass that one.
 func TestRenamingRecolouringAndDescribingATag(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Draft Name")
 
@@ -394,6 +404,7 @@ func TestRenamingRecolouringAndDescribingATag(t *testing.T) {
 
 // A stale If-Match is version skew, and the write must not land.
 func TestAStaleIfMatchRefusesTheRename(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Versioned")
 

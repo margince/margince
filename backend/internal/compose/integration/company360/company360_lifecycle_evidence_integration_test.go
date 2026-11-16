@@ -21,6 +21,7 @@ import (
 )
 
 func TestLifecycleConflictCitesTheSourceInsteadOfTheExtractionDate(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Cedar Labs", &e.Rep1))
 	e.WsExec(t, `UPDATE company SET lifecycle = 'customer' WHERE id = $1`, company.UUID)

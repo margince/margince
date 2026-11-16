@@ -82,6 +82,7 @@ func gcalStub(t *testing.T, owner string) *httptest.Server {
 }
 
 func TestGcalConnectorSyncsExternalMeetingAndSkipsInternal(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	const owner = "rep@ws.example"
 	stub := gcalStub(t, owner)

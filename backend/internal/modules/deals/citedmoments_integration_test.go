@@ -18,6 +18,7 @@ import (
 // A calendar move of one waits for the write's commit, so the check and the
 // recorded moments read the same row.
 func TestAVerdictHoldsItsCitedActivitiesFromTheCheckToTheCommit(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	meeting := seedTranscribedMeeting(t, e.configEnv, dealID, "")

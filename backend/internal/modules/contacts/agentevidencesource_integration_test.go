@@ -15,6 +15,7 @@ package contacts
 import "testing"
 
 func TestAnAgentCorrectionSaysAnAgentMadeIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	companyID := evidenceCompany(e.as(), t, e)
 
@@ -43,6 +44,7 @@ func TestAnAgentCorrectionSaysAnAgentMadeIt(t *testing.T) {
 
 // A contact's own correction is unchanged by any of this.
 func TestAHumanCorrectionStillNamesTheHumanWhoMadeIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)

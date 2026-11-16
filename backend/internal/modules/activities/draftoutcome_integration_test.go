@@ -82,6 +82,7 @@ func (e *sendEnv) deliveryCount(t *testing.T) int {
 // mis-wired composition would look identical to — which is why the wiring
 // itself is proven where it is assembled, not here.
 func TestSendEmailProceedsWhenNoDraftOutcomeRecorderIsWired(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -100,6 +101,7 @@ func TestSendEmailProceedsWhenNoDraftOutcomeRecorderIsWired(t *testing.T) {
 // recorded=false with no error, and none of them may fail a message that
 // legitimately went out.
 func TestSendEmailProceedsWhenTheDraftReferenceResolvesNoSignal(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -126,6 +128,7 @@ func TestSendEmailProceedsWhenTheDraftReferenceResolvesNoSignal(t *testing.T) {
 // rather than leaving a timeline entry and a queued message behind a judgment
 // that was never written.
 func TestSendEmailRollsBackTheWholeSendWhenTheLearningWriteFaults(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &deliveryWritingStager{userID: e.rep}
@@ -156,6 +159,7 @@ func TestSendEmailRollsBackTheWholeSendWhenTheLearningWriteFaults(t *testing.T) 
 // MARKETING send precisely because the two bodies differ there — with no
 // footer applied, passing the wrong one would look identical.
 func TestDraftOutcomeJudgesTheApprovedBodyNotTheTransmittedFooter(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -184,6 +188,7 @@ func TestDraftOutcomeJudgesTheApprovedBodyNotTheTransmittedFooter(t *testing.T) 
 // Mail composed independently of any draft resolves no signal and must not
 // cost a query for a row that cannot exist.
 func TestSendEmailAsksNothingOfTheLearningLoopWithoutADraftReference(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}

@@ -8,12 +8,12 @@ package contacts
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,6 +39,7 @@ func (n claimPlanNode) walk(visit func(claimPlanNode)) {
 // Sequential scans are off, so a small test table cannot make one look cheap.
 // A claim lookup that can use an index on the task then does.
 func TestTaskRecipientsAreFoundByTheirTask(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	// Claims spread over many contacts, as a workspace holds them: with one
@@ -109,7 +110,7 @@ func TestTaskRecipientsAreFoundByTheirTask(t *testing.T) {
 func analyzeAsOwner(t *testing.T, tables ...string) {
 	t.Helper()
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting as the owner: %v", err)
 	}

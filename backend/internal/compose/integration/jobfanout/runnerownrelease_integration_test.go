@@ -39,6 +39,7 @@ var releasingSpec = runner.AgentSpec{
 // credential could release from an attended conversation. What makes the run
 // unattended is the run id the runner stamps on every tool call it makes.
 func TestAScheduledRunDoesNotReleaseTheChangeItsCredentialProposed(t *testing.T) {
+	t.Parallel()
 	re := setupRunner(t)
 
 	var company struct {

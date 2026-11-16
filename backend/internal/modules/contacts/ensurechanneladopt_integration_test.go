@@ -33,6 +33,7 @@ func (e *dedupeEnv) corroboratedInput(t *testing.T, ci connector.ChannelIdentity
 // it the contact is unreachable for a reply, invisible to a channel-keyed
 // erasure, and re-resolved by address on every later message forever.
 func TestACorroboratingAddressAdoptsTheMailCapturedIncumbent(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const email = "tuyen@acme.example"
@@ -66,6 +67,7 @@ func TestACorroboratingAddressAdoptsTheMailCapturedIncumbent(t *testing.T) {
 // arrives twice, and the second pass must write nothing rather than fail the
 // ensure and log a fault on every poll.
 func TestAdoptingTheIncumbentTwiceWritesNothingTheSecondTime(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const email = "dung@acme.example"
@@ -108,6 +110,7 @@ func TestAdoptingTheIncumbentTwiceWritesNothingTheSecondTime(t *testing.T) {
 // contact WITH it. An addressless record is one the next mail from the same human
 // cannot match, so it mints a second record.
 func TestAMintedChannelContactKeepsTheCorroboratingAddress(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const email = "luu@acme.example"
@@ -137,6 +140,7 @@ func TestAMintedChannelContactKeepsTheCorroboratingAddress(t *testing.T) {
 // naming them by an account the suppression list never heard of, quietly
 // recreates them.
 func TestAnErasedAddressIsNotResurrectedByADirectMessage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const erased = "gone@acme.example"
@@ -175,6 +179,7 @@ func TestAnErasedAddressIsNotResurrectedByADirectMessage(t *testing.T) {
 // since committed. Everything else is the real thing: the real bind path decides
 // the winner, and the real database arbitrates.
 func TestLosingTheBindRaceStillRaisesTheIdentityReview(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const email = "shared@acme.example"
@@ -227,6 +232,7 @@ func TestLosingTheBindRaceStillRaisesTheIdentityReview(t *testing.T) {
 // stranger's address would be auto-created on every later bulk mail and made
 // permanently unsweepable — by messaging a member once.
 func TestAVouchedAddressIsNotEvidenceOfCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.asChannelConnector()
 	const vouched = "stranger@spamco.example"
@@ -253,6 +259,7 @@ func TestAVouchedAddressIsNotEvidenceOfCorrespondence(t *testing.T) {
 // workspace really did correspond with still counts, or the flag would be
 // switching the ladder off rather than scoping it.
 func TestAMailCapturedAddressStillCountsAsCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	const known = "real.contact@client.io"
 	contact := e.seedContact(e.as(), t, "Real Contact", []string{known}, nil)
@@ -266,6 +273,7 @@ func TestAMailCapturedAddressStillCountsAsCorrespondence(t *testing.T) {
 // A vouched direct message from a live lead files on that lead. It creates no
 // contact and binds no account.
 func TestAChannelMessageFromALeadFilesOnTheLead(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name  string
 		read  bool

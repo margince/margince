@@ -22,6 +22,7 @@ Bea,Same,https://www.linkedin.com/in/beasame,,acme inc,CFO,15 Mar 2024
 // A connection lands at an account only when the legal forms do not name two
 // entities. "Acme GmbH" is not placed at "Acme Inc", while "acme inc" is.
 func TestALinkedInEmployerWithAnotherLegalFormIsNotPlaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Acme Inc", Source: "manual"})

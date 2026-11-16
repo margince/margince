@@ -80,6 +80,7 @@ const forwardingAlias = "founder@previous-employer.example"
 // the seat's own address — which is the whole ticket: an alias is never the
 // From of anything the mailbox sends, so nothing else could have found it.
 func TestAnAliasTwoMessagesWereDeliveredToBecomesTheSeatsOwn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 
 	env.sync(t, deliveredMail(forwardingAlias, "", "buyer@customer.example", "alias-1@customer.example"))
@@ -100,6 +101,7 @@ func TestAnAliasTwoMessagesWereDeliveredToBecomesTheSeatsOwn(t *testing.T) {
 // threshold on its own — that would be corroboration by one piece of evidence
 // counted twice.
 func TestOneMessageArrivingTwiceIsOneSighting(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	message := deliveredMail(forwardingAlias, "", "buyer@customer.example", "alias-replay@customer.example")
 
@@ -116,6 +118,7 @@ func TestOneMessageArrivingTwiceIsOneSighting(t *testing.T) {
 // sender can get above — and must never become an identity, however many
 // messages carry it.
 func TestASenderCannotDeclareAnyoneTheMailboxOwner(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	const victim = "victim@customer.example"
 
@@ -133,6 +136,7 @@ func TestASenderCannotDeclareAnyoneTheMailboxOwner(t *testing.T) {
 // real one is learned and the forged one is not — which a walk that read the
 // last match, or collected every match, would get exactly backwards.
 func TestARealDeliveryIsLearnedAndAForgedOneBesideItIsNot(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	const victim = "victim@customer.example"
 
@@ -153,6 +157,7 @@ func TestARealDeliveryIsLearnedAndAForgedOneBesideItIsNot(t *testing.T) {
 // and never reaches the ledger — otherwise the table would fill with the one
 // address nobody needs discovering.
 func TestAnAddressTheSeatAlreadyHoldsIsNotRediscovered(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	declareIdentity(t, env.e, env.e.Rep1, capturemod.IdentityKindAddress, captureOwner)
 
@@ -180,6 +185,7 @@ func TestAnAddressTheSeatAlreadyHoldsIsNotRediscovered(t *testing.T) {
 // A service's no-reply address on a Delivered-To line is never the seat's own,
 // however often it appears, and one claimed that way before is no longer read.
 func TestAMachineAddressIsNeverClaimedAsTheSeatsOwn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	const service = "drive-shares-noreply@google.com"
 	err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {

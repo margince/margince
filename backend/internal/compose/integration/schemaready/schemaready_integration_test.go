@@ -61,6 +61,7 @@ func unitMigrations() fstest.MapFS {
 }
 
 func TestReadyMeansTheComposedUnitsSchemaIsApplied(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	if err := compose.RegisterExtensions([]extension.Extension{{
 		Name:        unitName,

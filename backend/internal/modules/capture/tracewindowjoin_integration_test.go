@@ -25,6 +25,7 @@ import (
 // same message appears once per historical disposition — which would also break
 // the page's own LIMIT and its cursor.
 func TestASendersHistoryDoesNotMultiplyTheirMessages(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	mine := memberContext(ctx, ws, me)
@@ -60,6 +61,7 @@ func TestASendersHistoryDoesNotMultiplyTheirMessages(t *testing.T) {
 
 // The contract advertises a cursor and a limit; nothing exercised them.
 func TestASecondPageContinuesUnderTheSameScope(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	mine := memberContext(ctx, ws, me)

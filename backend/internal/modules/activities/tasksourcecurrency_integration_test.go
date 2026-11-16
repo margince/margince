@@ -22,6 +22,7 @@ import (
 // An unregistered source_system is not current work until a human writes or
 // adopts the task.
 func TestOnlyANamedTaskSourceIsCurrentWork(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	asOf := time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)
 	seed := func(source *string) ids.UUID {

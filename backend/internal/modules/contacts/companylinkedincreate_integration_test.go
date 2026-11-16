@@ -14,6 +14,7 @@ import (
 )
 
 func TestACompanyCreatedWithALinkedInURLStoresItsCanonicalSpelling(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	raw := "http://www.linkedin.com/company/voltaq/about/?trk=x"
 	company, err := e.store.CreateCompany(e.as(), CreateCompanyInput{
@@ -28,6 +29,7 @@ func TestACompanyCreatedWithALinkedInURLStoresItsCanonicalSpelling(t *testing.T)
 }
 
 func TestASecondCompanyWithTheSameLinkedInURLIsRefusedAsTheUpdatePathRefusesIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := "https://www.linkedin.com/company/twinco"
@@ -55,6 +57,7 @@ func TestASecondCompanyWithTheSameLinkedInURLIsRefusedAsTheUpdatePathRefusesIt(t
 }
 
 func TestACompanyCreateRefusesAProfileURLWhereACompanyURLBelongs(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	profile := "https://www.linkedin.com/in/ada"
 	_, err := e.store.CreateCompany(e.as(), CreateCompanyInput{

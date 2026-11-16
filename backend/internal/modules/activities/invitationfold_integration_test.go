@@ -76,6 +76,7 @@ func (e *loadEnv) history(t *testing.T, in ListActivitiesInput) map[ids.UUID]crm
 }
 
 func TestEveryInvitationMailOfAMeetingFoldsOntoItInHistory(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	h := e.invitedHistory(t)
 	contactType := "contact"
@@ -104,6 +105,7 @@ func TestEveryInvitationMailOfAMeetingFoldsOntoItInHistory(t *testing.T) {
 }
 
 func TestInvitationMailStaysWhereItsMeetingIsNotListed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	h := e.invitedHistory(t)
 	contactType := "contact"
@@ -123,6 +125,7 @@ func TestInvitationMailStaysWhereItsMeetingIsNotListed(t *testing.T) {
 }
 
 func TestInvitationMailStaysWhenTheReaderCannotOpenItsMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	h := e.invitedHistory(t)
 	e.exec(t, `DELETE FROM activity_participant WHERE activity_id = $1 AND user_id = $2`, h.meeting, e.rep)
@@ -138,6 +141,7 @@ func TestInvitationMailStaysWhenTheReaderCannotOpenItsMeeting(t *testing.T) {
 }
 
 func TestMailForOneOccurrenceFoldsOnlyOntoThatOccurrence(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	h := e.invitedHistory(t)
 	var uid string

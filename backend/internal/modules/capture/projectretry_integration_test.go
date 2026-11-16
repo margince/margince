@@ -49,6 +49,7 @@ func (m *failingOnceMatcher) MatchProjectKey(_ context.Context, _ pgx.Tx, _ []st
 }
 
 func TestAFailedAttributionIsRetriedByTheNextCapture(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()
@@ -191,6 +192,7 @@ func projectLinkCount(t *testing.T, owner *pgx.Conn, _ ids.UUID) int {
 // stamp is idempotent, and what a pre-stamp link needs is exactly what this
 // asserts, that the call is made at all.
 func TestACaptureOfAnAlreadyFiledActivityStillStamps(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()

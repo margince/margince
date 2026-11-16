@@ -99,6 +99,7 @@ func (e *dedupeEnv) contactUpdatedEvents(ctx context.Context, t *testing.T, cont
 }
 
 func TestKickedStatusMarksTheIdentityBlocked(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Kickable Customer", nil, nil)
@@ -113,6 +114,7 @@ func TestKickedStatusMarksTheIdentityBlocked(t *testing.T) {
 }
 
 func TestMemberStatusClearsTheBlock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Unblocking Customer", nil, nil)
@@ -135,6 +137,7 @@ func TestMemberStatusClearsTheBlock(t *testing.T) {
 // no second trail: an audit spine that grows one row per redelivered webhook
 // is unreadable exactly when someone needs to read it.
 func TestReachabilityFlipCarriesTheWriteShape(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Traceable Customer", nil, nil)
@@ -190,6 +193,7 @@ func TestReachabilityFlipCarriesTheWriteShape(t *testing.T) {
 // the post-unblock message below and mint a second Contact for the same
 // human — exactly what the partial unique index would happily admit.
 func TestBlockThenUnblockKeepsOneContactNotTwo(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const name = "Comes Back"
@@ -247,6 +251,7 @@ func TestBlockThenUnblockKeepsOneContactNotTwo(t *testing.T) {
 // case: a watermark that only advanced on a real state change would record
 // nothing here and admit the stale block anyway.
 func TestAStaleMembershipUpdateCannotSuppressAReachableCustomer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Overtaken Customer", nil, nil)
@@ -272,6 +277,7 @@ func TestAStaleMembershipUpdateCannotSuppressAReachableCustomer(t *testing.T) {
 // reachability would then never change again, and nothing would say so. The
 // refusal is loud, and it leaves the stored state exactly as it found it.
 func TestAReachabilityChangeThatCannotBeOrderedIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Unorderable Customer", nil, nil)
@@ -307,6 +313,7 @@ func TestAReachabilityChangeThatCannotBeOrderedIsRefused(t *testing.T) {
 // and wedge the identity's reachability permanently — no block and no unblock
 // from the live bot would ever be applied again.
 func TestAFreshBotResetsTheMembershipWatermark(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Rebotted Customer", nil, nil)

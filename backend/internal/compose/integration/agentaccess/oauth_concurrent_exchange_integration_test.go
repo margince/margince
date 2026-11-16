@@ -61,6 +61,7 @@ func (o *oauthEnv) concurrentTokenExchange(codeA, codeB string) (a, b renewal) {
 // means "two connections for one client," which the Settings list, and every
 // scope check downstream of it, both assume can never happen.
 func TestConcurrentCodeExchangesForOneClientSerialize(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	codeA := o.authorize(t, url.Values{"scope": {"read write"}})

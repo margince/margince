@@ -135,6 +135,7 @@ func channelInput() SendMessageInput {
 // and is refused before a recipient is resolved — accepting it would stage a
 // message with no chat to deliver into.
 func TestSendMessageRefusesAnAnchorThatIsNotAChannelConversation(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchorWithoutProvider(t, "email")
 	contact := e.linkContact(t, anchor, "Mail Buyer")
@@ -162,6 +163,7 @@ func TestSendMessageRefusesAnAnchorThatIsNotAChannelConversation(t *testing.T) {
 // A test that kept asserting the old refusal would be asserting a code path no
 // data can reach, which is the same as asserting nothing.
 func TestTheDatabaseRefusesAKindAndTransportThatDisagree(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 
 	// A message that names no transport: unrepliable by construction, so the
@@ -197,6 +199,7 @@ func TestTheDatabaseRefusesAKindAndTransportThatDisagree(t *testing.T) {
 // reply delivered to the wrong one messages a customer somewhere they never
 // wrote from.
 func TestSendMessageRefusesWhenTheConversationReachesTwoContacts(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	first := e.linkContact(t, anchor, "First Buyer")
@@ -226,6 +229,7 @@ func TestSendMessageRefusesWhenTheConversationReachesTwoContacts(t *testing.T) {
 // same refusal with the other code: the contact is still on the record, the
 // conversation is still readable, and the reply must not be accepted.
 func TestSendMessageRefusesWhenTheConversationReachesNobody(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	e.linkContact(t, anchor, "Blocked Buyer")
@@ -254,6 +258,7 @@ func TestSendMessageRefusesWhenTheConversationReachesNobody(t *testing.T) {
 // would be authorized for somebody else — which is how suppression silently
 // stops applying to a whole channel.
 func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	contact := e.linkContact(t, anchor, "Telegram Buyer")
@@ -312,6 +317,7 @@ func TestSendMessageStagesAgainstTheResolvedRecipient(t *testing.T) {
 // the rep's mailbox would refuse every reply on this installation while every
 // mail test kept passing.
 func TestSendMessagePreFlightsTheChannelProviderRatherThanTheMailbox(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	contact := e.linkContact(t, anchor, "Telegram Buyer")
@@ -332,6 +338,7 @@ func TestSendMessagePreFlightsTheChannelProviderRatherThanTheMailbox(t *testing.
 // …and when it answers no, the rep is told who fixes it instead of being handed a
 // 202 for a message that can only park.
 func TestSendMessageRefusesWhenNoBotIsBound(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	contact := e.linkContact(t, anchor, "Telegram Buyer")
@@ -365,6 +372,7 @@ func TestSendMessageRefusesWhenNoBotIsBound(t *testing.T) {
 // how this installation's reply path is wired — that is a fact about a record
 // they may not read.
 func TestSendMessageAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	e.linkToContactOwnedBy(t, anchor, e.other)
@@ -385,6 +393,7 @@ func TestSendMessageAnswersAnUnauthorizedCallerBeforeTheWiringGuards(t *testing.
 // A reply nothing can resolve a recipient with must refuse, not send to nobody
 // — the same fail-closed posture the consent gate and the delivery stager take.
 func TestSendMessageRefusesWhenTheIdentitySeamIsUnwired(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	e.linkContact(t, anchor, "Telegram Buyer")
@@ -404,6 +413,7 @@ func TestSendMessageRefusesWhenTheIdentitySeamIsUnwired(t *testing.T) {
 // the timeline row behind would promise the rep a message that was never queued,
 // on a conversation they have no way to correct.
 func TestSendMessageCommitsNoActivityWhenChannelStagingFails(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	contact := e.linkContact(t, anchor, "Telegram Buyer")

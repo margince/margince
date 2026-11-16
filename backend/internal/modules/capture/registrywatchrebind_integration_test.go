@@ -118,6 +118,7 @@ func putWatch(ctx context.Context, t *testing.T) {
 // say so. The deadline goes with it: a deadline for a subscription this row no
 // longer owns keeps the renewal scan away until it lapses.
 func TestRebindingToAnotherAccountDropsTheStoredWatchHandle(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	label := "first@example.test"
 	reg.Register(rebindConnector{label: &label})
@@ -146,6 +147,7 @@ func TestRebindingToAnotherAccountDropsTheStoredWatchHandle(t *testing.T) {
 // AND A RECONNECT OF THE SAME ACCOUNT keeps it, which is what stops a
 // re-consent costing every mailbox its push registration.
 func TestReconnectingTheSameAccountKeepsTheStoredWatchHandle(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	label := "same@example.test"
 	reg.Register(rebindConnector{label: &label})
@@ -187,6 +189,7 @@ func connectionID(ctx context.Context, t *testing.T) ids.UUID {
 // subscription in a mailbox this row no longer points at, which is the failure
 // the clearing exists to prevent, arriving a moment later.
 func TestARenewalThatRacedARebindDoesNotRestoreTheOldHandle(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	label := "first@example.test"
 	rebind := func() {

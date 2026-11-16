@@ -141,6 +141,7 @@ func mcpRaw(t *testing.T, e *apptest.AppEnv, method, path, payload string, heade
 // bootstrap resolves on ONE origin: the 401 names an ABSOLUTE metadata URL,
 // that URL is served here, and it points at this same issuer.
 func TestMCPIsServedAtTheAPIOriginWithDiscovery(t *testing.T) {
+	t.Parallel()
 	env := setupConnector(t)
 	resp := listTools(t, env.AppEnv, "")
 	if resp.StatusCode != http.StatusUnauthorized {
@@ -190,6 +191,7 @@ func TestMCPIsServedAtTheAPIOriginWithDiscovery(t *testing.T) {
 //
 // Held by: TestMCPOnTheAPIServesTheAPIsOwnToolSurface (backend/internal/compose/integration/agentaccess/mcp_transport_integration_test.go) — this test.
 func TestMCPOnTheAPIServesTheAPIsOwnToolSurface(t *testing.T) {
+	t.Parallel()
 	env := setupConnector(t)
 
 	var minted struct {
@@ -276,6 +278,7 @@ func TestMCPOnTheAPIServesTheAPIsOwnToolSurface(t *testing.T) {
 // live with no off switch; answering the group with anything but the mux's
 // own 404 would tell a prober which gate is closed.
 func TestConnectorGateOffRemovesEveryConnectorRoute(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t) // the default deployment posture: the connector undeclared
 
 	// Every route the gate mounts, and nothing may be left out: an endpoint

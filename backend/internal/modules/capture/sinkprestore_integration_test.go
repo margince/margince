@@ -17,6 +17,7 @@ import (
 )
 
 func TestDropBeforeStoreAgreesWithUpsert(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	sink := capture.NewSink(db)
 

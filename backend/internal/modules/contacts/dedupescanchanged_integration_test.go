@@ -10,12 +10,12 @@ package contacts
 
 import (
 	"context"
-	"os"
 	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -35,7 +35,7 @@ func (e *dedupeEnv) scanChanged(t *testing.T) DedupeScanResult {
 func ageRows(t *testing.T, tables ...string) {
 	t.Helper()
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -79,6 +79,7 @@ func ageAllScannedRows(t *testing.T) {
 // companies last changed is found by the next nightly pass. That pass reads the
 // facts and the employment edges as well as the companies.
 func TestTheNightlyScanFilesASimilarNameOnceASecondFactArrives(t *testing.T) {
+	t.Parallel()
 	for name, share := range map[string]func(e *dedupeEnv, ctx context.Context, t *testing.T, brand, line ids.CompanyID){
 		"a stated phone number": func(e *dedupeEnv, ctx context.Context, t *testing.T, brand, line ids.CompanyID) {
 			e.statePhone(ctx, t, brand, "+49 89 1234567")
@@ -111,6 +112,7 @@ func TestTheNightlyScanFilesASimilarNameOnceASecondFactArrives(t *testing.T) {
 }
 
 func TestTheFirstNightlyScanReadsEverythingAndTheNextOnlyWhatChanged(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	seeded := e.seedPreRuleDuplicates(ctx, t)
@@ -140,6 +142,7 @@ func TestTheFirstNightlyScanReadsEverythingAndTheNextOnlyWhatChanged(t *testing.
 // A pass short of time stops before its next batch. It leaves the rest to the
 // next run, so its job's deadline never cancels a batch.
 func TestANightlyScanShortOfTimeLeavesTheRestToTheNextRun(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedPreRuleDuplicates(ctx, t)
@@ -162,6 +165,7 @@ func TestANightlyScanShortOfTimeLeavesTheRestToTheNextRun(t *testing.T) {
 // A write's updated_at is its transaction's start, so it can commit behind
 // a pass that has already read past that time.
 func TestTheNightlyScanFindsAWriteThatCommittedBehindItsWatermark(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	seeded := e.seedPreRuleDuplicates(ctx, t)
@@ -193,6 +197,7 @@ func TestTheNightlyScanFindsAWriteThatCommittedBehindItsWatermark(t *testing.T) 
 }
 
 func TestTheNightlyScanStartsWhereTheFullPassBegan(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.seedPreRuleDuplicates(ctx, t)
@@ -209,6 +214,7 @@ func TestTheNightlyScanStartsWhereTheFullPassBegan(t *testing.T) {
 // A merge moves the retired contact's number onto the survivor and leaves the
 // survivor's own row as it was. The moved row still names the survivor.
 func TestTheNightlyScanFilesAPairAMergeMadeByMovingANumber(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	shared := "+49 30 1234567"
@@ -233,6 +239,7 @@ func TestTheNightlyScanFilesAPairAMergeMadeByMovingANumber(t *testing.T) {
 }
 
 func TestTheDuplicateScanFilesASharedNumber(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	shared := "+49 30 7654321"
@@ -250,6 +257,7 @@ func TestTheDuplicateScanFilesASharedNumber(t *testing.T) {
 }
 
 func TestANameManyCompaniesShareFilesAtMostTheRivalLimit(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for range 20 {
@@ -285,6 +293,7 @@ func TestANameManyCompaniesShareFilesAtMostTheRivalLimit(t *testing.T) {
 // The rival cap bounds new filings. Five dismissed look-alikes must not hide
 // a sixth rival behind them, for either record type.
 func TestADismissedLookAlikeDoesNotTakeARivalsPlace(t *testing.T) {
+	t.Parallel()
 	for entity, create := range map[DedupeScanEntity]func(*dedupeEnv, context.Context, *testing.T, int) ids.UUID{
 		DedupeScanCompanies: func(e *dedupeEnv, ctx context.Context, t *testing.T, _ int) ids.UUID {
 			return e.createNamedCompany(ctx, t, "Acme Widgets").UUID

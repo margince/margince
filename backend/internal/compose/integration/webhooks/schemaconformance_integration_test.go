@@ -47,6 +47,7 @@ import (
 // so a payload that satisfies the generated Go type but drifted from the
 // documented wire contract (or vice versa) is still caught.
 func TestDealStageChangedPayloadConformsToPublicSchema(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	stages := apptest.DiscoverSeededPipeline(t, we.AppEnv)
 	dealID := apptest.ExerciseDealToWon(t, we.AppEnv, stages)
@@ -69,6 +70,7 @@ func TestDealStageChangedPayloadConformsToPublicSchema(t *testing.T) {
 // production, proving the mapping end to end rather than only at the unit
 // level (wireenvelope_test.go covers the pure mapping in isolation).
 func TestPublicEventEnvelopeConformsToPublicSchema(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	stages := apptest.DiscoverSeededPipeline(t, we.AppEnv)
 	dealID := apptest.ExerciseDealToWon(t, we.AppEnv, stages)

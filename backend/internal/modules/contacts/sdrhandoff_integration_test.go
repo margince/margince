@@ -29,6 +29,7 @@ import (
 // merely shares a company — an inference whose error grows with account size,
 // always in the direction that flatters the SDR.
 func TestAHandoffIsAcceptedWithTheDealItProduced(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-accept@example.test")
 	deal := e.seedDealForHandoff(t)
@@ -75,6 +76,7 @@ func TestAHandoffIsAcceptedWithTheDealItProduced(t *testing.T) {
 // this proves the constraint behind it, so a future writer that forgot cannot
 // record an unexplained refusal.
 func TestARejectedHandoffMustNameItsReason(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-reject@example.test")
 	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
@@ -97,6 +99,7 @@ func TestARejectedHandoffMustNameItsReason(t *testing.T) {
 // A rejection with a reason lands, and the reason comes from the workspace's
 // own list.
 func TestARejectionRecordsTheReasonItNames(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-reason@example.test")
 	reason := e.someHandoffReason(t, HandoffRejected)
@@ -130,6 +133,7 @@ func TestARejectionRecordsTheReasonItNames(t *testing.T) {
 // overwriting the first, because two decisions on one handoff is two stories
 // about what happened to one prospect.
 func TestAHandoffIsDecidedOnlyOnce(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-twice@example.test")
 	reason := e.someHandoffReason(t, HandoffRejected)
@@ -162,6 +166,7 @@ func TestAHandoffIsDecidedOnlyOnce(t *testing.T) {
 // A handoff names exactly ONE subject. Both, or neither, is two handoffs
 // wearing one id or none at all.
 func TestAHandoffNamesExactlyOneSubject(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-subject@example.test")
 	contact := e.seedContactForHandoff(t)
@@ -190,6 +195,7 @@ func TestAHandoffNamesExactlyOneSubject(t *testing.T) {
 // A refused handoff carries no deal. Attaching one would credit the submitter
 // for work their handoff was refused for.
 func TestARefusedHandoffCarriesNoDeal(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-nodeal@example.test")
 	reason := e.someHandoffReason(t, HandoffRejected)
@@ -264,19 +270,11 @@ func (e *promoteConsentEnv) eventReason(t *testing.T, id ids.UUID, status string
 
 // someHandoffReason writes a reason for the transition it applies to.
 //
-// It seeds rather than reading the migration's own rows, because the harness
-// resets every table before each test — a reader here would be asserting that
-// truncation had not happened, which is a fact about the harness rather than
-// about handoffs. That the migration seeds a usable list is a different claim,
-// made where it can be: TestTheSeededHandoffReasonsCoverBothTransitions
-// (backend/migrations/sdrhandoffreasons_integration_test.go) reads the
-// catalogue the migration left, against the transitions the column's own CHECK
-// admits.
-// The label carries the test's own name because sdr_handoff_reason is a
-// PRESERVED reference table: the migration seeds the system catalogue and the
-// reset leaves it standing, so a fixed label here would collide with the row the
-// previous test left behind. Its own reason also keeps a test that deactivates
-// one from reaching into another's.
+// It seeds rather than reading the migration's own rows, so a test here does not
+// rest on the shipped catalogue. That the migration seeds a usable list is
+// TestTheSeededHandoffReasonsCoverBothTransitions
+// (backend/migrations/sdrhandoffreasons_integration_test.go). The label carries
+// the test's own name, so it never collides with a shipped reason's label.
 func (e *promoteConsentEnv) someHandoffReason(t *testing.T, appliesTo string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
@@ -289,8 +287,7 @@ func (e *promoteConsentEnv) someHandoffReason(t *testing.T, appliesTo string) id
 }
 
 // seedDealForHandoff writes the pipeline and stage a deal needs as well as the
-// deal, because the harness resets every table before each test — reading a
-// seeded pipeline here would assert that truncation had not happened.
+// deal.
 func (e *promoteConsentEnv) seedDealForHandoff(t *testing.T) ids.UUID {
 	t.Helper()
 	pipeline, stage := ids.NewV7(), ids.NewV7()
@@ -338,6 +335,7 @@ func leadPtr(id ids.LeadID) *ids.UUID {
 // unreachable in SQL: the CAS admitted only `submitted`, so a recycled handoff
 // was terminal and "worth another try, not now" was an elaborate rejection.
 func TestARecycledHandoffCanBeHandedOnAgain(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-recycle@example.test")
 	reason := e.someHandoffReason(t, HandoffRecycled)
@@ -396,6 +394,7 @@ func TestARecycledHandoffCanBeHandedOnAgain(t *testing.T) {
 // from the only place that can hold it, which sends the held-meeting rate back
 // to guessing from a deal that merely shares a company.
 func TestAnAcceptanceWithoutADealIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-nodealaccept@example.test")
 	id, err := e.store.SubmitHandoff(e.ctx, NewSDRHandoff{LeadID: leadPtr(lead)})
@@ -420,6 +419,7 @@ func TestAnAcceptanceWithoutADealIsRefused(t *testing.T) {
 // are refused. The composite key is what refuses it, and this drives the
 // database rather than the Go check in front of it.
 func TestARejectionCannotCiteARecycleReason(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-crossreason@example.test")
 	recycleReason := e.someHandoffReason(t, HandoffRecycled)
@@ -446,6 +446,7 @@ func TestARejectionCannotCiteARecycleReason(t *testing.T) {
 // operator retires a reason without orphaning last quarter's rejections — but a
 // new decision citing one would record a reason nobody is offered.
 func TestARetiredReasonCannotBeChosen(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-retired@example.test")
 	reason := e.someHandoffReason(t, HandoffRejected)
@@ -476,6 +477,7 @@ func TestARetiredReasonCannotBeChosen(t *testing.T) {
 // null after somebody took it loses the one fact a "who owns this now" read
 // needs.
 func TestAcceptingAQueueHandoffClaimsIt(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-claim@example.test")
 	deal := e.seedDealForHandoff(t)
@@ -513,6 +515,7 @@ func TestAcceptingAQueueHandoffClaimsIt(t *testing.T) {
 // and the handoff they wrote points at a prospect they have no scope for, so
 // every later read of that lead answers about somebody they could not open.
 func TestAHandoffRefusesASubjectTheSubmitterCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-out-of-scope@example.test")
 	if _, err := e.owner.Exec(context.Background(),
@@ -541,6 +544,7 @@ func TestAHandoffRefusesASubjectTheSubmitterCannotOpen(t *testing.T) {
 // deal_id is what the held-meeting conversion reads, so an ungated one lets
 // that conversion follow a link its own author had no scope for.
 func TestAnAcceptanceRefusesADealTheDeciderCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "handoff-deal-out-of-scope@example.test")
 	deal := e.seedDealForHandoff(t)

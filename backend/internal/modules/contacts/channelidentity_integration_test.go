@@ -69,6 +69,7 @@ func (e *dedupeEnv) resolveOrCreateContactForIdentity(ctx context.Context, name 
 // identity already bound to someone is never re-pointed, and the offered
 // contact is told whose conversation it actually is.
 func TestChannelIdentityBindAdoptsTheIncumbentOwner(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.seedContact(ctx, t, "Incumbent Owner", []string{"incumbent@adopt.test"}, nil)
@@ -91,6 +92,7 @@ func TestChannelIdentityBindAdoptsTheIncumbentOwner(t *testing.T) {
 }
 
 func TestTwoConcurrentResolutionsConvergeOnOneContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const name = "Concurrent First Message"

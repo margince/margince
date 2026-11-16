@@ -90,8 +90,7 @@ func (f suggestionFixture) propose(t *testing.T, entityType string, entity ids.U
 	return outcome
 }
 
-// queue is the pending suggestions for this fixture's message. The clone is
-// shared by the package's tests, so the whole queue holds other tests' rows.
+// queue is the pending suggestions for this fixture's message.
 func (f suggestionFixture) queue() ([]crmcontracts.LinkSuggestion, error) {
 	all, err := f.store.ListLinkSuggestions(f.ctx)
 	return slices.DeleteFunc(all, func(s crmcontracts.LinkSuggestion) bool {
@@ -109,6 +108,7 @@ func (f suggestionFixture) count(t *testing.T, sql string) int {
 }
 
 func TestAProposalWaitsInTheQueueAndAttachesNothing(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	linksBefore := f.count(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1`)
 
@@ -136,6 +136,7 @@ func TestAProposalWaitsInTheQueueAndAttachesNothing(t *testing.T) {
 }
 
 func TestARepeatProposalWritesNothingAndARejectedOneStaysRejected(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	f.propose(t, "deal", f.deal)
 	queue, _ := f.queue()
@@ -155,6 +156,7 @@ func TestARepeatProposalWritesNothingAndARejectedOneStaysRejected(t *testing.T) 
 }
 
 func TestTheMessageAuthorIsNeverSuggestedAsItsTarget(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 
 	if got := f.propose(t, "contact", f.author); got != SuggestionExcluded {
@@ -169,6 +171,7 @@ func TestTheMessageAuthorIsNeverSuggestedAsItsTarget(t *testing.T) {
 }
 
 func TestAcceptingFilesTheMessageAndClosesTheSuggestionTogether(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	f.propose(t, "deal", f.deal)
 	queue, _ := f.queue()
@@ -193,6 +196,7 @@ func TestAcceptingFilesTheMessageAndClosesTheSuggestionTogether(t *testing.T) {
 }
 
 func TestASuggestionForARecordTheReaderCannotSeeCannotBeDecided(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	f.propose(t, "deal", f.deal)
 	queue, _ := f.queue()
@@ -209,6 +213,7 @@ func TestASuggestionForARecordTheReaderCannotSeeCannotBeDecided(t *testing.T) {
 }
 
 func TestRejectingAttachesNothing(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	f.propose(t, "deal", f.deal)
 	queue, _ := f.queue()
@@ -224,6 +229,7 @@ func TestRejectingAttachesNothing(t *testing.T) {
 }
 
 func TestAProposalNeedsTheRightToUpdateTheMessage(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	f.ctx = readOnlySeat(f.e, f.e.rep)
 
@@ -241,6 +247,7 @@ func TestAProposalNeedsTheRightToUpdateTheMessage(t *testing.T) {
 }
 
 func TestAProposalIsRefusedForABadShape(t *testing.T) {
+	t.Parallel()
 	f := newSuggestionFixture(t)
 	for name, in := range map[string]LinkSuggestionInput{
 		"a lead":       {EntityType: "lead", Reason: "r", Score: 0.5},

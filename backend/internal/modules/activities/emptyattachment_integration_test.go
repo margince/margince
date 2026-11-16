@@ -73,6 +73,7 @@ func (e *sendEnv) captureAFile(t *testing.T, anchor ids.ActivityID, filename str
 // The captured file BESIDE it is not decoration: a refusal that fired on any
 // attachment at all would satisfy the first half on its own.
 func TestAnEmptyCapturedFileCannotBeSentBackOut(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	empty := e.captureAFile(t, anchor, "empty.pdf", []byte{})
@@ -117,6 +118,7 @@ func TestAnEmptyCapturedFileCannotBeSentBackOut(t *testing.T) {
 // A file kept from private mail by name only has a size and no bytes. The send
 // refuses it when it is created, naming the file, rather than at delivery.
 func TestAWithheldFileCannotBeSentBackOut(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	ctx := principal.WithCorrelationID(

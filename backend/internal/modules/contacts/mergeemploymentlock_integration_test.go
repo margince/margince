@@ -21,6 +21,7 @@ import (
 )
 
 func TestAContactMergeWaitsForAPrimaryEmploymentEditOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Ilse Varga", "Varga Shared", "Varga Own")
@@ -85,6 +86,7 @@ func (e *dedupeEnv) beginPrimaryEdit(ctx context.Context, t *testing.T, edge ids
 // Employer attach, the company roster and the seat repair take a contact's
 // employment lock before its row. A merge keeps that order, so the two queue.
 func TestAContactMergeQueuesBehindAWriterHoldingTheEmploymentLockFirst(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	fx := e.seedFlipFixture(ctx, t, "Petra Holm", "Holm Shared", "Holm Own")

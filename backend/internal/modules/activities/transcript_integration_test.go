@@ -22,6 +22,7 @@ import (
 )
 
 func TestLogActivityNormalizesAndStoresATranscript(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 
@@ -73,6 +74,7 @@ func TestLogActivityNormalizesAndStoresATranscript(t *testing.T) {
 // which is exactly the row the retention selector and any future line
 // citation both assume is already canonical.
 func TestUpdateActivityNormalizesATranscriptBody(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)
@@ -108,6 +110,7 @@ func TestUpdateActivityNormalizesATranscriptBody(t *testing.T) {
 // cannot be edited down to whitespace any more than one can be created that
 // way.
 func TestUpdateActivityRefusesABlankTranscriptPatch(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)

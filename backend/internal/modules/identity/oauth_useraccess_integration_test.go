@@ -28,6 +28,7 @@ import (
 // straight through it, and reactivating the human hands the connection full
 // authority again with no new consent.
 func TestDeactivatingAHumanEndsTheConnectionsTheyConsentedTo(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "deactivate-ends-connection")
 	ctx := principal.WithWorkspaceID(context.Background(), e.admin.WorkspaceID.UUID)
 	fixture := e.connectOAuthFor(t, e.member)
@@ -69,6 +70,7 @@ func TestDeactivatingAHumanEndsTheConnectionsTheyConsentedTo(t *testing.T) {
 // to refuse anyway — that is what makes a kill path nobody extended fail
 // closed, exactly as the agent-auth liveness rule does for calls.
 func TestRotationRefusesForAHumanWhoIsNoLongerActive(t *testing.T) {
+	t.Parallel()
 	for name, statement := range map[string]string{
 		"deactivated": `UPDATE app_user SET status = 'deactivated' WHERE id = $1`,
 		"suspended":   `UPDATE app_user SET status = 'suspended' WHERE id = $1`,

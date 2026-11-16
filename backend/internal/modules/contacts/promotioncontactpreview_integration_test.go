@@ -14,6 +14,7 @@ import (
 )
 
 func TestPromotionContactPreviewMatchesTheCreatedContact(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{
 		FullName: new("Dana Buyer"), Email: new("dana@example.test"),
@@ -51,6 +52,7 @@ func TestPromotionContactPreviewMatchesTheCreatedContact(t *testing.T) {
 }
 
 func TestPromotionContactPreviewMatchesTheFillOnlyMerge(t *testing.T) {
+	t.Parallel()
 	for _, held := range []bool{false, true} {
 		t.Run(fmt.Sprintf("existing=%t", held), func(t *testing.T) {
 			e := setupPromoteConsent(t)

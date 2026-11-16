@@ -81,6 +81,7 @@ func (e *dedupeEnv) rawActivityRows(t *testing.T, contactID ids.ContactID) int {
 // An afternoon of chat is one day of talking, and the email beside it still
 // counts as itself: the collapse is the message kind's, not every kind's.
 func TestAChannelConversationCountsOnceForTheDayItRanOn(t *testing.T) {
+	t.Parallel()
 	env := setupDedupe(t)
 	contact := env.seedVisibleContact(t, "Ines Chatterjee")
 	now := time.Date(2026, 4, 20, 18, 0, 0, 0, time.UTC)
@@ -118,6 +119,7 @@ func TestAChannelConversationCountsOnceForTheDayItRanOn(t *testing.T) {
 // Two days on one conversation are two, and two conversations in one day are
 // two as well — the unit is the pair, not either half.
 func TestAConversationCountsOncePerDayItRanOn(t *testing.T) {
+	t.Parallel()
 	env := setupDedupe(t)
 	acrossDays := env.seedVisibleContact(t, "Ola Vermeer")
 	sameDay := env.seedVisibleContact(t, "Pia Lindqvist")

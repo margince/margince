@@ -83,6 +83,7 @@ func localeLedger(t *testing.T, svc *Service, userID ids.UUID) (audits, events i
 }
 
 func TestChoosingADisplayLanguageWritesTheSeatItsAuditAndItsEvent(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	seat, err := svc.SaveMyLocale(ctx, "de")
@@ -121,6 +122,7 @@ func TestChoosingADisplayLanguageWritesTheSeatItsAuditAndItsEvent(t *testing.T) 
 }
 
 func TestADisplayLanguageTheProductCannotRenderIsRefused(t *testing.T) {
+	t.Parallel()
 	svc, ctx, userID := seatChoosingALanguage(t)
 
 	// Each of these would leave the interface reaching for a catalog that does
@@ -147,6 +149,7 @@ func TestADisplayLanguageTheProductCannotRenderIsRefused(t *testing.T) {
 }
 
 func TestOnlyAHumanSeatChoosesADisplayLanguage(t *testing.T) {
+	t.Parallel()
 	svc, _, _ := seatChoosingALanguage(t)
 
 	// An agent has no interface to render, so it has no display language to

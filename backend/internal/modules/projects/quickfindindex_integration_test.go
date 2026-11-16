@@ -13,5 +13,6 @@ import (
 )
 
 func TestTheProjectQuickFindReadsItsTrigramIndex(t *testing.T) {
+	t.Parallel()
 	quickfindtest.AssertIndexed(t, "project", projectQuickFindExpr, "idx_project_quickfind_trgm", storekit.Identifier{}, "")
 }

@@ -25,6 +25,7 @@ import (
 )
 
 func TestReopeningALeadRestoresTheStatusItWasClosedAt(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	now := time.Now().UTC()
 	lead := e.seedLeadCreatedAt(t, "reopen-contacted@example.test", now.Add(-time.Hour))
@@ -83,6 +84,7 @@ func TestReopeningALeadRestoresTheStatusItWasClosedAt(t *testing.T) {
 // than refusing: the audit log is retained on its own schedule, and a lead that
 // cannot be reopened because of a record it does not own is a dead row.
 func TestALeadWhoseClosureIsNoLongerOnTheTrailReopensAsEngaged(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	now := time.Now().UTC()
 	lead := e.seedLeadCreatedAt(t, "reopen-untraced@example.test", now.Add(-time.Hour))
@@ -115,6 +117,7 @@ func TestALeadWhoseClosureIsNoLongerOnTheTrailReopensAsEngaged(t *testing.T) {
 // Reopening a closed lead whose address a live lead has since taken is the same
 // duplicate-email conflict create and update answer.
 func TestReopeningALeadWhoseEmailALiveLeadNowHoldsIsADuplicate(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	first := e.seedLead(t, "taken-while-closed@example.test")
 	if _, err := e.store.DisqualifyLead(e.ctx, first, DisqualifyLeadInput{}); err != nil {

@@ -73,6 +73,7 @@ func requireObservedAt(t *testing.T, got *time.Time, want time.Time) {
 // back recent mail first. Older mail from the same address already in the
 // workspace is earlier evidence, and mail from another domain is none.
 func TestAPlantedEdgeIsDatedFromTheEarliestMailOnItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.seedCompanyOnDomain(ctx, t, "Newco", "newco.test")
@@ -90,6 +91,7 @@ func TestAPlantedEdgeIsDatedFromTheEarliestMailOnItsDomain(t *testing.T) {
 // An edge already in place is dated earlier by an older message captured
 // after it, and a newer one leaves it alone. Only the move is audited.
 func TestAnOlderMessageMovesTheFirstObservationEarlier(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.seedCompanyOnDomain(ctx, t, "Newco", "newco.test")
@@ -123,6 +125,7 @@ func TestAnOlderMessageMovesTheFirstObservationEarlier(t *testing.T) {
 // The domain verdict plants the edges for everybody who wrote while the
 // question was open, and dates each from that contact's own mail.
 func TestTheDomainVerdictDatesTheEdgesItPlants(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	res, err := e.store.EnsureCounterparty(ctx,
@@ -179,6 +182,7 @@ func (e *dedupeEnv) editorCtx() context.Context {
 // An employment serving its notice is still current, so a message older than
 // its first observation still dates it.
 func TestAnEmploymentServingNoticeIsStillDatedByOlderMail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	company := e.seedCompanyOnDomain(ctx, t, "Newco", "newco.test")
@@ -202,6 +206,7 @@ func TestAnEmploymentServingNoticeIsStillDatedByOlderMail(t *testing.T) {
 // A contact merge archives the duplicate employment and keeps the earlier of
 // the two first observations on the edge that survives.
 func TestAContactMergeKeepsTheEarliestFirstObservation(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	company := e.seedCompanyOnDomain(ctx, t, "Newco", "newco.test")
@@ -225,6 +230,7 @@ func TestAContactMergeKeepsTheEarliestFirstObservation(t *testing.T) {
 
 // A company merge does the same for a contact employed at both companies.
 func TestACompanyMergeKeepsTheEarliestFirstObservation(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.editorCtx()
 	source := e.seedCompanyOnDomain(ctx, t, "Newco", "newco.test")

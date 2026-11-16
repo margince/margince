@@ -44,6 +44,7 @@ func (e *dedupeEnv) socialOf(ctx context.Context, t *testing.T, id ids.ContactID
 }
 
 func TestAnUpdateNamingOneSocialLinkKeepsTheOthers(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	id := e.contactWithLinks(ctx, t)
@@ -64,6 +65,7 @@ func TestAnUpdateNamingOneSocialLinkKeepsTheOthers(t *testing.T) {
 }
 
 func TestAnEmptyOrNullSocialValueRemovesThatLink(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	id := e.contactWithLinks(ctx, t)

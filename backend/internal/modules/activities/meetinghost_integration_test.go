@@ -61,6 +61,7 @@ func (e *sendEnv) onMeetingsOf(t *testing.T, user ids.UUID) map[ids.UUID]bool {
 }
 
 func TestAHandLoggedMeetingIsHostedByTheCaller(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 
 	id := e.logMeeting(t, "", nil, storekit.SourceAuthorInput{})
@@ -74,6 +75,7 @@ func TestAHandLoggedMeetingIsHostedByTheCaller(t *testing.T) {
 }
 
 func TestAnImportedMeetingIsHostedByItsAuthorSeatNotTheImporter(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	author := e.other
 
@@ -97,6 +99,7 @@ func TestAnImportedMeetingIsHostedByItsAuthorSeatNotTheImporter(t *testing.T) {
 }
 
 func TestAnImportedMeetingNamingOnlyAnAuthorNameHasNoHost(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	name := "Someone Elsewhere"
 
@@ -115,6 +118,7 @@ func TestAnImportedMeetingNamingOnlyAnAuthorNameHasNoHost(t *testing.T) {
 }
 
 func TestAnExplicitMeetingHostIsKept(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	other := ids.From[ids.UserKind](e.other)
 	name := "Someone Elsewhere"
@@ -130,6 +134,7 @@ func TestAnExplicitMeetingHostIsKept(t *testing.T) {
 }
 
 func TestAnonymousImportedInteractionsDoNotStampTheImporter(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	for _, kind := range []string{KindMeeting, "call", "email"} {
 		in := LogActivityInput{Kind: kind, Subject: new("Unattributed history"), Source: "import", SourceSystem: new("mirror:legacy_crm"), SourceID: new("anonymous-" + kind)}

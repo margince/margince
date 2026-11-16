@@ -21,6 +21,7 @@ import (
 )
 
 func TestCompanyPipelineFieldsShareOneRollupRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	frozen := time.Date(2026, 6, 2, 12, 0, 0, 0, time.UTC)
 	original := rollupClock

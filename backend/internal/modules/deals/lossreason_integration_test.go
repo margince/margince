@@ -103,6 +103,7 @@ func lostRows(t *testing.T, e *configEnv, deal ids.DealID) []*string {
 }
 
 func TestALossRecordsItsCodeOnTheDealTheMoveAndTheEvent(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	deal := p.deal(t, e, "Fleet renewal")
@@ -134,6 +135,7 @@ func TestALossRecordsItsCodeOnTheDealTheMoveAndTheEvent(t *testing.T) {
 // answer beside the first rather than over it. The note the first loss carried
 // survives in the audit log.
 func TestReopeningAndLosingAgainKeepsBothLosses(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	deal := p.deal(t, e, "Depot tooling")
@@ -167,6 +169,7 @@ func TestReopeningAndLosingAgainKeepsBothLosses(t *testing.T) {
 }
 
 func TestEveryLossDoorRefusesWhatTheOneCheckRefuses(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()
@@ -291,6 +294,7 @@ func applyMappings(t *testing.T, e *configEnv, decided crmcontracts.LossReasonMa
 // the note as it was. It never replaces a code the closer chose, and a second
 // run changes nothing.
 func TestAReviewedMappingAppliesOnceAndNeverOverwritesAChoice(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()
@@ -353,6 +357,7 @@ func TestAReviewedMappingAppliesOnceAndNeverOverwritesAChoice(t *testing.T) {
 // A mapping whose decision moved after the review is not applied from the old
 // review: the administrator applied what they saw.
 func TestAStaleReviewAppliesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()
@@ -378,6 +383,7 @@ func TestAStaleReviewAppliesNothing(t *testing.T) {
 }
 
 func TestOnlyASeatThatMayDecideSeesTheLegacyNotes(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	reader := e.withObjects(map[string]principal.ObjectGrant{
 		"deal": {Read: true}, "custom_field": {Read: true},
@@ -395,6 +401,7 @@ func TestOnlyASeatThatMayDecideSeesTheLegacyNotes(t *testing.T) {
 // seat still counts the deal, but it may not write it, so nothing is mapped.
 // A seat with no deal read is refused the count.
 func TestTheApplyCountsWhatTheOperatorMayReadAndMapsOnlyWhatItMayWrite(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()
@@ -463,6 +470,7 @@ func mappingRows(t *testing.T, e *configEnv, noteKey string) int {
 // A mapping is derived from a free-text note, so it goes once no deal carries
 // that note. Here that is when the last such deal is reopened.
 func TestAMappingGoesWithTheLastDealThatCarriesItsNote(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()
@@ -504,6 +512,7 @@ func TestAMappingGoesWithTheLastDealThatCarriesItsNote(t *testing.T) {
 // The apply holds the decision it applies FOR SHARE, so a re-decision cannot
 // commit between the read and the write. It waits, and here it times out.
 func TestARedecisionWaitsForTheApplyThatReadsIt(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	p := seedLossPipeline(t, e)
 	ctx := e.asLossAdmin()

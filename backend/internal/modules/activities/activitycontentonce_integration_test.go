@@ -137,6 +137,7 @@ func hasJoinInput(n decisionPlanNode) bool {
 // Get, the per-deal batch and an ordinary page decide content once per row.
 // A page decides it only for its own rows, not for every row that matched.
 func TestTheContentDecisionRunsOnlyForTheSelectedRows(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := principal.WithActor(e.as(principal.RowScopeAll), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,

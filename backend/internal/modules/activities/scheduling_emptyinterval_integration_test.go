@@ -18,6 +18,7 @@ import (
 )
 
 func TestReliableAvailabilityIgnoresEmptyEventsBeforeAddingBuffers(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	now := time.Date(2026, 10, 5, 6, 0, 0, 0, time.UTC)
@@ -56,6 +57,7 @@ func TestReliableAvailabilityIgnoresEmptyEventsBeforeAddingBuffers(t *testing.T)
 }
 
 func TestAnEmptyProviderEventDoesNotBlockInvitationDelivery(t *testing.T) {
+	t.Parallel()
 	f := newInvitationFixture(t)
 	f.calendar.busy = []connector.CalendarInterval{{Start: f.request.Start, End: f.request.Start}}
 	meeting := f.book(t)

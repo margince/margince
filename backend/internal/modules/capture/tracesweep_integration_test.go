@@ -17,6 +17,7 @@ import (
 )
 
 func TestSweepDeletesPastTheWindowAndKeepsWhatIsInside(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)

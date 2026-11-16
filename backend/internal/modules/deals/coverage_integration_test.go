@@ -28,6 +28,7 @@ func (failingCatalog) ActiveColumns(context.Context, string) ([]fieldcatalog.Col
 // is not there. An empty outside id is not a filter. The erased and merged
 // events stage in the writing transaction.
 func TestDealTxReadsRefuseWhatTheyMustAndTheEventsStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.asDealWriter()
 	if err := createSourcedDeal(ctx, t, e, "Renewal", freshSystem(), "D-1"); err != nil {

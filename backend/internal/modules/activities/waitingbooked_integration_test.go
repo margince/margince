@@ -51,6 +51,7 @@ func meetingWith(
 // The case the queue exists to stop nagging about: the customer asked, the rep
 // booked, and the meeting is still ahead.
 func TestABookedMeetingWithTheSenderMarksTheWait(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -71,6 +72,7 @@ func TestABookedMeetingWithTheSenderMarksTheWait(t *testing.T) {
 // The walk also reaches a meeting that names the sender as an attendee rather
 // than filing under their record — the same two arms the answer predicate has.
 func TestAnAttendedMeetingCountsAsBookedToo(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -93,6 +95,7 @@ func TestAnAttendedMeetingCountsAsBookedToo(t *testing.T) {
 // ask: the move's own audit row, the one every move writer leaves, is the
 // evidence that the rep acted on the request.
 func TestARescheduledMeetingCountsAsBooked(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -127,6 +130,7 @@ func TestARescheduledMeetingCountsAsBooked(t *testing.T) {
 // What does NOT mark a wait, one rule per case. Each seeds a meeting that
 // fails exactly one predicate, so a loosened clause names itself here.
 func TestWhatABookedMeetingIsNot(t *testing.T) {
+	t.Parallel()
 	future := 48 * time.Hour
 	for name, c := range map[string]struct {
 		start    time.Duration

@@ -40,6 +40,7 @@ var pinnedQuiet = time.Date(2026, 4, 12, 9, 0, 0, 0, time.UTC)
 // replacement. Its anchor falls back to the older activity, and a run for that
 // anchor already exists.
 func TestACalledOffMeetingReopensTheQuietReminderItAnswered(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	quietSince := pinnedQuiet
 	deal := e.seedQuietDeal(t, quietSince)
@@ -83,6 +84,7 @@ func TestACalledOffMeetingReopensTheQuietReminderItAnswered(t *testing.T) {
 //
 // The assertion above would pass against it.
 func TestACalledOffMeetingLeavesAReminderAnsweredSinceAlone(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	quietSince := pinnedQuiet
 	deal := e.seedQuietDeal(t, quietSince)
@@ -115,6 +117,7 @@ func TestACalledOffMeetingLeavesAReminderAnsweredSinceAlone(t *testing.T) {
 // The resolver and the scan read one predicate, so this is the same guard the
 // scan's anchor uses, asked where it is cheapest to see.
 func TestACalledOffMeetingAnswersNoQuietReminder(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	quietSince := pinnedQuiet
 	deal := e.seedQuietDeal(t, quietSince)
@@ -138,6 +141,7 @@ func TestACalledOffMeetingAnswersNoQuietReminder(t *testing.T) {
 // neither does an invitation: the meeting it books is the touch. The same mail
 // from a human sender does end it.
 func TestMailFromASendingSystemAnswersNoQuietReminder(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name    string
 		machine bool

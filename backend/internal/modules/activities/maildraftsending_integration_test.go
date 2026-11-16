@@ -11,7 +11,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"os"
 	"slices"
 	"strings"
 	"testing"
@@ -66,6 +65,7 @@ func contactAnchor(t *testing.T, e *sendEnv) MailDraftAnchor {
 }
 
 func TestASavedDraftReadsBackWithItsFilesReasonAndMoment(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeOwn)
 	anchor := contactAnchor(t, e)
@@ -101,6 +101,7 @@ func TestASavedDraftReadsBackWithItsFilesReasonAndMoment(t *testing.T) {
 // A file the author cannot see is left out of the row and the answer alike. It
 // counts the same as one that never existed, so the count tells nothing.
 func TestADraftKeepsNoFileItsAuthorCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeOwn)
 	visible, _ := e.seedDraftFile(t, "quote.pdf")
@@ -129,6 +130,7 @@ func TestADraftKeepsNoFileItsAuthorCannotSee(t *testing.T) {
 // A file archived, or out of the author's sight, after the save is left out
 // of the read rather than failing it.
 func TestADraftReadLeavesOutAFileGoneSinceTheSave(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeOwn)
 	anchor := contactAnchor(t, e)
@@ -158,6 +160,7 @@ func TestADraftReadLeavesOutAFileGoneSinceTheSave(t *testing.T) {
 // A save replaces the whole draft. A body without the sending fields clears
 // them, as it clears a missing subject.
 func TestASaveWithoutTheSendingFieldsClearsThem(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := contactAnchor(t, e)
@@ -196,6 +199,7 @@ func TestASaveWithoutTheSendingFieldsClearsThem(t *testing.T) {
 // The agent's writer readies its content through the composer's own path, so a
 // file its human cannot see is left out there too.
 func TestAnAgentsDraftKeepsNoFileItsHumanCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	hidden, hiddenParent := e.seedDraftFile(t, "their-contract.pdf")
 	e.linkToContactOwnedBy(t, hiddenParent, e.other)
@@ -214,6 +218,7 @@ func TestAnAgentsDraftKeepsNoFileItsHumanCannotSee(t *testing.T) {
 // A new version of an agent's words keeps the files the draft holds. A route save
 // replaces the whole draft, so one that names no files clears them.
 func TestANewVersionOfAnAgentsWordsKeepsTheDraftsFiles(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := draftStore(e)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
@@ -243,6 +248,7 @@ func TestANewVersionOfAnAgentsWordsKeepsTheDraftsFiles(t *testing.T) {
 // A file the draft holds that its author can no longer see stays held through new
 // words, and no read shows it.
 func TestAHeldFileNowHiddenStaysOutOfTheRead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := draftStore(e)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
@@ -274,6 +280,7 @@ func TestAHeldFileNowHiddenStaysOutOfTheRead(t *testing.T) {
 // New words read the files the draft holds under the row's lock. So files another
 // save put there while this one waited are the files the new version keeps.
 func TestNewWordsKeepTheFilesASaveMeanwhileLeft(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := draftStore(e)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
@@ -286,7 +293,7 @@ func TestNewWordsKeepTheFilesASaveMeanwhileLeft(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	saver, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	saver, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

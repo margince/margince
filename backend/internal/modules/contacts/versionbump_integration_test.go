@@ -35,6 +35,7 @@ func seedManualLead(t *testing.T) (context.Context, *Store, crmcontracts.Lead, i
 // The rescore an origin change owes lands in the series with the number the lead
 // now shows. The edit wrote that number in the same UPDATE.
 func TestARescoreOnAnOriginChangeIsInTheSeriesAndTheAuditDiff(t *testing.T) {
+	t.Parallel()
 	ctx, store, _, id := seedManualLead(t)
 	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("referral")})
 	if err != nil {
@@ -61,6 +62,7 @@ func TestARescoreOnAnOriginChangeIsInTheSeriesAndTheAuditDiff(t *testing.T) {
 // Under a Commercial Judgement override the rescore moves the machine value
 // and leaves the human's number alone, still in one version.
 func TestAnOriginChangeUnderAnOverrideMovesOnlyTheMachineScore(t *testing.T) {
+	t.Parallel()
 	ctx, store, _, id := seedManualLead(t)
 	human, reason := 88, "strategic account"
 	set, err := store.UpdateLead(ctx, id, UpdateLeadInput{Score: &human, ScoreOverrideReason: &reason})
@@ -85,6 +87,7 @@ func TestAnOriginChangeUnderAnOverrideMovesOnlyTheMachineScore(t *testing.T) {
 // An origin whose weight equals the old one moves no score, writes no series
 // entry, and still raises the version once.
 func TestAnOriginChangeThatLeavesTheScoreAlonePutsNothingInTheSeries(t *testing.T) {
+	t.Parallel()
 	ctx, store, _, id := seedManualLead(t)
 	low, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("event")})
 	if err != nil {
@@ -117,6 +120,7 @@ func TestAnOriginChangeThatLeavesTheScoreAlonePutsNothingInTheSeries(t *testing.
 // edit owes do not change that: provenance, the geocode after an address move,
 // the anchor name after a rename.
 func TestEachCompanyEditRaisesItsVersionByOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	edits := map[string]UpdateCompanyInput{
@@ -147,6 +151,7 @@ func TestEachCompanyEditRaisesItsVersionByOne(t *testing.T) {
 }
 
 func TestEachContactEditRaisesItsVersionByOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	edits := map[string]UpdateContactInput{
@@ -173,6 +178,7 @@ func TestEachContactEditRaisesItsVersionByOne(t *testing.T) {
 }
 
 func TestAHumanRenameStampsTheNameAsHumanChosen(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Glazed Frog GmbH", Source: "manual"})
@@ -190,6 +196,7 @@ func TestAHumanRenameStampsTheNameAsHumanChosen(t *testing.T) {
 }
 
 func TestAnOriginChangeThatMovesTheScoreRaisesItsVersionByOne(t *testing.T) {
+	t.Parallel()
 	ctx, store, created, id := seedManualLead(t)
 	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("referral")})
 	if err != nil {
@@ -206,6 +213,7 @@ func TestAnOriginChangeThatMovesTheScoreRaisesItsVersionByOne(t *testing.T) {
 // Withdrawing an override resumes the machine score. When that score has moved
 // since the override took hold, the new number rides the clear's own UPDATE.
 func TestClearingAnOverrideRaisesTheVersionByOneWhenTheMachineScoreMoved(t *testing.T) {
+	t.Parallel()
 	ctx, store, _, id := seedManualLead(t)
 	human, reason := 88, "strategic account"
 	set, err := store.UpdateLead(ctx, id, UpdateLeadInput{Score: &human, ScoreOverrideReason: &reason})

@@ -23,6 +23,7 @@ import (
 // answered nothing while the coordinates to answer it sat in the same estate
 // under a longer key.
 func TestACityNameResolvesFromTheCompaniesLocatedInIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -82,6 +83,7 @@ func TestACityNameResolvesFromTheCompaniesLocatedInIt(t *testing.T) {
 // Case and surrounding space are one question; a name nobody is located under
 // is not answered approximately.
 func TestACityLookupFoldsCaseAndRefusesWhatItCannotAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -135,6 +137,7 @@ func TestACityLookupFoldsCaseAndRefusesWhatItCannotAnswer(t *testing.T) {
 // same predicate the radius query itself applies. Averaging one in would
 // measure a city from where a company USED to be.
 func TestAStaleCoordinateIsNotAveragedIntoACity(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -182,6 +185,7 @@ func TestAStaleCoordinateIsNotAveragedIntoACity(t *testing.T) {
 // that voted for it. Refusing is honest; answering measures a radius around
 // nowhere.
 func TestACityNameCoveringTwoPlacesResolvesToNeither(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

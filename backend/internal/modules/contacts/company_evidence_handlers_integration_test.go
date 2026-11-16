@@ -20,6 +20,7 @@ import (
 )
 
 func TestListCompanyFactsHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)
@@ -63,6 +64,7 @@ func TestListCompanyFactsHandler(t *testing.T) {
 }
 
 func TestListCompanyProfileFieldsHandler(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyWithEvidence(ctx, t, e)

@@ -18,6 +18,7 @@ import (
 )
 
 func TestOfferCreationPreviewMatchesProductSnapshotsAndTotals(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	_, stage, _ := twoStagePipeline(t, e.configEnv)
 	_, pipeline, err := e.provider.StageSemantic(e.passport(), stage.UUID)
@@ -89,6 +90,7 @@ func TestOfferCreationPreviewMatchesProductSnapshotsAndTotals(t *testing.T) {
 }
 
 func TestOfferCreationPreviewRefusesCollidingOrOverflowedPositions(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	_, stage, _ := twoStagePipeline(t, e.configEnv)
 	_, pipeline, err := e.provider.StageSemantic(e.passport(), stage.UUID)

@@ -113,6 +113,7 @@ func (c *telegramEnv) ingestOne(t *testing.T, u telegramUpdate, cfg compose.JobR
 // seat). Without that, "the stranger could read it" would also pass on a
 // visibility clause that had stopped filtering anything.
 func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisibleContact(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 5201, messageID: 21, senderID: 770201, username: "annlee", firstName: "Ann", text: "Is this still available?"}
 
@@ -235,6 +236,7 @@ func (c *telegramEnv) assertWorkspaceVisible(t *testing.T, contactID, privateCon
 // queue and lets it run again. The activity's own natural key is what has to absorb
 // that, and nothing above it can.
 func TestAC_TG_4_RedeliveryYieldsExactlyOneActivity(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 5301, messageID: 31, senderID: 770301, username: "twice", firstName: "Rita", text: "same message"}
 
@@ -299,6 +301,7 @@ func TestAC_TG_4_RedeliveryYieldsExactlyOneActivity(t *testing.T) {
 // that owns its own mail domain, so all three gates have something to match on
 // if any of them ever reads a channel record's display text as an address.
 func TestAC_TG_5_MailGatesAreNoOpsForAChannelRecord(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	// The workspace's own mail domain, so the colleagues gate has something to
 	// find if anything asks it about a record with no domain.
@@ -366,6 +369,7 @@ func TestAC_TG_5_MailGatesAreNoOpsForAChannelRecord(t *testing.T) {
 // row's receipt rather than from its own transaction, created_at would move with
 // the injection and the window would collapse to zero.
 func TestCaptureLatencyIsMeasuredOnTheAsyncPathNotThePollCommit(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 5501, messageID: 51, senderID: 770501, username: "waiting", firstName: "Sam", text: "how long?"}
 
@@ -432,6 +436,7 @@ func TestCaptureLatencyIsMeasuredOnTheAsyncPathNotThePollCommit(t *testing.T) {
 // The count is taken AFTER the ingest has run, which is the whole point: a
 // duplicate written by the Sink does not exist until then.
 func TestOneInboundMessageLeavesOneRawEvidenceRowAndIsExportedOnce(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 5901, messageID: 91, senderID: 770901, username: "onlyonce", firstName: "Omar", text: "store me once"}
 

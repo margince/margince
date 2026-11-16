@@ -64,6 +64,7 @@ func seedVerdict(t *testing.T, tx pgx.Tx, threadKey string, seat ids.UUID, statu
 // pair read. Moving that row would violate the one-verdict-per-seat-per-thread
 // index, so it stays and is counted.
 func TestTheMoveLeavesAVerdictThatArrivedOnTheSurvivingKey(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	conn := ownerConn(t)
 	tx, err := conn.Begin(ctx)
@@ -102,6 +103,7 @@ func TestTheMoveLeavesAVerdictThatArrivedOnTheSurvivingKey(t *testing.T) {
 // The raced seat held an opening answer on the retired key and a hold on the
 // surviving one. A hold wins from whichever half it came.
 func TestTheMergeFoldsTheVerdictItCouldNotMove(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	conn := ownerConn(t)
 	tx, err := conn.Begin(ctx)
@@ -144,6 +146,7 @@ func TestTheMergeFoldsTheVerdictItCouldNotMove(t *testing.T) {
 // whole. Inheriting either answer would apply a verdict to a conversation it
 // was not given about, so the survivor goes back to pending.
 func TestTwoOpeningVerdictsReopenTheMergedThread(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	conn := ownerConn(t)
 	tx, err := conn.Begin(ctx)
@@ -182,6 +185,7 @@ func TestTwoOpeningVerdictsReopenTheMergedThread(t *testing.T) {
 // before use, which is the cheapest real version of a connection that has gone
 // while the merge was mid-flight.
 func TestEveryStepReportsATransactionItCannotUse(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	conn := ownerConn(t)
 	tx, err := conn.Begin(ctx)
@@ -224,6 +228,7 @@ func TestEveryStepReportsATransactionItCannotUse(t *testing.T) {
 //
 // The move must leave the row counted rather than failing the capture.
 func TestAVerdictTheGuardCannotSeeIsRefusedAndCounted(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	seeder, racer := ownerConn(t), ownerConn(t)
 	const from, to = "snapshot-retired", "snapshot-surviving"
@@ -235,17 +240,6 @@ func TestAVerdictTheGuardCannotSeeIsRefusedAndCounted(t *testing.T) {
 		Scan(&seat); err != nil {
 		t.Fatalf("seeding the seat: %v", err)
 	}
-	// Committed, because a second connection has to see it. So it is removed by
-	// hand rather than by a rollback.
-	t.Cleanup(func() {
-		if _, err := seeder.Exec(ctx,
-			`DELETE FROM capture_thread_verdict WHERE thread_key IN ($1, $2)`, from, to); err != nil {
-			t.Errorf("clearing the case's verdicts: %v", err)
-		}
-		if _, err := seeder.Exec(ctx, `DELETE FROM app_user WHERE id = $1`, seat); err != nil {
-			t.Errorf("clearing the case's seat: %v", err)
-		}
-	})
 	if _, err := seeder.Exec(ctx,
 		`INSERT INTO capture_thread_verdict (thread_key, user_id, status) VALUES ($1, $2, $3)`,
 		from, seat, VerdictHeld); err != nil {
@@ -287,6 +281,7 @@ func TestAVerdictTheGuardCannotSeeIsRefusedAndCounted(t *testing.T) {
 // Reporting success instead would leave verdicts on a thread key nothing
 // reads, with no sign that a seat's answer had been orphaned.
 func TestAVerdictNoPassCanSeeFailsRatherThanStranding(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	seeder, racer := ownerConn(t), ownerConn(t)
 	const from, to = "exhaust-retired", "exhaust-surviving"
@@ -298,15 +293,6 @@ func TestAVerdictNoPassCanSeeFailsRatherThanStranding(t *testing.T) {
 		Scan(&seat); err != nil {
 		t.Fatalf("seeding the seat: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := seeder.Exec(ctx,
-			`DELETE FROM capture_thread_verdict WHERE thread_key IN ($1, $2)`, from, to); err != nil {
-			t.Errorf("clearing the case's verdicts: %v", err)
-		}
-		if _, err := seeder.Exec(ctx, `DELETE FROM app_user WHERE id = $1`, seat); err != nil {
-			t.Errorf("clearing the case's seat: %v", err)
-		}
-	})
 	if _, err := seeder.Exec(ctx,
 		`INSERT INTO capture_thread_verdict (thread_key, user_id, status) VALUES ($1, $2, $3)`,
 		from, seat, VerdictHeld); err != nil {

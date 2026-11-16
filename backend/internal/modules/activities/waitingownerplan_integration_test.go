@@ -46,6 +46,7 @@ func (w *waitingStatement) TraceQueryStart(ctx context.Context, _ *pgx.Conn, dat
 func (*waitingStatement) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 func TestTheWaitingQueryKeysEachReplyOwnerLookupOnItsLink(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	sent := &waitingStatement{}
 	config := e.pool.Config()

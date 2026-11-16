@@ -86,6 +86,7 @@ func readSyncState(t *testing.T, e *integration.SearchEnv, connID ids.UUID) (str
 }
 
 func TestSyncFailureNeverKillsAConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	moody := &moodyConnector{name: "gmail"}
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))

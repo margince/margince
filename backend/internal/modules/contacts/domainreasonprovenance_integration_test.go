@@ -15,6 +15,7 @@ import (
 )
 
 func TestOlderWriterCannotReuseANewerDecisionsReasonCode(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.KeepDomainAsCompany(ctx, "changed.example"); err != nil {
@@ -48,6 +49,7 @@ func TestOlderWriterCannotReuseANewerDecisionsReasonCode(t *testing.T) {
 }
 
 func TestHumanAdmissionKeepsQuotedWordsAndClearsMachineMetadata(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.inTx(ctx, t, "bulk refusal", func(tx pgx.Tx) error {
@@ -81,6 +83,7 @@ func TestHumanAdmissionKeepsQuotedWordsAndClearsMachineMetadata(t *testing.T) {
 }
 
 func TestAdmissionAuditExcludesCodesFromAReplacedLegacyDecision(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	row, err := e.store.KeepDomainAsCompany(ctx, "auditcode.example")

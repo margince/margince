@@ -51,6 +51,7 @@ func unknownRepairFixture(t *testing.T) (*dedupeEnv, context.Context, relationsh
 }
 
 func TestUnknownEmploymentRepairKeepsAnEditAfterSelection(t *testing.T) {
+	t.Parallel()
 	e, ctx, row := unknownRepairFixture(t)
 	if _, err := e.store.UpdateRelationship(ctx, row.ID, UpdateRelationshipInput{Role: new("Advisor"), IfVersion: &row.Version}); err != nil {
 		t.Fatal(err)
@@ -76,6 +77,7 @@ func TestUnknownEmploymentRepairKeepsAnEditAfterSelection(t *testing.T) {
 }
 
 func TestUnknownEmploymentRepairAdvancesPastAConflictingLiveSlot(t *testing.T) {
+	t.Parallel()
 	e, ctx, row := unknownRepairFixture(t)
 	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{Kind: employmentKind, ContactID: row.ContactID, CompanyID: row.CompanyID, EmploymentStatus: new("current"), Source: "manual"}); err != nil {
 		t.Fatal(err)

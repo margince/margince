@@ -58,6 +58,7 @@ type vocabularyUnavailable struct {
 }
 
 func TestTheComposedMCPMountPublishesTheQueryVocabulary(t *testing.T) {
+	t.Parallel()
 	env := setupConnector(t)
 	bearer := readPassport(t, env.AppEnv, "query vocabulary reader")
 
@@ -119,6 +120,7 @@ func TestTheComposedMCPMountPublishesTheQueryVocabulary(t *testing.T) {
 // surface is in the published vocabulary on the next read, and a retired one
 // is gone — with no deploy, no cache bust, and no edit to any list.
 func TestACustomFieldReachesThePublishedVocabularyWithoutADeploy(t *testing.T) {
+	t.Parallel()
 	// The schema pool is the owner-privileged connection the add-field engine
 	// runs its one ALTER TABLE on; without it the create answers 501 and this
 	// test would be asserting against a surface that is not mounted.
@@ -172,6 +174,7 @@ func TestACustomFieldReachesThePublishedVocabularyWithoutADeploy(t *testing.T) {
 // A URI this surface does not serve answers the protocol's not-found, which
 // is also what a document the caller cannot see answers.
 func TestAnUnservedResourceURIIsRefusedOverTheTransport(t *testing.T) {
+	t.Parallel()
 	env := setupConnector(t)
 	bearer := readPassport(t, env.AppEnv, "resource prober")
 

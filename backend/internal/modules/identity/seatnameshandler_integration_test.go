@@ -71,6 +71,7 @@ func archiveSeat(t *testing.T, e *revocationEnv, id ids.UserID) {
 // looking at one gets a name rather than a uuid. This is the reading the roster
 // walk could not produce: it stops at the seats that may still become active.
 func TestANonAdminNamesADeactivatedColleague(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-deactivated")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 
@@ -107,6 +108,7 @@ func TestANonAdminNamesADeactivatedColleague(t *testing.T) {
 // recorded under their name before they ever signed in, so a non-admin caller
 // sees that name rather than a uuid.
 func TestANonAdminNamesAnInvitedColleague(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-invited")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 
@@ -129,6 +131,7 @@ func TestANonAdminNamesAnInvitedColleague(t *testing.T) {
 // An archived seat is the one that stops resolving, which is what lets a name
 // be withdrawn without rewriting the history that used it.
 func TestAnArchivedSeatIsNotNamed(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-archived")
 
 	gone, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -151,6 +154,7 @@ func TestAnArchivedSeatIsNotNamed(t *testing.T) {
 // The ceiling is the handler's, because the contract's maxItems is documentation:
 // nothing generated from it checks the length at runtime.
 func TestNamingMoreThanTheCeilingIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-ceiling")
 
 	atTheLimit := make([]openapi_types.UUID, maxNamedSeats)
@@ -172,6 +176,7 @@ func TestNamingMoreThanTheCeilingIsRefused(t *testing.T) {
 // One request, one order. Ranging the map SeatNames returns would answer the
 // same request differently between runs.
 func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-order")
 	first := inviteAndLogin(t, e, "first@acme.test", "Ada First")
 	second := inviteAndLogin(t, e, "second@acme.test", "Bo Second")
@@ -204,6 +209,7 @@ func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
 // The shape is the disclosure decision. A naming read hands back a name and
 // whether the colleague left. Adding the email later has to argue with this.
 func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-shape")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 
@@ -221,6 +227,7 @@ func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
 // A repeated id is one question, and an id nobody holds is an absence rather
 // than an error: the two readings the loader on the client depends on.
 func TestARepeatIsOneRowAndAnUnknownIdIsNoRow(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-repeat")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
 	stranger := openapi_types.UUID(ids.NewV7())
@@ -247,6 +254,7 @@ func TestARepeatIsOneRowAndAnUnknownIdIsNoRow(t *testing.T) {
 // refusal reaches a caller of the ROUTE as the 403 the contract publishes,
 // rather than as an empty answer that reads as a workspace with nobody in it.
 func TestNamingRefusesADealRoomBuyer(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-names-buyer")
 
 	buyerCtx := principal.WithActor(

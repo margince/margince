@@ -17,6 +17,7 @@ import (
 // A reply from a technical address names no contact, even where a contact
 // stored before the rule still holds it. A human's reply still names theirs.
 func TestAReplyFromATechnicalAddressNamesNoContact(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	seed := func(tx pgx.Tx, address string) (ids.UUID, error) {
 		var id ids.UUID
