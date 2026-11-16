@@ -400,3 +400,86 @@ func TestAMergedAwayRefusersReceiptsReachTheSurvivorsExport(t *testing.T) {
 			len(records.Receipts), records.Receipts)
 	}
 }
+
+// withdrawingContact seeds a contact under the receipt rules that registers for
+// the newsletter and withdraws by link press, on a store with no mail lane. So
+// the withdrawal writes no stop and no receipt.
+func (l *receiptLaneEnv) withdrawingContact(t *testing.T, store *consent.Store, name string) ids.UUID {
+	t.Helper()
+	contact := l.e.SeedContact(t, name, &l.e.Rep1)
+	l.e.WsExec(t, `UPDATE contact SET address_country = upper($2) WHERE id = $1`, contact, string(receiptCountry))
+	subject := ids.From[ids.ContactKind](contact)
+	if _, err := store.PublicSaveChoices(l.ctx, subject, []consent.PreferenceChoiceInput{
+		{PurposeKey: "newsletter", State: consent.StateGranted, Wording: new("News from time to time.")},
+	}); err != nil {
+		t.Fatalf("registering %s: %v", name, err)
+	}
+	if _, err := store.PublicWithdrawAll(l.ctx, subject, []string{"newsletter"}); err != nil {
+		t.Fatalf("withdrawing %s: %v", name, err)
+	}
+	return contact
+}
+
+// TestRetentionKeepsAWithdrawalWithNoStopOrReceipt withdraws two contacts by
+// link press with no mail lane, so neither has a stop or a receipt, and runs the
+// real retention pass with a one-day contact anonymize policy. The withdrawal
+// inside its year keeps its contact whole. One past it is anonymized, and its
+// registration and withdrawal stay in the export.
+func TestRetentionKeepsAWithdrawalWithNoStopOrReceipt(t *testing.T) {
+	l := setupReceiptLane(t)
+	l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ('newsletter', 'Newsletter', 'marketing')
+		ON CONFLICT (key) DO NOTHING`)
+	noMailLane := consent.NewStore(compose.InstallationDB(l.e.Pool))
+	young := l.withdrawingContact(t, noMailLane, "Young Withdrawal")
+	old := l.withdrawingContact(t, noMailLane, "Old Withdrawal")
+	if n := l.e.WsCount(t, `SELECT (SELECT count(*) FROM communication_suppression WHERE contact_id = ANY($1))
+		+ (SELECT count(*) FROM comms_outbound WHERE template_key = 'optout_acknowledgement')`,
+		[]ids.UUID{young, old}); n != 0 {
+		t.Fatalf("the withdrawals wrote %d stops or receipts, want none", n)
+	}
+	var seconds int64
+	if err := l.e.Pool.QueryRow(l.ctx, `SELECT extract(epoch FROM kept_until - captured_at)::bigint
+		FROM consent_event WHERE contact_id = $1 AND new_state = 'withdrawn'`, young).Scan(&seconds); err != nil {
+		t.Fatalf("reading the withdrawal's floor: %v", err)
+	}
+	if floor := time.Duration(seconds) * time.Second; floor != 366*24*time.Hour {
+		t.Errorf("the withdrawal is kept %v past its capture, want the rules' 366 days", floor)
+	}
+
+	owner := OwnerConn(t)
+	if _, err := owner.Exec(l.ctx, `UPDATE contact SET created_at = now() - interval '3 days',
+		entered_at = now() - interval '3 days' WHERE id = ANY($1)`, []ids.UUID{young, old}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(l.ctx, `UPDATE consent_event SET kept_until = now() - interval '1 day'
+		WHERE contact_id = $1 AND kept_until IS NOT NULL`, old); err != nil {
+		t.Fatal(err)
+	}
+	l.e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)
+		VALUES ('contact', 'no_consent_no_deal', 1, 'anonymize')`)
+	svc := compose.NewRetentionServiceFor(l.e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err := svc.EvaluateInstallation(RetentionPassCtx(l.e.WS)); err != nil {
+		t.Fatalf("running retention: %v", err)
+	}
+
+	for id, wantName := range map[ids.UUID]bool{young: true, old: false} {
+		var name string
+		if err := owner.QueryRow(l.ctx, `SELECT full_name FROM contact WHERE id = $1`, id).Scan(&name); err != nil {
+			t.Fatal(err)
+		}
+		if kept := strings.HasSuffix(name, "Withdrawal"); kept != wantName {
+			t.Errorf("contact %s is named %q after retention, want kept by its withdrawal's floor: %v", id, name, wantName)
+		}
+		records, err := l.store.OptOutRecords(l.ctx, ids.From[ids.ContactKind](id))
+		if err != nil {
+			t.Fatalf("exporting %s: %v", id, err)
+		}
+		states := map[string]int{}
+		for _, event := range records.ConsentEvents {
+			states[string(event.NewState)]++
+		}
+		if states["granted"] != 1 || states["withdrawn"] != 1 {
+			t.Errorf("contact %s exports consent events %v, want its registration and withdrawal", id, states)
+		}
+	}
+}

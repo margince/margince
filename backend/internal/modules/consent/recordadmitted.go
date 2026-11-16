@@ -106,7 +106,11 @@ func (s *Store) recordAdmittedTx(
 	}
 
 	capturedAt := s.now().UTC()
-	proofID, err := upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, actor.ID)
+	keptUntil, err := s.withdrawalFloorTx(ctx, tx, sub, ConsentState(in.NewState), purpose.class, capturedAt)
+	if err != nil {
+		return State{}, err
+	}
+	proofID, err := upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, keptUntil, actor.ID)
 	if err != nil {
 		return State{}, err
 	}
