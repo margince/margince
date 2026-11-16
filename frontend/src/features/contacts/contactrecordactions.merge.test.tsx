@@ -1,8 +1,8 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import {
@@ -27,7 +27,7 @@ const SOURCE = {
   updated_at: "2026-10-01T10:00:00Z",
 } satisfies components["schemas"]["Contact"];
 
-it("counts the merged-away contact's files on the survivor's Documents tab", async () => {
+function mountMerging() {
   const docs = contactDocuments(1);
   vi.stubGlobal("fetch", async (request: Request) => {
     const url = new URL(request.url);
@@ -58,7 +58,6 @@ it("counts the merged-away contact's files on the survivor's Documents tab", asy
     }
     return Response.json({ data: [], page: { has_more: false } });
   });
-  const user = userEvent.setup();
   render(
     <QueryClientProvider
       client={
@@ -71,12 +70,31 @@ it("counts the merged-away contact's files on the survivor's Documents tab", asy
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  await docs.shows(1);
+  return docs;
+}
 
+async function mergeIntoDanaBuyer() {
+  const user = userEvent.setup();
   await user.click(await screen.findByTestId("merge-record"));
   await user.type(screen.getByRole("searchbox"), "Dana");
   await user.click(await screen.findByRole("button", { name: /Dana Buyer/ }));
   await user.click(screen.getByTestId("merge-confirm"));
+}
 
+it("counts the merged-away contact's files on the survivor's Documents tab", async () => {
+  const docs = mountMerging();
+  await docs.shows(1);
+  await mergeIntoDanaBuyer();
   await docs.shows(2);
+});
+
+it("puts the survivor in the merged-away contact's place, so Back cannot reopen it", async () => {
+  globalThis.history.replaceState(null, "", `#/contacts/${SOURCE.id}`);
+  const entries = globalThis.history.length;
+  mountMerging();
+  await mergeIntoDanaBuyer();
+  await waitFor(() =>
+    expect(globalThis.location.hash).toBe(`#/contacts/${PROBED_CONTACT_ID}`),
+  );
+  expect(globalThis.history.length).toBe(entries);
 });

@@ -3,11 +3,24 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
-import { reportingStoryCatalog } from "../../testing/reporting.fixtures";
-import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import { afterEach, describe, expect, it } from "vitest";
+import {
+  reportingStoryCatalog,
+  reportingStoryReport,
+} from "../../testing/reporting.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { PREPARED_REPORTS, preparedSelection } from "./reporting.prepared";
 import { PreparedReports } from "./reporting.preparedpanel";
 import {
@@ -195,4 +208,53 @@ it("asks the team prospecting template from the catalog's team preset", () => {
   expect(
     preparedSelection(team, reportingStoryCatalog, reportingStoryScope, "p-1"),
   ).toBeNull();
+});
+
+describe("saving a copy", () => {
+  const SAVED = { ...reportingStoryReport, id: "report-copy" };
+
+  async function saveACopy(whileSaving: () => void) {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "POST /analytics/reports": () => {
+        whileSaving();
+        return jsonResponse(SAVED, 201);
+      },
+    });
+    render(
+      <StoryProviders>
+        <PreparedReports scope={reportingStoryScope} ownLens={false} />
+      </StoryProviders>,
+    );
+    const user = userEvent.setup();
+    const row = (await screen.findByText("Weekly sales review")).closest(
+      ".panel-row, [class*='row']",
+    ) as HTMLElement;
+    await user.click(
+      await within(row).findByRole("button", { name: "Save a copy" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /Report name/ }),
+      "My weekly review",
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: "Save report" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  }
+
+  it("opens the copy from where the reader asked for it", async () => {
+    window.history.replaceState(null, "", "#/analytics/reports");
+    await saveACopy(() => undefined);
+    expect(window.location.hash).toBe("#/analytics/reports/report-copy");
+  });
+
+  it("leaves a reader who moved on while it saved where they are", async () => {
+    window.history.replaceState(null, "", "#/analytics/reports");
+    await saveACopy(() =>
+      window.history.replaceState(null, "", "#/analytics/overview"),
+    );
+    expect(window.location.hash).toBe("#/analytics/overview");
+  });
 });

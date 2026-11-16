@@ -12,6 +12,11 @@ import {
 
 const RUN_PARAM = "run";
 
+/** The run the address names right now, outside a render. */
+export function addressedRunNow(): string | null {
+  return currentParams().get(RUN_PARAM) || null;
+}
+
 /**
  * The run the page is about, held in the address (`?run=`). A reader who
  * leaves a running import and comes back, from Recent imports or by reload,

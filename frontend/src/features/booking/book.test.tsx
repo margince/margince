@@ -157,6 +157,8 @@ it("submits a real invitation only after the visitor confirms their details and 
   inBookingMonth();
   const user = userEvent.setup();
   const calls = serve();
+  window.history.replaceState(null, "", "#/book/ada-lovelace");
+  const entries = window.history.length;
   mount("ada-lovelace");
   await user.click(await screen.findByRole("button", { name: slotName(0) }));
   expect(calls.filter((call) => call.method === "POST")).toHaveLength(0);
@@ -169,8 +171,10 @@ it("submits a real invitation only after the visitor confirms their details and 
   await user.click(screen.getByRole("checkbox"));
   await user.click(screen.getByRole("button", { name: CONFIRM }));
   await waitFor(() =>
-    expect(window.location.hash).toContain("manage-private-link"),
+    expect(window.location.hash).toBe("#/book/manage-private-link"),
   );
+  // In the booking page's place: Back must not offer the slot again.
+  expect(window.history.length).toBe(entries);
   const posted = calls.find((call) => call.method === "POST");
   expect(posted?.body).toMatchObject({
     ...bookingSlots[0],

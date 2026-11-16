@@ -29,9 +29,9 @@ import {
 } from "../../lib/capability";
 import { useClaimRecord } from "../../lib/claimrecord";
 import { useMemberName } from "../../lib/membernames";
+import { fromHere } from "../../lib/navigatefrom";
 import { mayLeaveReach, useLeaveIfOutOfReach } from "../../lib/outofreach";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
 import { useShortcut } from "../../lib/shortcuts";
 import { ShareAction } from "../records/share";
@@ -228,6 +228,7 @@ export function CompanyOwnerControl({
         if (!company.owner_id && next === viewerId) {
           return claim.mutateAsync(company.version);
         }
+        const from = fromHere();
         await patch({ owner_id: next });
         // As on a contact: a private account handed on can leave the reader.
         if (mayLeaveReach(company.visibility, next, viewerId)) {
@@ -236,6 +237,7 @@ export function CompanyOwnerControl({
             t("recordAccess.company.handedOver", {
               owner: options.find((user) => user.value === next)?.label ?? "",
             }),
+            from,
           );
         }
       }}
@@ -447,7 +449,7 @@ export function CompanyActionBadges({
           }}
           invalidate="companies"
           recordKey="company"
-          onArchived={() => navigate({ screen: "companies" })}
+          onArchived={(from) => from.navigateReplacing({ screen: "companies" })}
         />
       </OverflowMenu>
     </>

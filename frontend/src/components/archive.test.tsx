@@ -14,6 +14,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import type { Departure } from "../lib/navigatefrom";
 import { throwProblem } from "../lib/problem";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { jsonResponse } from "../testing/story-utils";
@@ -219,5 +220,68 @@ describe("ArchiveAction", () => {
     expect(await screen.findByRole("status")).toHaveTextContent(
       "“Jana Brandt” archived",
     );
+  });
+
+  describe("leaving the archived record", () => {
+    // What a record page passes: the list, in place of the record's entry.
+    const toList = (from: Departure) =>
+      from.navigateReplacing({ screen: "contacts" });
+
+    function archiveContact(archive: () => Promise<{ id: string }>) {
+      render(
+        <ArchiveAction
+          label="Archive contact"
+          confirmText="There is no undo control."
+          archive={archive}
+          invalidate="contacts"
+          recordKey="contact"
+          archivedMessage="Contact archived."
+          onArchived={toList}
+          requires={{ object: "contact", action: "delete" }}
+        />,
+      );
+    }
+
+    async function confirm() {
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId("archive-record"));
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: /^Archive/,
+        }),
+      );
+    }
+
+    it("puts the list in the record's place, so Back cannot reopen it", async () => {
+      globalThis.history.replaceState(null, "", "#/contacts/c-1");
+      const entries = globalThis.history.length;
+      archiveContact(() => Promise.resolve({ id: "c-1" }));
+      await confirm();
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Contact archived.",
+      );
+      expect(globalThis.location.hash).toBe("#/contacts");
+      expect(globalThis.history.length).toBe(entries);
+    });
+
+    it("leaves a reader who moved on before it finished where they are", async () => {
+      globalThis.history.replaceState(null, "", "#/contacts/c-1");
+      let finish: (archived: { id: string }) => void = () => undefined;
+      archiveContact(
+        () =>
+          new Promise((resolve) => {
+            finish = resolve;
+          }),
+      );
+      await confirm();
+      globalThis.history.replaceState(null, "", "#/deals/d-1");
+      finish({ id: "c-1" });
+
+      expect(await screen.findByRole("status")).toHaveTextContent(
+        "Contact archived.",
+      );
+      expect(globalThis.location.hash).toBe("#/deals/d-1");
+    });
   });
 });

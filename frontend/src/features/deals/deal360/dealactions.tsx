@@ -350,7 +350,7 @@ export function DealActions({
           }}
           invalidate="deals"
           recordKey="deal"
-          onArchived={() => navigate({ screen: "deals" })}
+          onArchived={(from) => from.navigateReplacing({ screen: "deals" })}
         />
       </OverflowMenu>
     </>

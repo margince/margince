@@ -10,7 +10,7 @@ import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isBareEntry } from "../../lib/returnroute";
-import { navigate } from "../../lib/router";
+import { navigateReplacing } from "../../lib/router";
 import { enteredCode, MfaCodeField } from "./mfacode";
 
 // A refused credential never says which half was wrong, and a status decides
@@ -42,11 +42,12 @@ export function loginErrorKey(
   return "auth.errUnreachable";
 }
 
-// A deep link the user followed stays; only a bare entry lands on the Brief.
+// A deep link the user followed stays; only a bare entry lands on the Brief,
+// in its place, so Back does not open the bare entry again.
 export function landSignedIn(onPhase: (phase: AuthPhase) => void) {
   onPhase("success");
   if (isBareEntry(globalThis.location?.hash ?? "")) {
-    navigate({ screen: "home" });
+    navigateReplacing({ screen: "home" });
   }
 }
 

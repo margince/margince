@@ -9,11 +9,13 @@ import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { contactTabRoute } from "../../lib/contacttab";
-import { navigate } from "../../lib/router";
 import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
 import { useViewerZone } from "../../lib/viewerzone";
+import {
+  navigateKeepingReturn,
+  openContactTab,
+} from "../worklist/worklist.return";
 import { contactDims, contactVerdict } from "./contactstanding";
 import { type ContactPeeks, contactPeeks } from "./contactstanding.peeks";
 import {
@@ -45,8 +47,7 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
     firstPage: view.activities,
     enabled: Boolean(view.activities),
   });
-  const openHistory = () =>
-    navigate(contactTabRoute(view.contact.id, "timeline"));
+  const openHistory = () => openContactTab(view.contact.id, "timeline");
   const peeks = contactPeeks(view, { t, plural, locale, zone }, openHistory);
   const verdict = contactVerdict(view, t) ?? {
     word: t("record.notShown"),
@@ -122,9 +123,9 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
 
 function openFigure(contactId: string, figure: ContactFigure) {
   if ("deal" in figure.opens) {
-    navigate({ screen: "deals", id: figure.opens.deal });
+    navigateKeepingReturn({ screen: "deals", id: figure.opens.deal });
   } else {
-    navigate(contactTabRoute(contactId, figure.opens.tab));
+    openContactTab(contactId, figure.opens.tab);
   }
 }
 

@@ -12,7 +12,7 @@ import {
   useInstallationDescribed,
 } from "../../../lib/installationcompany";
 import { throwProblem } from "../../../lib/problem";
-import { navigate, navigateReplacing, useRoute } from "../../../lib/router";
+import { navigateReplacing, useRoute } from "../../../lib/router";
 import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
 import { loadWizardState } from "../onboarding-progress";
@@ -413,9 +413,11 @@ function CurrentAct({
     case "team":
       return <TeamAct state={state} dispatch={dispatch} persist={persist} />;
     // Every journey ends on the same handoff, once the act that closed it has
-    // recorded completion.
+    // recorded completion. It replaces, so Back cannot replay it.
     case "done":
-      return <BuildScene onDone={() => navigate({ screen: "home" })} />;
+      return (
+        <BuildScene onDone={() => navigateReplacing({ screen: "home" })} />
+      );
     case "connect":
       return (
         <ConnectAct

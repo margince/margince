@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
@@ -102,5 +102,26 @@ describe("ContactHowItStands", () => {
       expect(text).toContain(shown);
       expect(text).not.toContain(contrary);
     },
+  );
+});
+
+it("keeps the way back to the Worklist when a figure opens another tab", () => {
+  globalThis.history.replaceState(
+    null,
+    "",
+    "#/contacts/p-1?from=worklist&queue_scope=team",
+  );
+  const { container } = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ContactHowItStands view={VIEW} />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const lastReply = container.querySelector(".stat-card-open");
+  if (!lastReply) throw new Error("the last-reply figure has no way in");
+  fireEvent.click(lastReply);
+  expect(globalThis.location.hash).toBe(
+    "#/contacts/p-1/timeline?from=worklist&queue_scope=team",
   );
 });

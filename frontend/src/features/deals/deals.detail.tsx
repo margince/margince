@@ -25,11 +25,11 @@ import { useRecordWriteRefusal } from "../../lib/capability";
 import { useDeal } from "../../lib/dealread";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
+import { fromHere } from "../../lib/navigatefrom";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import type { RecordTabId } from "../../lib/recordtaborder";
 import { scrollPageToTop } from "../../lib/reveal";
-import { navigate } from "../../lib/router";
 import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
@@ -226,8 +226,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
         }),
       );
     },
-    onSuccess: (offer: Offer) => {
-      navigate({ screen: "offers", id: offer.id });
+    onMutate: fromHere,
+    onSuccess: (offer: Offer, _input, from) => {
+      from.navigate({ screen: "offers", id: offer.id });
     },
   });
   const decide = useMutation({

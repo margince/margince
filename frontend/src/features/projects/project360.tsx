@@ -32,7 +32,6 @@ import { taskWriteKeys } from "../../lib/activitykeys";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useShortcut } from "../../lib/shortcuts";
 import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
@@ -485,7 +484,7 @@ function ProjectActions({
         }}
         invalidate="projects"
         recordKey="project"
-        onArchived={() => navigate({ screen: "projects" })}
+        onArchived={(from) => from.navigateReplacing({ screen: "projects" })}
       />
     </OverflowMenu>
   );

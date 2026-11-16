@@ -103,6 +103,24 @@ describe("a create that is not a list's own", () => {
     expect(window.location.hash).toBe("#/companies/acme");
   });
 
+  it("leaves a reader who moved on before it saved where they are", async () => {
+    window.location.hash = "#/companies/acme";
+    let finish: (created: { id: string }) => void = () => undefined;
+    const created = new Promise<{ id: string }>((resolve) => {
+      finish = resolve;
+    });
+    mount({ create: () => created });
+    fireEvent.click(screen.getByRole("button", { name: "New contact" }));
+    fireEvent.change(await screen.findByRole("textbox", { name: /Name/ }), {
+      target: { value: "Ada" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    window.history.replaceState(null, "", "#/deals/d1");
+    await act(async () => finish({ id: "c1" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(window.location.hash).toBe("#/deals/d1");
+  });
+
   it("names no key on its button", () => {
     mount({});
     const button = screen.getByRole("button", { name: "New contact" });

@@ -11,7 +11,7 @@ import {
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
-import { navigate } from "./lib/router";
+import { navigateReplacing } from "./lib/router";
 
 // Every route chunk, registered as it is declared. A screen is split so the
 // login screen does not carry the app. It is warmed once a session exists, so a
@@ -358,9 +358,9 @@ export function ShareRoute({
 // originally requested route, so it never navigates to the Brief for a
 // non-empty hash, and this hash is never empty. Without a navigate here, a
 // sign-in from this route would leave the reader signed in but still looking
-// at a login form.
+// at a login form. It replaces, so Back does not reopen the spent reset link.
 export function ResetRoute() {
-  return <AuthScreen onAuthed={() => navigate({ screen: "home" })} />;
+  return <AuthScreen onAuthed={() => navigateReplacing({ screen: "home" })} />;
 }
 
 // #/ext/<unit> (ADR-0120): the composed extension tier's one route into the

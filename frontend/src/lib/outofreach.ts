@@ -5,8 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { api } from "../api/client";
 import { useToast } from "../design-system/toast";
+import { type Departure, fromHere } from "./navigatefrom";
 import { recordWriteKeys } from "./recordwritekeys";
-import { navigateReplacing } from "./router";
 
 export type ReachableKind = "contact" | "company";
 
@@ -30,20 +30,25 @@ export function mayLeaveReach(
  * Runs after a write that may have taken the record out of reach. When the
  * server no longer shows it, it says so and takes the reader to the list.
  * Otherwise the page refetches and reads "could not be opened" after a
- * success. Answers whether it left.
+ * success. Answers whether it left. `from` is where the write started, when
+ * the caller noted it; else where the reader is when this is called.
  */
 export function useLeaveIfOutOfReach(kind: ReachableKind) {
   const queryClient = useQueryClient();
   const toast = useToast();
   return useCallback(
-    async (id: string, message: string): Promise<boolean> => {
+    async (
+      id: string,
+      message: string,
+      from: Departure = fromHere(),
+    ): Promise<boolean> => {
       if (!(await gone(kind, id))) {
         return false;
       }
       toast.show(message);
       // Replacing, and forgetting the record's reads: Back must not return
       // the reader to a page drawn from a cache the server now refuses.
-      navigateReplacing({ screen: LIST[kind] });
+      from.navigateReplacing({ screen: LIST[kind] });
       for (const queryKey of recordWriteKeys(kind, id)) {
         queryClient.removeQueries({ queryKey });
       }

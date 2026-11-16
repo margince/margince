@@ -11,6 +11,7 @@ import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import { binding, shortcutTip } from "../lib/keymap";
 import { leaveCreateForm } from "../lib/listreturn";
+import { fromHere } from "../lib/navigatefrom";
 import {
   ProblemError,
   problemExistingId,
@@ -108,11 +109,14 @@ export function useCreateRecord<Created extends { id: string }>({
       idempotencyKey: string;
       extra?: Record<string, unknown>;
     }) => create(values, rows, idempotencyKey, extra),
-    onSuccess: (created) => {
+    onMutate: fromHere,
+    onSuccess: (created, _vars, from) => {
+      // Asked before onDone, which may close the form's own address.
+      const opens = !stay && from.stillHere();
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       onCreated?.(created);
       onDone();
-      if (!stay) {
+      if (opens) {
         navigate({ screen, id: created.id });
       }
     },
