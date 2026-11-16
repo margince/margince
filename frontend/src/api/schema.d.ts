@@ -60807,6 +60807,12 @@ export interface components {
              *     attendees are all withheld both produce, and both mean the same thing here.
              */
             with_contact?: string;
+            /**
+             * @description Who is in a `meeting` row's room, as this reader may see them: the same room
+             *     `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+             *     reader may not read the meeting.
+             */
+            room?: components["schemas"]["WorklistMeetingRoom"];
             contact?: components["schemas"]["WorklistContactFacts"];
             /**
              * @description Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
@@ -61749,6 +61755,22 @@ export interface components {
              *     reader cannot act on it and cannot tell it from a bug.
              */
             label?: string;
+        };
+        /**
+         * @description Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+         *     meeting today and the next one name their attendees by one rule.
+         */
+        WorklistMeetingRoom: {
+            /** @description The attendees who are contacts this reader may see, named first. */
+            participants: {
+                /** Format: uuid */
+                contact_id: string;
+                full_name: string;
+            }[];
+            /** @description The attendees who are not contacts, named after the contacts within the same eight. */
+            other_participants?: components["schemas"]["MeetingOtherParticipant"][];
+            /** @description How many more attendees this reader may see than the eight named. Absent when every attendee is named. */
+            participants_more?: number;
         };
         /**
          * @description The human behind the row — whom a reply would go to — and how the silence
