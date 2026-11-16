@@ -692,6 +692,44 @@ describe("which employer is the current one", () => {
     expect(second).not.toContain("Current");
   });
 
+  it("leads a company with the role still held there, so the company reads current", async () => {
+    // An undated current role and a dated ended one at the same company. The
+    // date alone would put the ended role first and mark the company Former.
+    mount({
+      ...granted,
+      employments: {
+        data: [
+          {
+            relationship_id: "rel-ended",
+            company_id: "o-same",
+            company_name: "Twice AG",
+            role: "Old role",
+            is_current_primary: false,
+            employment_status: "former",
+            started_at: "2019-01-01T00:00:00Z",
+            started_precision: "month",
+            ended_at: "2022-06-01T00:00:00Z",
+            ended_precision: "month",
+          },
+          {
+            relationship_id: "rel-held",
+            company_id: "o-same",
+            company_name: "Twice AG",
+            role: "New role",
+            is_current_primary: true,
+          },
+        ],
+        page,
+      },
+    });
+    await screen.findAllByText("Twice AG");
+
+    const [first, second] = employerOrder();
+    expect(first).toContain("Twice AG");
+    expect(first).toContain("Current");
+    expect(second).not.toContain("Current");
+  });
+
   it("stops calling it current once the last day has passed", async () => {
     // The flag still says this employer is the primary one — the record of WHICH
     // employer it was is not rewritten when the date passes. Currency is derived
@@ -751,6 +789,28 @@ describe("which employer is the current one", () => {
     // The LOCAL date, formatted by hand. Reaching for toISOString() here would
     // send yesterday's date to anybody west of UTC for most of their working day.
     expect((body as Record<string, unknown>).ended_at).toBe("2026-08-18");
+  });
+
+  it("reads the employer's counts again once the job is marked ended", async () => {
+    // The company's contact count includes this contact's job, so the row's
+    // "N contacts" must not keep the figure from before the end.
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    mount(granted);
+    await screen.findByText("2 contacts · no open deals");
+    const companyReads = () =>
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([input]) =>
+          (input instanceof Request ? input.url : String(input)).endsWith(
+            "/companies/o-1",
+          ),
+        ).length;
+    const before = companyReads();
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: "Mark as ended" }));
+
+    await waitFor(() => expect(companyReads()).toBeGreaterThan(before));
   });
 });
 
