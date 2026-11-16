@@ -120,6 +120,7 @@ data_tasks:
   pace: 1s
 
 database:
+  read_concurrency: 3
   worker_max_connections: 12
   worker_statement_cache_capacity: 256
 

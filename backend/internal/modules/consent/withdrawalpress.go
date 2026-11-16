@@ -100,6 +100,10 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	if err := storekit.LockStopAddresses(ctx, tx, []string{ref.Address}, nil); err != nil {
 		return false, err
 	}
+	stoppedAt, err := stopLockInstantTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
 
 	// THE DEDUP IS ASYMMETRIC, because "already stopped" is.
 	//
@@ -131,8 +135,8 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	var stopID ids.UUID
 	err = tx.QueryRow(ctx, `
 		INSERT INTO communication_suppression
-		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id, recorded_through)
-		SELECT $1, $2, $3, $6, $4, $5, $7, $8
+		    (lead_id, address, kind, source, captured_by, decided_by_level, purpose_id, recorded_through, recorded_at)
+		SELECT $1, $2, $3, $6, $4, $5, $7, $8, $11
 		 WHERE NOT EXISTS (
 		       SELECT 1 FROM communication_suppression live
 		        WHERE live.revoked_at IS NULL
@@ -143,7 +147,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		RETURNING id`,
 		zeroAsNull(ref.LeadID.UUID), ref.Address, commsauthz.ReasonObjection,
 		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject),
-		lowered, hashes).Scan(&stopID)
+		lowered, hashes, stoppedAt).Scan(&stopID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Already stopped. The press succeeded the first time and this one
 		// changes nothing, which is what a replayed one-click POST is.
@@ -156,7 +160,8 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// An address no record names has no country to ask.
 	if !ref.LeadID.IsZero() {
 		lead := subject{id: ref.LeadID.UUID, entityType: entityLead}
-		if err := s.acknowledgeOptOutTx(ctx, tx, lead, commsauthz.ReasonObjection, stopID); err != nil {
+		if err := s.acknowledgeOptOutTx(ctx, tx, lead, commsauthz.ReasonObjection, stopID,
+			RefusalTimes{ReceivedAt: stoppedAt, StoppedAt: stoppedAt}); err != nil {
 			return false, err
 		}
 	}

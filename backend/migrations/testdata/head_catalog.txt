@@ -3015,6 +3015,7 @@ public.comms_outbound.in_reply_to text gen=- def=-
 public.comms_outbound.inflight_at timestamp with time zone gen=- def=-
 public.comms_outbound.inline_logo_key text gen=- def=-
 public.comms_outbound.instruction_id uuid gen=- def=-
+public.comms_outbound.kept_until timestamp with time zone gen=- def=-
 public.comms_outbound.link_id uuid gen=- def=-
 public.comms_outbound.list_unsubscribe text gen=- def=-
 public.comms_outbound.message_id text gen=- def=-
@@ -3296,9 +3297,11 @@ public.communication_suppression.communication_suppression_recorded_through CHEC
 public.communication_suppression.contact_id uuid gen=- def=-
 public.communication_suppression.decided_by_level text NOT NULL gen=- def=-
 public.communication_suppression.id uuid NOT NULL gen=- def=uuidv7()
+public.communication_suppression.kept_until timestamp with time zone gen=- def=-
 public.communication_suppression.kind text NOT NULL gen=- def=-
 public.communication_suppression.lead_id uuid gen=- def=-
 public.communication_suppression.purpose_id uuid gen=- def=-
+public.communication_suppression.received_at timestamp with time zone gen=- def=-
 public.communication_suppression.recorded_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_suppression.recorded_for_addresses text[] gen=- def=-
 public.communication_suppression.recorded_through text NOT NULL gen=- def='unknown'::text

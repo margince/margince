@@ -6,7 +6,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 ## comms_outbound
 
-44 columns · primary key `(id)` · referenced by 4 foreign keys
+45 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -32,6 +32,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `inflight_at` | `timestamp with time zone` |  |  |
 | `inline_logo_key` | `text` |  |  |
 | `instruction_id` | `uuid` |  | Points at `communication_instruction.id`. |
+| `kept_until` | `timestamp with time zone` |  |  |
 | `link_id` | `uuid` |  | Points at `confirm_token.id`. |
 | `list_unsubscribe` | `text` |  |  |
 | `message_id` | `text` |  |  |

@@ -1,0 +1,9 @@
+{
+  "verb": "export_contact_optout_records",
+  "checks": [
+    "contact.read"
+  ],
+  "takes": [
+    "contact"
+  ]
+}
