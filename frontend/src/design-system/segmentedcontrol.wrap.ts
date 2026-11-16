@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type RefObject, useMemo, useSyncExternalStore } from "react";
-import { watchSize } from "./recordtabs.fold";
+import { watchSize } from "./watchsize";
 
 // Whether the strip fell to a second row, which lets its segments fill each
 // row. Rows break on word widths alone, so the answer never undoes itself.
