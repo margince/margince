@@ -49,7 +49,7 @@ describe("the decision model lane", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(offered).toEqual(["jev", "jev_compatible"]);
+    expect(offered).toEqual(["jev", "jev_compatible", "gemini_decision"]);
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
         name: "jev_compatible",
@@ -73,6 +73,96 @@ describe("the decision model lane", () => {
     });
     // The lanes it sits beside are sent untouched.
     expect(sent?.embeddings.model).toBe("gemini-embedding-001");
+  });
+
+  // Google's Decisions API has its own endpoint and sends the Gemini key. So
+  // choosing it needs no host, and its one model is offered.
+  it("binds Google's decision model with no host to set", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const lane = await openEditor(
+      user,
+      "ai-routing-decisions",
+      /add decision model/i,
+    );
+    await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "gemini_decision",
+      }),
+    );
+    await user.click(within(lane).getByRole("combobox", { name: "Model" }));
+    await user.click(
+      await within(screen.getByRole("listbox")).findByRole("option", {
+        name: "gemini-decision-1",
+      }),
+    );
+    expect(within(lane).queryByText(/has no host yet/)).toBeNull();
+
+    const sent = await saveEditor(user, backend);
+    expect(sent?.decisions).toEqual({
+      provider: "gemini_decision",
+      model: "gemini-decision-1",
+    });
+  });
+
+  // gemini_decision has no key row: it sends the gemini key, which the gemini
+  // row names in `sent_by`. Without that key it is missing one, as any other
+  // provider is.
+  const unkeyedGemini = [
+    {
+      provider: "gemini",
+      configured: false,
+      env_var: "GEMINI_API_KEY",
+      usable: false,
+      sent_by: ["gemini_decision"],
+    },
+    {
+      provider: "jev",
+      configured: true,
+      env_var: "TYPESAFE_API_KEY",
+      usable: true,
+    },
+  ];
+
+  it("says gemini_decision's key is missing when the gemini row holds none", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(
+      ROUTING_EDITOR,
+      {
+        ...BOUND,
+        decisions: { provider: "gemini_decision", model: "gemini-decision-1" },
+      },
+      { providerKeys: unkeyedGemini },
+    );
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const lane = await openEditor(user, "ai-routing-decisions");
+    expect(within(lane).getByText("Provider key missing")).toBeInTheDocument();
+  });
+
+  it("offers gemini_decision to a new binding only once the gemini key is held", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, BOUND, {
+      providerKeys: unkeyedGemini,
+    });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const lane = await openEditor(
+      user,
+      "ai-routing-decisions",
+      /add decision model/i,
+    );
+    await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).not.toContain("gemini_decision");
   });
 
   // An installation that reaches decisions only through OpenRouter holds no
