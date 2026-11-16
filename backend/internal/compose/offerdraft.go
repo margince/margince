@@ -66,6 +66,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // offerDraftAgentID is the system actor AddStagedOfferLines' audit row
@@ -118,11 +119,13 @@ type offerLineCandidate struct {
 	ProductID              string `json:"product_id,omitempty"`
 }
 
-// offerDraftShapeValid is the §5.2 retry pipeline's schema-validity
-// check: parseable JSON in the demanded envelope. It cannot and does not
-// check evidence — the no-guess gate in groundOfferLines does that,
-// after the model call returns, exactly like extractionShapeValid vs
-// gateEvidence in enrichextract.go.
+// offerDraftSchema is offerLineCandidate's shape; a field the prompt lets the model omit is null.
+var offerDraftSchema = schema.Must(schema.Record(schema.Field("lines", schema.Array(schema.Record(
+	schema.Field("description", schema.String()), schema.Field("quantity", schema.String()), schema.Field("tax_rate", schema.String()),
+	schema.Field("evidence_snippet", schema.String()), schema.Field("source_id", schema.String()),
+	schema.Field("conversation_price_minor", schema.Optional(schema.Integer())), schema.Field("product_id", schema.Optional(schema.String())))))))
+
+// offerDraftShapeValid checks the demanded JSON envelope; groundOfferLines checks evidence after the call.
 func offerDraftShapeValid(text string) error {
 	_, err := parseOfferDraftLines(text)
 	return err
@@ -316,6 +319,7 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 		}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: offerDraftSchema,
 	}
 }
 

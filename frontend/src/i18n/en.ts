@@ -2776,6 +2776,7 @@ export const en = {
   "shell.help.releaseNotes": "Release notes",
   "shell.help.licenses": "Web app licenses",
   "shell.help.devBuild": "Development build",
+  "shell.help.devBuildRevision": "Development build · {revision}",
   "shell.shortcuts.anywhere": "Anywhere",
   "shell.shortcuts.search": "Open search",
   "shell.shortcuts.sidebar": "Show or hide sidebar",

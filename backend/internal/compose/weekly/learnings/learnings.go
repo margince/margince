@@ -24,6 +24,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -32,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // MaxLearningRunes bounds one learning.
@@ -58,6 +60,9 @@ const (
 	KindPattern    = "pattern"
 	KindExperiment = "experiment"
 )
+
+// kinds is the closed vocabulary both the reply schema and Parse hold a learning to.
+var kinds = []string{KindWorked, KindDidNotWork, KindPattern, KindExperiment}
 
 // SubjectDeal is the one kind of row a learning can cite.
 //
@@ -177,7 +182,22 @@ func Request(in Input, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(promptref.Rewrite(encodeInput(in), dealRefs(in)))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: replySchema(),
 	}
+}
+
+// replySchema is the reply Parse decodes.
+func replySchema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("learnings", schema.Array(schema.Record(
+			schema.Field("kind", schema.Enum(kinds...)),
+			schema.Field("text", schema.String()),
+			schema.Field("citations", schema.Array(schema.Record(
+				schema.Field("type", schema.Enum(SubjectDeal)),
+				schema.Field("id", schema.String()),
+			))),
+		))),
+	))
 }
 
 // encodeInput renders the week as the JSON the prompt reads, each deal typed as
@@ -338,9 +358,5 @@ func subjectIndex(in Input) map[subjectKey]string {
 
 // knownKind reports whether the reply named one of the four shapes.
 func knownKind(kind string) bool {
-	switch kind {
-	case KindWorked, KindDidNotWork, KindPattern, KindExperiment:
-		return true
-	}
-	return false
+	return slices.Contains(kinds, kind)
 }

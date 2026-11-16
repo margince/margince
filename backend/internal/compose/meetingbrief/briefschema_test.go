@@ -65,3 +65,30 @@ func TestTheBriefSchemaAndParserAgreeOnSectionKinds(t *testing.T) {
 		}
 	}
 }
+
+func TestThePlanRequestSendsTheShapeItsParserReads(t *testing.T) {
+	in := fullInput()
+	floor := floorFor(in)
+	req := PlanRequest(in, floor, string(textlang.English))
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the plan request carries no response schema, so a decoder may write any shape")
+	}
+	cite := `[{"entity_type":"activity","entity_id":"` + in.ActivityID + `"}]`
+	plan := func(relevance string) string {
+		return `{"objective":{"text":"Agree a date for the pilot.","evidence":` + cite + `},"opening":null,` +
+			`"top_risk":{"text":"The security pack is late.","evidence":` + cite + `,"say":"Own the delay.","show":"The draft pack.","avoid":"Promising a date."},` +
+			`"likely_asks":[{"question":"When is the pack ready?","basis":"They asked for it.","evidence":` + cite + `,"relevance":"` + relevance + `","prepare":"Bring the draft."}],` +
+			`"questions":[{"ask":"Who signs off?","why":"Nobody is named.","listen_for":"A name.","evidence":` + cite + `}],` +
+			`"scenarios":[{"label":"They push back","play":"Offer the phased plan.","coach":null,"evidence":` + cite + `}]}`
+	}
+	written, err := parseCitedPlan(plan("high"), in, floor)
+	if err != nil || written.Objective == nil || written.TopRisk == nil || len(written.LikelyAsks) != 1 {
+		t.Fatalf("the parser kept %+v (%v), want the objective, the risk and the ask", written, err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, citedFor(req, in, plan("high"))); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, citedFor(req, in, plan("urgent"))); err == nil {
+		t.Error("the schema admits a relevance outside high, medium and low")
+	}
+}
