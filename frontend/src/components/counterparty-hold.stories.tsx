@@ -23,10 +23,9 @@ const HELD_DOMAIN = {
   created_at: "2026-08-01T09:00:00Z",
 };
 
-function story(
-  holds: unknown[],
-  scope: HoldScope = { address: "office@studiolegal.de" },
-) {
+const DEFAULT_SCOPE: HoldScope = { address: "office@studiolegal.de" };
+
+function story(holds: unknown[], scope: HoldScope = DEFAULT_SCOPE) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),

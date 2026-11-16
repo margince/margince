@@ -143,6 +143,12 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 // Capture identities share the waiting scan's transaction snapshot.
 type ownDomainReader struct{ store *capture.OwnDomainStore }
 
+// init binds the own-domain list for the activities reads that have no store.
+// The History mail badge then tests a colleague's invitation as the Worklist does.
+func init() {
+	activities.UseColleagueDomains(capture.ColleagueDomainsTx)
+}
+
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
 }

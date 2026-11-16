@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { en } from "../../i18n/en";
 import { ranked } from "../../testing/brief.fixtures";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -18,6 +19,7 @@ const meta: Meta<typeof BriefSuggestions> = {
   decorators: [
     (Story) => {
       installFetchStub({
+        ...recordNamesRoutes({ deal: { "d-1": "Acme rollout" } }),
         "GET /brief": () =>
           jsonResponse({
             ...ranked,
@@ -66,6 +68,7 @@ export const NotAnnotated: Story = {
   decorators: [
     (Story) => {
       installFetchStub({
+        ...recordNamesRoutes({ deal: { "d-1": "Acme rollout" } }),
         "GET /brief": () =>
           jsonResponse({
             ...ranked,

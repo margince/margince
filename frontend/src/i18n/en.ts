@@ -4,6 +4,8 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.meeting_profile":
+    "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
   "systemJob.task_completion": "Completing tasks after email",
   "homeRepair.reason.taskChanged":
@@ -3351,6 +3353,7 @@ export const en = {
   // that has not run: both drew the same empty space before, and a reader
   // could not tell "nobody here" from a field still thinking.
   "picker.noMatch": "No match",
+  "select.filter": "Filter the list",
   "picker.results_one": "{count} result",
   "picker.results_other": "{count} results",
 
@@ -4177,6 +4180,7 @@ export const en = {
     "Some sections could not be loaded, so this page may be incomplete.",
   "evidence.explain": "Where “{value}” came from",
   "evidence.explainBeside": "{label}: where “{value}” came from",
+  "evidence.fromMeeting": "From a meeting on {date}",
   "evidence.fullHistory": "Full history",
   "co.section.unavailable":
     "Some data did not load, so this section may be incomplete.",
@@ -10513,6 +10517,7 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
   "jobs.kind.intro_expiry": "Introduction expiry",
   "jobs.kind.knowledge_ingest": "Document indexing",

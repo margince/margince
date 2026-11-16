@@ -322,6 +322,8 @@ type captureEnv struct {
 	// topic is the model the deal topic check asks, shared with the refile
 	// pass a test builds with refiler.
 	topic *topicModel
+	// now is the clock the registry runs on.
+	now time.Time
 }
 
 // captureNow is the fixed clock the capture harness runs on: the day after the
@@ -447,7 +449,7 @@ func newCaptureEnvWithBlob(t *testing.T, now time.Time, blob blobstore.Store) ca
 		t.Fatal("a mailbox must not verify its own domain — the company's claim does that")
 	}
 	return captureEnv{
-		e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, topic: topic,
+		e: e, sync: sync, syncSent: syncSent, registry: registry, conn: conn, topic: topic, now: now,
 		syncFiledUnderDeal: syncFiledUnderDeal, syncAsKind: syncAsKind, syncInContainer: syncInContainer,
 	}
 }

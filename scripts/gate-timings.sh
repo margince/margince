@@ -37,7 +37,7 @@ END {
 }'
 
 wall=$(grep -oE "^(ok|FAIL)[[:space:]]+[^[:space:]]+[[:space:]]+[0-9.]+s$" "$log" | tail -1 | awk '{print $NF}' | tr -d 's' || true)
-if [ -n "${wall:-}" ]; then
+if [[ -n "${wall:-}" ]]; then
 	tops | awk -v wall="$wall" '{s = $4; gsub(/[()s]/, "", s); t += s} END {
 		printf "wall: %ss, so %.1fx of the work ran at once\n", wall, t / wall
 	}'

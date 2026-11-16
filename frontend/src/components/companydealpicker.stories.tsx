@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../testing/story-utils";
 import { CompanyDealPicker } from "./companydealpicker";
@@ -27,6 +28,7 @@ export const ExistingDeals: Story = {
   args: { companyId: "company-one", value: "", onChange: () => {} },
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read"], company: ["read"] }),
       "GET /deals": () =>
         jsonResponse({
           data: [{ id: "support", name: "Support renewal" }],

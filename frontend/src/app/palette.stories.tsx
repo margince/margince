@@ -5,10 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { removeStored, STORAGE_KEYS } from "../lib/storage";
 import { meFixture } from "../testing/mefixture";
+import { recordNamesRoutes } from "../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
 import { CREATE_ID } from "./nav";
@@ -254,7 +256,11 @@ export const IdentifierBestMatchDark: Story = {
 };
 
 const RECENT_ID = "00000000-0000-4000-8000-000000000002";
-function recentPalette(read: () => Response | Promise<Response>) {
+function recentPalette(
+  read: RouteMap["GET /records/references"] = recordNamesRoutes({
+    contact: { [RECENT_ID]: "Anna Weber" },
+  })["GET /records/references"],
+) {
   const id = RECENT_ID;
   writeRecents(meFixture().user.id, [
     { kind: "record", entity_type: "contact", id, label: "Anna Weber" },
@@ -262,8 +268,8 @@ function recentPalette(read: () => Response | Promise<Response>) {
     { kind: "query", text: "Follow up next week" },
   ]);
   installFetchStub({
+    "GET /records/references": read,
     "GET /me": meRoute({ contact: ["read"] }),
-    [`GET /contacts/${id}`]: read,
     "GET /search": noHits,
   });
   return (
@@ -274,10 +280,7 @@ function recentPalette(read: () => Response | Promise<Response>) {
 }
 export const Recent: Story = {
   beforeEach: () => () => removeStored(STORAGE_KEYS.paletteRecents),
-  render: () =>
-    recentPalette(() =>
-      jsonResponse({ id: RECENT_ID, full_name: "Anna Weber" }),
-    ),
+  render: () => recentPalette(),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText("Anna Weber");
   },

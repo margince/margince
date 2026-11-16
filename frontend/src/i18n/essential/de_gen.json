@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.meeting_profile": "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
   "worklist.relationships.optional": "Optionale Kontaktpflege",
@@ -1755,6 +1756,7 @@
   "owner.rosterFailed": "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
   "ref.notInRoster": "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
+  "select.filter": "Liste filtern",
   "app.errorTitle": "Diese Ansicht funktioniert nicht mehr",
   "app.errorBody": "Bitte versuche es erneut. Wenn es wieder fehlschlägt, lade die Seite neu.",
   "app.errorRetry": "Erneut versuchen",

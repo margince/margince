@@ -50062,8 +50062,23 @@ components:
           description: The human who confirmed the claim. Server-stamped, never accepted from a request body.
         field: {type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number]}
         value: {type: string}
-        source: {type: string, enum: [human, agent, site_read, connector, migration, technical_lookup]}
+        source: {type: string, enum: [human, agent, site_read, connector, migration, technical_lookup, meeting]}
         captured_by: {type: string, readOnly: true}
+        source_activity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            With `source` `meeting`: the transcript or meeting notes the value was read from, when you may read them. Null for a reader the meeting's audience leaves out; they still see `source_occurred_at`. A meeting value stores no quote, so `evidence_snippet` is empty.
+        source_occurred_at:
+          type: [string, 'null']
+          format: date-time
+          readOnly: true
+          description: With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
+        source_occurred_precision:
+          readOnly: true
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          description: How precisely `source_occurred_at` is known; `day` for an all-day meeting.
         evidence_snippet: {type: [string, 'null']}
         source_url: {type: [string, 'null'], format: uri}
         confidence: {type: [number, 'null'], minimum: 0, maximum: 1}
@@ -50135,7 +50150,7 @@ components:
       properties:
         key: {type: string}
         value: {type: string}
-        source: {type: string, enum: [human, agent, site_read, connector, migration]}
+        source: {type: string, enum: [human, agent, site_read, connector, migration, meeting]}
         captured_by: {type: string, readOnly: true}
         source_url: {type: [string, 'null'], format: uri}
         confidence: {type: [number, 'null'], minimum: 0, maximum: 1}
@@ -50193,7 +50208,7 @@ components:
         value_kind: {type: string, enum: [profile_field, fact]}
         classification: {type: string, enum: [new, machine_change, human_conflict, unchanged]}
         current_value: {type: [string, 'null']}
-        current_source: {type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, null]}
+        current_source: {type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, meeting, null]}
         proposed_value: {type: string}
     CompanySiteReadResolution:
       type: object

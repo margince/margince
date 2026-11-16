@@ -4,6 +4,7 @@ import {
   emptyPage,
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { OfferScreen } from "./offers";
@@ -62,6 +63,7 @@ const draftOffer = {
 export const Draft: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-1": () => jsonResponse(draftOffer),
       "GET /offer-templates": () => jsonResponse(emptyPage),
       "GET /products": () => jsonResponse(emptyPage),
@@ -90,6 +92,7 @@ export const EditingTheHeader: Story = {
 export const DraftUnpricedLine: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-1": () =>
         jsonResponse({
           ...draftOffer,
@@ -123,6 +126,7 @@ export const DraftUnpricedLine: Story = {
 export const Sent: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-1": () =>
         jsonResponse({ ...draftOffer, status: "sent", revision: 2 }),
       "GET /offer-templates": () => jsonResponse(emptyPage),
@@ -153,6 +157,7 @@ export const Rejecting: Story = {
 export const RegeneratedWithAiDisclosure: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-2": () =>
         jsonResponse({
           ...draftOffer,
@@ -200,6 +205,7 @@ export const RegeneratedWithAiDisclosure: Story = {
 export const PdfRendered: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-1": () =>
         jsonResponse({
           ...draftOffer,
@@ -219,6 +225,7 @@ export const PdfRendered: Story = {
 export const PdfRenderUnavailable: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-1": () => jsonResponse(draftOffer),
       "GET /offer-templates": () => jsonResponse(emptyPage),
       "GET /products": () => jsonResponse(emptyPage),
@@ -239,6 +246,7 @@ export const PdfRenderUnavailable: Story = {
 export const LoadError: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /offers/o-1": () =>
         jsonResponse(
           { title: "server error", detail: "offer unavailable" },

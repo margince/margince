@@ -52233,8 +52233,20 @@ export interface components {
             field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
             value: string;
             /** @enum {string} */
-            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | "meeting";
             readonly captured_by: string;
+            /**
+             * Format: uuid
+             * @description With `source` `meeting`: the transcript or meeting notes the value was read from, when you may read them. Null for a reader the meeting's audience leaves out; they still see `source_occurred_at`. A meeting value stores no quote, so `evidence_snippet` is empty.
+             */
+            readonly source_activity_id?: string | null;
+            /**
+             * Format: date-time
+             * @description With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
+             */
+            readonly source_occurred_at?: string | null;
+            /** @description How precisely `source_occurred_at` is known; `day` for an all-day meeting. */
+            readonly source_occurred_precision?: components["schemas"]["OccurredPrecision"];
             evidence_snippet?: string | null;
             /** Format: uri */
             source_url?: string | null;
@@ -52324,7 +52336,7 @@ export interface components {
             key: string;
             value: string;
             /** @enum {string} */
-            source: "human" | "agent" | "site_read" | "connector" | "migration";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "meeting";
             readonly captured_by: string;
             /** Format: uri */
             source_url?: string | null;
@@ -52391,7 +52403,7 @@ export interface components {
             classification: "new" | "machine_change" | "human_conflict" | "unchanged";
             current_value: string | null;
             /** @enum {string|null} */
-            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
+            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | "meeting" | null;
             proposed_value: string;
         };
         CompanySiteReadResolution: {

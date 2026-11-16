@@ -109,6 +109,7 @@ it("reviews current versions and handles only eligible submissions without enabl
       automation_version: INQUIRY_AUTOMATION.version,
       selected: [{ id: first.id, version: first.version }],
     }),
+    expect.any(URL),
   );
   expect(close).not.toHaveBeenCalled();
   expect(

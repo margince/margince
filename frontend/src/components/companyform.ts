@@ -25,6 +25,7 @@ import type { MessageKey } from "../i18n/en";
 import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
+import { userOption } from "./assigneepicker";
 import {
   formatSizeBand,
   LIFECYCLE_LABELS,
@@ -319,7 +320,7 @@ export const RELATIONSHIP_TYPE_OPTIONS = [
 // field renderer prints option.label as given, so an untranslated key reaches
 // the reader as "company.lifecycle.customer".
 export function companyEditFields(
-  owners: readonly { id: string; display_name: string }[],
+  owners: readonly { id: string; display_name: string; email?: string }[],
   hasOwner: boolean,
   t: Translator,
   locale: Locale,
@@ -358,10 +359,7 @@ export function companyEditFields(
       label: "co.pulse.owner",
       type: "select",
       required: hasOwner,
-      options: owners.map((user) => ({
-        value: user.id,
-        label: user.display_name,
-      })),
+      options: owners.map(userOption),
     },
     // Where the account stands, and what it is to us — the two questions the
     // retired classification tried to answer with one value, and the reason

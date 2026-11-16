@@ -7,6 +7,7 @@ import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -62,6 +63,7 @@ function Row({
   canEdit?: boolean;
 }>) {
   installFetchStub({
+    ...recordNamesRoutes({ company: { [PARENT]: "Brandt Holding AG" } }),
     "GET /companies": () =>
       jsonResponse({
         data: [{ id: PARENT, display_name: "Brandt Holding AG" }],

@@ -221,6 +221,26 @@ it("leaves focus where a closing control put it", async () => {
   expect(document.activeElement?.textContent).toBe("the drawer this opened");
 });
 
+// With nothing after the trigger, Tab off the panel's last stop is the
+// browser's own, run from the trigger, so one press leaves the page.
+it("hands Tab to the browser from the trigger when no stop follows it", async () => {
+  const user = userEvent.setup();
+  render(
+    <LocaleProvider initial="en">
+      <Popover label="How it stands">
+        <button type="button">Full history</button>
+      </Popover>
+    </LocaleProvider>,
+  );
+  const trigger = screen.getByRole("button", { name: "How it stands" });
+  await user.click(trigger);
+  const last = screen.getByRole("button", { name: "Full history" });
+  await waitFor(() => expect(document.activeElement).toBe(last));
+
+  expect(fireEvent.keyDown(last, { key: "Tab" })).toBe(true);
+  expect(document.activeElement).toBe(trigger);
+});
+
 // A refused control cannot take focus, so a panel that opens on one must land
 // on the first control that can, or the reader stays outside a panel of controls.
 it("takes focus past a refused control to the first one that answers", async () => {
