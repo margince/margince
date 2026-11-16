@@ -104,6 +104,13 @@ type ConfirmRef struct {
 	QuestionKey     string
 	QuestionLocale  string
 	QuestionVersion int
+	// AsksNews is false on a details check whose recipient may not be asked
+	// about news there: its page shows no news question and its submit takes
+	// no answer to one.
+	AsksNews bool
+	// SubjectRequest is the contact's own request a consent link answers,
+	// zero when none was on record at mint. A grant keeps it.
+	SubjectRequest ids.UUID
 }
 
 // IssueConfirmToken mints the single-use link for one contact and returns the
@@ -327,9 +334,11 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 			purposeID:       purposeID,
 			expectedAddress: expectedAddress,
 			lane:            lane,
-			language:        language,
-			tokenHash:       hashPublicToken(token),
-			link:            s.confirmLink(token),
+			// The operator doors are the ones that refuse without a lane.
+			operatorAsks: lane == refuseWithoutMailLane,
+			language:     language,
+			tokenHash:    hashPublicToken(token),
+			link:         s.confirmLink(token),
 		})
 		return err
 	})
@@ -356,23 +365,24 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 //
 // Naming the subject is not authorization. The spend below is what redeems the
 // link, and it runs under the subject lock this read makes possible.
-func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ids.ContactID, string, error) {
+func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ids.ContactID, string, bool, error) {
 	var contactID ids.ContactID
 	var kind string
+	var asksNews bool
 	// The kind comes back with the subject so a submission wider than the mail
 	// can be refused BEFORE the link is spent. Refusing after would burn the
 	// subject's one chance to answer on a request the store was never going to
 	// stand behind — the same reason validateConfirmSubmission runs first.
 	err := tx.QueryRow(ctx, `
-		SELECT ct.contact_id, ct.kind FROM confirm_token ct
+		SELECT ct.contact_id, ct.kind, ct.asks_news FROM confirm_token ct
 		 WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
 		   AND EXISTS (SELECT 1 FROM contact p
 		                WHERE p.id = ct.contact_id AND p.archived_at IS NULL)`,
-		hashPublicToken(token), s.now().UTC()).Scan(&contactID, &kind)
+		hashPublicToken(token), s.now().UTC()).Scan(&contactID, &kind, &asksNews)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.ContactID{}, "", fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
+		return ids.ContactID{}, "", false, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
 	}
-	return contactID, kind, err
+	return contactID, kind, asksNews, err
 }
 
 // spendConfirmTokenTx marks the link used, inside the caller's transaction so
@@ -395,10 +405,11 @@ func (s *Store) spendConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string
 		  AND EXISTS (SELECT 1 FROM contact p
 		               WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
 		RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id,
-		          ct.question_key, ct.question_locale, ct.question_version`,
+		          ct.question_key, ct.question_locale, ct.question_version, ct.asks_news,
+		          coalesce(ct.subject_request_id, '00000000-0000-0000-0000-000000000000')`,
 		hashPublicToken(token), s.now().UTC()).Scan(
 		&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID,
-		&questionKey, &questionLocale, &questionVersion)
+		&questionKey, &questionLocale, &questionVersion, &ref.AsksNews, &ref.SubjectRequest)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ConfirmRef{}, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
 	}

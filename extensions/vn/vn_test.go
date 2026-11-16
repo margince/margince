@@ -158,8 +158,9 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 // TestTheVersionMovedWithTheInstruments. The number exists to tell two records
 // apart, so it is meaningless if it stays put when the law it names changes.
 func TestTheVersionMovedWithTheInstruments(t *testing.T) {
-	if got := messagingRules().Version; got != 2 {
-		t.Errorf("ruleset version = %d, want 2 — the pack now states the 2025 "+
-			"instruments and a decision must be able to say which set judged it", got)
+	if got := messagingRules().Version; got != 3 {
+		t.Errorf("ruleset version = %d, want 3 — the pack now states the 2025 "+
+			"instruments and the request a consent mail needs, and a decision must "+
+			"be able to say which set judged it", got)
 	}
 }

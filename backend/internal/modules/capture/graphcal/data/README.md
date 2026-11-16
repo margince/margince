@@ -2,7 +2,8 @@
 # The copied Windows zone mapping
 
 `windowsZones.xml` is a byte-for-byte copy of `common/supplemental/windowsZones.xml`, and
-`timezone.xml` of `common/bcp47/timezone.xml`, from [Unicode CLDR](https://github.com/unicode-org/cldr)
+`timezone.xml` (kept in `backend/internal/platform/cldrzone/data/`, where the mail copy also reads
+it) of `common/bcp47/timezone.xml`, from [Unicode CLDR](https://github.com/unicode-org/cldr)
 at the tag `release-48`. Both are under the Unicode License version 3 (© Unicode, Inc.). The license text is
 copied in `LICENSE-cldr.txt`, and it must ship with every copy of this software that we give out.
 
@@ -33,7 +34,7 @@ make the list again against a release newer than the copy, or empty it when none
 
 ```
 curl -sSL -o windowsZones.xml https://raw.githubusercontent.com/unicode-org/cldr/release-48/common/supplemental/windowsZones.xml
-curl -sSL -o timezone.xml https://raw.githubusercontent.com/unicode-org/cldr/release-48/common/bcp47/timezone.xml
+curl -sSL -o ../../../../platform/cldrzone/data/timezone.xml https://raw.githubusercontent.com/unicode-org/cldr/release-48/common/bcp47/timezone.xml
 curl -sSL -o LICENSE-cldr.txt https://raw.githubusercontent.com/unicode-org/cldr/release-48/LICENSE
 ```
 

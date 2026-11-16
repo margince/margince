@@ -7792,6 +7792,27 @@ func (e ConsentPurposeClass) Valid() bool {
 	}
 }
 
+// Defines values for ConsentPurposeFrequency.
+const (
+	ConsentPurposeFrequencyMonthly   ConsentPurposeFrequency = "monthly"
+	ConsentPurposeFrequencyQuarterly ConsentPurposeFrequency = "quarterly"
+	ConsentPurposeFrequencyWeekly    ConsentPurposeFrequency = "weekly"
+)
+
+// Valid indicates whether the value is a known member of the ConsentPurposeFrequency enum.
+func (e ConsentPurposeFrequency) Valid() bool {
+	switch e {
+	case ConsentPurposeFrequencyMonthly:
+		return true
+	case ConsentPurposeFrequencyQuarterly:
+		return true
+	case ConsentPurposeFrequencyWeekly:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConsentQualifyingEventKind.
 const (
 	ConsentQualifyingEventKindActiveDeal         ConsentQualifyingEventKind = "active_deal"
@@ -9256,6 +9277,33 @@ func (e ContactResearchRunState) Valid() bool {
 	case ContactResearchRunStateNotConnected:
 		return true
 	case ContactResearchRunStateReady:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ContactStatedSource.
+const (
+	ContactStatedSourceBusinessCard ContactStatedSource = "business_card"
+	ContactStatedSourceMetInPerson  ContactStatedSource = "met_in_person"
+	ContactStatedSourceOther        ContactStatedSource = "other"
+	ContactStatedSourceReferral     ContactStatedSource = "referral"
+	ContactStatedSourceWebsite      ContactStatedSource = "website"
+)
+
+// Valid indicates whether the value is a known member of the ContactStatedSource enum.
+func (e ContactStatedSource) Valid() bool {
+	switch e {
+	case ContactStatedSourceBusinessCard:
+		return true
+	case ContactStatedSourceMetInPerson:
+		return true
+	case ContactStatedSourceOther:
+		return true
+	case ContactStatedSourceReferral:
+		return true
+	case ContactStatedSourceWebsite:
 		return true
 	default:
 		return false
@@ -43392,7 +43440,10 @@ type ConsentPurpose struct {
 	// Class What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 	Class     *ConsentPurposeClass `json:"class,omitempty"`
 	CreatedAt time.Time            `json:"created_at"`
-	Id        openapi_types.UUID   `json:"id"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Id        openapi_types.UUID       `json:"id"`
 
 	// Key Stable machine key (e.g. transactional, marketing_email, profiling). Referenced by send_email.consent_purpose.
 	Key   string `json:"key"`
@@ -43404,6 +43455,9 @@ type ConsentPurpose struct {
 
 // ConsentPurposeClass What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
 type ConsentPurposeClass string
+
+// ConsentPurposeFrequency How often the purpose's mail goes out, roughly. The subscription question states it.
+type ConsentPurposeFrequency string
 
 // ConsentQualifyingEvent A recorded exchange that may support a scoped message. The send check also
 // uses its sending company, request or deal context, current stops and source
@@ -44995,6 +45049,9 @@ type ContactResearchSource struct {
 	Url   string  `json:"url"`
 }
 
+// ContactStatedSource Where a contact created by hand came from, as the user who created it stated.
+type ContactStatedSource string
+
 // ContactStop One live stop on a contact, and whether the caller may take it back.
 type ContactStop struct {
 	// Address The address a stop is held on. Null for a stop on the contact.
@@ -45293,6 +45350,9 @@ type ControllerParticulars struct {
 
 	// PrivacyContact How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
+
+	// PrivacyPage Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
 }
 
 // ControllerSend Present on a mail sent through the installation's own relay rather than through a
@@ -45699,9 +45759,11 @@ type CreateCompanyRequestSizeBand string
 
 // CreateConsentPurposeRequest defines model for CreateConsentPurposeRequest.
 type CreateConsentPurposeRequest struct {
-	Key                 string `json:"key"`
-	Label               string `json:"label"`
-	RequiresDoubleOptIn *bool  `json:"requires_double_opt_in,omitempty"`
+	// Frequency Absent means monthly.
+	Frequency           *ConsentPurposeFrequency `json:"frequency,omitempty"`
+	Key                 string                   `json:"key"`
+	Label               string                   `json:"label"`
+	RequiresDoubleOptIn *bool                    `json:"requires_double_opt_in,omitempty"`
 }
 
 // CreateContactEnrichmentRunRequest defines model for CreateContactEnrichmentRunRequest.
@@ -45721,6 +45783,12 @@ type CreateContactEnrichmentRunRequest struct {
 
 // CreateContactRequest Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
 type CreateContactRequest struct {
+	// AcquisitionNote Their own words about the source, printed on the contact's privacy page beside it.
+	AcquisitionNote *string `json:"acquisition_note,omitempty"`
+
+	// AcquisitionSource Where the contact came from, as the user creating it states. The contact's privacy page prints it. `other` needs `acquisition_note`.
+	AcquisitionSource *ContactStatedSource `json:"acquisition_source,omitempty"`
+
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
 
@@ -58855,6 +58923,9 @@ type PrivacyInformationController struct {
 
 	// PrivacyContact How to reach whoever answers questions about the data.
 	PrivacyContact *string `json:"privacy_contact,omitempty"`
+
+	// PrivacyPage Where the installation publishes its own privacy information. Absent when not stated.
+	PrivacyPage *string `json:"privacy_page,omitempty"`
 }
 
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
@@ -58915,6 +58986,12 @@ type PrivacyInformationPage struct {
 	// Rights The rights the contact holds over this data, as codes a page renders in its own
 	// language. Art. 14(2)(c)-(e) requires naming them.
 	Rights []PrivacyInformationPageRights `json:"rights"`
+
+	// StatedSource Where the contact came from, as the user who created it by hand stated. Absent when nothing was given.
+	StatedSource *ContactStatedSource `json:"stated_source,omitempty"`
+
+	// StatedSourceNote Their own words beside `stated_source`. Absent when none were given.
+	StatedSourceNote *string `json:"stated_source_note,omitempty"`
 }
 
 // PrivacyInformationPageDataCategories defines model for PrivacyInformationPage.DataCategories.
@@ -60538,6 +60615,10 @@ type RecordCommunicationContextRequestKind string
 // A purpose-built projection and never the Contact360 read model, which carries this workspace's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
+	// AsksNews False when the recipient's country bars asking about news in a details check. The page
+	// then shows no news question, and a submit carrying a marketing answer is a 422.
+	AsksNews *bool `json:"asks_news,omitempty"`
+
 	// Company The current employer, read through the live employment relationship. Not correctable here.
 	Company string `json:"company"`
 
@@ -66358,8 +66439,11 @@ type StatedAmount struct {
 type SubscriptionConfirmationPage struct {
 	// Controller Who is responsible for the data, from the installation's own controller particulars, by the
 	// rule the mail's disclosure lines use. A part the installation has not stated is absent.
-	Controller *PrivacyInformationController    `json:"controller,omitempty"`
-	Kind       SubscriptionConfirmationPageKind `json:"kind"`
+	Controller *PrivacyInformationController `json:"controller,omitempty"`
+
+	// Frequency How often the purpose's mail goes out, roughly. The subscription question states it.
+	Frequency *ConsentPurposeFrequency         `json:"frequency,omitempty"`
+	Kind      SubscriptionConfirmationPageKind `json:"kind"`
 
 	// Language The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
 	Language *MailLanguage `json:"language,omitempty"`
@@ -86626,6 +86710,22 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if raw, found := object["acquisition_note"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionNote)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_note': %w", err)
+		}
+		delete(object, "acquisition_note")
+	}
+
+	if raw, found := object["acquisition_source"]; found {
+		err = json.Unmarshal(raw, &a.AcquisitionSource)
+		if err != nil {
+			return fmt.Errorf("error reading 'acquisition_source': %w", err)
+		}
+		delete(object, "acquisition_source")
+	}
+
 	if raw, found := object["address"]; found {
 		err = json.Unmarshal(raw, &a.Address)
 		if err != nil {
@@ -86796,6 +86896,20 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 	var err error
 	object := make(map[string]json.RawMessage)
+
+	if a.AcquisitionNote != nil {
+		object["acquisition_note"], err = json.Marshal(a.AcquisitionNote)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_note': %w", err)
+		}
+	}
+
+	if a.AcquisitionSource != nil {
+		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
 
 	if a.Address != nil {
 		object["address"], err = json.Marshal(a.Address)

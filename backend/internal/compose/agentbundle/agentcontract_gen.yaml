@@ -31935,7 +31935,18 @@ components:
         company_name:
           type: [string, 'null']
           description: The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain.
+        acquisition_source:
+          description: 'Where the contact came from, as the user creating it states. The contact''s privacy page prints it. `other` needs `acquisition_note`.'
+          allOf: [{$ref: '#/components/schemas/ContactStatedSource'}]
+        acquisition_note:
+          type: [string, 'null']
+          maxLength: 500
+          description: 'Their own words about the source, printed on the contact''s privacy page beside it.'
       additionalProperties: true
+    ContactStatedSource:
+      type: string
+      enum: [met_in_person, business_card, referral, website, other]
+      description: Where a contact created by hand came from, as the user who created it stated.
     CompanyForAddress:
       type: object
       description: The company a contact at the asked address would work at.
@@ -51279,7 +51290,12 @@ components:
           type: string
           enum: [business_correspondence, transactional, marketing, phone_outreach]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+        frequency: {$ref: '#/components/schemas/ConsentPurposeFrequency'}
         created_at: {type: string, format: date-time}
+    ConsentPurposeFrequency:
+      type: string
+      enum: [weekly, monthly, quarterly]
+      description: How often the purpose's mail goes out, roughly. The subscription question states it.
     RetentionScope:
       type: string
       description: |-
@@ -51895,6 +51911,10 @@ components:
           type: string
           maxLength: 500
           description: 'How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.'
+        privacy_page:
+          type: string
+          maxLength: 500
+          description: 'Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.'
         objection_route:
           type: string
           maxLength: 500

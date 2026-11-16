@@ -791,6 +791,9 @@
             },
             "AdvertiserContact": {
               "type": "string"
+            },
+            "PrivacyPage": {
+              "type": "string"
             }
           }
         }

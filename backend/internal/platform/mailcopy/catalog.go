@@ -280,9 +280,9 @@ func confirmAskLines(line writeLine) {
 	// proof can name a published row rather than quoting whatever arrived with
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
-		"News from time to time, roughly once a month. Your choice is respected.",
-		"Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
-		"Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.")
+		"{controller} will use your name and email address to send you news about its products and services by email, roughly once a month. You can withdraw your consent at any time with the unsubscribe link in each email.",
+		"{controller} verwendet Ihren Namen und Ihre E-Mail-Adresse, um Ihnen etwa einmal im Monat per E-Mail Neuigkeiten zu eigenen Produkten und Dienstleistungen zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen.",
+		"{controller} sẽ dùng họ tên và địa chỉ email của quý khách để gửi email tin tức về sản phẩm và dịch vụ của mình, khoảng mỗi tháng một lần. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào bằng liên kết hủy đăng ký trong mỗi email.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
 		"Subscribe to news",
 		"Neuigkeiten abonnieren",
@@ -295,13 +295,17 @@ func confirmAskLines(line writeLine) {
 	// rather than describing a frequency. A grant through that door binds this;
 	// one through the record-confirmation door binds the pair above.
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionAsk },
-		"Confirm that you want to receive {purpose}.",
-		"Bestätigen Sie, dass Sie {purpose} erhalten möchten.",
-		"Xác nhận quý khách muốn nhận {purpose}.")
+		"Confirm that you agree that {controller} may use your name and email address to send you {purpose} by email, roughly {frequency}. You can withdraw your consent at any time with the unsubscribe link in each email. Information about your rights: {privacy_page}.",
+		"Bestätigen Sie, dass {controller} Ihren Namen und Ihre E-Mail-Adresse verwenden darf, um Ihnen etwa {frequency} {purpose} per E-Mail zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen. Informationen zu Ihren Rechten: {privacy_page}.",
+		"Xác nhận quý khách đồng ý để {controller} dùng họ tên và địa chỉ email của quý khách để gửi email {purpose}, khoảng {frequency}. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào bằng liên kết hủy đăng ký trong mỗi email. Thông tin về quyền của quý khách: {privacy_page}.")
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
 		"Confirm subscription",
 		"Abonnement bestätigen",
 		"Xác nhận đăng ký")
+	line(func(c *Copy) *string { return &c.FrequencyWeekly }, "once a week", "einmal pro Woche", "mỗi tuần một lần")
+	line(func(c *Copy) *string { return &c.FrequencyMonthly }, "once a month", "einmal im Monat", "mỗi tháng một lần")
+	line(func(c *Copy) *string { return &c.FrequencyQuarterly }, "once a quarter", "einmal im Quartal", "mỗi quý một lần")
+	line(func(c *Copy) *string { return &c.ControllerFallback }, "we", "wir", "chúng tôi")
 }
 
 // recordNoticeLines is the copy for the messages the installation sends about a
@@ -371,10 +375,22 @@ func confirmConsentLines(line writeLine) {
 		" It is valid until %s.",
 		" Er ist bis %s gültig.",
 		" Liên kết có hiệu lực đến %s.")
+	line(func(c *Copy) *string { return &c.ZoneOfCountry },
+		"%s time",
+		"Ortszeit %s",
+		"giờ %s")
 	line(func(c *Copy) *string { return &c.ConfirmRecordIgnore },
 		"Reviewing your details is optional. Leaving this email unanswered does not subscribe you to anything.",
 		"Die Prüfung Ihrer Daten ist freiwillig. Wenn Sie nichts tun, abonnieren Sie keine Nachrichten.",
 		"Việc kiểm tra thông tin là tùy chọn. Nếu quý khách không trả lời, quý khách sẽ không được đăng ký nhận nội dung nào.")
+	line(func(c *Copy) *string { return &c.ConfirmRecordCheckBody },
+		"You can review the contact details we hold about you and correct any mistakes.",
+		"Sie können Ihre bei uns gespeicherten Kontaktdaten prüfen und Fehler korrigieren.",
+		"Quý khách có thể kiểm tra thông tin liên hệ chúng tôi lưu và sửa thông tin chưa đúng.")
+	line(func(c *Copy) *string { return &c.ConfirmRecordCheckIgnore },
+		"Reviewing your details is optional. You do not need to reply.",
+		"Die Prüfung Ihrer Daten ist freiwillig. Sie müssen nicht antworten.",
+		"Việc kiểm tra thông tin là tùy chọn. Quý khách không cần trả lời.")
 	line(func(c *Copy) *string { return &c.ConfirmConsentIgnore },
 		"If you do not want this subscription, you can ignore this email. Without your confirmation, the subscription will not be activated.",
 		"Wenn Sie diese Nachrichten nicht abonnieren möchten, können Sie diese E-Mail ignorieren. Ohne Ihre Bestätigung wird das Abonnement nicht aktiviert.",

@@ -323,9 +323,17 @@ type Copy struct {
 	// agreeing to something they were not asked, which is the defect the whole
 	// published-question change exists to end.
 	//
-	// {purpose} is substituted with the purpose's own label at render time.
+	// {purpose}, {controller}, {frequency} and {privacy_page} are filled when
+	// a confirm page serves the question, so the grant records the full text.
 	ConfirmSubscriptionAsk     string
 	ConfirmSubscriptionConfirm string
+	// The words a purpose's frequency is named by inside that sentence.
+	FrequencyWeekly    string
+	FrequencyMonthly   string
+	FrequencyQuarterly string
+	// ControllerFallback names the sender in a question when the installation
+	// has stated no legal name.
+	ControllerFallback string
 	// ConfirmPersonal says the link is the reader's alone. ConfirmExpiry is
 	// APPENDED to it when the link has a date, with the date as %s.
 	//
@@ -334,11 +342,18 @@ type Copy struct {
 	// while every language spells that sentence the same way.
 	ConfirmPersonal string
 	ConfirmExpiry   string
+	// ZoneOfCountry names the recipient's local time by their country, with
+	// the country's name as %s.
+	ZoneOfCountry string
 	// The closing line, different for the two messages: a record confirmation
 	// asks nothing of its reader, while an unanswered opt-in withholds the
 	// permission until they answer.
 	ConfirmRecordIgnore  string
 	ConfirmConsentIgnore string
+	// The details check for a recipient who may not be asked about news in
+	// it: the same invitation and closing, with no word about news.
+	ConfirmRecordCheckBody   string
+	ConfirmRecordCheckIgnore string
 	// The privacy notice's closing line. It asks for nothing, so it says so:
 	// a reader who does nothing has lost nothing, which is what makes this a
 	// notice rather than a request.

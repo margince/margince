@@ -193,6 +193,7 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		PrivacyContact:    valueOr(req.PrivacyContact),
 		ObjectionRoute:    valueOr(req.ObjectionRoute),
 		AdvertiserContact: valueOr(req.AdvertiserContact),
+		PrivacyPage:       valueOr(req.PrivacyPage),
 	}
 	// THE READ GATE FIRST, before anything is written. The response echoes the
 	// stored value, which asks the read verb — and a principal holding update
@@ -246,6 +247,7 @@ func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars
 		PrivacyContact:    &p.PrivacyContact,
 		ObjectionRoute:    &p.ObjectionRoute,
 		AdvertiserContact: &p.AdvertiserContact,
+		PrivacyPage:       &p.PrivacyPage,
 	}
 }
 

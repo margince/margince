@@ -165,7 +165,7 @@ func messagingRules() messaging.Rules {
 		// Decree 91/2020 alone, and one recording version 2 was judged under
 		// the same decree as amended. The number is what tells those two apart
 		// in a record read years later, which is the only reason it moves.
-		Version:            2,
+		Version:            3,
 		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
@@ -186,5 +186,8 @@ func messagingRules() messaging.Rules {
 		},
 		OptOutAcknowledgement:       true,
 		OptOutAcknowledgementWithin: 24 * time.Hour,
+		// Decree 91/2020/ND-CP Art. 11.2: a consent request the recipient did
+		// not ask for is itself an unsolicited message.
+		ConsentConfirmationNeedsRequest: true,
 	}
 }

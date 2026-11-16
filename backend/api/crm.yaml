@@ -48166,8 +48166,21 @@ components:
         company_name:
           type: [string, 'null']
           description: The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain.
+        acquisition_source:
+          description: 'Where the contact came from, as the user creating it states. The contact''s privacy page prints it. `other` needs `acquisition_note`.'
+          allOf: [{ $ref: '#/components/schemas/ContactStatedSource' }]
+        acquisition_note:
+          type: [string, 'null']
+          maxLength: 500
+          description: 'Their own words about the source, printed on the contact''s privacy page beside it.'
       additionalProperties: true
       x-extension: true
+
+    ContactStatedSource:
+      type: string
+      enum: [met_in_person, business_card, referral, website, other]
+      x-extensible-enum: true
+      description: Where a contact created by hand came from, as the user who created it stated.
 
     QuickCaptureContactRequest:
       type: object
@@ -73618,7 +73631,14 @@ components:
           enum: [business_correspondence, transactional, marketing, phone_outreach]
           x-extensible-enum: true
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+        frequency: { $ref: '#/components/schemas/ConsentPurposeFrequency' }
         created_at: { type: string, format: date-time }
+
+    ConsentPurposeFrequency:
+      type: string
+      enum: [weekly, monthly, quarterly]
+      x-extensible-enum: true
+      description: How often the purpose's mail goes out, roughly. The subscription question states it.
 
     CreateConsentPurposeRequest:
       type: object
@@ -73627,6 +73647,9 @@ components:
         key: { type: string }
         label: { type: string }
         requires_double_opt_in: { type: boolean, default: false }
+        frequency:
+          allOf: [{ $ref: '#/components/schemas/ConsentPurposeFrequency' }]
+          description: Absent means monthly.
 
     ExistingCustomerNotice:
       type: object
@@ -74637,6 +74660,10 @@ components:
           type: string
           maxLength: 500
           description: 'How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.'
+        privacy_page:
+          type: string
+          maxLength: 500
+          description: 'Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.'
         objection_route:
           type: string
           maxLength: 500
@@ -75354,6 +75381,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: 'When the acquisition happened, absent where the door could not say.'
+        stated_source:
+          allOf: [{ $ref: '#/components/schemas/ContactStatedSource' }]
+          description: 'Where the contact came from, as the user who created it by hand stated. Absent when nothing was given.'
+        stated_source_note: { type: string, description: 'Their own words beside `stated_source`. Absent when none were given.' }
         purposes:
           type: array
           description: 'What the installation uses this contact''s data for, by published name.'
@@ -75388,6 +75419,7 @@ components:
         identity: { type: string, description: 'The legal name and postal address, as lines. Absent unless both are stated.' }
         privacy_contact: { type: string, description: 'How to reach whoever answers questions about the data.' }
         objection_route: { type: string, description: 'How to object, where the installation states a way of its own.' }
+        privacy_page: { type: string, description: 'Where the installation publishes its own privacy information. Absent when not stated.' }
 
     PrivacyInformationRetention:
       type: object
@@ -75421,6 +75453,7 @@ components:
           x-extensible-enum: true
         purpose_key:   { type: string, description: 'The subscription this link is about.' }
         purpose_label: { type: string, description: 'Its published name, for the page to show.' }
+        frequency: { $ref: '#/components/schemas/ConsentPurposeFrequency' }
         state:
           type: string
           enum: [unknown, granted, withdrawn]
@@ -75463,6 +75496,11 @@ components:
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
         controller: { $ref: '#/components/schemas/PrivacyInformationController' }
         question: { $ref: '#/components/schemas/ConfirmQuestion' }
+        asks_news:
+          type: boolean
+          description: |
+            False when the recipient's country bars asking about news in a details check. The page
+            then shows no news question, and a submit carrying a marketing answer is a 422.
 
     ConfirmQuestion:
       type: object

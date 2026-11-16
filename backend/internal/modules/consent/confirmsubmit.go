@@ -97,7 +97,7 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		// Naming the subject costs one extra read and buys the ordering: it
 		// takes no row lock, so it can say who this link belongs to without
 		// ordering anything.
-		contactID, kind, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
+		contactID, kind, asksNews, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
 		if err != nil {
 			return err
 		}
@@ -105,6 +105,9 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		// leaves the link usable rather than burning the subject's one answer.
 		if err := refuseWiderThanTheMail(kind, in); err != nil {
 			return err
+		}
+		if !asksNews && in.MarketingChoice != "" {
+			return &ValidationError{Field: "marketing_choice", Reason: "this link asks no news question and takes no answer to one"}
 		}
 		if err := lockSubjectSuppressions(ctx, tx, contactID.UUID); err != nil {
 			return err
@@ -301,7 +304,8 @@ func (s *Store) recordLinkedPurposeTx(ctx context.Context, tx pgx.Tx, ref Confir
 		// Earned, not asserted: set only after spendConfirmTokenTx consumed the
 		// link that proves the mailbox. This is what satisfies a double-opt-in
 		// purpose, and the only thing that does.
-		MailboxProof: MailboxProvenByConfirmLink,
+		MailboxProof:   MailboxProvenByConfirmLink,
+		SubjectRequest: ref.SubjectRequest,
 	}
 	sub, state, err := admitRecord(ctx, input)
 	if err != nil {

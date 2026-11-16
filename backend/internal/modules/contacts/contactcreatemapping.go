@@ -72,6 +72,9 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	in.Address = req.Address
 	in.Emails = contactEmailInputs(req.Emails)
 	in.Phones = contactPhoneInputs(req.Phones)
-	in.Employer, err = employerChoiceFromRequest(idArg[ids.CompanyKind](req.CompanyId), req.CompanyName, req.Source)
+	if in.Employer, err = employerChoiceFromRequest(idArg[ids.CompanyKind](req.CompanyId), req.CompanyName, req.Source); err != nil {
+		return in, err
+	}
+	in.Acquisition, err = statedAcquisition(req.AcquisitionSource, req.AcquisitionNote)
 	return in, err
 }

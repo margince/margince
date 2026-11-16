@@ -4,6 +4,7 @@
 package consent
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
@@ -19,6 +20,37 @@ func TestEveryServedQuestionSplitsIntoItsAskAndAnswers(t *testing.T) {
 			if ask == "" || len(got) != want {
 				t.Errorf("%s/%s splits into ask %q and %d answers, want %d", key, language, ask, len(got), want)
 			}
+		}
+	}
+}
+
+// TestTheSubscriptionQuestionIsServedWithEveryFieldFilled. The served text is
+// what a grant records, so it names who sends, what, how often, and where the
+// rights are, with no placeholder left.
+func TestTheSubscriptionQuestionIsServedWithEveryFieldFilled(t *testing.T) {
+	words := mailcopy.For("vi")
+	served := fillQuestion(RenderQuestion(TemplateSubscriptionQuestion, "vi"), questionFields{
+		purpose: purposeName(PurposeMarketingEmail, "Product news", words), controller: "Công ty Ví Dụ",
+		frequency: frequencyName("monthly", words), privacyPage: "https://example.com/bao-mat", words: words,
+	})
+	ask, answers := ServedQuestion{Text: served}.Parts()
+	want := "Xác nhận quý khách đồng ý để Công ty Ví Dụ dùng họ tên và địa chỉ email của quý khách để gửi " +
+		"email Tin tức sản phẩm, khoảng mỗi tháng một lần. Quý khách có thể rút lại sự đồng ý bất cứ lúc " +
+		"nào bằng liên kết hủy đăng ký trong mỗi email. Thông tin về quyền của quý khách: " +
+		"https://example.com/bao-mat."
+	if ask != want || len(answers) != 1 {
+		t.Errorf("served ask:\n  %q\nwant:\n  %q", ask, want)
+	}
+}
+
+// TestTheRecordQuestionNamesTheSenderOrSaysWe. With no legal name stated the
+// sentence still opens with a capital.
+func TestTheRecordQuestionNamesTheSenderOrSaysWe(t *testing.T) {
+	for controller, opening := range map[string]string{"Example Trading GmbH": "Example Trading GmbH will use", "": "We will use"} {
+		served := fillQuestion(RenderQuestion(TemplateMarketingQuestion, "en"),
+			questionFields{controller: controller, words: mailcopy.For("en")})
+		if ask, _ := (ServedQuestion{Text: served}).Parts(); !strings.HasPrefix(ask, opening) {
+			t.Errorf("controller %q: ask %q, want it to open with %q", controller, ask, opening)
 		}
 	}
 }

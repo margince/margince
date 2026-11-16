@@ -133,6 +133,16 @@ type Rules struct {
 
 	// OptOutAcknowledgementWithin bounds receipt delivery from the recorded refusal; zero declares no deadline.
 	OptOutAcknowledgementWithin time.Duration
+
+	// RecordConfirmationWithoutNews says the mail that asks a recipient to
+	// check their details must not also ask whether they want news. The link
+	// then pins no question, its page shows none and its submit takes none.
+	RecordConfirmationWithoutNews bool
+
+	// ConsentConfirmationNeedsRequest says a consent-confirmation mail may be
+	// sent only when the recipient's own request to subscribe is on record; a
+	// mail asking for consent nobody requested is itself unsolicited.
+	ConsentConfirmationNeedsRequest bool
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
