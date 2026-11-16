@@ -113,7 +113,7 @@ func (changeReports) Spec() mcp.ToolSpec {
 		Name: "change_reports", Title: "Work saved reports and the forecast", Version: toolVersionV1,
 		Description: changeReportsCopy.render(), Instead: changeReportsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"draft: save a report's next charts as a draft to publish later, or create a new report only its author sees"},
+			"action":{"description":"draft: save a report's next charts as a draft to publish later, or with no report_id create a new report only its author sees"},
 			"selection":{"description":"The report's metrics, charts and sections; a pipeline_id comes from ` + pipelinesSource + `"}}}`),
 	}
 }
@@ -147,8 +147,7 @@ func (changeActivities) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "change_activities", Title: "Log, plan and file activities", Version: toolVersionV1,
 		Description: changeActivitiesCopy.render(), Instead: changeActivitiesCopy.Instead,
-		InputSchema: schema(`{"type":"object","properties":{
-			"action":{"description":"log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: file one activity under another record too, or move it with replace_existing_of_type; relink_many: the same for a named set; ready: say the user is ready for a meeting; unready: take that back"}}}`),
+		InputSchema: schema(`{"type":"object","properties":{}}`),
 	}
 }
 

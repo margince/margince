@@ -665,12 +665,17 @@ func TestOwnerScopeNarrowsTheSuggestionCountWithTheList(t *testing.T) {
 			t.Errorf("%s: listed %d and counted %d, want %d", name, len(got), open, len(tc.want))
 		}
 		seam := attentionDealSuggestions{store: e.Deals}
-		page, err := seam.OpenSuggestions(e.signalReader(), tc.owners, 100)
-		if err != nil {
-			t.Fatalf("the Worklist listing for %s: %v", name, err)
+		page, complete, err := seam.OpenSuggestions(e.signalReader(), tc.owners, 100)
+		if err != nil || !complete {
+			t.Fatalf("the Worklist listing for %s: complete %v, %v", name, complete, err)
 		}
 		if seamOpen, err := seam.CountOpen(e.signalReader(), tc.owners); err != nil || seamOpen != len(tc.want) || len(page) != len(tc.want) {
 			t.Errorf("%s: the Worklist listed %d and counted %d (err %v), want %d", name, len(page), seamOpen, err, len(tc.want))
+		}
+		if len(tc.want) > 1 {
+			if short, complete, err := seam.OpenSuggestions(e.signalReader(), tc.owners, len(tc.want)-1); err != nil || complete || len(short) != len(tc.want)-1 {
+				t.Errorf("%s: a page one short of %d is %d rows, complete %v (%v); want incomplete", name, len(tc.want), len(short), complete, err)
+			}
 		}
 		for _, company := range tc.want {
 			if !companies[company] {

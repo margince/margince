@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
 	"github.com/margince/margince/backend/internal/compose/readerrendering"
+	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -88,6 +89,7 @@ type (
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers
+	recordReferenceHandlers = recordreferences.Handlers
 	company360Handlers      = company360.Handlers
 	erasureReturnHandlers   = erasurereturn.Handlers
 	contact360Handlers      = contact360.Handlers

@@ -36,7 +36,8 @@ type DB struct {
 	workspace func(context.Context) (ids.WorkspaceID, error)
 	// budget bounds every statement this handle's transactions run, and is zero
 	// on a handle nobody bounded — see Bounded.
-	budget time.Duration
+	budget   time.Duration
+	admitted bool
 }
 
 // Bounded is this handle with a time ceiling on every statement its
@@ -64,7 +65,7 @@ func (d *DB) Bounded(budget time.Duration) *DB {
 	if d == nil {
 		return nil
 	}
-	return &DB{pool: d.pool, workspace: d.workspace, budget: budget}
+	return &DB{pool: d.pool, workspace: d.workspace, budget: budget, admitted: d.admitted}
 }
 
 // Bind returns a handle that resolves its workspace through resolve.
@@ -206,5 +207,27 @@ func (d *DB) ForWorkspace(ws ids.WorkspaceID) *DB {
 	// missing.
 	pinned := BindTo(d.pool, ws)
 	pinned.budget = d.budget
+	pinned.admitted = d.admitted
 	return pinned
+}
+
+// WithReadAdmission opts expensive reads into the pool's shared allowance.
+func (d *DB) WithReadAdmission() *DB {
+	if d == nil {
+		return nil
+	}
+	admitted := *d
+	admitted.admitted = true
+	return &admitted
+}
+
+// Read passes the admitted context onward so nested reads share its allowance.
+func (d *DB) Read(ctx context.Context, fn func(context.Context, pgx.Tx) error) error {
+	read := func(ctx context.Context) error {
+		return d.Tx(ctx, func(tx pgx.Tx) error { return fn(ctx, tx) })
+	}
+	if d == nil || !d.admitted {
+		return read(ctx)
+	}
+	return WithReadAdmission(ctx, d.pool, read)
 }

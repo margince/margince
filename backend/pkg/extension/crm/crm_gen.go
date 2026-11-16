@@ -64,7 +64,7 @@ func (e ActivityCallOutcome) Valid() bool {
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
 	ActivityCaptureLabelMeeting    ActivityCaptureLabel = "meeting"
-	ActivityCaptureLabelNoise      ActivityCaptureLabel = "noise"
+	ActivityCaptureLabelOther      ActivityCaptureLabel = "other"
 )
 
 // Valid indicates whether the value is a known member of the ActivityCaptureLabel enum.
@@ -74,7 +74,7 @@ func (e ActivityCaptureLabel) Valid() bool {
 		return true
 	case ActivityCaptureLabelMeeting:
 		return true
-	case ActivityCaptureLabelNoise:
+	case ActivityCaptureLabelOther:
 		return true
 	default:
 		return false
@@ -192,6 +192,27 @@ func (e ActivityLanguage) Valid() bool {
 	case ActivityLanguageEn:
 		return true
 	case ActivityLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ActivityMeetingNotesConnection.
+const (
+	Connect              ActivityMeetingNotesConnection = "connect"
+	NotesAccountMismatch ActivityMeetingNotesConnection = "notes_account_mismatch"
+	NotesGrantMissing    ActivityMeetingNotesConnection = "notes_grant_missing"
+)
+
+// Valid indicates whether the value is a known member of the ActivityMeetingNotesConnection enum.
+func (e ActivityMeetingNotesConnection) Valid() bool {
+	switch e {
+	case Connect:
+		return true
+	case NotesAccountMismatch:
+		return true
+	case NotesGrantMissing:
 		return true
 	default:
 		return false
@@ -1832,7 +1853,7 @@ type Activity struct {
 	// CanShareInternal Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
 	CanShareInternal *bool `json:"can_share_internal,omitempty"`
 
-	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+	// CaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 	CaptureLabel *ActivityCaptureLabel `json:"capture_label,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.
@@ -1908,6 +1929,9 @@ type Activity struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
+	// Invitation Meeting only, on a record's History read with `collapse_copies`: who a calendar meeting invited and how they answered. That read folds the event's invitation mail, updates, cancellations and answers onto the meeting instead of listing them as mail rows, when you may open both. Absent when `content_state` is `withheld`.
+	Invitation *MeetingInvitationSummary `json:"invitation,omitempty"`
+
 	// InvitationStatus Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
 	InvitationStatus *ActivityInvitationStatus `json:"invitation_status,omitempty"`
 
@@ -1925,6 +1949,9 @@ type Activity struct {
 
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
+
+	// MeetingNotesConnection A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+	MeetingNotesConnection *ActivityMeetingNotesConnection `json:"meeting_notes_connection,omitempty"`
 
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus `json:"meeting_status,omitempty"`
@@ -2000,7 +2027,7 @@ type ActivityAutomaticKind string
 // ActivityCallOutcome How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.
 type ActivityCallOutcome string
 
-// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+// ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
 type ActivityCaptureLabel string
 
 // ActivityContentState Whether this response carries the activity's content. `withheld` means the caller may discover the row (a linked record is theirs to read) but is not in its audience: only the safe markers are filled — id, kind, channel_provider, occurred_at, direction, audience, links, is_done/due_at for a task, call_outcome for a call, provenance and timestamps — and subject, body, thread_key, capture_label, source_id and raw are null. An `available` row is complete.
@@ -2019,6 +2046,9 @@ type ActivityKind string
 // A detector's observation, not a declaration by its author, and it describes the message rather than the contact: the same contact writes in two languages and each message says which it is. A drafted reply follows it, so that a reply to an English thread is written in English whatever language its sender's own writing samples happen to be in.
 // Withheld with the rest of the content: it is derived from the body, so a caller who may discover the row without reading it is not told this either.
 type ActivityLanguage string
+
+// ActivityMeetingNotesConnection A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+type ActivityMeetingNotesConnection string
 
 // ActivityMeetingStatus Set only when kind=meeting.
 type ActivityMeetingStatus string
@@ -3039,6 +3069,16 @@ type MeetingGuest struct {
 	Response *MeetingResponse `json:"response,omitempty"`
 }
 
+// MeetingInvitationSummary The calendar invitation mail of one meeting, folded onto it in History: how many were invited and how many answered each way.
+type MeetingInvitationSummary struct {
+	Accepted int `json:"accepted" minimum:"0"`
+	Declined int `json:"declined" minimum:"0"`
+
+	// Invited The colleagues and contacts on the meeting.
+	Invited   int `json:"invited" minimum:"0"`
+	Tentative int `json:"tentative" minimum:"0"`
+}
+
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
 
@@ -3897,6 +3937,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "imported_from")
 	}
 
+	if raw, found := object["invitation"]; found {
+		err = json.Unmarshal(raw, &a.Invitation)
+		if err != nil {
+			return fmt.Errorf("error reading 'invitation': %w", err)
+		}
+		delete(object, "invitation")
+	}
+
 	if raw, found := object["invitation_status"]; found {
 		err = json.Unmarshal(raw, &a.InvitationStatus)
 		if err != nil {
@@ -3943,6 +3991,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'meeting_intent': %w", err)
 		}
 		delete(object, "meeting_intent")
+	}
+
+	if raw, found := object["meeting_notes_connection"]; found {
+		err = json.Unmarshal(raw, &a.MeetingNotesConnection)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_notes_connection': %w", err)
+		}
+		delete(object, "meeting_notes_connection")
 	}
 
 	if raw, found := object["meeting_status"]; found {
@@ -4429,6 +4485,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.Invitation != nil {
+		object["invitation"], err = json.Marshal(a.Invitation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'invitation': %w", err)
+		}
+	}
+
 	if a.InvitationStatus != nil {
 		object["invitation_status"], err = json.Marshal(a.InvitationStatus)
 		if err != nil {
@@ -4466,6 +4529,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'meeting_intent': %w", err)
+		}
+	}
+
+	if a.MeetingNotesConnection != nil {
+		object["meeting_notes_connection"], err = json.Marshal(a.MeetingNotesConnection)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_notes_connection': %w", err)
 		}
 	}
 

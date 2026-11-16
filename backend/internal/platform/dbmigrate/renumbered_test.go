@@ -220,3 +220,32 @@ func TestARenumberFromEquivalentContentMovesTheRecordedRow(t *testing.T) {
 		t.Fatal("no renumbered pair has an equivalence entry, so nothing here was asked; remove this test with the last such entry")
 	}
 }
+
+func equivalenceSourceMigrations(t *testing.T, namespace string) []Migration {
+	t.Helper()
+	migrations := loadNamespaceMigrations(t, namespace)
+	shipped := map[string]Migration{}
+	for _, migration := range migrations {
+		shipped[migration.Version] = migration
+	}
+	text, err := os.ReadFile(filepath.Join("..", "..", "..", "migrations", "renumbered.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pairs, err := ParseRenumbers(string(text))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pair := range pairs[namespace] {
+		migration, ok := shipped[pair.New]
+		if !ok || migration.Name != pair.Name {
+			t.Fatalf("renumber %s has no current source", pair.Old)
+		}
+		if _, exists := shipped[pair.Old]; exists {
+			t.Fatalf("renumber %s still ships under its old version", pair.Old)
+		}
+		migration.Version = pair.Old
+		migrations = append(migrations, migration)
+	}
+	return migrations
+}

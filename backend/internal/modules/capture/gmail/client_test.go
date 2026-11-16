@@ -11,6 +11,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -82,6 +83,11 @@ func googleStub(t *testing.T) *httptest.Server {
 	})
 
 	mux.HandleFunc("/history", func(w http.ResponseWriter, r *http.Request) {
+		if !slices.Contains(r.URL.Query()["historyTypes"], "labelAdded") {
+			// Without it Gmail never reports a scheduled send going out.
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 		if r.URL.Query().Get("startHistoryId") == "0" {
 			// Google answers a too-old cursor with 404 (mapped to ErrHistoryGone).
 			w.WriteHeader(http.StatusNotFound)
@@ -91,6 +97,12 @@ func googleStub(t *testing.T) *httptest.Server {
 			"history": []map[string]any{
 				{"messagesAdded": []map[string]any{{"message": map[string]string{"id": "m3"}}}},
 				{"messagesAdded": []map[string]any{{"message": map[string]string{"id": "m4"}}}},
+				// A scheduled message going out: Gmail files it under SENT.
+				{"labelsAdded": []map[string]any{{"message": map[string]string{"id": "m5"}, "labelIds": []string{"SENT"}}}},
+				// An ordinary send can be reported both ways; it is fetched once.
+				{"labelsAdded": []map[string]any{{"message": map[string]string{"id": "m4"}, "labelIds": []string{"SENT"}}}},
+				// The owner starring a message is not new mail.
+				{"labelsAdded": []map[string]any{{"message": map[string]string{"id": "m6"}, "labelIds": []string{"STARRED"}}}},
 			},
 			"historyId": "99999",
 		})
@@ -310,8 +322,8 @@ func TestHistoryCollectsAddedIDsAndAdvancesCursor(t *testing.T) {
 	if err != nil {
 		t.Fatalf("History: %v", err)
 	}
-	if len(ids) != 2 || ids[0] != "m3" || ids[1] != "m4" {
-		t.Errorf("added ids = %v, want [m3 m4]", ids)
+	if !slices.Equal(ids, []string{"m3", "m4", "m5"}) {
+		t.Errorf("ids to fetch = %v, want [m3 m4 m5]: the two added messages and the one filed as SENT", ids)
 	}
 	if hist != "99999" {
 		t.Errorf("new historyId = %q, want 99999", hist)

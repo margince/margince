@@ -4613,7 +4613,7 @@ paths:
       operationId: getCompanyScan
       x-mcp-tool: { verb: get_company_scan, router: read_details, action: company_scan, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: What this account needs, as the model last judged it for this reader.
+      summary: What this company needs, as the model last judged it for this reader.
       description: |
         The account scan is the model's reading of one account for one reader: what the
         exchanges and the pipeline say needs a contact, each finding citing the records it
@@ -4645,7 +4645,7 @@ paths:
       operationId: ensureCompanyScan
       x-mcp-tool: { verb: ensure_company_scan, router: run_research, action: refresh_scan, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Make sure this reader's scan of the account is current, reading it again only when the account changed.
+      summary: Make sure this reader's scan of the company is current, reading it again only when the company changed.
       description: |
         Opening an account page calls this once. It compares the account as this reader
         sees it now — a fingerprint over the composite read, the recent message words, the
@@ -4752,7 +4752,7 @@ paths:
       deprecated: true
       x-mcp-tool: { verb: get_company_brief, router: read_details, action: company_brief, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: The standing account brief — what this account is, where it stands, and what changed.
+      summary: The standing company brief — what this company is, where it stands, and what changed.
       description: |
         A short written brief over the same records the 360 serves, cached and reused
         until its inputs change.
@@ -4798,7 +4798,7 @@ paths:
       deprecated: true
       x-mcp-tool: { verb: regenerate_company_brief, router: run_research, action: refresh_company_brief, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Regenerate this account's brief, ignoring the cached one.
+      summary: Regenerate this company's brief, ignoring the cached one.
       description: |
         The explicit refresh behind the brief card's "outdated — refresh". It reads and
         writes only the cached brief: no record field changes, and nothing is sent.
@@ -4916,7 +4916,7 @@ paths:
       x-waits-on-model: always
       x-mcp-tool: { verb: ask_about_company, router: run_research, action: ask_about_company, tier: auto_execute, scope: enrich, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Ask one of the prepared questions about this account.
+      summary: Ask one of the prepared questions about this company.
       description: |
         The company view's "Ask Margince". The question is chosen from a fixed list, not
         typed: each prepared question names records the answer must be written from, so
@@ -5505,6 +5505,38 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /finance/customer-payments:
+    get:
+      tags: [Finance]
+      operationId: getCustomerPayments
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Overdue customer invoices the reader may see.
+      description: |
+        Requires finance and company read grants. Company row visibility, including
+        private capture rows and live record shares, is applied before totals,
+        counts, previews and pages. The payment read also requires company ownership,
+        a shared owner team, an explicit read share, or an all-rows grant;
+        workspace-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
+        Only the current accounting connection and its live customer links contribute.
+        Disputed invoices and former customers are excluded from collection prompts.
+        Amounts stay in their invoice currency; totals in different currencies stay separate.
+        Invoice pages are ordered by due date and invoice id, oldest first.
+      parameters:
+        - name: cursor
+          in: query
+          description: Opaque continuation from this response's page.next_cursor.
+          schema: { type: string }
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Scoped customer payment overview and one overdue invoice page.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomerPayments' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /companies/{id}/finance-summary:
@@ -9089,11 +9121,11 @@ paths:
     get:
       tags: [Extensions]
       operationId: listExtensionReports
-      security: [ { cookieAuth: [] } ]   # Reports and Home draw it; an agent asks the report tools
+      security: [ { cookieAuth: [] } ]   # Reports draws it; an agent asks the report tools
       x-agent-access: human-only
       x-human-only-reason: covered
       x-settings-audience: member
-      summary: The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+      summary: The counts and breakdowns installed extensions add to Reports, answered for this caller.
       description: |
         Each count and breakdown an installed extension declares, run through the report engine for
         this caller. Row scope, field masks and the group floor apply as they do to a core report.
@@ -9257,7 +9289,9 @@ paths:
           description: >-
             Show one row per email when several colleagues' mailboxes each hold a copy of it.
             Only copies the caller may read are joined, and the row shown says how many in
-            `copies`. Off by default, so an export or sync client still reads every row.
+            `copies`. Off by default, so an export or sync client still reads every row. With
+            `entity_type` and `entity_id`, a calendar invitation, update, cancellation or answer
+            whose meeting is on the same page set is folded onto that meeting's `invitation`.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -10645,7 +10679,7 @@ paths:
       operationId: previewAccountSendAuthorization
       x-mcp-tool: { verb: preview_account_send_authorization, router: change_activities, action: check_new_send, tier: auto_execute, scope: write, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      summary: Would this account-started message be allowed, and on what ground.
+      summary: Would a new message with no thread behind it be allowed, and on what ground.
       description: |
         The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
         with no anchor to derive a category from. It names its own `links`, exactly as the send
@@ -12500,9 +12534,12 @@ paths:
                   type: string
                   maxLength: 2000
                   description: |
-                    The exact sentence shown beside the choice, stored verbatim as proof. Required with a
-                    grant. Bounded because it is stored on the proof row and read back through the subject
-                    access export — the same bound is enforced server-side, and the two are one rule.'
+                    The wording shown beside the choice. Required with a grant. Where the page carried a
+                    `question`, send its `text` unchanged: the proof records the served question, and a
+                    grant with other words is refused with 409 `version_skew`, because the page is older
+                    than the question the link pinned. Where the page carried none, this sentence is
+                    stored verbatim as proof. Bounded because it is stored on the proof row and read back
+                    through the subject access export.
       responses:
         '200':
           description: |
@@ -12514,6 +12551,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ConfirmSubmissionReceipt' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /public/preferences/{token}/unsubscribe:
@@ -17373,6 +17411,47 @@ paths:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /channel-links/{record_type}/{id}/channels:
+    parameters:
+      - name: record_type
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Connectors]
+      operationId: listLinkableChannels
+      # Human-only: the picker in the web form's Link an existing channel. An
+      # agent names the channel it links through link_channel.
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [ { cookieAuth: [] } ]
+      summary: The private channels this record can be linked to.
+      description: |
+        The private, unarchived channels the bot is a member of that no live link holds, by name.
+        Only a member who may link this record reads it. A private channel the bot is not in is
+        never listed: the chat does not tell the bot it exists. A member of that channel adds the
+        bot to it first.
+      responses:
+        '200':
+          description: The channels, sorted by name.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LinkableChannels' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '409':
+          description: 'No chat bot is connected (`code: channel_bot_not_connected`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: 'The chat could not be reached (`code: channel_provider_unreachable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /channel-links/{record_type}/{id}/notes:
     parameters:
       - name: record_type
@@ -21724,6 +21803,10 @@ paths:
         `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
         source that FAILED is named there too. A day cannot read as clear while something
         that would have filled it never answered.
+
+        `If-None-Match` with the answer's `ETag` answers 304 when the bytes have not
+        changed. The answer is `private, no-cache`: only the reader's own browser keeps it,
+        and it asks again before each use.
       x-mcp-tool: { verb: get_worklist, router: read_workspace, action: worklist, tier: auto_execute, scope: read, served_by: route }
       parameters:
         - name: scope
@@ -21932,12 +22015,38 @@ paths:
             page carries neither `optional_relationships` nor
             `optional_relationships_more_available`. A reconnection the reader pinned
             is still read and still reaches the queue. Nothing else on the page changes.
+        - name: shape
+          in: query
+          schema: { type: string, enum: [queue, home], default: queue }
+          description: |
+            How much of the ranked day the page carries. `queue` is the page of the queue
+            and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+            the day's meeting rows plus every row that comes due in the next five minutes,
+            with no cursor and no rows below the cut. Focus, the
+            summary, `counts[].considered`, `reach[].considered` and the readings are the
+            same in both shapes; `shown` counts the rows this page carries.
       responses:
         '200':
           description: The ranked day.
+          headers:
+            ETag:
+              description: A weak tag of the answer's bytes, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Worklist' }
+        '304':
+          description: The client already holds this answer.
+          headers:
+            ETag:
+              description: The tag the client holds, quoted.
+              schema: { type: string }
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: { type: string }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -25521,10 +25630,10 @@ paths:
         reports that disclosure as unmeetable rather than inventing one, which is what makes an
         unconfigured installation visible instead of silently non-compliant.
 
-        NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
-        from a jurisdiction's obligation to the words that meet it exists, but no step between
-        composing a body and handing it to a provider asks for them. The gap is recorded in
-        `backend/gates/messagingruleapplied_test.go`.
+        The legal name opens and heads every mail the installation sends as controller. The
+        particulars a jurisdiction requires are printed at the end of that mail, each under a label
+        in the mail's language, and at the end of a marketing mail a member sends. The particulars
+        themselves are printed as stated, in the language they were typed in.
       responses:
         '200':
           description: The stated particulars. Empty fields where nothing has been said.
@@ -27898,6 +28007,11 @@ paths:
               required: [purpose_id]
               properties:
                 purpose_id: { type: string, format: uuid }
+                language:
+                  allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
+                  description: |
+                    The language of the mail and of the page its link opens. Absent means the
+                    installation's mail language.
       responses:
         '201':
           description: Link issued, and what became of the delivery.
@@ -28806,7 +28920,7 @@ paths:
     post:
       tags: [Identity]
       operationId: removeMember
-      summary: Retire an account while preserving historical attribution.
+      summary: Retire a member while preserving historical attribution.
       description: Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: remove_workspace_member, router: change_access, action: remove_member, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
@@ -29056,6 +29170,46 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /records/references:
+    get:
+      tags: [Links]
+      operationId: readRecordReferences
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: Read names and archive state for a bounded set of records.
+      description: |
+        Requires the selected record kind's read grant. A denied object is 403.
+        Missing and row-hidden ids are omitted without distinguishing them.
+        Includes readable archived records and the company anchor. Results are
+        unique and follow the first occurrence of each requested id. This is not
+        a page: there is no cursor or total. The input bound applies before deduplication.
+        Lead names fall back to email when the full name is blank. Company logos
+        use the same revision URL as the company detail read.
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [contact, company, lead, deal, project]
+        - name: id
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: The readable references, or an empty data array.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RecordReferenceListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /users/names:
     get:
@@ -35197,7 +35351,7 @@ paths:
       operationId: getMyLinkedInReach
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: get_my_linked_in_reach, router: read_details, action: my_linkedin_reach, tier: auto_execute, scope: read, served_by: route }
-      summary: Which accounts your imported network reaches.
+      summary: Which companies your imported network reaches.
       parameters:
         - $ref: '#/components/parameters/Limit'
         - name: cursor
@@ -36055,7 +36209,7 @@ paths:
       operationId: listCompanyContracts
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: list_company_contracts, router: read_details, action: company_contracts, tier: auto_execute, scope: read, served_by: route }
-      summary: The agreements this account holds, newest first (CONTRACT-WIRE-1).
+      summary: The agreements this company holds, newest first (CONTRACT-WIRE-1).
       description: |
         Every contract anchored to this company, whatever its status.
 
@@ -42617,7 +42771,7 @@ components:
     # ---- capture connectors (per-user OAuth mail/calendar; RC-8, CAP-WIRE-1) ----
     CaptureConcernKind:
       type: string
-      enum: [reauth_required, connection_error, sync_failing, backfill_failed, sync_stalled, capture_silent]
+      enum: [reauth_required, connection_error, sync_failing, notes_grant_missing, notes_account_mismatch, backfill_failed, sync_stalled, capture_silent]
       x-extensible-enum: true
 
     DismissCaptureSilenceRequest:
@@ -44512,7 +44666,7 @@ components:
               properties:
                 commitments: { type: integer }
                 meetings: { type: integer }
-                noise: { type: integer }
+                other: { type: integer, description: Neither a commitment nor a meeting; says nothing about importance. }
         connectors:
           type: array
           items:
@@ -45239,10 +45393,10 @@ components:
         effective_candidates: { type: array, items: { $ref: '#/components/schemas/AiRouteCandidate' } }
         impact: { type: string, enum: [unchanged, model_changed, decision_changed, fallback_changed, budget_blocked, unconfigured], x-extensible-enum: true, x-go-type: string, description: 'How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.' }
         budget_exempt: { type: boolean }
-        decision_first: { type: boolean, description: 'The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.' }
+        decision_first: { type: boolean, description: 'The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor.' }
         decision_skip_reason:
           type: string
-          enum: [unbound, uncertified, local_only]
+          enum: [unbound, uncertified]
           x-extensible-enum: true
           x-go-type: string
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
@@ -45588,7 +45742,7 @@ components:
       properties:
         attempt: { type: integer }
         is_terminal: { type: boolean }
-        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
+        attempt_reason: { type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.' }
         kind: { type: string, enum: [completion, embedding, decision], x-extensible-enum: true, x-go-type: string, description: 'What this attempt asked: a chat completion, an embedding, or a decision model.' }
         tier: { type: string, description: 'The tier this attempt ran on; decide for the decision lane.' }
         provider: { type: string }
@@ -45864,6 +46018,21 @@ components:
           type: array
           items: { type: string }
           description: The notice types the app subscribes to.
+    LinkableChannels:
+      type: object
+      additionalProperties: false
+      required: [channels]
+      properties:
+        channels:
+          type: array
+          items: { $ref: '#/components/schemas/LinkableChannel' }
+    LinkableChannel:
+      type: object
+      additionalProperties: false
+      required: [slug, name]
+      properties:
+        slug: { type: string, description: The value a link request names the channel by. }
+        name: { type: string }
     LinkChannelRequest:
       type: object
       additionalProperties: false
@@ -49558,6 +49727,64 @@ components:
       additionalProperties: false
       properties:
         company_id: { type: string, format: uuid }
+
+    CustomerPayments:
+      type: object
+      required: [state, access_scope, linked_companies, invoice_count, company_count, totals, customers, data, page]
+      properties:
+        state: { $ref: '#/components/schemas/FinanceSummaryState' }
+        access_scope:
+          type: string
+          description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
+        provider: { type: string }
+        last_synced_at: { type: string, format: date-time }
+        linked_companies:
+          type: integer
+          minimum: 0
+          description: Readable, live linked companies eligible for the payment overview.
+        invoice_count: { type: integer, minimum: 0 }
+        company_count: { type: integer, minimum: 0 }
+        totals:
+          type: array
+          description: Complete overdue totals for readable companies, each in its own currency.
+          items: { $ref: '#/components/schemas/CustomerPaymentTotal' }
+        customers:
+          type: array
+          maxItems: 3
+          description: Up to three company and currency groups, oldest overdue invoice first.
+          items: { $ref: '#/components/schemas/CustomerPaymentCustomer' }
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/CustomerPaymentInvoice' }
+        page: { $ref: '#/components/schemas/PageInfo' }
+    CustomerPaymentTotal:
+      type: object
+      required: [currency, amount_minor]
+      properties:
+        currency: { type: string }
+        amount_minor: { type: integer, format: int64 }
+    CustomerPaymentCustomer:
+      type: object
+      required: [company_id, company_name, currency, amount_minor, invoice_count, oldest_days]
+      properties:
+        company_id: { type: string, format: uuid }
+        company_name: { type: string }
+        currency: { type: string }
+        amount_minor: { type: integer, format: int64 }
+        invoice_count: { type: integer, minimum: 1 }
+        oldest_days: { type: integer, minimum: 1 }
+    CustomerPaymentInvoice:
+      type: object
+      required: [invoice_id, company_id, company_name, currency, open_minor, due_at, days_overdue]
+      properties:
+        invoice_id: { type: string, format: uuid }
+        company_id: { type: string, format: uuid }
+        company_name: { type: string }
+        number: { type: [string, 'null'] }
+        currency: { type: string }
+        open_minor: { type: integer, format: int64 }
+        due_at: { type: string, format: date }
+        days_overdue: { type: integer, minimum: 1 }
 
     CompanyFinanceSummary:
       type: object
@@ -56973,11 +57200,14 @@ components:
 
     Project360Commitment:
       type: object
-      required: [activity_id, subject, due_at, assignee_id, assignee_name, overdue]
+      required: [activity_id, subject, due_at, due_has_time, assignee_id, assignee_name, overdue, version]
       properties:
         activity_id: { type: string, format: uuid }
         subject: { type: string }
         due_at: { type: [string, 'null'], format: date-time }
+        due_has_time: { type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time.' }
+        due_intent: { $ref: '#/components/schemas/IntentTime' }
+        version: { type: integer, format: int64, description: "The task row's version, which a write to the task names." }
         assignee_id: { type: [string, 'null'], format: uuid }
         assignee_name: { type: [string, 'null'] }
         overdue: { type: boolean, description: Dated and already past at `as_of`. }
@@ -57987,7 +58217,7 @@ components:
         start_intent: { $ref: '#/components/schemas/IntentTime' }
         contact_id: { type: string, format: uuid }
         attendee_email: { type: string, format: email }
-        start: { type: string, format: date-time }
+        start: { type: string, format: date-time, description: 'The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.' }
         end: { type: string, format: date-time }
         subject: { type: string, maxLength: 200 }
         location: { type: string, maxLength: 1000 }
@@ -58189,6 +58419,18 @@ components:
         contact_id: { type: string, format: uuid, description: 'The contact, one of the contact `links` you see.' }
         response: { $ref: '#/components/schemas/MeetingResponse' }
 
+    MeetingInvitationSummary:
+      type: object
+      description: >-
+        The calendar invitation mail of one meeting, folded onto it in History: how many were invited
+        and how many answered each way.
+      required: [invited, accepted, declined, tentative]
+      properties:
+        invited: { type: integer, minimum: 0, description: 'The colleagues and contacts on the meeting.' }
+        accepted: { type: integer, minimum: 0 }
+        declined: { type: integer, minimum: 0 }
+        tentative: { type: integer, minimum: 0 }
+
     Activity:
       type: object
       description: |
@@ -58354,6 +58596,14 @@ components:
             Meeting only: the answers the colleagues and the linked contacts you see gave the
             invitation, for those a calendar stated one for. A guest in `guests` carries their own
             `response`. Filled and withheld like `guests`.
+        invitation:
+          readOnly: true
+          allOf: [{ $ref: '#/components/schemas/MeetingInvitationSummary' }]
+          description: >-
+            Meeting only, on a record's History read with `collapse_copies`: who a calendar meeting
+            invited and how they answered. That read folds the event's invitation mail, updates,
+            cancellations and answers onto the meeting instead of listing them as mail rows, when
+            you may open both. Absent when `content_state` is `withheld`.
         guests_left_out:
           type: integer
           minimum: 0
@@ -58397,12 +58647,13 @@ components:
             whose provider offered none.
         capture_label:
           type: [string, 'null']
-          enum: [null, commitment, meeting, noise]
+          enum: [null, commitment, meeting, other]
           x-extensible-enum: true
           readOnly: true
           description: >-
             What this message turned out to be, from the batched capture classification. Null means
             unclassified, which is a backlog state and not a verdict of "ordinary".
+            Other means neither a commitment nor a meeting; it says nothing about importance.
         bulk_mail_attested:
           type: boolean
           readOnly: true
@@ -58482,6 +58733,12 @@ components:
           x-enum-varnames: [ActivityCallOutcomeNone, ActivityCallOutcomeReached, ActivityCallOutcomeNotReached, ActivityCallOutcomeVoicemail, ActivityCallOutcomeCallBackLater, ActivityCallOutcomePutThrough]
           description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: { type: [string, 'null'], enum: [null, booked, held, no_show, canceled], x-extensible-enum: true, description: 'Set only when kind=meeting.' }
+        meeting_notes_connection:
+          type: string
+          enum: [connect, notes_grant_missing, notes_account_mismatch]
+          x-extensible-enum: true
+          readOnly: true
+          description: A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
         invitation_status:
           type: [string, 'null']
           readOnly: true
@@ -59603,6 +59860,13 @@ components:
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
+        follow_up_task:
+          $ref: '#/components/schemas/ActivityFollowUpTask'
+          description: >-
+            Optional next step when marking a meeting held. Creates the task in the same
+            transaction, with the meeting as its source and its links and audience inherited.
+            Requires activity create authority. A meeting already held cannot add another
+            task through this outcome write.
         subject: { type: [string, 'null'], maxLength: 20000 }
         body: { type: [string, 'null'] }
         occurred_at: { type: string, format: date-time }
@@ -66321,6 +66585,21 @@ components:
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
 
+    RecordReference:
+      type: object
+      required: [id, name, archived]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: [string, 'null'] }
+        archived: { type: boolean }
+        logo: { type: [string, 'null'], description: Company logo URL; omitted for other kinds. }
+    RecordReferenceListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/RecordReference' }
     SeatName:
       type: object
       description: >
@@ -75087,7 +75366,7 @@ components:
             language. Art. 14(2)(c)-(e) requires naming them.
           items:
             type: string
-            enum: [access, rectification, erasure, restriction, objection, complain_to_authority]
+            enum: [access, rectification, erasure, restriction, portability, objection, withdraw_consent, complain_to_authority]
             x-extensible-enum: true
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
@@ -75099,6 +75378,7 @@ components:
         Who is responsible for the data, from the installation's own controller particulars, by the
         rule the mail's disclosure lines use. A part the installation has not stated is absent.
       properties:
+        legal_name: { type: string, description: 'The legal name alone, which every controller mail opens with. Absent when not stated.' }
         identity: { type: string, description: 'The legal name and postal address, as lines. Absent unless both are stated.' }
         privacy_contact: { type: string, description: 'How to reach whoever answers questions about the data.' }
         objection_route: { type: string, description: 'How to object, where the installation states a way of its own.' }
@@ -75143,6 +75423,8 @@ components:
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
+        controller: { $ref: '#/components/schemas/PrivacyInformationController' }
+        question: { $ref: '#/components/schemas/ConfirmQuestion' }
 
     RecordConfirmationPage:
       type: object
@@ -75173,6 +75455,24 @@ components:
         language:
           allOf: [{ $ref: '#/components/schemas/MailLanguage' }]
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
+        controller: { $ref: '#/components/schemas/PrivacyInformationController' }
+        question: { $ref: '#/components/schemas/ConfirmQuestion' }
+
+    ConfirmQuestion:
+      type: object
+      description: |
+        The question this link pinned, in the link's language and resolved with its purpose. The
+        page shows `ask` and offers `answers`, and sends `text` back unchanged as
+        `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+      required: [version, text, ask, answers]
+      properties:
+        version: { type: string, description: 'The published version the link pinned.' }
+        text: { type: string, description: 'The whole question as the proof records it: the ask, then each answer, one per line.' }
+        ask: { type: string, description: 'The sentence the reader answers.' }
+        answers:
+          type: array
+          items: { type: string }
+          description: 'The labels of the answers the page offers, in order.'
 
     ConfirmFieldOrigin:
       type: object
@@ -79646,6 +79946,13 @@ components:
       required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant every source below was read at.' }
+        served_stale:
+          type: boolean
+          description: |
+            True when this answer is Home's kept answer past its five-minute freshness,
+            served while the server reads it again. It still holds every access rule the
+            fresh read would apply. A client asks again a few seconds later for the fresh
+            answer. Absent or false means the answer is fresh.
         scope:
           type: string
           enum: [mine, unassigned, team, all]
@@ -79947,6 +80254,13 @@ components:
         the same admission every manager figure on this surface makes.
       required: [as_of, receipts, truncated]
       properties:
+        count_is_floor:
+          type: boolean
+          description: The shared completed-change read reached a source bound; counts remain lower bounds.
+        sources_unavailable:
+          type: array
+          items: { $ref: '#/components/schemas/WorklistSourceUnavailable' }
+          description: Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened.
         as_of: { type: string, format: date-time, description: 'The instant these were read at.' }
         since:
           type: string
@@ -80036,6 +80350,9 @@ components:
         client draws the summary alone rather than inventing something to open.
       required: [id, kind, summary, occurred_at]
       properties:
+        completed_change:
+          $ref: '#/components/schemas/MagicLine'
+          description: The canonical completed change or group shared with Home, including receipt identities and count bounds.
         system_display:
           $ref: '#/components/schemas/SystemDisplay'
         close_date_change: { $ref: '#/components/schemas/CloseDateChange' }
@@ -80620,6 +80937,13 @@ components:
             records the reader cannot both write is somebody else's decision, and
             counting it here tells them a contact is waiting on an answer they are not
             able to give.
+        soonest_lead_due:
+          type: string
+          format: date-time
+          description: |
+            When the nearest open task on a lead is due, over every task this read weighed.
+            Absent when no such task has a due time, or when the task lane was read to its
+            bound or could not be read, so an unseen task could be due sooner.
         more_available:
           type: boolean
           description: |

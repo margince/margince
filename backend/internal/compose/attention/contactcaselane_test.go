@@ -36,9 +36,9 @@ func (s *stubContactCases) inScope(q CaseQuery) []ContactCase {
 	return out
 }
 
-func (s *stubContactCases) OpenCases(_ context.Context, q CaseQuery) ([]ContactCase, error) {
+func (s *stubContactCases) OpenCases(_ context.Context, q CaseQuery) ([]ContactCase, int, error) {
 	s.asked = append(s.asked, q)
-	return s.inScope(q), nil
+	return s.inScope(q), len(s.inScope(q)), nil
 }
 
 func (s *stubContactCases) CountCases(_ context.Context, q CaseQuery) (int, error) {

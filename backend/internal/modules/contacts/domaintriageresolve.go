@@ -388,7 +388,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 	// the change the trail exists to explain, and the bus is how the surfaces
 	// that count a company's contacts learn to recount.
 	for _, one := range made {
-		if err := auditCapturedEmployment(ctx, tx, one.edge, one.contact, companyID, relationshipOriginCapture); err != nil {
+		if err := auditCapturedEmployment(ctx, tx, one.edge, one.contact, companyID, relationshipOriginCapture, ""); err != nil {
 			return 0, err
 		}
 		if err := fileEmployerTwins(ctx, tx, one.contact, by); err != nil {

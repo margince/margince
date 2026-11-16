@@ -448,3 +448,13 @@ func textFields(fields map[string]any) map[string]string {
 	}
 	return out
 }
+
+// canonicalIndustry renders an imported industry the way the store holds it.
+// A file that spells the industry another way is then no change. Text that
+// names no code compares as written.
+func canonicalIndustry(trimmed string) string {
+	if code, ok := contacts.ResolveIndustry(trimmed); ok {
+		return code
+	}
+	return trimmed
+}

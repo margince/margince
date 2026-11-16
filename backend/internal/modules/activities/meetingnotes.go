@@ -32,13 +32,12 @@ const meetingNotesSource = "meeting_notes"
 // argLimit names the row bound of a paged read.
 const argLimit = "limit"
 
-// meetingNotesRawKey holds, in the transcript's raw, the meeting and the Doc
-// revision it was read from. source_activity_id is not used: on a meeting it
-// names the task an outcome answers.
+// meetingNotesRawKey preserves the source document revision.
 const meetingNotesRawKey = "google_doc"
 
 // MeetingNotesQuery asks for the notes links on one owner's meetings.
 type MeetingNotesQuery struct {
+	Meeting      *ids.ActivityID
 	Owner        ids.UserID
 	Domains      []string
 	Since, Until time.Time
@@ -86,13 +85,14 @@ func (s *Store) DueMeetingNotesTx(ctx context.Context, tx pgx.Tx, q MeetingNotes
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, l.url FROM attachment l JOIN activity a ON a.id = l.entity_id
 		 WHERE `+meetingNotesReadable+`
+ AND (@meeting::uuid IS NULL OR a.id = @meeting)
 		   AND `+occurredday.FromSQL("a", "@since::timestamptz")+`
 		   AND `+occurredday.MeetingTookPlaceSQL("a", "@until::timestamptz")+`
 		   AND NOT EXISTS (SELECT 1 FROM activity t
 		                    WHERE t.source_system = @transcript AND t.source_id = l.url)
 		 ORDER BY a.occurred_at DESC, l.id
 		 LIMIT @limit`, pgx.NamedArgs{
-		"owner": q.Owner, "domains": q.Domains, "since": q.Since, "until": q.Until,
+		KindMeeting: q.Meeting, "owner": q.Owner, "domains": q.Domains, "since": q.Since, "until": q.Until,
 		"transcript": transcriptSourceSystem, argLimit: q.Limit,
 	})
 	if err != nil {
@@ -126,7 +126,7 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 	err := tx.QueryRow(ctx, `
 		SELECT l.filename FROM attachment l JOIN activity a ON a.id = l.entity_id
 		 WHERE a.id = @meeting AND l.url = @url AND `+meetingNotesReadable+`
-		   FOR SHARE OF a`, pgx.NamedArgs{
+		   FOR UPDATE OF a`, pgx.NamedArgs{
 		"meeting": in.Meeting, "url": in.URL, "owner": in.Owner, "domains": in.Domains,
 	}).Scan(&linkName)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -156,7 +156,8 @@ func (s *Store) LandMeetingNotesTx(ctx context.Context, tx pgx.Tx, in MeetingNot
 	transcript := LogActivityInput{
 		Kind: KindMeeting, Subject: &title, Body: &body, OccurredAt: &meeting.OccurredAt,
 		SourceSystem: new(transcriptSourceSystem), SourceID: &in.URL,
-		Source: meetingNotesSource, Links: filedUnder(meeting),
+		Source: meetingNotesSource, Links: linksOfKinds(meeting, []string{linkEntityContact}),
+		recordsMeeting: &in.Meeting, keepRecordedOutcome: true,
 		Raw: &map[string]any{meetingNotesRawKey: map[string]any{
 			"meeting_id": in.Meeting.String(), "revision_id": in.Revision,
 		}},

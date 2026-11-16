@@ -144,9 +144,12 @@ A row with **no owner** (`owner_id IS NULL`) is nobody's to change until someone
 (`EnsureClaimable`, `POST /v1/records/{record_type}/{id}/claim`). Claiming makes the claimer the
 owner. Everyone can read the row the whole time.
 
-A record carries the answer on the wire: `writable` on a contact, company, lead, deal or project
-says whether **this** caller may change **this** row. So a client builds its edit buttons from the
-same question the server answers. It is a signal for the screen, and never the check itself.
+A contact, company, lead, deal or project carries `writable`, which reports this caller's row update authority and is false for archived records.
+Clients also check the seat and object grant before offering an edit.
+The flag guides the screen; mutation checks still authorize every write.
+
+Field masks use raw update authority, which can stay true on an archived record whose `writable` flag is false.
+Archiving does not remove an owner's authority over fields they may still read.
 
 ### Activities: who can find them and who can read them
 

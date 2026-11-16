@@ -82,13 +82,14 @@ const render = (ui: ReactNode) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
+  const rendered = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <RecordShell>{ui}</RecordShell>
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...rendered, client };
 };
 
 /**
@@ -108,7 +109,9 @@ function byIdCalls(fetchMock: { mock: { calls: unknown[][] } }): string[][] {
       "http://localhost",
     );
     const named = url.searchParams.getAll("id");
-    return url.pathname.endsWith("/companies") && named.length > 0
+    return url.pathname.endsWith("/records/references") &&
+      url.searchParams.get("kind") === "company" &&
+      named.length > 0
       ? [named]
       : [];
   });
@@ -151,25 +154,51 @@ function stubBackend(opts: {
         rows: [],
       });
     }
+    const referenceURL = new URL(url, "http://localhost");
+    if (referenceURL.pathname === "/v1/records/references") {
+      const ids = referenceURL.searchParams.getAll("id");
+      if (referenceURL.searchParams.get("kind") === "company") {
+        if (ids.some((id) => opts.refuse?.includes(id))) {
+          return jsonResponse(
+            { code: "permission_denied", title: "permission denied" },
+            403,
+          );
+        }
+        return jsonResponse({
+          data: ids.flatMap((id) => {
+            const company = opts.byId?.[id];
+            return company
+              ? [
+                  {
+                    id,
+                    name: company.display_name,
+                    archived: false,
+                    logo: company.logo_url,
+                  },
+                ]
+              : [];
+          }),
+        });
+      }
+      return jsonResponse({
+        data:
+          opts.project && ids.includes(opts.project.id)
+            ? [
+                {
+                  id: opts.project.id,
+                  name: opts.project.name,
+                  archived: false,
+                },
+              ]
+            : [],
+      });
+    }
     const byId = /\/companies\/([^/?]+)/.exec(url);
     if (byId) {
       const company = opts.byId?.[byId[1]];
       return company
         ? jsonResponse(company)
         : jsonResponse({ code: "not_found", title: "not found" }, 404);
-    }
-    const named = new URL(url, "http://localhost").searchParams.getAll("id");
-    if (url.includes("/companies") && named.length > 0) {
-      if (named.some((id) => opts.refuse?.includes(id))) {
-        return jsonResponse(
-          { code: "permission_denied", title: "permission denied" },
-          403,
-        );
-      }
-      return jsonResponse({
-        data: named.flatMap((id) => (opts.byId?.[id] ? [opts.byId[id]] : [])),
-        page: { next_cursor: null },
-      });
     }
     if (url.includes("/companies")) {
       if (opts.pageGate) {
@@ -462,34 +491,38 @@ describe("the board past the picker's first page", () => {
     expect(screen.queryByText("o-refused")).toBeNull();
   });
 
-  // The two reads are issued together and settle in any order. While the page
-  // read is still out every company a loaded deal names looks unresolved, and
-  // asking per id then is a request each for names the page is about to carry
-  // — a hundred of them on a cold board, none of which can be un-sent.
-  it("asks for no company by id until the picker's page has answered", async () => {
+  // Earlier labels cost a targeted batch even when the picker later includes them.
+  it("names companies before the picker's page answers", async () => {
     let openPage = () => {};
     const pageGate = new Promise<void>((resolve) => {
       openPage = resolve;
     });
+    const company = { id: "o-north", display_name: "Northgate Systems" };
     const fetchMock = stubBackend({
-      deals: [deal({ company_id: "o-offpage" })],
-      page: [{ id: "o1", display_name: "Acme Corp" }],
-      byId: {
-        "o-offpage": { id: "o-offpage", display_name: "Northgate Systems" },
-      },
+      deals: [deal({ company_id: company.id })],
+      page: [company],
+      byId: { [company.id]: company },
       pageGate,
     });
     vi.stubGlobal("fetch", fetchMock);
-    render(<DealsScreen />);
+    const { client } = render(<DealsScreen />);
+    // The board's company page, read once /me names the reader scope.
+    const boardCompaniesStatus = (held: typeof client) =>
+      held
+        .getQueryCache()
+        .getAll()
+        .find((q) => q.queryKey[0] === "companies" && q.queryKey[1] !== "")
+        ?.state.status;
 
-    // The board has the deals and not the page: the card is on screen with no
-    // company on it, and nothing has been asked for by id.
-    await boardCard("Fleet retrofit");
-    expect(byIdCalls(fetchMock)).toEqual([]);
+    const card = await boardCard("Fleet retrofit");
+    expect(await within(card).findByText("Northgate Systems")).toBeTruthy();
+    expect(boardCompaniesStatus(client)).toBe("pending");
+    expect(byIdCalls(fetchMock)).toEqual([[company.id]]);
 
     openPage();
-    expect(await screen.findByText("Northgate Systems")).toBeTruthy();
-    expect(byIdCalls(fetchMock)).toEqual([["o-offpage"]]);
+    await waitFor(() => expect(boardCompaniesStatus(client)).toBe("success"));
+    expect(within(card).getByText("Northgate Systems")).toBeTruthy();
+    expect(byIdCalls(fetchMock)).toEqual([[company.id]]);
   });
 
   // One read for every company the page did not hold, not one each: a cold
@@ -521,8 +554,8 @@ describe("the board past the picker's first page", () => {
         return String(first instanceof Request ? first.url : first);
       })
       .find((url) => url.includes("id=o-north"));
-    expect(read).toContain("include_archived=true");
-    expect(read).toContain("include_anchor=true");
+    expect(read).toContain("/records/references?");
+    expect(read).toContain("kind=company");
   });
 });
 

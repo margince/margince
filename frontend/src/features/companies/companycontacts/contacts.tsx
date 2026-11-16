@@ -115,6 +115,7 @@ export function CompanyContactsList({
       async (
         query: ListQuery,
         cursor: string | null,
+        signal?: AbortSignal,
       ): Promise<ListPage<CompanyContact>> => {
         // The declared filters, named one by one rather than spread. `filters`
         // carries whatever the address holds, and the address is the reader's
@@ -122,6 +123,7 @@ export function CompanyContactsList({
         // from a pasted URL overwrite the ones this function just computed,
         // which breaks paging with a 422 the reader cannot explain.
         const { data, error } = await api.GET("/companies/{id}/contacts", {
+          signal,
           params: {
             path: { id: companyId },
             query: {

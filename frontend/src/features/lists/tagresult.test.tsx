@@ -12,6 +12,7 @@ import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { TagResultScreen } from "./tagresult";
@@ -47,6 +48,12 @@ afterEach(() => {
 describe("the tag page names what carries the word", () => {
   it("lists the records themselves, by name", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 1, deals: 1 }),
       "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
@@ -73,6 +80,12 @@ describe("the tag page names what carries the word", () => {
 
   it("opens the record the row names", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
       "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
@@ -91,6 +104,12 @@ describe("the tag page names what carries the word", () => {
   // reporting zero, is what made the page read as an inventory of absences.
   it("lists and opens the leads that carry the word", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({
         contacts: 0,
         companies: 0,
@@ -113,6 +132,12 @@ describe("the tag page names what carries the word", () => {
 
   it("draws no group for a type nothing carries", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
       "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
@@ -132,6 +157,12 @@ describe("the tag page names what carries the word", () => {
   // blank row: a reader cannot press what they cannot see.
   it("names a record carrying no name", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
       "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "" }] }),
@@ -152,6 +183,12 @@ describe("the tag page names what carries the word", () => {
   it("does not ask for the rows of a type carrying none", async () => {
     let dealCalls = 0;
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 1, companies: 0, deals: 0 }),
       "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
@@ -175,6 +212,12 @@ describe("the tag page names what carries the word", () => {
   // count therefore promised rows the list would not return.
   it("counts the rows it shows, not the tag's usage", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 3, companies: 0, deals: 0 }),
       "GET /contacts": () =>
         jsonResponse({ data: [{ id: "p-1", full_name: "Katrin Hofmann" }] }),
@@ -194,6 +237,12 @@ describe("the tag page names what carries the word", () => {
   // tells a reader they may not see records that are simply unfetched.
   it("does not report a failed read as records being withheld", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 2, companies: 0, deals: 0 }),
       "GET /contacts": () =>
         new Response("nope", {
@@ -222,6 +271,12 @@ describe("the tag page names what carries the word", () => {
   // promising rows the groups correctly do not show.
   it("does not total the assignments of a retired word", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: () =>
         jsonResponse({
           id: TAG,
@@ -249,6 +304,12 @@ describe("the tag page names what carries the word", () => {
 
   it("says so when the word is on nothing at all", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       [`GET /tags/${TAG}`]: tagRead({ contacts: 0, companies: 0, deals: 0 }),
     });
     render(
@@ -265,7 +326,14 @@ describe("the tag page names what carries the word", () => {
   // `#/tags` names no tag, and the page that lists them lives in Settings. The
   // bare address redirects there, so Back never lands on an empty page again.
   it("sends the bare address to the page that lists tags", () => {
-    installFetchStub({});
+    installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
+    });
     window.location.hash = "#/tags";
     render(
       <StoryProviders>

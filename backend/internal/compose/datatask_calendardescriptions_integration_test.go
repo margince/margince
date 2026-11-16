@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
@@ -51,20 +50,7 @@ func meetingBodyOf(t *testing.T, e *integration.Env, id ids.UUID) string {
 
 func runCalendarDescriptionTask(ctx context.Context, t *testing.T, e *integration.Env, task datatask.Task) {
 	t.Helper()
-	now := clocktest.Now(t)
-	engine, err := datatask.New(e.Pool, []datatask.Task{task}, "test", func() time.Time { return now },
-		func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := engine.Seed(ctx); err != nil {
-		t.Fatal(err)
-	}
-	for range 20 {
-		if _, err := engine.Execute(ctx); err != nil {
-			t.Fatal(err)
-		}
-	}
+	e.RunDataTask(ctx, t, task)
 }
 
 func calendarDescriptionEstimate(ctx context.Context, t *testing.T, e *integration.Env) int64 {

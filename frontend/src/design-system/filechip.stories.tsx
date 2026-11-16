@@ -36,6 +36,13 @@ export const OtherKind: Story = {
 
 // A private message's file, recorded by name, size and type with no bytes kept:
 // the same card, quieter, and not a link.
+export const Link: Story = {
+  args: {
+    link: "https://docs.google.com/document/d/abc/edit",
+    filename: "Kickoff - Notes by Gemini",
+  },
+};
+
 export const Withheld: Story = {
   args: {
     withheld: "Not kept, because the message is private.",

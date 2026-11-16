@@ -856,7 +856,7 @@ argument. The list members endpoint has no such parameter. It takes `entity_id`,
 
 ## Declare a report count or breakdown
 
-A unit can add a number to Reports and Home. A count says how many live records a population holds. A breakdown splits
+A unit can add a number to Reports. A count says how many live records a population holds. A breakdown splits
 that count by one field.
 
 ```go

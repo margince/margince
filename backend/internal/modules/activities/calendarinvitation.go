@@ -35,6 +35,37 @@ import (
 // given on the calendar, so no reminder task is filed for it.
 var answerableInvitationSQL = "(a.calendar_uid IS NOT NULL AND " + calendarMethodInSQL(calendarmethod.Answerable()) + ")"
 
+// mailNamesMeetingSQL is whether the calendar mail on alias a is about the
+// meeting whose identity key is key. A mail naming one occurrence of a series
+// (RECURRENCE-ID) is about that occurrence only; one naming none is about all.
+func mailNamesMeetingSQL(key string) string {
+	return `(` + meetingUIDOfKeySQL(key) + ` = a.calendar_uid
+	  AND (` + mailOccurrenceSQL + ` = '' OR ` + key + ` = a.calendar_uid || '/' || ` + mailOccurrenceSQL + `))`
+}
+
+// mailOccurrenceSQL is the calendar mail's RECURRENCE-ID on alias a, spelled as
+// MeetingIdentityKey spells an occurrence, or ” for none. The parser writes an
+// all-day occurrence as YYYYMMDD; the key holds its midnight in UTC.
+const mailOccurrenceSQL = `(CASE WHEN a.calendar_event->>'occurrence' ~ '^[0-9]{8}$'
+	THEN to_char(to_date(a.calendar_event->>'occurrence', 'YYYYMMDD'), 'YYYY-MM-DD') || 'T00:00:00Z'
+	ELSE coalesce(a.calendar_event->>'occurrence', '') END)`
+
+// invitationNeverOwedSQL is a calendar invitation no verdict can make owed. A
+// colleague's invitation waits on nobody's written reply. Neither does one
+// whose event has begun by asOf: every meeting it names has begun.
+// Every reader of "owed" applies it, so the deal card, the Worklist and the
+// reminder writer agree.
+func invitationNeverOwedSQL(asOf string) string {
+	meetingOfUID := `FROM activity_identity ai JOIN activity mt ON mt.id = ai.activity_id
+	        WHERE ai.identity_kind = '` + IdentityKindMeeting + `'
+	          AND ` + mailNamesMeetingSQL("ai.identity_key") + `
+	          AND mt.kind = 'meeting' AND mt.archived_at IS NULL`
+	return `(` + calendarInvitationSQL + ` AND (a.invitation_sender IS NOT NULL
+	 OR (a.calendar_uid IS NOT NULL
+	     AND EXISTS (SELECT 1 ` + meetingOfUID + `)
+	     AND NOT EXISTS (SELECT 1 ` + meetingOfUID + ` AND NOT ` + occurredday.BegunSQL("mt", asOf) + `))))`
+}
+
 // openInvitation is one invitation the reader may still answer.
 type openInvitation struct {
 	uid      string
@@ -88,7 +119,7 @@ func openInvitationsTx(
 		                ORDER BY p.created_at LIMIT 1) AS response
 		         FROM activity_identity ai JOIN activity mt ON mt.id = ai.activity_id
 		        WHERE ai.identity_kind = '`+IdentityKindMeeting+`'
-		          AND `+meetingUIDOfKeySQL("ai.identity_key")+` = a.calendar_uid
+		          AND `+mailNamesMeetingSQL("ai.identity_key")+`
 		          AND mt.kind = 'meeting' AND mt.archived_at IS NULL AND mt.restricted_at IS NULL
 		        ORDER BY `+ahead+` DESC, CASE WHEN `+ahead+` THEN mt.occurred_at END, mt.occurred_at DESC
 		        LIMIT 1) m ON true

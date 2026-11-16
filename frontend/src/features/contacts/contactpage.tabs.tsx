@@ -104,6 +104,7 @@ export function ContactTabPanel({
   onBriefMeeting,
   onAction,
   onWrite,
+  onResearch,
   refusedReasonId,
 }: Readonly<{
   tab: ContactTab;
@@ -118,6 +119,8 @@ export function ContactTabPanel({
   // Opens the page's composer. The Network tab drops it while the header's
   // Email verb is refused, so the map offers no write the header would not.
   onWrite?: () => void;
+  // Opens the page's public-source research drawer, from the Research tab.
+  onResearch?: () => void;
   // The page's one sentence about why this contact takes no changes, for
   // the tab whose verb writes the record: the upload on Documents.
   refusedReasonId?: string;
@@ -158,7 +161,7 @@ export function ContactTabPanel({
         />
       );
     case "research":
-      return <ContactResearchTab view={view} />;
+      return <ContactResearchTab view={view} onResearch={onResearch} />;
     case "documents":
       return (
         <ContactFilesTab

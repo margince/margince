@@ -45,6 +45,7 @@ import { importRoutes } from "./imports";
 import * as insight from "./insight";
 import * as lists from "./lists";
 import * as records from "./records";
+import { recordReferences } from "./references";
 import { type MockRoute, notFound, page, reply } from "./server";
 import * as session from "./session";
 import * as work from "./work";
@@ -96,6 +97,21 @@ export const routes: readonly MockRoute[] = [
     method: "GET",
     path: "/installation/configuration",
     handle: reply(session.installationConfiguration),
+  },
+  {
+    method: "GET",
+    path: "/finance/customer-payments",
+    handle: reply({
+      access_scope: "disconnected",
+      state: "no_connection",
+      linked_companies: 0,
+      company_count: 0,
+      invoice_count: 0,
+      totals: [],
+      customers: [],
+      data: [],
+      page: { has_more: false },
+    }),
   },
   // An installation with the demo source composed in and nothing connected.
   {
@@ -271,9 +287,10 @@ export const routes: readonly MockRoute[] = [
   {
     method: "POST",
     path: "/leads/l-1/promote",
-    handle: reply(records.promotedLead),
+    handle: records.promoteLead,
   },
   { path: "/users", handle: reply(page(seats)) },
+  { method: "GET", path: "/records/references", handle: recordReferences },
   { path: "/users/names", handle: records.userNames },
   { path: "/pipelines", handle: reply(records.pipelines) },
   {
@@ -430,7 +447,6 @@ export const routes: readonly MockRoute[] = [
     path: (path) => path.includes("/context"),
     handle: reply({ anchor: { type: "contact", id: "x" }, sections: [] }),
   },
-  { path: "/digest", handle: reply(insight.digest) },
   { path: "/capture/activity", handle: reply(captureActivity) },
   { path: "/capture/activity/workspace", handle: reply(captureActivity) },
   {

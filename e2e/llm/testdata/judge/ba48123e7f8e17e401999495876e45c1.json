@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer provides only a conversion percentage (0%) but gives no count of meetings held and no count of opportunities created.",
+  "model": "claude-haiku-4-5-20251001",
+  "criterion": "Criterion 1. The answer gives how many meetings the user held and how many of them became an opportunity, as numbers read from Margince. Answer no if it gives no count, or only one of the two.",
+  "answer": "Your meeting-to-opportunity conversion is 0% this quarter."
+}

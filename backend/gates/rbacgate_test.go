@@ -421,7 +421,6 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/contacts:EnqueueDomainSplit":           "the company twin of EnqueueIdentityConflict above, admitted for the same reason and with the same reach. Capture's ensure asks the domain lane about a sender's own domain and its base; when those two are registered to two different companies it hands the pair to compose's raiseDomainSplit, under the connector principal with no human in the call. Recording that two domains name two DIFFERENT companies writes no domain onto either of them, so it can neither merge nor disclose — there is nothing for object-RBAC to admit, and the human authority sits on the queue's own disposition. It answers a boolean and never record data",
 	"internal/modules/contacts:SignatureCandidates":          "enrich-backlog read driven by the worker sweep under the workspace GUC, no human principal (ADR-0063 §2.9); lists live contacts whose newest readable inbound mail is past their read watermark",
 	"internal/modules/contacts:OlderSignatureSources":        "the same sweep's read of one candidate's older readable mail, under the workspace GUC with no human principal; it applies the candidate query's own mail tests and returns only IDs of sources the pass may already read",
-	"internal/modules/contacts:MarkSignatureRead":            "the same sweep's read cursor: it records WHICH mail the model was already shown for a contact, so the pass stops paying for the same empty signature nightly — a bookkeeping row with no record data, written under the workspace GUC with no human principal to admit",
 	"internal/modules/contacts:CompanyNameCandidates":        "promotion-backlog read driven by the nightly sweep under the workspace GUC, no human principal (PO-F-2a); reads only provisionally-named companies and the signature evidence naming them",
 
 	// comms: delivery machinery, not the message. StageTx runs in the caller's
@@ -769,12 +768,13 @@ var authDecisionVerbs = []string{"Require", "Ensure", "Admit", "Hold"}
 // about the ROW rather than about the caller, so the sentinel heuristic would
 // keep proposing them.
 var authNotDecisions = map[string]string{
-	"MasksAnyRowOf":   "answers a BOOLEAN about the caller's role and returns no error of its own. The refusal is the caller's: deals turns it into a parse error on a sort over a withheld column",
-	"VisibleSubset":   "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
-	"WritableSubset":  "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
-	"LockSubjectLive": "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
-	"RefuseRow":       "relays a refusal the store already decided on a rule the record holds, and records it; it reads no grant and decides nothing",
-	"StampWritable":   "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
+	"MasksAnyRowOf":            "answers a BOOLEAN about the caller's role and returns no error of its own. The refusal is the caller's: deals turns it into a parse error on a sort over a withheld column",
+	"VisibleSubset":            "OMITS the rows the caller may not see rather than refusing, and answers an empty map for a caller holding no read at all. Its callers use the set to withhold a reference, which is a projection decision made above it",
+	"WritableSubset":           "the write half of the same shape: an empty map for a caller with no update verb, and omission rather than refusal for the rest",
+	"LockSubjectLive":          "takes a row lock and refuses a table outside the closed set or a row already archived. It never reads the principal: the authority probe is a separate call the caller makes first, and its own comment says so",
+	"RefuseRow":                "relays a refusal the store already decided on a rule the record holds, and records it; it reads no grant and decides nothing",
+	"ProjectCompanyPredicates": "answers a caller without relationship.read with EdgesRead false rather than an error, so its callers withhold the company section. It refuses nobody; the ErrPermissionDenied it reads is EdgeReadScope's, turned into that omission",
+	"StampWritable":            "stamps a per-row boolean the CLIENT reads to decide what to offer. It removes no row and refuses no caller — its comment separates what the client is told from what the server enforces",
 }
 
 // gatekit:fixture the decisions whose names do not carry a refusal verb, each

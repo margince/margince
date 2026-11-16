@@ -11,6 +11,7 @@ import {
   PROJECT_DEALS_ANCHOR,
 } from "./projectreadings";
 import {
+  type Commitment,
   CommitmentsCard,
   type Project360,
   ProjectContractsCard,
@@ -36,7 +37,7 @@ export function ProjectCards({
   // The deals card's verb, built by the page that may reach the deal flow.
   newDeal?: ReactNode;
   // The complete box of one open task, for a reader who may write tasks.
-  tick?: (activityId: string) => ReactNode;
+  tick?: (commitment: Commitment) => ReactNode;
   onOpenTask: (activityId: string) => void;
   onOpenTasks: () => void;
   onOpenDocuments: () => void;

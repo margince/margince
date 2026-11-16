@@ -5,6 +5,7 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { ListQuery } from "../../components/listquery";
 import type { MessageKey } from "../../i18n/en";
+import { useHealthScope } from "../../lib/healthscope";
 import { LEAD_STATUS_COUNTS_KEY, leadTerminalKey } from "../../lib/leadkeys";
 import { throwProblem, unwrap } from "../../lib/problem";
 import type { Lead } from "./leadpresentation";
@@ -95,11 +96,16 @@ export function leadStatusReportFilters(
 // mutation refreshes the terminal figures with the cards.
 export function useLeadStatusCounts(query: ListQuery) {
   const filters = leadStatusReportFilters(query);
+  // Counts over the rows one reader scope may see.
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: [...LEAD_STATUS_COUNTS_KEY, filters],
-    enabled: terminalCountsWithheldBecause(query) === undefined,
-    queryFn: async (): Promise<Map<string, number> | null> => {
+    queryKey: [...LEAD_STATUS_COUNTS_KEY, readerScope ?? "", filters],
+    enabled:
+      readerScope !== undefined &&
+      terminalCountsWithheldBecause(query) === undefined,
+    queryFn: async ({ signal }): Promise<Map<string, number> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
+        signal,
         params: { path: { report: "leads-by-status" } },
         body: {
           group_by: ["status"],
@@ -143,15 +149,26 @@ export function useTerminalLeads(
 ) {
   const params = terminalLeadsQueryParams(query, status);
   const dialStatus = query.filters.status;
+  const readerScope = useHealthScope();
   return useInfiniteQuery({
     // The dial's own status, which `params` overwrites, keeps an excluded
-    // column off the cached rows of an unfiltered one.
-    queryKey: [...leadTerminalKey(status), params, dialStatus ?? null],
-    enabled: enabled && (!dialStatus || dialStatus === status),
+    // column off the cached rows of an unfiltered one. The reader scope keeps
+    // rows read under old grants off the column.
+    queryKey: [
+      ...leadTerminalKey(status),
+      readerScope ?? "",
+      params,
+      dialStatus ?? null,
+    ],
+    enabled:
+      enabled &&
+      readerScope !== undefined &&
+      (!dialStatus || dialStatus === status),
     initialPageParam: null as string | null,
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam, signal }) => {
       return unwrap(
         await api.GET("/leads", {
+          signal,
           params: {
             query: { ...params, limit: 50, cursor: pageParam ?? undefined },
           },

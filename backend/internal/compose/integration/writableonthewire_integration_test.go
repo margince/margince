@@ -18,7 +18,9 @@ package integration
 // nothing here would change if a client ignored the flag entirely.
 
 import (
+	"context"
 	"maps"
+	"strconv"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -47,7 +49,7 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 	myDeal := e.SeedDeal(t, "My deal", pipeline, open, &e.Rep1)
 	theirDeal := e.SeedDeal(t, "Their deal", pipeline, open, &e.Rep3)
 
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+	rep := asFullSeat(e, AccountRepPerms)
 
 	// contact
 	for _, row := range []struct {
@@ -116,7 +118,7 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 // the owner in the moment right after they saved.
 func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 	e := Setup(t)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, companyWriterPermsFor(t))
+	rep := asFullSeat(e, companyWriterPermsFor(t))
 	name := "Echo Test GmbH"
 
 	created, err := e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
@@ -126,8 +128,8 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 		t.Fatalf("creating the company: %v", err)
 	}
 	if created.Writable == nil || !*created.Writable {
-		t.Errorf("the CREATE echo reports writable=%v for the row its own caller just made and owns",
-			created.Writable)
+		t.Errorf("the CREATE echo reports writable=%s for the row its own caller just made and owns",
+			flagText(created.Writable))
 	}
 
 	changed := "Echo Test GmbH II"
@@ -137,8 +139,8 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 		t.Fatalf("updating the company: %v", err)
 	}
 	if updated.Writable == nil || !*updated.Writable {
-		t.Errorf("the UPDATE echo reports writable=%v for a row the same caller just wrote",
-			updated.Writable)
+		t.Errorf("the UPDATE echo reports writable=%s for a row the same caller just wrote",
+			flagText(updated.Writable))
 	}
 }
 
@@ -148,7 +150,7 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 // the server declines.
 func TestAnArchivedRecordIsNotWritableOnTheWire(t *testing.T) {
 	e := Setup(t)
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, companyWriterPermsFor(t))
+	rep := asFullSeat(e, companyWriterPermsFor(t))
 	created, err := e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
 		DisplayName: "Archived Co", Source: "manual",
 	})
@@ -177,7 +179,7 @@ func TestAListPageCarriesWritabilityOnEveryRow(t *testing.T) {
 	mine := e.SeedContact(t, "Mine on the page", &e.Rep1)
 	theirs := e.SeedContact(t, "Theirs on the page", &e.Rep3)
 
-	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
+	rep := asFullSeat(e, AccountRepPerms)
 	page, _, err := e.Contacts.ListContacts(rep, contacts.ListContactsInput{})
 	if err != nil {
 		t.Fatal(err)
@@ -202,6 +204,19 @@ func TestAListPageCarriesWritabilityOnEveryRow(t *testing.T) {
 		t.Fatalf("the list returned %d of the %d seeded rows — the fixture is not what this asserts on",
 			seen, len(want))
 	}
+}
+
+// asFullSeat binds Rep1 on a full seat. A seatless context reads as a read seat,
+// which is offered no write, so every row would report writable=false.
+func asFullSeat(e *Env, perms principal.Permissions) context.Context {
+	return OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), principal.SeatFull)
+}
+
+func flagText(flag *bool) string {
+	if flag == nil {
+		return "absent"
+	}
+	return strconv.FormatBool(*flag)
 }
 
 // companyWriterPermsFor is AccountRepPerms plus company.update. No shipped rep

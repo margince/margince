@@ -2,6 +2,8 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import type { components } from "../../api/schema";
+import { stable } from "../../format/collate";
 import { en } from "../../i18n/en";
 import { briefKey } from "../../lib/workkeys";
 import { ranked } from "../../testing/brief.fixtures";
@@ -16,6 +18,18 @@ afterEach(() => {
 // The opener counts the run's suggestions, so its words depend on the run.
 const findOpener = () => screen.findByText(/^Review (\d+ )?deal suggestions?$/);
 
+function referenceAnswer(
+  query: URLSearchParams,
+  references: readonly components["schemas"]["RecordReference"][],
+) {
+  expect(query.get("kind")).toBe("deal");
+  const ids = query.getAll("id");
+  expect(ids.length).toBeGreaterThan(0);
+  return jsonResponse({
+    data: references.filter((reference) => ids.includes(reference.id)),
+  });
+}
+
 it("counts the suggestions and opens the stored run without turning them into work or loading names while closed", async () => {
   const user = userEvent.setup();
   const calls = stubApi({
@@ -29,12 +43,19 @@ it("counts the suggestions and opens the stored run without turning them into wo
           },
         ],
       }),
+    "GET /records/references": (_body, query) => {
+      expect(query.getAll("id")).toEqual(["d-1"]);
+      return referenceAnswer(query, [
+        { id: "d-1", name: "Acme rollout", archived: false },
+      ]);
+    },
     "GET /deals/d-1": () => jsonResponse({ id: "d-1", name: "Acme rollout" }),
   });
   const { container } = render(<BriefSuggestions />);
   const opener = await findOpener();
   expect(opener.textContent).toBe("Review 1 deal suggestion");
   expect(calls.some((call) => call.path.startsWith("/deals"))).toBe(false);
+  expect(calls.some((call) => call.path === "/records/references")).toBe(false);
   await user.click(opener);
   expect(
     (await screen.findByRole("link", { name: "Acme rollout" })).getAttribute(
@@ -79,12 +100,18 @@ it("never displays stored findings for a deal the current read refuses", async (
         ...ranked,
         items: [{ ...ranked.items[0], finding: "Hidden buyer context" }],
       }),
+    "GET /records/references": (_body, query) => {
+      expect(query.getAll("id")).toEqual(["d-1"]);
+      return referenceAnswer(query, []);
+    },
     "GET /deals/d-1": () => jsonResponse({}, 404),
   });
   const { container } = render(<BriefSuggestions />);
   await user.click(await findOpener());
   await waitFor(() =>
-    expect(calls.some((call) => call.path === "/deals/d-1")).toBe(true),
+    expect(calls.some((call) => call.path === "/records/references")).toBe(
+      true,
+    ),
   );
   expect(container.textContent).not.toContain("Hidden buyer context");
   expect(container.textContent).not.toContain("d-1");
@@ -102,6 +129,15 @@ it("offers retry for a failed name read and restores the deal only after success
           { ...ranked.items[0], finding: "Buyer requested a rollout plan." },
         ],
       }),
+    "GET /records/references": (_body, query) => {
+      expect(query.get("kind")).toBe("deal");
+      expect(query.getAll("id")).toEqual(["d-1"]);
+      return fails
+        ? jsonResponse({}, 503)
+        : referenceAnswer(query, [
+            { id: "d-1", name: "Acme rollout", archived: false },
+          ]);
+    },
     "GET /deals/d-1": () =>
       fails
         ? jsonResponse({}, 503)
@@ -124,6 +160,11 @@ it("offers retry for a failed name read and restores the deal only after success
 // anything; `finding` is per deal. Those two facts are three different states,
 // and only one of them is a suggestion with something to read.
 const DEALS = {
+  "GET /records/references": (_body: unknown, query: URLSearchParams) =>
+    referenceAnswer(query, [
+      { id: "d-1", name: "Acme rollout", archived: false },
+      { id: "d-2", name: "Globex renewal", archived: false },
+    ]),
   "GET /deals/d-1": () => jsonResponse({ id: "d-1", name: "Acme rollout" }),
   "GET /deals/d-2": () => jsonResponse({ id: "d-2", name: "Globex renewal" }),
 };
@@ -223,6 +264,10 @@ it("drops a deal the reader may no longer open from the quiet list as well", asy
   const user = userEvent.setup();
   stubApi({
     "GET /brief": () => jsonResponse(twoDeals({ annotated_at: null })),
+    "GET /records/references": (_body, query) =>
+      referenceAnswer(query, [
+        { id: "d-2", name: "Globex renewal", archived: false },
+      ]),
     "GET /deals/d-1": () => jsonResponse({}, 404),
     "GET /deals/d-2": DEALS["GET /deals/d-2"],
   });
@@ -275,18 +320,22 @@ it.each(["", "   \n\t "])(
 // is no list for it to describe, and it must not stand over an empty one.
 it("draws no quiet line when every deal under it is one the reader may no longer open", async () => {
   const user = userEvent.setup();
+  const referencedIDs: string[] = [];
   const calls = stubApi({
     "GET /brief": () => jsonResponse(twoDeals({ annotated_at: null })),
+    "GET /records/references": (_body, query) => {
+      referencedIDs.push(...query.getAll("id"));
+      return referenceAnswer(query, []);
+    },
     "GET /deals/d-1": () => jsonResponse({}, 404),
     "GET /deals/d-2": () => jsonResponse({}, 404),
   });
   const { container } = render(<BriefSuggestions />);
   await user.click(await findOpener());
   await waitFor(() =>
-    expect(
-      calls.filter((call) => call.path.startsWith("/deals/")),
-    ).toHaveLength(2),
+    expect([...referencedIDs].sort(stable)).toEqual(["d-1", "d-2"]),
   );
+  expect(calls.some((call) => call.path === "/records/references")).toBe(true);
   await waitFor(() =>
     expect(screen.queryByText(en["brief.suggestions.notAnnotated"])).toBeNull(),
   );

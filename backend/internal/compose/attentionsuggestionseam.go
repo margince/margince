@@ -22,23 +22,26 @@ import (
 // The open state is a literal, so one plan serves every reader.
 type attentionDealSuggestions struct{ store *deals.Store }
 
+// OpenSuggestions' page is complete when the list has no next cursor; the list
+// and CountOpenSuggestions share one where clause, openSuggestionWhere.
 func (a attentionDealSuggestions) OpenSuggestions(
 	ctx context.Context, owners *storekit.OwnerSet, limit int,
-) ([]crmcontracts.DealSuggestion, error) {
+) ([]crmcontracts.DealSuggestion, bool, error) {
 	var list []deals.Suggestion
+	var next string
 	err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
 		var err error
-		list, _, err = a.store.ListSuggestions(ctx, deals.SuggestionQuery{ScopeOwners: owners, Limit: limit})
+		list, next, err = a.store.ListSuggestions(ctx, deals.SuggestionQuery{ScopeOwners: owners, Limit: limit})
 		return err
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	out := make([]crmcontracts.DealSuggestion, 0, len(list))
 	for _, suggestion := range list {
 		out = append(out, deals.SuggestionWire(suggestion))
 	}
-	return out, nil
+	return out, next == "", nil
 }
 
 func (a attentionDealSuggestions) CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error) {

@@ -1,15 +1,8 @@
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
 import { EntityRef } from "../../components/entityref";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "../../components/listquery";
+import { ListTable, useListQuery } from "../../components/listquery";
 import {
   createdColumn,
   lastActivityColumn,
@@ -25,9 +18,7 @@ import { Badge } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { ContactLink, CopyEmail } from "../../design-system/contactlink";
 import { useLocale, useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
-import { listQueryParams } from "../../lib/tagfilter";
 import { useViewerZone } from "../../lib/viewerzone";
 import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
 import {
@@ -36,6 +27,11 @@ import {
   useSavedViewTabs,
 } from "../lists/savedviews";
 import { ContactCreateActions } from "./contactcreate";
+import {
+  CONTACTS_INITIAL_SORT,
+  CONTACTS_LIST_KEY,
+  fetchContactsPage,
+} from "./contacts.queries";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
@@ -45,34 +41,6 @@ import { ContactCreateActions } from "./contactcreate";
 // view-existing link (P-16) are the four shared blocks wired in here.
 
 type Contact = components["schemas"]["Contact"];
-
-async function fetchContactsPage(
-  query: ListQuery,
-  cursor: string | null,
-): Promise<ListPage<Contact>> {
-  const data = unwrap(
-    await api.GET("/contacts", {
-      params: {
-        query: {
-          q: query.q || undefined,
-          sort: query.sort || undefined,
-          include_archived: query.includeArchived || undefined,
-          cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage),
-          ...listQueryParams(query.filters),
-        },
-      },
-    }),
-  );
-  return {
-    data: data.data,
-    page: {
-      next_cursor: data.page.next_cursor ?? null,
-      has_more: data.page.has_more,
-      total: data.page.total,
-    },
-  };
-}
 
 // `#/contacts/import` is this screen's reserved segment (app/nav.ts), so the
 // list's reads never start for the import page.
@@ -98,8 +66,8 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
   const ownerChips = useOwnerTagChips();
   const savedViews = useSavedViewTabs("contacts");
   const state = useListQuery<Contact>({
-    key: "contacts",
-    initialSort: "-created_at",
+    key: CONTACTS_LIST_KEY,
+    initialSort: CONTACTS_INITIAL_SORT,
     fetchPage: fetchContactsPage,
   });
   const selection = useBulkSelection({

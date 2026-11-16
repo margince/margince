@@ -1,0 +1,482 @@
+/** @vitest-environment happy-dom */
+import type { QueryClient } from "@tanstack/react-query";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
+import {
+  armHoverIntent,
+  takeHoverClock,
+} from "../design-system/hoverintent-testing";
+import { ContactsScreen } from "../features/contacts/contacts";
+import { contactsArrivalOptions } from "../features/contacts/contacts.queries";
+import { DealsScreen } from "../features/deals/deals";
+import { dealsArrivalColumnOptions } from "../features/deals/deals.opening";
+import {
+  deal,
+  render as renderDeals,
+  stages,
+  stubBackend,
+} from "../features/deals/deals.testkit";
+import { healthScope } from "../lib/healthscopekey";
+import { pipelinesOptions } from "../lib/pipelines.queries";
+import { sessionOptions } from "../lib/session";
+import { meFixture } from "../testing/mefixture";
+import { renderWith } from "../testing/shellharness";
+import { HANDOFF_MS, navigationPrefetch } from "./navigation-prefetch";
+import { createQueryClient } from "./queryclient";
+import { WorkspaceRail } from "./shell";
+
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  window.location.hash = "";
+  window.localStorage.clear();
+});
+
+type Pipeline = components["schemas"]["Pipeline"];
+
+const READER = meFixture({
+  allow: { contact: ["read"], deal: ["read"] },
+  rowScope: "all",
+});
+
+const READER_SCOPE = healthScope(READER) ?? "";
+
+const OTHER_READER = {
+  ...READER,
+  user: { ...READER.user, id: "00000000-0000-4000-8000-000000000002" },
+};
+
+const anna = {
+  id: "p-1",
+  full_name: "Anna Weber",
+  emails: [],
+  captured_by: "human:u1",
+  source: "manual",
+  version: 1,
+};
+
+// The app's own client, so a mount meets the same freshness window it would.
+function signedIn(me = READER) {
+  const client = createQueryClient();
+  client.setQueryData(sessionOptions.queryKey, me);
+  return client;
+}
+
+// A server that answers the Contacts list from a queue the case releases, and
+// every other read with an empty page.
+function contactsServer() {
+  const asked: Request[] = [];
+  const waiting: Array<() => void> = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      if (url.pathname.endsWith("/contacts")) {
+        asked.push(request);
+        await new Promise<void>((resolve) => waiting.push(resolve));
+        return Response.json({
+          data: [anna],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
+      if (url.pathname.endsWith("/me")) return Response.json(READER);
+      return Response.json({ data: [], page: { has_more: false } });
+    }),
+  );
+  return {
+    asked,
+    answerAll: () => {
+      for (const answer of waiting.splice(0)) answer();
+    },
+  };
+}
+
+// Holds the pipeline catalog and every column read until the case answers.
+function dealsServer() {
+  const catalog: Request[] = [];
+  const columns: Request[] = [];
+  const waiting: Array<() => void> = [];
+  const held = <T,>(body: T) =>
+    new Promise<Response>((resolve) =>
+      waiting.push(() => resolve(Response.json(body))),
+    );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = new Request(input, init);
+      const url = new URL(request.url);
+      if (url.pathname.endsWith("/pipelines")) {
+        catalog.push(request);
+        return held({
+          data: [
+            { id: "pl", name: "Sales", is_default: true, position: 0, stages },
+          ],
+        });
+      }
+      if (url.pathname.endsWith("/deals")) {
+        columns.push(request);
+        return held({ data: [], page: { has_more: false } });
+      }
+      return Response.json({ data: [], page: { has_more: false } });
+    }),
+  );
+  return {
+    catalog,
+    columns,
+    answerAll: () => {
+      for (const answer of waiting.splice(0)) answer();
+    },
+  };
+}
+
+function rail(client: QueryClient) {
+  renderWith(client, <WorkspaceRail route={{ screen: "home" }} />);
+  return screen.getByRole("link", { name: "Contacts" });
+}
+
+// Rests a mouse pointer on the link for `restMs` on the hover clock. Then the
+// real clock comes back, so the reads can settle.
+function pointAt(link: HTMLElement, restMs: number, leave = false) {
+  takeHoverClock();
+  armHoverIntent();
+  fireEvent.pointerEnter(link, { pointerType: "mouse" });
+  act(() => {
+    vi.advanceTimersByTime(restMs);
+  });
+  if (leave) {
+    fireEvent.pointerLeave(link, { pointerType: "mouse" });
+    act(() => {
+      vi.advanceTimersByTime(1_000);
+    });
+  }
+  vi.useRealTimers();
+}
+
+describe("navigation intent on the rail's Contacts link", () => {
+  it("warms the list's first read under the key the screen mounts, and the screen asks nothing more", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    pointAt(rail(client), 500);
+
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    const url = new URL(server.asked[0]?.url ?? "");
+    expect(url.searchParams.get("sort")).toBe("-created_at");
+    expect(url.searchParams.get("limit")).toBe("50");
+    server.answerAll();
+    await waitFor(() =>
+      expect(
+        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey)
+          ?.pages,
+      ).toHaveLength(1),
+    );
+
+    cleanup();
+    renderWith(client, <ContactsScreen />);
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+    expect(server.asked).toHaveLength(1);
+  });
+
+  it("starts no read for a pointer that passes over the link", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    pointAt(rail(client), 20, true);
+
+    await act(() => Promise.resolve());
+    expect(server.asked).toHaveLength(0);
+    expect(
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
+    ).toBeUndefined();
+  });
+
+  it("aborts a warm read the pointer left before it answered", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    const link = rail(client);
+    pointAt(link, 500);
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+
+    fireEvent.pointerLeave(link, { pointerType: "mouse" });
+
+    await waitFor(() => expect(server.asked[0]?.signal.aborted).toBe(true));
+  });
+
+  it("keeps a followed link's read alive after the pointer leaves, for the screen to adopt", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    const link = rail(client);
+    pointAt(link, 500);
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+
+    fireEvent.click(link);
+    fireEvent.pointerLeave(link, { pointerType: "mouse" });
+    renderWith(client, <ContactsScreen />);
+    server.answerAll();
+
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+    expect(server.asked).toHaveLength(1);
+    expect(server.asked[0]?.signal.aborted).toBe(false);
+  });
+
+  it("warms on keyboard focus too", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    rail(client);
+    const user = userEvent.setup();
+
+    while (
+      document.activeElement !== screen.getByRole("link", { name: "Contacts" })
+    )
+      await user.tab();
+
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+  });
+
+  it("starts nothing for a reader without contact read", async () => {
+    const server = contactsServer();
+    const client = signedIn(meFixture({ allow: { deal: ["read"] } }));
+    navigationPrefetch(client).intend("contacts");
+
+    await act(() => Promise.resolve());
+    expect(server.asked).toHaveLength(0);
+  });
+
+  it("drops a warmed list when another principal signs in, so their screen reads its own", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("contacts");
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    server.answerAll();
+    await waitFor(() =>
+      expect(
+        client.getQueryData(contactsArrivalOptions(READER_SCOPE).queryKey),
+      ).toBeDefined(),
+    );
+
+    client.setQueryData(sessionOptions.queryKey, OTHER_READER);
+
+    expect(
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
+    ).toBeUndefined();
+    renderWith(client, <ContactsScreen />);
+    await waitFor(() => expect(server.asked).toHaveLength(2));
+  });
+
+  it("clears a warmed list a screen shows the moment the workspace changes under the same user", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("contacts");
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    server.answerAll();
+    renderWith(client, <ContactsScreen />);
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+
+    act(() => {
+      client.setQueryData(sessionOptions.queryKey, {
+        ...READER,
+        workspace_name: "Another Workspace",
+      });
+    });
+
+    // The new principal's read is still held, so the old rows left on their own.
+    await waitFor(() => expect(screen.queryByText("Anna Weber")).toBeNull());
+    await waitFor(() => expect(server.asked).toHaveLength(2));
+  });
+
+  it("abandons a warm read still in flight when the principal changes", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("contacts");
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+
+    client.setQueryData(sessionOptions.queryKey, OTHER_READER);
+
+    await waitFor(() => expect(server.asked[0]?.signal.aborted).toBe(true));
+    server.answerAll();
+    expect(
+      client.getQueryState(contactsArrivalOptions(READER_SCOPE).queryKey),
+    ).toBeUndefined();
+  });
+
+  it("starts nothing while the session snapshot is being read again", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    await client.invalidateQueries({
+      queryKey: sessionOptions.queryKey,
+      refetchType: "none",
+    });
+
+    navigationPrefetch(client).intend("contacts");
+
+    await act(() => Promise.resolve());
+    expect(server.asked).toHaveLength(0);
+  });
+
+  it("starts nothing before the session names the reader", async () => {
+    const server = contactsServer();
+    const client = createQueryClient();
+
+    navigationPrefetch(client).intend("contacts");
+
+    await act(() => Promise.resolve());
+    expect(server.asked).toHaveLength(0);
+  });
+
+  it("reads a shown list once under the new row scope, not again under the old", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("contacts");
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    server.answerAll();
+    renderWith(client, <ContactsScreen />);
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+
+    act(() => {
+      client.setQueryData(
+        sessionOptions.queryKey,
+        meFixture({ allow: { contact: ["read"], deal: ["read"] } }),
+      );
+    });
+
+    await waitFor(() => expect(screen.queryByText("Anna Weber")).toBeNull());
+    await waitFor(() => expect(server.asked).toHaveLength(2));
+    server.answerAll();
+    expect(await screen.findByText("Anna Weber")).toBeTruthy();
+    expect(server.asked).toHaveLength(2);
+  });
+
+  it("keys the warmed list by the reader scope", () => {
+    expect(contactsArrivalOptions(READER_SCOPE).queryKey[1]).toBe(READER_SCOPE);
+  });
+
+  it("does not hand a screen rows read under the same user's old row scope", async () => {
+    const server = contactsServer();
+    const client = signedIn();
+    // Read by an earlier visit, not by the prefetch, so nothing drops it on a
+    // principal change but its key.
+    client.setQueryData(contactsArrivalOptions(READER_SCOPE).queryKey, {
+      pages: [
+        {
+          data: [
+            {
+              ...anna,
+              created_at: "2026-01-01T00:00:00Z",
+              updated_at: "2026-01-01T00:00:00Z",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        },
+      ],
+      pageParams: [null],
+    });
+    const narrowed = meFixture({
+      allow: { contact: ["read"], deal: ["read"] },
+      rowScope: "own",
+    });
+    act(() => {
+      client.setQueryData(sessionOptions.queryKey, narrowed);
+    });
+
+    renderWith(client, <ContactsScreen />);
+
+    await waitFor(() => expect(server.asked).toHaveLength(1));
+    expect(screen.queryByText("Anna Weber")).toBeNull();
+  });
+});
+
+describe("navigation intent toward Deals", () => {
+  it("warms the default pipeline's first column, and the board joins it", async () => {
+    const urls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onDealsUrl: (url) => urls.push(url) }),
+    );
+    const client = signedIn();
+    navigationPrefetch(client).intend("deals");
+
+    await waitFor(() => expect(urls).toHaveLength(1));
+    const column = new URL(urls[0] ?? "", "https://test.local");
+    expect(column.searchParams.get("stage_id")).toBe("s1");
+    expect(column.searchParams.get("pipeline_id")).toBe("pl");
+    await waitFor(() =>
+      expect(client.getQueryData(pipelinesOptions.queryKey)).toBeDefined(),
+    );
+
+    renderDeals(<DealsScreen />, client);
+    expect(await screen.findByText("Fleet retrofit")).toBeTruthy();
+    const stagesRead = urls.map((url) =>
+      new URL(url, "https://test.local").searchParams.get("stage_id"),
+    );
+    expect(stagesRead.filter((stage) => stage === "s1")).toHaveLength(1);
+  });
+
+  it("abandons a pending catalog read on a principal change and starts no column", async () => {
+    const server = dealsServer();
+    const client = signedIn();
+    navigationPrefetch(client).intend("deals");
+    await waitFor(() => expect(server.catalog).toHaveLength(1));
+
+    client.setQueryData(sessionOptions.queryKey, OTHER_READER);
+    await waitFor(() => expect(server.catalog[0]?.signal.aborted).toBe(true));
+    server.answerAll();
+
+    await act(() => Promise.resolve());
+    expect(server.columns).toHaveLength(0);
+    expect(client.getQueryState(pipelinesOptions.queryKey)).toBeUndefined();
+  });
+
+  it("lets a followed link's catalog and column reads go within one handoff window", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const server = dealsServer();
+    const client = signedIn();
+    const prefetch = navigationPrefetch(client);
+    prefetch.intend("deals");
+    await vi.waitFor(() => expect(server.catalog).toHaveLength(1));
+    prefetch.follow("deals");
+
+    await vi.advanceTimersByTimeAsync(HANDOFF_MS - 1_000);
+    server.answerAll();
+    await vi.waitFor(() => expect(server.columns).toHaveLength(1));
+    expect(server.columns[0]?.signal.aborted).toBe(false);
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    expect(server.columns[0]?.signal.aborted).toBe(true);
+  });
+
+  it("chooses the declared default pipeline and its earliest stage", () => {
+    const pipeline = (id: string, isDefault: boolean): Pipeline => ({
+      id,
+      name: id,
+      is_default: isDefault,
+      position: 0,
+      stages: [...stages]
+        .reverse()
+        .map((stage) => ({ ...stage, pipeline_id: id })),
+    });
+
+    const options = dealsArrivalColumnOptions(
+      [pipeline("first", false), pipeline("declared", true)],
+      READER_SCOPE,
+    );
+
+    expect(options?.queryKey[2]).toBe(READER_SCOPE);
+    expect(options?.queryKey[3].pipelineId).toBe("declared");
+    expect(options?.queryKey[5]).toBe("s1");
+    expect(
+      dealsArrivalColumnOptions(
+        [{ ...pipeline("bare", true), stages: [] }],
+        READER_SCOPE,
+      ),
+    ).toBeUndefined();
+  });
+});

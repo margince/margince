@@ -22,10 +22,10 @@ func TestCapturedMailNeedsConfirmedResponsibilityBeforeItAsksForAReply(t *testin
 		name, body, label, verdict string
 		owed                       bool
 	}{
-		{"newsletter", "Here is our monthly newsletter. No action is requested.", "noise", activities.OwedVerdictInformsUs, false},
+		{"newsletter", "Here is our monthly newsletter. No action is requested.", "other", activities.OwedVerdictInformsUs, false},
 		{"customer promise", "I will send our forecast volumes tomorrow.", "commitment", activities.OwedVerdictInformsUs, false},
 		{"buyer request", "Please send the proposal for our integration project.", "commitment", activities.OwedVerdictAsksUs, true},
-		{"conflicting noise", "Message with conflicting automatic judgments.", "noise", activities.OwedVerdictAsksUs, false},
+		{"conflicting other", "Message with conflicting automatic judgments.", "other", activities.OwedVerdictAsksUs, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			o := setupOwed(t)
@@ -53,13 +53,13 @@ func TestCapturedMailNeedsConfirmedResponsibilityBeforeItAsksForAReply(t *testin
 			} else if o.waiting(t, message) {
 				t.Fatal("non-request entered the waiting lane")
 			}
-			if tc.name == "conflicting noise" {
+			if tc.name == "conflicting other" {
 				title := "Send the requested figures"
 				if _, _, err := o.e.Activities.LogActivity(o.reader(), activities.LogActivityInput{Kind: "task", RequestActivityID: &message, Subject: &title, Source: "manual"}); err != nil {
 					t.Fatal(err)
 				}
 				if !o.badged(t, message) {
-					t.Fatal("explicit human acceptance did not override noise")
+					t.Fatal("explicit human acceptance did not override other")
 				}
 			}
 		})

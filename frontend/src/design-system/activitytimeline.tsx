@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
 import { callOutcomeLabel } from "../lib/calloutcome";
+import { meetingInvitationLabel } from "../lib/meetinginvitation";
 import { correspondenceSide } from "../lib/messagevoice";
 import { markdownLines } from "./markdown-text";
 import {
@@ -155,8 +156,11 @@ export function activityTimeline(
       isDone: activity.is_done,
       commitmentReviewCount: commitmentReviewCount(activity),
       title: timelineTitle(activity),
-      // How a call ended sits where a direction sits: what the call did.
-      qualifier: callOutcomeLabel(activity, who?.t),
+      // How a call ended, or who a meeting's folded invitation reached, sits
+      // where a direction sits.
+      qualifier:
+        callOutcomeLabel(activity, who?.t) ??
+        meetingInvitationLabel(activity, who?.locale),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated
       // subjectless rows together.

@@ -36,7 +36,7 @@ func TestContactCaseCensusCostDoesNotGrowWithItsCases(t *testing.T) {
 	read := func(want int) int {
 		t.Helper()
 		sent.sql = nil
-		rows, err := lane.OpenCases(c.rep(c.e.Rep1), attention.CaseQuery{Scope: attention.CaseScopeMine, Recipient: c.e.Rep1, Limit: 200})
+		rows, _, err := lane.OpenCases(c.rep(c.e.Rep1), attention.CaseQuery{Scope: attention.CaseScopeMine, Recipient: c.e.Rep1, Limit: 200})
 		if err != nil || len(rows) != want {
 			t.Fatalf("read %d cases, want %d: %v", len(rows), want, err)
 		}

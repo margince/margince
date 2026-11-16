@@ -41,6 +41,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "agent.fact.sourceOnProvider",
   "standing.mark.label",
   "worklist.happened.deal",
+  "contact.chapter.wayInAnswer",
+  "contact.chapter.withDetail",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",

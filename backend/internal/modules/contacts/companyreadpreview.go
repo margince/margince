@@ -99,10 +99,15 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if err := previewFieldsVisible(ctx, companyEntity, stored); err != nil {
 			return nil, err
 		}
-		authority, value, err := unclaimedCompanyColumn(ctx, tx, id, column, field.Value)
-		if err != nil {
-			return nil, err
+		value := field.Value
+		if column == columnIndustry {
+			code, ok := ResolveIndustry(value)
+			if !ok {
+				continue
+			}
+			value = code
 		}
+		var err error
 		if value == "" {
 			continue
 		}
@@ -111,7 +116,7 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		bound, unmapped := companyColumnArgument(column, value)
 		applies := false
 		if !unmapped {
-			applies, err = companyColumnWriteApplies(ctx, tx, column, authority, []any{id, bound})
+			applies, err = companyColumnWriteApplies(ctx, tx, column, fillUnclaimed, []any{id, bound})
 			if err != nil {
 				return nil, err
 			}

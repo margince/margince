@@ -21,6 +21,7 @@ import {
 } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useHealthScope } from "../../lib/healthscope";
 import { valueFor } from "../../lib/labelfor";
 import { useMemberNames } from "../../lib/membernames";
 import { usePipelines } from "../../lib/pipelines.queries";
@@ -50,6 +51,7 @@ const SALE_TYPE: Record<
 /** The open deals behind the reading, with what each sells and its next task. */
 export function useWorkDeals(progress: SalesProgress) {
   const { kind, id } = progress.scope;
+  const readerScope = useHealthScope();
   return useInfiniteQuery<
     Paged<WorkDeal>,
     Error,
@@ -57,7 +59,8 @@ export function useWorkDeals(progress: SalesProgress) {
     QueryKey,
     string | undefined
   >({
-    queryKey: ["progress-work", "deals", kind, id],
+    queryKey: ["progress-work", "deals", kind, id, readerScope ?? ""],
+    enabled: readerScope !== undefined,
     initialPageParam: undefined,
     getNextPageParam: (last) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,

@@ -233,7 +233,7 @@ answers 422 for a filter from another view. The cursor binds the view through `a
 
 | Work | Read | Bound | Owner narrowing |
 |---|---|---|---|
-| Tasks due after today | `UpcomingForViewer` in `compose/attentiontaskseam.go` | `upcomingCap` = 6, within `upcomingHorizonDays` = 14 | The `task` arms |
+| Tasks due after today | `PlannedForViewer` in `compose/attentiontaskseam.go` | `upcomingCap` = 6, within `upcomingHorizonDays` = 14 | The `task` arms |
 | Tasks due later than that | Not read | None | None |
 | Undated tasks | Only in the due-now read, and only for `storekit.UndatedTaskSources()`; every other undated task is never read (`modules/activities/taskwindow.go`) | `plannedCap` = 12 | The `task` arms |
 | Weekly plan commitments | `compose/attentionplanseam.go` keeps only those due by end of today; undated and later ones are skipped | None | As `weekly_commitment` |

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
@@ -204,6 +205,9 @@ func filled(value any) bool {
 
 // recordedUses is each granted purpose, on consent, and each live
 // communication basis, on its own kind, once each.
+//
+// A legal_obligation basis is left out. The controller lane records one for
+// each notice it sends. Sending that notice is not a use the notice must list.
 func recordedUses(consent, bases []map[string]any) []NoticeUse {
 	out := []NoticeUse{}
 	add := func(use NoticeUse) {
@@ -219,7 +223,8 @@ func recordedUses(consent, bases []map[string]any) []NoticeUse {
 	now := time.Now()
 	for _, row := range bases {
 		kind, ok := row["kind"].(string)
-		if !ok || row["revoked_at"] != nil || endedBy(row["valid_until"], now) {
+		if !ok || kind == string(commsauthz.BasisLegalObligation) ||
+			row["revoked_at"] != nil || endedBy(row["valid_until"], now) {
 			continue
 		}
 		add(NoticeUse{PurposeKey: businessCorrespondence, Basis: kind})

@@ -95,6 +95,8 @@ tags:
     description: The typed relationship edge (employment + deal stakeholder).
   - name: Deals
     description: Deals, including stage advancement.
+  - name: Links
+    description: Typed links between a deal, a company and a contact, and the link types.
   - name: Pipelines
     description: Pipelines and their ordered stages.
   - name: Projects
@@ -2702,7 +2704,7 @@ paths:
       tags: [Companies]
       operationId: getCompanyScan
       security: [{bearerAuth: []}]
-      summary: What this account needs, as the model last judged it for this reader.
+      summary: What this company needs, as the model last judged it for this reader.
       description: |-
         The account scan is the model's reading of one account for one reader: what the
         exchanges and the pipeline say needs a contact, each finding citing the records it
@@ -2724,7 +2726,7 @@ paths:
       tags: [Companies]
       operationId: ensureCompanyScan
       security: [{bearerAuth: []}]
-      summary: Make sure this reader's scan of the account is current, reading it again only when the account changed.
+      summary: Make sure this reader's scan of the company is current, reading it again only when the company changed.
       description: |-
         Opening an account page calls this once. It compares the account as this reader
         sees it now — a fingerprint over the composite read, the recent message words, the
@@ -2806,7 +2808,7 @@ paths:
       operationId: getCompanyBrief
       deprecated: true
       security: [{bearerAuth: []}]
-      summary: The standing account brief — what this account is, where it stands, and what changed.
+      summary: The standing company brief — what this company is, where it stands, and what changed.
       description: |-
         A short written brief over the same records the 360 serves, cached and reused
         until its inputs change.
@@ -2829,7 +2831,7 @@ paths:
       operationId: regenerateCompanyBrief
       deprecated: true
       security: [{bearerAuth: []}]
-      summary: Regenerate this account's brief, ignoring the cached one.
+      summary: Regenerate this company's brief, ignoring the cached one.
       description: |-
         The explicit refresh behind the brief card's "outdated — refresh". It reads and
         writes only the cached brief: no record field changes, and nothing is sent.
@@ -2923,7 +2925,7 @@ paths:
       tags: [Companies]
       operationId: askAboutCompany
       security: [{bearerAuth: []}]
-      summary: Ask one of the prepared questions about this account.
+      summary: Ask one of the prepared questions about this company.
       description: |-
         The company view's "Ask Margince". The question is chosen from a fixed list, not
         typed: each prepared question names records the answer must be written from, so
@@ -3335,6 +3337,36 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Relationship strength for a company (max over current employees).
+  /finance/customer-payments:
+    get:
+      tags: [Finance]
+      operationId: getCustomerPayments
+      summary: Overdue customer invoices the reader may see.
+      description: |-
+        Requires finance and company read grants. Company row visibility, including
+        private capture rows and live record shares, is applied before totals,
+        counts, previews and pages. The payment read also requires company ownership,
+        a shared owner team, an explicit read share, or an all-rows grant;
+        workspace-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
+        Only the current accounting connection and its live customer links contribute.
+        Disputed invoices and former customers are excluded from collection prompts.
+        Amounts stay in their invoice currency; totals in different currencies stay separate.
+        Invoice pages are ordered by due date and invoice id, oldest first.
+      parameters:
+        - name: cursor
+          in: query
+          description: Opaque continuation from this response's page.next_cursor.
+          schema: {type: string}
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Scoped customer payment overview and one overdue invoice page.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomerPayments'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/finance-summary:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -6648,7 +6680,7 @@ paths:
           in: query
           schema: {type: boolean, default: false}
           description: >-
-            Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row.
+            Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. With `entity_type` and `entity_id`, a calendar invitation, update, cancellation or answer whose meeting is on the same page set is folded onto that meeting's `invitation`.
       responses:
         '200':
           description: A page of activities (newest first by default).
@@ -7439,7 +7471,7 @@ paths:
       tags: [Activities]
       operationId: previewAccountSendAuthorization
       security: [{bearerAuth: []}]
-      summary: Would this account-started message be allowed, and on what ground.
+      summary: Would a new message with no thread behind it be allowed, and on what ground.
       description: |-
         The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
         with no anchor to derive a category from. It names its own `links`, exactly as the send
@@ -15461,12 +15493,38 @@ paths:
             page carries neither `optional_relationships` nor
             `optional_relationships_more_available`. A reconnection the reader pinned
             is still read and still reaches the queue. Nothing else on the page changes.
+        - name: shape
+          in: query
+          schema: {type: string, enum: [queue, home], default: queue}
+          description: |-
+            How much of the ranked day the page carries. `queue` is the page of the queue
+            and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+            the day's meeting rows plus every row that comes due in the next five minutes,
+            with no cursor and no rows below the cut. Focus, the
+            summary, `counts[].considered`, `reach[].considered` and the readings are the
+            same in both shapes; `shown` counts the rows this page carries.
       responses:
         '200':
           description: The ranked day.
+          headers:
+            ETag:
+              description: A weak tag of the answer's bytes, quoted.
+              schema: {type: string}
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: {type: string}
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Worklist'}
+        '304':
+          description: The client already holds this answer.
+          headers:
+            ETag:
+              description: The tag the client holds, quoted.
+              schema: {type: string}
+            Cache-Control:
+              description: Always `private, no-cache`.
+              schema: {type: string}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -18759,6 +18817,11 @@ paths:
               required: [purpose_id]
               properties:
                 purpose_id: {type: string, format: uuid}
+                language:
+                  allOf: [{$ref: '#/components/schemas/MailLanguage'}]
+                  description: |-
+                    The language of the mail and of the page its link opens. Absent means the
+                    installation's mail language.
       responses:
         '201':
           description: Link issued, and what became of the delivery.
@@ -19569,7 +19632,7 @@ paths:
     post:
       tags: [Identity]
       operationId: removeMember
-      summary: Retire an account while preserving historical attribution.
+      summary: Retire a member while preserving historical attribution.
       description: |-
         Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
 
@@ -19655,6 +19718,45 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+  /records/references:
+    get:
+      tags: [Links]
+      operationId: readRecordReferences
+      summary: Read names and archive state for a bounded set of records.
+      description: |-
+        Requires the selected record kind's read grant. A denied object is 403.
+        Missing and row-hidden ids are omitted without distinguishing them.
+        Includes readable archived records and the company anchor. Results are
+        unique and follow the first occurrence of each requested id. This is not
+        a page: there is no cursor or total. The input bound applies before deduplication.
+        Lead names fall back to email when the full name is blank. Company logos
+        use the same revision URL as the company detail read.
+      parameters:
+        - name: kind
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [contact, company, lead, deal, project]
+        - name: id
+          in: query
+          required: true
+          style: form
+          explode: true
+          schema:
+            type: array
+            minItems: 1
+            maxItems: 100
+            items: {type: string, format: uuid}
+      responses:
+        '200':
+          description: The readable references, or an empty data array.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RecordReferenceListResponse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /users/names:
     get:
       tags: [Identity]
@@ -24355,7 +24457,7 @@ paths:
       tags: [Contacts]
       operationId: getMyLinkedInReach
       security: [{bearerAuth: []}]
-      summary: Which accounts your imported network reaches.
+      summary: Which companies your imported network reaches.
       parameters:
         - $ref: '#/components/parameters/Limit'
         - name: cursor
@@ -24689,7 +24791,7 @@ paths:
       tags: [Contracts]
       operationId: listCompanyContracts
       security: [{bearerAuth: []}]
-      summary: The agreements this account holds, newest first.
+      summary: The agreements this company holds, newest first.
       description: Every contract anchored to this company, whatever its status.
       parameters:
         - $ref: '#/components/parameters/Id'
@@ -27828,7 +27930,7 @@ components:
         total: {type: integer, description: The size of the whole shipped baseline.}
     CaptureConcernKind:
       type: string
-      enum: [reauth_required, connection_error, sync_failing, backfill_failed, sync_stalled, capture_silent]
+      enum: [reauth_required, connection_error, sync_failing, notes_grant_missing, notes_account_mismatch, backfill_failed, sync_stalled, capture_silent]
     DismissCaptureSilenceRequest:
       type: object
       additionalProperties: false
@@ -29827,10 +29929,10 @@ components:
         effective_candidates: {type: array, items: {$ref: '#/components/schemas/AiRouteCandidate'}}
         impact: {type: string, enum: [unchanged, model_changed, decision_changed, fallback_changed, budget_blocked, unconfigured], description: 'How the proposed routing changes what answers this feature. decision_changed — only the decision model that answers it first moved (added, removed or rebound) while every tier binding stayed put; model_changed wins when the lead tier binding moved as well.'}
         budget_exempt: {type: boolean}
-        decision_first: {type: boolean, description: 'The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider.'}
+        decision_first: {type: boolean, description: 'The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor.'}
         decision_skip_reason:
           type: string
-          enum: [unbound, uncertified, local_only]
+          enum: [unbound, uncertified]
           description: 'Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.'
         decision_candidate:
           $ref: '#/components/schemas/AiRouteCandidate'
@@ -30117,7 +30219,7 @@ components:
       properties:
         attempt: {type: integer}
         is_terminal: {type: boolean}
-        attempt_reason: {type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.'}
+        attempt_reason: {type: string, description: 'Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it.'}
         kind: {type: string, enum: [completion, embedding, decision], description: 'What this attempt asked: a chat completion, an embedding, or a decision model.'}
         tier: {type: string, description: 'The tier this attempt ran on; decide for the decision lane.'}
         provider: {type: string}
@@ -32974,6 +33076,63 @@ components:
       additionalProperties: false
       properties:
         company_id: {type: string, format: uuid}
+    CustomerPayments:
+      type: object
+      required: [state, access_scope, linked_companies, invoice_count, company_count, totals, customers, data, page]
+      properties:
+        state: {$ref: '#/components/schemas/FinanceSummaryState'}
+        access_scope:
+          type: string
+          description: Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined.
+        provider: {type: string}
+        last_synced_at: {type: string, format: date-time}
+        linked_companies:
+          type: integer
+          minimum: 0
+          description: Readable, live linked companies eligible for the payment overview.
+        invoice_count: {type: integer, minimum: 0}
+        company_count: {type: integer, minimum: 0}
+        totals:
+          type: array
+          description: Complete overdue totals for readable companies, each in its own currency.
+          items: {$ref: '#/components/schemas/CustomerPaymentTotal'}
+        customers:
+          type: array
+          maxItems: 3
+          description: Up to three company and currency groups, oldest overdue invoice first.
+          items: {$ref: '#/components/schemas/CustomerPaymentCustomer'}
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/CustomerPaymentInvoice'}
+        page: {$ref: '#/components/schemas/PageInfo'}
+    CustomerPaymentTotal:
+      type: object
+      required: [currency, amount_minor]
+      properties:
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+    CustomerPaymentCustomer:
+      type: object
+      required: [company_id, company_name, currency, amount_minor, invoice_count, oldest_days]
+      properties:
+        company_id: {type: string, format: uuid}
+        company_name: {type: string}
+        currency: {type: string}
+        amount_minor: {type: integer, format: int64}
+        invoice_count: {type: integer, minimum: 1}
+        oldest_days: {type: integer, minimum: 1}
+    CustomerPaymentInvoice:
+      type: object
+      required: [invoice_id, company_id, company_name, currency, open_minor, due_at, days_overdue]
+      properties:
+        invoice_id: {type: string, format: uuid}
+        company_id: {type: string, format: uuid}
+        company_name: {type: string}
+        number: {type: [string, 'null']}
+        currency: {type: string}
+        open_minor: {type: integer, format: int64}
+        due_at: {type: string, format: date}
+        days_overdue: {type: integer, minimum: 1}
     CompanyFinanceSummary:
       type: object
       description: |-
@@ -38860,11 +39019,14 @@ components:
         role: {type: [string, 'null']}
     Project360Commitment:
       type: object
-      required: [activity_id, subject, due_at, assignee_id, assignee_name, overdue]
+      required: [activity_id, subject, due_at, due_has_time, assignee_id, assignee_name, overdue, version]
       properties:
         activity_id: {type: string, format: uuid}
         subject: {type: string}
         due_at: {type: [string, 'null'], format: date-time}
+        due_has_time: {type: boolean, description: 'True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time.'}
+        due_intent: {$ref: '#/components/schemas/IntentTime'}
+        version: {type: integer, format: int64, description: "The task row's version, which a write to the task names."}
         assignee_id: {type: [string, 'null'], format: uuid}
         assignee_name: {type: [string, 'null']}
         overdue: {type: boolean, description: Dated and already past at `as_of`.}
@@ -39662,7 +39824,7 @@ components:
         start_intent: {$ref: '#/components/schemas/IntentTime'}
         contact_id: {type: string, format: uuid}
         attendee_email: {type: string, format: email}
-        start: {type: string, format: date-time}
+        start: {type: string, format: date-time, description: 'The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.'}
         end: {type: string, format: date-time}
         subject: {type: string, maxLength: 200}
         location: {type: string, maxLength: 1000}
@@ -39838,6 +40000,16 @@ components:
         user_id: {type: string, format: uuid, description: 'The colleague, one of `colleague_ids` or the host.'}
         contact_id: {type: string, format: uuid, description: 'The contact, one of the contact `links` you see.'}
         response: {$ref: '#/components/schemas/MeetingResponse'}
+    MeetingInvitationSummary:
+      type: object
+      description: >-
+        The calendar invitation mail of one meeting, folded onto it in History: how many were invited and how many answered each way.
+      required: [invited, accepted, declined, tentative]
+      properties:
+        invited: {type: integer, minimum: 0, description: 'The colleagues and contacts on the meeting.'}
+        accepted: {type: integer, minimum: 0}
+        declined: {type: integer, minimum: 0}
+        tentative: {type: integer, minimum: 0}
     Activity:
       type: object
       description: |-
@@ -39942,6 +40114,11 @@ components:
           items: {$ref: '#/components/schemas/MeetingAttendeeResponse'}
           description: >-
             Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
+        invitation:
+          readOnly: true
+          allOf: [{$ref: '#/components/schemas/MeetingInvitationSummary'}]
+          description: >-
+            Meeting only, on a record's History read with `collapse_copies`: who a calendar meeting invited and how they answered. That read folds the event's invitation mail, updates, cancellations and answers onto the meeting instead of listing them as mail rows, when you may open both. Absent when `content_state` is `withheld`.
         guests_left_out:
           type: integer
           minimum: 0
@@ -39977,10 +40154,10 @@ components:
             The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
         capture_label:
           type: [string, 'null']
-          enum: [null, commitment, meeting, noise]
+          enum: [null, commitment, meeting, other]
           readOnly: true
           description: >-
-            What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+            What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
         bulk_mail_attested:
           type: boolean
           readOnly: true
@@ -40025,6 +40202,11 @@ components:
           enum: [null, reached, not_reached, voicemail, call_back_later, put_through]
           description: 'How a call ended: reached, not_reached (nobody answered), voicemail (left a voicemail), call_back_later (asked to be called back), put_through (passed to someone else who took it). Call only, optional. Only reached and put_through, or no outcome, count as contact.'
         meeting_status: {type: [string, 'null'], enum: [null, booked, held, no_show, canceled], description: 'Set only when kind=meeting.'}
+        meeting_notes_connection:
+          type: string
+          enum: [connect, notes_grant_missing, notes_account_mismatch]
+          readOnly: true
+          description: A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
         invitation_status:
           type: [string, 'null']
           readOnly: true
@@ -40673,6 +40855,10 @@ components:
         deal_filing:
           $ref: '#/components/schemas/ActivityDealFiling'
           description: Optional filing choice when recording a call or meeting outcome. Existing deal links remain.
+        follow_up_task:
+          $ref: '#/components/schemas/ActivityFollowUpTask'
+          description: >-
+            Optional next step when marking a meeting held. Creates the task in the same transaction, with the meeting as its source and its links and audience inherited. Requires activity create authority. A meeting already held cannot add another task through this outcome write.
         subject: {type: [string, 'null'], maxLength: 20000}
         body: {type: [string, 'null']}
         occurred_at: {type: string, format: date-time}
@@ -46226,6 +46412,21 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+    RecordReference:
+      type: object
+      required: [id, name, archived]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: [string, 'null']}
+        archived: {type: boolean}
+        logo: {type: [string, 'null'], description: Company logo URL; omitted for other kinds.}
+    RecordReferenceListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/RecordReference'}
     SeatName:
       type: object
       description: >-
@@ -54722,6 +54923,13 @@ components:
       required: [as_of, queue, summary, sources_unavailable, scope, scope_options, reach, counts, readings]
       properties:
         as_of: {type: string, format: date-time, description: 'The instant every source below was read at.'}
+        served_stale:
+          type: boolean
+          description: |-
+            True when this answer is Home's kept answer past its five-minute freshness,
+            served while the server reads it again. It still holds every access rule the
+            fresh read would apply. A client asks again a few seconds later for the fresh
+            answer. Absent or false means the answer is fresh.
         scope:
           type: string
           enum: [mine, unassigned, team, all]
@@ -54928,6 +55136,13 @@ components:
         What the product did on this reader's behalf, reported rather than asked about.
       required: [as_of, receipts, truncated]
       properties:
+        count_is_floor:
+          type: boolean
+          description: The shared completed-change read reached a source bound; counts remain lower bounds.
+        sources_unavailable:
+          type: array
+          items: {$ref: '#/components/schemas/WorklistSourceUnavailable'}
+          description: Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened.
         as_of: {type: string, format: date-time, description: 'The instant these were read at.'}
         since:
           type: string
@@ -54999,6 +55214,9 @@ components:
         One completed act, and the record it was about.
       required: [id, kind, summary, occurred_at]
       properties:
+        completed_change:
+          $ref: '#/components/schemas/MagicLine'
+          description: The canonical completed change or group shared with Home, including receipt identities and count bounds.
         system_display:
           $ref: '#/components/schemas/SystemDisplay'
         close_date_change: {$ref: '#/components/schemas/CloseDateChange'}
@@ -55356,6 +55574,13 @@ components:
             hundred alike approvals read as a hundred here even where the queue draws
             them as one row — the strip says how much work there is, and the queue says
             how much reading it costs.
+        soonest_lead_due:
+          type: string
+          format: date-time
+          description: |-
+            When the nearest open task on a lead is due, over every task this read weighed.
+            Absent when no such task has a due time, or when the task lane was read to its
+            bound or could not be read, so an unseen task could be due sooner.
         more_available:
           type: boolean
           description: |-

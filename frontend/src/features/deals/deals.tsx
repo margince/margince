@@ -3,6 +3,8 @@ import type { components } from "../../api/schema";
 // Kanban, table and deal detail share the fetched records and approval flow.
 // Mixed-currency columns never sum native minor units; weighting stays server-side.
 
+export { usePartnerOptions } from "../../components/dealpartnerfields";
+export { mapDealCreate } from "../../lib/dealcreate";
 export {
   buildStageTotals,
   dealsQueryParams,
@@ -11,10 +13,10 @@ export {
 export { buildColumns } from "./deals.columns";
 export { DealScreen } from "./deals.detail";
 export { DealDetails } from "./deals.details";
-export { dealEditFields, usePartnerOptions } from "./deals.fields";
+export { dealEditFields } from "./deals.fields";
 export { DealsScreen } from "./deals.list";
 export { OffersPanel } from "./deals.overview";
-export { mapDealCreate, mapDealUpdate } from "./deals.write";
+export { mapDealUpdate } from "./deals.write";
 
 export type Deal = components["schemas"]["Deal"];
 

@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import {
   jsonResponse,
   StoryProviders,
@@ -144,6 +145,28 @@ it.each(scenarios)(
             ],
             page: { has_more: false },
           });
+        }
+        if (path === "/records/references") {
+          expect(url.searchParams.get("kind")).toBe("company");
+          if (companyFailure)
+            return jsonResponse(
+              {
+                title: "Company names unavailable",
+                status: companyFailure,
+                code:
+                  companyFailure === 403
+                    ? "permission_denied"
+                    : "internal_error",
+              },
+              companyFailure,
+            );
+          const answer = companyNamesAnswer(url.href, {
+            o1: "Employer A",
+            o2: "Employer B",
+            o3: "Partner company",
+          });
+          if (!answer) throw new Error(`unexpected reference lookup: ${url}`);
+          return answer;
         }
         if (path === "/companies") {
           if (companyFailure)

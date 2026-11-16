@@ -1111,6 +1111,10 @@ func (stubs) LinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordTyp
 	httperr.NotImplemented(w, r, "LinkChannel")
 }
 
+func (stubs) ListLinkableChannels(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListLinkableChannels")
+}
+
 func (stubs) FileChannelMessage(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "FileChannelMessage")
 }
@@ -2273,6 +2277,10 @@ func (stubs) ProposeFilter(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) GetFilterVocabulary(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFilterVocabularyParams) {
 	httperr.NotImplemented(w, r, "GetFilterVocabulary")
+}
+
+func (stubs) GetCustomerPayments(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetCustomerPaymentsParams) {
+	httperr.NotImplemented(w, r, "GetCustomerPayments")
 }
 
 func (stubs) DownloadFinanceInvoicePdf(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -3605,6 +3613,10 @@ func (stubs) CreateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, para
 
 func (stubs) UpdateRecordRole(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateRecordRoleParams) {
 	httperr.NotImplemented(w, r, "UpdateRecordRole")
+}
+
+func (stubs) ReadRecordReferences(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ReadRecordReferencesParams) {
+	httperr.NotImplemented(w, r, "ReadRecordReferences")
 }
 
 func (stubs) GetRecordLists(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, entityId openapi_types.UUID) {

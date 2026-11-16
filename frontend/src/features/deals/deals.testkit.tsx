@@ -17,10 +17,10 @@ export function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-export const render = (ui: ReactNode): RenderResult => {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+export const render = (
+  ui: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+): RenderResult => {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

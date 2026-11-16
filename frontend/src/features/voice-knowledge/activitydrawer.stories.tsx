@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, within } from "storybook/test";
+import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { browserZone } from "../../format/timezone";
 import {
@@ -233,4 +233,46 @@ export const WebFormFields: Story = {
 export const WebFormFieldsDark: Story = {
   ...WebFormFields,
   globals: { theme: "dark" },
+};
+
+export const MeetingNotesNeedConnection: Story = {
+  render: (args) => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /attachments": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "gemini-notes",
+              entity_type: "activity",
+              entity_id: id,
+              category: "link",
+              filename: "Notes by Gemini",
+              url: "https://docs.google.com/document/d/demo-notes/edit",
+              created_at: "2026-11-14T11:00:00Z",
+              source: "capture",
+              captured_by: "connector:gcal",
+            },
+          ],
+          page: { has_more: false, next_cursor: null },
+        }),
+      [`GET /activities/${id}`]: () =>
+        jsonResponse({
+          id,
+          kind: "meeting",
+          subject: "Discovery call",
+          occurred_at: "2026-11-14T10:00:00Z",
+          content_state: "available",
+          meeting_notes_connection: "connect",
+          links: [],
+        }),
+    });
+    return <OpenActivityDrawer {...args} />;
+  },
+  play: async ({ canvasElement }) => {
+    const hint = await within(canvasElement.ownerDocument.body).findByText(
+      "Notes are attached. Connect meeting notes to read them.",
+    );
+    await waitFor(() => expect(hint).toBeVisible());
+  },
 };

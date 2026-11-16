@@ -84,20 +84,19 @@ func adHocSpec(entity datasource.EntityType) (reportSpec, bool) {
 		if f.Type == "bigint" || f.Type == "integer" {
 			spec.measures[f.Name] = expr
 		}
-		// A descriptor field that POINTS AT a row-scoped record carries the same
-		// obligation here as in the prebuilt catalog: grouping by it hands back
-		// an id the caller's own read of the same row masks.
-		//
-		// Derived from the schema rather than written per spec, because this
-		// vocabulary is. A hand-kept list would go stale the next time a
-		// descriptor grows a reference, and the failure is a disclosure rather
-		// than an error.
+		// A descriptor field that points at a row-scoped record carries the
+		// prebuilt catalog's obligation. It is derived from the schema.
 		if table, isReference := adHocReferenceTables[f.Name]; isReference {
 			if spec.referenceScopes == nil {
 				spec.referenceScopes = map[string]string{}
 			}
 			spec.referenceScopes[expr] = table
 		}
+	}
+	if _, named := spec.dimensions[fieldCompanyID]; named && entity == datasource.EntityProject {
+		spec.dimensions[fieldCompanyID], spec.filters[fieldCompanyID] = colProjectCustomer, colProjectCustomer
+		delete(spec.referenceScopes, "t."+fieldCompanyID)
+		spec = withProjectCompany(spec)
 	}
 	return spec, true
 }

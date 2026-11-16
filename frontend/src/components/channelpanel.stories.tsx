@@ -46,6 +46,11 @@ function stateStory(answer: unknown, canEdit = true) {
 
 export const NoBotConnected: Story = { render: stateStory({ state: "off" }) };
 
+export const NoBotConnectedDark: Story = {
+  globals: { theme: "dark" },
+  render: stateStory({ state: "off" }),
+};
+
 export const NoChannelYet: Story = { render: stateStory({ state: "none" }) };
 
 export const Linked: Story = {

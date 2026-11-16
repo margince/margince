@@ -86,7 +86,7 @@ func seedEmailRequestFiledUnder(t *testing.T, e *loadEnv, subject, label, verdic
 func TestEmailRequestCreatesOneUndatedTaskThatReachesWhoMayReadItsMail(t *testing.T) {
 	e := setupLoad(t)
 	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
-	thanks := seedEmailRequest(t, e, "Thanks for the report", "noise", OwedVerdictInformsUs)
+	thanks := seedEmailRequest(t, e, "Thanks for the report", "other", OwedVerdictInformsUs)
 	draft := seedEmailRequest(t, e, "I will send my draft", "commitment", OwedVerdictInformsUs)
 	store := storeKnowing(e)
 	for range 2 {
@@ -235,7 +235,7 @@ func TestEmailMoveUsesTheConversationAndActionEvidence(t *testing.T) {
 	e := setupLoad(t)
 	first := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
 	answered := seedEmailRequest(t, e, "Competitor question", "commitment", OwedVerdictAsksUs)
-	info := seedEmailRequest(t, e, "I will follow up", "noise", OwedVerdictInformsUs)
+	info := seedEmailRequest(t, e, "I will follow up", "other", OwedVerdictInformsUs)
 	store := storeKnowing(e)
 	original, err := store.GetActivity(e.as(), ids.From[ids.ActivityKind](answered), storekit.LiveOnly)
 	if err != nil {

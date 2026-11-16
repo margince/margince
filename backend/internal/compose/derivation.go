@@ -296,9 +296,6 @@ func compileDerivation(spec reportSpec, q derivationQuery) (derivationPlan, erro
 // not read removed, so a drill-through selects only what the caller could
 // have grouped or aggregated by themselves.
 func grantedSpec(ctx context.Context, spec reportSpec) reportSpec {
-	if len(spec.grants) == 0 {
-		return spec
-	}
 	narrowed := spec
 	narrowed.dimensions = map[string]string{}
 	for _, name := range grantedNames(ctx, spec, spec.dimensions) {

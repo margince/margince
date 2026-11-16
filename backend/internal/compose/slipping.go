@@ -315,11 +315,13 @@ func atRiskList(
 	quietForDays int, asOf time.Time, zone *time.Location, owners *storekit.OwnerSet, arm deals.AtRiskArm,
 ) deals.ListDealsInput {
 	sort := deals.AtRiskSort
+	// A slipping deal is drawn from the deal's own columns, so the page skips the
+	// enrichment a deal screen shows.
 	return deals.ListDealsInput{
 		AtRisk: &deals.AtRiskWindow{
 			QuietForDays: quietForDays, AsOf: asOf, CloseBefore: storekit.WorkspaceDay(asOf, zone), Arm: arm,
 		},
-		Sort: &sort, ScopeOwners: owners,
+		Sort: &sort, ScopeOwners: owners, FactsOnly: true,
 	}
 }
 

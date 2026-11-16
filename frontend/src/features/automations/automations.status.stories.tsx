@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { configuredAutomation } from "./automations.fixtures";
@@ -20,6 +21,7 @@ function ScheduledStatus() {
     initial_run_preview_required: true,
   };
   installFetchStub({
+    "GET /me": meRoute({ automation: ["read", "update"] }),
     "POST /automations/au-1/preview": () =>
       jsonResponse({
         matches_now: 4,
@@ -39,7 +41,8 @@ export const ReviewBeforeEnable: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(await within(canvasElement).findByRole("switch"));
     const body = within(canvasElement.ownerDocument.body);
-    await expect(await body.findByText("Matches now: 4")).toBeVisible();
+    // The dialog fades in, so the line is visible only once it has opened.
+    await waitFor(() => expect(body.getByText("Matches now: 4")).toBeVisible());
   },
 };
 export const ReviewBeforeEnableDark: Story = {

@@ -62,7 +62,8 @@ type AppEnv struct {
 	// ownPool is set on an env from Reboot, whose pool no other env shares.
 	ownPool bool
 	// importJobs are the import workers over this server's own object store.
-	importJobs compose.ImportJobWorkers
+	importJobs          compose.ImportJobWorkers
+	settleHomeRefreshes func()
 }
 
 // SetupApp boots the default harness server — no schema pool, so the
@@ -149,10 +150,11 @@ func (e *AppEnv) RebootWith(t *testing.T, tune func(*pgxpool.Config)) *AppEnv {
 	return next.serve(t, e.Client.Jar)
 }
 
-// Close stops the server now rather than at test end, and the pool when Reboot
-// opened it; SetupApp's pool is shared by the package and outlives any one env.
+// Close stops requests and drains their refreshes before releasing an owned pool.
+// SetupApp shares its pool across environments.
 func (e *AppEnv) Close() {
 	e.TS.Close()
+	e.settleHomeRefreshes()
 	if e.ownPool {
 		e.Pool.Close()
 	}
@@ -163,11 +165,7 @@ func (e *AppEnv) Close() {
 // rebooted app is wired the same as the one it replaces.
 func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 	t.Helper()
-	// The delivery machinery every send transport is composed with in the api
-	// role. Without it a send refuses rather than log an activity claiming a
-	// message went out, so a harness missing it would test the refusal in
-	// every suite that sends — including the consent and preference-center
-	// suites, whose subject is what happens AFTER a send is accepted.
+	// Real delivery wiring lets send tests reach their subject after transport admission.
 	sendInserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
 		t.Fatalf("jobs.NewInserter: %v", err)
@@ -185,11 +183,7 @@ func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 		// which is correct in production and useless in a lane testing the
 		// feature.
 		compose.WithScheduleTimer(compose.NewScheduleTimer(sendInserter)),
-		// This harness serves no Redis, and a meter that cannot reach its
-		// counter fails CLOSED — correct in production, and it would refuse
-		// every agent read in a lane that is testing something else. Declaring
-		// the app under test unbounded is the honest spelling: a suite that
-		// wants the bound composes its own metered Server.
+		// Counter failures would refuse unrelated agent tests; meter tests wire their own server.
 		compose.WithAgentVolume(agentvolume.Unmetered()),
 		// The lane the installation's OWN mail rides. Without it a confirm
 		// link is minted and never staged, so every suite whose subject is what
@@ -217,17 +211,20 @@ func (e *AppEnv) serve(t *testing.T, jar http.CookieJar) *AppEnv {
 		compose.WithImportPreviewWaitForTest(nil, 0),
 	}, e.wiring(origin)...)
 	var importJobsErr error
-	allOpts = append(allOpts, compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr))
+	allOpts = append(allOpts,
+		compose.WithImportJobWorkersForTest(&e.importJobs, &importJobsErr),
+		compose.WithHomeRefreshSettlerForTest(&e.settleHomeRefreshes),
+	)
 	ts.Config.Handler = compose.New(e.Pool, slog.New(slog.NewTextHandler(os.Stderr, nil)), allOpts...)
 	if importJobsErr != nil {
 		t.Fatalf("building the import workers: %v", importJobsErr)
 	}
 	ts.StartTLS()
-	t.Cleanup(ts.Close)
 
 	e.TS = ts
 	e.Client = ts.Client()
 	e.Client.Jar = jar
+	t.Cleanup(e.Close)
 	return e
 }
 

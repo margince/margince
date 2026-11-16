@@ -2016,8 +2016,6 @@ export const en = {
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
-  "aiAdmin.decisionSkip.local_only":
-    "Decision model not used: this activity takes only a local decision provider.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -2358,6 +2356,7 @@ export const en = {
   "systemJob.owed_verdict": "Owed reply check",
   "systemJob.own_sent_mail_repair": "Sent mail correction",
   "systemJob.participant_backfill": "Mail participant fill-in",
+  "systemJob.reply_settled_stamp": "Reply status bookkeeping",
   "systemJob.past_activity_clock_refold": "Last activity date update",
   "systemJob.private_thread_strip": "Private thread removal",
   "systemJob.provider_recovery": "Enrichment provider recovery",
@@ -3265,6 +3264,7 @@ export const en = {
   "rel.role": "Role",
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
+  "rel.former": "Former",
   "rel.current": "Current",
   "rel.endedOn": "Until {when}",
   "rel.remove": "Remove",
@@ -3837,6 +3837,8 @@ export const en = {
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View full thread",
   "timeline.group.mayContinue": "Earlier messages may exist",
+  "timeline.group.newerPart": "Later messages above",
+  "timeline.group.olderPart": "Earlier messages below",
   // A thread on the chronology is one card: the kind, the count and who was
   // on it over the subject, then each message with who wrote it and when.
   "timeline.group.kind": "Thread",
@@ -4201,6 +4203,24 @@ export const en = {
   "billing.saveChange": "Save change",
   "billing.versionUnresolved":
     "The billing contact could not be read back, so the change was not sent. Reload and retry.",
+  "payments.refresh": "Refresh",
+  "payments.title": "Customer payments",
+  "payments.none": "No overdue invoices.",
+  "payments.overdueAmount": "{amount} overdue",
+  "payments.invoices_one": "{count} invoice",
+  "payments.invoices_other": "{count} invoices",
+  "payments.customers_one": "{count} customer",
+  "payments.customers_other": "{count} customers",
+  "payments.oldest_one": "Oldest invoice 1 day overdue",
+  "payments.oldest_other": "Oldest invoice {days} days overdue",
+  "payments.viewInvoices": "View overdue invoices",
+  "payments.customer": "Customer",
+  "payments.openAmount": "Outstanding",
+  "payments.stale": "Invoice data may have changed since the last sync.",
+  "payments.syncFailed":
+    "The accounting sync failed. Amounts show the last successful sync.",
+  "payments.syncUnavailable":
+    "Invoice data is unavailable until the accounting sync succeeds.",
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
@@ -5122,6 +5142,14 @@ export const en = {
   "activity.detail.response.needsAction": "No answer",
   "meeting.attendeesMore_one": "and {count} more",
   "meeting.attendeesMore_other": "and {count} more",
+  "meeting.invitation.invited_one": "{count} invited",
+  "meeting.invitation.invited_other": "{count} invited",
+  "meeting.invitation.accepted_one": "{count} accepted",
+  "meeting.invitation.accepted_other": "{count} accepted",
+  "meeting.invitation.declined_one": "{count} declined",
+  "meeting.invitation.declined_other": "{count} declined",
+  "meeting.invitation.tentative_one": "{count} maybe",
+  "meeting.invitation.tentative_other": "{count} maybe",
   "activity.detail.guestsLeftOut_one": "and {count} more guest not listed",
   "activity.detail.guestsLeftOut_other": "and {count} more guests not listed",
   "activity.detail.colleagues": "Colleagues",
@@ -5183,8 +5211,10 @@ export const en = {
   "co.profileField.register_number": "Register number",
   "co.profileField.industry": "Industry",
   "co.profileField.history": "History",
-  "co.narrative.title": "How they buy",
+  "co.narrative.title": "How they sell and to whom",
   "co.narrative.add": "Add",
+  "co.narrative.notOnSite": "Not on their website",
+  "co.narrative.notReadYet": "Not read from their website yet",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Last exchange",
   "co.contacts.strength": "Relationship",
@@ -6822,12 +6852,6 @@ export const en = {
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
-  "brief.intro.waiting": "Waiting on you",
-  "brief.intro.meetings": "Meetings today",
-  "brief.intro.urgent": "Urgent",
-  "brief.intro.read_one": "Last nightly run: 1 email synced.",
-  "brief.intro.read_other": "Last nightly run: {count} emails synced.",
-  "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says
   // which factor it lost, never why.
@@ -7582,6 +7606,9 @@ export const en = {
   "log.kindTask": "Task",
   "log.kindMeeting": "Meeting",
   "log.kindCall": "Call",
+  "log.kindMessage": "Message",
+  "log.channel": "Chat app",
+  "log.channelPlaceholder": "Choose a chat app",
   "log.attendee": "Attendees",
   "log.otherAttendees": "Other attendees",
   "log.removeAttendee": "Remove {name}",
@@ -11038,6 +11065,8 @@ export const en = {
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
     "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
+  "privacynotice.rights.howContact":
+    "To use any of these, contact us: {contact}",
   "privacynotice.right.access": "Ask for a copy of what we hold about you.",
   "privacynotice.right.rectification":
     "Ask us to correct anything that is wrong.",
@@ -11045,7 +11074,12 @@ export const en = {
   "privacynotice.right.restriction":
     "Ask us to stop using it while something is disputed.",
   "privacynotice.right.objection": "Object to how we use it.",
-  "privacynotice.right.complain": "Complain to your data protection authority.",
+  "privacynotice.right.portability":
+    "Ask for the data you gave us in a common machine-readable format, or have it sent to someone else.",
+  "privacynotice.right.withdrawConsent":
+    "Withdraw a consent you gave, at any time. This does not change what we did before.",
+  "privacynotice.right.complain":
+    "Complain to a data protection supervisory authority, for example in the country where you live or work.",
   "privacynotice.controller.title": "Who is responsible",
   "privacynotice.controller.contact": "Questions about your data: {contact}",
   "privacynotice.categories.title": "What we hold",
@@ -11083,6 +11117,10 @@ export const en = {
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
+  "privacynotice.retention.afterYears_one": "{count} year",
+  "privacynotice.retention.afterYears_other": "{count} years",
+  "privacynotice.retention.afterDays_one": "{count} day",
+  "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
     "{scope}: taken out of daily use after {days}.",
@@ -12179,8 +12217,6 @@ export const en = {
 
   // The team chat card on a deal or project.
   "channelLink.title": "Team chat",
-  "channelLink.off": "Connect a chat bot in Settings to link a channel.",
-  "channelLink.openSettings": "Open chat bot settings",
   "channelLink.none": "No channel yet",
   "channelLink.noneSub":
     "A private channel keeps the team up to date on this record.",
@@ -12190,7 +12226,7 @@ export const en = {
   "channelLink.linkFailed": "Channel not linked",
   "channelLink.channelField": "Channel name or link",
   "channelLink.channelHint":
-    "A private channel the bot is already a member of.",
+    "Pick a private channel the bot is in. To link another one, add the bot to it in the chat first.",
   "channelLink.summarize": "Summarize the talk so far (up to 5 summaries)",
   "channelLink.verbosity": "What Margince posts",
   "channelLink.verbosityHint":
@@ -12223,7 +12259,7 @@ export const en = {
   "channelLink.refused.botNotConnected":
     "No chat bot is connected. An administrator connects one in Settings.",
   "channelLink.refused.channelNotFound":
-    "No channel with this name or link was found.",
+    "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
   "channelLink.refused.channelNotPrivate":
     "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember":
@@ -13385,7 +13421,9 @@ export const en = {
   // not do, no em dashes.
   "confirm.title": "Your details",
   "confirm.intro":
-    "Margince, an AI system, runs this CRM. Below is everything recorded about you. You can correct any of it, or request its removal.",
+    "Below is everything recorded about you. You can correct any of it, or request its removal.",
+  "confirm.introNamed":
+    "{controller} holds the details below about you. You can correct any of them, or request their removal.",
   "confirm.card.title": "Recorded details",
   "confirm.field.fullName": "Name",
   "confirm.field.title": "Job title",
@@ -13422,7 +13460,9 @@ export const en = {
   "confirm.done.body":
     "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":
-    "This link is no longer valid. It may have been used or may have expired.",
+    "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
+  "confirm.questionChanged":
+    "The question on this page changed after you opened it. Reload the page and answer again.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
   "prefs.confirmationNeededWhy":
     "To switch this on, use the confirmation link in the email sent to you. You can switch it off here at any time.",
@@ -15543,8 +15583,6 @@ export const en = {
     "Input too large for the decision model",
   "aicalls.reason.decision_uncertified":
     "Decision model not certified for this task",
-  "aicalls.reason.decision_local_only":
-    "Task is local-only and the decision model is not",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
@@ -17995,7 +18033,6 @@ export const en = {
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the
   // landmark list rather than by scrolling to it.
-  "contact.graph.sideColumn": "Introductions and changes",
   "contact.graph.recordWorksWith": "Record: works with {name}",
   "contact.graph.noEdge": "No recorded correspondence with {name}.",
   "contact.graph.withColleague": "with {name}",
@@ -18046,7 +18083,6 @@ export const en = {
   "contact.intro.lastYesterday": "Yesterday",
   "contact.intro.lastDays": "{days} days ago",
   "contact.intro.lastNever": "None in 90 days",
-  "contact.intro.stripWho": "Routes",
   "contact.intro.stripWhoMix": "{direct} direct · {indirect} via a contact",
   "contact.intro.stripWhoOwn": "Includes your own relationship",
   "contact.intro.otherRoutesTitle": "Other routes",
@@ -18064,14 +18100,37 @@ export const en = {
   "contact.intro.change.warmed": "Warmer",
   "contact.intro.change.cooled": "Cooler",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Intro request",
   "contact.intro.handoffNotStarted": "Not started",
   "contact.intro.handoffUnread": "Could not be read",
   "contact.intro.handoffOwner": "Next: {name}",
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
   "contact.intro.relayTitle": "Introduction status",
-  "contact.intro.stripLabel": "Network figures",
+  "contact.chapter.jump": "On this tab",
+  "contact.chapter.wayIn": "Way in",
+  "contact.chapter.whoAnswer":
+    "Who on your team and at their company corresponds with {name}, and how often.",
+  "contact.chapter.progress": "Progress",
+  "contact.chapter.routes_one": "{count} route",
+  "contact.chapter.routes_other": "{count} routes",
+  "contact.chapter.allDirect_one": "direct",
+  "contact.chapter.allDirect_other": "all direct",
+  "contact.chapter.allVia_one": "via a contact",
+  "contact.chapter.allVia_other": "all via a contact",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Intro request: {handoff}. Latest change: {change}.",
+  "contact.chapter.toCheck": "To check",
+  "contact.chapter.toCheckAnswer":
+    "What Margince read from their mail and pages. Confirm, correct or dismiss each one.",
+  "contact.chapter.sources": "Sources",
+  "contact.chapter.sourcesAnswer":
+    "What each source says. Nothing here overwrites what a colleague typed.",
+  "contact.chapter.recordKeeping": "Record keeping",
+  "contact.chapter.recordKeepingAnswer":
+    "The fields, permissions and settings kept on this contact.",
+  "contact.chapter.researchAction": "Research public sources",
   "contact.intro.mapTitle": "Who knows {name}",
   "contact.intro.stepRoute": "Choose route",
   "contact.intro.stepRoutePick": "select who to ask",
@@ -18212,7 +18271,7 @@ export const en = {
   "contact.intro.unavailable": "Not available",
   "contact.network.momentsTitle": "What changed",
   "contact.network.momentsSub":
-    "Changes in this relationship, from the messages.",
+    "Changes read from the messages, and earlier intro requests.",
   "contact.network.noMoments": "No recent changes in this relationship.",
   "contact.change.repliedAfterGap": "They replied after {days} quiet days.",
   "contact.change.wentQuiet": "No activity for {days} days.",
@@ -20434,6 +20493,8 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
+  "worklist.verb.meetingSkipNextStep": "Skip next step",
+  "worklist.verb.meetingNextStep": "What is the next step?",
   "worklist.verb.meetingHowDidItGo": "How did it go?",
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
@@ -20916,6 +20977,8 @@ export const en = {
   "lead.company.linkTitle": "Link this lead to {name}?",
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
+  "lead.company.addedOnQualify":
+    "No company linked yet. Qualifying links or creates it.",
   "lead.company.linkOnQualify":
     "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.company.matchedByDomain": "Same website domain",
@@ -21142,6 +21205,13 @@ export const en = {
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
   "magic.action.capture_connection_error": "{provider} could not be reached",
+  "activity.notes.connectHint":
+    "Notes are attached. Connect meeting notes to read them.",
+  "activity.notes.otherAccount":
+    "Notes are attached. Connect meeting notes with the same Google account as your calendar.",
+  "captureConcern.notesGrant": "Cannot read meeting notes",
+  "captureConcern.notesAccount":
+    "Meeting notes need the same Google account as the calendar",
   "captureConcern.reauth": "Reconnect required",
   "captureConcern.error": "Connection error",
   "captureConcern.failing": "Sync is failing",

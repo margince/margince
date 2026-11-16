@@ -89,11 +89,15 @@ func RefuseDealForNewProject(status string, namesProject bool, masked *[]string)
 type createSeams struct {
 	attachCompany    AttachCompany
 	projectCompanies ProjectCompanies
+	projectCustomers ProjectCustomers
 	attachDeal       AttachDeal
 }
 
 func (s *Store) createSeams() createSeams {
-	return createSeams{attachCompany: s.attachCompany, projectCompanies: s.projectCompanies, attachDeal: s.attachDeal}
+	return createSeams{
+		attachCompany: s.attachCompany, projectCompanies: s.projectCompanies,
+		projectCustomers: s.projectCustomers, attachDeal: s.attachDeal,
+	}
 }
 
 // WithDealLink wires the seams that check and point a deal at the project

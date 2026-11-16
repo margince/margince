@@ -137,7 +137,7 @@ func fillEmployment(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerNa
 	if err != nil || !found {
 		return nothingFilled, err
 	}
-	edge, planted, err := plantProviderEmploymentEdge(ctx, tx, subject, company, providerName)
+	edge, planted, err := plantProviderEmploymentEdge(ctx, tx, subject, company, providerName, v.title)
 	if err != nil || !planted {
 		return nothingFilled, err
 	}

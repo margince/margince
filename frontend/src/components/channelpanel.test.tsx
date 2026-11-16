@@ -56,6 +56,14 @@ function stubServer(
     "fetch",
     vi.fn(async (request: Request) => {
       const path = new URL(request.url).pathname;
+      if (path === `${LINK_PATH}/channels` && request.method === "GET") {
+        return jsonResponse({
+          channels: [
+            { slug: "deal-acme-renewal", name: "deal-acme-renewal" },
+            { slug: "deal-globex", name: "deal-globex" },
+          ],
+        });
+      }
       if (path !== LINK_PATH) {
         throw new Error(`unstubbed: ${request.method} ${path}`);
       }
@@ -77,15 +85,15 @@ function stubServer(
 }
 
 function render(ui: ReactNode) {
-  return rtlRender(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const view = rtlRender(
+    <QueryClientProvider client={queryClient}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...view, queryClient };
 }
 
 function renderPanel(canEdit = true) {
@@ -100,20 +108,24 @@ afterEach(() => {
 });
 
 describe("ChannelPanel", () => {
-  it("sends a reader with no chat bot to the integrations settings", async () => {
+  it("hides the card when no chat bot is connected", async () => {
     stubServer({ state: "off" });
-    renderPanel();
-    expect(
-      await screen.findByText(
-        "Connect a chat bot in Settings to link a channel.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Open chat bot settings" }),
-    ).toHaveAttribute(
-      "href",
-      expect.stringContaining("settings/integrations/telegram"),
+    const { container, queryClient } = renderPanel();
+    await waitFor(() => {
+      expect(
+        queryClient.getQueryState(["channel-link", "deal", DEAL_ID])?.status,
+      ).toBe("success");
+    });
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("hides the card while checking whether a chat bot is connected", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
     );
+    const { container } = renderPanel();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("creates a channel and names the invited members without a chat account", async () => {
@@ -145,7 +157,7 @@ describe("ChannelPanel", () => {
     expect(writes).toEqual([{ method: "POST", body: { mode: "create" } }]);
   });
 
-  it("links an existing channel with the history summary asked for by default", async () => {
+  it("links an existing channel picked from the ones the bot is in, with the history summary asked for by default", async () => {
     const writes = stubServer({ state: "none" }, () =>
       jsonResponse({ state: "linked", link }, 201),
     );
@@ -162,7 +174,10 @@ describe("ChannelPanel", () => {
     ).toBeChecked();
     await user.type(
       within(dialog).getByLabelText("Channel name or link *"),
-      "deal-acme-renewal",
+      "acme",
+    );
+    await user.click(
+      await screen.findByRole("option", { name: /deal-acme-renewal/ }),
     );
     await pickOption(
       user,

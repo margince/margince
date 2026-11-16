@@ -44,6 +44,7 @@ type fakeAPI struct {
 	labelsErr          error
 	spam               map[string]bool // ids Gmail filed under the SPAM label
 	trash              map[string]bool // ids Gmail filed under the TRASH label
+	unlabeled          map[string]bool // ids Gmail lists with no label at all
 	gone               map[string]bool
 	historyCalls       int
 	listCalls          int
@@ -121,6 +122,11 @@ func (f *fakeAPI) GetRaw(_ context.Context, _, id string) (Message, error) {
 	}
 	if f.trash[id] {
 		msg.Labels = append(msg.Labels, trashLabelID)
+	}
+	// Gmail files delivered mail somewhere; only a test that asks for it gets
+	// the label-less shape of a scheduled send.
+	if len(msg.Labels) == 0 && !f.unlabeled[id] {
+		msg.Labels = []string{"INBOX"}
 	}
 	return msg, nil
 }
@@ -512,6 +518,57 @@ func TestSyncStillCapturesTheSendThatFollowsTheDraft(t *testing.T) {
 	}
 	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:s1@mail.gmail.com" {
 		t.Fatalf("captured %+v, want only the sent message", sink.recs)
+	}
+}
+
+// A message scheduled with "Schedule send" has not been sent. Gmail lists it
+// with no label at all. Once Gmail sends it, it is filed under SENT and the
+// same id is captured once.
+func TestSyncCapturesAScheduledSendOnlyOnceGmailSendsIt(t *testing.T) {
+	const scheduled = "sch1@mail.gmail.com"
+	api := &fakeAPI{
+		email:     owner,
+		historyID: "12345",
+		recent:    []string{scheduled},
+		raws:      map[string][]byte{scheduled: rawMsg(scheduled, owner)},
+		unlabeled: map[string]bool{scheduled: true},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 0 {
+		t.Fatalf("captured %d records before Gmail sent it, want 0", len(sink.recs))
+	}
+
+	api.unlabeled = nil
+	api.sent = map[string]bool{scheduled: true}
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 || sink.recs[0].Source != "gmail:"+scheduled {
+		t.Fatalf("captured %+v after the send, want the one sent message", sink.recs)
+	}
+}
+
+// Inbound mail with no label, such as mail a filter archived, is still mail.
+func TestSyncCapturesUnlabelledInboundMail(t *testing.T) {
+	const archived = "a1@mail.gmail.com"
+	api := &fakeAPI{
+		email:     owner,
+		historyID: "12345",
+		recent:    []string{archived},
+		raws:      map[string][]byte{archived: rawMsg(archived, "alice@acme.com")},
+		unlabeled: map[string]bool{archived: true},
+	}
+	c := New(fakeOAuth{access: "access-1"}, api)
+	sink := &recordingSink{}
+	if _, err := c.Sync(context.Background(), authBytes(t), nil, sink); err != nil {
+		t.Fatalf("Sync: %v", err)
+	}
+	if len(sink.recs) != 1 {
+		t.Fatalf("captured %d records, want 1", len(sink.recs))
 	}
 }
 

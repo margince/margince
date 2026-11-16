@@ -110,11 +110,21 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/contacts/p-1")) {
-          return jsonResponse({ id: "p-1", full_name: "Anna Weber" });
+        if (
+          request.url.includes("/records/references") &&
+          new URL(request.url).searchParams.get("kind") === "contact"
+        ) {
+          return jsonResponse({
+            data: [{ id: "p-1", name: "Anna Weber", archived: false }],
+          });
         }
-        if (request.url.includes("/deals/d-1")) {
-          return jsonResponse({ id: "d-1", name: "Q3 Renewal" });
+        if (
+          request.url.includes("/records/references") &&
+          new URL(request.url).searchParams.get("kind") === "deal"
+        ) {
+          return jsonResponse({
+            data: [{ id: "d-1", name: "Q3 Renewal", archived: false }],
+          });
         }
         return jsonResponse({}, 404);
       }),
@@ -144,8 +154,13 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/leads/l-1")) {
-          return jsonResponse({ id: "l-1", full_name: "Jordan Lee" });
+        if (
+          request.url.includes("/records/references") &&
+          new URL(request.url).searchParams.get("kind") === "lead"
+        ) {
+          return jsonResponse({
+            data: [{ id: "l-1", name: "Jordan Lee", archived: false }],
+          });
         }
         return jsonResponse({}, 404);
       }),
@@ -164,7 +179,10 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
-        jsonResponse({ data: [{ id: "o-nameless" }], next_cursor: null }),
+        jsonResponse({
+          data: [{ id: "o-nameless", name: null, archived: false }],
+          next_cursor: null,
+        }),
       ),
     );
     render(<EntityRef kind="company" id="o-nameless" />);
@@ -191,11 +209,11 @@ describe("EntityRef", () => {
   it("keeps the id when the record is gone or hidden from this reader", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => jsonResponse({ code: "not_found" }, 404)),
+      vi.fn(async () => jsonResponse({ data: [] })),
     );
     render(<EntityRef kind="deal" id="d-gone" />);
 
-    // A 404 is an answer: row-scope hides a record it will not admit exists,
+    // An omitted id is an answer: row-scope hides a record it will not admit exists,
     // and retrying produces the same one. The id is what a reader is left to
     // trace, so this is the settled reading rather than the failed one.
     await waitFor(() => expect(screen.getByText("d-gone")).toBeTruthy());
@@ -232,7 +250,12 @@ describe("EntityRef", () => {
     expect(screen.queryByText("o-slow")).toBeNull();
 
     for (const resolve of answer) {
-      resolve(jsonResponse({ data: [{ id: "o-slow" }], next_cursor: null }));
+      resolve(
+        jsonResponse({
+          data: [{ id: "o-slow", name: null, archived: false }],
+          next_cursor: null,
+        }),
+      );
     }
 
     // Settled, the id is what is left, and it is a fact a reader can trace —
@@ -336,11 +359,12 @@ describe("EntityRef", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (request: Request) => {
-        if (request.url.includes("/leads/l-1")) {
+        if (
+          request.url.includes("/records/references") &&
+          new URL(request.url).searchParams.get("kind") === "lead"
+        ) {
           return jsonResponse({
-            id: "l-1",
-            full_name: "Jonas Keller",
-            email: "jonas@example.com",
+            data: [{ id: "l-1", name: "Jonas Keller", archived: false }],
           });
         }
         return jsonResponse({}, 404);

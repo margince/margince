@@ -59,7 +59,7 @@ afterEach(() => {
 });
 function mount(
   read: (request: Request) => Promise<Response> | Response = () =>
-    json({ id, full_name: "Fresh name" }),
+    json({ data: [{ id, name: "Fresh name", archived: false }] }),
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -142,7 +142,9 @@ it("never paints a stored name and shows the current name before the screens", a
   mount(() => pending.then((response) => response.clone()));
   expect(screen.queryByText(record.label)).toBeNull();
   expect(screen.getByText("Acme")).toBeTruthy();
-  await act(async () => resolve(json({ id, full_name: "Renamed contact" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Renamed contact", archived: false }] })),
+  );
   expect(await screen.findByText("Renamed contact")).toBeTruthy();
   const rows = screen
     .getAllByRole("button")
@@ -171,9 +173,7 @@ it("prunes archived records while keeping a transiently failed read for another 
   expect(readRecents(me.user.id).entries).toEqual([record]);
   view.rerender(false);
   cleanup();
-  mount(() =>
-    json({ id, full_name: "Archived", archived_at: "2026-01-01T00:00:00Z" }),
-  );
+  mount(() => json({ data: [{ id, name: "Archived", archived: true }] }));
   await waitFor(() => expect(readRecents(me.user.id).entries).toEqual([]));
 });
 it("Clear cannot be undone by a late name response", async () => {
@@ -184,7 +184,9 @@ it("Clear cannot be undone by a late name response", async () => {
   writeRecents(me.user.id, [record, query]);
   mount(() => pending.then((response) => response.clone()));
   fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-  await act(async () => resolve(json({ id, full_name: "Too late" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Too late", archived: false }] })),
+  );
   expect(readRecents(me.user.id).entries).toEqual([]);
   expect(screen.queryByText("Too late")).toBeNull();
 });
@@ -201,7 +203,9 @@ it("a seat switch cannot paint or restore an earlier seat's late read", async ()
       user: { ...me.user, id: "00000000-0000-4000-8000-000000000003" },
     }),
   );
-  await act(async () => resolve(json({ id, full_name: "Wrong seat" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Wrong seat", archived: false }] })),
+  );
   expect(screen.queryByText("Wrong seat")).toBeNull();
   expect(readRecents(me.user.id).entries).toEqual([record]);
 });
@@ -227,8 +231,8 @@ it("rechecks access on activation and refuses a now-hidden record", async () => 
   writeRecents(me.user.id, [record]);
   mount(() =>
     allowed
-      ? json({ id, full_name: "Fresh name" })
-      : json({ code: "not_found", status: 404 }, 404),
+      ? json({ data: [{ id, name: "Fresh name", archived: false }] })
+      : json({ data: [] }),
   );
   const row = await screen.findByRole("button", { name: /^FN\s*Fresh name/ });
   allowed = false;
@@ -247,7 +251,7 @@ it("sign-out clears history and notifies the open palette", () => {
 it("rechecks fresh names on each opening", async () => {
   let name = "First name";
   writeRecents(me.user.id, [record]);
-  const view = mount(() => json({ id, full_name: name }));
+  const view = mount(() => json({ data: [{ id, name, archived: false }] }));
   await screen.findByText("First name");
   view.rerender(false);
   name = "Second name";
@@ -260,7 +264,7 @@ it("hides a transient activation failure and keeps it for the next opening", asy
   writeRecents(me.user.id, [record]);
   mount(() =>
     available
-      ? json({ id, full_name: "Fresh name" })
+      ? json({ data: [{ id, name: "Fresh name", archived: false }] })
       : json({ status: 503, code: "service_unavailable" }, 503),
   );
   const row = await screen.findByRole("button", { name: /^FN\s*Fresh name/ });
@@ -278,13 +282,17 @@ it("a closed palette never navigates when an activation finishes late", async ()
   });
   writeRecents(me.user.id, [record]);
   const view = mount(() =>
-    waiting ? pending : json({ id, full_name: "Fresh name" }),
+    waiting
+      ? pending
+      : json({ data: [{ id, name: "Fresh name", archived: false }] }),
   );
   const row = await screen.findByRole("button", { name: /^FN\s*Fresh name/ });
   waiting = true;
   fireEvent.click(row);
   view.rerender(false);
-  await act(async () => resolve(json({ id, full_name: "Late name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Late name", archived: false }] })),
+  );
   expect(window.location.hash).toBe("");
   expect(view.close).not.toHaveBeenCalled();
 });
@@ -330,22 +338,18 @@ it.each(["contact", "company", "lead", "deal", "project"] as const)(
 );
 
 function metadata(kind: EntityKind, name: string, archived = false): Response {
-  const archived_at = archived ? "2026-01-01T00:00:00Z" : null;
-  if (kind === "company")
-    return json({
-      data: [
-        {
-          id,
-          display_name: name,
-          logo_url: "https://example.test/current-logo.png",
-          archived_at,
-        },
-      ],
-      page: { has_more: false, next_cursor: null },
-    });
-  if (kind === "contact" || kind === "lead")
-    return json({ id, full_name: name, archived_at });
-  return json({ id, name, archived_at });
+  return json({
+    data: [
+      {
+        id,
+        name,
+        archived,
+        ...(kind === "company"
+          ? { logo: "https://example.test/current-logo.png" }
+          : {}),
+      },
+    ],
+  });
 }
 it.each(ENTITY_KINDS)(
   "reads the authorized current name of a saved %s",
@@ -376,16 +380,14 @@ it.each(ENTITY_KINDS)("removes an absent saved %s", async (kind) => {
   writeRecents(me.user.id, [
     { kind: "record", entity_type: kind, id, label: "Old" },
   ]);
-  mount(() =>
-    kind === "company"
-      ? json({ data: [] })
-      : json({ code: "not_found", status: 404 }, 404),
-  );
+  mount(() => json({ data: [] }));
   await waitFor(() => expect(readRecents(me.user.id).entries).toEqual([]));
 });
 it("shows a renamed record when storage can be read but refuses writes", async () => {
   writeRecents(me.user.id, [record]);
-  const read = vi.fn(() => json({ id, full_name: "Current name" }));
+  const read = vi.fn(() =>
+    json({ data: [{ id, name: "Current name", archived: false }] }),
+  );
   const storage = localStorage;
   vi.stubGlobal("localStorage", {
     get length() {
@@ -419,7 +421,9 @@ it("keeps a keyboard-picked destination when checked records arrive above it", a
       .getByRole("button", { name: "Deals Screen" })
       .classList.contains("selected"),
   ).toBe(true);
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   expect(await screen.findByText("Current name")).toBeTruthy();
   expect(
     screen
@@ -441,7 +445,9 @@ it("waits for a mixed recent list before default Enter opens its newest record",
   fireEvent.keyDown(input, { key: "Enter" });
   expect(view.close).not.toHaveBeenCalled();
   expect(input.getAttribute("value")).toBe("");
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   await screen.findByText("Current name");
   fireEvent.keyDown(input, { key: "Enter" });
   await waitFor(() => expect(window.location.hash).toBe(`#/contacts/${id}`));
@@ -456,7 +462,7 @@ it("returns focus to the query after clicking a saved search", async () => {
 it("keeps Clear reachable with only unnamed saved records and returns focus", async () => {
   const user = steppedClock();
   writeRecents(me.user.id, [record]);
-  mount(() => json({ id, full_name: "" }));
+  mount(() => json({ data: [{ id, name: "", archived: false }] }));
   await waitFor(() => expect(screen.queryByText("Loading")).toBeNull());
   await user.click(screen.getByRole("button", { name: "Clear" }));
   expect(readRecents(me.user.id).entries).toEqual([]);
@@ -468,7 +474,7 @@ it("returns focus after an activation fails and hides its row", async () => {
   writeRecents(me.user.id, [record]);
   mount(() =>
     allowed
-      ? json({ id, full_name: "Current name" })
+      ? json({ data: [{ id, name: "Current name", archived: false }] })
       : json({ code: "service_unavailable", status: 503 }, 503),
   );
   const button = await screen.findByRole("button", { name: /Current name/ });
@@ -487,7 +493,9 @@ it("hides a shown record before the changed permission read answers", async () =
   writeRecents(me.user.id, [record]);
   const view = mount(() => {
     calls++;
-    return changed ? pending : json({ id, full_name: "Current name" });
+    return changed
+      ? pending
+      : json({ data: [{ id, name: "Current name", archived: false }] });
   });
   await screen.findByText("Current name");
   changed = true;
@@ -519,7 +527,7 @@ it("a permission change aborts an in-flight activation", async () => {
       ? json({ code: "permission_denied", status: 403 }, 403)
       : waiting
         ? pending
-        : json({ id, full_name: "Current name" });
+        : json({ data: [{ id, name: "Current name", archived: false }] });
   });
   const button = await screen.findByRole("button", { name: /Current name/ });
   waiting = true;
@@ -532,7 +540,9 @@ it("a permission change aborts an in-flight activation", async () => {
       meFixture({ allow: { company: ["read"] } }),
     ),
   );
-  await act(async () => resolve(json({ id, full_name: "Too late" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Too late", archived: false }] })),
+  );
   expect(window.location.hash).toBe("");
   expect(view.close).not.toHaveBeenCalled();
   expect(screen.queryByText("Too late")).toBeNull();
@@ -616,14 +626,18 @@ it("two clicks share one activation and navigate only once", async () => {
   writeRecents(me.user.id, [record]);
   const view = mount(() => {
     calls++;
-    return waiting ? pending : json({ id, full_name: "Current name" });
+    return waiting
+      ? pending
+      : json({ data: [{ id, name: "Current name", archived: false }] });
   });
   const button = await screen.findByRole("button", { name: /Current name/ });
   waiting = true;
   fireEvent.click(button);
   fireEvent.click(button);
   await waitFor(() => expect(calls).toBe(2));
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   await waitFor(() => expect(view.close).toHaveBeenCalledOnce());
   fireEvent.click(button);
   expect(calls).toBe(2);
@@ -638,7 +652,9 @@ it("keeps an activation when another tab appends an unrelated recent query", asy
   writeRecents(me.user.id, [record, query]);
   const view = mount(() => {
     calls++;
-    return calls === 2 ? pending : json({ id, full_name: "Current name" });
+    return calls === 2
+      ? pending
+      : json({ data: [{ id, name: "Current name", archived: false }] });
   });
   const button = await screen.findByRole("button", { name: /Current name/ });
   fireEvent.click(button);
@@ -660,7 +676,9 @@ it("keeps an activation when another tab appends an unrelated recent query", asy
       }),
     );
   });
-  await act(async () => resolve(json({ id, full_name: "Current name" })));
+  await act(async () =>
+    resolve(json({ data: [{ id, name: "Current name", archived: false }] })),
+  );
   await waitFor(() => expect(view.close).toHaveBeenCalledOnce());
   expect(readRecents(me.user.id).entries).toContainEqual({
     kind: "query",
@@ -818,7 +836,7 @@ it("keeps Clear available when an archived row's prune cannot be saved", async (
     },
   });
   const read = vi.fn(() =>
-    json({ id, full_name: "Archived", archived_at: "2026-01-01T00:00:00Z" }),
+    json({ data: [{ id, name: "Archived", archived: true }] }),
   );
   mount(read);
   await waitFor(() => expect(read).toHaveBeenCalledOnce());

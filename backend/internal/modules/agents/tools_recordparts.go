@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -76,21 +78,30 @@ const (
 	actionArg      = "action"
 )
 
-// recordPartActions names what each action needs, in the order a refusal says it.
-var recordPartActions = map[string][]string{
-	"add_offer_line":                {partOfferID, partLine},
-	"update_offer_line":             {partOfferID, partLineItemID, partLine},
-	"remove_offer_line":             {partOfferID, partLineItemID},
-	"add_company_fact":              {partCompanyID, partCategory, partField, partValue},
-	"update_company_fact":           {partCompanyID, partFactKey, partValue},
-	"confirm_company_fact":          {partCompanyID, partFactKey},
-	"remove_company_fact":           {partCompanyID, partFactKey},
-	"update_company_profile_field":  {partCompanyID, partField, partValue},
-	"confirm_company_profile_field": {partCompanyID, partField},
-	"set_project_company":           {partProjectID, partCompanyID},
-	"remove_project_company":        {partProjectID, partCompanyID},
-	"set_project_stakeholder":       {partProjectID, partContactID, partRole},
-	"remove_project_stakeholder":    {partProjectID, partContactID},
+// recordPartAction is one action: what its name leaves unsaid and the arguments
+// it reads. It refuses to run without needs, named in this order; takes are optional.
+type recordPartAction struct {
+	note  string
+	needs []string
+	takes []string
+}
+
+// recordPartActions maps each action to what it reads. The action's line in
+// the schema a client reads is built from it.
+var recordPartActions = map[string]recordPartAction{
+	"add_offer_line":                {needs: []string{partOfferID, partLine}},
+	"update_offer_line":             {needs: []string{partOfferID, partLineItemID, partLine}},
+	"remove_offer_line":             {needs: []string{partOfferID, partLineItemID}},
+	"add_company_fact":              {note: "states one by hand", needs: []string{partCompanyID, partCategory, partField, partValue}},
+	"update_company_fact":           {note: "corrects an extracted fact", needs: []string{partCompanyID, partFactKey, partValue}},
+	"confirm_company_fact":          {needs: []string{partCompanyID, partFactKey}},
+	"remove_company_fact":           {note: "one the company does not state", needs: []string{partCompanyID, partFactKey}},
+	"update_company_profile_field":  {needs: []string{partCompanyID, partField, partValue}},
+	"confirm_company_profile_field": {needs: []string{partCompanyID, partField}},
+	"set_project_company":           {note: "adds it or changes its role", needs: []string{partProjectID, partCompanyID}, takes: []string{partRole}},
+	"remove_project_company":        {needs: []string{partProjectID, partCompanyID}},
+	"set_project_stakeholder":       {note: "adds it or changes its role", needs: []string{partProjectID, partContactID, partRole}},
+	"remove_project_stakeholder":    {needs: []string{partProjectID, partContactID}},
 }
 
 // recordPartFields is what `field` admits: a company profile field, or the
@@ -103,6 +114,24 @@ func recordPartFields() []string {
 		}
 	}
 	return fields
+}
+
+// recordPartLines gives each action a line: the arguments it needs, what its
+// name leaves unsaid, and what it reads when sent.
+func recordPartLines(actions []string) string {
+	lines := []string{"The arguments each action needs:"}
+	for _, name := range actions {
+		part := recordPartActions[name]
+		clauses := []string{strings.Join(part.needs, ", ")}
+		if part.note != "" {
+			clauses = append(clauses, part.note)
+		}
+		if len(part.takes) > 0 {
+			clauses = append(clauses, "takes "+strings.Join(part.takes, ", "))
+		}
+		lines = append(lines, name+": "+strings.Join(clauses, "; "))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (t changeRecordParts) Spec() mcp.ToolSpec {
@@ -120,7 +149,7 @@ func (t changeRecordParts) Spec() mcp.ToolSpec {
 			"confirmCompanyFact/deleteCompanyFact/updateCompanyProfileField/confirmCompanyProfileField/" +
 			"setProjectCompany/removeProjectCompany/setProjectStakeholder/removeProjectStakeholder",
 		InputSchema: schema(`{"type":"object","required":["action"],"properties":{
-			"action":{"type":"string","enum":` + mustJSON(actions) + `},
+			"action":{"type":"string","enum":` + mustJSON(actions) + `,"description":` + strconv.Quote(recordPartLines(actions)) + `},
 			"offer_id":{"type":"string","format":"uuid"},
 			"line_item_id":{"type":"string","format":"uuid"},
 			"line":{"type":"object","description":"The line to add, or the fields of it to change. quantity is required to add one; product_id is taken only on add.","properties":{
@@ -142,9 +171,9 @@ func (t changeRecordParts) Spec() mcp.ToolSpec {
 			"fact_key":{"type":"string","description":"One fact of the company, spelled <field>:<value_key> from its read"},
 			"category":{"type":"string","enum":` + mustJSON(companyFactCategories) + `},
 			"field":{"type":"string","enum":` + mustJSON(recordPartFields()) + `,"description":"A profile field for the profile field actions, a fact field for add_company_fact; record_fields lists which is which"},
-			"value":{"type":"string"},
-			"role":{"type":"string"},
-			"if_version":{"type":"integer","description":"The version you read, so a change made since is refused rather than overwritten"}},
+			"value":{"type":"string","description":"The fact's or profile field's new value"},
+			"role":{"type":"string","description":"What the company or contact is to the project"},
+			"if_version":{"type":"integer","description":"The version you read; a change made since is refused"}},
 			"additionalProperties":false}`),
 		OutputSchema: schema(`{"type":"object"}`),
 	}
@@ -155,11 +184,11 @@ func (t changeRecordParts) Handle(ctx context.Context, in json.RawMessage) (json
 	if err := decodeArgs(in, &a); err != nil {
 		return nil, err
 	}
-	needs, known := recordPartActions[a.Action]
+	part, known := recordPartActions[a.Action]
 	if !known {
 		return nil, &BadArgsError{Field: actionArg, Cause: fmt.Errorf("%q is not an action", a.Action)}
 	}
-	for _, need := range needs {
+	for _, need := range part.needs {
 		if !a.names(need) {
 			return nil, &BadArgsError{Field: need, Cause: fmt.Errorf("%s needs %s", a.Action, need)}
 		}

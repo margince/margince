@@ -666,7 +666,7 @@ tiers: [alpha, beta]
 tasks:
   zed: {display_name: "Test task zed", summary: "Does a thing.", ladder: [alpha], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only], decision: true}
   foo: {display_name: "Test task foo", summary: "Does a thing.", ladder: [alpha, beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only]}
-  abe: {display_name: "Test task abe", summary: "Does a thing.", ladder: [beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only], decision: true, local_only: true}
+  abe: {display_name: "Test task abe", summary: "Does a thing.", ladder: [beta], execution_mode: background, on_budget_exhausted: queue, status: shipped, subject_restriction: honour, sites: [only], decision: true}
 
 degrade_to:
   beta: alpha
@@ -699,18 +699,17 @@ func TestTheDecisionTableListsEveryDeclaredTaskInNameOrder(t *testing.T) {
 }
 
 // The egress page answers for the decision lane too: a decision task's text
-// can reach the bound decision model, and a local-only one only a local
-// model. A task without the declaration says so.
-func TestTheEgressPageNamesEachTasksDecisionReachAndLocalOnlyDeclaration(t *testing.T) {
+// can reach the bound decision model. A task without the declaration says so.
+func TestTheEgressPageNamesEachTasksDecisionReach(t *testing.T) {
 	c, err := parseContract([]byte(decisionContract))
 	if err != nil {
 		t.Fatalf("parseContract: %v", err)
 	}
 	page := string(emitEgressDoc(c))
 	for task, want := range map[string]string{
-		"abe": "| `abe` | `beta` | no | no | yes | only a local decision provider | shipped |",
-		"foo": "| `foo` | `alpha` → `beta` | no | no | no | none | shipped |",
-		"zed": "| `zed` | `alpha` | no | no | no | the bound decision model | shipped |",
+		"abe": "| `abe` | `beta` | no | no | the bound decision model | shipped |",
+		"foo": "| `foo` | `alpha` → `beta` | no | no | none | shipped |",
+		"zed": "| `zed` | `alpha` | no | no | the bound decision model | shipped |",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("the egress row for %s is not %q:\n%s", task, want, page)

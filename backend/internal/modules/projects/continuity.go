@@ -32,13 +32,26 @@ func CompanyDeliveryTx(ctx context.Context, tx pgx.Tx, company ids.CompanyID, lo
 	if scope == "" {
 		scope = "TRUE"
 	}
+	// The company's projects are the ones it is on now, by a live edge: the
+	// stored company_id keeps naming a company taken off the project. Whether
+	// an account still has delivery is a fact about the account, so the edges
+	// are read whole, whatever this caller may read of them.
+	onProject := storekit.SQLf("p.id IN (SELECT c.project_id FROM relationship c WHERE c.kind = '%s'"+
+		" AND c.company_id = $%d AND c.archived_at IS NULL)", auth.ProjectCompanyKind, companyPos)
 	from := "project"
 	if lock {
+		// Removing a company takes its project's edges FOR UPDATE, so sharing
+		// them here holds the delivery fact still. A new edge to the company
+		// waits on the company row the decision has already locked.
+		if _, err := tx.Exec(ctx, "SELECT 1 FROM relationship c WHERE c.kind = $1 AND c.company_id = $2"+
+			" AND c.archived_at IS NULL FOR SHARE", auth.ProjectCompanyKind, company); err != nil {
+			return false, false, fmt.Errorf("lock account delivery edges: %w", err)
+		}
 		// Name the scope and continuity columns so custom-field DDL cannot change the locked row shape.
-		from = storekit.SQLf("(SELECT id, company_id, owner_id, phase, archived_at FROM project WHERE company_id = $%d ORDER BY id FOR UPDATE)", companyPos)
+		from = "(SELECT id, company_id, owner_id, phase, archived_at FROM project p WHERE " + onProject + " ORDER BY id FOR UPDATE)"
 	}
 	query := storekit.SQLf(`SELECT coalesce(bool_or(p.phase = $%d AND %s), false), coalesce(bool_and(%s), true)
- FROM %s p WHERE p.company_id = $%d AND p.archived_at IS NULL`, phasePos, scope, scope, from, companyPos)
+ FROM %s p WHERE %s AND p.archived_at IS NULL`, phasePos, scope, scope, from, onProject)
 	if err := tx.QueryRow(ctx, query, args...).Scan(&active, &complete); err != nil {
 		return false, false, fmt.Errorf("read account delivery continuity: %w", err)
 	}

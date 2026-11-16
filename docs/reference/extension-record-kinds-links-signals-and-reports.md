@@ -16,7 +16,7 @@ Margince. It is for those who build or run extensions. The table lists each feat
 | 1 | Audited fix of signal evidence | Correct a signal's type and evidence. The old values stay in the audit log. | [Audited fix of signal evidence](#audited-fix-of-signal-evidence) |
 | 2 | Company type field | Declare a company type in an extension and set it on a company. See it in the company list and filter by it. | [Company type field](#company-type-field) |
 | 3 | Extension record kinds and link registry | Declare a record kind in an extension. Tag it, put it on a Shortlist and refuse access to it by default. Read the kinds you may see from `GET /v1/record-kinds`. | [Extension record kinds and link registry](#extension-record-kinds-and-link-registry) |
-| 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports and Home, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) |
+| 4 | Extension report breakdowns and counts | Declare a count or a breakdown in an extension. See it on Reports, under the seat's row scope, field masks and the group floor. A multi-select custom field can be split by. | [Extension report breakdowns and counts](#extension-report-breakdowns-and-counts) |
 | 5 | Extension signal types with structured evidence | Declare a signal type in an extension, with an evidence layout that marks personal data. File a signal of it. The same event reported twice leaves one signal. Erasing a contact removes the personal members. | [Extension signal types with structured evidence](#extension-signal-types-with-structured-evidence) |
 | 6 | Panels and tabs on record pages | Draw a component of the unit's own on a contact, company or deal page, with the record the page shows. A reader needs `read` on the panel's object. | [Panels and tabs on record pages](#panels-and-tabs-on-record-pages) |
 | 7 | "Pick a record" field type | Add a custom field of type `record` that points at one record of a kind an extension declared. Set and read it on the record pages and in the settings table. | ["Pick a record" field type](#pick-a-record-field-type) |
@@ -130,7 +130,7 @@ What this feature does not do yet:
 
 ## Extension report breakdowns and counts
 
-An extension can add named counts and breakdowns to Reports and Home. A count is how many live records a population
+An extension can add named counts and breakdowns to Reports. A count is how many live records a population
 holds. A breakdown splits that count by one field. The steps to declare one are in
 [Declare a report count or breakdown](../how-to/add-an-extension.md#declare-a-report-count-or-breakdown).
 
@@ -149,7 +149,7 @@ name.
 | Field masks | A mask that reaches the kind or the population takes the rows out of every group. The answer carries how many in `excluded_by_permission`. |
 | Group floor | A group below the analytics group floor is withheld. The floor is the one the analytics questions use, five by default. The smallest remaining group goes with it, and so does the total. A count under the floor is withheld too. |
 | `GET /v1/extension-reports` | Answers every report the seat may read. A report whose custom field this installation does not define is left out. |
-| Reports and Home | The Reports Pipeline page and the Home side column draw each answer in a panel. Both read the same endpoint. |
+| Reports | The Reports Pipeline page draws each answer in a panel. |
 
 The frontend holds no list of registered names. The label and the groups come from the answer, so the screens cannot
 drift from the registry. The contract's `kind` values `count` and `breakdown` are held equal to the registry's by a

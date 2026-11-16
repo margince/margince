@@ -6,7 +6,7 @@ import {
 } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../api/client";
-import { ENTITY_NAME_KEY } from "../components/entityref";
+import { companyReferenceQuery } from "../components/entityref.queries";
 import {
   ConnectivityError,
   reportReached,
@@ -347,7 +347,7 @@ describe("the mutation failure sink", () => {
 describe("names the chrome is showing", () => {
   function nameQuery(client: QueryClient, id: string): Promise<unknown> {
     return client.fetchQuery({
-      queryKey: ["company", ENTITY_NAME_KEY, id],
+      ...companyReferenceQuery(id),
       queryFn: () => Promise.resolve({ name: "Globex" }),
     });
   }
@@ -360,7 +360,8 @@ describe("names the chrome is showing", () => {
     const client = createQueryClient();
     await nameQuery(client, "o-1");
     expect(
-      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])?.isInvalidated,
+      client.getQueryState(companyReferenceQuery("o-1").queryKey)
+        ?.isInvalidated,
     ).toBe(false);
 
     await new MutationObserver(client, {
@@ -368,7 +369,8 @@ describe("names the chrome is showing", () => {
     }).mutate();
 
     expect(
-      client.getQueryState(["company", ENTITY_NAME_KEY, "o-1"])?.isInvalidated,
+      client.getQueryState(companyReferenceQuery("o-1").queryKey)
+        ?.isInvalidated,
     ).toBe(true);
   });
 

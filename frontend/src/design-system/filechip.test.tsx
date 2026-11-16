@@ -14,6 +14,18 @@ describe("FileChip", () => {
     expect(link.getAttribute("download")).toBe("GR-2026-0092.pdf");
   });
 
+  it("opens a link in a new tab instead of downloading it", () => {
+    render(
+      <FileChip link="https://docs.google.com/document/d/x" filename="Notes" />,
+    );
+    const link = screen.getByRole("link", { name: "Notes" });
+    expect(link.getAttribute("href")).toBe(
+      "https://docs.google.com/document/d/x",
+    );
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.hasAttribute("download")).toBe(false);
+  });
+
   it("draws a PDF, an image and anything else with three different marks", () => {
     // The glyph is decorative, so it is compared as markup rather than looked
     // up by name: what matters is that the three kinds do not draw the same

@@ -3,10 +3,12 @@
 
 import {
   type QueryClient,
+  type QueryKey,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { fileListKeys } from "./attachmentkeys";
 import { problemCodeOf, problemStatus, unwrap } from "./problem";
 import { invalidateRecord } from "./recordwritekeys";
 import { contactCasesKey, dsrsKey, worklistKey } from "./workkeys";
@@ -32,14 +34,27 @@ export function invalidateAfterContactMerge(
   client: QueryClient,
   contactIds: Iterable<string>,
 ): Promise<unknown> {
+  const ids = [...new Set(contactIds)];
   return Promise.all([
     invalidatePairReads(client),
     client.invalidateQueries({ queryKey: ["contacts"] }),
     client.invalidateQueries({ queryKey: dsrsKey }),
-    ...[...new Set(contactIds)].map((id) =>
-      invalidateRecord(client, "contact", id),
+    ...ids.map((id) => invalidateRecord(client, "contact", id)),
+    // The merged-away contact's files and message links move to the survivor.
+    ...movedFileKeys("contact", ids).map((queryKey) =>
+      client.invalidateQueries({ queryKey }),
     ),
   ]);
+}
+
+// A merge refiles every file of the merged-away record under the survivor.
+function movedFileKeys(
+  kind: "contact" | "company",
+  ids: readonly string[],
+): QueryKey[] {
+  return ids.flatMap((id) =>
+    fileListKeys({ entityType: kind, entityId: id }, "moved"),
+  );
 }
 
 /**
@@ -63,6 +78,8 @@ export function useDedupeDisposition() {
       winnerId?: string;
       /** Both ends of a contact pair, so a merge stales their pages too. */
       contactIds?: readonly string[];
+      /** Both ends of a company pair, whose libraries a merge combines. */
+      companyIds?: readonly string[];
     }) => {
       unwrap(
         await api.POST("/dedupe/candidates/{id}/disposition", {
@@ -71,10 +88,19 @@ export function useDedupeDisposition() {
         }),
       );
     },
-    onSuccess: (_, input) =>
-      input.disposition === "merge" && input.contactIds
-        ? invalidateAfterContactMerge(queryClient, input.contactIds)
-        : invalidatePairReads(queryClient),
+    onSuccess: (_, input) => {
+      if (input.disposition !== "merge")
+        return invalidatePairReads(queryClient);
+      if (input.contactIds) {
+        return invalidateAfterContactMerge(queryClient, input.contactIds);
+      }
+      return Promise.all([
+        invalidatePairReads(queryClient),
+        ...movedFileKeys("company", input.companyIds ?? []).map((queryKey) =>
+          queryClient.invalidateQueries({ queryKey }),
+        ),
+      ]);
+    },
   });
 }
 

@@ -455,7 +455,7 @@ func refusedUncalled(err error) bool {
 // blocked provider, unless a cached answer will serve it: that reaches no
 // provider and spends no attempt, so an outage must not withhold it.
 func (r *Router) blockedUnlessCached(b *binding, task Task, ladder []Tier, key string, wsID ids.WorkspaceID, keyErr error) *ProviderDownError {
-	servable := servableLadder(b, task, ladder)
+	servable := servableLadder(b, ladder)
 	if keyErr == nil && !r.cacheOff {
 		if _, tier, hit := r.cache.get(key, wsID, b.generation); hit && tierOnLadder(servable, tier) {
 			return nil

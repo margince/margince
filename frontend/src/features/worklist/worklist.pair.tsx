@@ -104,7 +104,15 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const answer = (disposition: PairDisposition, winnerId?: string) =>
     decide.mutate(
-      { id: item.id, disposition, winnerId },
+      {
+        id: item.id,
+        disposition,
+        winnerId,
+        companyIds:
+          item.subject?.type === "company"
+            ? [pair.left.id, pair.right.id]
+            : undefined,
+      },
       {
         // A refused decision leaves the row exactly as an unpressed one looks.
         // Without this the reader believes the pair is settled and it is not.

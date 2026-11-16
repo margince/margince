@@ -134,6 +134,31 @@ func (c *Client) CreateChannel(ctx context.Context, externalKey, name string) (C
 	return c.Channel(ctx, out.Slug)
 }
 
+// Channels lists the channels the bot can see: every public channel, and each
+// private channel it is a member of. Dispact names a channel here by its slug
+// and leaves archived channels out.
+func (c *Client) Channels(ctx context.Context) ([]Channel, error) {
+	var out struct {
+		Channels []struct {
+			Name       string `json:"name"`
+			IsPrivate  bool   `json:"is_private"`
+			IsArchived bool   `json:"is_archived"`
+		} `json:"channels"`
+	}
+	if err := c.call(ctx, http.MethodGet, "/api/bot/channels", nil, &out); err != nil {
+		return nil, err
+	}
+	channels := make([]Channel, 0, len(out.Channels))
+	for _, ch := range out.Channels {
+		channels = append(channels, Channel{
+			Slug: ch.Name, Name: ch.Name, IsPrivate: ch.IsPrivate, IsArchived: ch.IsArchived,
+			// A private channel is listed only to its members.
+			BotIsMember: ch.IsPrivate,
+		})
+	}
+	return channels, nil
+}
+
 // ChannelByKey finds the channel created under externalKey.
 func (c *Client) ChannelByKey(ctx context.Context, externalKey string) (Channel, error) {
 	var out struct {

@@ -15,7 +15,7 @@ See also [improve-mcp-quality.md](improve-mcp-quality.md) (what to do with a red
 |---|---|
 | `claude` (default) | `claude-sonnet-5-5` |
 | `gpt` | `gpt-5.6-sol` |
-| `gemini` | `gemini-3.8-flash-medium` |
+| `gemini` | `gemini-4-hydrogen-medium` |
 | `mistral` | `mistral-medium-3-5` |
 
 The table is in `e2e/llm/candidates.json`.

@@ -182,7 +182,7 @@ func Setup(t *testing.T) *Env {
 // this store that legitimately varies between them.
 func ProjectsStore(db *database.DB) *projects.Store {
 	return projects.NewStore(db).
-		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx)).
+		WithCompanyEdges(contacts.AttachCompanyToProjectTx, projects.CompaniesFrom(contacts.CompaniesOnProjectTx), contacts.FirstCustomersOnProjectsTx).
 		WithDealLink(installseam.ProjectDealLink(deals.NewStore(db, installseam.Deals())))
 }
 

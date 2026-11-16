@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
+import { contactDocuments } from "../../testing/contactdocuments";
 import { ComposeModal, RelinkModal } from "./compose";
 import {
   activity202,
@@ -26,6 +27,45 @@ afterEach(() => {
 });
 
 describe("RelinkModal", () => {
+  it("moves the message's files off the contact's Documents count", async () => {
+    const docs = contactDocuments(2);
+    const onClose = vi.fn();
+    stubRoutes({
+      "GET /attachments": () => docs.list(),
+      "GET /search": () =>
+        jsonResponse({
+          data: [{ type: "deal", id: "d-9", title: "Acme renewal" }],
+          page: { has_more: false },
+        }),
+      "POST /activities/act-1/relink": () => {
+        docs.becomes(1);
+        return jsonResponse(activity202);
+      },
+    });
+    render(
+      <>
+        {docs.strip}
+        <RelinkModal
+          activityId="act-1"
+          activityVersion={4}
+          entityType="contact"
+          entityId="p-1"
+          open
+          onClose={onClose}
+        />
+      </>,
+    );
+    await docs.shows(2);
+
+    await userEvent.type(screen.getByRole("searchbox"), "Acme");
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Acme renewal" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Relink" }));
+
+    await docs.shows(1);
+  });
+
   it("relinks the search-picked target and closes on 200", async () => {
     const onClose = vi.fn();
     const sent = stubRoutes({

@@ -356,7 +356,7 @@ func readCompanyMergeState(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (cr
 // (backend/internal/compose/integration/projectmerge_integration_test.go)
 const liveProjectEdge = `FROM relationship c
 		  JOIN project p ON p.id = c.project_id AND p.archived_at IS NULL
-		 WHERE c.kind = 'project_company' AND c.archived_at IS NULL`
+		 WHERE c.kind = '` + ProjectCompanyKind + `' AND c.archived_at IS NULL`
 
 // refuseWhenBothCarryProjects enforces PROJ-LIFE-4's ask. Two companies
 // that each hold live bodies of work may, once merged, be running the same

@@ -26,6 +26,7 @@ import {
   KINDS_WITH_A_CONTACT,
   type MeetingAttendees,
   NO_ATTENDEES,
+  subjectIsRequired,
   todayDay,
 } from "../lib/activitybody";
 import { useCanWrite } from "../lib/capability";
@@ -43,6 +44,7 @@ import "./logactivity.css";
 import { useViewerZone } from "../lib/viewerzone";
 import { FollowUpTaskFields, TaskTimeField } from "./followuptaskfields";
 import { CallOutcomeField } from "./logactivity.calloutcome";
+import { MessageChannelField, useMessageChannel } from "./logactivity.channel";
 import { useActivityCustomFields } from "./logactivity.custom";
 import {
   activityDealFilingKey,
@@ -121,6 +123,7 @@ export function LogActivityForm({
   }
   const [files, setFiles] = useState<readonly PickedFile[]>([]);
   const custom = useActivityCustomFields(draft.kind);
+  const messageChannel = useMessageChannel(draft);
   const [attendees, setAttendees] = useState<MeetingAttendees>(NO_ATTENDEES);
   const asksAttendees = KINDS_WITH_A_CONTACT.has(draft.kind);
   const needsAttendee = entityType === "company" && asksAttendees;
@@ -284,7 +287,8 @@ export function LogActivityForm({
           (draft.kind !== "task" &&
             draft.followUp !== undefined &&
             !draft.followUp.subject.trim()) ||
-          (needsAttendee && attendees.contacts.length === 0))
+          (needsAttendee && attendees.contacts.length === 0) ||
+          messageChannel.missing)
       }
       reason={dealFiling.reason}
       pending={log.isPending}
@@ -314,6 +318,7 @@ export function LogActivityForm({
           draft: {
             ...draft,
             dealFiling: dealFiling.request,
+            channelProvider: messageChannel.channel,
             sourceActivityId,
             custom: custom.body(),
           },
@@ -332,6 +337,7 @@ export function LogActivityForm({
           <ActivityKindField
             value={draft.kind}
             offersTask={!taskToComplete}
+            offersMessage={messageChannel.options.length > 0}
             onChange={(kind) => setField({ kind })}
           />
         )}
@@ -350,10 +356,7 @@ export function LogActivityForm({
             <DateInput
               {...control}
               value={isoOrBlank(draft.day)}
-              // A note or meeting cannot have happened in the future, and the
-              // cap makes the picker say so; a due date has no such ceiling.
-              // occurredFields clamps a typed-in future day the same way, on the
-              // same clock. So the box refuses the days the submit would move.
+              // Match occurredFields so the picker and submission accept the same days.
               max={latestDayOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
               onChange={(event) => setField({ day: event.target.value })}
@@ -385,13 +388,19 @@ export function LogActivityForm({
         />
       )}
       {dealFiling.field}
+      <MessageChannelField
+        active={draft.kind === "message"}
+        options={messageChannel.options}
+        value={messageChannel.channel}
+        onChange={(channelProvider) => setField({ channelProvider })}
+      />
       {draft.kind === "call" && (
         <CallOutcomeField
           value={draft.callOutcome}
           onChange={(callOutcome) => setField({ callOutcome })}
         />
       )}
-      <Field label={t("log.subject")} required={draft.kind !== "call"}>
+      <Field label={t("log.subject")} required={subjectIsRequired(draft.kind)}>
         {(control) => (
           <TextInput
             {...control}
@@ -457,10 +466,6 @@ export function LogActivityForm({
     : form(<div className="form-actions">{submit}</div>);
 }
 
-/**
- * LogActivity is the standing composer card the contact and deal screens keep
- * open in their rail.
- */
 export function LogActivity({
   entityType,
   entityId,
@@ -476,24 +481,19 @@ export function LogActivity({
   const me = useMe();
   const canLog = useCanWrite("activity", "create");
   const logRefused = me.data?.authorization !== undefined && !canLog;
-  if (logRefused) {
-    return (
-      <Panel title={t("log.title")}>
-        <PanelBody>
-          <p>{t("record.logActivityRefused")}</p>
-        </PanelBody>
-      </Panel>
-    );
-  }
   return (
     <Panel title={t("log.title")}>
       <PanelBody>
-        <LogActivityForm
-          entityType={entityType}
-          entityId={entityId}
-          askedKind={askedKind}
-          onLogged={onLogged}
-        />
+        {logRefused ? (
+          <p>{t("record.logActivityRefused")}</p>
+        ) : (
+          <LogActivityForm
+            entityType={entityType}
+            entityId={entityId}
+            askedKind={askedKind}
+            onLogged={onLogged}
+          />
+        )}
       </PanelBody>
     </Panel>
   );

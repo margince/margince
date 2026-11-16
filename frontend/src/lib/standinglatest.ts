@@ -75,7 +75,7 @@ function saidIn(row: Activity): string | undefined {
     row.kind === "task" ||
     row.archived_at ||
     row.content_state === "withheld" ||
-    row.capture_label === "noise" ||
+    ["other", "noise"].includes(row.capture_label ?? "") ||
     SAYS_NOTHING.has(row.automatic_kind ?? "")
   ) {
     return undefined;

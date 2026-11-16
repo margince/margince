@@ -23,6 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+const captureReconnectSentence = "magic.action.capture_reauth_required"
+
 // SourceHealth answers the reader's own capture connections needing a hand.
 //
 // A seam because capture is a sibling module: compose injects the edge. This
@@ -104,10 +106,12 @@ type watchedCondition struct {
 const captureNotCollecting = "magic.consequence.capture_not_collecting"
 
 var watchedConcerns = map[string]watchedCondition{
-	"sync_stalled":   {sentence: "magic.action.capture_sync_stalled", consequence: captureNotCollecting},
-	"capture_silent": {sentence: "magic.action.capture_silent", consequence: "magic.consequence.capture_may_be_incomplete"},
+	"sync_stalled":           {sentence: "magic.action.capture_sync_stalled", consequence: captureNotCollecting},
+	"notes_grant_missing":    {sentence: captureReconnectSentence, consequence: captureNotCollecting},
+	"notes_account_mismatch": {sentence: captureReconnectSentence, consequence: captureNotCollecting},
+	"capture_silent":         {sentence: "magic.action.capture_silent", consequence: "magic.consequence.capture_may_be_incomplete"},
 	"reauth_required": {
-		sentence:    "magic.action.capture_reauth_required",
+		sentence:    captureReconnectSentence,
 		consequence: captureNotCollecting,
 	},
 	"connection_error": {

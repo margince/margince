@@ -169,12 +169,29 @@ function overriddenAfter(
   );
 }
 
+/**
+ * The screen's list fetcher, in the screen or in the module it imports the
+ * fetcher from. A shell prefetch shares that module without loading the screen.
+ */
+export function listFetcherBody(
+  file: string,
+  source: string,
+  readModule: ReadModule,
+): string | undefined {
+  const local = fetcherBody(source);
+  if (local !== undefined) return local;
+  const named = /\bfetchPage: (\w+),/.exec(source)?.[1];
+  return named === undefined
+    ? undefined
+    : builderBody(file, source, named, readModule);
+}
+
 export function screenSendsSort(
   file: string,
   source: string,
   readModule: ReadModule,
 ): boolean {
-  const body = fetcherBody(source);
+  const body = listFetcherBody(file, source, readModule);
   const wire = body === undefined ? undefined : wireQuery(body);
   if (wire === undefined) return false;
   const spreads = wireSpreads(file, source, wire, readModule);
@@ -208,14 +225,14 @@ function sortClaims(source: string): string[] {
 }
 
 /** A sibling module read from the tree, by a path from src/ and a specifier. */
-const treeModules =
+export const treeModules =
   (tree: CensusTree): ReadModule =>
   (fromFile, specifier) => {
     const base = resolve(srcDir, dirname(fromFile), specifier);
     return (tree.at(`${base}.ts`) ?? tree.at(`${base}.tsx`))?.text;
   };
 
-const fromSrc = (file: CensusFile) => file.rel.replace(/^src\//, "");
+export const fromSrc = (file: CensusFile) => file.rel.replace(/^src\//, "");
 
 // The company contacts list builds its fetcher in place with useMemo.
 const inPlaceFetcher = join(

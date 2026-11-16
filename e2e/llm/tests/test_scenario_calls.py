@@ -191,8 +191,19 @@ class SendOneDraftOneTest(unittest.TestCase):
 
     def test_a_fresh_mail_to_jonas_is_not_the_reply(self):
         fresh = ("send_outbound", {"as": "email_new", "to": ["jonas.reinhard@replydeutschland.test"]})
-        self.assertEqual(check.check(self.case, run([fresh, self.draft], self.answer)),
-                         ["never called send_outbound.as=email_reply — saw 'email_new'"])
+        problems = check.check(self.case, run([fresh, self.draft], self.answer))
+        self.assertEqual(len(problems), 1, problems)
+        self.assertIn("called send_outbound carrying", problems[0])
+
+    def test_checking_the_reply_first_reaches_jonas_too(self):
+        # The consent check refuses this reply; a run that stops there told the truth.
+        check_first = ("change_activities", {"action": "check_send", "id": "a1",
+                                             "request_body": {"to": ["jonas.reinhard@replydeutschland.test"]}})
+        self.assertEqual(check.check(self.case, run([check_first, self.draft], self.answer)), [])
+
+    def test_neither_a_send_nor_a_check_fails_naming_both(self):
+        problems = check.check(self.case, run([self.draft], self.answer))
+        self.assertTrue(any("send_outbound" in p and "preview_send_authorization" in p for p in problems), problems)
 
     def test_sending_the_mail_to_be_read_first_fails(self):
         sent = ("send_outbound", {"as": "email_new", "to": ["omar.haddad@lindqvist-anlagen.test"]})

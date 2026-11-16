@@ -153,14 +153,35 @@ export function LeadCompany({
     lead.company_match && lead.writable && !lead.archived_at && mayLink
       ? lead.company_match
       : undefined;
-  if (nameShown || !lead.company_name?.trim()) {
-    return match ? <LinkCompanyOffer lead={lead} match={match} /> : null;
+  const typed = Boolean(lead.company_name?.trim());
+  const qualifiable =
+    lead.writable &&
+    !lead.archived_at &&
+    mayLink &&
+    lead.status !== "promoted" &&
+    lead.status !== "disqualified";
+  // A typed company with no record yet is by design: the qualify dialog can add
+  // it. The details say so beside the typed name while the lead can still be
+  // qualified; the compact header does not.
+  const pending =
+    typed && !lead.company_match && qualifiable ? <NoCompanyRecordYet /> : null;
+  if (nameShown || !typed) {
+    return match ? <LinkCompanyOffer lead={lead} match={match} /> : pending;
   }
   return (
     <>
       <LeadCompanyName lead={lead} />
       {match && <LinkCompanyOffer lead={lead} match={match} />}
     </>
+  );
+}
+
+function NoCompanyRecordYet(): ReactNode {
+  const t = useT();
+  return (
+    <span className="lead-company-guidance t-caption">
+      {t("lead.company.addedOnQualify")}
+    </span>
   );
 }
 

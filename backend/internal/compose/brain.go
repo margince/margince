@@ -122,13 +122,7 @@ type ModelPath struct {
 	// classify labels a known contact's mail for attention, this decides
 	// whether a stranger becomes a record at all.
 	CaptureCounterpartyVerdict completer
-	// CaptureConfidentialityVerdict decides what one THREAD is about, so a
-	// classified mailbox can open the ordinary conversations instead of holding
-	// everything. A separate task from CaptureCounterpartyVerdict because it
-	// answers a different question about a different subject: that one decides
-	// whether a stranger becomes a record, this decides whether a colleague may
-	// read a conversation. Its ladder is local-only, so a deployment that binds
-	// no local rung holds every thread rather than sending mail to a cloud.
+	// Separate from sender classification: a known mailbox can still hold a private thread.
 	CaptureConfidentialityVerdict completer
 	// SignalExtract is the SIG-F-3 lane that reads the material events out of
 	// a settled conversation. It is a separate task from CaptureClassify

@@ -25,7 +25,7 @@ export const RecordOwner: Story = {
   args: {
     action: "create_task",
     automation: {
-      ...configuredAutomation("renewal-1", Date.parse("2026-12-01T10:00:00Z")),
+      ...configuredAutomation("au-2", Date.parse("2026-12-01T10:00:00Z")),
       key: "renewal_reminder",
       params: { recipient: "record_owner" },
     },

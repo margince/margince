@@ -336,7 +336,6 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	// could filter by one freely.
 	filtered := slices.Sorted(maps.Keys(req.Filters))
 	req.Filters = withThresholdDefaults(spec, req.Filters)
-	asked := req.GroupBy
 	// The default group-by becomes the REQUEST's. Everything downstream that
 	// asks what this query groups by — the plan echo, the derivation handle,
 	// and the reference-scope set deciding which referenced records the answer
@@ -346,13 +345,16 @@ func (e *reportEngine) runSpec(ctx context.Context, report string, spec reportSp
 	if len(req.GroupBy) == 0 {
 		req.GroupBy = spec.defaultBy
 	}
+	// The default grouping is refused like an asked one, never dropped: an
+	// ungrouped open-deals-per-company is a different report under its name.
+	asked := req.GroupBy
 	groupBy := req.GroupBy
 	aggregates := req.Aggregates
 	if len(aggregates) == 0 {
 		aggregates = grantedDefaultAggregates(ctx, spec)
 	}
-	// What the caller asked for by name is refused by name; what they did not
-	// ask for was narrowed above.
+	// The grouping and what the caller asked for by name are refused by name;
+	// default measures they did not ask for were narrowed above.
 	if err := requireVocabularyGrants(ctx, spec,
 		slices.Concat(asked, filtered, aggregateFields(req.Aggregates))); err != nil {
 		return reportOutcome{}, err
