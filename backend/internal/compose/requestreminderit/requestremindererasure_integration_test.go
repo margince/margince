@@ -3,7 +3,9 @@
 
 //go:build integration
 
-package compose
+// Package requestreminderit_test proves, through the production capture path
+// and the composed eraser, that erasing a mail takes its quote off the reminder.
+package requestreminderit_test
 
 import (
 	"context"
@@ -13,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -64,7 +67,7 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 	if _, err := e.Activities.SetOwedVerdictAsked(classifier, message, activities.OwedVerdictAsksUs, "fixture", at, "Please send the report."); err != nil {
 		t.Fatal(err)
 	}
-	if err := NewOwedClassifier(e.Pool, nil, func() time.Time { return at.Add(time.Hour) }, nil).store.CaptureEmailRequests(classifier, at.Add(time.Hour)); err != nil {
+	if err := compose.NewOwedClassifier(e.Pool, nil, func() time.Time { return at.Add(time.Hour) }, nil).RunWorkspace(classifier, 0); err != nil {
 		t.Fatal(err)
 	}
 	const quoted = `SELECT count(*) FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1
@@ -74,7 +77,7 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 		t.Fatalf("%d reminder(s) quote the ask in body and system text, want 1; the test proves nothing otherwise", n)
 	}
 
-	eraser := eraserWithGraph(e.DB()).WithRawCapturePurger(RawCapturePurgerFor(e.DB()))
+	eraser := compose.ComposedEraser(e.Pool, nil, nil)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return eraser.PurgeContentDerivedFromNoiseTx(e.Admin(), tx, []ids.UUID{message})
 	}); err != nil {
@@ -83,4 +86,15 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 	if n := countIn(t, e, quoted, message); n != 0 {
 		t.Errorf("%d reminder(s) still quote the erased mail in body or system text", n)
 	}
+}
+
+func countIn(t *testing.T, e *integration.Env, query string, args ...any) int {
+	t.Helper()
+	var n int
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
+	}); err != nil {
+		t.Fatalf("counting: %v", err)
+	}
+	return n
 }
