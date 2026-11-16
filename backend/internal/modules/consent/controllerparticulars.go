@@ -63,8 +63,8 @@ type ParticularsTranslation struct {
 	AdvertiserContact string `yaml:"AdvertiserContact"` //nolint:tagliatelle // the saved row spells each field by its Go name
 }
 
-// text is the translation's fields alone, with no default text under them.
-func (t ParticularsTranslation) text() ControllerParticulars {
+// asParticulars is the translation's fields alone, with no default text under them.
+func (t ParticularsTranslation) asParticulars() ControllerParticulars {
 	return ControllerParticulars{
 		LegalName: t.LegalName, PostalAddress: t.PostalAddress, PrivacyContact: t.PrivacyContact,
 		ObjectionRoute: t.ObjectionRoute, AdvertiserContact: t.AdvertiserContact,
@@ -157,7 +157,7 @@ func validateControllerParticulars(p ControllerParticulars) error {
 			return fmt.Errorf("translation %q is stated twice, and a mail can print only one", t.Language)
 		}
 		seen[t.Language] = true
-		if err := validateParticularFields(particularFields(t.text(), t.Language)); err != nil {
+		if err := validateParticularFields(particularFields(t.asParticulars(), t.Language)); err != nil {
 			return err
 		}
 	}

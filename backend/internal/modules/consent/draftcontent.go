@@ -19,9 +19,11 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // The draft findings, in the vocabulary of the preview contract.
@@ -54,12 +56,19 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 	}
 	var findings []DraftFinding
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// One check per pack, however many recipients share it.
+		var codes []jurisdiction.Code
 		for _, address := range recipients {
 			country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
 			if err != nil {
 				return err
 			}
-			rules, _, found := applicableRules(country.Code)
+			if !slices.Contains(codes, country.Code) {
+				codes = append(codes, country.Code)
+			}
+		}
+		for _, code := range codes {
+			rules, _, found := applicableRules(code)
 			if !found {
 				continue
 			}
@@ -98,37 +107,43 @@ func draftFindings(language string, claims []string, subject, body string) []Dra
 }
 
 // claimsIn answers each claim word text uses as a whole word, ignoring case.
-// A longer claim takes its words with it, so "tốt nhất" is not also reported
-// as "nhất".
+// Longer claims are matched first and blanked out wherever they stand, so
+// "tốt nhất" is not also reported as "nhất".
 func claimsIn(text string, claims []string) []string {
-	lowered := []rune(strings.ToLower(text))
+	lowered := strings.ToLower(text)
 	ordered := slices.Clone(claims)
-	slices.SortStableFunc(ordered, func(a, b string) int { return len([]rune(b)) - len([]rune(a)) })
+	slices.SortStableFunc(ordered, func(a, b string) int { return len(b) - len(a) })
 	var found []string
 	for _, claim := range ordered {
-		word := []rune(strings.ToLower(norm.NFC.String(claim)))
-		if at := wholeWordAt(lowered, word); at >= 0 {
+		var hit bool
+		if lowered, hit = blankWholeWords(lowered, strings.ToLower(norm.NFC.String(claim))); hit {
 			found = append(found, claim)
-			for i := range word {
-				lowered[at+i] = ' '
-			}
 		}
 	}
 	return found
 }
 
-func wholeWordAt(text, word []rune) int {
-	for at := 0; at+len(word) <= len(text); at++ {
-		if !slices.Equal(text[at:at+len(word)], word) {
-			continue
-		}
-		before := at == 0 || !unicode.IsLetter(text[at-1])
-		after := at+len(word) == len(text) || !unicode.IsLetter(text[at+len(word)])
-		if before && after {
-			return at
-		}
+// blankWholeWords replaces every whole-word occurrence of word in text with
+// spaces of the same byte length, and reports whether there was one. Word
+// edges are the ones the draft checks use, so a digit continues a word.
+func blankWholeWords(text, word string) (string, bool) {
+	if word == "" {
+		return text, false
 	}
-	return -1
+	hit := false
+	for offset := 0; offset < len(text); {
+		i := strings.Index(text[offset:], word)
+		if i < 0 {
+			break
+		}
+		start, end := offset+i, offset+i+len(word)
+		if salutation.WordBoundary(text, start-1) && salutation.WordBoundary(text, end) {
+			text = text[:start] + strings.Repeat(" ", len(word)) + text[end:]
+			hit = true
+		}
+		offset = start + 1
+	}
+	return text, hit
 }
 
 var (
@@ -155,10 +170,6 @@ func statesProof(text string) bool {
 // leadsWith reports whether the first paragraph whose language can be told is
 // in language. A draft with no such paragraph is not judged.
 func leadsWith(body string, language textlang.Lang) bool {
-	for paragraph := range strings.SplitSeq(body, "\n\n") {
-		if found := textlang.Detect(paragraph); found != textlang.Unknown {
-			return found == language
-		}
-	}
-	return true
+	found := textlang.DetectFirst(strings.Split(body, "\n\n")...)
+	return found == textlang.Unknown || found == language
 }

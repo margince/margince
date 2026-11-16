@@ -71,12 +71,12 @@ func TestAdvertisingInThePackLanguageNeedsTheParticularsInIt(t *testing.T) {
 	}
 	layout := disclosureLayout{marketing: true, language: "en", baseLanguage: "en", packLanguage: "vi"}
 
-	for _, line := range layoutDisclosures(owed, particularsWith("", ""), layout) {
+	for _, line := range bothAdvertisingLines(t, layoutDisclosures(owed, particularsWith("", ""), layout)) {
 		if !line.Missing() {
 			t.Errorf("%s printed %q with no Vietnamese version stated", line.Kind, line.Text)
 		}
 	}
-	for _, line := range layoutDisclosures(owed, particularsWith(vietnameseRoute, vietnameseReach), layout) {
+	for _, line := range bothAdvertisingLines(t, layoutDisclosures(owed, particularsWith(vietnameseRoute, vietnameseReach), layout)) {
 		if line.Missing() {
 			t.Errorf("%s is missing although its Vietnamese version is stated", line.Kind)
 		}
@@ -84,7 +84,7 @@ func TestAdvertisingInThePackLanguageNeedsTheParticularsInIt(t *testing.T) {
 	// An installation that writes in the pack language has stated
 	// its particulars in it already.
 	native := disclosureLayout{marketing: true, language: "vi", baseLanguage: "vi", packLanguage: "vi"}
-	for _, line := range layoutDisclosures(owed, particularsWith("", ""), native) {
+	for _, line := range bothAdvertisingLines(t, layoutDisclosures(owed, particularsWith("", ""), native)) {
 		if line.Missing() {
 			t.Errorf("%s is missing although the default text is written in the pack language", line.Kind)
 		}
@@ -166,4 +166,15 @@ func TestAFurtherEntityKeepsItsOwnNameInATranslatedMail(t *testing.T) {
 		t.Errorf("the entity's Vietnamese mail names %q with route %q, want its own name and the stated route",
 			got.LegalName, got.ObjectionRoute)
 	}
+}
+
+// bothAdvertisingLines fails unless lines are the objection route and the
+// advertiser contact, so a loop over them cannot pass on an empty answer.
+func bothAdvertisingLines(t *testing.T, lines []DisclosureLine) []DisclosureLine {
+	t.Helper()
+	if len(lines) != 2 || lines[0].Kind != string(messagingrules.ObjectionRoute) ||
+		lines[1].Kind != string(messagingrules.AdvertiserContact) {
+		t.Fatalf("lines %+v, want the objection route and the advertiser contact", lines)
+	}
+	return lines
 }

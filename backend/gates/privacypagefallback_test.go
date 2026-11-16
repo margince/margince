@@ -24,26 +24,16 @@ const (
 // record another.
 func TestThePrivacyPageFallbackIsOneOnBothSides(t *testing.T) {
 	t.Parallel()
-	source, err := gatekit.ReadFile(frontendPrivacyPage)
-	if err != nil {
-		t.Fatalf("reading the frontend fallback: %v", err)
-	}
-	list := regexp.MustCompile(`PRIVACY_PAGE_FIELDS = \[([^\]]*)\]`).FindSubmatch(source)
-	if list == nil {
-		t.Fatalf("%s no longer declares PRIVACY_PAGE_FIELDS; point this gate at what replaced it", frontendPrivacyPage)
-	}
-	var screen []string
-	for _, field := range regexp.MustCompile(`"([a-z_]+)"`).FindAllSubmatch(list[1], -1) {
-		screen = append(screen, string(field[1]))
-	}
+	screen := privacyPageFieldsIn(t, frontendPrivacyPage, `PRIVACY_PAGE_FIELDS = \[([^\]]*)\]`)
 	server := privacyPageFieldsIn(t, serverPrivacyPage, `privacyPageFields = \[\]string\{([^}]*)\}`)
 	if !slices.Equal(screen, server) || len(server) == 0 {
 		t.Errorf("the page falls back through %v and the server through %v", screen, server)
 	}
 }
 
-// privacyPageFieldsIn reads the field names a declaration lists, out of its own
-// source: a gate may not import the module that owns the list.
+// privacyPageFieldsIn reads the field names a declaration lists, out of its
+// file's source. Both sides are read this way, so neither is a copy the gate
+// keeps itself.
 func privacyPageFieldsIn(t *testing.T, path, declaration string) []string {
 	t.Helper()
 	source, err := gatekit.ReadFile(path)

@@ -29,8 +29,9 @@ var (
 	isoDate     = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 )
 
-// The length of a phone number in digits: E.164 allows fifteen, and no
-// dialable number in use has fewer than eight with its area code.
+// The length of a phone number in digits, the range values.E164Pattern allows.
+// The pattern itself is not matched: free text writes a national number with
+// a leading 0, spaces and brackets, which E.164 refuses.
 const (
 	phoneMinDigits = 8
 	phoneMaxDigits = 15
@@ -106,26 +107,42 @@ func meansWord(m messagingrules.ContactMeans) string {
 // The packs in force are those of the installation's country and of each live
 // legal entity's country.
 func (s *Store) checkParticularsInForce(ctx context.Context, p ControllerParticulars) error {
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		codes, err := s.countriesInForceTx(ctx, tx)
-		if err != nil {
-			return err
-		}
-		rules, _, found := applicableRules(codes...)
-		if !found {
-			return nil
-		}
-		versions := [][]particularField{particularFields(p, "")}
-		for _, t := range p.Translations {
-			versions = append(versions, particularFields(t.text(), t.Language))
-		}
+	inForce, err := s.rulesInForce(ctx)
+	if err != nil {
+		return err
+	}
+	versions := [][]particularField{particularFields(p, "")}
+	for _, t := range p.Translations {
+		versions = append(versions, particularFields(t.asParticulars(), t.Language))
+	}
+	for _, rules := range inForce {
 		for _, d := range rules.Disclosures {
 			if err := checkMeansStated(d, versions); err != nil {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+// rulesInForce answers the rule set of each pack in force: the installation's
+// country and each live legal entity's country. Both what settings refuse and
+// what the settings form asks for are read off this one answer.
+func (s *Store) rulesInForce(ctx context.Context) ([]messagingrules.Rules, error) {
+	var inForce []messagingrules.Rules
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		codes, err := s.countriesInForceTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		for _, code := range codes {
+			if rules, _, found := applicableRules(code); found {
+				inForce = append(inForce, rules)
+			}
+		}
 		return nil
 	})
+	return inForce, err
 }
 
 // checkMeansStated answers the first stated field of d's kind that lacks one
@@ -178,33 +195,26 @@ func (s *Store) countriesInForceTx(ctx context.Context, tx pgx.Tx) ([]jurisdicti
 // That is the packs' disclosure languages, and the means an objection route
 // names.
 func (s *Store) particularsAsked(ctx context.Context) ([]string, []messagingrules.ContactMeans, error) {
+	inForce, err := s.rulesInForce(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 	var languages []string
 	var means []messagingrules.ContactMeans
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		codes, err := s.countriesInForceTx(ctx, tx)
-		if err != nil {
-			return err
+	for _, rules := range inForce {
+		if language := rules.DisclosureLanguage; language != "" && !slices.Contains(languages, language) {
+			languages = append(languages, language)
 		}
-		for _, code := range codes {
-			rules, _, found := applicableRules(code)
-			if !found {
+		for _, d := range rules.Disclosures {
+			if d.Kind != messagingrules.ObjectionRoute {
 				continue
 			}
-			if language := rules.DisclosureLanguage; language != "" && !slices.Contains(languages, language) {
-				languages = append(languages, language)
-			}
-			for _, d := range rules.Disclosures {
-				if d.Kind != messagingrules.ObjectionRoute {
-					continue
-				}
-				for _, m := range d.Means {
-					if !slices.Contains(means, m) {
-						means = append(means, m)
-					}
+			for _, m := range d.Means {
+				if !slices.Contains(means, m) {
+					means = append(means, m)
 				}
 			}
 		}
-		return nil
-	})
-	return languages, means, err
+	}
+	return languages, means, nil
 }

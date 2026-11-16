@@ -49,7 +49,7 @@ func layoutDisclosures(owed []messagingrules.Disclosure, p ControllerParticulars
 	if !l.marketing || !l.refusalLast {
 		return out
 	}
-	return l.refusalSectionLast(out, l.advertising(p))
+	return l.refusalSectionLast(out, l.advertisingParticulars(p))
 }
 
 // particularsFor answers the version of p a disclosure of kind prints.
@@ -62,13 +62,13 @@ func (l disclosureLayout) particularsFor(kind messagingrules.DisclosureKind, p C
 	if !l.marketing || l.packLanguage == "" || dataProtectionDisclosure(kind) {
 		return p.In(l.language)
 	}
-	return l.advertising(p)
+	return l.advertisingParticulars(p)
 }
 
-// advertising is p as advertising in the pack language prints it. The
+// advertisingParticulars is p as advertising in the pack language prints it. The
 // name and address fall back to the default text; the objection route and
 // the advertiser contact do not.
-func (l disclosureLayout) advertising(p ControllerParticulars) ControllerParticulars {
+func (l disclosureLayout) advertisingParticulars(p ControllerParticulars) ControllerParticulars {
 	if l.packLanguage == "" {
 		return p.In(l.language)
 	}

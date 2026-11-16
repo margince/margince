@@ -68,3 +68,21 @@ func TestADraftThatOpensInAnotherLanguageIsFlagged(t *testing.T) {
 		t.Error("a pack with no content rules flagged a draft")
 	}
 }
+
+// A digit continues a word, as in the draft checks: "số 1" is not "số 100".
+func TestANumberedClaimDoesNotMatchALongerNumber(t *testing.T) {
+	if got := claimsIn("Chúng tôi phục vụ số 100 khách hàng.", []string{"số 1"}); len(got) != 0 {
+		t.Errorf("claims %v found inside a longer number", got)
+	}
+	if got := claimsIn("Chúng tôi là số 1.", []string{"số 1"}); !slices.Equal(got, []string{"số 1"}) {
+		t.Errorf("claims %v, want the numbered claim found", got)
+	}
+}
+
+// Every use of a longer claim is taken out before a shorter one is sought.
+func TestALongerClaimUsedTwiceHidesItsShorterPart(t *testing.T) {
+	got := claimsIn("Tốt nhất cho bạn. Giá tốt nhất.", vietnameseClaims)
+	if !slices.Equal(got, []string{"tốt nhất"}) {
+		t.Errorf("claims %v, want only \"tốt nhất\"", got)
+	}
+}

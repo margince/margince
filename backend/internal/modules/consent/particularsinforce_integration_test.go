@@ -35,6 +35,7 @@ func advertisingPack(t *testing.T, e *channelConsentEnv, code string) *Store {
 		},
 		DataProtectionFollowsRecipient: true,
 		DisclosureLanguage:             "vi",
+		ClaimsNeedProof:                []string{"tốt nhất"},
 		RefusalSectionLast:             true,
 	})
 	livesIn(t, e, code)
@@ -105,10 +106,37 @@ func TestAVietnameseAdvertisingMailPrintsTheStoredVietnameseRoute(t *testing.T) 
 		ObjectionRoute:    "Write to privacy@example.com, call +49 30 1234 5678 or open https://example.com/stop.",
 		AdvertiserContact: "+49 30 1234 5678, hello@example.com, https://example.com",
 	})
-	for _, line := range disclosures(t, e, store, commsauthz.CategoryMarketing) {
-		if line.Kind != string(messagingrules.ControllerIdentity) && !line.Missing() {
+	lines = disclosures(t, e, store, commsauthz.CategoryMarketing)
+	if len(lines) != 2 || lines[0].Kind != string(messagingrules.AdvertiserContact) ||
+		lines[1].Kind != string(messagingrules.ObjectionRoute) {
+		t.Fatalf("the advertising lines are %+v, want the advertiser block then the refusal", lines)
+	}
+	for _, line := range lines {
+		if !line.Missing() {
 			t.Errorf("%s printed %q with no Vietnamese version stated; advertising to this "+
 				"recipient must be refused until it is", line.Kind, line.Text)
 		}
+	}
+}
+
+func TestCheckAdvertisingDraftAsksTheRecipientsPack(t *testing.T) {
+	e := setupChannelConsent(t)
+	store := advertisingPack(t, e, "yc")
+	ctx := withActivityCreate(e.ctx)
+	recipient := recipientAddress(e)
+
+	found, err := store.CheckAdvertisingDraft(ctx, []string{recipient, recipient},
+		"[QC] Ưu đãi", "Kính gửi quý khách,\n\nĐây là dịch vụ tốt nhất cho doanh nghiệp của quý khách.")
+	if err != nil {
+		t.Fatalf("checking the draft: %v", err)
+	}
+	if len(found) != 1 || found[0].Requirement != DraftClaimWithoutProof {
+		t.Fatalf("findings %+v, want one claim without proof, once for two recipients of one pack", found)
+	}
+
+	found, err = store.CheckAdvertisingDraft(ctx, []string{"nobody@elsewhere.test"},
+		"Offer", "Dear customer,\n\nThis is the best service for your company and its whole team.")
+	if err != nil || len(found) != 0 {
+		t.Errorf("a recipient under no pack answered %+v, %v; want nothing", found, err)
 	}
 }

@@ -375,8 +375,10 @@ func TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal(t *testin
 		t.Fatalf("the advertiser block is not directly before the refusal section:\n%s", body)
 	}
 	rest := body[at+len(advertiser)+2+len(refusal):]
-	if !strings.HasPrefix(rest, "\n\n---\n") || strings.Count(rest, "\n") != 4 ||
-		!strings.Contains(rest, "https://mail.example.test") {
-		t.Errorf("after the refusal comes %q, want only the two opt-out links", rest)
+	if want := appendUnsubscribeFooter("", got.links, got.words); rest != want {
+		t.Errorf("after the refusal comes %q, want only the opt-out links %q", rest, want)
+	}
+	if !strings.Contains(rest, "/#/unsubscribe/tok/") || !strings.Contains(rest, "/#/preferences/tok") {
+		t.Errorf("the opt-out links %q do not carry the recipient's stop and preference links", rest)
 	}
 }
