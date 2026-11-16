@@ -110,6 +110,15 @@ describe("servingBlocked", () => {
     ).toBe("decisions");
     expect(
       servingBlocked(
+        {
+          kind: "decisions",
+          binding: { provider: "gemini_decision", model: "gemini-decision-1" },
+        },
+        ROUTING,
+      ),
+    ).toBe("decisionsDirect");
+    expect(
+      servingBlocked(
         { ...TIER, binding: { provider: "gemini", model: "m" } },
         ROUTING,
       ),

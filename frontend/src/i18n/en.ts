@@ -2777,6 +2777,7 @@ export const en = {
   "shell.help.releaseNotes": "Release notes",
   "shell.help.licenses": "Web app licenses",
   "shell.help.devBuild": "Development build",
+  "shell.help.devBuildRevision": "Development build · {revision}",
   "shell.shortcuts.anywhere": "Anywhere",
   "shell.shortcuts.search": "Open search",
   "shell.shortcuts.sidebar": "Show or hide sidebar",
@@ -20872,6 +20873,7 @@ export const en = {
   "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-compatible",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Built-in test provider",
@@ -21535,6 +21537,8 @@ export const en = {
   "aiServing.guide": "Routing guide ↗",
   "aiServing.blocked.decisions":
     "The decision model answers through OpenRouter’s decisions endpoint, which takes no routing block. Its timeout is set per task under AI tasks.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} serves the decision model itself, so host routing does not apply. Its timeout is set per task under AI tasks.",
   "aiServing.blocked.provider":
     "Host routing applies only to OpenRouter. {provider} serves this model itself. Thinking level and timeout are still set per task under AI tasks.",
   "aiServing.blocked.host":

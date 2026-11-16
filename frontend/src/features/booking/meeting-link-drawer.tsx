@@ -284,6 +284,7 @@ function LinkForm({
         <Field
           label={t("scheduling.meetingName")}
           hint={t("scheduling.meetingNameHelp")}
+          error={titleMissing ? t("record.fieldRequired") : undefined}
         >
           {(control) => (
             <TextInput
@@ -376,12 +377,7 @@ function LinkForm({
         <Button onClick={onClose} disabled={save.isPending}>
           {t("create.cancel")}
         </Button>
-        <Button
-          variant="primary"
-          pending={save.isPending}
-          disabled={!!lengthError || !!locationError || titleMissing}
-          onClick={submit}
-        >
+        <Button variant="primary" pending={save.isPending} onClick={submit}>
           {t("scheduling.saveLink")}
         </Button>
       </DrawerFoot>

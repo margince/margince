@@ -944,7 +944,8 @@ kinds:
       Removes the company fields a meeting filled once its transcript was
       narrowed, restricted, archived or redacted, or no participant works at
       that company any more. Hourly, so a value stops speaking for such a
-      meeting within the hour; database-only, and bounded per workspace pass.
+      meeting within the hour. Database-only; each transaction is bounded, and
+      the timeout bounds the pass.
 
   transcript_audience_sweep:
     role: worker
@@ -958,7 +959,8 @@ kinds:
       Gives each meeting transcript the readers its meeting has now. A guest
       added to or taken off the meeting by calendar sync or any other writer
       reaches the transcript within a quarter hour; an audience set by hand
-      reaches it at once. Database-only, and bounded per workspace pass.
+      reaches it at once. Database-only; each transaction is bounded, and
+      the timeout bounds the pass.
 
   initiative_enrolment_sweep:
     role: worker
