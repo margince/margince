@@ -2947,6 +2947,7 @@
   "log.date": "Datum",
   "log.dateHint": "Der Tag, an dem es stattfand. Für einen späteren Tag erstelle eine Aufgabe.",
   "log.assignee": "Zugewiesen an",
+  "log.assigneeMe": "Du selbst",
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",

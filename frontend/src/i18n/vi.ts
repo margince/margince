@@ -6657,7 +6657,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.taskSubject": "Việc cần làm",
   "bulk.taskDue": "Hạn hoàn thành",
   "bulk.taskAssignee": "Giao cho",
-  "bulk.taskAssigneeMe": "Tôi",
   "bulk.taskNext": "Xem trước",
   "bulk.titleCreateTask":
     "Tạo một việc cần làm cho mỗi hồ sơ đã chọn trong {unit}?",
@@ -7677,6 +7676,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.dateHint":
     "Ngày việc này đã diễn ra; để lên kế hoạch cho ngày sau, hãy thêm việc cần làm.",
   "log.assignee": "Giao cho",
+  "log.assigneeMe": "Tôi",
   "log.unassigned": "Chưa giao",
   "log.save": "Ghi nhận",
   "log.saving": "Đang ghi nhận…",

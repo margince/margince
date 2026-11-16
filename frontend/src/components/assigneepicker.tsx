@@ -189,7 +189,7 @@ export function namedColleaguesFirst(
 
 /**
  * The assignee picker for a task being written: the workspace's contacts, less
- * agent seats, plus a leading "Unassigned".
+ * agent seats, plus a leading "Me". A task that names nobody goes to its writer.
  *
  * Renders nothing while `active` is false, and its roster walk is deferred to
  * that same flag — a note or meeting is not held by a colleague, so neither the
@@ -222,7 +222,7 @@ export function TaskAssigneeField({
         {(control) => (
           <Select
             {...control}
-            options={[{ value: "", label: t("log.unassigned") }, ...options]}
+            options={[{ value: "", label: t("log.assigneeMe") }, ...options]}
             value={value}
             onChange={onChange}
           />

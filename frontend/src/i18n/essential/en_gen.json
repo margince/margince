@@ -2947,6 +2947,7 @@
   "log.date": "Date",
   "log.dateHint": "The day it happened; for a later day, add a task.",
   "log.assignee": "Assignee",
+  "log.assigneeMe": "Me",
   "log.unassigned": "Unassigned",
   "log.save": "Log",
   "log.saving": "Logging…",

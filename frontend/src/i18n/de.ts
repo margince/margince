@@ -6829,7 +6829,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "bulk.taskSubject": "Was zu tun ist",
   "bulk.taskDue": "Fällig am",
   "bulk.taskAssignee": "Zuständig",
-  "bulk.taskAssigneeMe": "Du selbst",
   "bulk.taskNext": "Vorschau",
   "bulk.titleCreateTask":
     "Für jeden ausgewählten Datensatz in {unit} eine Aufgabe erstellen?",
@@ -7871,6 +7870,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.dateHint":
     "Der Tag, an dem es stattfand. Für einen späteren Tag erstelle eine Aufgabe.",
   "log.assignee": "Zugewiesen an",
+  "log.assigneeMe": "Du selbst",
   "log.unassigned": "Nicht zugewiesen",
   "log.save": "Erfassen",
   "log.saving": "Wird erfasst…",
