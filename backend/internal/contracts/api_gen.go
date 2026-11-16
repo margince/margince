@@ -7842,11 +7842,12 @@ func (e ConsentQualifyingEventSourceEntityType) Valid() bool {
 
 // Defines values for ConsentRequestScopes.
 const (
-	ConsentRequestScopesDraft  ConsentRequestScopes = "draft"
-	ConsentRequestScopesEnrich ConsentRequestScopes = "enrich"
-	ConsentRequestScopesRead   ConsentRequestScopes = "read"
-	ConsentRequestScopesSend   ConsentRequestScopes = "send"
-	ConsentRequestScopesWrite  ConsentRequestScopes = "write"
+	ConsentRequestScopesDraft            ConsentRequestScopes = "draft"
+	ConsentRequestScopesEnrich           ConsentRequestScopes = "enrich"
+	ConsentRequestScopesPersonalChannels ConsentRequestScopes = "personal_channels"
+	ConsentRequestScopesRead             ConsentRequestScopes = "read"
+	ConsentRequestScopesSend             ConsentRequestScopes = "send"
+	ConsentRequestScopesWrite            ConsentRequestScopes = "write"
 )
 
 // Valid indicates whether the value is a known member of the ConsentRequestScopes enum.
@@ -7855,6 +7856,8 @@ func (e ConsentRequestScopes) Valid() bool {
 	case ConsentRequestScopesDraft:
 		return true
 	case ConsentRequestScopesEnrich:
+		return true
+	case ConsentRequestScopesPersonalChannels:
 		return true
 	case ConsentRequestScopesRead:
 		return true
@@ -15567,11 +15570,12 @@ func (e IntroRequestStatus) Valid() bool {
 
 // Defines values for IssuePassportRequestScopes.
 const (
-	IssuePassportRequestScopesDraft  IssuePassportRequestScopes = "draft"
-	IssuePassportRequestScopesEnrich IssuePassportRequestScopes = "enrich"
-	IssuePassportRequestScopesRead   IssuePassportRequestScopes = "read"
-	IssuePassportRequestScopesSend   IssuePassportRequestScopes = "send"
-	IssuePassportRequestScopesWrite  IssuePassportRequestScopes = "write"
+	IssuePassportRequestScopesDraft            IssuePassportRequestScopes = "draft"
+	IssuePassportRequestScopesEnrich           IssuePassportRequestScopes = "enrich"
+	IssuePassportRequestScopesPersonalChannels IssuePassportRequestScopes = "personal_channels"
+	IssuePassportRequestScopesRead             IssuePassportRequestScopes = "read"
+	IssuePassportRequestScopesSend             IssuePassportRequestScopes = "send"
+	IssuePassportRequestScopesWrite            IssuePassportRequestScopes = "write"
 )
 
 // Valid indicates whether the value is a known member of the IssuePassportRequestScopes enum.
@@ -15580,6 +15584,8 @@ func (e IssuePassportRequestScopes) Valid() bool {
 	case IssuePassportRequestScopesDraft:
 		return true
 	case IssuePassportRequestScopesEnrich:
+		return true
+	case IssuePassportRequestScopesPersonalChannels:
 		return true
 	case IssuePassportRequestScopesRead:
 		return true

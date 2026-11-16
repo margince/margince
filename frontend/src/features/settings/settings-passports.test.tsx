@@ -181,11 +181,14 @@ describe("PassportCard — minting", () => {
     await user.click(within(dialog).getByText("Agent name"));
     expect(name).toHaveFocus();
 
-    // Five choices that belong together ARE a group, and the group has a name.
+    // Six choices that belong together ARE a group, and the group has a name.
     const group = within(dialog).getByRole("group", {
       name: /agent permissions/i,
     });
-    expect(within(group).getAllByRole("checkbox")).toHaveLength(5);
+    expect(within(group).getAllByRole("checkbox")).toHaveLength(6);
+    expect(
+      within(group).getByRole("checkbox", { name: "Personal channels" }),
+    ).not.toBeChecked();
   });
 
   it("refuses a passport with no scope, and says why", async () => {

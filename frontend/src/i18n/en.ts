@@ -9167,6 +9167,7 @@ export const en = {
   "passport.scope.write": "Change records",
   "passport.scope.send": "Send messages",
   "passport.scope.enrich": "Use AI and buy data",
+  "passport.scope.personal_channels": "Personal channels",
   "passport.select": "Passport",
   "passport.noneOption": "No passport",
   // Where a passport may act, beside what it may do. "Workspace" is retired
@@ -17955,6 +17956,8 @@ export const en = {
   "consent.scopeNote.write": "creates, edits and archives records as you",
   "consent.scopeNote.send": "sends messages as you, without asking first",
   "consent.scopeNote.enrich": "runs AI work and buys contact data",
+  "consent.scopeNote.personal_channels":
+    "sends your chats and files in, and picks up your replies; each shows who sent it in",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",
   "consent.preset.label": "Assistant permissions",

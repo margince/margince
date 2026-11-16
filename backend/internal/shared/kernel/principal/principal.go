@@ -47,6 +47,9 @@ const (
 	ScopeWrite  Scope = "write"
 	ScopeSend   Scope = "send"
 	ScopeEnrich Scope = "enrich"
+	// ScopePersonalChannels lets a client send its member's own chats in and pull
+	// their replies, and nothing else; no other scope grants it.
+	ScopePersonalChannels Scope = "personal_channels"
 )
 
 // Egresses reports whether spending this cap can put a request on the wire

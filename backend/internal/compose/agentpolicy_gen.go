@@ -71,11 +71,12 @@ const (
 type agentScope string
 
 const (
-	scopeRead   agentScope = "read"
-	scopeDraft  agentScope = "draft"
-	scopeWrite  agentScope = "write"
-	scopeSend   agentScope = "send"
-	scopeEnrich agentScope = "enrich"
+	scopeRead             agentScope = "read"
+	scopeDraft            agentScope = "draft"
+	scopeWrite            agentScope = "write"
+	scopeSend             agentScope = "send"
+	scopeEnrich           agentScope = "enrich"
+	scopePersonalChannels agentScope = "personal_channels"
 )
 
 // agentServedBy says how an operation relates to its MCP tool. registry: the handler runs the tool,

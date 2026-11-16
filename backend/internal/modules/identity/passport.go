@@ -67,7 +67,7 @@ const (
 // cannot see in the metadata is a scope it will never ask for.
 var passportScopeVocabulary = []principal.Scope{
 	principal.ScopeRead, principal.ScopeDraft, principal.ScopeWrite,
-	principal.ScopeSend, principal.ScopeEnrich,
+	principal.ScopeSend, principal.ScopeEnrich, principal.ScopePersonalChannels,
 }
 
 // validScopes is the admission form of that vocabulary: the mint and the

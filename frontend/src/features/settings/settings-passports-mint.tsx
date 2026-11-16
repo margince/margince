@@ -26,7 +26,14 @@ import { throwProblem } from "../../lib/problem";
 import { resetToSignedOut } from "../../lib/session";
 import { MintedPassport } from "./settings.passportuse";
 
-const PASSPORT_SCOPES = ["read", "draft", "write", "send", "enrich"] as const;
+const PASSPORT_SCOPES = [
+  "read",
+  "draft",
+  "write",
+  "send",
+  "enrich",
+  "personal_channels",
+] as const;
 type PassportScope = (typeof PASSPORT_SCOPES)[number];
 
 // Annotated, so an added scope is a missing-key compile error rather than a

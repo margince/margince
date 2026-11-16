@@ -781,8 +781,8 @@ export interface paths {
         /**
          * What the OAuth consent screen renders for one pending authorization.
          * @description Session-authenticated. Resolves the requesting client from the database and lists the
-         *     fixed five-scope vocabulary (read, draft, write, send, enrich) the consent screen offers,
-         *     every one of them ticked by default. What the client asked for excludes none of them: the
+         *     fixed scope vocabulary (read, draft, write, send, enrich, personal_channels) the consent screen offers;
+         *     the first five are ticked by default and personal_channels only when the human ticks it. What the client asked for excludes none of them: the
          *     human's ticks — not the client's request — become the connection's authority. Human-only —
          *     an agent must never read or drive a consent screen.
          */
@@ -51787,7 +51787,7 @@ export interface components {
              * @description The passport scope this operation consumes — the cap the granting human set, which the tier cannot substitute for: a tier says whether a human confirms the act, a scope says whether the act was ever delegable. Every `x-mcp-tool` declares one; unlike `tier` and `record_type`, absent is NOT a meaningful state, so generation fails on a missing value rather than emitting a zero. It is what an operation with no registered MCP tool is admitted under, and for one that has a tool the generator holds the two equal — so a verb cannot mean `enrich` on MCP and `write` on REST.
              * @enum {string}
              */
-            scope?: "read" | "draft" | "write" | "send" | "enrich";
+            scope?: "read" | "draft" | "write" | "send" | "enrich" | "personal_channels";
             /**
              * @description registry — the operation's handler runs the tool through the tool registry, the entry the MCP door uses, which admits the call itself: scope, seat, tier, approval, retry key and volume budget. The REST admission gate passes such an operation through untouched, because admitting it there as well would charge an agent twice and stage a confirm-first call twice. route — the reverse: the MCP verb runs this operation's own handler in process, so both doors are one engine. Such a verb is an action of the router named in `router`, called by `action`. Absent means the operation's own handler runs and the gate admits it.
              * @enum {string}
@@ -56939,7 +56939,7 @@ export interface components {
             /** @description Which agent this binds, e.g. "Claude Desktop". */
             label?: string | null;
             /** @description Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC. */
-            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
+            scopes: ("read" | "draft" | "write" | "send" | "enrich" | "personal_channels")[];
             /** @description Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time. */
             ttl_hours?: number | null;
             /** @description The passport never expires; it works until it is revoked or its human is turned off. Not together with ttl_hours. */
@@ -57091,7 +57091,7 @@ export interface components {
             client_name: string;
             /** @description The client asked to stay connected without asking again (offline_access). */
             offline: boolean;
-            scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
+            scopes: ("read" | "draft" | "write" | "send" | "enrich" | "personal_channels")[];
             /**
              * @description The work areas the human's role reaches, which the screen offers to choose from. The
              *     screen posts the choice back as `areas`: `all`, or the chosen areas separated by spaces.

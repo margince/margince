@@ -290,6 +290,32 @@ describe("OAuthConsent", () => {
     );
   });
 
+  it("offers Personal channels unticked, and Full assistant leaves it so", async () => {
+    renderConsent({
+      scopes: ["read", "draft", "write", "send", "enrich", "personal_channels"],
+    });
+    const user = userEvent.setup();
+    const channels = await screen.findByRole("checkbox", {
+      name: /Personal channels/,
+    });
+    expect(channels).not.toBeChecked();
+    expect(
+      screen.getByRole("button", { name: "Full assistant" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(screen.getByRole("button", { name: "Read and draft" }));
+    await user.click(screen.getByRole("button", { name: "Full assistant" }));
+    expect(channels).not.toBeChecked();
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft write send enrich",
+    );
+
+    await user.click(channels);
+    expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
+      "read draft write send enrich personal_channels",
+    );
+  });
+
   it("calls a grant that matches neither preset its own", async () => {
     renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
     const user = userEvent.setup();

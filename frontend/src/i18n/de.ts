@@ -9201,6 +9201,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "passport.scope.write": "Datensätze ändern",
   "passport.scope.send": "Nachrichten senden",
   "passport.scope.enrich": "KI nutzen und Daten kaufen",
+  "passport.scope.personal_channels": "Persönliche Kanäle",
   "workArea.name.business": "Vertriebsarbeit",
   "workArea.name.compliance": "Compliance und Datenschutz",
   "workArea.name.capture": "E-Mail- und Kalendererfassung",
@@ -18142,6 +18143,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.send":
     "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
   "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
+  "consent.scopeNote.personal_channels":
+    "übermittelt Ihre Chats und Dateien und holt Ihre Antworten ab; jede zeigt, wer sie übermittelt hat",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",
   "consent.preset.label": "Assistentenrechte",
