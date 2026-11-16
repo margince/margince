@@ -91,6 +91,7 @@ var relationshipGate = objectGate{
 // Acme" one page at a time, which is a STRONGER disclosure than the count on
 // the account. It carries the gate, and is not in this set.
 var predicateEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/companymeetingprofile.go:meetingCompanyPresentSQL":          "a system-only sweep predicate: whether a meeting transcript still has a participant currently employed at the company its profile field names. Only the yes or no decides a removal; no edge column or endpoint leaves the statement",
 	"internal/platform/database/storekit/sharedmailowner.go:SharedMailWorkOwnerSQL":        "the current employment edge only joins a mail sender's contact to its company, so the company owner can be picked as the seat that holds the mail's work. Only that seat id leaves the statement; no edge column or endpoint reaches any reader",
 	"internal/modules/capture/dealrefile.go:RefileCandidatesTx":                            "System-only candidate selection returns activity identities, never relationship endpoints; RefileTx recomputes employment evidence under the capturing seat through mailCompanies and its EdgeReadScope before any filing.",
 	"internal/modules/deals/stagemoveverdict.go:buyerWrote":                                "an existence predicate under the deal row lock: whether a cited mail's sender is a current employee of the deal's company or a stakeholder of the deal. Only a yes or no leaves the query, never an edge column or endpoint",

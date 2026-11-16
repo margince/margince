@@ -9,7 +9,8 @@ import "github.com/margince/margince/backend/pkg/extension/reach"
 // moves what the retired partner earned onto the survivor.
 func SweepReach() []reach.Table {
 	return []reach.Table{{
-		Name:  "commission_entry",
-		Links: []reach.Link{{Column: filterPartnerCompanyID, Record: reach.Company}},
+		Name:   "commission_entry",
+		Entity: commissionObject,
+		Links:  []reach.Link{{Column: filterPartnerCompanyID, Record: reach.Company}},
 	}}
 }

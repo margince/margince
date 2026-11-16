@@ -24692,6 +24692,9 @@ paths:
         - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
           model list, and `model_count` is its length.
         - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+        - `gemini_decision` is asked Google's model list, `/v1beta/models` on its endpoint's host:
+          Google answers a bad key with 400, so the decision request cannot tell it from a bad
+          body. It passes with no `model_count`.
         - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
           public, so listing it would pass any key. It passes with no `model_count`.
         - Any other decision endpoint is sent the decision request with an empty body. 401 or
@@ -41958,6 +41961,13 @@ components:
             not list: `gemini` for `gemini_vertex`, which serves the same models. A price written
             for this provider overrides it. Absent for a provider whose unpriced models stay
             unpriced.
+        sent_by:
+          type: array
+          items: { type: string }
+          description: >-
+            The other providers whose calls send this same key, such as `gemini_decision` on
+            `gemini`. They have no row of their own, so each needs this key held. Absent when no
+            other provider sends it.
     AiProviderKeyTestResult:
       type: object
       additionalProperties: false
@@ -42281,8 +42291,9 @@ components:
           description: >-
             jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on
             the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY
-            is sent when held and never required).
-        model: { type: string, description: 'The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.' }
+            is sent when held and never required) | gemini_decision (Google's Decisions API on the
+            Gemini Developer API, keyed by the gemini provider's GEMINI_API_KEY; no EU hosting).
+        model: { type: string, description: 'The decision model id, e.g. jev-1.13.0 on jev, typesafe/jev-1.13 on OpenRouter, or gemini-decision-1 on gemini_decision.' }
         base_url:
           type: string
           deprecated: true
@@ -81417,6 +81428,12 @@ components:
             A client MUST NOT draw a way into the brief without it. Absent means there is
             no page to read this brief on, which an internal meeting and a meeting whose
             attendees are all withheld both produce, and both mean the same thing here.
+        room:
+          allOf: [{ $ref: '#/components/schemas/WorklistMeetingRoom' }]
+          description: |
+            Who is in a `meeting` row's room, as this reader may see them: the same room
+            `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+            reader may not read the meeting.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
         recipients:
@@ -82596,6 +82613,33 @@ components:
             A client then names the group by its kind alone and NEVER falls back to
             `cause`, because an identity on screen is worse than a vaguer sentence: the
             reader cannot act on it and cannot tell it from a bug.
+
+    WorklistMeetingRoom:
+      type: object
+      description: |
+        Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+        meeting today and the next one name their attendees by one rule.
+      required: [participants]
+      properties:
+        participants:
+          type: array
+          description: The attendees who are contacts this reader may see, named first.
+          maxItems: 8
+          items:
+            type: object
+            required: [contact_id, full_name]
+            properties:
+              contact_id: { type: string, format: uuid }
+              full_name: { type: string }
+        other_participants:
+          type: array
+          description: The attendees who are not contacts, named after the contacts within the same eight.
+          maxItems: 8
+          items: { $ref: '#/components/schemas/MeetingOtherParticipant' }
+        participants_more:
+          type: integer
+          minimum: 1
+          description: How many more attendees this reader may see than the eight named. Absent when every attendee is named.
 
     WorklistContactFacts:
       type: object

@@ -98,6 +98,7 @@ export const PROVIDER_KEYS = [
     configured: true,
     env_var: "GEMINI_API_KEY",
     usable: true,
+    sent_by: ["gemini_decision"],
   },
   {
     provider: "anthropic",
@@ -167,6 +168,11 @@ export const VENDOR_MODELS: Record<string, unknown> = {
       { id: "gemini-embedding-001", lane: "embeddings" },
     ],
   },
+  // Google documents one decision model, and the server offers it alone.
+  gemini_decision: {
+    provider: "gemini_decision",
+    models: [{ id: "gemini-decision-1", lane: "decisions" }],
+  },
   anthropic: { provider: "anthropic", models: [], unavailable: "no_key" },
   // ollama is left to the stub's default answer (reachable, nothing pulled);
   // vllm is the keyless adapter nothing is listening for.
@@ -187,6 +193,7 @@ export function backendFor(
       env_var: string;
       usable: boolean;
       optional?: boolean;
+      sent_by?: readonly string[];
     }[];
   } = {},
 ) {

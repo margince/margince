@@ -67,6 +67,7 @@ func setupFacts(t *testing.T) *factsEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	emptyDatabase(t)
 	e := &factsEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7()}
 	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, e.user, "rep-"+e.user.String()+"@facts.test")

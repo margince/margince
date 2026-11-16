@@ -50,6 +50,10 @@ const mailOccurrenceSQL = `(CASE WHEN a.calendar_event->>'occurrence' ~ '^[0-9]{
 	THEN to_char(to_date(a.calendar_event->>'occurrence', 'YYYYMMDD'), 'YYYY-MM-DD') || 'T00:00:00Z'
 	ELSE coalesce(a.calendar_event->>'occurrence', '') END)`
 
+func invitationColleagueSenderSQL(ownDomains string) string {
+	return `(a.invitation_sender IS NOT NULL OR ` + ownDomainSenderAtSQL("a", ownDomains) + `)`
+}
+
 // invitationNeverOwedSQL is a calendar invitation no verdict can make owed. A
 // colleague's invitation waits on nobody's written reply. Neither does one
 // whose event has begun by asOf: every meeting it names has begun.
@@ -61,8 +65,7 @@ func invitationNeverOwedSQL(asOf, ownDomains string) string {
 	        WHERE ai.identity_kind = '` + IdentityKindMeeting + `'
 	          AND ` + mailNamesMeetingSQL("ai.identity_key") + `
 	          AND mt.kind = 'meeting' AND mt.archived_at IS NULL`
-	return `(` + calendarInvitationSQL + ` AND (a.invitation_sender IS NOT NULL
-	 OR ` + ownDomainSenderAtSQL("a", ownDomains) + `
+	return `(` + calendarInvitationSQL + ` AND (` + invitationColleagueSenderSQL(ownDomains) + `
 	 OR (a.calendar_uid IS NOT NULL
 	     AND EXISTS (SELECT 1 ` + meetingOfUID + `)
 	     AND NOT EXISTS (SELECT 1 ` + meetingOfUID + ` AND NOT ` + occurredday.BegunSQL("mt", asOf) + `))))`

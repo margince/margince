@@ -61,6 +61,7 @@ func setupResolve(t *testing.T) *resolveEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	emptyDatabase(t)
 	e := &resolveEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), lead: ids.NewV7()}
 	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`,
