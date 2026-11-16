@@ -1,31 +1,31 @@
 {
   "target": "bench-perf",
-  "measured_on": "2026-11-13",
+  "measured_on": "2026-11-16",
   "machine": {
     "os": "linux",
     "arch": "amd64",
-    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "cpu": "Intel(R) Xeon(R) 6975P-C",
     "cores": 4,
     "memory_gib": 15,
     "toolchain": "go1.27.4",
-    "postgres": "16.15"
+    "postgres": "16.16"
   },
   "budgets": [
     {
       "id": "PERF-3",
       "name": "search_fts (smb tier)",
-      "p50_ms": 131.102001,
-      "p95_ms": 140.4021,
-      "p99_ms": 146.813543,
+      "p50_ms": 54.832918,
+      "p95_ms": 57.563107,
+      "p99_ms": 59.030657,
       "budget_ms": 200,
       "samples": 20
     },
     {
       "id": "PERF-7",
       "name": "context_graph (smb tier)",
-      "p50_ms": 17.725762,
-      "p95_ms": 112.197027,
-      "p99_ms": 119.706724,
+      "p50_ms": 9.829947,
+      "p95_ms": 36.410355,
+      "p99_ms": 37.964523,
       "budget_ms": 300,
       "samples": 20,
       "caveat": "measured on the smb tier; the SLO binds at mid_market"

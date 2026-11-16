@@ -1,12 +1,12 @@
 {
   "target": "bench-mobile",
-  "measured_on": "2026-11-13",
+  "measured_on": "2026-11-16",
   "machine": {
     "os": "linux",
     "arch": "x64",
-    "cpu": "AMD EPYC 9V45 96-Core Processor",
+    "cpu": "Intel(R) Xeon(R) 6975P-C",
     "cores": 4,
-    "memory_gib": 16,
+    "memory_gib": 15,
     "toolchain": "node 24.22.2",
     "network": "throttled Fast-3G (MOBILE-PARAM-2)",
     "viewport": "390x844"
@@ -15,9 +15,9 @@
     {
       "id": "MOBILE-AC-2",
       "name": "record_open_perceived",
-      "p50_ms": 113,
-      "p95_ms": 122,
-      "p99_ms": 130,
+      "p50_ms": 75,
+      "p95_ms": 82,
+      "p99_ms": 90,
       "budget_ms": 300,
       "samples": 20
     }

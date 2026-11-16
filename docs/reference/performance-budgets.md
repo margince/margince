@@ -26,11 +26,11 @@ records, so a row changes only when a maintainer merges it.
 |---|---|---|---|---|---|
 | `PERF-1` | Record open (contact/company/deal) | < 100 ms server | 57.6 ms | within budget | 2026-11-14 |
 | `PERF-2` | List/table view (50 rows, filtered) | < 150 ms server | 85.3 ms | within budget | 2026-11-14 |
-| `PERF-3` | Search (full-text) | < 200 ms | 140 ms | within budget | 2026-11-13 |
+| `PERF-3` | Search (full-text) | < 200 ms | 57.6 ms | within budget | 2026-11-16 |
 | `PERF-4` | Save/mutation | < 150 ms server | 60.6 ms | within budget | 2026-10-07 |
 | `PERF-5` | AI baseline action (summary/draft) | first token < 1.5 s | 109 ms | within budget | 2026-11-14 |
 | `PERF-6` | Cold start (single binary) | < 2 s | 849 ms | within budget | 2026-11-14 |
-| `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 112 ms | inconclusive: measured on the smb tier; the SLO binds at mid_market | 2026-11-13 |
+| `PERF-7` | Context-graph assembly | < 300 ms at mid-market | 36.4 ms | inconclusive: measured on the smb tier; the SLO binds at mid_market | 2026-11-16 |
 | `PERF-8` | Worklist and Home, as the screen calls them | < 1 s | 4598 ms | over budget (#10779) | 2026-11-14 |
 | `PERF-9` | Analytics screen | < 300 ms | 144 ms | within budget | 2026-11-14 |
 | `PERF-10` | Search as the screen calls it | < 1 s | 936 ms | within budget | 2026-11-14 |
@@ -38,7 +38,7 @@ records, so a row changes only when a maintainer merges it.
 | `PERF-12` | System health diagnostic reads | < 1 s | 76.7 ms | within budget | 2026-11-01 |
 | `LOAD-1` | A cheap request while the team starts at once | < 150 ms | 23.8 ms | within budget | 2026-11-14 |
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 | 39.2 ms | within budget | 2026-08-15 |
-| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 122 ms | within budget | 2026-11-13 |
+| `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived | 82.0 ms | within budget | 2026-11-16 |
 
 ## Daily use (`make bench-daily`)
 
@@ -278,35 +278,35 @@ A latency is only true of the machine that produced it.
 
 Its rows are listed per seat under [Daily use](#daily-use-make-bench-daily).
 
-### `make bench-mobile` · measured 2026-11-13
+### `make bench-mobile` · measured 2026-11-16
 
 | | |
 |---|---|
 | os / arch | linux / x64 |
-| cpu | AMD EPYC 9V45 96-Core Processor (4 cores) |
-| memory | 16 GiB |
+| cpu | Intel(R) Xeon(R) 6975P-C (4 cores) |
+| memory | 15 GiB |
 | toolchain | node 24.22.2 |
 | network | throttled Fast-3G (MOBILE-PARAM-2) |
 | viewport | 390x844 |
 
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
-| `record_open_perceived` | 113 ms | 122 ms | 130 ms | 300 ms | 20 |
+| `record_open_perceived` | 75.0 ms | 82.0 ms | 90.0 ms | 300 ms | 20 |
 
-### `make bench-perf` · measured 2026-11-13
+### `make bench-perf` · measured 2026-11-16
 
 | | |
 |---|---|
 | os / arch | linux / amd64 |
-| cpu | AMD EPYC 9V74 80-Core Processor (4 cores) |
+| cpu | Intel(R) Xeon(R) 6975P-C (4 cores) |
 | memory | 15 GiB |
 | toolchain | go1.27.4 |
-| postgres | 16.15 |
+| postgres | 16.16 |
 
 | measurement | p50 | p95 | p99 | budget | samples |
 |---|---|---|---|---|---|
-| `search_fts (smb tier)` | 131 ms | 140 ms | 147 ms | 200 ms | 20 |
-| `context_graph (smb tier)` | 17.7 ms | 112 ms | 120 ms | 300 ms | 20 |
+| `search_fts (smb tier)` | 54.8 ms | 57.6 ms | 59.0 ms | 200 ms | 20 |
+| `context_graph (smb tier)` | 9.8 ms | 36.4 ms | 38.0 ms | 300 ms | 20 |
 
 ### `make bench-record` · measured 2026-10-07
 

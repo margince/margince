@@ -17,7 +17,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 
 | Assistant | How we connected it | Jobs tried | Can I trust it? | In plain words |
 |---|---|---:|---|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
+| `claude-sonnet-5-5` | Claude Code CLI | 73 of 73 | 🟡 Mostly | Reliable on 71 of 73 jobs tried; not yet: The draft routes reach only an agent's own draft. Where the user; Log the meeting, add the task, and say what the work left waiting. Measured with search working on word matches only, which is harder than a real setup. |
 | `gemini-4-hydrogen-medium` | Antigravity CLI | 73 of 73 | 🟢 Yes | Reliable on 73 of 73 jobs tried. |
 | `gpt-5.6-sol` | Codex CLI | 73 of 73 | 🟡 Mostly | Reliable on 72 of 73 jobs tried; not yet: What a buyer reads in a deal room changes the moment it is saved,. |
 
@@ -96,14 +96,14 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | What a buyer reads in a deal room changes the moment it is saved, | Ask before the buyer sees it | ✅ | ✅ | ❌ |
 | The user asks for the message to Sofia that asks her for an | The ask goes to the colleague | ✅ | ✅ | ✅ |
 | An agent sets its user's time zone only as source `agent`. The zone | The agent's zone is the agent's | ✅ | ✅ | ✅ |
-| The draft routes reach only an agent's own draft. Where the user | The user's own draft stays theirs | ✅ | ✅ | ✅ |
+| The draft routes reach only an agent's own draft. Where the user | The user's own draft stays theirs | ❌ | ✅ | ✅ |
 | An admin's questions about the installation are reads: the job page, | Job health is a read<br>Reading the routing moves nothing<br>Read the audit trail | ✅ | ✅ | ✅ |
 | The weekly plan and a company's dossier are both read_details panels | Read the plan and the dossier, and change nothing | ✅ | ✅ | ✅ |
 | Two outcomes of a sales review are two change_reports actions: a | Record the review decision<br>Record the forecast call | ✅ | ✅ | ✅ |
 | A team and a share are both change_access: create the team, add each | Create the team and add both colleagues<br>Share the record with the colleague named | ✅ | ✅ | ✅ |
 | A user's own hours and own language are theirs alone, so both go to | Own hours go to the own-settings tool<br>A user's language is their own | ✅ | ✅ | ✅ |
 | The FX sheet and the company logo are workspace setup, written | A rate goes on the sheet<br>A logo is setup, not an attachment | ✅ | ✅ | ✅ |
-| Log the meeting, add the task, and say what the work left waiting | Leave the rest of the queue out | ✅ | ✅ | ✅ |
+| Log the meeting, add the task, and say what the work left waiting | Leave the rest of the queue out | ❌ | ✅ | ✅ |
 | How is the crane project doing? | A project's health is read with its reason | ✅ | ✅ | ✅ |
 | Who would be on the fair list? | A list larger than one page is read whole | ✅ | ✅ | ✅ |
 
@@ -145,9 +145,11 @@ Which model drove the lane, and how it went. The tool columns further down are t
 
 | Model | Cases run | Reached their bar | Below it | Runs passed | Reliability |
 |---|---:|---:|---:|---:|---:|
-| `claude-sonnet-5-5@claude-cli` | 73 of 73 | 73 | 0 | 146/147 | 99% |
+| `claude-sonnet-5-5@claude-cli` | 73 of 73 | 71 | 2 | 143/148 | 97% |
 | `gemini-4-hydrogen-medium@agy-cli` | 73 of 73 | 73 | 0 | 146/148 | 99% |
 | `gpt-5.6-sol@codex-cli` | 73 of 73 | 72 | 1 | 144/154 | 94% |
+
+> `claude-sonnet-5-5@claude-cli` below its bar on: case110_write_greta_a_thank_you, case117_log_it_and_say_what_waits
 
 > `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room
 
@@ -227,7 +229,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |
 | [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |
 | [case109_show_my_times_in_lisbon](../../e2e/llm/scenarios/case109-show-my-times-in-lisbon.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The agent's zone is the agent's | `change_my_settings` |
-| [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The user's own draft stays theirs | `change_activities` or `draft_outbound` or `read_details` |
+| [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `claude-sonnet-5-5@claude-cli` | **FAIL** | 1/3 | 2 | **1** The user's own draft stays theirs | `change_activities` or `draft_outbound` or `read_details` |
 | [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The user's own draft stays theirs | `change_activities` or `draft_outbound` or `read_details` |
 | [case110_write_greta_a_thank_you](../../e2e/llm/scenarios/case110-write-greta-a-thank-you.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The user's own draft stays theirs | `change_activities` or `draft_outbound` or `read_details` |
 | [case111_how_is_the_workspace_doing](../../e2e/llm/scenarios/case111-how-is-the-workspace-doing.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Job health is a read<br>**2** Reading the routing moves nothing<br>**3** Read the audit trail | `read_workspace` |
@@ -248,7 +250,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
 | [case116_the_rate_and_the_logo](../../e2e/llm/scenarios/case116-the-rate-and-the-logo.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** A rate goes on the sheet<br>**2** A logo is setup, not an attachment | `change_settings` |
-| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
+| [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `claude-sonnet-5-5@claude-cli` | **FAIL** | 0/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
 | [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
 | [case117_log_it_and_say_what_waits](../../e2e/llm/scenarios/case117-log-it-and-say-what-waits.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **2** Leave the rest of the queue out | `list_approvals` |
 | [case118_is_the_crane_job_at_risk](../../e2e/llm/scenarios/case118-is-the-crane-job-at-risk.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** A project's health is read with its reason | - |
@@ -263,7 +265,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_forecast` |
 | [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_forecast` |
 | [case22_can_i_trust_the_numbers](../../e2e/llm/scenarios/case22-can-i-trust-the-numbers.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Source health is read rather than assumed<br>**2** An unread source is not reported as a quiet one | `read_forecast` |
-| [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
+| [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
 | [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/3 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
 | [case23_find_us_a_slot](../../e2e/llm/scenarios/case23-find-us-a-slot.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** Real openings, from the host's own calendar<br>**2** The other side's calendar is not claimed to be known | `check_availability` |
 | [case3_spreadsheet](../../e2e/llm/scenarios/case3-spreadsheet.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The numbers are shown before anything is committed<br>**6** The row that could not be used is reported | `preview_import` |
@@ -290,7 +292,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `change_state`, `read_project` |
 | [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `change_state`, `read_project` |
 | [case41_close_the_project](../../e2e/llm/scenarios/case41-close-the-project.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/3 | 2 | **1** How it moved is a different question from where it stands<br>**2** What is still open is said before the project is closed | `change_state`, `read_project` |
-| [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/3 | 2 | **1** The transport is named as the installation names it<br>**2** A channel that cannot send replies still captures, files and reads | `change_activities` |
+| [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** The transport is named as the installation names it<br>**2** A channel that cannot send replies still captures, files and reads | `change_activities` |
 | [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass | 2/2 | 2 | **1** The transport is named as the installation names it<br>**2** A channel that cannot send replies still captures, files and reads | `change_activities` |
 | [case42_can_i_answer_on_whatsapp](../../e2e/llm/scenarios/case42-can-i-answer-on-whatsapp.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | **1** The transport is named as the installation names it<br>**2** A channel that cannot send replies still captures, files and reads | `change_activities` |
 | [case43_the_fair_leads_are_prospects](../../e2e/llm/scenarios/case43-the-fair-leads-are-prospects.yaml) | `claude-sonnet-5-5@claude-cli` | pass | 2/2 | 2 | **1** All four change at once, with nothing waiting<br>**2** The value that was replaced is reported | `update_record` |
@@ -556,6 +558,7 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_details` | 1.00 | 4 | `case112_my_plan_and_the_dossier`, `case88_send_it_anyway` |
 | `change_settings` | 1.00 | 6 | `case106_turn_that_rule_off`, `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
+| `change_activities` | 1.00 | 12 | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_workspace` | 1.00 | 4 | `case111_how_is_the_workspace_doing`, `case33_two_cards_for_one_company` |
 | `change_state` | 1.00 | 10 | `case40_sort_the_queue`, `case41_close_the_project`, `case45_move_the_deal_on`, `case47_tidy_the_fair_list`, `case85_the_pilot_slipped` |
@@ -579,12 +582,10 @@ Every run of every case requiring this tool passed, for the model named.
 | `resolve_duplicates` | 1.00 | 4 | `case33_two_cards_for_one_company`, `case56_not_the_same` |
 | `draft_outbound` | 1.00 | 4 | `case44_chase_what_is_slipping`, `case60_send_one_draft_one` |
 | `schedule_meeting` | 1.00 | 2 | `case46_get_us_in_a_room` |
-| `list_approvals` | 1.00 | 2 | `case117_log_it_and_say_what_waits` |
 | `read_context` | 1.00 | 2 | `case64_catch_me_up_and_the_brief` |
 | `read_attention` | 1.00 | 6 | `case49_who_can_introduce_us`, `case58_quiet_for_three_weeks`, `case61_what_have_i_promised` |
 | `read_relationships` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `read_tags` | 1.00 | 6 | `case30_a_word_for_it`, `case31_wrong_word_on_the_record`, `case32_two_words_for_one_thing` |
-| `check_availability` | 1.00 | 2 | `case23_find_us_a_slot` |
 | `list_documents` | 1.00 | 2 | `case74_read_the_file_back` |
 | `read_project` | 1.00 | 2 | `case41_close_the_project` |
 | `archive_record` | 1.00 | 2 | `case33_two_cards_for_one_company` |
@@ -673,7 +674,8 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `change_activities` | 0.92 | 12/13 | - | `case42_can_i_answer_on_whatsapp`, `case46_get_us_in_a_room`, `case48_that_whole_thread_is_filed_wrong`, `case59_file_it_on_the_meeting_and_the_contract`, `case74_read_the_file_back`, `case9_filed_in_the_wrong_place` |
+| `list_approvals` | 0.00 | 0/2 | `case117_log_it_and_say_what_waits` | `case117_log_it_and_say_what_waits` |
+| `check_availability` | 0.67 | 2/3 | - | `case23_find_us_a_slot` |
 
 ### `gemini-4-hydrogen-medium@agy-cli`
 
