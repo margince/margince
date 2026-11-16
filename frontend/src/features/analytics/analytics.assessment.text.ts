@@ -95,7 +95,12 @@ function assessmentQuantity(value: number, unit: string, locale: Locale) {
 }
 
 export function readableQuantities(text: string): boolean {
-  return !/[€$£¥₫]|\d[\d.,]*\s?[kmb]\b|\d[\d.,]*[.,]\d{1,2}\s+[A-Z]{3}\b/i.test(
-    text,
-  );
+  if (/[€$£¥₫]/.test(text)) return false;
+  for (const number of text.matchAll(/\d[\d.,]*/g)) {
+    const after = text.slice(number.index + number[0].length);
+    if (/^\s?[kmb]\b/i.test(after)) return false;
+    if (/[.,]\d{1,2}$/.test(number[0]) && /^\s+[A-Z]{3}\b/i.test(after))
+      return false;
+  }
+  return true;
 }

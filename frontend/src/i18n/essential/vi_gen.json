@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
   "worklist.relationships.optional": "Kết nối lại tùy chọn",
@@ -1755,6 +1756,7 @@
   "owner.rosterFailed": "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
   "ref.notInRoster": "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
+  "select.filter": "Lọc danh sách",
   "app.errorTitle": "Màn hình này bị lỗi",
   "app.errorBody": "Thử lại. Nếu vẫn lỗi, tải lại trang.",
   "app.errorRetry": "Thử lại",

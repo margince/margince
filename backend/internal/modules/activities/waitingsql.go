@@ -324,7 +324,7 @@ var waitingEligibleFromSQL = `FROM activity a
 	   -- Matched on the address's domain, and on a subdomain of one of ours, the
 	   -- way the seam's own set does — mail from a departmental host is still
 	   -- from a colleague.
-	   AND (%[13]s OR NOT %[14]s)
+	   AND (%[13]s OR NOT ` + ownDomainSenderAtSQL("a", "%[14]s") + `)
 	   -- Owed a reply at all, before the cap like every rule above. The
 	   -- obvious machine senders go here: two hundred notification threads
 	   -- must not fill the scan and push a real customer past it. The
@@ -332,7 +332,7 @@ var waitingEligibleFromSQL = `FROM activity a
 	   -- newsletter somebody recognised does not arrive as fresh work. Slots 11
 	   -- and 17 relax the not-sales and informs_us judgements for their hidden
 	   -- figures.
-	   AND ` + owedSQL("$%[1]d", "%[11]s", "%[17]s", "%[21]s") + `
+	   AND ` + owedSQL("$%[1]d", "%[14]s", "%[11]s", "%[17]s", "%[21]s") + `
 	   -- Set aside by THIS reader, and only this reader.
 	   --
 	   -- Judged against the row's CURRENT state rather than against what it was

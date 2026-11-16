@@ -328,7 +328,7 @@ func (s *Store) waitingStatement(
 		arg(relax.reader),
 		responsibility,
 		notSales, unlinked,
-		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
+		colleague, fmt.Sprintf("$%d", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,

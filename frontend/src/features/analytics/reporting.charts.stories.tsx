@@ -119,6 +119,7 @@ const boundEvaluation = {
 // cover sees it, and as one they do not.
 function BoundCard({ restricted }: Readonly<{ restricted: boolean }>) {
   installFetchStub({
+    ...reportingStoryRoutes(),
     "GET /analytics/reports/report/questions/bound/answer": () =>
       jsonResponse(
         restricted
