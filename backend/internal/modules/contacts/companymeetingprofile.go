@@ -24,8 +24,7 @@ import (
 const CompanySourceMeeting = "meeting"
 
 // meetingTranscriptSharedSQL is a transcript, alias t, that may fill a company
-// field: every reader may open it, and nothing in it was restricted, archived
-// or redacted.
+// field. Every reader may open it, and it is not restricted, archived or redacted.
 const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at IS NULL AND t.archived_at IS NULL
 	AND cardinality(t.redacted_fields) = 0`
 
@@ -37,10 +36,12 @@ func RetractStaleMeetingProfilesTx(ctx context.Context, tx pgx.Tx, limit int) (i
 	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
 		return 0, err
 	}
-	rows, err := tx.Query(ctx, `DELETE FROM company_profile_field f USING activity t
-		WHERE f.id IN (SELECT s.id FROM company_profile_field s JOIN activity t ON t.id = s.source_activity_id
-		                WHERE s.source = 'meeting' AND NOT (`+meetingTranscriptSharedSQL+`)
-		                ORDER BY s.id LIMIT $1 FOR UPDATE OF s SKIP LOCKED)
+	rows, err := tx.Query(ctx, `WITH picked AS MATERIALIZED (
+		  SELECT s.id FROM company_profile_field s JOIN activity t ON t.id = s.source_activity_id
+		   WHERE s.source = 'meeting' AND NOT (`+meetingTranscriptSharedSQL+`)
+		   ORDER BY s.id LIMIT $1 FOR UPDATE OF s SKIP LOCKED)
+		DELETE FROM company_profile_field f USING activity t
+		WHERE f.id IN (SELECT id FROM picked)
 		  AND f.source = 'meeting' AND t.id = f.source_activity_id AND NOT (`+meetingTranscriptSharedSQL+`)
 		RETURNING f.company_id, f.field, f.value`, limit)
 	if err != nil {
