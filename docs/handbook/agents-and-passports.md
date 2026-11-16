@@ -22,7 +22,7 @@ To connect your AI tool to Margince, open **Settings → AI assistants** and ans
 4. For a chat app, under **Whose plan is it?**, choose **My company’s** or **My own**. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
 5. To paste the address, a command or text for a file, choose **Copy address** or **Copy**.
 6. Follow the numbered steps the card shows for that one case.
-7. When Margince opens, sign in. **Authorize access** ticks all five permissions; beside **Send messages** it says "sends messages as you, without asking first". Clear any permissions the tool should not get, then choose **Authorize**.
+7. When Margince opens, sign in. **Authorize access** ticks all five permissions; **Send messages** allows sending, but the client must get your approval or a direct instruction first. Clear any permissions the tool should not get, then choose **Authorize**.
 To refuse, choose **Deny access**.
 Authorizing creates the connection, listed under **Your connections**, so you need no passport.
 Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
@@ -162,10 +162,7 @@ relinking it away does not remove that. A member can take the filing back with
 **Undo filing**; an agent cannot. See
 [Capture](capture.md#filing-under-a-project-starts-a-retention-clock).
 
-The **Autonomy tiers** card in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**, states the same rule.
-It reads "Send email, book meetings, update a contact or deal: runs immediately if the
-agent has that permission. Granting the permission is the approval." and
-"Enrichment from the web: waits in Approvals."
+The **Autonomy tiers** card states the same rule. Find it in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. Routine updates run automatically. Connected clients must get approval or a direct instruction before sending. Unattended sends and enrichment from the web wait in **Approvals**.
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
@@ -212,8 +209,8 @@ in these cases:
 
 So an agent may answer a card staged for the colleague it acts for, its own
 proposal included, within the rules above. That is what the colleague could
-have answered in the app, and could put back later. A scheduled agent
-never answers a card at all, because nobody is watching it to have said yes.
+have answered in the app, and could put back later. An unattended agent
+cannot approve a card, because nobody is there to have said yes. It can still reject a proposal.
 
 **Raising its own allowance.** An agent can never answer a request to raise its
 own allowance, either way. A passport that could raise its own limit would have
@@ -248,9 +245,9 @@ record visibility, the same limit the colleague behind it has.
 
 ## What protects a send
 
-Agent sending is not held behind a confirmation by default. So it helps to know
-what *does* stand in the way. There are four things, and none of them is a
-click.
+A direct instruction authorizes a send without a second click in Margince. Connected
+clients must ask before an unrequested send; the server cannot inspect their conversation.
+Unattended runs stage sends for a human decision. These four further checks still apply.
 
 **Consent, refused by default, per purpose.** A send is refused unless an
 active consent, with its evidence, exists for the *purpose* that send falls under. Consent

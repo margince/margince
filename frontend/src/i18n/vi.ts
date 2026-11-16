@@ -9615,7 +9615,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Đọc, tóm tắt, soạn nháp: chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
-    "CRM được cập nhật tự động; có thể kiểm tra và hoàn tác. Gửi tin nhắn cần bạn cho phép: yêu cầu gửi trực tiếp được tính là cho phép; tác vụ tự chạy phải chờ duyệt.",
+    "Cập nhật thường ngày tự động và có thể hoàn tác. Trợ lý phải có yêu cầu hoặc sự cho phép của bạn trước khi gửi; gửi tự động phải chờ duyệt.",
   "settings.tierWait": "Bổ sung dữ liệu từ web: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn hoặc chốt deal, gắn hoạt động vào dự án: chạy ngay nếu trợ lý có quyền đó.",
@@ -12185,7 +12185,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.s4.scope1Rest": "Thư tự động trở thành liên hệ, công ty và hoạt động.",
   "ob.s4.scope2Lead": "Bao gồm quyền gửi.",
   "ob.s4.scope2Rest":
-    "Margince có thể gửi từ hộp thư này khi bạn gửi, và khi bạn cấp cho một agent passport có quyền gửi. Cấp passport đó chính là phê duyệt. Có thể thu hồi passport bất cứ lúc nào.",
+    "Margince có thể gửi từ hộp thư này khi bạn tự gửi hoặc yêu cầu trực tiếp trợ lý gửi. Quyền gửi không phải là phê duyệt cho một tin nhắn. Gửi tự động phải chờ bạn duyệt. Có thể thu hồi quyền truy cập bất cứ lúc nào.",
   "ob.s4.scope3Lead": "Dữ liệu nằm trong công ty của bạn.",
   "ob.s4.scope3Rest": "Xuất hoặc xóa toàn bộ bất cứ lúc nào.",
   "ob.s4.scope4Lead": "Ngắt kết nối bằng một cú nhấp.",
@@ -17672,7 +17672,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
-    "gửi tin nhắn khi bạn cho phép, kể cả bằng yêu cầu trực tiếp",
+    "cho phép gửi; trợ lý phải nhận được sự cho phép hoặc yêu cầu trực tiếp trước khi gửi. Quyền gửi không phải là phê duyệt",
   "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",
@@ -20439,7 +20439,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "firstRun.ignite.read":
     "đọc trang web của công ty và báo cáo những gì tìm được",
   "firstRun.ignite.draft": "soạn theo giọng văn đã huấn luyện",
-  "firstRun.ignite.act": "gửi bất cứ thứ gì hay sửa hồ sơ khi bạn chưa duyệt",
+  "firstRun.ignite.act":
+    "gửi khi chưa có yêu cầu trực tiếp hoặc sự cho phép của bạn",
   "firstRun.ignite.carryOn": "Tiếp tục",
   "firstRun.ignite.leaving": "Đang kiểm tra thiết lập…",
   "firstRun.step.model": "Mô hình",

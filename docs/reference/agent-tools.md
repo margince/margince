@@ -6,7 +6,8 @@ An agent in Margince acts for the human who gave it a **passport**, the credenti
 
 Messages need human approval. A direct instruction to send counts; standing send permission
 alone does not. Connected clients must ask before an unrequested send. Unattended runs
-stage every `send`-scope call and pause until a person approves that call.
+stage every `send`-scope call and pause for a human decision. Approval releases that call;
+rejection resumes the run without sending it.
 
 Most tools run at once for an agent that acts as its own user, because it can do only what that user could do alone. Some
 still wait for a human then. These are the `enrich` tool and these actions: `set_up_partner` and `merge_member_accounts` on

@@ -7,9 +7,8 @@
 
 package gates
 
-// A direct human instruction can authorise a send without another in-app
-// approval. Static send tiers describe that path; unattended runs wait at
-// auth.TierFor. This copy check catches promises of an extra confirmation.
+// Shipped locale copy must not claim every record update requires approval
+// or that standing send permission approves a message.
 
 import (
 	"path/filepath"
@@ -28,18 +27,22 @@ var absoluteApprovalClaims = map[string][]*regexp.Regexp{
 		regexp.MustCompile(`nothing is written until you (approve|accept)`),
 		regexp.MustCompile(`agents only draft[,]? people send`),
 		regexp.MustCompile(`granting the permission is the approval`),
+		regexp.MustCompile(`giving that passport is the approval`),
+		regexp.MustCompile(`send anything or change a record without your approval`),
 	},
 	"de": {
 		regexp.MustCompile(`jede änderung (wartet|braucht eine freigabe)`),
 		regexp.MustCompile(`vorher wird nichts geschrieben`),
 		regexp.MustCompile(`nur menschen (senden|verschicken)`),
-		regexp.MustCompile(`mit der berechtigung ist die freigabe bereits erteilt`),
+		regexp.MustCompile(`mit (der berechtigung|diesem passport) ist die freigabe bereits erteilt`),
+		regexp.MustCompile(`ohne deine freigabe etwas senden oder einen datensatz ändern`),
 	},
 	"vi": {
 		regexp.MustCompile(`mọi thay đổi.{0,30}chờ.{0,20}duyệt`),
 		regexp.MustCompile(`chưa duyệt[,]? chưa lưu`),
 		regexp.MustCompile(`chỉ bạn được bấm gửi`),
-		regexp.MustCompile(`cấp quyền chính là phê duyệt`),
+		regexp.MustCompile(`cấp (quyền|passport đó) chính là phê duyệt`),
+		regexp.MustCompile(`gửi bất cứ thứ gì hay sửa hồ sơ khi bạn chưa duyệt`),
 	},
 }
 

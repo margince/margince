@@ -81,15 +81,16 @@ by `DELETE /passports/{id}` from your signed-in session. That route refuses a pa
 `/oauth/revoke` answers `200` for such a passport and leaves it working, as RFC 7009 allows for a token it does not
 own.
 
-**What a passport can do without asking you.** Most actions that change real things run at once: to import a file,
-send mail, book, merge or archive. A passport works as *you*. It carries your seat, your grants and your row
-scope. So it can only reach what you could already reach in the app, and a second confirm from you would
-make nothing safer.
+**What a passport can do.** Routine, reversible updates run at once. A passport carries your seat,
+grants and row scope, so it reaches only what you could reach in the app. A direct instruction to send
+counts as approval; the client must ask before an unrequested send. Standing send permission alone
+is not approval, and the server cannot inspect the client's conversation. Unattended Margince runs
+stage sends for a human decision, even on your passport.
 
 Your own limits still apply. They are RBAC, row scope, the seat limit, and the end date of the
 passport. They are also the scopes you picked when you created it.
 
-Two things do not follow that rule:
+These calls also wait:
 
 - **`enrich`** still needs a confirm first. The model names the URL the server calls. So if someone gets
   the model to name an address, the server reaches an address that no one with the credential picked.
