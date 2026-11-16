@@ -268,7 +268,7 @@ func TestTheLanePinsThePoolCeilingItBudgetsFor(t *testing.T) {
 	// Every test run the lane starts is held to the parallel tests the budget
 	// counts; go test's own default is one per CPU.
 	for _, path := range []string{"../scripts/test-integration-one.sh", "../scripts/test-integration-parallel.sh"} {
-		for _, line := range strings.Split(readRepoFile(t, path), "\n") {
+		for line := range strings.SplitSeq(readRepoFile(t, path), "\n") {
 			code := !strings.HasPrefix(strings.TrimSpace(line), "#")
 			starts := code && (strings.Contains(line, "go test -p 1") || strings.Contains(line, "-test.paniconexit0"))
 			if starts && !strings.Contains(line, `parallel="$LANE_TEST_PARALLEL"`) && !strings.Contains(line, `-parallel "$LANE_TEST_PARALLEL"`) {
