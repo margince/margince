@@ -10533,8 +10533,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
   "jobs.kind.transcript_audience_sweep": "Lesende von Terminnotizen",
-  "jobs.kind.meeting_profile_retract_sweep":
-    "Unternehmensfelder aus Terminen",
+  "jobs.kind.meeting_profile_retract_sweep": "Unternehmensfelder aus Terminen",
   "jobs.kind.initiative_enrolment_sweep":
     "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
@@ -21475,8 +21474,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Notizen sind angehängt. Verbinde Terminnotizen, um sie zu lesen.",
   "activity.notes.otherAccount":
     "Notizen sind angehängt. Verbinde Terminnotizen mit dem Google-Konto deines Kalenders.",
-  "captureConcern.notesGrant":
-    "Terminnotizen können nicht gelesen werden",
+  "captureConcern.notesGrant": "Terminnotizen können nicht gelesen werden",
   "captureConcern.notesAccount":
     "Terminnotizen benötigen dasselbe Google-Konto wie der Kalender",
   "captureConcern.reauth": "Erneute Verbindung erforderlich",
