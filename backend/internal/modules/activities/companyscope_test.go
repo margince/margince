@@ -392,16 +392,16 @@ func TestTheWaitingQueryNeverNullMatchesThreadKeys(t *testing.T) {
 // threadless unjudged row would turn a hand-logged note into a standing
 // obligation on the deal.
 func TestOnlyTheObligationAdmitsThreadlessMail(t *testing.T) {
-	if strings.Contains(owedSQL("$1", neverRelaxed, neverRelaxed, neverRelaxed), "a.thread_key IS NOT NULL") {
+	if strings.Contains(owedSQL("$1", "$2", neverRelaxed, neverRelaxed, neverRelaxed), "a.thread_key IS NOT NULL") {
 		t.Fatal("the obligation asks a message for a thread key, so a customer's threadless " +
 			"mail cannot be judged and stays invisible")
 	}
-	if !strings.Contains(reviewableRequestSQL("$1"), "a.thread_key IS NOT NULL AND NOT") {
+	if !strings.Contains(reviewableRequestSQL("$1", "$2"), "a.thread_key IS NOT NULL AND NOT") {
 		t.Fatal("request review admits unjudged threadless mail without a sender rule in front of it")
 	}
 	// Every reader of the waiting query asks the same obligation, because the
 	// query carries it rather than taking it from its caller.
-	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[11]s", "%[17]s", "%[21]s")) {
+	if !strings.Contains(waitingRepliesSQL, owedSQL("$%[1]d", "%[14]s", "%[11]s", "%[17]s", "%[21]s")) {
 		t.Fatal("the waiting query no longer carries owedSQL, so the lane and the badge can disagree")
 	}
 }

@@ -362,6 +362,12 @@ func ValidOwnDomain(raw string) (string, error) {
 // them in SQL: a predicate cannot run before a scan cap, and a colleague rule
 // applied after one lets internal threads fill the scan.
 func (s *OwnDomainStore) ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
+	return ColleagueDomainsTx(ctx, tx)
+}
+
+// ColleagueDomainsTx is the method above for a reader with no store, such as
+// the History mail badge's binding.
+func ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}

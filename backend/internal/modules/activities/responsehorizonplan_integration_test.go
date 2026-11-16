@@ -139,7 +139,7 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
-		ownDomainSenderSQL("inbound", 3),
+		"$3",
 		slowPercentile,
 		sampledMessages(4))
 	now := clocktest.Now(t)

@@ -37,7 +37,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(activityIDs)
-	in, err := moveInputs(ctx, arg, asOf)
+	in, err := moveInputs(ctx, tx, arg, asOf)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 // it the request is no longer current work unless a human kept it, so it reads
 // none. The mail stays on the timeline; none does not mean answered.
 func moveSQL(in moveBinding, kinds string) string {
-	return `CASE WHEN coalesce(` + owedSQL(in.asOf, neverRelaxed, neverRelaxed, neverRelaxed) + ` AND ` +
+	return `CASE WHEN coalesce(` + owedSQL(in.asOf, in.ownDomains, neverRelaxed, neverRelaxed, neverRelaxed) + ` AND ` +
 		withinWaitingHorizonSQL(in.asOf, in.horizon) + `, false)
    THEN '` + string(crmcontracts.EmailSummaryMoveNeedsReply) + `'
    WHEN coalesce(` + awaitingTheirAnswerSQL(in.asOf, in.sentByReader, in.laterContent, kinds) + `, false)
@@ -83,41 +83,49 @@ func moveSQL(in moveBinding, kinds string) string {
 
 // moveBinding is what moveSQL reads, already bound as parameters.
 type moveBinding struct {
-	asOf, sentByReader, laterContent, horizon string
+	asOf, ownDomains, sentByReader, laterContent, horizon string
 }
 
 // moveInputs binds what moveSQL reads about the reader and the instant. Only
 // the seat stamp counts as the reader's. Their hand-typed addresses live with
 // capture, which a page read cannot reach. Such a mail reads none, never
 // theirs. The horizon is the stored measurement the queue reads, clamped to its
-// ceiling.
-func moveInputs(ctx context.Context, arg func(any) int, asOf time.Time) (moveBinding, error) {
+// ceiling. The own-domain list is the one the Worklist tests senders against.
+func moveInputs(ctx context.Context, tx pgx.Tx, arg func(any) int, asOf time.Time) (moveBinding, error) {
 	laterContent, err := auth.ActivityContentClause(ctx, "later", arg)
 	if err != nil {
 		return moveBinding{}, err
 	}
-	return moveInputsGatedBy(ctx, arg, asOf, laterContent), nil
+	return moveInputsGatedBy(ctx, tx, arg, asOf, laterContent)
 }
 
 // moveInputsGatedBy is moveInputs for a statement that gates the later mail
 // itself, through laterContent over the alias later.
-func moveInputsGatedBy(ctx context.Context, arg func(any) int, asOf time.Time, laterContent string) moveBinding {
+func moveInputsGatedBy(ctx context.Context, tx pgx.Tx, arg func(any) int, asOf time.Time, laterContent string) (moveBinding, error) {
+	ownDomains, err := bindColleagueDomains(ctx, tx, arg)
+	if err != nil {
+		return moveBinding{}, err
+	}
 	return moveBinding{
 		asOf:         fmt.Sprintf("$%d::timestamptz", arg(asOf)),
+		ownDomains:   ownDomains,
 		sentByReader: sentByReaderSQL(fmt.Sprintf("$%d", arg(readerOrNobody(ctx))), fmt.Sprintf("$%d", arg([]string{}))),
 		laterContent: laterContent,
 		horizon:      storekit.WaitingHorizonSQL(asOf, arg),
-	}
+	}, nil
 }
 
 // MailMoveColumnSQL is the History badge's move on the activity under alias a
 // as a column. readable names the set MailThreadReadableSQL renders over a's
 // candidates. It is NULL when the row is not a mail the reader may read, since
 // the move is judged from the mail's content.
-func MailMoveColumnSQL(ctx context.Context, arg func(any) int, asOf time.Time, readable string) string {
-	in := moveInputsGatedBy(ctx, arg, asOf, InGatedSetSQL(readable, "later"))
+func MailMoveColumnSQL(ctx context.Context, tx pgx.Tx, arg func(any) int, asOf time.Time, readable string) (string, error) {
+	in, err := moveInputsGatedBy(ctx, tx, arg, asOf, InGatedSetSQL(readable, "later"))
+	if err != nil {
+		return "", err
+	}
 	return `CASE WHEN a.kind = 'email' AND a.restricted_at IS NULL AND ` + InGatedSetSQL(readable, "a") + ` THEN ` +
-		moveSQL(in, mailKinds) + ` END`
+		moveSQL(in, mailKinds) + ` END`, nil
 }
 
 // MailThreadReadableSQL renders the ids the reader may read among the
@@ -144,7 +152,10 @@ func MailMovesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf t
 	if err != nil {
 		return nil, err
 	}
-	in := moveInputsGatedBy(ctx, arg, asOf, InGatedSetSQL(mailMoveReadable, "later"))
+	in, err := moveInputsGatedBy(ctx, tx, arg, asOf, InGatedSetSQL(mailMoveReadable, "later"))
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `WITH `+mailMoveCandidates+` AS MATERIALIZED (
   SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
    WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.kind = 'email' AND a.restricted_at IS NULL),

@@ -81,7 +81,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
      AND (`+auth.WorkspaceAudienceSQL("a")+` OR `+storekit.SharedMailWorkOwnerSQL("a")+` IS NOT NULL) AND a.restricted_at IS NULL
      AND NOT `+answerableInvitationSQL+`
-     AND NOT `+invitationNeverOwedSQL(fmt.Sprintf("$%d::timestamptz", arg(asOf)))+`
+     AND NOT `+invitationNeverOwedSQL(fmt.Sprintf("$%d::timestamptz", arg(asOf)), fmt.Sprintf("$%d", arg(domains)))+`
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
      AND (`+assigneeSQL+`) IS NOT NULL
      AND NOT `+readerSetAsideSQL("("+assigneeSQL+")", wake), neverRelaxed)

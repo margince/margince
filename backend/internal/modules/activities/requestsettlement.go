@@ -120,8 +120,9 @@ type RepliedRequest struct {
 // verdict that recorded its evidence is skipped while that evidence is
 // unchanged, so an edit, a narrowing or a backdated answer brings it back. An
 // older verdict without it is skipped while its answer is still the newest. A
-// still_owed verdict from an older rule is never skipped. A never-owed invitation is not judged.
-var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `)) AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL("$1::timestamptz") + `)
+// still_owed verdict from an older rule is never skipped. A never-owed invitation is not judged;
+// $4 is the own-domain list that tells a colleague's invitation.
+var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `)) AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL("$1::timestamptz", "$4") + `)
  AND ` + auth.WorkspaceAudienceSQL("a") + `
  AND NOT ` + auth.ActivityRestrictedSQL("a.id") + `
  AND a.counterparty_email IS NOT NULL
@@ -208,6 +209,10 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	}
 	var out []RepliedRequest
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		ownDomains, err := s.ownDomainList(ctx, tx)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, coalesce(a.counterparty_email, ''),
 			       latest.id,
@@ -231,7 +236,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			 WHERE %[5]s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
 			 LIMIT $3`, settlementEvidenceSQL(), newestAnswerRow, EmailRequestTaskSource, settlementCompletedTaskSQL("reminder"), repliedRequestsSQL),
-			asOf, OwedVerdictCapturedBy, limit)
+			asOf, OwedVerdictCapturedBy, limit, ownDomains)
 		if err != nil {
 			return fmt.Errorf("activities: reading answered requests: %w", err)
 		}
