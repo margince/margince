@@ -61,9 +61,8 @@ type JudgeInput struct {
 // The answer ceiling is the shared reasoning headroom: a Gemini 3.x judge
 // already spent over 3,000 tokens thinking on the smaller turn this replaced.
 //
-// It carries no ResponseSchema: this request's digest stamps every judged
-// certification record, so a schema would stale them all, and
-// ParseJudgeVerdict already refuses a malformed verdict for a retry.
+// It carries no ResponseSchema: its digest stamps every judged certification
+// record, and ParseJudgeVerdict already refuses a malformed verdict.
 //
 //promptlang:exempt the certification judge scores another prompt's output against a rubric; it grades rather than writing anything an installation reads
 //promptvoice:exempt a grading harness scoring another prompt's output against a rubric; it returns a score and one reason read by whoever runs the harness, never by an installation's user.

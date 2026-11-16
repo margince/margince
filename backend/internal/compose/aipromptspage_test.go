@@ -244,6 +244,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 				continue
 			}
 			got.decisions = appendDistinctQuestions(got.decisions, one.decisions)
+			got.unschemed += one.unschemed
 			for _, system := range one.systems {
 				if seenSystem[system] {
 					continue
@@ -268,8 +269,10 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 		default:
 			got.shape = oneFencedItem
 		}
+		checkSchemaDeclared(t, key, got.unschemed > 0)
 		prompts = append(prompts, got)
 	}
+	checkDeclaredSchemalessReached(t, prompts)
 	if len(prompts) == 0 {
 		// Under-recognition is the one failure this must not have: an empty
 		// walk would rewrite the page to nothing and report success.
@@ -362,7 +365,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 	seen := map[string]bool{}
 	unschemed := 0
 	for _, req := range recorder.Requests {
-		if asksForJSON(req) && len(req.ResponseSchema) == 0 {
+		if strings.Contains(req.System+fmt.Sprint(req.Messages), "JSON") && len(req.ResponseSchema) == 0 {
 			unschemed++
 		}
 		canonical := promptfence.Canonicalize(req.System, req.System)
