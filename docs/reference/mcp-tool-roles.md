@@ -1277,20 +1277,20 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `change_reports.update_schedule` | `update_reporting_schedule` | `installation_settings.read` `report_definition.read` `report_schedule.read` `report_schedule.update` |
 | Reports and analytics | `change_reports.update_target` | `update_reporting_target` | `installation_settings.read` `sales_target.read` `sales_target.update` |
 | Reports and analytics | `read_analytics.compose` | `compose_analytics_report` |  |
-| Reports and analytics | `read_analytics.query` | `run_analytics_query` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` |
+| Reports and analytics | `read_analytics.query` | `run_analytics_query` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
 | Reports and analytics | `read_forecast.input_sources` | `data_coverage` | `data_coverage.read` `forecast.read` |
-| Reports and analytics | `read_reports.analytics_cell_records` | `explain_analytics_cell` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` |
+| Reports and analytics | `read_reports.analytics_cell_records` | `explain_analytics_cell` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
 | Reports and analytics | `read_reports.analytics_context` | `get_analytics_context` | `forecast.read` `installation_settings.read` |
-| Reports and analytics | `read_reports.analytics_schema` | `get_analytics_schema` | `activity.read` `company.read` `deal.read` `lead.read` `project.read` `relationship.read` |
+| Reports and analytics | `read_reports.analytics_schema` | `get_analytics_schema` | `activity.read` `deal.read` `lead.read` `project.read` |
 | Reports and analytics | `read_reports.company_coverage` | `get_company_coverage` | `activity.read` `company.read` `contact.read` `deal.read` `relationship.read` |
-| Reports and analytics | `read_reports.evidence` | `search_report_evidence` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` |
-| Reports and analytics | `read_reports.question_card_answer` | `answer_reporting_question_card` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` `report_definition.read` |
-| Reports and analytics | `read_reports.question_card_records` | `explain_reporting_question_card` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` `report_definition.read` |
+| Reports and analytics | `read_reports.evidence` | `search_report_evidence` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` |
+| Reports and analytics | `read_reports.question_card_answer` | `answer_reporting_question_card` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` |
+| Reports and analytics | `read_reports.question_card_records` | `explain_reporting_question_card` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `report_definition.read` |
 | Reports and analytics | `read_reports.report_revisions` | `list_reporting_report_revisions` | `report_definition.read` `report_definition.update` |
-| Reports and analytics | `read_reports.report_run` | `get_report_run` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` |
-| Reports and analytics | `read_reports.report_run_cell_records` | `explain_report_run_cell` | `activity.read` `company.read` `deal.read` `installation_settings.read` `lead.read` `project.read` `relationship.read` |
-| Reports and analytics | `read_reports.report_runs` | `list_report_runs` | `activity.read` `company.read` `deal.read` `lead.read` `project.read` `relationship.read` |
-| Reports and analytics | `read_reports.run` | `run_report` | `activity.read` `installation_settings.read` `project.read` |
+| Reports and analytics | `read_reports.report_run` | `get_report_run` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
+| Reports and analytics | `read_reports.report_run_cell_records` | `explain_report_run_cell` | `activity.read` `deal.read` `installation_settings.read` `lead.read` `project.read` |
+| Reports and analytics | `read_reports.report_runs` | `list_report_runs` | `activity.read` `deal.read` `lead.read` `project.read` |
+| Reports and analytics | `read_reports.run` | `run_report` | `activity.read` `installation_settings.read` |
 | Reports and analytics | `read_reports.sales_decisions` | `list_sales_decisions` | `activity.read` |
 | Reports and analytics | `read_reports.sales_initiative` | `get_sales_initiative` | `sales_initiative.read` |
 | Reports and analytics | `read_reports.sales_initiative_members` | `list_sales_initiative_members` | `sales_initiative.read` |
@@ -1299,7 +1299,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Reports and analytics | `read_reports.sdr_meetings` | `list_sdr_upcoming_meetings` | `installation_settings.read` |
 | Reports and analytics | `read_reports.sdr_summary` | `get_sdr_summary` | `installation_settings.read` |
 | Reports and analytics | `read_reports.sdr_team` | `get_sdr_team_review` | `installation_settings.read` `lead.read` |
-| Reports and analytics | `read_workspace.analytics` | `describe_analytics_vocabulary` | `activity.read` `company.read` `deal.read` `lead.read` `project.read` `relationship.read` |
+| Reports and analytics | `read_workspace.analytics` | `describe_analytics_vocabulary` | `activity.read` `deal.read` `lead.read` `project.read` |
 | Reports and analytics | `read_workspace.report_blocks` | `describe_report_blocks` |  |
 | Reports and analytics | `read_workspace.report_vocabulary` | `describe_report_vocabulary` |  |
 | Reports and analytics | `run_research.assess_sales_review` | `assess_sales_review` | `deal.read` `installation_settings.read` `report_definition.read` |
