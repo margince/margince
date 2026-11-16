@@ -143,11 +143,8 @@ func meetingChangeableCompanies(
 	slices.SortFunc(touched, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
 	var changeable []ids.UUID
 	for _, company := range slices.Compact(touched) {
-		check := auth.EnsureRetractable
-		if _, writes := stated[ids.From[ids.CompanyKind](company)]; writes {
-			check = auth.EnsureWritableLive
-		}
-		err := check(ctx, tx, companyEntity, company)
+		_, writes := stated[ids.From[ids.CompanyKind](company)]
+		err := ensureMeetingChangeable(ctx, tx, company, writes)
 		switch {
 		case err == nil:
 			changeable = append(changeable, company)
@@ -156,6 +153,13 @@ func meetingChangeableCompanies(
 		}
 	}
 	return changeable, nil
+}
+
+func ensureMeetingChangeable(ctx context.Context, tx pgx.Tx, company ids.UUID, writes bool) error {
+	if writes {
+		return auth.EnsureWritableLive(ctx, tx, companyEntity, company)
+	}
+	return auth.EnsureRetractable(ctx, tx, companyEntity, company)
 }
 
 // retractUnstatedMeetingFields removes the values this transcript wrote on a

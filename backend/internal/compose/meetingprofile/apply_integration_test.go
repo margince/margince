@@ -83,11 +83,11 @@ func (m *meeting) read(t *testing.T, entries ...saidBy) {
 	for i := range sure {
 		sure[i] = 0.8
 	}
-	m.readAs(t, m.e.Admin(), entries, sure)
+	m.readAs(m.e.Admin(), t, entries, sure)
 }
 
 // readAs applies a reading as reader; confidence[i] is entries[i]'s.
-func (m *meeting) readAs(t *testing.T, reader context.Context, entries []saidBy, confidence []float64) {
+func (m *meeting) readAs(reader context.Context, t *testing.T, entries []saidBy, confidence []float64) {
 	t.Helper()
 	profile := []map[string]any{}
 	var parties []commitmentparty.Party
@@ -223,11 +223,11 @@ func TestTwoSpeakersOfOneCompanyAgreeOnTheSurerValue(t *testing.T) {
 	dana, erik := m.employee(t, company, "Dana Brandt"), m.employee(t, company, "Erik Brandt")
 	stated := []saidBy{{dana, "sales_motion", distributors}, {erik, "sales_motion", "They sell online."}}
 
-	m.readAs(t, m.e.Admin(), stated, []float64{0.6, 0.9})
+	m.readAs(m.e.Admin(), t, stated, []float64{0.6, 0.9})
 	if got, _ := m.field(t, company, "sales_motion"); got.Value != "They sell online." {
 		t.Errorf("sales_motion reads %q, want the surer speaker's value", got.Value)
 	}
-	m.readAs(t, m.e.Admin(), stated, []float64{0.8, 0.8})
+	m.readAs(m.e.Admin(), t, stated, []float64{0.8, 0.8})
 	if got, _ := m.field(t, company, "sales_motion"); got.Value != distributors {
 		t.Errorf("sales_motion reads %q on a tie, want the earlier entry's value", got.Value)
 	}
@@ -246,7 +246,7 @@ func TestAReaderWhoMayNotChangeACompanyLeavesItsMeetingFields(t *testing.T) {
 	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
 	m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "sales_motion", distributors})
 
-	m.readAs(t, companyEditor(m), nil, nil)
+	m.readAs(companyEditor(m), t, nil, nil)
 	if got, ok := m.field(t, company, "sales_motion"); !ok || got.Value != distributors {
 		t.Errorf("sales_motion reads %q (present %v) after a reading by someone who may not change the company", got.Value, ok)
 	}
@@ -262,7 +262,7 @@ func TestACompanyTheReaderMayNotWriteLeavesTheOthersAudited(t *testing.T) {
 	}
 	before := audited()
 
-	m.readAs(t, companyEditor(m), []saidBy{{sigrid, "sales_motion", distributors}}, []float64{0.8})
+	m.readAs(companyEditor(m), t, []saidBy{{sigrid, "sales_motion", distributors}}, []float64{0.8})
 	if got, ok := m.field(t, ours, "icp"); ok {
 		t.Errorf("icp still reads %q; the re-reading no longer states it", got.Value)
 	}
