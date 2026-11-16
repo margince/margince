@@ -12,6 +12,7 @@ func WithUnattended(ctx context.Context) context.Context {
 	return context.WithValue(ctx, unattendedKey{}, true)
 }
 
+// Unattended covers runner calls before and after a run ID is assigned.
 func Unattended(ctx context.Context) bool {
 	value, ok := ctx.Value(unattendedKey{}).(bool)
 	_, running := AgentRunID(ctx)

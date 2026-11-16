@@ -9615,7 +9615,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Đọc, tóm tắt, soạn nháp: chạy ngay, ghi nhật ký đầy đủ.",
   "settings.tierSend":
-    "CRM được cập nhật tự động; có thể kiểm tra và hoàn tác. Gửi tin nhắn cần có người cho phép: yêu cầu gửi trực tiếp được tính là cho phép; tác vụ tự chạy phải chờ duyệt.",
+    "CRM được cập nhật tự động; có thể kiểm tra và hoàn tác. Gửi tin nhắn cần bạn cho phép: yêu cầu gửi trực tiếp được tính là cho phép; tác vụ tự chạy phải chờ duyệt.",
   "settings.tierWait": "Bổ sung dữ liệu từ web: chờ trong Phê duyệt.",
   "settings.tierAdvance":
     "Chuyển giai đoạn hoặc chốt deal, gắn hoạt động vào dự án: chạy ngay nếu trợ lý có quyền đó.",
@@ -17672,7 +17672,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
-    "gửi tin nhắn khi có người cho phép, kể cả bằng yêu cầu trực tiếp",
+    "gửi tin nhắn khi bạn cho phép, kể cả bằng yêu cầu trực tiếp",
   "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",

@@ -17954,7 +17954,8 @@ export const en = {
   "consent.scopeNote.read": "sees what you can see",
   "consent.scopeNote.draft": "prepares messages for your review",
   "consent.scopeNote.write": "creates, edits and archives records as you",
-  "consent.scopeNote.send": "sends messages with human approval, including a direct instruction",
+  "consent.scopeNote.send":
+    "sends messages with human approval, including a direct instruction",
   "consent.scopeNote.enrich": "runs AI work and buys contact data",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",

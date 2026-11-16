@@ -191,11 +191,12 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// behind it keeps both rules.
 	resolvedAuto := tier == mcp.TierAutoExecute
 	effectiveTier := TierFor(ctx, p, spec)
-	if effectiveTier == mcp.TierAutoExecute {
+	switch {
+	case effectiveTier == mcp.TierAutoExecute:
 		tier = mcp.TierAutoExecute
-	} else if effectiveTier == mcp.TierConfirmationRequired {
+	case effectiveTier == mcp.TierConfirmationRequired:
 		tier = mcp.TierConfirmationRequired
-	} else if tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil {
+	case tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil:
 		return ctx, fmt.Errorf(
 			"gate: %s resolved to auto-execute without naming the record version it was resolved from: %w",
 			spec.Name, apperrors.ErrRequiresApproval)
