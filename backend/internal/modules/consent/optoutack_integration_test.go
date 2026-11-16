@@ -18,6 +18,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -256,6 +257,37 @@ func TestTheStopSurvivesAnAcknowledgementThatCannotBeStaged(t *testing.T) {
 	}
 	if !standing {
 		t.Error("the stop was rolled back by its own acknowledgement")
+	}
+}
+
+// TestAReceiptThatCannotBeStagedLeavesTheRefusalsFloor records a refusal whose
+// receipt fails to stage, under rules that keep refusals a year. The stop
+// still carries its floor, so retention cannot take it early.
+func TestAReceiptThatCannotBeStagedLeavesTheRefusalsFloor(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stager := owingAcknowledgement(t, e, true)
+	code := testJurisdiction(t)
+	messagingrules.Register(messagingrules.Rules{
+		Jurisdiction: code, Version: 1, OptOutAcknowledgement: true, OptOutRecordsKeep: 366 * 24 * time.Hour,
+	})
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, string(code)); err != nil {
+		t.Fatal(err)
+	}
+	stager.fail = errors.New("this message cannot be staged")
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{ContactID: e.contact, Kind: commsauthz.ReasonObjection}); err != nil {
+		t.Fatalf("recording the refusal: %v", err)
+	}
+	var kept *time.Time
+	var stopped time.Time
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT kept_until, recorded_at FROM communication_suppression WHERE contact_id = $1`, e.contact).Scan(&kept, &stopped); err != nil {
+		t.Fatalf("reading the stop: %v", err)
+	}
+	if kept == nil || kept.Sub(stopped) < 365*24*time.Hour {
+		t.Errorf("the refusal stopped at %v keeps its floor until %v, want a year on: the failed receipt took it", stopped, kept)
 	}
 }
 

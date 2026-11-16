@@ -390,7 +390,7 @@ func TestNoDecisionUnderAPackWithoutLegitimateInterestsRestsOnThem(t *testing.T)
 }
 
 // stageTo stages a delivery to the env recipient on the copied thread.
-func stageTo(t *testing.T, e *resolveEnv, ctx context.Context) commsauthz.Decision {
+func stageTo(ctx context.Context, t *testing.T, e *resolveEnv) commsauthz.Decision {
 	t.Helper()
 	delivery := e.plantDelivery(t)
 	var set commsauthz.DecisionSet
@@ -418,16 +418,16 @@ func TestStagingSpendsTheConfirmationOnce(t *testing.T) {
 	e.ctx = withActivityCreate(e.ctx)
 	subject := []ConfirmedSubject{{Kind: entityContact, ID: e.contact.UUID}}
 
-	if d := stageTo(t, e, e.ctx); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
+	if d := stageTo(e.ctx, t, e); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
 		t.Fatalf("an unconfirmed send staged as %+v, want refused as unconfirmed", d)
 	}
 	if _, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, subject); err != nil {
 		t.Fatalf("confirming: %v", err)
 	}
-	if d := stageTo(t, e, e.ctx); d.Verdict != commsauthz.VerdictAllow {
+	if d := stageTo(e.ctx, t, e); d.Verdict != commsauthz.VerdictAllow {
 		t.Fatalf("the confirmed send staged as %+v, want allowed", d)
 	}
-	if d := stageTo(t, e, e.ctx); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
+	if d := stageTo(e.ctx, t, e); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
 		t.Errorf("a second send spent the confirmation again: %+v", d)
 	}
 
@@ -438,7 +438,7 @@ func TestStagingSpendsTheConfirmationOnce(t *testing.T) {
 		Type: principal.PrincipalAgent, ID: "agent:x", OnBehalfOf: ids.NewV7(),
 		Permissions: principal.Permissions{RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll},
 	})
-	if d := stageTo(t, e, stranger); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
+	if d := stageTo(stranger, t, e); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
 		t.Errorf("an agent acting for somebody else spent the user's confirmation: %+v", d)
 	}
 }

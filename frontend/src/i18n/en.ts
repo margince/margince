@@ -22510,7 +22510,7 @@ export const en = {
     "No routing-review threshold exceeded in the checked sample",
   "health.code.automatic_routing": "Automatic work routing needs review",
   "health.code.receipts_sent":
-    "Every opt-out receipt owed in the last 30 days was sent",
+    "No opt-out receipt missed or overdue in the last 30 days",
   "health.code.receipts_missed": "Some opt-out receipts were not sent",
   "health.code.capture_thread_processing":
     "Thread classification is processing",

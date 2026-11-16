@@ -32,6 +32,7 @@ import "../src/design-system/atoms.css";
 // no interval above it, so every settings-card story understated exactly the
 // spacing those stories exist to check.
 import "../src/features/settings/settings.css";
+import { configure } from "storybook/test";
 import { setEdgeLightShown } from "../src/app/agent-edge-preference";
 import { settleFirstScreen } from "../src/lib/journeymarks";
 import { startPointerTarget } from "../src/lib/pointertarget";
@@ -74,6 +75,10 @@ const withSurface: Decorator = (Story, context) => {
 settleFirstScreen();
 // The scrollbar under the pointer lights as it does in the app (main.tsx).
 startPointerTarget();
+// A play's `findBy*` waits 1 s by default. A screen loaded behind `lazy()` paints
+// its rows a few hundred ms past that once four capture workers share the CPU.
+// A query for something that never appears still fails, five seconds later.
+configure({ asyncUtilTimeout: 5000 });
 
 const preview: Preview = {
   // Storage outlives a story's page. A story that turns a switch off would leak it.

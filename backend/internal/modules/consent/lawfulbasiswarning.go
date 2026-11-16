@@ -39,6 +39,8 @@ const lawfulBasisWarning = "lawful_basis_missing"
 // maxConfirmedSubjects mirrors the contract's maxItems.
 const maxConfirmedSubjects = 100
 
+const fieldSubjects = "subjects"
+
 // confirmationLifetime is how long a confirmation waits for its send. It
 // answers the message being written, not one sent later.
 const confirmationLifetime = 15 * time.Minute
@@ -59,7 +61,7 @@ func (s *Store) ConfirmSendWithoutLawfulBasis(ctx context.Context, subjects []Co
 		return nil, apperrors.ErrPermissionDenied
 	}
 	if len(subjects) == 0 || len(subjects) > maxConfirmedSubjects {
-		return nil, &ValidationError{Field: "subjects", Reason: fmt.Sprintf("name 1 to %d records", maxConfirmedSubjects)}
+		return nil, &ValidationError{Field: fieldSubjects, Reason: fmt.Sprintf("name 1 to %d records", maxConfirmedSubjects)}
 	}
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return nil, err
@@ -93,7 +95,7 @@ func requireSubjectVisible(ctx context.Context, tx pgx.Tx, subject ConfirmedSubj
 			return err
 		}
 	default:
-		return &ValidationError{Field: "subjects", Reason: "name a contact or a lead"}
+		return &ValidationError{Field: fieldSubjects, Reason: "name a contact or a lead"}
 	}
 	return auth.EnsureVisible(ctx, tx, subject.Kind, subject.ID)
 }
