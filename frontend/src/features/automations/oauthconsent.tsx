@@ -18,7 +18,7 @@ import {
   type PassportAreas,
   WorkAreasChoice,
 } from "../../components/workareas";
-import { Button, SegmentedControl } from "../../design-system/atoms";
+import { Button, Card, SegmentedControl } from "../../design-system/atoms";
 import { ChoiceList } from "../../design-system/choicelist";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { QueryGate } from "../../design-system/querystates";
@@ -146,7 +146,9 @@ function ConsentFrame({
   return (
     <AuthExperience phase={phase} notice wide={wide} core={false}>
       <Wordmark alt={t("auth.title")} />
-      {children}
+      <Card as="div" className="oauthconsent-pane">
+        {children}
+      </Card>
     </AuthExperience>
   );
 }

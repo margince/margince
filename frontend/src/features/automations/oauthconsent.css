@@ -1,3 +1,9 @@
+/* The task column centres its items, so a pane with no width shrinks to its content. */
+.oauthconsent-pane {
+  width: 100%;
+  padding: var(--padPane);
+}
+
 .oauthconsent-body {
   margin-top: var(--space-2);
 }
