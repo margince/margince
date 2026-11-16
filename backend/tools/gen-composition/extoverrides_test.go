@@ -57,6 +57,14 @@ func TestOverridesRefuseAValueThatIsNotAString(t *testing.T) {
 	}
 }
 
+func TestOverridesRefuseANullValue(t *testing.T) {
+	dir := t.TempDir()
+	writeOverride(t, dir, "en.json", `{"nav.deals":null}`)
+	if _, err := collectUnitOverrides("acme", dir); err == nil || !strings.Contains(err.Error(), "is null") {
+		t.Fatalf("err = %v, want the null refusal", err)
+	}
+}
+
 func TestOverridesAreAbsentWhenTheFolderIs(t *testing.T) {
 	got, err := collectUnitOverrides("acme", t.TempDir())
 	if err != nil || got != nil {

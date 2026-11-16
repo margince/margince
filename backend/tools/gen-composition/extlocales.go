@@ -100,10 +100,19 @@ func readLocaleFiles(name, layer string) ([]unitLocale, error) {
 		if err != nil {
 			return nil, err
 		}
-		var keys map[string]string
-		if err := json.Unmarshal(raw, &keys); err != nil {
+		// Pointers, because encoding/json decodes a JSON null into "" without error.
+		var decoded map[string]*string
+		if err := json.Unmarshal(raw, &decoded); err != nil {
 			return nil, fmt.Errorf("extensions/%s: %s/%s: %w — a locale file is a flat object of string to string",
 				name, rel, e.Name(), err)
+		}
+		keys := make(map[string]string, len(decoded))
+		for key, value := range decoded {
+			if value == nil {
+				return nil, fmt.Errorf("extensions/%s: %s/%s: %q is null — a locale file is a flat object of string to string",
+					name, rel, e.Name(), key)
+			}
+			keys[key] = *value
 		}
 		out = append(out, unitLocale{Unit: name, Locale: locale, Keys: keys})
 	}

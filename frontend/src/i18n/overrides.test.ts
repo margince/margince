@@ -47,6 +47,12 @@ describe("overrideProblems", () => {
     ]);
   });
 
+  it("refuses an override that adds a placeholder core lacks", () => {
+    expect(
+      overrideProblems("en", { "users.editTitle": "Edit {name} in {team}" }),
+    ).toEqual(["en users.editTitle: adds {team}"]);
+  });
+
   it("refuses an override that omits a plural form core has", () => {
     expect(
       overrideProblems("en", {

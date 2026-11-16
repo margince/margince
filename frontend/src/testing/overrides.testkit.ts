@@ -15,7 +15,8 @@ const placeholders = (text: string): string[] =>
   [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1] ?? "");
 
 /**
- * What an override breaks against core. It may drop a placeholder core has.
+ * What an override breaks against core. It may drop a placeholder core has,
+ * or add one the caller never passes.
  * It may omit a plural form core has for the same base.
  */
 export function overrideProblems(
@@ -27,10 +28,13 @@ export function overrideProblems(
   for (const [key, value] of Object.entries(overrides)) {
     const original = catalog[key];
     if (original === undefined) continue;
-    for (const name of placeholders(original)) {
-      if (!placeholders(value).includes(name)) {
-        problems.push(`${locale} ${key}: drops {${name}}`);
-      }
+    const given = placeholders(value);
+    const wanted = placeholders(original);
+    for (const name of wanted.filter((n) => !given.includes(n))) {
+      problems.push(`${locale} ${key}: drops {${name}}`);
+    }
+    for (const name of given.filter((n) => !wanted.includes(n))) {
+      problems.push(`${locale} ${key}: adds {${name}}`);
     }
     for (const sibling of missingPluralForms(catalog, key, overrides)) {
       problems.push(`${locale} ${key}: omits plural form ${sibling}`);
