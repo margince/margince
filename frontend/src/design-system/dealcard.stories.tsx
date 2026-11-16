@@ -38,9 +38,8 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
   };
 }
 
-// Each state a card can be in, at the board's own column width: the slots stay
-// level from card to card, and only a card that needs the reader carries
-// colour. Every card gets the verbs the deals board would give it.
+// Each state a card can be in, at the board's column width. Its slots stay
+// level card to card, and only a card that needs the reader carries colour.
 const menu = (
   <>
     <Button>Move to Proposal</Button>
