@@ -273,6 +273,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         contactPhoneInputs(rows).length
           ? undefined
           : t("create.contactChannelRequired"),
+      wireField: "linkedin_url",
     },
     {
       key: "emails",

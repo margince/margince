@@ -145,7 +145,7 @@ describe("CreateAction refusals of a row list or a set", () => {
   }
 
   it("shows a refused address under the email rows", async () => {
-    await submitList(refusal("emails", "email_names_no_one"));
+    await submitList(refusal("emails", "email_invalid"));
     await waitFor(() =>
       expect(screen.getByText(/^emails refused\.$/i)).toBeTruthy(),
     );

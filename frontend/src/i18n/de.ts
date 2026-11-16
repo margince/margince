@@ -7456,6 +7456,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.dealName": "Deal-Name",
   "create.amount": "Wert",
   "create.amountNegative": "Gib einen Betrag von null oder mehr ein.",
+  "create.emailNamesNoOne":
+    "Diese Adresse gehört zu einem Versandsystem, nicht zu einer Person. Gib die eigene Adresse des Kontakts ein.",
+  "create.addressErased":
+    "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
+  "create.linkedinMalformed":
+    "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
+  "create.linkedinNotLinkedin":
+    "Gib einen Link zu einer Seite auf linkedin.com ein.",
+  "create.linkedinNotProfile":
+    "Gib einen Link zum Profil einer Person ein, etwa linkedin.com/in/name.",
+  "create.dateRangeReversed":
+    "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
+  "create.countryCodeInvalid":
+    "Gib das Land als zweistelligen Code ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",

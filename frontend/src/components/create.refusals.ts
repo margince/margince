@@ -40,11 +40,13 @@ export function fieldRefusals(
   const refused = problemFieldErrorsOf(error);
   const byField = new Map<string, string>();
   for (const problem of refused) {
-    // An offered box sends its pick under `pickedKey`: that refusal is its own.
+    // An offered box sends its pick under `pickedKey`, and a row list's rows
+    // send their values under the row field's key: those refusals are its own.
     const field = fields.find(
       (candidate) =>
         (candidate.wireField ?? candidate.key) === problem.field ||
-        candidate.offers?.pickedKey === problem.field,
+        candidate.offers?.pickedKey === problem.field ||
+        candidate.rowFields?.some((row) => row.key === problem.field),
     );
     if (!field) continue;
     byField.set(field.key, fieldRefusalSentence(problem, t));

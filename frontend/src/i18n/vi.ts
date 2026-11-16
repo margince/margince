@@ -7276,6 +7276,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.dealName": "Tên deal",
   "create.amount": "Giá trị",
   "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
+  "create.emailNamesNoOne":
+    "Địa chỉ này thuộc về một hệ thống gửi thư, không phải một người. Hãy nhập địa chỉ riêng của liên hệ.",
+  "create.addressErased":
+    "Giá trị này đã bị xóa theo yêu cầu của chủ sở hữu và không thể lưu lại.",
+  "create.linkedinMalformed":
+    "Đây không phải là đường liên kết. Hãy dán địa chỉ của trang LinkedIn.",
+  "create.linkedinNotLinkedin":
+    "Hãy nhập đường liên kết tới một trang trên linkedin.com.",
+  "create.linkedinNotProfile":
+    "Hãy nhập đường liên kết tới hồ sơ của một người, ví dụ linkedin.com/in/ten.",
+  "create.dateRangeReversed":
+    "Ngày kết thúc đứng trước ngày bắt đầu. Hãy chọn ngày kết thúc muộn hơn.",
+  "create.countryCodeInvalid":
+    "Hãy nhập quốc gia bằng mã hai chữ cái, ví dụ DE hoặc US.",
   "create.referenceNotFound":
     "Bản ghi này không còn tồn tại hoặc bạn không thể xem.",
   "create.currency": "Loại tiền",
