@@ -69,7 +69,8 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 	}
 	const quoted = `SELECT count(*) FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1
 		AND (body LIKE '%Please send the report.%' OR system_text::text LIKE '%Please send the report.%')`
-	if n := countIn(t, e, quoted+` AND body IS NOT NULL AND system_text::text LIKE '%Please send the report.%'`, message); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1
+		AND body LIKE '%Please send the report.%' AND system_text::text LIKE '%Please send the report.%'`, message); n != 1 {
 		t.Fatalf("%d reminder(s) quote the ask in body and system text, want 1; the test proves nothing otherwise", n)
 	}
 
