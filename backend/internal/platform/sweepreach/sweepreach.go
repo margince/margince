@@ -89,6 +89,9 @@ func Tables() ([]Owned, error) {
 	return slices.Clone(installed.tables), nil
 }
 
+// entity is the audit entity a row of the table is recorded under.
+func (o Owned) entity() string { return cmp.Or(o.Table.Entity, o.Table.Name) }
+
 func (o Owned) qualified() string {
 	if o.Schema == "" {
 		return pgx.Identifier{o.Table.Name}.Sanitize()
@@ -96,14 +99,23 @@ func (o Owned) qualified() string {
 	return pgx.Identifier{o.Schema, o.Table.Name}.Sanitize()
 }
 
+// Relinked is one declared column the merge moved, the audit entity of its
+// table, and the rows it moved there.
+type Relinked struct {
+	Entity, Column string
+	Rows           []ids.UUID
+}
+
 // Relink moves every declared column holding the retired record's id onto the
 // survivor, in the caller's transaction. A plain UPDATE is right because a
-// declared link is a pointer and nothing makes it unique per record.
-func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target ids.UUID) error {
+// declared link is a pointer and nothing makes it unique per record. The
+// caller writes the audit row for each moved row, as for each row Erase clears.
+func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target ids.UUID) ([]Relinked, error) {
 	tables, err := Tables()
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var out []Relinked
 	for _, o := range tables {
 		for _, l := range o.Table.Links {
 			if !movesFor(l, record) {
@@ -116,12 +128,20 @@ func Relink(ctx context.Context, tx pgx.Tx, record reach.Record, source, target 
 				stmt += ` AND ` + pgx.Identifier{l.KindColumn}.Sanitize() + ` = $3`
 				args = append(args, string(record))
 			}
-			if _, err := tx.Exec(ctx, stmt, args...); err != nil {
-				return fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
+			rows, err := tx.Query(ctx, stmt+` RETURNING id`, args...)
+			if err != nil {
+				return nil, fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
+			}
+			moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+			if err != nil {
+				return nil, fmt.Errorf("move %s's %s.%s onto the surviving %s: %w", o.Owner, o.Table.Name, l.Column, record, err)
+			}
+			if len(moved) > 0 {
+				out = append(out, Relinked{Entity: o.entity(), Column: l.Column, Rows: moved})
 			}
 		}
 	}
-	return nil
+	return out, nil
 }
 
 // movesFor reports whether Relink moves any row of the link when a record of
@@ -166,10 +186,11 @@ func MovedColumns(record reach.Record) (map[Column]Moved, error) {
 	return moved, nil
 }
 
-// Cleared is one table the erasure wrote and the rows it cleared there.
+// Cleared is the audit entity of one table the erasure wrote, and the rows it
+// cleared there.
 type Cleared struct {
-	Table string
-	Rows  []ids.UUID
+	Entity string
+	Rows   []ids.UUID
 }
 
 // Erase clears the declared columns on every row a contact link names the
@@ -194,7 +215,7 @@ func Erase(ctx context.Context, tx pgx.Tx, subject ids.UUID, tombstone string) (
 		if err != nil {
 			return nil, fmt.Errorf("read %s's cleared %s rows: %w", o.Owner, o.Table.Name, err)
 		}
-		out = append(out, Cleared{Table: o.Table.Name, Rows: cleared})
+		out = append(out, Cleared{Entity: o.entity(), Rows: cleared})
 	}
 	return out, nil
 }
