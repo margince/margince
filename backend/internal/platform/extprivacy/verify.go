@@ -167,13 +167,8 @@ func readTables(ctx context.Context, q Querier, prefix string) (map[string]map[s
 func checkColumns(t privacy.Table, have map[string]column) error {
 	// Only a table the core clears or sweeps needs a row id: it audits each row by it.
 	if len(t.Personal) > 0 || Swept(t) {
-		id, ok := have["id"]
-		if !ok {
-			return fmt.Errorf("extprivacy: privacy declares column %s.id, which the table does not have", t.Name)
-		}
-		if id.dataType != "uuid" || id.nullable || !id.soleKey {
-			return fmt.Errorf("extprivacy: %s.id must be a uuid primary key, or a NOT NULL uuid under a unique index of its own, "+
-				"because the core audits each cleared row by it", t.Name)
+		if err := checkRowID(t.Name, have); err != nil {
+			return err
 		}
 	}
 	if err := checkAgeColumn(t, have); err != nil {
@@ -228,6 +223,41 @@ func clearable(c column) error {
 	}
 	if !c.nullable && c.constrained {
 		return errors.New("a required personal column under a CHECK, UNIQUE, foreign key or exclusion constraint may refuse the blank value; make it nullable")
+	}
+	return nil
+}
+
+// checkRowID holds a table to the row id the core audits each row it touches by.
+func checkRowID(table string, have map[string]column) error {
+	id, ok := have["id"]
+	if !ok {
+		return fmt.Errorf("extprivacy: %s.id is missing; the core audits each row it touches by its id", table)
+	}
+	if id.dataType != "uuid" || id.nullable || !id.soleKey {
+		return fmt.Errorf("extprivacy: %s.id must be a uuid primary key, or a NOT NULL uuid under a unique index of its own, "+
+			"because the core audits each row it touches by it", table)
+	}
+	return nil
+}
+
+// VerifyRowIDs holds each named table of a unit to a row id, for a table a
+// merge moves rows of (reach.Table): the merge audits each moved row by it.
+func VerifyRowIDs(ctx context.Context, q Querier, namespace string, names []string) error {
+	if len(names) == 0 {
+		return nil
+	}
+	tables, err := readTables(ctx, q, namespace+"_")
+	if err != nil {
+		return fmt.Errorf("extprivacy: reading the %s tables: %w", namespace, err)
+	}
+	for _, name := range names {
+		have, ok := tables[name]
+		if !ok {
+			return fmt.Errorf("extprivacy: reach declares table %s, which the unit's migrations have not created", name)
+		}
+		if err := checkRowID(name, have); err != nil {
+			return err
+		}
 	}
 	return nil
 }

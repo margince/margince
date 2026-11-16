@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -256,5 +257,26 @@ func TestTheBootRefusesAUnitReachingATableItDoesNotOwn(t *testing.T) {
 	}}, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "not one of its own") {
 		t.Fatalf("RegisterExtensions() = %v, want the foreign table refused", err)
+	}
+}
+
+// AuditEach writes one audit row per id past its statement chunk, each by the
+// bound actor with the shared images.
+func TestAuditEachWritesOneRowPerIDAcrossChunks(t *testing.T) {
+	e := Setup(t)
+	moved := make([]ids.UUID, 1001)
+	for i := range moved {
+		moved[i] = ids.NewV7()
+	}
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return storekit.AuditEach(e.Admin(), tx, "update", "ext_reachtest_note", moved,
+			map[string]any{"company_id": "from"}, map[string]any{"company_id": "to"})
+	})
+	if err != nil {
+		t.Fatalf("AuditEach: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(DISTINCT a.id) FROM audit_log a WHERE a.entity_id = ANY($1) AND a.action = 'update'
+		AND a.entity_type = 'ext_reachtest_note' AND a.actor_id <> '' AND a.after->>'company_id' = 'to'`, moved); n != len(moved) {
+		t.Errorf("AuditEach wrote %d audit rows for %d moved rows", n, len(moved))
 	}
 }

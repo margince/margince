@@ -11,6 +11,8 @@ package storekit
 import (
 	"context"
 	"encoding/json"
+	"strconv"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -45,9 +47,9 @@ func AuditEventWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType s
 	return writeAuditRow(ctx, tx, action, entityType, entityID, nil, after, evidence)
 }
 
-// writeAuditRow is this package's INSERT into audit_log, which every door here
+// writeAuditRow writes one row through insertAuditRows, which every door here
 // reaches: Audit and AuditWithEvidence after they have judged the before-image,
-// AuditEvent without one to judge.
+// AuditEvent without one to judge, and AuditEach for many rows.
 //
 // The table takes writes from elsewhere too — approvals sends its own statement
 // for the approval row's lifecycle, a different subject carrying no field images
@@ -57,47 +59,70 @@ func AuditEventWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType s
 //
 //craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
 func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (ids.UUID, error) {
-	p, err := Actor(ctx)
+	row, err := prepareAuditRow(ctx, entityType, entityID, before, after, evidence)
 	if err != nil {
 		return ids.Nil, err
 	}
+	return row.id, insertAuditRows(ctx, tx, action, entityType, []auditRow{row})
+}
 
-	beforeJSON, err := marshalOrNil(before)
-	if err != nil {
-		return ids.Nil, err
+// auditRow is one audit_log row ready to insert: its images and evidence
+// marshalled, linked and masked.
+type auditRow struct {
+	id, entityID            ids.UUID
+	before, after, evidence []byte
+}
+
+//craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
+func prepareAuditRow(ctx context.Context, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (auditRow, error) {
+	row := auditRow{id: ids.NewV7(), entityID: entityID}
+	var err error
+	if row.before, err = marshalOrNil(before); err != nil {
+		return auditRow{}, err
 	}
-	afterJSON, err := marshalOrNil(after)
-	if err != nil {
-		return ids.Nil, err
+	if row.after, err = marshalOrNil(after); err != nil {
+		return auditRow{}, err
 	}
 	evidence, err = withExtensionAttribution(ctx, withReleasedByLink(ctx, entityID, withReversalLink(ctx, entityType, entityID, evidence)))
 	if err != nil {
-		return ids.Nil, err
+		return auditRow{}, err
 	}
-	var evidenceJSON []byte
 	if evidence != nil {
-		evidenceJSON, err = json.Marshal(evidence)
-		if err != nil {
-			return ids.Nil, err
+		if row.evidence, err = json.Marshal(evidence); err != nil {
+			return auditRow{}, err
 		}
 	}
-	if err := maskAuditColumns(entityType, &beforeJSON, &afterJSON, &evidenceJSON); err != nil {
-		return ids.Nil, err
+	if err := maskAuditColumns(entityType, &row.before, &row.after, &row.evidence); err != nil {
+		return auditRow{}, err
 	}
+	return row, nil
+}
 
-	id := ids.NewV7()
-	_, err = tx.Exec(ctx,
-		// No tenant column. It came from the TRANSACTION's binding until
-		// ADR-0091 §8 phase D reached the ledgers — the last two tables that
-		// carried one — so an audit row now names WHAT happened and WHO did it,
-		// and the installation is the only answer to where.
-		// The table name is the constant the fault classifier reads, so a rename
-		// moves both or neither: a stale classifier would report our own broken
-		// audit row to the caller as a value they sent.
-		`INSERT INTO `+TableAudit+` (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule, batch_id)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
-		id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf),
-		action, entityType, entityID, beforeJSON, afterJSON, evidenceJSON,
-		auth.AuthzRule(p, entityType, action), batchOf(ctx))
-	return id, err
+// insertAuditRows is this package's INSERT into audit_log: rows of one action
+// and entity type, by the bound actor, in one statement.
+func insertAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, rows []auditRow) error {
+	p, err := Actor(ctx)
+	if err != nil {
+		return err
+	}
+	var args []any
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
+	shared := strings.Join([]string{
+		arg(string(p.Type)), arg(p.ID), arg(UUIDOrNil(p.PassportID)), arg(UUIDOrNil(p.OnBehalfOf)),
+		arg(action), arg(entityType),
+	}, ", ")
+	tail := arg(auth.AuthzRule(p, entityType, action)) + ", " + arg(batchOf(ctx))
+	values := make([]string, 0, len(rows))
+	for _, row := range rows {
+		values = append(values, "("+arg(row.id)+", "+shared+", "+arg(row.entityID)+", "+
+			arg(row.before)+", "+arg(row.after)+", "+arg(row.evidence)+", "+tail+")")
+	}
+	// No tenant column: the installation is the only answer to where. The table
+	// name is the constant the fault classifier reads, so a rename moves both.
+	_, err = tx.Exec(ctx, `INSERT INTO `+TableAudit+` (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule, batch_id)
+		 VALUES `+strings.Join(values, ", "), args...)
+	return err
 }
