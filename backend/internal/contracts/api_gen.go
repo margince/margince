@@ -14697,14 +14697,15 @@ func (e ImportPresetLinkType) Valid() bool {
 
 // Defines values for ImportProblemKind.
 const (
-	ImportProblemKindBrokenLink   ImportProblemKind = "broken_link"
-	ImportProblemKindDroppedLink  ImportProblemKind = "dropped_link"
-	ImportProblemKindDuplicate    ImportProblemKind = "duplicate"
-	ImportProblemKindInvalidValue ImportProblemKind = "invalid_value"
-	ImportProblemKindNewTag       ImportProblemKind = "new_tag"
-	ImportProblemKindPermission   ImportProblemKind = "permission"
-	ImportProblemKindUnknownOwner ImportProblemKind = "unknown_owner"
-	ImportProblemKindUnusableRow  ImportProblemKind = "unusable_row"
+	ImportProblemKindBrokenLink         ImportProblemKind = "broken_link"
+	ImportProblemKindDroppedLink        ImportProblemKind = "dropped_link"
+	ImportProblemKindDuplicate          ImportProblemKind = "duplicate"
+	ImportProblemKindIncompleteIdentity ImportProblemKind = "incomplete_identity"
+	ImportProblemKindInvalidValue       ImportProblemKind = "invalid_value"
+	ImportProblemKindNewTag             ImportProblemKind = "new_tag"
+	ImportProblemKindPermission         ImportProblemKind = "permission"
+	ImportProblemKindUnknownOwner       ImportProblemKind = "unknown_owner"
+	ImportProblemKindUnusableRow        ImportProblemKind = "unusable_row"
 )
 
 // Valid indicates whether the value is a known member of the ImportProblemKind enum.
@@ -14715,6 +14716,8 @@ func (e ImportProblemKind) Valid() bool {
 	case ImportProblemKindDroppedLink:
 		return true
 	case ImportProblemKindDuplicate:
+		return true
+	case ImportProblemKindIncompleteIdentity:
 		return true
 	case ImportProblemKindInvalidValue:
 		return true
@@ -14758,6 +14761,7 @@ const (
 	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
 	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
 	ImportReasonCodeCompanyNameEmpty             ImportReasonCode = "company_name_empty"
+	ImportReasonCodeContactChannelMissing        ImportReasonCode = "contact_channel_missing"
 	ImportReasonCodeContactDuplicateFound        ImportReasonCode = "contact_duplicate_found"
 	ImportReasonCodeContactDuplicateSkipped      ImportReasonCode = "contact_duplicate_skipped"
 	ImportReasonCodeContactEmailHeld             ImportReasonCode = "contact_email_held"
@@ -14910,6 +14914,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCompanyLinkOnMeeting:
 		return true
 	case ImportReasonCodeCompanyNameEmpty:
+		return true
+	case ImportReasonCodeContactChannelMissing:
 		return true
 	case ImportReasonCodeContactDuplicateFound:
 		return true
@@ -22906,6 +22912,24 @@ func (e SdrUpcomingMeetingStartsPrecision) Valid() bool {
 	case SdrUpcomingMeetingStartsPrecisionDay:
 		return true
 	case SdrUpcomingMeetingStartsPrecisionInstant:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SearchDataAnswerOutcome.
+const (
+	SearchDataAnswerOutcomeAnswered    SearchDataAnswerOutcome = "answered"
+	SearchDataAnswerOutcomeUnsupported SearchDataAnswerOutcome = "unsupported"
+)
+
+// Valid indicates whether the value is a known member of the SearchDataAnswerOutcome enum.
+func (e SearchDataAnswerOutcome) Valid() bool {
+	switch e {
+	case SearchDataAnswerOutcomeAnswered:
+		return true
+	case SearchDataAnswerOutcomeUnsupported:
 		return true
 	default:
 		return false
@@ -45854,7 +45878,7 @@ type CreateContactEnrichmentRunRequest struct {
 	Provider Provider `json:"provider"`
 }
 
-// CreateContactRequest Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
+// CreateContactRequest Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
 type CreateContactRequest struct {
 	// AcquisitionNote Their own words about the source, printed on the contact's privacy page beside it.
 	AcquisitionNote *string `json:"acquisition_note,omitempty"`
@@ -64721,6 +64745,28 @@ type SdrWaitingHandoffPage struct {
 	Rows       []SdrWaitingHandoff `json:"rows"`
 }
 
+// SearchDataAnswer defines model for SearchDataAnswer.
+type SearchDataAnswer struct {
+	Analytics *AnalyticsAnswer `json:"analytics,omitempty"`
+
+	// AnalyticsQuery One question, in the vocabulary the schema returned.
+	AnalyticsQuery *AnalyticsQuery `json:"analytics_query,omitempty"`
+
+	// Count For reporting, show the metric's eligible record count rather than its value.
+	Count      *bool                   `json:"count,omitempty"`
+	Evaluation *ReportingEvaluation    `json:"evaluation,omitempty"`
+	Outcome    SearchDataAnswerOutcome `json:"outcome"`
+
+	// Records What `query_workspace` answers: the rows the plan matched, the plan as run, and how complete the answer is.
+	Records *WorkspaceQueryResult `json:"records,omitempty"`
+
+	// Source The typed selection or query requested, including its period and filters; evaluation.context names the resolved reporting period.
+	Source *string `json:"source,omitempty"`
+}
+
+// SearchDataAnswerOutcome defines model for SearchDataAnswer.Outcome.
+type SearchDataAnswerOutcome string
+
 // SearchHitEmployer A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer.
 type SearchHitEmployer struct {
 	CompanyId   openapi_types.UUID `json:"company_id"`
@@ -69509,7 +69555,7 @@ type VCardImportResult struct {
 	// contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
-	// Reason Why a card was skipped, in words a reader can act on.
+	// Reason Why a card was skipped, or a warning about an imported contact without a channel.
 	Reason *string `json:"reason,omitempty"`
 }
 
@@ -80351,6 +80397,11 @@ type SearchParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
+// AskSearchDataJSONBody defines parameters for AskSearchData.
+type AskSearchDataJSONBody struct {
+	Question string `json:"question"`
+}
+
 // ListSignalsParams defines parameters for ListSignals.
 type ListSignalsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -82652,6 +82703,9 @@ type CreateMeetingProposalJSONRequestBody = MeetingProposalRequest
 
 // ReassignHandoffJSONRequestBody defines body for ReassignHandoff for application/json ContentType.
 type ReassignHandoffJSONRequestBody = HandoffAssigneeInput
+
+// AskSearchDataJSONRequestBody defines body for AskSearchData for application/json ContentType.
+type AskSearchDataJSONRequestBody AskSearchDataJSONBody
 
 // ConnectSharedMailboxJSONRequestBody defines body for ConnectSharedMailbox for application/json ContentType.
 type ConnectSharedMailboxJSONRequestBody = ConnectSharedMailboxRequest
@@ -99072,6 +99126,9 @@ type ServerInterface interface {
 	// Cross-object search (contacts, companies, deals, activities, leads).
 	// (GET /search)
 	Search(w http.ResponseWriter, r *http.Request, params SearchParams)
+	// Answer a question through the caller's reporting and record readers.
+	// (POST /search/data-answer)
+	AskSearchData(w http.ResponseWriter, r *http.Request)
 	// The installation's shared mailboxes, disconnected ones included.
 	// (GET /shared-mailboxes)
 	ListSharedMailboxes(w http.ResponseWriter, r *http.Request)
@@ -105270,6 +105327,12 @@ func (_ Unimplemented) ReassignHandoff(w http.ResponseWriter, r *http.Request, i
 // Cross-object search (contacts, companies, deals, activities, leads).
 // (GET /search)
 func (_ Unimplemented) Search(w http.ResponseWriter, r *http.Request, params SearchParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer a question through the caller's reporting and record readers.
+// (POST /search/data-answer)
+func (_ Unimplemented) AskSearchData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -148498,6 +148561,28 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 	handler.ServeHTTP(w, r)
 }
 
+// AskSearchData operation middleware
+func (siw *ServerInterfaceWrapper) AskSearchData(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskSearchData(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListSharedMailboxes operation middleware
 func (siw *ServerInterfaceWrapper) ListSharedMailboxes(w http.ResponseWriter, r *http.Request) {
 
@@ -157586,6 +157671,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/search", wrapper.Search)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/search/data-answer", wrapper.AskSearchData)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/shared-mailboxes", wrapper.ListSharedMailboxes)

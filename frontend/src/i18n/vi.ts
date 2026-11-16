@@ -2896,7 +2896,26 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.searching": "Đang tìm hồ sơ…",
   "palette.searchFailedTitle": "Tìm kiếm không thành công",
   "palette.searchFailed": "Các lệnh ở trên vẫn hoạt động.",
-  "palette.askRow": "Hỏi Margince: “{query}”",
+  "palette.askDataRow": "Hỏi dữ liệu CRM: “{query}”",
+  "palette.openAnalytics": "Mở trong Phân tích",
+  "palette.dataUnsupportedOnly":
+    "Không thể trả lời câu hỏi này từ dữ liệu CRM.",
+  "palette.dataUnsupported":
+    "Chưa thể trả lời câu hỏi này từ dữ liệu CRM. Đây là nội dung trong sổ tay.",
+  "palette.dataSource": "Nguồn: {source}",
+  "palette.dataPlan": "Truy vấn đã dùng",
+  "create.contactChannelRequired":
+    "Thêm ít nhất một email, số điện thoại hoặc URL LinkedIn.",
+  "import.reason.contact_channel_missing":
+    "Liên hệ chưa có email, số điện thoại hoặc URL LinkedIn. Hãy bổ sung một cách liên lạc.",
+  "palette.recordsCoverage": "Phạm vi: {coverage}. Tối đa {limit} bản ghi.",
+  "palette.noDataRecords": "Không có bản ghi nào phù hợp với câu hỏi này.",
+  "palette.dataUnavailable": "Chưa đọc được dữ liệu CRM",
+  "palette.coverageExact": "Kết quả chính xác",
+  "palette.coveragePartial": "Kết quả giới hạn",
+  "palette.crmRecords": "Bản ghi CRM",
+  "palette.recordName": "Bản ghi",
+  "palette.askRow": "Hỏi sổ tay: “{query}”",
   "palette.asking": "Đang hỏi Margince…",
   "palette.answerAria": "Câu trả lời của Margince",
   "palette.answerFrom": "Từ {name}",
@@ -10164,6 +10183,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.problem.new_tag": "Thẻ mới",
   "import.problem.duplicate": "Trùng lặp",
   "import.problem.permission": "Không có quyền",
+  "import.problem.incomplete_identity": "Thiếu thông tin liên lạc",
   "import.problem.unusable_row": "Dòng không dùng được",
   "settings.dangerZone": "Vùng nguy hiểm",
   "settings.resetDataDesc":

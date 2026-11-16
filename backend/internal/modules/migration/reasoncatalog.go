@@ -14,6 +14,7 @@ const (
 	ReasonEmptyPayload               ReasonCode = "empty_payload"
 	ReasonNaturalKeyTaken            ReasonCode = "natural_key_taken"
 	ReasonDuplicateEmail             ReasonCode = "duplicate_email"
+	ReasonContactChannelMissing      ReasonCode = "contact_channel_missing"
 	ReasonContactUnnamed             ReasonCode = "contact_unnamed"
 	ReasonContactEmailHeld           ReasonCode = "contact_email_held"
 	ReasonContactHoldsLead           ReasonCode = "contact_holds_lead"
@@ -141,6 +142,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "This email address already belongs to another contact.",
 		textlang.German:     "Diese E-Mail-Adresse gehört bereits einem anderen Kontakt.",
 		textlang.Vietnamese: "Địa chỉ email này đã thuộc về một liên hệ khác.",
+	}},
+	ReasonContactChannelMissing: {text: map[textlang.Lang]string{
+		textlang.English:    "Contact has no email, phone or LinkedIn URL; add one to reach them.",
+		textlang.German:     "Der Kontakt hat keine E-Mail, Telefonnummer oder LinkedIn-URL. Ergänze eine Kontaktmöglichkeit.",
+		textlang.Vietnamese: "Liên hệ chưa có email, số điện thoại hoặc URL LinkedIn. Hãy bổ sung một cách liên lạc.",
 	}},
 	ReasonContactUnnamed: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "The row carries neither a name nor an email, so it names no contact.",

@@ -110,6 +110,7 @@
     "askAboutCompany": "business",
     "askCorpus": "business",
     "askForWeeklyPlanHelp": "business",
+    "askSearchData": "business",
     "assessNoticeSource": "compliance",
     "assessSalesReview": "business",
     "assignLegalEntityMember": "admin_settings",
@@ -983,6 +984,7 @@
     "askAboutCompany": "companies",
     "askCorpus": "knowledge",
     "askForWeeklyPlanHelp": "worklist",
+    "askSearchData": "search",
     "assessNoticeSource": "privacy_notices",
     "assessSalesReview": "reports",
     "assignLeads": "leads",
@@ -2177,6 +2179,9 @@
     ],
     "ask_knowledge_corpus": [
       "knowledge"
+    ],
+    "ask_search_data": [
+      "search"
     ],
     "assess_sales_review": [
       "reports"
@@ -4294,6 +4299,9 @@
       "business"
     ],
     "ask_knowledge_corpus": [
+      "business"
+    ],
+    "ask_search_data": [
       "business"
     ],
     "assess_sales_review": [

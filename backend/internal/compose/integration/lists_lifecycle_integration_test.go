@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -75,7 +76,7 @@ func TestALiveListExplainsEachBranchAndKeepsEachFilterInItsHistory(t *testing.T)
 	var named struct {
 		ID string `json:"id"`
 	}
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Branch Alpha"}, http.StatusCreated, &named)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Branch Alpha"}, http.StatusCreated, &named)
 	var live listWire
 	mustCall(t, e, "POST", "/v1/lists", AnyMap{
 		"name": "Both branches", "entity_type": "contact", "list_type": "dynamic",

@@ -1,0 +1,57 @@
+{
+  "name": "search_data_counts_open_deals",
+  "task": "nl_search",
+  "site": "search_data_plan",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": {
+    "now": "2026-11-16T12:00:00Z",
+    "context": {
+      "timezone": "UTC",
+      "base_currency": "EUR",
+      "as_of": "2026-11-16T12:00:00Z",
+      "default_scope": {
+        "kind": "owner",
+        "id": "019f0000-0000-7000-8000-000000000001",
+        "label": "Me"
+      },
+      "allowed_scopes": [
+        {
+          "kind": "owner",
+          "id": "019f0000-0000-7000-8000-000000000001",
+          "label": "Me"
+        }
+      ],
+      "capabilities": {
+        "submit_manager_forecast": false,
+        "view_manager_forecast": false
+      }
+    },
+    "self_user_id": "019f0000-0000-7000-8000-000000000001",
+    "objects": [
+      "deal",
+      "company",
+      "contact",
+      "forecast",
+      "report_definition",
+      "installation_settings",
+      "pipeline",
+      "activity"
+    ],
+    "question": "How many of my open deals are there?"
+  },
+  "expect": {
+    "outcome": "accepted",
+    "answer": {
+      "engine": "analytics",
+      "count": false,
+      "arguments": "{\"entity\": \"open-deals-per-company\", \"measures\": [{\"fn\": \"count\"}], \"scope_kind\": \"owner\", \"scope_id\": \"019f0000-0000-7000-8000-000000000001\"}"
+    },
+    "bands": {
+      "certified_min": 80,
+      "degraded_min": 60,
+      "floor": 50
+    },
+    "rubric": "Count all open deals in the supplied owner scope through the analytics query engine. A bounded list is not a total count."
+  }
+}

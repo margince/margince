@@ -48,7 +48,7 @@ func countDismissals(t *testing.T, e *apptest.AppEnv, contactID string) int {
 func TestANudgeDismissalGoesFromSetAsideToStoppedAndBackToFollowing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Nudge journey", "journey@fable.test", "Admin")
-	contact := createContact(t, e, AnyMap{"full_name": "Gone Quiet", "source": "manual"})
+	contact := createContact(t, e, AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Gone Quiet", "source": "manual"})
 	path := "/v1/contacts/" + contact.ID + "/nudge-dismissal"
 
 	setAside := func(days int) {
@@ -87,15 +87,15 @@ func TestAHiddenContactIsNotFoundThroughItsNudgePreference(t *testing.T) {
 	apptest.BootstrapWorkspaceSession(t, e, "Nudge scope", "scope@fable.test", "Admin")
 	e.DescribeCompany(t)
 	colleague := inviteColleague(t, e)
-	hidden := createContact(t, e, AnyMap{"full_name": "Not Yours", "source": "manual", "owner_id": colleague})
+	hidden := createContact(t, e, AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Not Yours", "source": "manual", "owner_id": colleague})
 	setVisibility(t, e, hidden.ID, "owner")
-	quiet := createContact(t, e, AnyMap{"full_name": "Already Quiet", "source": "manual", "owner_id": colleague})
+	quiet := createContact(t, e, AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Already Quiet", "source": "manual", "owner_id": colleague})
 	mustCall(t, e, "PUT", "/v1/contacts/"+quiet.ID+"/nudge-dismissal", AnyMap{"days": 30}, http.StatusNoContent, nil)
 	if n := countDismissals(t, e, quiet.ID); n != 1 {
 		t.Fatalf("the admin's dismissal left %d rows, want one", n)
 	}
 	setVisibility(t, e, quiet.ID, "owner")
-	own := createContact(t, e, AnyMap{"full_name": "Yours", "source": "manual"})
+	own := createContact(t, e, AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Yours", "source": "manual"})
 	demoteToRep(t, e)
 	mustCall(t, e, "GET", "/v1/contacts/"+hidden.ID, nil, http.StatusNotFound, nil)
 	mustCall(t, e, "DELETE", "/v1/contacts/"+quiet.ID+"/nudge-dismissal", nil, http.StatusNotFound, nil)

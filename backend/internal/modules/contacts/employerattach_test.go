@@ -16,7 +16,8 @@ import (
 
 func TestAContactCreateNamingBothAnIDAndANameIsRefused(t *testing.T) {
 	_, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "Both Ways", Source: "manual",
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		FullName:    "Both Ways", Source: "manual",
 		CompanyId: new(openapi_types.UUID(ids.NewV7())), CompanyName: new("Also New GmbH"),
 	})
 	refused, ok := errors.AsType[*httperr.DetailedError](err)
@@ -27,7 +28,8 @@ func TestAContactCreateNamingBothAnIDAndANameIsRefused(t *testing.T) {
 
 func TestABlankCompanyNameNamesNoEmployer(t *testing.T) {
 	in, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "No Employer", Source: "manual", CompanyName: new("   "),
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		FullName:    "No Employer", Source: "manual", CompanyName: new("   "),
 	})
 	if err != nil {
 		t.Fatalf("mapping: %v", err)

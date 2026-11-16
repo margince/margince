@@ -120,7 +120,7 @@ func memberSeeders(s sweepSeed) map[string]func() string {
 		// A contact a colleague off the caller's team owns, which a seat short
 		// of all row scope may ask to be handed.
 		"stranger_contact": func() string {
-			return s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep")})
+			return s.post("/v1/contacts", integration.AnyMap{"full_name": "Role Sweep", "source": "manual", "owner_id": active("rep"), "emails": []map[string]string{{"email": uniqueEmail()}}})
 		},
 		"invited_user":     func() string { return invited("rep") },
 		"deactivated_user": deactivated,

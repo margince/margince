@@ -85,7 +85,12 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
-	return migration.EnsureResult{Created: true}, nil
+	result := migration.EnsureResult{Created: true}
+	if warning := importedContactChannelWarning(in); warning != nil {
+		result.Warnings = []migration.SkippedRow{*warning}
+	}
+
+	return result, nil
 }
 
 // applyContact writes a contact's changed fields. It merges the file's address,
@@ -272,4 +277,12 @@ func leadKeyHeld(err error) (migration.Reason, bool) {
 		return contactEmailClaimedWhy, true
 	}
 	return migration.Reason{}, false
+}
+
+func importedContactChannelWarning(in contacts.CreateContactInput) *migration.SkippedRow {
+	if contacts.HasContactChannel(in) {
+		return nil
+	}
+	why := migration.Why(migration.ReasonContactChannelMissing)
+	return &migration.SkippedRow{Kind: migration.ProblemIncompleteIdentity, Reason: why.English(), Code: why.Code}
 }

@@ -3921,6 +3921,7 @@ public.confirm_token.token_hash text NOT NULL gen=- def=-
 public.confirm_token_hash_key CREATE UNIQUE INDEX confirm_token_hash_key ON public.confirm_token USING btree (token_hash)
 public.confirm_token_live_by_kind CREATE INDEX confirm_token_live_by_kind ON public.confirm_token USING btree (contact_id, kind, purpose_id) WHERE (consumed_at IS NULL)
 public.confirm_token_pkey CREATE UNIQUE INDEX confirm_token_pkey ON public.confirm_token USING btree (id)
+public.confirm_token_subject_request_id_idx CREATE INDEX confirm_token_subject_request_id_idx ON public.confirm_token USING btree (subject_request_id)
 public.connector_connection_pkey CREATE UNIQUE INDEX connector_connection_pkey ON public.capture_connection USING btree (id)
 public.consent_doi_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_doi_token.consent_doi_token_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
@@ -3969,6 +3970,7 @@ public.consent_event.subject_request_id uuid gen=- def=-
 public.consent_event.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_event FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}')
 public.consent_event.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_event FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "new_state": 20000, "confirm_ip": 20000, "captured_by": 20000, "lawful_basis": 20000, "policy_version": 20000, "issuance_trigger": 20000, "confirm_user_agent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"confirm_ip":20000,"confirm_user_agent":20000,"issuance_trigger":20000,"lawful_basis":20000,"new_state":20000,"policy_version":20000,"source":20000}')
 public.consent_event_pkey CREATE UNIQUE INDEX consent_event_pkey ON public.consent_event USING btree (id)
+public.consent_event_subject_request_id_idx CREATE INDEX consent_event_subject_request_id_idx ON public.consent_event USING btree (subject_request_id)
 public.consent_purpose acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_purpose.archived_at timestamp with time zone gen=- def=-
 public.consent_purpose.class text NOT NULL gen=- def='marketing'::text
@@ -6947,7 +6949,10 @@ public.lawful_basis_confirmation.lawful_basis_confirmation_pkey PRIMARY KEY (id)
 public.lawful_basis_confirmation.lawful_basis_confirmation_window CHECK ((expires_at > confirmed_at))
 public.lawful_basis_confirmation.lead_id uuid gen=- def=-
 public.lawful_basis_confirmation.spent_at timestamp with time zone gen=- def=-
+public.lawful_basis_confirmation_confirmed_by_cascade_idx CREATE INDEX lawful_basis_confirmation_confirmed_by_cascade_idx ON public.lawful_basis_confirmation USING btree (confirmed_by)
+public.lawful_basis_confirmation_contact_id_cascade_idx CREATE INDEX lawful_basis_confirmation_contact_id_cascade_idx ON public.lawful_basis_confirmation USING btree (contact_id)
 public.lawful_basis_confirmation_delivery CREATE INDEX lawful_basis_confirmation_delivery ON public.lawful_basis_confirmation USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
+public.lawful_basis_confirmation_lead_id_cascade_idx CREATE INDEX lawful_basis_confirmation_lead_id_cascade_idx ON public.lawful_basis_confirmation USING btree (lead_id)
 public.lawful_basis_confirmation_open_contact CREATE INDEX lawful_basis_confirmation_open_contact ON public.lawful_basis_confirmation USING btree (contact_id, confirmed_by) WHERE ((contact_id IS NOT NULL) AND (spent_at IS NULL))
 public.lawful_basis_confirmation_open_lead CREATE INDEX lawful_basis_confirmation_open_lead ON public.lawful_basis_confirmation USING btree (lead_id, confirmed_by) WHERE ((lead_id IS NOT NULL) AND (spent_at IS NULL))
 public.lawful_basis_confirmation_pkey CREATE UNIQUE INDEX lawful_basis_confirmation_pkey ON public.lawful_basis_confirmation USING btree (id)

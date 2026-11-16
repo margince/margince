@@ -2895,7 +2895,26 @@ export const en = {
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
   "palette.searchFailed": "The commands above still work.",
-  "palette.askRow": "Ask Margince: “{query}”",
+  "palette.askDataRow": "Ask CRM data: “{query}”",
+  "palette.openAnalytics": "Open in Analytics",
+  "palette.dataUnsupportedOnly":
+    "This question could not be answered from CRM data.",
+  "palette.dataUnsupported":
+    "This question could not be answered from CRM data. Here is what the handbook covers.",
+  "palette.dataSource": "Source: {source}",
+  "palette.dataPlan": "Query used",
+  "create.contactChannelRequired":
+    "Add at least one email, phone or LinkedIn URL.",
+  "import.reason.contact_channel_missing":
+    "Contact has no email, phone or LinkedIn URL; add one to reach them.",
+  "palette.recordsCoverage": "Coverage: {coverage}. Up to {limit} records.",
+  "palette.noDataRecords": "No records match this question.",
+  "palette.dataUnavailable": "CRM data could not be read",
+  "palette.coverageExact": "Exact matches",
+  "palette.coveragePartial": "Limited matches",
+  "palette.crmRecords": "CRM records",
+  "palette.recordName": "Record",
+  "palette.askRow": "Ask the handbook: “{query}”",
   "palette.asking": "Asking Margince…",
   "palette.answerAria": "Answer from Margince",
   "palette.answerFrom": "From {name}",
@@ -10439,6 +10458,7 @@ export const en = {
   "import.problem.new_tag": "New tag",
   "import.problem.duplicate": "Duplicate",
   "import.problem.permission": "No permission",
+  "import.problem.incomplete_identity": "Missing contact channel",
   "import.problem.unusable_row": "Unusable row",
   "settings.dangerZone": "Danger zone",
   "settings.resetDataDesc":

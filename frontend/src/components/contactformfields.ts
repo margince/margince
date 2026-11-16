@@ -258,7 +258,17 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       maxLength: TEXT_LIMITS.label,
     },
     contactCompanyField,
-    { key: "social.linkedin", label: "create.linkedin" },
+    {
+      key: "social.linkedin",
+      label: "create.linkedin",
+      validate: (value, values, rows = {}) =>
+        !values?.full_name?.trim() ||
+        value.trim() ||
+        contactEmailInputs(rows).length ||
+        contactPhoneInputs(rows).length
+          ? undefined
+          : t("create.contactChannelRequired"),
+    },
     {
       key: "emails",
       label: "create.email",
@@ -351,7 +361,13 @@ const CREATE_ONLY = new Set([
 ]);
 
 export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
-  return contactCreateFields(t).filter((field) => !CREATE_ONLY.has(field.key));
+  return contactCreateFields(t)
+    .filter((field) => !CREATE_ONLY.has(field.key))
+    .map((field) =>
+      field.key === "social.linkedin"
+        ? { ...field, validate: undefined }
+        : field,
+    );
 }
 
 // Compare replace-sets in their request shape; row ids and server metadata
