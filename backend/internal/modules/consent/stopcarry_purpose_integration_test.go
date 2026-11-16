@@ -17,6 +17,7 @@ package consent
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -128,5 +129,80 @@ func TestACarryKeepsANarrowAndABroadStopOfOneKindBothOnTheSurvivor(t *testing.T)
 	}
 	if !sawNarrow {
 		t.Error("the narrow (newsletter-only) stop did not reach the survivor")
+	}
+}
+
+// TestALeadsPressIsStampedWhenItsLockIsHeld presses a lead's link late in its
+// transaction. The stop records when its lock was held, not when the
+// transaction began. So a send that waited ahead of it never reads as after it.
+func TestALeadsPressIsStampedWhenItsLockIsHeld(t *testing.T) {
+	e := setupChannelConsent(t)
+	lead := seedLead(t, e, "Late Press", "late-press@example.test")
+	var began, stopped time.Time
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(e.ctx, `SELECT now()`).Scan(&began); err != nil {
+			return err
+		}
+		if _, err := e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{
+			LeadID: lead, Address: "late-press@example.test", Scope: WithdrawalScopeAllMarketing,
+		}); err != nil {
+			return err
+		}
+		return tx.QueryRow(e.ctx, `SELECT recorded_at FROM communication_suppression WHERE lead_id = $1`, lead.UUID).Scan(&stopped)
+	}); err != nil {
+		t.Fatalf("pressing the lead's link: %v", err)
+	}
+	if !stopped.After(began) {
+		t.Errorf("the stop reads as recorded at %v, the instant its transaction began, not when its lock was held", stopped)
+	}
+}
+
+// TestACarryTheSurvivorAlreadyMatchesKeepsTheRetiringFloor merges a lead whose
+// refusal carries a retention floor into one holding the same refusal with none.
+// The survivor's own stop is kept, and it takes the retiring stop's floor.
+func TestACarryTheSurvivorAlreadyMatchesKeepsTheRetiringFloor(t *testing.T) {
+	e := setupChannelConsent(t)
+	from := seedLead(t, e, "Kept Refusal", "kept-refusal@example.test")
+	to := seedLead(t, e, "Kept Refusal Survivor", "kept-refusal-survivor@example.test")
+	for lead, address := range map[ids.LeadID]string{from: "kept-refusal@example.test", to: "kept-refusal-survivor@example.test"} {
+		if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+			_, err := e.store.StopForCredentialTx(e.ctx, tx, WithdrawalRef{LeadID: lead, Address: address, Scope: WithdrawalScopeAllMarketing})
+			return err
+		}); err != nil {
+			t.Fatalf("pressing %s: %v", address, err)
+		}
+	}
+	var floor time.Time
+	if err := e.owner.QueryRow(context.Background(), `
+		UPDATE communication_suppression SET kept_until = recorded_at + interval '366 days'
+		 WHERE lead_id = $1 RETURNING kept_until`, from.UUID).Scan(&floor); err != nil {
+		t.Fatalf("giving the retiring refusal its floor: %v", err)
+	}
+
+	merger := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.user.String(), UserID: e.user,
+		Permissions: principal.Permissions{
+			Objects:  map[string]principal.ObjectGrant{"lead": {Read: true, Update: true}},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+	if err := e.store.db.Tx(merger, func(tx pgx.Tx) error {
+		return e.store.CarryStopsTx(merger, tx, commsauthz.LeadStopSubject(from), commsauthz.LeadStopSubject(to))
+	}); err != nil {
+		t.Fatalf("carrying: %v", err)
+	}
+
+	var stops int
+	var kept *time.Time
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*), max(kept_until) FROM communication_suppression WHERE lead_id = $1 AND revoked_at IS NULL`,
+		to.UUID).Scan(&stops, &kept); err != nil {
+		t.Fatalf("reading the survivor's stops: %v", err)
+	}
+	if stops != 1 {
+		t.Fatalf("the survivor holds %d live stops, want its own one: the matched refusal is not copied", stops)
+	}
+	if kept == nil || !kept.Equal(floor) {
+		t.Errorf("the survivor's refusal is kept until %v, want the retiring refusal's %v", kept, floor)
 	}
 }

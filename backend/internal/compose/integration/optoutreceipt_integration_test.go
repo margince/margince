@@ -365,3 +365,38 @@ func TestARelinkedReceiptStaysInItsRefusersExport(t *testing.T) {
 		}
 	}
 }
+
+// TestAMergedAwayRefusersReceiptsReachTheSurvivorsExport merges a contact that
+// withdrew and stopped into another. The survivor's export holds both receipts,
+// found through the stop its copy came from and the merged record's withdrawals.
+func TestAMergedAwayRefusersReceiptsReachTheSurvivorsExport(t *testing.T) {
+	l := setupReceiptLane(t)
+	retired := ids.From[ids.ContactKind](l.contact)
+	l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ('newsletter', 'Newsletter', 'marketing')
+		ON CONFLICT (key) DO NOTHING`)
+	if _, err := l.store.PublicSaveChoices(l.ctx, retired, []consent.PreferenceChoiceInput{
+		{PurposeKey: "newsletter", State: consent.StateGranted, Wording: new("News from time to time.")},
+	}); err != nil {
+		t.Fatalf("registering: %v", err)
+	}
+	if _, err := l.store.PublicWithdrawAll(l.ctx, retired, []string{"newsletter"}); err != nil {
+		t.Fatalf("withdrawing: %v", err)
+	}
+	if _, err := l.store.PublicStop(l.ctx, retired, consent.StopAllMarketing, ""); err != nil {
+		t.Fatalf("stopping: %v", err)
+	}
+	survivor := ids.From[ids.ContactKind](l.e.SeedContact(t, "Surviving Subject", &l.e.Rep1))
+	merger := l.e.Contacts.WithStopCarrier(l.store).WithSatelliteCarriers(l.store, nil)
+	if _, err := merger.MergeContact(l.e.Admin(), retired, survivor, nil); err != nil {
+		t.Fatalf("merging: %v", err)
+	}
+
+	records, err := l.store.OptOutRecords(l.ctx, survivor)
+	if err != nil {
+		t.Fatalf("exporting: %v", err)
+	}
+	if len(records.Receipts) != 2 {
+		t.Errorf("the survivor's export holds %d receipts, want the merged record's withdrawal and stop receipts: %+v",
+			len(records.Receipts), records.Receipts)
+	}
+}

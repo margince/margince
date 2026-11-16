@@ -22772,7 +22772,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.code.automatic_routing":
     "Die Zuweisung automatischer Arbeit muss geprüft werden",
   "health.code.receipts_sent":
-    "Jede Bestätigung der letzten 30 Tage wurde versendet",
+    "Keine Bestätigung der letzten 30 Tage fehlt oder ist überfällig",
   "health.code.receipts_missed":
     "Einige Bestätigungen von Werbewidersprüchen wurden nicht versendet",
   "health.code.capture_thread_processing": "Unterhaltungen werden eingeordnet",

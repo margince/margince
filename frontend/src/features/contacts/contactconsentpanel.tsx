@@ -297,18 +297,18 @@ export function ContactConsentPanel({ view }: Readonly<{ view: Contact360 }>) {
 function OptOutRecordsDownload({ contactId }: Readonly<{ contactId: string }>) {
   const t = useT();
   const download = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (id: string) => {
       const { data, error } = await api.GET(
         "/contacts/{id}/consent/optout-records",
-        { params: { path: { id: contactId } } },
+        { params: { path: { id } } },
       );
       if (error) throwProblem(error);
       return data;
     },
-    onSuccess: (records) =>
+    onSuccess: (records, id) =>
       downloadBytes(
         JSON.stringify(records, null, 2),
-        `optout-records-${contactId}.json`,
+        `optout-records-${id}.json`,
         "application/json",
       ),
   });
@@ -317,7 +317,7 @@ function OptOutRecordsDownload({ contactId }: Readonly<{ contactId: string }>) {
       <Button
         variant="ghost"
         pending={download.isPending}
-        onClick={() => download.mutate()}
+        onClick={() => download.mutate(contactId)}
       >
         <Download aria-hidden />
         {t("consent.optOutRecords")}

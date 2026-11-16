@@ -18830,8 +18830,9 @@ export interface paths {
          * @description The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email to keep for at
          *     least one year and to show an inspector: every consent the contact gave or withdrew, every
          *     stop recorded on them with the time the refusal arrived and the time sending stopped, and
-         *     every opt-out receipt sent or queued to them. Nothing here ages out; all three are kept
-         *     until the contact is erased.
+         *     every opt-out receipt sent or queued to them. Retention keeps a refusal and its receipt
+         *     until the floor the contact's rules set ends, a year under Decree 91. After that a
+         *     retention policy may act on them as on any other record.
          *
          *     An archived contact is answered too. Times are UTC.
          */

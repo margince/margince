@@ -96,11 +96,15 @@ func (s *Store) acknowledgeOptOutTx(
 func (s *Store) stageAcknowledgementTx(
 	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
 ) error {
+	terms, owed, err := s.keepUnderReceiptRulesTx(ctx, tx, sub, stopID, times)
+	if err != nil || !owed {
+		return err
+	}
 	nested, err := tx.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("consent: opening receipt preparation: %w", err)
 	}
-	owed, missing, err := s.stageOwedReceiptTx(ctx, nested, sub, messageID, stopID, times)
+	missing, err := s.stageOwedReceiptTx(ctx, nested, sub, terms, messageID, stopID, times)
 	missed := MissedReceipt{SubjectType: sub.entityType, SubjectID: sub.id, MessageID: messageID, Reason: missing}
 	if err != nil {
 		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
@@ -108,46 +112,62 @@ func (s *Store) stageAcknowledgementTx(
 		}
 		slog.ErrorContext(ctx, "opt-out receipt could not be staged; the refusal remains recorded",
 			"subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
-		// A failure before the rules answered cannot say a receipt was owed.
-		if owed {
-			missed.Reason = MissedReceiptNotPrepared
-			s.raiseMissedReceiptTx(ctx, tx, missed)
-		}
-		return nil
-	}
-	if err := nested.Commit(ctx); err != nil {
+		missed.Reason = MissedReceiptNotPrepared
+	} else if err := nested.Commit(ctx); err != nil {
 		return fmt.Errorf("consent: committing receipt preparation: %w", err)
 	}
-	if owed && missing != "" {
+	if missed.Reason != "" {
 		s.raiseMissedReceiptTx(ctx, tx, missed)
 	}
 	return nil
 }
 
-// stageOwedReceiptTx stages the receipt when the rules owe one. It answers
-// whether one is owed, and why it could not be staged when it was not.
-func (s *Store) stageOwedReceiptTx(
-	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
-) (bool, string, error) {
-	terms, owed, err := s.receiptOwedTx(ctx, tx, sub)
+// keepUnderReceiptRulesTx reads the subject's receipt terms and stamps the
+// refusal's retention floor, in a savepoint apart from the receipt's. So a
+// receipt that fails to stage cannot take the floor down with it.
+func (s *Store) keepUnderReceiptRulesTx(
+	ctx context.Context, tx pgx.Tx, sub subject, stopID ids.UUID, times RefusalTimes,
+) (receiptTerms, bool, error) {
+	nested, err := tx.Begin(ctx)
 	if err != nil {
-		return false, "", err
+		return receiptTerms{}, false, fmt.Errorf("consent: opening the refusal's retention floor: %w", err)
 	}
-	if terms.keptUntil, err = keepRefusalTx(ctx, tx, sub, stopID, times, terms.keep); err != nil || !owed {
-		return false, "", err
+	terms, owed, err := s.receiptOwedTx(ctx, nested, sub)
+	if err == nil {
+		terms.keptUntil, err = keepRefusalTx(ctx, nested, sub, stopID, times, terms.keep)
 	}
+	if err != nil {
+		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
+			return receiptTerms{}, false, fmt.Errorf("consent: rolling back the refusal's retention floor: %w", rollbackErr)
+		}
+		// A failure before the rules answered cannot say a receipt was owed.
+		slog.ErrorContext(ctx, "opt-out receipt rules could not be read; the refusal remains recorded",
+			"subject_type", sub.entityType, "subject_id", sub.id, "cause", err)
+		return receiptTerms{}, false, nil
+	}
+	if err := nested.Commit(ctx); err != nil {
+		return receiptTerms{}, false, fmt.Errorf("consent: committing the refusal's retention floor: %w", err)
+	}
+	return terms, owed, nil
+}
+
+// stageOwedReceiptTx stages the receipt the rules owe, and answers why it
+// could not be staged when it was not.
+func (s *Store) stageOwedReceiptTx(
+	ctx context.Context, tx pgx.Tx, sub subject, terms receiptTerms, messageID string, stopID ids.UUID, times RefusalTimes,
+) (string, error) {
 	times.UTCOffset = terms.utcOffset
 	if s.confirmSender == nil {
-		return true, MissedReceiptNoMailLane, nil
+		return MissedReceiptNoMailLane, nil
 	}
 	address, err := acknowledgementAddressTx(ctx, tx, sub, stopID)
 	if err != nil {
-		return true, "", err
+		return "", err
 	}
 	if address == "" {
-		return true, MissedReceiptNoAddress, nil
+		return MissedReceiptNoAddress, nil
 	}
-	return true, "", s.prepareAcknowledgementTx(ctx, tx, sub, terms, address, messageID, times)
+	return "", s.prepareAcknowledgementTx(ctx, tx, sub, terms, address, messageID, times)
 }
 
 // receiptTerms are what the rules ask of one refusal and its receipt. dueAt is
