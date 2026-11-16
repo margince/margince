@@ -279,9 +279,9 @@ What it does not cover:
 - It is a `v1beta` API of the Gemini Developer API alone. Vertex AI does not serve it.
 - Google runs it in no EU region, so do not bind it under `eu_hosted`. That profile does not refuse
   it, as it does not refuse `gemini`; `sovereign` refuses it.
-- The three decision sites are certified on `gemini-decision-1`. Certification is advisory: a bound
-  lane asks every site with a decision form, and a site falls back to its ladder when the answer does
-  not stand. See [certify-a-decision-site.md](certify-a-decision-site.md).
+- The three decision sites are certified on `gemini-decision-1`. A bound lane asks every site with a
+  decision form, certified or not. A site falls back to its ladder when the answer does not stand. See
+  [certify-a-decision-site.md](certify-a-decision-site.md).
 
 ## The sovereign profile refuses every cloud provider
 
