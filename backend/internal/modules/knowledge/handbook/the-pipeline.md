@@ -10,12 +10,13 @@ that screen names which ladder you are looking at.
 ## Deal tasks
 
 ### How do I move a deal to the next stage?
-To move a deal to another stage in Margince, open the deal from **Deals** and click the stage you want on its **Stage** ladder. Or drag its card to another column on the **Board** view.
+To move a deal to another stage in Margince, open the deal from **Deals** and click the stage you want on its **Stage** ladder. Or use the **…** menu on its card on the **Board** view, or drag the card to another column.
 1. Open **Deals** in the sidebar and open the deal, or switch the list to **Board**.
-2. Click the stage you want on the ladder, or drag the card onto that stage's column.
-3. The dialog asks **Move to {stage}?**. Press **Confirm**, or **Cancel**.
+2. Click the stage you want on the ladder.
+3. On the board, open the card's **…** menu. Choose **Move to** the next stage, or **Move to stage** and pick one. You can also drag the card onto that stage's column.
+4. A move to a won or lost stage asks **Move to {stage}?**. Press **Confirm**, or **Cancel**.
 
-The move is saved at once ("Moved to {stage}"); there is no save button. Dragging does not work on touch screens, so use the ladder on a touch screen. Also called: advance a deal, change deal stage, progress an opportunity.
+The move is saved at once ("Moved to {stage}"); there is no save button. The menu works with the keyboard and on a touch screen. Also called: advance a deal, change deal stage, progress an opportunity.
 
 ### How do I move several deals to a stage at once?
 To move many deals at once, tick them on the **Deals** list and use **Move to stage** in the bar that appears.
@@ -25,8 +26,8 @@ To move many deals at once, tick them on the **Deals** list and use **Move to st
 This offers open stages only, and skips deals already on that stage. You cannot win or lose many deals at once: close each one on its own page. Only open deals that are not archived have a box to tick. Also called: bulk edit, mass update deal stage.
 
 ### How do I mark a deal as won?
-To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. There is no separate Won button.
-1. Open the deal and click the Won stage on its **Stage** ladder. Or drag the card to the Won column on **Board**.
+To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. On the board, **Mark won** in the card's **…** menu does the same.
+1. Open the deal and click the Won stage on its **Stage** ladder. Or choose **Mark won** in the card's menu on **Board**, or drag the card to the Won column.
 2. The dialog says "This closes the deal as won. Nothing changes until you confirm."
 3. Without a signed contract, the dialog asks **How was it won?** on opening. **Confirm** waits for your answer. **Other** also needs **Details**.
 4. Press **Confirm**. The deal closes.
@@ -34,8 +35,8 @@ To mark a deal as won in Margince, move it to a stage whose **Stage type** is **
 Also called: close won, close a deal as won, win an opportunity.
 
 ### How do I mark a deal as lost?
-When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and say why. There is no separate Lost button.
-1. Open the deal and click the Lost stage on its **Stage** ladder. Or drag the card to the Lost column on **Board**.
+When a customer or client says no, mark the deal as lost. Move it to a stage whose **Stage type** is **Lost** and say why. On the board, **Mark lost** in the card's **…** menu does the same.
+1. Open the deal and click the Lost stage on its **Stage** ladder. Or choose **Mark lost** in the card's menu on **Board**, or drag the card to the Lost column.
 2. Pick a reason under **Why was it lost?**, and add a **Note** if it needs explaining. The note box has room for several lines, and Enter starts a new line. **Confirm** stays off until you pick a reason.
 3. Press **Confirm**, or press Ctrl+Enter (⌘+Enter on a Mac) in the note.
 
@@ -126,14 +127,25 @@ stage changes still read well. Deals still on it have to move first.
 
 ## Moving a deal
 
-A deal moves three ways. Drag it on the board, or click a stage on the ladder on
-the deal page. Or select several and use **Move to stage**. Margince saves the
-move at once and says so ("Moved to Discovery"), with no save button.
+A deal moves four ways. Drag it on the board, or click a stage on the ladder on
+the deal page. Or open the card's **…** menu on the board. Or select several and
+use **Move to stage**. Margince saves the move at once and says so
+("Moved to Discovery"), with no save button.
 
-Dragging on the board does not work on touch, so use the ladder on a touch screen. If
-two colleagues move the same deal at once, the second is refused, so it does not
-write over the first. A deal can only move to a stage in its own pipeline, and
-you close deals one at a time.
+The card menu is the way to move a deal with the keyboard or a touch screen. It
+offers **Move to** the next stage and **Move to stage**, which lets you search
+for any stage of the pipeline. **Mark won** and **Mark lost** show only when the
+pipeline has one stage of that type. They ask the same confirmation a drop asks.
+
+On a won or lost deal the move items are grey: "This deal is closed. Reopen it
+on its page to move it." Someone who may not change the deal sees no move items.
+The menu also holds **Deal summary**, **Write email**, **Add task**,
+**Copy link**, **Add to Shortlist** and **Archive deal**. On an archived deal it
+holds only **Deal summary** and **Copy link**.
+
+If two colleagues move the same deal at once, the second is refused, so it does
+not write over the first. A deal can only move to a stage in its own pipeline,
+and you close deals one at a time.
 
 ## Closing a deal
 

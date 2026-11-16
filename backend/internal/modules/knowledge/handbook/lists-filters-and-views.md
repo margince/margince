@@ -139,7 +139,7 @@ Also called: sort options, order by column.
 
 ### How do I switch between the table and the board?
 To switch between table and board in Margince, open **Deals** or **Leads**, press **View**, and pick **Table** or **Board** at the top of the panel.
-- **Deals** opens on **Board**: one column for each stage of the pipeline shown, and you drag a card to move the deal. See [The pipeline](the-pipeline.md).
+- **Deals** opens on **Board**: one column for each stage of the pipeline shown. You drag a card to move the deal, or open its **…** menu and choose where it goes. See [The pipeline](the-pipeline.md).
 - **Leads** opens on **Table**. Its **Board** has a column for each status, and you drag a card between New, Contacted and Engaged.
 Filters and search still work on the board. When every match of a search is in a column off screen, the board names those columns and moves to the first one. Ticking many rows, **Columns**, **Compact** and **Save view** are on the table only.
 Also called: kanban, pipeline view, list view, card view.
