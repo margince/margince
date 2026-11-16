@@ -67,6 +67,13 @@ func verifySchema(ctx context.Context, q extprivacy.Querier, exts []extension.Ex
 		if err := extprivacy.VerifySchema(ctx, q, namespaces[i], namespaces, e.Privacy); err != nil {
 			return fmt.Errorf("extension %q: %w", e.Name, err)
 		}
+		reached := make([]string, 0, len(e.Reach))
+		for _, table := range e.Reach {
+			reached = append(reached, table.Name)
+		}
+		if err := extprivacy.VerifyRowIDs(ctx, q, namespaces[i], reached); err != nil {
+			return fmt.Errorf("extension %q: %w", e.Name, err)
+		}
 	}
 	return nil
 }
