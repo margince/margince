@@ -86,6 +86,7 @@ func setupPromises(t *testing.T) *promiseEnv {
 	if err := testdb.CapStatements(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	emptyDatabase(t)
 
 	e := &promiseEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7()}
 	if _, err := owner.Exec(ctx,

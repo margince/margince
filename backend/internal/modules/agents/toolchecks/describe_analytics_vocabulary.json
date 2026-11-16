@@ -1,11 +1,6 @@
 {
   "verb": "describe_analytics_vocabulary",
   "checks": [
-    "activity.read",
-    "company.read",
-    "deal.read",
-    "lead.read",
-    "project.read",
-    "relationship.read"
+    "activity.read,deal.read,lead.read,project.read"
   ]
 }

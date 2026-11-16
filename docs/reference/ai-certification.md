@@ -3783,7 +3783,7 @@ Records (13):
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/32 | `certified` | 18 | 18 | 1.00 | 2393ms | 5094ms | 18 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/32 | `certified` | 18 | 18 | 1.00 | 972ms | 1206ms | 18 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier` | `current` | 32/32 | `certified` | 96 | 96 | 1.00 | 2247ms | 5109ms | 96 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 32/32 | `certified` | 96 | 96 | 1.00 | 3501ms | 6006ms | 96 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 32/32 | `certified` | 96 | 96 | 1.00 | 3673ms | 5110ms | 96 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/32 | `supported_degraded` | 102 | 95 | 0.93 | 1880ms | 5801ms | 95 | 7 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/32 | `not_supported` | 54 | 47 | 0.87 | 1345ms | 1963ms | 47 | 7 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/32 | `not_supported` | 54 | 45 | 0.83 | 846ms | 1477ms | 45 | 9 | 0 | 0 |

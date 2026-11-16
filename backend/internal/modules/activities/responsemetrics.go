@@ -70,8 +70,8 @@ const everyMessage = ""
 // its question is the opposite end: the point past which this installation
 // essentially does not answer at all (waitinghorizon.go).
 var firstResponseSQL = `
-	-- The messages judged come first, so the answer read below runs only over
-	-- them: a sample (%[6]s) must bound that read, not trim its result.
+	-- The candidate sample (%[6]s) bounds the answer walk; invitation eligibility
+	-- is then judged at the answer's instant.
 	WITH judged AS MATERIALIZED (
 	  SELECT inbound.id FROM activity inbound
 	   WHERE inbound.kind IN ('email', 'message')
@@ -84,10 +84,9 @@ var firstResponseSQL = `
 	     -- the queue applies, an internal thread nobody replies to would drag the
 	     -- rate down over work the queue never showed anybody.
 	     AND NOT ` + ownDomainSenderAtSQL("inbound", "%[4]s") + `
-	     -- An invitation no verdict can make owed is answered on the calendar,
-	     -- so an RSVP to it is not a reply the rate should count.
 	     AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = inbound.id
-	                       AND ` + invitationNeverOwedSQL("$2::timestamptz", "%[4]s") + `)
+	                       AND ` + calendarInvitationSQL + ` AND ` + invitationColleagueSenderSQL("%[4]s") + `
+	                       AND NOT ` + acceptedRequestSQL + `)
 	     -- A SALES thread, by the same four arms waitingRepliesSQL qualifies on.
 	     -- Restated rather than shared because this query has no wl join to hang
 	     -- them off; what must not drift is the DEFINITION, and a test feeding
@@ -122,7 +121,12 @@ var firstResponseSQL = `
 	         SELECT ` + firstAnswerAtSQL("inbound", "'infinity'::timestamptz") + ` AS occurred_at
 	         OFFSET 0
 	       ) reply
-	 WHERE reply.occurred_at IS NOT NULL`
+	 WHERE reply.occurred_at IS NOT NULL
+	   AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = inbound.id
+	                     AND ` + invitationNeverOwedSQL(
+	// occurred_at raw: the first answer's instant bounds whether the meeting has begun.
+	"reply.occurred_at", "%[4]s") + `
+	                     AND NOT ` + acceptedRequestSQL + `)`
 
 // dispositionsSQL counts what readers put down in the window.
 //

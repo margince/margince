@@ -8,6 +8,8 @@ package meetingprofile_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"maps"
@@ -24,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -101,6 +104,13 @@ func (m *meeting) readAs(reader context.Context, t *testing.T, entries []saidBy,
 	raw, err := json.Marshal(profile)
 	if err != nil {
 		t.Fatal(err)
+	}
+	// A speaker is a participant of the transcript, where the reading's parties come from.
+	for _, entry := range entries {
+		if _, err := integration.OwnerConn(t).Exec(context.Background(), `INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'attendee') ON CONFLICT DO NOTHING`, m.transcript.UUID, entry.speaker); err != nil {
+			t.Fatal(err)
+		}
 	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := database.WithWorkspaceTx(reader, m.e.Pool, func(tx pgx.Tx) error {
@@ -290,6 +300,77 @@ func TestAMeetingValueGoesOnceItsTranscriptIsNarrowedOrRedacted(t *testing.T) {
 		}
 		if got, ok := m.field(t, company, "sales_motion"); ok {
 			t.Errorf("after %q the field still says %q for a transcript its readers lost", change, got.Value)
+		}
+	}
+}
+
+// One sweep removes every value a narrowed transcript filled, even past what
+// one transaction takes.
+func TestOneSweepRemovesMoreMeetingValuesThanOneBatch(t *testing.T) {
+	m := newMeeting(t, "workspace")
+	entries := make([]saidBy, meetingprofile.SweepBatch+1)
+	for i := range entries {
+		company := m.e.SeedCompany(t, fmt.Sprintf("Brandt IT %d", i), &m.e.Rep1)
+		entries[i] = saidBy{m.employee(t, company, fmt.Sprintf("Dana Brandt %d", i)), "sales_motion", distributors}
+	}
+	m.read(t, entries...)
+	filled := `SELECT count(*) FROM company_profile_field WHERE source = 'meeting' AND source_activity_id = $1`
+	if got := m.e.WsCount(t, filled, m.transcript); got != len(entries) {
+		t.Fatalf("the reading filled %d values, want %d", got, len(entries))
+	}
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, m.transcript.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if err := (meetingprofile.Sweep{Pool: m.e.Pool}).Workspace(context.Background(), m.e.WS); err != nil {
+		t.Fatalf("sweeping: %v", err)
+	}
+	if got := m.e.WsCount(t, filled, m.transcript); got != 0 {
+		t.Fatalf("one sweep left %d values a narrowed transcript filled", got)
+	}
+}
+
+// The sweep reaches every company in the workspace, so an administrator who
+// may edit companies is still refused it.
+func TestOnlyTheSystemRunsTheMeetingProfileSweep(t *testing.T) {
+	m := newMeeting(t, "workspace")
+	err := database.WithWorkspaceTx(m.e.Admin(), m.e.Pool, func(tx pgx.Tx) error {
+		_, err := contacts.RetractStaleMeetingProfilesTx(m.e.Admin(), tx, 10)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("an administrator ran the meeting-profile sweep: err = %v, want a permission refusal", err)
+	}
+}
+
+// A value stands while someone from its company is on the meeting. Taking the
+// speaker off the transcript, or the speaker leaving the company, removes it.
+func TestAMeetingValueGoesOnceNobodyFromItsCompanyIsOnTheMeeting(t *testing.T) {
+	for name, change := range map[string]string{
+		"speaker taken off": `DELETE FROM activity_participant WHERE activity_id = $1 AND contact_id = $2`,
+		"speaker left":      `UPDATE relationship SET archived_at = now() WHERE contact_id = $2 AND kind = 'employment' AND $1::uuid IS NOT NULL`,
+		"speaker only bcc":  `UPDATE activity_participant SET role = 'bcc' WHERE activity_id = $1 AND contact_id = $2`,
+	} {
+		m := newMeeting(t, "workspace")
+		company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
+		speaker := m.employee(t, company, "Dana Brandt")
+		m.read(t, saidBy{speaker, "sales_motion", distributors})
+		sweep := func() {
+			t.Helper()
+			if err := (meetingprofile.Sweep{Pool: m.e.Pool}).Workspace(context.Background(), m.e.WS); err != nil {
+				t.Fatalf("sweeping: %v", err)
+			}
+		}
+		sweep()
+		if _, ok := m.field(t, company, "sales_motion"); !ok {
+			t.Fatalf("%s: the sweep removed a value whose speaker is still on the meeting", name)
+		}
+		if _, err := integration.OwnerConn(t).Exec(context.Background(), change, m.transcript.UUID, speaker); err != nil {
+			t.Fatal(err)
+		}
+		sweep()
+		if got, ok := m.field(t, company, "sales_motion"); ok {
+			t.Errorf("%s: the field still says %q with nobody from the company on the meeting", name, got.Value)
 		}
 	}
 }

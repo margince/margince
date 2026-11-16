@@ -31265,8 +31265,8 @@
           "runs": 96,
           "passed": 96,
           "reliability": 1,
-          "latency_p50_ms": 3501,
-          "latency_p95_ms": 6006,
+          "latency_p50_ms": 3673,
+          "latency_p95_ms": 5110,
           "reported": {
             "accepted": 96,
             "wrong_answer": 0,
