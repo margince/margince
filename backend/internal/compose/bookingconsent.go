@@ -216,7 +216,7 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 		return activities.MarketingNotRequested, nil
 	}
 	issued, err := a.store.IssueBookedConsentLink(ctx,
-		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom)
+		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom, m.AskedBySubject)
 	if err == nil {
 		// STAGED, not merely minted. issueLink answers a token it could not
 		// send rather than failing — an installation with no relay gets a link
@@ -233,7 +233,7 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 		}
 		return activities.MarketingPendingConfirmation, nil
 	}
-	// NO REFUSAL OF THE QUESTION COSTS THE MEETING, whatever the reason.
+	// NO REFUSAL OF THE QUESTION COSTS THE MEETING, with the two exceptions below.
 	//
 	// The tick was optional and the meeting was not: the subject can be asked
 	// again from the preference centre or the next mail, and the slot they
@@ -261,7 +261,7 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	// besides — it would say which addresses a contact holds and what they
 	// have withdrawn, to anyone who can guess an email.
 	//
-	// AN AUTHORIZATION REFUSAL IS THE ONE EXCEPTION, and it is not a refusal of
+	// AN AUTHORIZATION REFUSAL IS ONE EXCEPTION, and it is not a refusal of
 	// the question at all: it says something about the CALLER rather than about
 	// this installation's ability to ask. The mint takes auth.Require before it
 	// opens a transaction, and the contact probe inside it can answer a denial
@@ -293,6 +293,11 @@ func bookingConsentRecord(contactID ids.UUID, c activities.BookingConsent) conse
 func bookingMarketingFailure(err error) (activities.MarketingOutcome, error) {
 	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
 		return activities.MarketingNotRequested, err
+	}
+	// A user's own booking asked for this mail, so the refusal is theirs to
+	// act on, as at the double-opt-in door. The public page never meets it.
+	if missing, ok := errors.AsType[*consent.NoSubjectRequestError](err); ok {
+		return activities.MarketingNotRequested, missing
 	}
 	return activities.MarketingNotAsked, nil
 }

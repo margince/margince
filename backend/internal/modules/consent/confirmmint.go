@@ -105,7 +105,7 @@ func (s *Store) issueLinkTx(
 		if req.lane == refuseWithoutMailLane && !s.canSendConfirm() {
 			return ErrNoMailLane
 		}
-		rules, err := confirmRulesTx(ctx, tx, contactID, kind, deliveredTo, req.operatorAsks)
+		rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, deliveredTo, req.operatorAsks)
 		if err != nil {
 			return err
 		}

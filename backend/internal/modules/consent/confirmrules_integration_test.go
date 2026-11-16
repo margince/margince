@@ -8,7 +8,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -126,9 +125,15 @@ func TestAConsentMailWithoutTheSubjectsRequestIsRefused(t *testing.T) {
 	seedSubjectAddress(t, e)
 	placeUnderConfirmRules(t, e)
 
-	var invalid *ValidationError
-	_, err := e.store.IssueConsentLink(e.ctx, e.contact, e.doiNews, "", "")
-	if !errors.As(err, &invalid) || !strings.Contains(invalid.Reason, "has not asked to subscribe") {
+	requireNoSubjectRequestRefusal(t, e)
+}
+
+// requireNoSubjectRequestRefusal asks for a consent link as a user and wants
+// the request rule's refusal, with no link minted.
+func requireNoSubjectRequestRefusal(t *testing.T, e *channelConsentEnv) {
+	t.Helper()
+	var missing *NoSubjectRequestError
+	if _, err := e.store.IssueConsentLink(e.ctx, e.contact, e.doiNews, "", ""); !errors.As(err, &missing) {
 		t.Fatalf("a consent mail with no request on record: %v, want the refusal", err)
 	}
 	var minted int
@@ -237,4 +242,43 @@ func TestTheStoredConsentTextIsTheFilledSentence(t *testing.T) {
 	if recorded != want {
 		t.Errorf("the grant recorded:\n  %q\nwant:\n  %q", recorded, want)
 	}
+}
+
+// TestAStoredMailStampDoesNotStandInForTheMail. A stamped inbound_message is
+// read again from the timeline, so a stamp whose mail is gone is no request.
+func TestAStoredMailStampDoesNotStandInForTheMail(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	placeUnderConfirmRules(t, e)
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_qualifying_event (contact_id, kind, source_entity_type, source_entity_id,
+		                                      occurred_at, source, captured_by)
+		VALUES ($1, 'inbound_message', 'activity', $2, $3, 'derived', 'human:x')`,
+		e.contact, ids.NewV7(), clocktest.Now(t).Add(-time.Hour)); err != nil {
+		t.Fatalf("stamping a mail that is gone: %v", err)
+	}
+	requireNoSubjectRequestRefusal(t, e)
+}
+
+// TestARequestRecordedForAnotherEntityIsNotThisMailsRequest. The mail is the
+// installation's, sent for the default entity; a request recorded for a second
+// entity does not answer for it.
+func TestARequestRecordedForAnotherEntityIsNotThisMailsRequest(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	placeUnderConfirmRules(t, e)
+	branch := ids.NewV7()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO legal_entity (id, display_name, legal_name, country, captured_by)
+		VALUES ($1, 'Branch', 'Branch Co Ltd', 'zk', 'human:x')`, branch); err != nil {
+		t.Fatalf("adding a second entity: %v", err)
+	}
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO consent_qualifying_event (contact_id, kind, note, occurred_at, source, captured_by,
+		                                      recorded_for_entities)
+		VALUES ($1, $2, 'Asked the branch for the newsletter', $3, 'human', 'human:x', ARRAY[$4::uuid])`,
+		e.contact, KindRequestedBySubject, clocktest.Now(t).Add(-time.Hour), branch); err != nil {
+		t.Fatalf("recording the branch's request: %v", err)
+	}
+	requireNoSubjectRequestRefusal(t, e)
 }

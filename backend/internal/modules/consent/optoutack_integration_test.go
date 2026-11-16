@@ -429,7 +429,7 @@ func TestTheReceiptSpeaksTheLanguageOfTheLastLinkMailWeSent(t *testing.T) {
 		t.Fatalf("minting the Vietnamese link: %v", err)
 	}
 	seedLinkDelivery(t, e, stager.seen.LinkID)
-	if _, err := e.storeNoLane.IssueBookedConsentLink(e.ctx, e.contact, e.doiNews, ""); err != nil {
+	if _, err := e.storeNoLane.IssueBookedConsentLink(e.ctx, e.contact, e.doiNews, "", true); err != nil {
 		t.Fatalf("minting the English link with no mail: %v", err)
 	}
 

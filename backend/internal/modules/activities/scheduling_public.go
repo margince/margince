@@ -134,6 +134,9 @@ type BookingMarketing struct {
 	// authenticated booking names a linked contact rather than typing an email,
 	// so there is no second address for the two to disagree about.
 	TickedFrom string
+	// AskedBySubject is true when the contact ticked the box on the public
+	// page, and false when a signed-in user's booking asked on their behalf.
+	AskedBySubject bool
 }
 
 // requestedPurpose is the purpose id a form NAMED, or nothing. The contract's
@@ -431,7 +434,7 @@ func (h Handlers) bookPublicMeetingForLead(w http.ResponseWriter, r *http.Reques
 // way to name one: a parameter of that type would have to restate the whole
 // literal, field tags included.
 func (h Handlers) admitBookingMarketing(w http.ResponseWriter, r *http.Request, c crmcontracts.CaptureConsent, tickedFrom string) (*BookingMarketing, bool) {
-	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, h.publicConsent)
+	marketing, err := prepareBookingMarketing(r.Context(), c, tickedFrom, true, h.publicConsent)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return nil, false

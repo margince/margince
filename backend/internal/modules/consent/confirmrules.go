@@ -9,18 +9,14 @@ package consent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// subscriptionRequestKinds are the records that show the contact asking to
-// hear from us. They are a logged request, a posted form and a written mail.
-var subscriptionRequestKinds = []string{KindRequestedBySubject, KindInquiry, "inbound_message"}
 
 // confirmRules is what the recipient's rules decide about one link.
 type confirmRules struct {
@@ -32,7 +28,7 @@ type confirmRules struct {
 
 // confirmRulesTx decides both for a contact's link. A consent link minted by
 // an operator under rules that need a request is refused without one.
-func confirmRulesTx(
+func (s *Store) confirmRulesTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind, address string, operatorAsks bool,
 ) (confirmRules, error) {
 	out := confirmRules{asksNews: true}
@@ -48,36 +44,83 @@ func confirmRulesTx(
 	if kind != LinkConsentConfirmation || !operatorAsks {
 		return out, nil
 	}
-	out.subjectRequest, err = subscriptionRequestTx(ctx, tx, contactID, address)
+	out.subjectRequest, err = s.subscriptionRequestTx(ctx, tx, contactID, address)
 	if err != nil {
 		return out, err
 	}
 	if found && rules.ConsentConfirmationNeedsRequest && out.subjectRequest.IsZero() {
-		return out, &ValidationError{
-			Field: contactIDKey,
-			Reason: "this contact has not asked to subscribe, and their country's rules allow a " +
-				"consent-confirmation mail only in answer to their own request. Record the request " +
-				"(a form they posted, a mail they wrote, or a call you log) first",
-		}
+		return out, &NoSubjectRequestError{}
 	}
 	return out, nil
 }
 
-// subscriptionRequestTx is the newest live request from the contact on record
-// for the address the link goes to, zero when there is none.
-func subscriptionRequestTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) (ids.UUID, error) {
+// NoSubjectRequestError refuses a consent-confirmation mail a user asked for
+// when the recipient's rules need the contact's own request and none is on
+// record.
+type NoSubjectRequestError struct{}
+
+func (e *NoSubjectRequestError) Error() string { return "consent: " + contactIDKey + ": " + e.reason() }
+
+// FieldFault answers the refusal as a 422 naming the contact.
+func (e *NoSubjectRequestError) FieldFault() (field, code, message string) {
+	return contactIDKey, "invalid", e.reason()
+}
+
+func (e *NoSubjectRequestError) reason() string {
+	return "this contact has not asked to subscribe, and their country's rules allow a " +
+		"consent-confirmation mail only in answer to their own request. Record the request " +
+		"(a form they posted, a mail they wrote, or a call you log) first"
+}
+
+// subscriptionRequestTx is the contact's own request a consent mail answers,
+// zero when there is none. It asks the send path's qualifying-event readers.
+// First comes a request a user or agent recorded, or a booking inquiry whose
+// meeting still exists. Then comes a mail the contact wrote, read again from
+// the timeline and stamped, so the link and the grant can name it. The mail
+// is the installation's own, so the default legal entity is the sender.
+func (s *Store) subscriptionRequestTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) (ids.UUID, error) {
+	entity, err := storekit.LegalEntityOf(ctx, tx, ids.UUID{})
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	sub, _, err := qualifyingSubjectRef(subjectRef{Kind: entityContact, ID: contactID.String()})
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	event, found, err := recordedSubjectQualifyingEvent(ctx, tx, sub, time.Time{}, s.now(), &address, entity)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	if !found {
+		event, found, err = inboundQualifyingEvent(ctx, tx,
+			subjectRef{Kind: entityContact, ID: contactID.String(), Address: address}, time.Time{}, entity)
+		if err != nil || !found {
+			return ids.UUID{}, err
+		}
+		by, err := storekit.CapturedBy(ctx)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		if err := RecordDerivedQualifyingEvent(ctx, tx, contactID.String(), event, by); err != nil {
+			return ids.UUID{}, err
+		}
+	}
+	return qualifyingEventRowTx(ctx, tx, contactID, event)
+}
+
+// qualifyingEventRowTx names the stored row behind an event: its own id for a
+// hand-recorded one, else the row its source record was stamped as.
+func qualifyingEventRowTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, event QualifyingEvent) (ids.UUID, error) {
+	if event.ID != "" {
+		return ids.Parse(event.ID)
+	}
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `
-		SELECT q.id FROM consent_qualifying_event q
-		 WHERE q.contact_id = $1 AND q.kind = ANY($2::text[]) AND q.retracted_at IS NULL
-		   AND q.occurred_at <= $3 AND `+requestCoversSQL("q.recorded_for_addresses", "$4")+`
-		 ORDER BY q.occurred_at DESC, q.id DESC LIMIT 1`,
-		contactID, subscriptionRequestKinds, time.Now().Add(clockSkewAllowance), address).Scan(&id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.UUID{}, nil
-	}
+		SELECT id FROM consent_qualifying_event
+		 WHERE contact_id = $1 AND source_entity_type = $2 AND source_entity_id = $3::uuid`,
+		contactID, event.SourceEntityType, event.SourceEntityID).Scan(&id)
 	if err != nil {
-		return ids.UUID{}, fmt.Errorf("consent: reading whether the contact asked to subscribe: %w", err)
+		return ids.UUID{}, fmt.Errorf("consent: naming the request this link answers: %w", err)
 	}
 	return id, nil
 }
