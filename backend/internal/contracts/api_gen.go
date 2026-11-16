@@ -16762,6 +16762,33 @@ func (e ListFilterOperand) Valid() bool {
 	}
 }
 
+// Defines values for ListHistoryEntryChanges.
+const (
+	ListHistoryEntryChangesFilter  ListHistoryEntryChanges = "filter"
+	ListHistoryEntryChangesName    ListHistoryEntryChanges = "name"
+	ListHistoryEntryChangesPurpose ListHistoryEntryChanges = "purpose"
+	ListHistoryEntryChangesSharing ListHistoryEntryChanges = "sharing"
+	ListHistoryEntryChangesSteward ListHistoryEntryChanges = "steward"
+)
+
+// Valid indicates whether the value is a known member of the ListHistoryEntryChanges enum.
+func (e ListHistoryEntryChanges) Valid() bool {
+	switch e {
+	case ListHistoryEntryChangesFilter:
+		return true
+	case ListHistoryEntryChangesName:
+		return true
+	case ListHistoryEntryChangesPurpose:
+		return true
+	case ListHistoryEntryChangesSharing:
+		return true
+	case ListHistoryEntryChangesSteward:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListHistoryEntryKind.
 const (
 	ListHistoryEntryKindMemberAdded   ListHistoryEntryKind = "member_added"
@@ -55367,15 +55394,24 @@ type ListFiltersVocabulary struct {
 
 // ListHistoryEntry defines model for ListHistoryEntry.
 type ListHistoryEntry struct {
-	Actor      string                  `json:"actor"`
-	ActorName  *string                 `json:"actor_name,omitempty"`
-	Definition *map[string]interface{} `json:"definition,omitempty"`
+	// Actor The principal behind the change (`human:<uuid>`, `agent:<id>`, `connector:<name>` or `system:<job>`), so a machine write is named as the machine it was.
+	Actor string `json:"actor"`
+
+	// ActorName Display name of a human actor; null for any other.
+	ActorName *string `json:"actor_name,omitempty"`
+
+	// Changes What a revision changed against the version before it; empty when it changed none of these. Null on a membership change and when no earlier version is kept, which on version 1 means the list was made.
+	Changes    *[]ListHistoryEntryChanges `json:"changes,omitempty"`
+	Definition *map[string]interface{}    `json:"definition,omitempty"`
 
 	// DefinitionVersion For an observed change, the list version whose filter it was seen under.
 	DefinitionVersion *int64              `json:"definition_version,omitempty"`
 	EntityId          *openapi_types.UUID `json:"entity_id,omitempty"`
-	EntityType        *string             `json:"entity_type,omitempty"`
-	Id                openapi_types.UUID  `json:"id"`
+
+	// EntityName What the record that joined or left is called now. Null on a revision and for a record type with no name. A change about a record the reader cannot see is not in the history.
+	EntityName *string            `json:"entity_name,omitempty"`
+	EntityType *string            `json:"entity_type,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
 
 	// Kind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
 	Kind       ListHistoryEntryKind `json:"kind"`
@@ -55383,11 +55419,20 @@ type ListHistoryEntry struct {
 	Note       *string              `json:"note,omitempty"`
 	OccurredAt time.Time            `json:"occurred_at"`
 
+	// PreviousDefinition The filter before a revision, so a reader sees it beside `definition`.
+	PreviousDefinition *map[string]interface{} `json:"previous_definition,omitempty"`
+
+	// PreviousName The name before a revision.
+	PreviousName *string `json:"previous_name,omitempty"`
+
 	// Reason `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
 	Reason  *ListHistoryEntryReason `json:"reason,omitempty"`
 	Sharing *string                 `json:"sharing,omitempty"`
 	Version *int64                  `json:"version,omitempty"`
 }
+
+// ListHistoryEntryChanges defines model for ListHistoryEntry.Changes.
+type ListHistoryEntryChanges string
 
 // ListHistoryEntryKind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
 type ListHistoryEntryKind string

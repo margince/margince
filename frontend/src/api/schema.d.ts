@@ -46540,11 +46540,15 @@ export interface components {
             reason?: "chosen" | "bulk" | "record_archived" | "record_restored" | "evaluated" | "filter_changed" | "automation" | null;
             /** Format: date-time */
             occurred_at: string;
+            /** @description The principal behind the change (`human:<uuid>`, `agent:<id>`, `connector:<name>` or `system:<job>`), so a machine write is named as the machine it was. */
             actor: string;
+            /** @description Display name of a human actor; null for any other. */
             actor_name?: string | null;
             entity_type?: string | null;
             /** Format: uuid */
             entity_id?: string | null;
+            /** @description What the record that joined or left is called now. Null on a revision and for a record type with no name. A change about a record the reader cannot see is not in the history. */
+            entity_name?: string | null;
             note?: string | null;
             /** Format: int64 */
             version?: number | null;
@@ -46553,6 +46557,14 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             sharing?: string | null;
+            /** @description What a revision changed against the version before it; empty when it changed none of these. Null on a membership change and when no earlier version is kept, which on version 1 means the list was made. */
+            changes?: ("name" | "purpose" | "filter" | "sharing" | "steward")[] | null;
+            /** @description The name before a revision. */
+            previous_name?: string | null;
+            /** @description The filter before a revision, so a reader sees it beside `definition`. */
+            previous_definition?: {
+                [key: string]: unknown;
+            } | null;
         };
         RecordListsResponse: {
             data: components["schemas"]["List"][];

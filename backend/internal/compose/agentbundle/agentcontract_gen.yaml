@@ -43735,15 +43735,32 @@ components:
             For an observed change, the list version whose filter it was seen under.
         reason: {type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, evaluated, filter_changed, automation, null], description: '`filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.'}
         occurred_at: {type: string, format: date-time}
-        actor: {type: string}
-        actor_name: {type: [string, 'null']}
+        actor:
+          type: string
+          description: >-
+            The principal behind the change (`human:<uuid>`, `agent:<id>`, `connector:<name>` or `system:<job>`), so a machine write is named as the machine it was.
+        actor_name: {type: [string, 'null'], description: 'Display name of a human actor; null for any other.'}
         entity_type: {type: [string, 'null']}
         entity_id: {type: [string, 'null'], format: uuid}
+        entity_name:
+          type: [string, 'null']
+          description: >-
+            What the record that joined or left is called now. Null on a revision and for a record type with no name. A change about a record the reader cannot see is not in the history.
         note: {type: [string, 'null']}
         version: {type: [integer, 'null'], format: int64}
         name: {type: [string, 'null']}
         definition: {type: [object, 'null'], additionalProperties: true}
         sharing: {type: [string, 'null']}
+        changes:
+          type: [array, 'null']
+          items: {type: string, enum: [name, purpose, filter, sharing, steward]}
+          description: >-
+            What a revision changed against the version before it; empty when it changed none of these. Null on a membership change and when no earlier version is kept, which on version 1 means the list was made.
+        previous_name: {type: [string, 'null'], description: The name before a revision.}
+        previous_definition:
+          type: [object, 'null']
+          additionalProperties: true
+          description: The filter before a revision, so a reader sees it beside `definition`.
     RecordListsResponse:
       type: object
       required: [data, truncated]
