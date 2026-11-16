@@ -101,6 +101,34 @@ Door 3 differs from door 2 in who the call acts as. Door 2 acts as the signed-in
 
 A new core service for units is a new method on `Runtime`, a published port and a core side that holds the gate. The steps are in [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md).
 
+### What the core lends a unit, and what is built
+
+One row for each thing a unit can ask of the core. The tool bag below lists which records `tx.Core()` reaches.
+
+| Core capability | A unit calls | Declared in | Decided by | State |
+|---|---|---|---|---|
+| Its own tables | `rt.Tx`, `tx.Exec`, `tx.Query` | `Migrations` | The `ext_runtime` role: unit tables only | Built |
+| Core records, read and write | `tx.Core()` | none | The caller's live rights | Built |
+| Tell a member about a record | `tx.Core().Notices()` | none | The member's own notification settings | Built |
+| Propose where a message belongs | `tx.Core().LinkSuggestions()` | none | The caller's live rights | Built |
+| Read for a job tick or a delivery | `rt.Deals`, `Authority`, `Directory`, `Activities`, `SetAside` | `SystemReads` | Nobody; an attended call is refused | Built |
+| Land records from its own system | `rt.Ingest`, `IngestBatch`, `IngestPosition` | `Ingress` | The member whose credential produced the record | Built |
+| Run its own job soon | `rt.SyncNow` | `Jobs` | The unit's own declared job | Built |
+| A vendor's access token | `rt.OAuthAccessToken`, `OAuthDisconnect` | `OAuthApps` | The admin's consent | Built |
+| Its own secrets | `rt.Secrets` | `Secrets` | The unit's own namespace | Built |
+| The installation's AI models | `rt.Models().Complete` | `Needs`, `models` | The installation's model choice and shared budget | Built |
+| The installation's file store | `rt.Objects().Put`, `Get`, `Delete` | `Needs`, `objects` | A key prefix of the unit's own | Built |
+
+What a unit does not get:
+
+| Not offered | State | Why |
+|---|---|---|
+| The core vault | Never | It holds connector tokens and provider keys. A vendor token comes through `OAuthApps`. |
+| The bytes of a core attachment | Never | An attachment follows its record's row-level rights, which a read by key skips. |
+| Custom field values on a core write | Not yet | The write is refused with `ErrInvalid` until the field catalog is checked against it. |
+| A spend cap for each unit's model calls | Not yet | One shared budget serves all units, and the audit rows say which unit spent it. |
+| Expiry or an index of a unit's objects | Not yet | A unit deletes its own objects with `Delete`. |
+
 ## The tool bag: what a unit can do to each core record
 
 Read a row as "can a unit do this to that record?" A ✅ is a door the core offers. A · is no door. Every table
