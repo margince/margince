@@ -122,10 +122,11 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 			return workflow.Effect{}, err
 		}
 	}
-	why, err := stageMoveReason(ev.Payload)
+	move, err := readStageMove(ev.Payload)
 	if err != nil {
 		return workflow.Effect{}, err
 	}
+	why := move.reason()
 	if configured.TaskTitle != "" {
 		return ownedTaskEffectNoKey(ctx, w.ex, ev, taskWords{subject: configured.TaskTitle, why: why}, dueAt)
 	}
@@ -134,29 +135,42 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 		dueAt)
 }
 
-// stageMoveReason says which stages the deal moved between, by the names
-// they had at the move. A payload without the destination's name says nothing.
-func stageMoveReason(payload json.RawMessage) (func(string) *systemtext.Component, error) {
+// stageMove holds the stage names a deal had at the move.
+type stageMove struct{ from, to string }
+
+func readStageMove(payload json.RawMessage) (stageMove, error) {
 	if len(payload) == 0 {
-		return nil, nil
+		return stageMove{}, nil
 	}
 	var moved crmcontracts.PublicEventDealStageChanged
 	if err := json.Unmarshal(payload, &moved); err != nil {
-		return nil, fmt.Errorf("automation: reading the stage move: %w", err)
+		return stageMove{}, fmt.Errorf("automation: reading the stage move: %w", err)
 	}
-	if moved.ToStageName == nil || *moved.ToStageName == "" {
-		return nil, nil
+	var move stageMove
+	if moved.FromStageName != nil {
+		move.from = *moved.FromStageName
 	}
-	to := *moved.ToStageName
-	if moved.FromStageName == nil || *moved.FromStageName == "" {
+	if moved.ToStageName != nil {
+		move.to = *moved.ToStageName
+	}
+	return move, nil
+}
+
+// reason says which stages the deal moved between. A move without the
+// destination's name says nothing.
+func (m stageMove) reason() func(string) *systemtext.Component {
+	switch {
+	case m.to == "":
+		return nil
+	case m.from == "":
 		return func(deal string) *systemtext.Component {
-			return systemtext.Sentence("automation.why.stage_placed", systemtext.Text(deal), systemtext.Text(to))
-		}, nil
+			return systemtext.Sentence("automation.why.stage_placed", systemtext.Text(deal), systemtext.Text(m.to))
+		}
+	default:
+		return func(deal string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.stage_moved", systemtext.Text(deal), systemtext.Text(m.from), systemtext.Text(m.to))
+		}
 	}
-	from := *moved.FromStageName
-	return func(deal string) *systemtext.Component {
-		return systemtext.Sentence("automation.why.stage_moved", systemtext.Text(deal), systemtext.Text(from), systemtext.Text(to))
-	}, nil
 }
 
 func (w stageChangeCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
