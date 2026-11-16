@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen } from "storybook/test";
+import { expect, screen, within } from "storybook/test";
+import { phoneRow } from "../../testing/phonerow";
 import { COMPANY, project } from "../../testing/projects.fixtures";
 import {
   installFetchStub,
@@ -58,6 +59,17 @@ function installList(projects: unknown[]) {
     "GET /companies": () =>
       jsonResponse({ data: [COMPANY], page: { next_cursor: null } }),
     [`GET /companies/${COMPANY.id}`]: () => jsonResponse(COMPANY),
+    "GET /records/references": () =>
+      jsonResponse({
+        data: [
+          {
+            id: COMPANY.id,
+            name: COMPANY.display_name,
+            archived: false,
+            logo: null,
+          },
+        ],
+      }),
     "GET /users": () =>
       jsonResponse({
         data: [{ id: "u-me", display_name: "Me", status: "active" }],
@@ -74,6 +86,38 @@ export const List: Story = {
         <ProjectsScreen />
       </StoryProviders>
     );
+  },
+};
+
+/** At 390px line one ends in the phase and line two names the customer, when there is one. */
+export const ListPhone: Story = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    installList([
+      ...rows,
+      project({ id: "pr-4", name: "Internal tooling", company_id: null }),
+    ]);
+    return (
+      <StoryProviders>
+        <ProjectsScreen />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findAllByText(COMPANY.display_name);
+    const fleet = phoneRow(canvas.getByText("Fleet retrofit"));
+    await expect([fleet.end, fleet.caption]).toEqual([
+      ["Delivering"],
+      [COMPANY.display_name],
+    ]);
+    const internal = phoneRow(canvas.getByText("Internal tooling"));
+    await expect([internal.end, internal.caption]).toEqual([
+      ["Initiative"],
+      [],
+    ]);
   },
 };
 
