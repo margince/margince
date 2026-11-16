@@ -61,29 +61,40 @@ func ApplyMeetingProfileTx(
 		return err
 	}
 	for company, fields := range stated {
-		if err := auth.EnsureWritableLive(ctx, tx, companyEntity, company.UUID); err != nil {
+		if err := writeMeetingFieldsTx(ctx, tx, company, transcript, by, fields, changedOf(changed, company)); err != nil {
 			return err
-		}
-		for _, field := range fields {
-			var was *string
-			if err := tx.QueryRow(ctx, `SELECT value FROM company_profile_field WHERE company_id = $1 AND field = $2`,
-				company, field.Field).Scan(&was); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-				return fmt.Errorf("read profile field %s before a meeting writes it: %w", field.Field, err)
-			}
-			value := textbounds.Fit("public.company_profile_field.value", field.Value)
-			tag, err := tx.Exec(ctx, upsertCompanyProfileField,
-				company, field.Field, value, "", nil, field.Confidence, CompanySourceMeeting, by, false, transcript.UUID)
-			if err != nil {
-				return fmt.Errorf("write profile field %s from a meeting: %w", field.Field, err)
-			}
-			if tag.RowsAffected() > 0 {
-				changedOf(changed, company).note(field.Field, was, &value)
-			}
 		}
 	}
 	for company, fields := range changed {
 		if err := recordMeetingProfile(ctx, tx, company, fields); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// writeMeetingFieldsTx writes one company's stated fields and notes each it changed.
+func writeMeetingFieldsTx(
+	ctx context.Context, tx pgx.Tx, company ids.CompanyID, transcript ids.ActivityID, by string,
+	fields []MeetingProfileField, images *meetingFieldImages,
+) error {
+	if err := auth.EnsureWritableLive(ctx, tx, companyEntity, company.UUID); err != nil {
+		return err
+	}
+	for _, field := range fields {
+		var was *string
+		if err := tx.QueryRow(ctx, `SELECT value FROM company_profile_field WHERE company_id = $1 AND field = $2`,
+			company, field.Field).Scan(&was); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("read profile field %s before a meeting writes it: %w", field.Field, err)
+		}
+		value := textbounds.Fit("public.company_profile_field.value", field.Value)
+		tag, err := tx.Exec(ctx, upsertCompanyProfileField,
+			company, field.Field, value, "", nil, field.Confidence, CompanySourceMeeting, by, false, transcript.UUID)
+		if err != nil {
+			return fmt.Errorf("write profile field %s from a meeting: %w", field.Field, err)
+		}
+		if tag.RowsAffected() > 0 {
+			images.note(field.Field, was, &value)
 		}
 	}
 	return nil
@@ -162,6 +173,9 @@ func changedOf(changed map[ids.CompanyID]*meetingFieldImages, company ids.Compan
 //
 //craft:ignore naked-any the audit evidence seam is jsonb
 func recordMeetingProfile(ctx context.Context, tx pgx.Tx, company ids.CompanyID, images *meetingFieldImages) error {
+	if len(images.after) == 0 {
+		return nil
+	}
 	fields := images.after
 	evidence := map[string]any{auditKeySource: CompanySourceMeeting}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, actionUpdate, companyEntity, company.UUID, images.before, images.after, evidence)
