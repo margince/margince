@@ -121,7 +121,7 @@ func TestALiveListExplainsEachBranchAndKeepsEachFilterInItsHistory(t *testing.T)
 func TestAListsHistoryNamesTheRecordAndWhatEachRevisionChanged(t *testing.T) {
 	e, _ := listsApp(t, true)
 	var chosen AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "History Gamma"}, http.StatusCreated, &chosen)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "History Gamma"}, http.StatusCreated, &chosen)
 	var list listWire
 	mustCall(t, e, "POST", "/v1/lists", AnyMap{"name": "Picked", "entity_type": "contact"}, http.StatusCreated, &list)
 	mustCall(t, e, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
