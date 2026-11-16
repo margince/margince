@@ -242,7 +242,7 @@ func TestAgentReleaseSpendsTheCapsTheReleaseSpends(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := agentMayDecide(tc.p, row{Kind: tc.kind}, tc.approve, ownReleaseRefused)
+			err := agentMayDecide(context.Background(), tc.p, row{Kind: tc.kind}, tc.approve, ownReleaseRefused)
 			if tc.want && err != nil {
 				t.Fatalf("refused: %v", err)
 			}
@@ -323,7 +323,7 @@ func TestACredentialReleasesOnlyTheUndoableProposalItMade(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := agentMayDecide(proposer, tc.a, tc.approve, tc.own)
+			err := agentMayDecide(context.Background(), proposer, tc.a, tc.approve, tc.own)
 			if tc.want && err != nil {
 				t.Fatalf("refused a decision it may make: %v", err)
 			}
@@ -353,7 +353,7 @@ func TestTheHumanBehindACredentialStillDecidesItsProposal(t *testing.T) {
 	lender := ids.NewV7()
 	passport := ids.From[ids.PassportKind](lender)
 	human := principal.Principal{Type: principal.PrincipalHuman, UserID: lender}
-	if err := agentMayDecide(human, row{Kind: "advance_deal", PassportID: &passport}, true, ownReleaseRefused); err != nil {
+	if err := agentMayDecide(context.Background(), human, row{Kind: "advance_deal", PassportID: &passport}, true, ownReleaseRefused); err != nil {
 		t.Fatalf("a human was refused a proposal their own credential staged: %v", err)
 	}
 }

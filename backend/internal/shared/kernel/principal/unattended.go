@@ -14,5 +14,6 @@ func WithUnattended(ctx context.Context) context.Context {
 
 func Unattended(ctx context.Context) bool {
 	value, ok := ctx.Value(unattendedKey{}).(bool)
-	return ok && value
+	_, running := AgentRunID(ctx)
+	return running || ok && value
 }
