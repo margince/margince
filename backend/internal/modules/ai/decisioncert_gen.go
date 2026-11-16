@@ -5,6 +5,12 @@
 package ai
 
 var decisionCertified = map[DecisionCertKey]DecisionCert{
+	// records/capture_confidentiality_verdict/decision_thread_gemini_decision_gemini-decision-1_cloud_frontier.json
+	{Task: "capture_confidentiality_verdict", Site: "thread", Provider: "gemini_decision", Model: "gemini-decision-1"}: {PromptVersion: "pf7da57b4a7315366fe502ff398b3035e", CorpusVersion: "v1"},
+	// records/capture_counterparty_verdict/decision_verdict_gemini_decision_gemini-decision-1_cloud_frontier.json
+	{Task: "capture_counterparty_verdict", Site: "verdict", Provider: "gemini_decision", Model: "gemini-decision-1"}: {PromptVersion: "p2b1e2acaf7899fc2c9272b4ac16a7d8a", CorpusVersion: "v1"},
+	// records/site_triage/decision_triage_gemini_decision_gemini-decision-1_cloud_frontier.json
+	{Task: "site_triage", Site: "triage", Provider: "gemini_decision", Model: "gemini-decision-1"}: {PromptVersion: "pcb8f06d8051b9da26e24b30ce2407cc7", CorpusVersion: "v1"},
 	// records/site_triage/decision_triage_jev_compatible_typesafe_jev-1.13_cloud_frontier.json
 	{Task: "site_triage", Site: "triage", Provider: "jev_compatible", Model: "typesafe/jev-1.13"}: {PromptVersion: "pcb8f06d8051b9da26e24b30ce2407cc7", CorpusVersion: "v1"},
 }

@@ -29,15 +29,15 @@ func selectDecider(lane DecisionsConfig, keys config.Lookup) (*decisionClient, e
 
 // selectDeciderOn is selectDecider with the transport supplied, the seam a
 // test binds the client to an httptest server through. Every decision adapter
-// speaks one wire, so the recipe is the registry row — its default endpoint
-// and its key — and no per-provider switch. The binding's base_url is the full
-// endpoint: nothing is appended to it.
+// speaks one wire, so the recipe is the registry row (its default endpoint, its
+// key and its dialect) and no per-provider switch. The binding's base_url is
+// the full endpoint: nothing is appended to it.
 func selectDeciderOn(lane DecisionsConfig, keys config.Lookup, httpc *http.Client) (*decisionClient, error) {
 	d, known := providerByName(lane.Provider)
 	if !known || !d.caps.has(capDecision) {
 		return nil, fmt.Errorf("ai: unknown decision provider %q (have: %s)", lane.Provider, strings.Join(DecisionProviders(), ", "))
 	}
-	client := &decisionClient{http: httpc, url: defaulted(lane.BaseURL, d.defaultEndpoint)}
+	client := &decisionClient{http: httpc, url: defaulted(lane.BaseURL, d.defaultEndpoint), dialect: d.decisionDialect}
 	if d.key != nil {
 		client.apiKey = cloudKey(d.name, keys)
 		if client.apiKey == "" && !d.keyOptional {

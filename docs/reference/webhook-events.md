@@ -56,6 +56,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`approval.requested`](#approvalrequested) | approval | 1 |
 | [`attachment.archived`](#attachmentarchived) | attachment | 1 |
 | [`attachment.created`](#attachmentcreated) | attachment | 1 |
+| [`attachment.restored`](#attachmentrestored) | attachment | 1 |
 | [`attachment.updated`](#attachmentupdated) | attachment | 1 |
 | [`audit.appended`](#auditappended) | audit | 1 |
 | [`coldstart.accepted`](#coldstartaccepted) | approval | 1 |
@@ -370,6 +371,17 @@ Payload for attachment.created. A file was uploaded against a record. The attach
 | `data.content_type` | string | no | The MIME type as stored, or null where the upload declared none. |
 | `data.parent_id` | string (uuid) | yes | The record the file hangs off. A subscriber routes on this rather than on the attachment. |
 | `data.parent_type` | string | yes | The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity \| contact \| company \| deal \| lead \| contract). |
+
+### `attachment.restored`
+
+Record: `attachment` · version 1
+
+Payload for attachment.restored. An archived file is back in the record's listings, because the source that listed it lists it again. It is the undo of attachment.archived for the same file, not a new file, so a subscriber that counts uploads does not count it twice. It carries the same shape as the other three, with the same omissions.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.parent_id` | string (uuid) | yes | The record the file hangs off. |
+| `data.parent_type` | string | yes | The kind of record the file hangs off. |
 
 ### `attachment.updated`
 

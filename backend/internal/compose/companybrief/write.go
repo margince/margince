@@ -17,6 +17,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -26,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // Completer is the model seam: the summarize lane, or nil.
@@ -96,7 +99,7 @@ func perRecordSentences[T any](
 // not a record the reader can open, and pretending otherwise would invent a
 // citation to make a recommendation look grounded.
 const briefSystem = `You write a pre-meeting account briefing for a salesperson, from a JSON summary of one account in their CRM.
-Return ONLY a JSON object: {"sections":[{"kind":"snapshot|fit|health|activity|next_step","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"deal|activity|contact|company|fact","entity_id":"<the record's ref, such as d1>"}]}]}]}.
+Return ONLY a JSON object: {"sections":[{"kind":"snapshot|fit|health|activity|next_step","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"deal|activity|contact|company","entity_id":"<the record's ref, such as d1>"}]}]}]}.
 The sections answer, in order: what this company is; why it matters to US; how the relationship stands; what actually happened; what to do next. Omit a section you have nothing real to say in.
 If no confirmed company context is given, omit fit: why this account matters to us is judged against our own profile, and without it the reason is invented.
 Label every sentence. A FACT restates what the summary says and cites the record it came from. An ASSESSMENT is a judgment you draw by combining the summary with the company context — say it plainly, and cite the records that support it. A RECOMMENDATION is one concrete move; cite the account-side record that motivates it.
@@ -167,7 +170,26 @@ func accountEvidence(companyID string) []Evidence {
 // knowing what we sell (see Input.withoutProfile). What keeps that honest is
 // the nature label on every claim, not withholding the text.
 func BriefRequest(in Input, lang string) model.Request {
-	return groundedRequest(briefSystemFor, in, lang)
+	req := groundedRequest(briefSystemFor, in, lang)
+	req.ResponseSchema = briefSchema()
+	return req
+}
+
+// briefSchema is the reply ParseBriefSections reads.
+func briefSchema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("sections", schema.Array(schema.Record(
+			schema.Field("kind", schema.Enum(briefSectionOrder...)),
+			schema.Field("sentences", schema.Array(schema.Record(
+				schema.Field("text", schema.String()),
+				schema.Field("nature", schema.Enum(slices.Sorted(maps.Keys(knownNature))...)),
+				schema.Field("evidence", schema.Array(schema.Record(
+					schema.Field("entity_type", schema.Enum(citeCompany, citeDeal, citeActivity, citeContact)),
+					schema.Field("entity_id", schema.String()),
+				))),
+			))),
+		))),
+	))
 }
 
 // groundedRequest is the one request shape both of this package's sites send:

@@ -6,8 +6,10 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.transcript_audience":
+    "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile":
-    "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
+    "Entfernt Unternehmenswerte, deren Termin nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
   "homeRepair.reason.taskChanged":
@@ -1816,7 +1818,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.deliveryUnknown":
     "Der Server hat keine Einladung zurückgegeben. Frage bei der organisierenden Person nach, bevor du es erneut versuchst.",
   "scheduling.personalGuest":
-    "Diese Einladung richtet sich an die Person, die diesen Link erhalten hat. Für die Besprechung wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
+    "Diese Einladung richtet sich an die Person, die diesen Link erhalten hat. Für den Termin wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
   "scheduling.proposalGreeting": "Hallo,",
   "scheduling.proposalChoose":
     "Wähle hier eine Zeit oder finde einen anderen Termin:",
@@ -1934,7 +1936,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Kalender verbunden. Ein verbundenes Postfach bringt seinen Kalender nicht mit.",
   "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
-  "scheduling.location": "Ort oder Besprechungslink",
+  "scheduling.location": "Ort oder Terminlink",
   "scheduling.duration": "Termindauer",
   "scheduling.noticeHelp":
     "24 Stunden bedeutet mindestens einen vollen Tag im Voraus.",
@@ -2698,10 +2700,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
   "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
   "history.field.meeting_documents_added":
-    "Besprechungsnotizen aus dem Kalender verknüpft",
+    "Terminnotizen aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
   "history.field.meeting_guests_removed":
-    "Gäste an ihre eigene Besprechung zurückgegeben",
+    "Gäste an ihren eigenen Termin zurückgegeben",
   "history.field.guest_answers_changed":
     "Antworten der Gäste aus dem Kalender aktualisiert",
   "history.field.guests_left_out": "Nicht aufgeführte Gäste",
@@ -2885,6 +2887,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.help.releaseNotes": "Versionshinweise",
   "shell.help.licenses": "Lizenzen der Web-App",
   "shell.help.devBuild": "Entwicklungs-Build",
+  "shell.help.devBuildRevision": "Entwicklungs-Build · {revision}",
   "shell.shortcuts.anywhere": "Überall",
   "shell.shortcuts.search": "Suche öffnen",
   "shell.shortcuts.sidebar": "Seitenleiste ein- oder ausblenden",
@@ -7055,8 +7058,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.agenda.leads_other": "{count} Leads",
   "brief.agenda.deals_at_risk_one": "{count} Deal mit Handlungsbedarf",
   "brief.agenda.deals_at_risk_other": "{count} Deals mit Handlungsbedarf",
-  "brief.agenda.meetings_one": "{count} Besprechung",
-  "brief.agenda.meetings_other": "{count} Besprechungen",
+  "brief.agenda.meetings_one": "{count} Termin",
+  "brief.agenda.meetings_other": "{count} Termine",
   "brief.agenda.tasks_one": "{count} Aufgabe",
   "brief.agenda.tasks_other": "{count} Aufgaben",
   "brief.agenda.decisions_one": "{count} Entscheidung",
@@ -8218,7 +8221,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
   "tasks.origin.analytics_decision":
-    "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
+    "Aus einem Vertriebstermin festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus dem letzten Termin fest.",
   "tasks.origin.overnight_reconcile":
     "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen hat.",
   "tasks.origin.commitment":
@@ -10530,8 +10533,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
-  "jobs.kind.meeting_profile_retract_sweep":
-    "Unternehmensfelder aus Besprechungen",
+  "jobs.kind.transcript_audience_sweep": "Lesende von Terminnotizen",
+  "jobs.kind.meeting_profile_retract_sweep": "Unternehmensfelder aus Terminen",
   "jobs.kind.initiative_enrolment_sweep":
     "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
@@ -12032,20 +12035,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGdocs": "Google Docs",
-  "connectors.cannotReadNotes": "Kann Besprechungsnotizen nicht lesen",
+  "connectors.cannotReadNotes": "Kann Terminnotizen nicht lesen",
   "connectors.reconnectToReadNotes":
-    "Neu verbinden, um Besprechungsnotizen zu lesen. Google hat keinen Zugriff auf die Notizdokumente erhalten.",
-  "connectors.bringsNotes": "Besprechungsnotizen",
-  "connectors.notes.name": "Besprechungsnotizen",
+    "Neu verbinden, um Terminnotizen zu lesen. Google hat keinen Zugriff auf die Notizdokumente erhalten.",
+  "connectors.bringsNotes": "Terminnotizen",
+  "connectors.notes.name": "Terminnotizen",
   "connectors.notes.desc":
     "Die Notizen und Transkripte, die Google Meet schreibt, werden aus Google Docs gelesen und am Termin abgelegt.",
-  "connectors.notes.connect": "Besprechungsnotizen verbinden",
-  "connectors.notes.stop": "Besprechungsnotizen nicht mehr lesen",
-  "connectors.notes.stopTitle": "Besprechungsnotizen nicht mehr lesen?",
+  "connectors.notes.connect": "Terminnotizen verbinden",
+  "connectors.notes.stop": "Terminnotizen nicht mehr lesen",
+  "connectors.notes.stopTitle": "Terminnotizen nicht mehr lesen?",
   "connectors.notes.stopBody":
     "Margince liest die Notizen von Google Meet nicht mehr. E-Mail und Kalender laufen weiter, und Notizen an Terminen bleiben erhalten.",
   "connectors.notes.otherAccount":
-    "Die Besprechungsnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinde die Besprechungsnotizen daher mit {calendar}.",
+    "Die Terminnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinde die Terminnotizen daher mit {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
@@ -13563,7 +13566,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.group.inquiries": "Neue Anfragen",
   "auto.group.deals": "Deals",
   "auto.group.customers": "Kunden",
-  "auto.group.meetings": "Besprechungen",
+  "auto.group.meetings": "Termine",
   "auto.group.lists": "Listen",
   "auto.instances": "Eingerichtete Automatisierungen",
   "auto.instances.empty":
@@ -15972,7 +15975,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.redirectCopiedFor": "URI für {purpose} kopiert",
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
-  "oauthApp.redirect.documents_connect": "Besprechungsnotizen",
+  "oauthApp.redirect.documents_connect": "Terminnotizen",
   "oauthApp.redirect.sign_in": "Anmeldung",
   "oauthApp.redirect.extension_connect": "Verbinden",
   "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
@@ -17778,6 +17781,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.attachment.archived.label": "Datei archiviert",
   "webhooks.event.attachment.archived.when":
     "Eine Datei an einem Datensatz wird archiviert.",
+  "webhooks.event.attachment.restored.label": "Datei wiederhergestellt",
+  "webhooks.event.attachment.restored.when":
+    "Eine archivierte Datei ist wieder an einem Datensatz.",
   "webhooks.eventGroup.projects": "Projekte",
   "webhooks.event.project.created.label": "Projekt erstellt",
   "webhooks.event.project.created.when":
@@ -21128,6 +21134,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Integrierter Testanbieter",
@@ -21470,13 +21477,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
   "activity.notes.connectHint":
-    "Notizen sind angehängt. Verbinde Besprechungsnotizen, um sie zu lesen.",
+    "Notizen sind angehängt. Verbinde Terminnotizen, um sie zu lesen.",
   "activity.notes.otherAccount":
-    "Notizen sind angehängt. Verbinde Besprechungsnotizen mit dem Google-Konto deines Kalenders.",
-  "captureConcern.notesGrant":
-    "Besprechungsnotizen können nicht gelesen werden",
+    "Notizen sind angehängt. Verbinde Terminnotizen mit dem Google-Konto deines Kalenders.",
+  "captureConcern.notesGrant": "Terminnotizen können nicht gelesen werden",
   "captureConcern.notesAccount":
-    "Besprechungsnotizen benötigen dasselbe Google-Konto wie der Kalender",
+    "Terminnotizen benötigen dasselbe Google-Konto wie der Kalender",
   "captureConcern.reauth": "Erneute Verbindung erforderlich",
   "captureConcern.error": "Verbindungsfehler",
   "captureConcern.failing": "Synchronisierung schlägt fehl",
@@ -21540,7 +21546,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.acceptNeedsChoice":
     "Verfügbar, sobald unter Kalender ein Kalender für Buchungen gespeichert ist.",
   "scheduling.col.link": "Link",
-  "scheduling.offeredLengths": "Weitere Besprechungsdauern",
+  "scheduling.offeredLengths": "Weitere Termindauern",
   "scheduling.offeredLengthsHelp":
     "Minuten durch Kommas trennen, zum Beispiel 30, 45, 60. Die Standarddauer bleibt verfügbar.",
   "scheduling.col.length": "Dauer",
@@ -21803,6 +21809,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.guide": "Routing-Leitfaden ↗",
   "aiServing.blocked.decisions":
     "Das Entscheidungsmodell antwortet über den Entscheidungs-Endpunkt von OpenRouter, der keinen Routing-Block annimmt. Das Zeitlimit des Entscheidungsmodells wird pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} stellt das Entscheidungsmodell selbst bereit, daher gilt kein Host-Routing. Das Zeitlimit wird pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.blocked.provider":
     "Host-Routing gilt nur für OpenRouter. {provider} stellt dieses Modell selbst bereit. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.blocked.host":
@@ -22147,7 +22155,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.summarize": "Datensatzzusammenfassung",
   "aiTask.name.tag_suggest": "Tag-Vorschläge",
   "aiTask.name.transcript": "Transkriptauswertung",
-  "aiTask.name.transcript_propose": "Erkennung von Besprechungsaufgaben",
+  "aiTask.name.transcript_propose": "Erkennung von Aufgaben aus Terminen",
   "aiTask.name.voice_build": "Erstellung der Voice DNA",
   "aiTask.name.weekly_learnings": "Erkenntnisse der letzten Woche",
   "aiTask.name.weekly_review": "Wöchentlicher Rückblick",
@@ -22411,7 +22419,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.assessment.refresh": "Einschätzung erneuern",
   "analytics.assessment.retry": "Erneut versuchen",
   "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",
-  "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
+  "analytics.decisions.title": "Entscheidungen aus dem letzten Termin",
   "analytics.decisions.purpose":
     "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
   "analytics.decisions.record": "Entscheidung festhalten",

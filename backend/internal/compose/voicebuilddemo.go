@@ -58,15 +58,11 @@ func voiceDemoDraftRequest(personality string, artifact ai.VoiceArtifact) model.
 	return model.Request{
 		System:         voiceDemoDraftSystemFor(fence),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: profileBlock + "\n\n" + voiceDemoTask}},
-		MaxTokens:      voiceDemoDraftMaxTokens,
+		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: replyDraftSchema,
 		SecretStripper: ai.NewSecretStripper(),
 	}
 }
-
-// voiceDemoDraftMaxTokens bounds one demonstration draft: a subject and a short
-// body, which is what the profile card shows.
-const voiceDemoDraftMaxTokens = 1200
 
 // demonstrationDraft asks for ONE draft in the built voice, for a corpus that
 // could spare no sample to score against.

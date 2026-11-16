@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
@@ -2796,6 +2797,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.help.releaseNotes": "Ghi chú phát hành",
   "shell.help.licenses": "Giấy phép ứng dụng web",
   "shell.help.devBuild": "Bản dựng phát triển",
+  "shell.help.devBuildRevision": "Bản dựng phát triển · {revision}",
   "shell.shortcuts.anywhere": "Mọi nơi",
   "shell.shortcuts.search": "Mở tìm kiếm",
   "shell.shortcuts.sidebar": "Hiện hoặc ẩn thanh bên",
@@ -10241,6 +10243,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ghi dữ liệu nhập",
   "jobs.kind.import_undo": "Hoàn tác lượt nhập",
   "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
+  "jobs.kind.transcript_audience_sweep": "Quyền xem ghi chú cuộc họp",
   "jobs.kind.meeting_profile_retract_sweep": "Trường công ty từ cuộc họp",
   "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
   "jobs.kind.intro_expiry": "Hết hạn lời giới thiệu",
@@ -17318,6 +17321,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.attachment.archived.label": "Đã chuyển tệp vào kho lưu trữ",
   "webhooks.event.attachment.archived.when":
     "Tệp của một hồ sơ được chuyển vào kho lưu trữ.",
+  "webhooks.event.attachment.restored.label": "Đã khôi phục tệp",
+  "webhooks.event.attachment.restored.when":
+    "Một tệp đã lưu trữ trở lại trên hồ sơ.",
   "webhooks.eventGroup.projects": "Dự án",
   "webhooks.event.project.created.label": "Đã tạo dự án",
   "webhooks.event.project.created.when": "Một dự án được mở cho một công ty.",
@@ -20579,6 +20585,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.geminiVertex": "Gemini trên Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Tương thích Jev",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Nhà cung cấp thử nghiệm tích hợp",
@@ -21225,6 +21232,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.guide": "Hướng dẫn định tuyến ↗",
   "aiServing.blocked.decisions":
     "Mô hình quyết định trả lời qua endpoint decisions của OpenRouter, endpoint này không nhận khối định tuyến. Thời gian chờ đặt theo từng tác vụ trong mục Tác vụ AI.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} tự phục vụ mô hình quyết định, nên định tuyến máy chủ không áp dụng. Thời gian chờ đặt theo từng tác vụ trong mục Tác vụ AI.",
   "aiServing.blocked.provider":
     "Định tuyến máy chủ chỉ áp dụng cho OpenRouter. {provider} tự phục vụ mô hình này. Mức suy nghĩ và thời gian chờ vẫn đặt theo từng tác vụ trong mục Tác vụ AI.",
   "aiServing.blocked.host":
