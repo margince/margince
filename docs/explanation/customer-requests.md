@@ -55,7 +55,7 @@ The classifier also copies the ask word for word from the mail (`owedverdict.Ver
 keeps the text only when it is found in the mail itself, and stores it with the verdict in
 `activity.owed_ask`. The reminder's body then reads `Anna Weber asked: "…"`, whichever pass files
 it, so the Home card names who asked and what, with no model call on Home. Erasing the mail clears
-the ask with the body.
+the ask with the body, and erases the reminder that quotes it (`eraseRequestReminders`).
 
 Each verdict records the rule it was reached under. A `still_owed` verdict from an older rule is judged
 again, and the title it gave a reminder may change once more.
