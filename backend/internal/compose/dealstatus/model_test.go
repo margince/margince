@@ -8,7 +8,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // inputWithTimeline is one deal and two timeline rows, the shape every filter
@@ -421,5 +423,32 @@ func TestTheMoveReasonKeepsItsOwnBound(t *testing.T) {
 		story: []map[string]any{line(overlong, "act-1")},
 	}), in); err != nil {
 		t.Errorf("a section sentence within its own bound was refused: %v", err)
+	}
+}
+
+func TestTheStatusRequestSendsTheShapeItsParserReads(t *testing.T) {
+	in := inputWithTimeline()
+	req := StatusRequest(in, string(textlang.English))
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the status request carries no response schema, so a decoder may write any shape")
+	}
+	answer := func(standing string) string {
+		return promptref.Rewrite(reply(draft{
+			story:      []map[string]any{line("The offer was promised on the call and never sent.", "act-1")},
+			blocker:    []map[string]any{},
+			buyer:      []map[string]any{line("They asked for the price before anything else.", "act-2")},
+			standing:   standing,
+			because:    []map[string]any{line("The last contact was the call, and nobody followed it.", "act-1")},
+			moveReason: []map[string]any{line("Sending it is what the call promised.", "act-1")},
+		}), refsOf(in).tables()...)
+	}
+	if got, err := ParseStatus(answer("drifting"), in); err != nil || got.Verdict.Standing != "drifting" {
+		t.Fatalf("the parser read the well-formed reply as %+v (%v), want a drifting card", got.Verdict, err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, answer("drifting")); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, answer("promising")); err == nil {
+		t.Error("the schema admits a standing the parser drops")
 	}
 }
