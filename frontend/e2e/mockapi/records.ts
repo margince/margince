@@ -449,9 +449,11 @@ export const advanceDeal: Handler = (
     version: current + 1,
   };
   // The win starts the delivery it was sold for, in the same write.
-  projectState.startDelivery(
-    dealPatches[target.id]?.project_id ?? target.project_id,
-  );
+  if (advance.status === "won") {
+    projectState.startDelivery(
+      dealPatches[target.id]?.project_id ?? target.project_id,
+    );
+  }
   return json({ ...target, ...dealPatches[target.id] });
 };
 

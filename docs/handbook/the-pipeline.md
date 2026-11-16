@@ -12,8 +12,9 @@ that screen names which ladder you are looking at.
 ### How do I move a deal to the next stage?
 To move a deal to another stage in Margince, open the deal from **Deals** and click the stage you want on its **Stage** ladder. Or use the **…** menu on its card on the **Board** view, or drag the card to another column.
 1. Open **Deals** in the sidebar and open the deal, or switch the list to **Board**.
-2. Click the stage you want on the ladder. On the board, open **More actions for** the deal and choose **Move to** the next stage, or **Move to stage** and pick one. You can also drag the card onto that stage's column.
-3. A move to a won or lost stage asks **Move to {stage}?**. Press **Confirm**, or **Cancel**.
+2. Click the stage you want on the ladder.
+3. On the board, open the card's **…** menu. Choose **Move to** the next stage, or **Move to stage** and pick one. You can also drag the card onto that stage's column.
+4. A move to a won or lost stage asks **Move to {stage}?**. Press **Confirm**, or **Cancel**.
 
 The move is saved at once ("Moved to {stage}"); there is no save button. The menu works with the keyboard and on a touch screen. Also called: advance a deal, change deal stage, progress an opportunity.
 
@@ -127,18 +128,24 @@ stage changes still read well. Deals still on it have to move first.
 ## Moving a deal
 
 A deal moves four ways. Drag it on the board, or click a stage on the ladder on
-the deal page. Or open the **…** menu on its card on the board. Or select several and use **Move to stage**.
-Margince saves the move at once and says so ("Moved to Discovery"), with no save button.
+the deal page. Or open the card's **…** menu on the board. Or select several and
+use **Move to stage**. Margince saves the move at once and says so
+("Moved to Discovery"), with no save button.
 
-The card menu is the way to move a deal with the keyboard or a touch screen. It offers **Move to** the next
-stage and **Move to stage**, which lets you search for any stage of the pipeline. **Mark won** and
-**Mark lost** show only when the pipeline has one stage of that type, and they ask the same confirmation a drop
-asks. On a won or lost deal the move items are grey: "This deal is closed. Reopen it on its page to move it."
-Someone who may not change the deal sees no move items. The menu also holds **Deal summary**, **Write email**,
-**Add task**, **Copy link**, **Add to Shortlist** and **Archive deal**. On an archived deal it holds only
-**Deal summary** and **Copy link**. If two colleagues move the same deal at once, the second is refused, so it does not
-write over the first. A deal can only move to a stage in its own pipeline, and
-you close deals one at a time.
+The card menu is the way to move a deal with the keyboard or a touch screen. It
+offers **Move to** the next stage and **Move to stage**, which lets you search
+for any stage of the pipeline. **Mark won** and **Mark lost** show only when the
+pipeline has one stage of that type. They ask the same confirmation a drop asks.
+
+On a won or lost deal the move items are grey: "This deal is closed. Reopen it
+on its page to move it." Someone who may not change the deal sees no move items.
+The menu also holds **Deal summary**, **Write email**, **Add task**,
+**Copy link**, **Add to Shortlist** and **Archive deal**. On an archived deal it
+holds only **Deal summary** and **Copy link**.
+
+If two colleagues move the same deal at once, the second is refused, so it does
+not write over the first. A deal can only move to a stage in its own pipeline,
+and you close deals one at a time.
 
 ## Closing a deal
 
