@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
   "worklist.relationships.optional": "Kết nối lại tùy chọn",

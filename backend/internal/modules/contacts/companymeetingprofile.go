@@ -23,6 +23,26 @@ import (
 // own audience decides who reads what was said.
 const CompanySourceMeeting = "meeting"
 
+// meetingTranscriptSharedSQL is a transcript, alias t, that may fill a company
+// field: every reader may open it, and nothing in it was restricted, archived
+// or redacted.
+const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at IS NULL AND t.archived_at IS NULL
+	AND cardinality(t.redacted_fields) = 0`
+
+// StaleMeetingTranscriptsTx names up to limit transcripts whose company fields
+// stand although the transcript may no longer fill them: it was narrowed,
+// restricted, archived or redacted since. ApplyMeetingProfileTx retracts them.
+func StaleMeetingTranscriptsTx(ctx context.Context, tx pgx.Tx, limit int) ([]ids.ActivityID, error) {
+	rows, err := tx.Query(ctx, `SELECT DISTINCT f.source_activity_id FROM company_profile_field f
+		JOIN activity t ON t.id = f.source_activity_id
+		WHERE f.source = 'meeting' AND NOT (`+meetingTranscriptSharedSQL+`)
+		ORDER BY f.source_activity_id LIMIT $1`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("read the meetings whose company fields no longer stand: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.ActivityID])
+}
+
 // MeetingProfileField is one field a meeting states about the company.
 type MeetingProfileField struct {
 	Field      string
@@ -41,8 +61,8 @@ func ApplyMeetingProfileTx(
 		return err
 	}
 	var shared bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE id = $1
-		   AND audience = 'workspace' AND restricted_at IS NULL AND archived_at IS NULL)`, transcript.UUID).Scan(&shared); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity t WHERE t.id = $1 AND `+meetingTranscriptSharedSQL+`)`,
+		transcript.UUID).Scan(&shared); err != nil {
 		return fmt.Errorf("read the transcript's audience: %w", err)
 	}
 	if !shared {
