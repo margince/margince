@@ -182,7 +182,7 @@ func copyTemplate(ctx context.Context) (Database, error) {
 	live[name] = true
 	databasesMu.Unlock()
 	if err := prepareCopy(ctx, db); err != nil {
-		return Database{}, errors.Join(err, release(context.Background(), "", db))
+		return Database{}, errors.Join(err, release(ctx, "", db))
 	}
 	return db, nil
 }
@@ -217,7 +217,7 @@ func adminPool(ctx context.Context, ownerDSN string) (*pgxpool.Pool, error) {
 			adminErr = err
 			return
 		}
-		admin, adminErr = OwnPoolWith(context.WithoutCancel(ctx), maintenance, func(cfg *pgxpool.Config) { cfg.MaxConns = 1 })
+		admin, adminErr = OwnPoolWith(ctx, maintenance, func(cfg *pgxpool.Config) { cfg.MaxConns = 1 })
 	})
 	return admin, adminErr
 }
@@ -242,7 +242,7 @@ func withOwner(ctx context.Context, db Database, work func(context.Context, *pgx
 	if err != nil {
 		return fmt.Errorf("connecting to %s: %w", db.Name, err)
 	}
-	defer func() { err = errors.Join(err, owner.Close(context.Background())) }()
+	defer func() { err = errors.Join(err, owner.Close(ctx)) }()
 	return work(ctx, owner)
 }
 
@@ -292,17 +292,23 @@ const (
 // backend exits shortly after, and a forced `DROP DATABASE` sleeps 100 ms each
 // time it still finds one.
 func awaitDisconnect(ctx context.Context, name string) error {
-	deadline := time.Now().Add(disconnectWait)
+	deadline := time.After(disconnectWait)
+	poll := time.NewTicker(disconnectPoll)
+	defer poll.Stop()
 	for {
 		var open bool
 		if err := admin.QueryRow(ctx,
 			`SELECT EXISTS (SELECT 1 FROM pg_stat_activity WHERE datname = $1)`, name).Scan(&open); err != nil {
 			return fmt.Errorf("checking for sessions on %s: %w", name, err)
 		}
-		if !open || time.Now().After(deadline) {
+		if !open {
 			return nil
 		}
-		time.Sleep(disconnectPoll)
+		select {
+		case <-deadline:
+			return nil
+		case <-poll.C:
+		}
 	}
 }
 
