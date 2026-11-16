@@ -42,8 +42,8 @@ export function loginErrorKey(
   return "auth.errUnreachable";
 }
 
-// A deep link the user followed stays; only a bare entry lands on the Brief,
-// in its place, so Back does not open the bare entry again.
+// A followed deep link stays. Only a bare entry lands on the Brief, in its
+// place, so Back skips it.
 export function landSignedIn(onPhase: (phase: AuthPhase) => void) {
   onPhase("success");
   if (isBareEntry(globalThis.location?.hash ?? "")) {

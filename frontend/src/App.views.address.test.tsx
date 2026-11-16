@@ -22,8 +22,8 @@ vi.mock("./lib/historydepth", async (importOriginal) => ({
   traverseTo: vi.fn(() => false),
 }));
 
-// Each screen this suite routes to is a page that shows the address it reads,
-// carries a draft, and hands its dial writer out so a test can write late.
+// Each routed screen shows the address it reads, carries a draft, and exposes
+// its dial writer so a test can write late.
 const writers = new Map<string, (next: UrlParams) => void>();
 
 vi.mock("./App.screens", async (importOriginal) => ({

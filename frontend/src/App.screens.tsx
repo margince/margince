@@ -348,17 +348,12 @@ export function ShareRoute({
   );
 }
 
-// The reset form itself, so the two places that answer #/reset-password render
-// one form. The first is `App`, ahead of the session gate and inside the
-// pre-session frame. The second is the routed table, which is total over
-// `Screen` and so has an entry for every address, this one included.
-//
-// A stale or bare reset link has no token, so the embedded form renders as an
-// ordinary login rather than ResetForm. LoginForm's onSuccess restores the
-// originally requested route, so it never navigates to the Brief for a
-// non-empty hash, and this hash is never empty. Without a navigate here, a
-// sign-in from this route would leave the reader signed in but still looking
-// at a login form. It replaces, so Back does not reopen the spent reset link.
+// One form for both places that answer #/reset-password: `App`, ahead of the
+// session gate, and the routed table, which has an entry for every `Screen`.
+// A stale or bare link has no token, so it renders as an ordinary login.
+// LoginForm restores the requested route only for a non-empty hash, and this
+// hash is never empty, so sign-in needs the navigate here. It replaces, so Back
+// does not reopen the spent reset link.
 export function ResetRoute() {
   return <AuthScreen onAuthed={() => navigateReplacing({ screen: "home" })} />;
 }

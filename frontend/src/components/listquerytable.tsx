@@ -284,9 +284,9 @@ export function ListTable<Row>({
     }
   }, [query.q]);
 
-  // The reader left with a word still settling, and the word must not land on
-  // where they went: another entry (Back, Forward, a link), or another page the
-  // app replaced in place (a redirect). A dial this list turns keeps both.
+  // A word still settling when the reader leaves must not land on where they
+  // went. That covers another entry (Back, Forward, a link) and a page replaced
+  // in place (a redirect). A dial this list turns keeps both.
   useEffect(() => {
     let entry = { hash: globalThis.location.hash, depth: entryDepth() };
     return watchAddress(() => {

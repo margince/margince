@@ -48,16 +48,10 @@ export function listAddress(screen: Screen): string {
 }
 
 /**
- * Leave a record for the screen before it.
- *
- * The installed app has no browser Back, so this is the only way out. The
- * record's own tabs are views of one page, so they are stepped over. With an
- * earlier screen of ours in history, history is the truest answer, because it
- * also brings back the list's filter and scroll offset. A record with none of
- * ours behind it goes to its list instead of out of the app.
- *
- * A press that finds the reader already off the record, or a traversal still
- * under way, is a second press for the same leave and does nothing.
+ * Leave a record for the screen before it. The installed app has no browser
+ * Back. History is preferred because it restores the list's filter and scroll
+ * offset; with no earlier screen of ours, the record's list is the way out.
+ * A press while already off the record, or mid-traversal, is a repeat and does nothing.
  */
 export function leaveRecord(record: Route): void {
   const onRecord = (hash: string) => {

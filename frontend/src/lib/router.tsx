@@ -230,18 +230,11 @@ function takeFromHash(): boolean {
     return false;
   }
   held.set(screen, carried);
-  // replaceState, not an assignment to location.hash: an assignment adds a
-  // history entry and leaves the credential in the one behind it, so the leak
-  // would survive a Back press. It fires no hashchange either, which is what
-  // lets the subscription below take the credential before it tells React the
-  // address moved — the snapshot React then reads is already the scrubbed one.
-  //
-  // The document's own query is kept: the credential is in the fragment, so
-  // nothing here needs `?…` gone, and rewriting it away discarded whatever else
-  // the URL was carrying (Storybook's `?id=<story>`, which left a reload of the
-  // canvas on no story at all).
-  //
-  // The entry's state goes along: it holds the entry's depth and scroll stamps.
+  // replaceState, not a hash assignment: that adds an entry and leaves the
+  // credential behind it, one Back press away. It fires no hashchange, so the
+  // subscription scrubs the credential before React reads the address.
+  // The document's own query is kept (Storybook's `?id=<story>` lives there).
+  // The entry's state goes along: it holds the depth and scroll stamps.
   const { pathname, search } = globalThis.location;
   globalThis.history.replaceState(
     globalThis.history.state,
@@ -408,11 +401,8 @@ export function useLiveHash(): string {
  * The whole address, as a value that changes when the reader navigates. Under
  * a routed screen it is the address that screen was drawn for.
  *
- * Exported because an address has two halves with two owners. The path names
- * what is on screen and is this module's. The query names which view of it (how
- * a list is narrowed, ordered and paged) and belongs to lib/urlstate.ts.
- * Both must re-render on the same announcement, and a second subscription to
- * the browser's events would be a second answer to where the reader is.
+ * Exported because the path is this module's and the query is lib/urlstate.ts's.
+ * Both must re-render on one announcement, not on a second browser subscription.
  */
 export function useHash(): string {
   const live = useLiveHash();

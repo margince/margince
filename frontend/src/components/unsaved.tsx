@@ -61,12 +61,12 @@ export function useGuardedLeave(
   const scope = useId();
   useUnsavedGuard(dirty && leaving === null, scope);
   const held = useHasUnsavedChanges(scope);
-  // The bar, not the address the page was drawn for: the move it sent is
-  // what this waits to see, while the page itself may still be held.
+  // Reads the bar, not the address the page was drawn for. The page may still be
+  // held while this waits for the move it sent.
   const hash = useLiveHash();
 
-  // The other draft's question can be answered Keep, which puts the address
-  // back with this page still mounted: its own draft is unsaved again.
+  // Another draft's question can be answered Keep. That puts the address back
+  // with this page still mounted, so its own draft is unsaved again.
   if (leaving?.sentTo !== undefined) {
     if (!leaving.arrived && hash === leaving.sentTo) {
       setLeaving({ ...leaving, arrived: true });
@@ -118,19 +118,11 @@ export function useBeforeUnload(dirty: boolean): void {
 }
 
 /**
- * Holds `children` steady while an unsaved edit is on screen and the address
- * changes underneath it.
- *
- * `address` is whatever the caller counts as "somewhere else" — in this app the
- * hash of the displayed route. When it changes and something is dirty, the guard
- * keeps rendering the address it was already showing and asks. Discarding shows
- * the new one; keeping sends the reader back to the one they were editing, which
- * is the only outcome that leaves their work where they can still save it.
+ * Holds `children` steady while an unsaved edit is on screen and the address changes underneath it.
+ * Discarding shows the new address; keeping sends the reader back, where their work can still be saved.
  * `samePlace` names a change that is not leaving, such as a dial turned in place.
- *
- * `onKeep` is how the caller puts the address back, because only the caller
- * knows what the address IS — this component holds content, not routes. It is
- * given the depth stamp of the history entry the held address was live on.
+ * `onKeep` puts the address back, because only the caller knows what an address is.
+ * It gets the depth stamp of the entry the held address was live on.
  */
 export function UnsavedGuard<Address extends string>({
   address,

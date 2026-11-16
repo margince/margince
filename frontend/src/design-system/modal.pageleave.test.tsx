@@ -12,8 +12,8 @@ import {
 import { replaceDial } from "../lib/urlstate";
 import { Modal } from "./modal";
 
-// A dialog the page holds in state has no address of its own, so the page
-// moving under it is the only sign that it now covers a different view.
+// A dialog held in page state has no address of its own. The page moving under
+// it is the only sign it now covers a different view.
 
 beforeEach(() => {
   globalThis.history.replaceState(null, "", "#/contacts/c1/overview");

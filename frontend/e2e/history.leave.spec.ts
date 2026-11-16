@@ -113,8 +113,8 @@ test("Back from another list returns to the page of the list the reader left", a
   ).toBeVisible();
 });
 
-// A settings form on an address with a fourth segment's worth of depth and a
-// query, so a Stay that puts back only part of the address shows.
+// The address has depth and a query, so a Stay that restores only part of it
+// shows.
 const retentionForm =
   "/#/settings/system-health/configuration?section=operations.retention.label";
 
@@ -237,8 +237,8 @@ const records = [
 
 type RecordWalk = (typeof records)[number];
 
-// Home, then the list by its rail link, then one record from it, then the
-// record's history tab: the walk a rep takes before reaching for the arrow.
+// Home, the list, one record, then its history tab. A rep walks this before
+// reaching for the arrow.
 async function openRecordHistory(page: Page, record: RecordWalk) {
   await page.goto("/#/home");
   await expect(page.getByRole("main")).toBeVisible();

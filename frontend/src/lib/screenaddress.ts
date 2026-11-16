@@ -4,10 +4,10 @@
 import { createContext, useContext, useLayoutEffect } from "react";
 
 /**
- * The whole address the routed screen around a component was drawn for. A
- * screen stays up past a move, while the next one loads or while a draft holds
- * it, and its reads must not see the address that replaced it. Null outside a
- * routed screen.
+ * The whole address the routed screen around a component was drawn for.
+ * A screen stays up past a move while the next loads or a draft holds it.
+ * Its reads must not see the address that replaced it. Null outside a routed
+ * screen.
  */
 export const ScreenAddress = createContext<string | null>(null);
 

@@ -26,8 +26,8 @@ export type Departure = Readonly<{
 
 /**
  * Notes where the reader is now. Call it from the action itself (the click,
- * the `mutate`, a mutation's `onMutate`), never from render: a render can be
- * older than the address the reader acted on.
+ * the `mutate`, a mutation's `onMutate`). Never call it from render, which can
+ * be older than the address the reader acted on.
  */
 export function fromHere(): Departure {
   const origin = globalThis.location.hash;

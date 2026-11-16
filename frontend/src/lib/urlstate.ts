@@ -153,10 +153,10 @@ export function replaceDial(key: string, value: string | undefined): void {
 /**
  * The dials the address carries, and the one way to change them.
  *
- * Under a routed screen the setter writes only while the bar is on that page,
- * checked at the write: a screen held past a move, or a save settling after the
- * reader left, would write into the entry they arrived on. It is stable while
- * the page is, so an effect keyed on it does not re-run for a dial.
+ * Under a routed screen the setter writes only while the bar is on that page.
+ * A screen held past a move, or a save settling after the reader left, would
+ * otherwise write into the entry they arrived on. It is stable while the page
+ * is, so an effect keyed on it does not re-run for a dial.
  */
 export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   const hash = useHash();
