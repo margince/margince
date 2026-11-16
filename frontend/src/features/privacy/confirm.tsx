@@ -12,7 +12,8 @@ import {
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { INTL_LOCALE } from "../../format/intllocale";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 import { LinkInvalidError, RateLimitedError } from "../settings/preferences";
 import {
@@ -60,6 +61,7 @@ export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
 // that pinned none falls back to this build's own sentence.
 function marketingQuestion(
   t: ReturnType<typeof useT>,
+  locale: Locale,
   served: components["schemas"]["ConfirmQuestion"] | undefined,
   controllerName: string | undefined,
 ) {
@@ -67,7 +69,8 @@ function marketingQuestion(
     served?.ask ??
     t("confirm.marketing.ask", {
       controller:
-        controllerName ?? sentenceStart(t("confirm.controllerFallback")),
+        controllerName ??
+        sentenceStart(t("confirm.controllerFallback"), locale),
     });
   return {
     ask,
@@ -79,6 +82,7 @@ function marketingQuestion(
 
 function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   const t = useT();
+  const { locale } = useLocale();
 
   const details = useQuery({
     queryKey: ["confirm-details", token],
@@ -129,6 +133,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   const record = card?.kind === "record_confirmation" ? card : undefined;
   const question = marketingQuestion(
     t,
+    locale,
     record?.question,
     record?.controller?.legal_name,
   );
@@ -391,6 +396,6 @@ function NewsQuestion({
 }
 
 /** A sentence that opens with a filled-in word starts with a capital. */
-export function sentenceStart(word: string): string {
-  return word.charAt(0).toLocaleUpperCase() + word.slice(1);
+export function sentenceStart(word: string, locale: Locale): string {
+  return word.charAt(0).toLocaleUpperCase(INTL_LOCALE[locale]) + word.slice(1);
 }
