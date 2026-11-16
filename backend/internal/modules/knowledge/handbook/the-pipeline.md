@@ -135,7 +135,8 @@ use **Move to stage**. Margince saves the move at once and says so
 The card menu is the way to move a deal with the keyboard or a touch screen. It
 offers **Move to** the next stage and **Move to stage**, which lets you search
 for any stage of the pipeline. **Mark won** and **Mark lost** show only when the
-pipeline has one stage of that type. They ask the same confirmation a drop asks.
+pipeline has one stage of that type, and the deal is not on it. They ask the same
+confirmation a drop asks.
 
 On a won or lost deal the move items are grey: "This deal is closed. Reopen it
 on its page to move it." Someone who may not change the deal sees no move items.
