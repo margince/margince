@@ -43,6 +43,7 @@ const card = (over: Partial<SubscriptionPage>): SubscriptionPage => ({
 const meta: Meta<typeof SubscriptionConfirmBody> = {
   title: "Signed out/Confirm your details/Subscription",
   component: SubscriptionConfirmBody,
+  parameters: { layout: "fullscreen" },
   decorators: [
     (Story) => (
       <StoryProviders>

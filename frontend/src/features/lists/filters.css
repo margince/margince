@@ -24,8 +24,7 @@
 }
 
 /* The page's name, with the one control the page reads from beside it. On a
- * phone the control drops under the name at full width, so four record types
- * still fit without scrolling sideways. */
+ * phone the control drops under the name at full width. */
 .filters-head {
   display: flex;
   align-items: flex-end;
@@ -45,10 +44,19 @@
   margin: 0;
 }
 
+/* A field's full width would wrap it under the name on a wide page. */
+.filters-head-picks .select-control {
+  inline-size: 16rem;
+  max-inline-size: 100%;
+}
+
 @media (max-width: 700px) {
   .filters-head-picks {
     flex-direction: column;
     align-items: stretch;
+  }
+  .filters-head-picks .select-control {
+    inline-size: auto;
   }
 }
 

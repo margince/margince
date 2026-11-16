@@ -17951,11 +17951,12 @@ export const en = {
   "consent.redirectsTo": "Margince will send the authorization back to {host}.",
   "consent.redirectsToLoopback":
     "That is an address on this computer, and this connection cannot prove which program is listening on it.",
-  "consent.scopeNote.read": "sees what you can see",
-  "consent.scopeNote.draft": "prepares messages for your review",
-  "consent.scopeNote.write": "creates, edits and archives records as you",
-  "consent.scopeNote.send": "sends messages as you, without asking first",
-  "consent.scopeNote.enrich": "runs AI work and buys contact data",
+  "consent.scopeNote.read": "Sees what you can see",
+  "consent.scopeNote.draft": "Prepares messages for your review",
+  "consent.scopeNote.write": "Creates, edits and archives records as you",
+  "consent.scopeNote.send": "Sends messages as you, without asking first",
+  "consent.scopeNote.enrich": "Runs AI work and buys contact data",
+  "consent.scopesLegend": "What it may do",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",
   "consent.preset.label": "Assistant permissions",
