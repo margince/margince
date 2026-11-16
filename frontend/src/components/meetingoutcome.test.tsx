@@ -12,12 +12,14 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { dueInstant } from "../format/calendarday";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
-import { MeetingOutcome } from "./meetingoutcome";
+import { meFixture } from "../testing/mefixture";
+import { MeetingOutcome, RecordMeetingOutcome } from "./meetingoutcome";
 import { writeMeetingOutcome } from "./taskactions.rowwrites";
 
 // The real writer, watched: the dialog must write through it, so a meeting's
@@ -45,7 +47,7 @@ afterEach(() => {
 
 // Records every request the card makes, and answers a PATCH as the server
 // does: with the meeting at its next version.
-function stubServer(sent: Sent[]) {
+function stubServer(sent: Sent[], meetingStatus = "booked") {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -57,6 +59,14 @@ function stubServer(sent: Sent[]) {
         ifMatch: request.headers.get("If-Match"),
         body: text === "" ? undefined : JSON.parse(text),
       });
+      if (request.method === "GET" && request.url.endsWith("/me")) {
+        return new Response(
+          JSON.stringify(
+            meFixture({ allow: { activity: ["read", "update"] } }),
+          ),
+          { status: 200, headers: { "content-type": "application/json" } },
+        );
+      }
       if (request.method === "GET") {
         return new Response(
           JSON.stringify({
@@ -66,7 +76,7 @@ function stubServer(sent: Sent[]) {
             body: "Agenda",
             occurred_at: "2026-07-06T09:00:00Z",
             occurred_precision: "instant",
-            meeting_status: "booked",
+            meeting_status: meetingStatus,
             version: 7,
             writable: true,
             offers_email: false,
@@ -84,7 +94,17 @@ function stubServer(sent: Sent[]) {
   );
 }
 
-function renderCard() {
+function renderCard(
+  card: ReactNode = (
+    <MeetingOutcome
+      id={MEETING_ID}
+      version={7}
+      title="Site visit"
+      invalidateKeys={[]}
+      cancellable
+    />
+  ),
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -92,13 +112,7 @@ function renderCard() {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
-          <MeetingOutcome
-            id={MEETING_ID}
-            version={7}
-            title="Site visit"
-            invalidateKeys={[]}
-            cancellable
-          />
+          {card}
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -132,7 +146,9 @@ describe("MeetingOutcome", () => {
     );
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText("What is the next step?")).toBeTruthy();
+    expect(
+      within(dialog).getByRole("heading", { name: "How did it go?" }),
+    ).toBeTruthy();
     await user.click(
       within(dialog).getByRole("button", { name: "Skip next step" }),
     );
@@ -242,6 +258,107 @@ describe("MeetingOutcome", () => {
             },
           },
         },
+      },
+    ]);
+  });
+
+  it("saves notes typed into It happened in the same held write", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "It happened: Site visit" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const notes = await within(dialog).findByRole("textbox", {
+      name: "Notes",
+    });
+    await user.clear(notes);
+    await user.type(notes, "Budget approved");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Skip next step" }),
+    );
+
+    expect(await screen.findByText("Meeting outcome recorded")).toBeTruthy();
+    expect(
+      sent.filter((request) => request.method === "PATCH").map((r) => r.body),
+    ).toEqual([{ meeting_status: "held", body: "Budget approved" }]);
+  });
+
+  it("spins only Did not happen while its write runs", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "Did not happen: Site visit" })
+          .getAttribute("aria-busy"),
+      ).toBe("true"),
+    );
+    for (const name of ["It happened: Site visit", "Add notes to Site visit"]) {
+      expect(
+        screen.getByRole("button", { name }).getAttribute("aria-busy"),
+      ).not.toBe("true");
+    }
+  });
+
+  it("lets a held meeting take its notes the day after, without answering it again", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent, "held");
+    renderCard(
+      <RecordMeetingOutcome
+        activity={{
+          id: MEETING_ID,
+          kind: "meeting",
+          subject: "Site visit",
+          body: "Agenda",
+          occurred_at: "2026-07-06T09:00:00Z",
+          occurred_precision: "instant",
+          meeting_status: "held",
+          awaiting_outcome: false,
+          is_done: false,
+          created_at: "2026-07-06T09:00:00Z",
+          updated_at: "2026-07-06T09:00:00Z",
+          version: 7,
+          writable: true,
+          offers_email: false,
+          source: "manual",
+          captured_by: "human:u1",
+        }}
+        invalidateKeys={[]}
+      />,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Edit notes on Site visit" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const notes = await within(dialog).findByRole("textbox", {
+      name: "Notes",
+    });
+    await user.clear(notes);
+    await user.type(notes, "Budget approved");
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    expect(await screen.findByText("Notes saved")).toBeTruthy();
+    expect(sent.filter((request) => request.method === "PATCH")).toEqual([
+      {
+        method: "PATCH",
+        url: `/v1/activities/${MEETING_ID}`,
+        ifMatch: "7",
+        body: { body: "Budget approved" },
       },
     ]);
   });
