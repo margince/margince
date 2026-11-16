@@ -143,8 +143,7 @@ type Rules struct {
 	ClaimsNeedProof []string
 
 	// NotClaims are phrases that hold a claim word and claim nothing, such as
-	// a closing greeting. They are taken out of a draft before its claims are
-	// sought.
+	// a closing greeting. The claim check skips them.
 	NotClaims []string
 
 	// ForeignAdvertiserNeedsLocalAgency says an advertiser not established in
@@ -194,11 +193,13 @@ type Rules struct {
 	// then pins no question, its page shows none and its submit takes none.
 	RecordConfirmationWithoutNews bool
 
-	// ConsentConfirmationNeedsRequest says a mail asking for consent to an
-	// advertising purpose may be sent only when the recipient's own request to
-	// subscribe is on record. Such a mail nobody requested is itself
-	// unsolicited advertising.
+	// ConsentConfirmationNeedsRequest says a mail asking for consent may be
+	// sent only when the recipient's own request to subscribe is on record. A
+	// mail asking for consent nobody requested is itself unsolicited.
 	ConsentConfirmationNeedsRequest bool
+
+	// ConsentRequestFirstFor are the purpose classes the rule above covers; empty covers all.
+	ConsentRequestFirstFor []PurposeClass
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -460,6 +461,9 @@ func (r Rules) Validate() error {
 		}
 	}
 	if err := r.validateClaims(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	if err := r.validateRequestFirstFor(); err != nil {
 		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 	}
 	return r.validateDisclosureLanguage()

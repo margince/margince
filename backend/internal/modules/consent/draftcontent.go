@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
-	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // The draft findings, in the vocabulary of the preview contract.
@@ -83,7 +82,9 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 			if !found {
 				continue
 			}
-			packFindings := draftFindings(rules, subject, body)
+			packFindings := draftFindings(contentRules{
+				language: rules.DisclosureLanguage, claims: rules.ClaimsNeedProof, notClaims: rules.NotClaims,
+			}, subject, body)
 			if rules.ForeignAdvertiserNeedsLocalAgency && sender != code {
 				packFindings = append(packFindings, foreignAdvertiser(code))
 			}
@@ -121,12 +122,18 @@ func foreignAdvertiser(country jurisdiction.Code) DraftFinding {
 	}
 }
 
+// contentRules are the fields of one pack's rules a draft is checked against.
+type contentRules struct {
+	language          string
+	claims, notClaims []string
+}
+
 // draftFindings checks one draft against one pack's content rules.
-func draftFindings(rules messagingrules.Rules, subject, body string) []DraftFinding {
+func draftFindings(rules contentRules, subject, body string) []DraftFinding {
 	var out []DraftFinding
-	language := rules.DisclosureLanguage
+	language := rules.language
 	text := norm.NFC.String(subject + "\n" + body)
-	if found := claimsIn(text, rules.ClaimsNeedProof, rules.NotClaims); len(found) > 0 && !statesProof(text) {
+	if found := claimsIn(text, rules.claims, rules.notClaims); len(found) > 0 && !statesProof(text) {
 		out = append(out, DraftFinding{
 			Requirement: DraftClaimWithoutProof,
 			Detail: fmt.Sprintf("the draft claims %q; state the proving document's name, number and date beside it",

@@ -223,8 +223,9 @@ user logged, a form the contact sent, or a mail the contact wrote. The core keep
 link and on the grant's proof row (`consent_event.subject_request_id`). The rule is read in
 `backend/internal/modules/consent/confirmrules.go`.
 
-The rule covers a request for consent to advertising: a purpose in a marketing class. A request for
-consent to correspondence advertises nothing, so a user may send it unasked. That is the request the
+The decree governs advertising, so the rule covers a request for consent to a purpose of the
+marketing class only (`ConsentRequestFirstFor`). A request for consent to correspondence advertises
+nothing, so a user may send it unasked. That is the request the
 **Ask for consent** button of the no-basis warning sends, and its proof row names no request of the
 contact's own.
 

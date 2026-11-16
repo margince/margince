@@ -6,13 +6,11 @@ package consent
 import (
 	"slices"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 var vietnameseClaims = []string{"nhất", "duy nhất", "tốt nhất", "số một"}
 
-var vietnamese = messagingrules.Rules{DisclosureLanguage: "vi", ClaimsNeedProof: vietnameseClaims}
+var vietnamese = contentRules{language: "vi", claims: vietnameseClaims}
 
 const vietnameseOffer = "Kính gửi quý khách,\n\nChúng tôi xin giới thiệu dịch vụ của chúng tôi cho doanh nghiệp của quý khách."
 
@@ -61,14 +59,14 @@ func TestAClaimMatchesWholeWordsOnly(t *testing.T) {
 
 func TestADraftThatOpensInAnotherLanguageIsFlagged(t *testing.T) {
 	english := "Dear customer,\n\nWe would like to introduce our new service to your company and its team.\n\n" + vietnameseOffer
-	if _, ok := findingOf(draftFindings(messagingrules.Rules{DisclosureLanguage: "vi"}, "", english), DraftLanguageFirst); !ok {
+	if _, ok := findingOf(draftFindings(contentRules{language: "vi"}, "", english), DraftLanguageFirst); !ok {
 		t.Error("a draft opening in English was not flagged for a pack asking for Vietnamese first")
 	}
 	vietnameseFirst := vietnameseOffer + "\n\nDear customer, we would like to introduce our new service to your company."
-	if _, ok := findingOf(draftFindings(messagingrules.Rules{DisclosureLanguage: "vi"}, "", vietnameseFirst), DraftLanguageFirst); ok {
+	if _, ok := findingOf(draftFindings(contentRules{language: "vi"}, "", vietnameseFirst), DraftLanguageFirst); ok {
 		t.Error("a draft opening in Vietnamese was flagged")
 	}
-	if len(draftFindings(messagingrules.Rules{}, "", english)) != 0 {
+	if len(draftFindings(contentRules{}, "", english)) != 0 {
 		t.Error("a pack with no content rules flagged a draft")
 	}
 }
@@ -94,10 +92,10 @@ func TestALongerClaimUsedTwiceHidesItsShorterPart(t *testing.T) {
 // A claim in English counts as well as one in Vietnamese, and a closing
 // greeting the pack says claims nothing is not one.
 func TestAnEnglishClaimInAVietnameseDraftIsFlagged(t *testing.T) {
-	rules := messagingrules.Rules{
-		DisclosureLanguage: "vi",
-		ClaimsNeedProof:    []string{"best", "hàng đầu"},
-		NotClaims:          []string{"best regards"},
+	rules := contentRules{
+		language:  "vi",
+		claims:    []string{"best", "hàng đầu"},
+		notClaims: []string{"best regards"},
 	}
 	body := vietnameseOffer + "\n\nChúng tôi là nhà cung cấp hàng đầu, the best in Vietnam."
 	f, ok := findingOf(draftFindings(rules, "[QC] Ưu đãi", body), DraftClaimWithoutProof)

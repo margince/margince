@@ -161,6 +161,22 @@ describe("the no-lawful-basis warning", () => {
     expect(onSend).not.toHaveBeenCalled();
   });
 
+  it("offers no consent request when no purpose asks for consent by mail", async () => {
+    vi.spyOn(globalThis, "fetch");
+    const [marked, other] = MARKED.recipients;
+    if (!marked || !other) return;
+    const { consent_purpose_id: _dropped, ...withoutPurpose } = marked;
+    draw({ ...MARKED, recipients: [withoutPurpose, other] }, vi.fn());
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(
+      screen.getByRole("button", { name: "Send anyway" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Ask for consent" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("sends at once when no recipient is marked", async () => {
     const fetched = vi.spyOn(globalThis, "fetch");
     const onSend = vi.fn();

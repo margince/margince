@@ -43,6 +43,8 @@ type (
 	DisclosureKind = pub.DisclosureKind
 	// ContactMeans names one way of reaching someone a disclosure must name.
 	ContactMeans = pub.ContactMeans
+	// PurposeClass names a class of consent purpose.
+	PurposeClass = pub.PurposeClass
 )
 
 // The published constants, re-exported.
@@ -106,6 +108,7 @@ func clone(r Rules) Rules {
 	out.Instruments = slices.Clone(r.Instruments)
 	out.ClaimsNeedProof = slices.Clone(r.ClaimsNeedProof)
 	out.NotClaims = slices.Clone(r.NotClaims)
+	out.ConsentRequestFirstFor = slices.Clone(r.ConsentRequestFirstFor)
 
 	if r.FrequencyCap != nil {
 		copied := *r.FrequencyCap
@@ -227,6 +230,7 @@ func stricter(a, b Rules) Rules {
 	}
 	out.RecordConfirmationWithoutNews = a.RecordConfirmationWithoutNews || b.RecordConfirmationWithoutNews
 	out.ConsentConfirmationNeedsRequest = a.ConsentConfirmationNeedsRequest || b.ConsentConfirmationNeedsRequest
+	out.ConsentRequestFirstFor = requestFirstFor(a, b)
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.
@@ -243,6 +247,26 @@ func foldAdvertisingContent(out *Rules, b Rules) {
 	out.ForeignAdvertiserNeedsLocalAgency = out.ForeignAdvertiserNeedsLocalAgency || b.ForeignAdvertiserNeedsLocalAgency
 	out.ClaimsNeedProof = unionOf(out.ClaimsNeedProof, b.ClaimsNeedProof)
 	out.NotClaims = unionOf(out.NotClaims, b.NotClaims)
+}
+
+// requestFirstFor is the classes either side's request rule covers. A side
+// whose rule covers every class makes the fold cover every class.
+func requestFirstFor(a, b Rules) []PurposeClass {
+	var out []PurposeClass
+	for _, side := range []Rules{a, b} {
+		if !side.ConsentConfirmationNeedsRequest {
+			continue
+		}
+		if len(side.ConsentRequestFirstFor) == 0 {
+			return nil
+		}
+		for _, class := range side.ConsentRequestFirstFor {
+			if !slices.Contains(out, class) {
+				out = append(out, class)
+			}
+		}
+	}
+	return out
 }
 
 // unionOf is every word of a, then each word of b that a lacks, in a new slice.

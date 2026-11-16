@@ -44560,9 +44560,9 @@ export interface components {
              * @description For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
              *     about for this use, the oldest live double-opt-in purpose whose class covers it and that
              *     the contact has not withdrawn. `POST /contacts/{id}/consent/double-opt-in` with it mails
-             *     the request. A request for consent to a purpose outside the marketing classes needs no
-             *     request of the contact's own on record. Absent when no such purpose exists, or when the
-             *     recipient is a lead.
+             *     the request. The recipient's pack says for which purpose classes the contact's own request
+             *     must be on record first. Absent when no such purpose exists, or when the recipient is a
+             *     lead.
              */
             consent_purpose_id?: string;
             /**
@@ -91654,8 +91654,8 @@ export interface operations {
             /**
              * @description The request named no purpose, named one no `consent_purpose` row holds, or the contact
              *     carries no live email address — so there is no mailbox a link could reach. Also when
-             *     the contact's country asks that a consent mail answer their own request, the purpose is
-             *     in a marketing class, and no such request is on record.
+             *     the contact's country asks that a consent mail for the purpose's class answer their own
+             *     request, and no such request is on record.
              */
             422: {
                 headers: {

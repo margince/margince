@@ -64940,9 +64940,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
 	// about for this use, the oldest live double-opt-in purpose whose class covers it and that
 	// the contact has not withdrawn. `POST /contacts/{id}/consent/double-opt-in` with it mails
-	// the request. A request for consent to a purpose outside the marketing classes needs no
-	// request of the contact's own on record. Absent when no such purpose exists, or when the
-	// recipient is a lead.
+	// the request. The recipient's pack says for which purpose classes the contact's own request
+	// must be on record first. Absent when no such purpose exists, or when the recipient is a
+	// lead.
 	ConsentPurposeId *openapi_types.UUID `json:"consent_purpose_id,omitempty"`
 
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule

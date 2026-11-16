@@ -7,12 +7,16 @@ package consent
 
 import (
 	"context"
-	"errors"
 	"maps"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,6 +43,7 @@ func placeUnderConsentOnly(t *testing.T, e *resolveEnv) {
 			Jurisdiction: consentOnlyCountry.code, Version: 1, ConsentOnly: true,
 			DataProtectionFollowsRecipient: true, DisclosureLanguage: string(mailcopy.Vietnamese),
 			NoLegitimateInterests: true, ConsentConfirmationNeedsRequest: true,
+			ConsentRequestFirstFor: []messagingrules.PurposeClass{messagingrules.PurposeClass(ClassMarketing)},
 		})
 	})
 	placeContact(t, e.owner, e.contact, consentOnlyCountry.code)
@@ -105,8 +110,10 @@ func TestAdvertisingWithoutConsentUnderThePackIsRefusedNotWarned(t *testing.T) {
 
 // A reply to a recipient with no basis on record names the purpose a consent
 // request would ask about: the correspondence purpose, not the newsletter.
-// That request goes without a request of the contact's own, because it asks
-// for no advertising. A request for the newsletter still needs one.
+// Asked through the double-opt-in door, that request goes without a request of
+// the contact's own, because the pack asks one only for advertising. Its link
+// names no request, and its audit row names the user who asked. A request for
+// the newsletter is still refused.
 func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
@@ -127,15 +134,69 @@ func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 		t.Fatalf("the preview names purpose %v, want the correspondence purpose %v", got, correspondence)
 	}
 
-	store := e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")
+	h := Handlers{store: e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")}
 	ctx := withContactUpdate(e.ctx)
-	if _, err := store.IssueConsentLink(ctx, e.contact, correspondence, "", ""); err != nil {
-		t.Errorf("asking for consent to correspondence: %v, want the mail to go", err)
+	if rec := askConsent(t, ctx, h, e.contact, correspondence); rec.Code != http.StatusCreated {
+		t.Fatalf("asking for consent to correspondence answered %d %s, want 201", rec.Code, rec.Body.String())
 	}
-	var missing *NoSubjectRequestError
-	if _, err := store.IssueConsentLink(ctx, e.contact, news, "", ""); !errors.As(err, &missing) {
-		t.Errorf("asking for consent to the newsletter: %v, want the request rule's refusal", err)
+	var tokenID ids.UUID
+	var request *ids.UUID
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT id, subject_request_id FROM confirm_token WHERE contact_id = $1 AND purpose_id = $2`,
+		e.contact, correspondence).Scan(&tokenID, &request); err != nil {
+		t.Fatalf("reading the link: %v", err)
 	}
+	if request != nil {
+		t.Errorf("the link names request %v, want none: the contact asked for nothing", *request)
+	}
+	var actor string
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT actor_id FROM audit_log WHERE entity_type = 'confirm_token' AND entity_id = $1 AND action = 'create'`,
+		tokenID).Scan(&actor); err != nil {
+		t.Fatalf("reading the link's audit row: %v", err)
+	}
+	if want := "human:" + e.user.String(); actor != want {
+		t.Errorf("the link's audit row names %q, want the asking user %q", actor, want)
+	}
+
+	if rec := askConsent(t, ctx, h, e.contact, news); rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("asking for consent to the newsletter answered %d %s, want 422: the contact asked for nothing",
+			rec.Code, rec.Body.String())
+	}
+}
+
+// A fresh installation's correspondence purpose is not confirmed by double
+// opt-in, so the preview names no purpose and the composer offers no request.
+func TestNoConsentPurposeIsNamedWhenNoneAsksByMail(t *testing.T) {
+	e := setupResolve(t)
+	placeUnderConsentOnly(t, e)
+	e.capturedMail(t, "thread-matter", "cc", true)
+	e.seedPurpose(t, "rp_plain_correspondence", "business_correspondence")
+	seedDoubleOptInPurpose(t, e, "rp_only_news", "marketing")
+
+	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
+		Recipients: []connector.Recipient{{Email: e.address}}, ThreadKey: "thread-matter",
+	})
+	if err != nil {
+		t.Fatalf("previewing: %v", err)
+	}
+	if len(set.Decisions) != 1 || !set.Decisions[0].LawfulBasisMissing {
+		t.Fatalf("preview %+v, want the recipient marked", set.Decisions)
+	}
+	if got := set.Decisions[0].ConsentPurpose; !got.IsZero() {
+		t.Errorf("the preview names purpose %v, want none: no double-opt-in purpose covers correspondence", got)
+	}
+}
+
+// askConsent drives the double-opt-in door the composer's button posts to.
+func askConsent(t *testing.T, ctx context.Context, h Handlers, contact ids.ContactID, purpose ids.PurposeID) *httptest.ResponseRecorder {
+	t.Helper()
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/x/consent/double-opt-in",
+		strings.NewReader(`{"purpose_id":"`+purpose.String()+`"}`)).WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	h.IssueDoubleOptIn(rec, req, crmcontracts.Id(contact.UUID))
+	return rec
 }
 
 // withContactUpdate adds the grant a consent request asks for.

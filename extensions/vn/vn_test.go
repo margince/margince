@@ -258,3 +258,14 @@ func TestAForeignAdvertiserIsToldToUseAVietnameseAgency(t *testing.T) {
 		t.Error("an advertiser outside Vietnam is not told to advertise through a Vietnamese agency")
 	}
 }
+
+// TestOnlyAdvertisingConsentNeedsTheRequestFirst pins Decree 91/2020/ND-CP
+// Art. 11.2, which governs advertising: a consent request for correspondence
+// needs no request of the contact's own.
+func TestOnlyAdvertisingConsentNeedsTheRequestFirst(t *testing.T) {
+	r := messagingRules()
+	if !r.ConsentConfirmationNeedsRequest ||
+		!slices.Equal(r.ConsentRequestFirstFor, []messaging.PurposeClass{messaging.PurposeClassMarketing}) {
+		t.Errorf("the request rule covers %v, want the advertising class only", r.ConsentRequestFirstFor)
+	}
+}

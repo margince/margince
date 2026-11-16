@@ -388,3 +388,20 @@ func TestARecipientBoundLawSurvivesTheFold(t *testing.T) {
 		}
 	}
 }
+
+// The request rule of a fold covers each class either side covers, and every
+// class when one side covers every class.
+func TestTheRequestRuleSurvivesTheFold(t *testing.T) {
+	narrow := Rules{
+		Jurisdiction: "aa", Version: 1, ConsentConfirmationNeedsRequest: true,
+		ConsentRequestFirstFor: []PurposeClass{"marketing"},
+	}
+	none := Rules{Jurisdiction: "bb", Version: 1}
+	if got := stricter(none, narrow); !slices.Equal(got.ConsentRequestFirstFor, []PurposeClass{"marketing"}) {
+		t.Errorf("classes %v, want the one side's marketing", got.ConsentRequestFirstFor)
+	}
+	every := Rules{Jurisdiction: "cc", Version: 1, ConsentConfirmationNeedsRequest: true}
+	if got := stricter(narrow, every); len(got.ConsentRequestFirstFor) != 0 || !got.ConsentConfirmationNeedsRequest {
+		t.Errorf("classes %v, want every class: one side asks a request for each", got.ConsentRequestFirstFor)
+	}
+}
