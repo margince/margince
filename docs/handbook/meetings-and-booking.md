@@ -62,8 +62,9 @@ wait for the meeting to start. A meeting with a date but no time waits until tha
 Press **Did not happen** on the row for a meeting that did not take place; it is recorded as canceled.
 A meeting with a Margince invitation takes only **It happened** or **No-show**, because its notes and date follow the invitation.
 
-Once a meeting is held, its line on the timeline and the **Meetings** tab show **Add notes**, or **Edit notes** when it has some.
+A held meeting shows **Add notes** on the timeline and the **Meetings** tab, or **Edit notes** when it has some.
 Write the notes the next day if you need to, then press **Log**. Anyone who may change the meeting can do this.
+A meeting with a Margince invitation does not offer them.
 
 A colleague's meeting that you were in but cannot change shows as **No outcome yet for** the meeting. Its host records the outcome. Press **Done** to take it off your list.
 Also called: mark a meeting held, meeting outcome, no-show, meeting happened.

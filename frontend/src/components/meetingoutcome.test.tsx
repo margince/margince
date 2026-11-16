@@ -362,4 +362,33 @@ describe("MeetingOutcome", () => {
       },
     ]);
   });
+
+  it("holds the notes still while their save runs, so no typed word is dropped", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    const answered = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation((input, init) => {
+      const request = input instanceof Request ? input : new Request(input);
+      return request.method === "PATCH"
+        ? new Promise<Response>(() => undefined)
+        : (answered?.(input, init) ?? Promise.reject(new Error("unstubbed")));
+    });
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "It happened: Site visit" }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const notes = await within(dialog).findByRole("textbox", {
+      name: "Notes",
+    });
+    await user.click(
+      within(dialog).getByRole("button", { name: "Skip next step" }),
+    );
+
+    await waitFor(() =>
+      expect(notes.getAttribute("aria-disabled")).toBe("true"),
+    );
+  });
 });

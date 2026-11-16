@@ -206,10 +206,13 @@ async function saveMeeting(
 function MeetingNotesField({
   draft,
   transcript,
+  saving,
   onChange,
 }: Readonly<{
   draft: OutcomeDraft;
   transcript: boolean;
+  // The save carries the notes as they were pressed, so typing waits for it.
+  saving: boolean;
   onChange: (draft: OutcomeDraft) => void;
 }>) {
   const t = useT();
@@ -219,6 +222,7 @@ function MeetingNotesField({
       hint={t("worklist.verb.meetingBodyHint")}
       transcript={transcript}
       rows={4}
+      disabled={saving}
       value={draft.body}
       onChange={(body) => onChange({ ...draft, body })}
     />
@@ -376,6 +380,7 @@ export function MeetingOutcomeDialog({
                 <MeetingNotesField
                   draft={draft}
                   transcript={transcript}
+                  saving={save.isPending}
                   onChange={setDraft}
                 />
               ))}
