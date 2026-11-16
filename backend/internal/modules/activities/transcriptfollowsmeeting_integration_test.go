@@ -180,8 +180,10 @@ func TestATranscriptCitingATaskIsReadByItsOwnGuests(t *testing.T) {
 		sql  string
 		args []any
 	}{
-		{`INSERT INTO activity (id, kind, subject, source, captured_by) VALUES ($1, 'task', 'Send the deck', 'manual', $2)`,
-			[]any{task, "human:" + e.rep.String()}},
+		{
+			`INSERT INTO activity (id, kind, subject, source, captured_by) VALUES ($1, 'task', 'Send the deck', 'manual', $2)`,
+			[]any{task, "human:" + e.rep.String()},
+		},
 		{`UPDATE activity SET source_activity_id = $2, audience = 'participants' WHERE id = $1`, []any{transcript, task}},
 		{`INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`, []any{transcript, e.other}},
 	} {
