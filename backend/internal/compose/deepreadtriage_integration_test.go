@@ -30,7 +30,7 @@ import (
 )
 
 // triageBrainFake answers the classification call with one canned verdict and counts the calls atomically,
-// because the read extracts its pages concurrently. Other calls go to the extraction fake, so one worker serves both.
+// because the read extracts its pages concurrently. A test can give the extraction lane its own instance as well.
 type triageBrainFake struct {
 	verdict string
 	calls   atomic.Int64
