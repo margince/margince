@@ -6,6 +6,7 @@
 package activities
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -63,6 +64,37 @@ func TestARequestSkippedWhileLockedIsQuotedByTheNextPass(t *testing.T) {
 	if filed != 0 {
 		t.Fatalf("%d reminder(s) filed for a row another writer held, want the pass to skip it", filed)
 	}
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := reminderBody(t, e, store, source), "“Please send the report.”"; !strings.Contains(got, want) {
+		t.Fatalf("reminder body %q, want it to quote %q", got, want)
+	}
+}
+
+// A filing that fails rolls back only the reminder; the ask stays with the
+// verdict, so the retry still quotes it.
+func TestARequestWhoseFilingFailedIsQuotedByTheRetry(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	if _, err := store.SetOwedVerdictAsked(asClassifier(e), source, OwedVerdictAsksUs, "prompts-ask", dbNow(t, e), "Please send the report."); err != nil {
+		t.Fatal(err)
+	}
+	refuse := "refuse_reminder_" + strings.ReplaceAll(source.String(), "-", "")
+	e.exec(t, `CREATE FUNCTION `+refuse+`() RETURNS trigger LANGUAGE plpgsql AS $$
+		BEGIN IF NEW.source_activity_id = '`+source.String()+`' THEN RAISE EXCEPTION 'filing refused'; END IF; RETURN NEW; END $$`)
+	e.exec(t, `CREATE TRIGGER `+refuse+` BEFORE INSERT ON activity FOR EACH ROW EXECUTE FUNCTION `+refuse+`()`)
+	t.Cleanup(func() {
+		if _, err := e.owner.Exec(context.Background(), `DROP TRIGGER IF EXISTS `+refuse+` ON activity; DROP FUNCTION IF EXISTS `+refuse+`()`); err != nil {
+			t.Errorf("removing the refusing trigger: %v", err)
+		}
+	})
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err == nil {
+		t.Fatal("the refused filing reported success")
+	}
+	e.exec(t, `DROP TRIGGER `+refuse+` ON activity`)
+	e.exec(t, `DROP FUNCTION `+refuse+`()`)
 	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
