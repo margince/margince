@@ -98,8 +98,9 @@ func TestOwedReadsATakenRequestOnceAndAdmitsWhatEveryRuleReadingItAdmits(t *test
 	base := clocktest.Now(t).Add(-2 * time.Hour).Truncate(time.Second)
 	seedOwedMatrix(ctx, t, tx, base)
 	const asOf = "$1::timestamptz"
+	const noOwnDomains = "ARRAY[]::text[]"
 
-	if n := strings.Count(owedSQL(asOf, neverRelaxed, neverRelaxed, neverRelaxed), "FROM activity accepted"); n != 1 {
+	if n := strings.Count(owedSQL(asOf, noOwnDomains, neverRelaxed, neverRelaxed, neverRelaxed), "FROM activity accepted"); n != 1 {
 		t.Errorf("owedSQL reads a taken request %d times, want once", n)
 	}
 	relaxed := []string{neverRelaxed, "TRUE"}
@@ -108,8 +109,8 @@ func TestOwedReadsATakenRequestOnceAndAdmitsWhatEveryRuleReadingItAdmits(t *test
 			for _, unjudged := range relaxed {
 				inline := `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
 				  AND (` + dismissed + ` OR ` + notDismissedSQL + `)
-				  AND ` + owedRulesSQL(asOf, informs, unjudged, acceptedRequestSQL) + `)`
-				got := owedIDs(ctx, t, tx, owedSQL(asOf, dismissed, informs, unjudged), base)
+				  AND ` + owedRulesSQL(asOf, noOwnDomains, informs, unjudged, acceptedRequestSQL) + `)`
+				got := owedIDs(ctx, t, tx, owedSQL(asOf, noOwnDomains, dismissed, informs, unjudged), base)
 				want := owedIDs(ctx, t, tx, inline, base)
 				if !reflect.DeepEqual(got, want) {
 					t.Fatalf("relaxed %s/%s/%s: read once owes %d messages, read in every rule %d:\n%v\n%v",
@@ -121,13 +122,13 @@ func TestOwedReadsATakenRequestOnceAndAdmitsWhatEveryRuleReadingItAdmits(t *test
 
 	// The matrix must reach the rules a taken request changes, or the
 	// comparison above holds over rows where it cannot differ.
-	taken := owedIDs(ctx, t, tx, owedRulesSQL(asOf, neverRelaxed, neverRelaxed, "TRUE")+` AND `+requestOpenSQL, base)
-	untaken := owedIDs(ctx, t, tx, owedRulesSQL(asOf, neverRelaxed, neverRelaxed, "FALSE")+` AND `+requestOpenSQL, base)
+	taken := owedIDs(ctx, t, tx, owedRulesSQL(asOf, noOwnDomains, neverRelaxed, neverRelaxed, "TRUE")+` AND `+requestOpenSQL, base)
+	untaken := owedIDs(ctx, t, tx, owedRulesSQL(asOf, noOwnDomains, neverRelaxed, neverRelaxed, "FALSE")+` AND `+requestOpenSQL, base)
 	if len(taken) <= len(untaken) || len(untaken) == 0 {
 		t.Errorf("a taken request owes %d messages and an untaken one %d; the matrix does not exercise the rules it changes",
 			len(taken), len(untaken))
 	}
-	if all := owedIDs(ctx, t, tx, owedSQL(asOf, neverRelaxed, neverRelaxed, neverRelaxed)+` AND c.taken = 'human'`, base); len(all) == 0 {
+	if all := owedIDs(ctx, t, tx, owedSQL(asOf, noOwnDomains, neverRelaxed, neverRelaxed, neverRelaxed)+` AND c.taken = 'human'`, base); len(all) == 0 {
 		t.Error("no message a human took is owed; the matrix never makes the taken-request subquery true")
 	}
 }

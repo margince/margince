@@ -141,7 +141,7 @@ func withMessageMoves(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activi
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wanted := arg(messages)
-	in, err := moveInputs(ctx, arg, asOf)
+	in, err := moveInputs(ctx, tx, arg, asOf)
 	if err != nil {
 		return err
 	}

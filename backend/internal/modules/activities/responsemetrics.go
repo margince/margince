@@ -83,11 +83,11 @@ var firstResponseSQL = `
 	     -- answers "how fast do we answer customers". Without the same exclusion
 	     -- the queue applies, an internal thread nobody replies to would drag the
 	     -- rate down over work the queue never showed anybody.
-	     AND NOT %[4]s
+	     AND NOT ` + ownDomainSenderAtSQL("inbound", "%[4]s") + `
 	     -- An invitation no verdict can make owed is answered on the calendar,
 	     -- so an RSVP to it is not a reply the rate should count.
 	     AND NOT EXISTS (SELECT 1 FROM activity a WHERE a.id = inbound.id
-	                       AND ` + invitationNeverOwedSQL("$2::timestamptz") + `)
+	                       AND ` + invitationNeverOwedSQL("$2::timestamptz", "%[4]s") + `)
 	     -- A SALES thread, by the same four arms waitingRepliesSQL qualifies on.
 	     -- Restated rather than shared because this query has no wl join to hang
 	     -- them off; what must not drift is the DEFINITION, and a test feeding
@@ -241,7 +241,7 @@ func (s *Store) ResponseWindow(ctx context.Context, from, to time.Time) (Respons
 			content,
 			liveRecord(openDealPredicate, "d"),
 			liveRecord(workingLeadPredicate, "ld"),
-			ownDomainSenderSQL("inbound", arg(ownDomains)),
+			fmt.Sprintf("$%d", arg(ownDomains)),
 			medianPercentile, everyMessage)
 		if err := tx.QueryRow(ctx, query, args...).Scan(&out.Answered, &out.MedianMinutes); err != nil {
 			return fmt.Errorf("activities: reading first-response times: %w", err)

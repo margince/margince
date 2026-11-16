@@ -36,6 +36,10 @@ func SettledCitations(
 	citedPos := arg(cited)
 	recipientsPos := arg(recipients)
 	until := fmt.Sprintf("$%d::timestamptz", arg(asOf))
+	ownDomains, err := bindColleagueDomains(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
 	// The cited messages, their answers and their follow-ups share one content
 	// gate. Evidence the reader may not read settles nothing.
 	readable, err := auth.ContentReadableActivitiesSQL(ctx,
@@ -73,7 +77,7 @@ SELECT a.id, coalesce(
  WHERE a.id IN (SELECT id FROM cited) AND a.id IN (SELECT id FROM readable_activity)`,
 		citedPos, answerIDsSQL("a", until), promiseFollowUpSQL("kept", "a", until), recipientsPos,
 		promiseRecipientAddressedSQL("kept", "promised.contact_id"), readable,
-		requestOpenSQL, confirmedRequestSQL, acceptedRequestSQL+` OR NOT `+invitationNeverOwedSQL(until)), args...)
+		requestOpenSQL, confirmedRequestSQL, acceptedRequestSQL+` OR NOT `+invitationNeverOwedSQL(until, ownDomains)), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading whether cited threads settled: %w", err)
 	}
