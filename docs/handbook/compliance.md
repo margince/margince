@@ -120,9 +120,9 @@ Vietnamese data-protection law also follows the recipient. When a contact's or l
 - when they object to the use of their data or take back their consent, Margince makes a task due in 15 days;
 - a request to stop using their data, or to take back consent to anything other than marketing, also gets an email at once. It says when the request arrived and when it will be done;
 - the reason recorded for using their data is their consent to that use, with its date. Your own business need is never enough;
-- without that consent, the send screen and the approval card show a warning. You can still send once you confirm it. The audit log records your confirmation, and one confirmation covers one send. A send nobody confirmed is held for a person to decide.
+- without that consent, the send screen and the approval card show a warning. You can still send once you confirm it. The audit log records your confirmation, and one confirmation covers one send. A send nobody confirmed is held for a colleague to decide.
 
-Margince learns where a contact is only from the addresses above. A Vietnamese person whose address is not a Vietnamese one is not found. The Vietnamese rules do not apply to that contact.
+Margince learns where a contact is only from the addresses above. A Vietnamese contact whose address is not a Vietnamese one is not found. The Vietnamese rules do not apply to that contact.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
 

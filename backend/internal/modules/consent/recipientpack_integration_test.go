@@ -12,6 +12,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"maps"
 	"strings"
 	"sync"
 	"testing"
@@ -446,9 +447,7 @@ func TestStagingSpendsTheConfirmationOnce(t *testing.T) {
 func withActivityCreate(ctx context.Context) context.Context {
 	actor, _ := principal.Actor(ctx)
 	grants := map[string]principal.ObjectGrant{}
-	for k, v := range actor.Permissions.Objects {
-		grants[k] = v
-	}
+	maps.Copy(grants, actor.Permissions.Objects)
 	grants["activity"] = principal.ObjectGrant{Read: true, Create: true}
 	actor.Permissions.Objects = grants
 	return principal.WithActor(ctx, actor)
