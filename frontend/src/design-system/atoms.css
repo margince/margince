@@ -838,12 +838,8 @@
   border: 1px solid var(--groundEdge);
   margin: 0;
   display: inline-flex;
-  /* An unwrapped inline-flex does not shrink: it sets its own minimum width and
-     pushes whatever contains it. The company record's tab strip is seven
-     options — measured 543px inside a 374px column at 390px, which is the whole
-     of that page's horizontal overflow, and the record page is the one every
-     other surface is meant to look like. A closed option set is exactly the
-     thing that CAN take a second line, so it does. */
+  /* A second row only once the words themselves cannot share one: a strip on
+     two rows reads as two controls. */
   flex-wrap: wrap;
   background: var(--bgChip);
   color: var(--textPrimary);
@@ -859,7 +855,13 @@
      chip and the mark are laid on the word's line rather than under it, and
      `align-items` is what holds all three on one centre line. */
   display: inline-flex;
+  /* Not an `auto` basis: a narrow row would then shrink each segment in
+     proportion to its label rather than equally. */
+  flex: 1 1 0;
+  max-inline-size: max-content;
   align-items: center;
+  justify-content: center;
+  text-align: center;
   /* Transparent, so an unpressed option is read on the TRACK's --bgChip and
      takes the chip's ink accordingly. The pressed one below lifts onto its own
      --bgElevated and answers to that instead. */
@@ -869,14 +871,6 @@
   cursor: pointer;
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
-}
-/* A phone is where the strip wraps: each line's options then share its width,
-   so no option sits alone on a half-empty line. */
-@media (max-width: 720px) {
-  .segmented button {
-    flex: 1 1 auto;
-    justify-content: center;
-  }
 }
 .segmented button:hover:where(:not(:disabled)) {
   background: var(--groundHover);
@@ -898,6 +892,7 @@
   display: inline-block;
   width: 5px;
   height: 5px;
+  flex-shrink: 0;
   margin-left: 5px;
   border-radius: 50%;
   corner-shape: round;

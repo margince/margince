@@ -4,7 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import { Kbd, SegmentedControl } from "./atoms";
+import { expect } from "storybook/test";
+import { Card, Kbd, SegmentedControl } from "./atoms";
 
 const meta: Meta<typeof SegmentedControl> = {
   title: "Components/Forms and input/Segmented control",
@@ -120,4 +121,98 @@ function MarkedTabsDemo() {
 // at states the fact in words.
 export const MarkedOption: Story = {
   render: () => <MarkedTabsDemo />,
+};
+
+const PRESETS = ["readDraft", "full", "custom"] as const;
+type Preset = (typeof PRESETS)[number];
+const PRESET_LABELS: Record<Preset, string> = {
+  readDraft: "Read and draft",
+  full: "Full assistant",
+  custom: "Pick your own",
+};
+
+const SECTIONS = ["overview", "research", "tasks"] as const;
+type Section = (typeof SECTIONS)[number];
+const SECTION_LABELS: Record<Section, string> = {
+  overview: "Overview",
+  research: "Data and tools",
+  tasks: "Open tasks",
+};
+
+function NarrowDemo() {
+  const [preset, setPreset] = useState<Preset>("readDraft");
+  const [section, setSection] = useState<Section>("overview");
+  return (
+    <div style={stack}>
+      <SegmentedControl
+        options={PRESETS}
+        value={preset}
+        onChange={setPreset}
+        labels={PRESET_LABELS}
+        label="Access"
+      />
+      <SegmentedControl
+        options={SECTIONS}
+        value={section}
+        onChange={setSection}
+        labels={SECTION_LABELS}
+        counts={{ research: 12, tasks: 3 }}
+        marks={{ research: true }}
+        label="Record sections"
+      />
+    </div>
+  );
+}
+
+async function holdsOneRow(canvasElement: HTMLElement) {
+  for (const strip of canvasElement.querySelectorAll(".segmented")) {
+    const frame = strip.getBoundingClientRect();
+    const segments = [...strip.querySelectorAll("button")].map((segment) => ({
+      box: segment.getBoundingClientRect(),
+      clipped: segment.scrollWidth > segment.clientWidth,
+    }));
+    for (const { box, clipped } of segments) {
+      await expect(box.top).toBe(segments[0]?.box.top);
+      await expect(box.right).toBeLessThanOrEqual(frame.right);
+      await expect(clipped).toBe(false);
+    }
+  }
+}
+
+// Too narrow for the labels on one line: each label wraps inside its own
+// segment, and the count stays beside the words it counts.
+export const NarrowContainer: Story = {
+  render: () => (
+    <div style={{ inlineSize: "300px" }}>
+      <NarrowDemo />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await holdsOneRow(canvasElement);
+    const presets = canvasElement.querySelector(".segmented");
+    const widths = [...(presets?.children ?? [])].map((segment) =>
+      Math.round(segment.getBoundingClientRect().width),
+    );
+    await expect(new Set(widths).size).toBe(1);
+  },
+};
+
+export const NarrowContainerDark: Story = {
+  ...NarrowContainer,
+  globals: { theme: "dark" },
+};
+
+// A card on a 390px phone, too narrow for the presets on one line.
+export const AtPhoneWidth: Story = {
+  render: () => (
+    <div style={{ padding: "var(--padCard)" }}>
+      <Card as="div">
+        <NarrowDemo />
+      </Card>
+    </div>
+  ),
+  play: async ({ canvasElement }) => holdsOneRow(canvasElement),
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
