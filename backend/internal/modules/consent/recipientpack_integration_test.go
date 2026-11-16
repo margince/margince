@@ -165,7 +165,7 @@ func TestTheRecipientsPackDecidesTheControllerMailAndThePages(t *testing.T) {
 			}
 
 			lines, err := e.store.Disclosures(e.ctx, commsauthz.CategoryReplyToInbound,
-				[]string{"subject-" + e.contact.String() + "@example.test"}, ids.UUID{})
+				[]string{"subject-" + e.contact.String() + "@example.test"}, ids.UUID{}, "")
 			if err != nil {
 				t.Fatalf("asking what the mail must disclose: %v", err)
 			}

@@ -117,6 +117,19 @@ func vnInstruments() []messaging.Instrument {
 	}
 }
 
+// refusalMeans are the ways Decree 91/2020/ND-CP Art. 20.2 requires a
+// recipient to be able to refuse advertising email.
+func refusalMeans() []messaging.ContactMeans {
+	return []messaging.ContactMeans{messaging.MeansWeb, messaging.MeansEmail, messaging.MeansPhone}
+}
+
+// superlatives are the claims Law on Advertising Art. 8.11 and Circular
+// 12/2026/TT-BVHTTDL Art. 3 allow only with a listed proof shown in the mail.
+// "nhất" alone also catches the forms built on it ("lớn nhất", "rẻ nhất").
+func superlatives() []string {
+	return []string{"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu"}
+}
+
 // messagingRules is what Vietnamese law requires of an outbound message, stated
 // as data the core engine applies. Nothing here decides a send.
 //
@@ -164,9 +177,10 @@ func messagingRules() messaging.Rules {
 		// 2 stated the 2025 instruments. 3 applied them: the data-protection
 		// rules follow the recipient, no use rests on legitimate interests, and
 		// the receipt is due at once in Vietnam time. 4 adds that a consent
-		// mail answers the recipient's own request. The number tells a
-		// decision taken under each set apart.
-		Version:            4,
+		// mail answers the recipient's own request. 5 asks three refusal
+		// means, ends advertising with the refusal section and flags claims
+		// that need a proof. The number tells a decision under each set apart.
+		Version:            5,
 		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
@@ -177,10 +191,12 @@ func messagingRules() messaging.Rules {
 		Disclosures: []messaging.Disclosure{
 			{Kind: messaging.ControllerIdentity},
 			{Kind: messaging.PrivacyContact},
-			{Kind: messaging.ObjectionRoute, MarketingOnly: true},
+			{Kind: messaging.ObjectionRoute, MarketingOnly: true, Means: refusalMeans()},
 			{Kind: messaging.AdvertiserContact, MarketingOnly: true},
 		},
-		SubjectPrefix: advertisingLabel,
+		RefusalSectionLast: true,
+		ClaimsNeedProof:    superlatives(),
+		SubjectPrefix:      advertisingLabel,
 		FrequencyCap: &messaging.FrequencyCap{
 			Messages: vnAdvertisingMessagesPerDay,
 			Window:   vnAdvertisingWindow,

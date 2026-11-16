@@ -22767,6 +22767,25 @@ export const en = {
   "goals.withdrawTitle": "Withdraw the goals of {name} for {year}?",
   "goals.withdrawBody":
     "All twelve months stop counting as goals. The history keeps them.",
+  "particulars.title": "Company details in mail",
+  "particulars.intro":
+    "Mail you send ends with the details the law asks for. Each field holds up to 500 characters.",
+  "particulars.legalName": "Legal name",
+  "particulars.postalAddress": "Postal address",
+  "particulars.privacyContact": "Data protection contact",
+  "particulars.objectionRoute": "How to refuse advertising",
+  "particulars.advertiserContact": "Advertiser contact",
+  "particulars.objectionMeans":
+    "Name a web page or social network link, an email address and a phone number. A reply word such as STOP can be added.",
+  "particulars.translationTitle": "In {language}",
+  "particulars.translationIntro":
+    "Mail and pages in {language} show this text where you fill it in. Advertising that must be in {language} is sent only once the refusal and the advertiser contact are filled in here.",
+  "particulars.objectionExample": "Example: {example}",
+  "compose.contentFinding.title": "Advertising rules for this mail",
+  "compose.contentFinding.claim":
+    "“{words}” is a claim you may make only with a proof. Add the name, number and date of the proving document to the mail.",
+  "compose.contentFinding.language":
+    "Write this mail in {language} first. Text in another language goes below it, no larger than the {language} text.",
 } as const;
 
 export type MessageKey = keyof typeof en;

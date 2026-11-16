@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
+import { useSettledValue } from "../../design-system/debouncedsearch";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
@@ -335,8 +336,7 @@ export function useComposeSend({
       finishSent();
     },
   });
-  // Clearing the refusal and draft after staging keeps this composer from
-  // offering the same held message again.
+  // Clearing the refusal and draft after staging stops a resend of the held message.
   const directSent = () => {
     send.reset();
     toast.show(t("directSend.queued"));
@@ -375,16 +375,22 @@ export function useComposeSend({
   const evidence = contextDealId ? { deal_id: contextDealId } : undefined;
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
+  // A marketing draft is checked against its recipients' content rules.
+  const settledSubject = useSettledValue(fields.subject);
+  const settledBody = useSettledValue(fields.body);
   const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,
     links,
     context: claimedContext,
     evidence,
+    draft:
+      claimedContext === "marketing"
+        ? { subject: settledSubject, body: settledBody }
+        : undefined,
     enabled: open && !isChannelReply,
   });
-  // A recipient with no lawful basis on record is warned about, and Send waits
-  // for the sender to confirm it.
+  // Send waits for the sender to confirm a recipient with no lawful basis on record.
   const lawfulBasis = useLawfulBasisGate(answer.preview);
   // A consent refusal joins the engine's answer as one status, and only while
   // it is about this message. A stale one would sit red beside a newer check.

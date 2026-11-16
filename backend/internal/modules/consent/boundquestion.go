@@ -17,7 +17,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -187,9 +186,6 @@ func frequencyName(frequency string, words mailcopy.Copy) string {
 // Held by: TestThePrivacyPageFallbackIsOneOnBothSides
 // (backend/gates/privacypagefallback_test.go)
 var privacyPageFields = []string{"privacy_page", "privacy_contact"}
-
-// PrivacyPageFields is privacyPageFields for the gate that holds the mirror.
-func PrivacyPageFields() []string { return slices.Clone(privacyPageFields) }
 
 func privacyPageOf(p ControllerParticulars) string {
 	stated := map[string]string{"privacy_page": p.PrivacyPage, "privacy_contact": p.PrivacyContact}

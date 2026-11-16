@@ -23087,4 +23087,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.withdrawTitle": "Ziele von {name} für {year} zurückziehen?",
   "goals.withdrawBody":
     "Alle zwölf Monate zählen nicht mehr als Ziele. Der Verlauf behält sie.",
+  "particulars.title": "Firmenangaben in E-Mails",
+  "particulars.intro":
+    "Deine E-Mails enden mit den Angaben, die das Gesetz verlangt. Jedes Feld fasst bis zu 500 Zeichen.",
+  "particulars.legalName": "Rechtlicher Name",
+  "particulars.postalAddress": "Postanschrift",
+  "particulars.privacyContact": "Kontakt zum Datenschutz",
+  "particulars.objectionRoute": "So lehnt man Werbung ab",
+  "particulars.advertiserContact": "Kontaktdaten des werbenden Unternehmens",
+  "particulars.objectionMeans":
+    "Nenne eine Webseite oder einen Link zu einem sozialen Netzwerk, eine E-Mail-Adresse und eine Telefonnummer. Ein Antwortwort wie STOP kann dazukommen.",
+  "particulars.translationTitle": "Auf {language}",
+  "particulars.translationIntro":
+    "E-Mails und Seiten auf {language} zeigen diesen Text, wo du ihn ausfüllst. Werbung, die auf {language} sein muss, geht erst raus, wenn Ablehnung und Kontaktdaten des werbenden Unternehmens hier ausgefüllt sind.",
+  "particulars.objectionExample": "Beispiel: {example}",
+  "compose.contentFinding.title": "Werberegeln für diese E-Mail",
+  "compose.contentFinding.claim":
+    "„{words}“ darfst du nur mit Nachweis behaupten. Ergänze Name, Nummer und Datum des Nachweises in der E-Mail.",
+  "compose.contentFinding.language":
+    "Schreibe diese E-Mail zuerst auf {language}. Text in einer anderen Sprache steht darunter und ist nicht größer als der Text auf {language}.",
 };

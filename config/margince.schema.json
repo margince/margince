@@ -794,6 +794,33 @@
             },
             "PrivacyPage": {
               "type": "string"
+            },
+            "Translations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "Language": {
+                    "type": "string"
+                  },
+                  "LegalName": {
+                    "type": "string"
+                  },
+                  "PostalAddress": {
+                    "type": "string"
+                  },
+                  "PrivacyContact": {
+                    "type": "string"
+                  },
+                  "ObjectionRoute": {
+                    "type": "string"
+                  },
+                  "AdvertiserContact": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           }
         }

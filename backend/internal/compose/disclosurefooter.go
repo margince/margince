@@ -41,9 +41,9 @@ type disclosureAdapter struct {
 // putting an objection route under what may be an invoice reads as an
 // invitation to stop receiving invoices.
 func (a disclosureAdapter) DisclosuresFor(
-	ctx context.Context, category string, recipients []string, entity ids.UUID,
+	ctx context.Context, category string, recipients []string, entity ids.UUID, language string,
 ) ([]activities.DisclosureLine, error) {
-	owed, err := a.store.Disclosures(ctx, commsauthz.Category(category), recipients, entity)
+	owed, err := a.store.Disclosures(ctx, commsauthz.Category(category), recipients, entity, language)
 	if err != nil {
 		return nil, err
 	}
@@ -54,6 +54,11 @@ func (a disclosureAdapter) DisclosuresFor(
 	return out, nil
 }
 
+// newDisclosureAdapter carries the country reader, which picks the pack: a bare
+// store answers no country and every message would owe nothing. The mail
+// language says whether the default particulars meet a pack's language.
 func newDisclosureAdapter(db *database.DB) disclosureAdapter {
-	return disclosureAdapter{store: consent.NewStore(db).WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}
+	return disclosureAdapter{store: consent.NewStore(db).
+		WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
+		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))}
 }

@@ -11,16 +11,16 @@
       "covered": 39,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 918,
-      "web_app_calls_open": 756,
+      "web_app_calls": 920,
+      "web_app_calls_open": 757,
       "web_app_calls_ask_first": 106,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 136,
+      "web_app_calls_security": 137,
       "web_app_calls_covered": 25,
       "parity_signed_in_percent": 81.6,
-      "parity_web_app_percent": 82.3
+      "parity_web_app_percent": 82.2
     },
-    "open_with_no_web_app_call_found": 110,
+    "open_with_no_web_app_call_found": 109,
     "parity_web_app_counting_covered_percent": 85,
     "parity_web_app_once_pending_is_open_percent": 85
   },
@@ -625,14 +625,14 @@
       "covered": 0,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 57,
-      "web_app_calls_open": 39,
+      "web_app_calls": 59,
+      "web_app_calls_open": 40,
       "web_app_calls_ask_first": 16,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 18,
+      "web_app_calls_security": 19,
       "web_app_calls_covered": 0,
       "parity_signed_in_percent": 70,
-      "parity_web_app_percent": 68.4,
+      "parity_web_app_percent": 67.7,
       "areas": [
         {
           "key": "consent",
@@ -685,14 +685,14 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 9,
-          "web_app_calls_open": 6,
+          "web_app_calls": 11,
+          "web_app_calls_open": 7,
           "web_app_calls_ask_first": 1,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 3,
+          "web_app_calls_security": 4,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 71.4,
-          "parity_web_app_percent": 66.6
+          "parity_web_app_percent": 63.6
         },
         {
           "key": "retention",
@@ -14939,7 +14939,8 @@
       "scope": "read",
       "verb": "get_controller_particulars",
       "router": "read_workspace",
-      "action": "controller_particulars"
+      "action": "controller_particulars",
+      "web_app": "direct"
     },
     {
       "method": "PUT",
@@ -14950,7 +14951,8 @@
       ],
       "group": "compliance",
       "area": "privacy_notices",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "GET",

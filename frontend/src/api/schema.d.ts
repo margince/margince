@@ -44384,9 +44384,10 @@ export interface components {
          */
         CommunicationContext: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
         /**
-         * @description What a composer is about to write, in the shape the engine judges. It carries no
-         *     `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
-         *     draft to the server to be told whether it may exist would be the wrong way round.
+         * @description What a composer is about to write, in the shape the engine judges. A `subject` and
+         *     `body` never reach a consent decision. When given, they are checked against the
+         *     advertising content rules of each recipient's jurisdiction pack and answered as
+         *     `content_findings`.
          */
         PreviewSendRequest: {
             /**
@@ -44414,6 +44415,10 @@ export interface components {
             consent_purpose?: string;
             /** @description Records the caller names in support of this message. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
+            /** @description The draft's subject, checked only for `content_findings`. */
+            subject?: string;
+            /** @description The draft's plain text, checked only for `content_findings`. */
+            body?: string;
         };
         /**
          * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
@@ -44438,6 +44443,10 @@ export interface components {
              */
             consent_purpose?: string;
             evidence?: components["schemas"]["CommunicationEvidence"];
+            /** @description The draft's subject, checked only for `content_findings`. */
+            subject?: string;
+            /** @description The draft's plain text, checked only for `content_findings`. */
+            body?: string;
         };
         LawfulBasisConfirmationRequest: {
             /**
@@ -44468,6 +44477,28 @@ export interface components {
              */
             allowed: boolean;
             recipients: components["schemas"]["SendAuthorizationPreviewRecipient"][];
+            /**
+             * @description What the draft's `subject` and `body` do not meet among the advertising content rules
+             *     of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
+             *     Empty when no subject or body was given, or when the message is not advertising.
+             */
+            content_findings?: components["schemas"]["DraftContentFinding"][];
+        };
+        DraftContentFinding: {
+            /**
+             * @description `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+             *     proof (the document's name, number and date), and states none.
+             *     `advertising_language_first`: the draft does not open in the pack's disclosure
+             *     language, which advertising leads with.
+             * @enum {string}
+             */
+            requirement: "claim_without_proof" | "advertising_language_first";
+            /** @description What was found, for the composer to read. */
+            detail: string;
+            /** @description The claim words found, for `claim_without_proof`. */
+            words?: string[];
+            /** @description The language the draft must lead with, for `advertising_language_first`. */
+            language?: string;
         };
         /** @description An existing recipient record the caller can read. */
         CommunicationEvidenceSubject: {
@@ -54594,7 +54625,41 @@ export interface components {
              *     as met.
              */
             advertiser_contact?: string;
+            /**
+             * @description The same particulars in other languages, one entry per language. A mail or page in one of
+             *     them prints the translated text where it is stated and the text above where it is not.
+             *     Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
+             *     recipient under that pack is refused until its objection route and advertiser contact are
+             *     stated in that language.
+             */
+            translations?: components["schemas"]["ControllerParticularsTranslation"][];
+            /**
+             * @description The languages the jurisdiction packs in force ask the objection route and the advertiser
+             *     contact to be stated in. The packs in force are those of the installation's country and
+             *     of each legal entity's country.
+             */
+            readonly disclosure_languages?: string[];
+            /**
+             * @description What every stated objection route must name under the packs in force. Saving a route that
+             *     lacks one answers 422 with the field and the missing part.
+             */
+            readonly objection_route_means?: components["schemas"]["ContactMeans"][];
         };
+        /** @description The controller particulars in one more language. An empty field prints the default text. */
+        ControllerParticularsTranslation: {
+            /** @description The language, as a base language the installation can send mail in. */
+            language: string;
+            legal_name?: string;
+            postal_address?: string;
+            privacy_contact?: string;
+            objection_route?: string;
+            advertiser_contact?: string;
+        };
+        /**
+         * @description A way of reaching someone that a stated particular must name.
+         * @enum {string}
+         */
+        ContactMeans: "web" | "email" | "phone";
         /**
          * @description Where a disclosure duty stands.
          *

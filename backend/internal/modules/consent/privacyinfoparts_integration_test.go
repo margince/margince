@@ -7,6 +7,7 @@ package consent
 
 import (
 	"context"
+	"reflect"
 	"slices"
 	"testing"
 )
@@ -42,7 +43,7 @@ func TestThePrivacyPageNamesTheControllerTheInstallationStated(t *testing.T) {
 	stateParticulars(t, e, stated)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})
-	if info.Controller != stated {
+	if !reflect.DeepEqual(info.Controller, stated) {
 		t.Errorf("the page names controller %+v, want the stated particulars %+v", info.Controller, stated)
 	}
 }

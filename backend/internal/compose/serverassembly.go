@@ -21,6 +21,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
+	"github.com/margince/margince/backend/internal/compose/draftcontent"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
@@ -115,12 +116,10 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 		WithUnsubscribe(preferenceLinkAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		// The disclosures a jurisdiction demands, put into the body that owes
 		// them. See compose/disclosurefooter.go.
-		WithDisclosures(disclosureAdapter{store: consent.NewStore(InstallationDB(pool)).
-			// WITH THE COUNTRY READER, which decides which pack applies. A bare
-			// store answers no country, so applicableRules finds no pack and
-			// every message silently owes nothing — the failure this seam
-			// exists to end, arriving through the wiring instead.
-			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
+		WithDisclosures(newDisclosureAdapter(InstallationDB(pool))).
+		// The advertising content rules a draft is checked against while it
+		// is written. See compose/draftcontent.
+		WithDraftContent(draftcontent.Adapter{Store: consent.NewStore(InstallationDB(pool))}).
 		// The sender's own sign-off (core 0235). contacts owns the row because
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,

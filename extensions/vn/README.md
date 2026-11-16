@@ -4,7 +4,8 @@
 What Vietnamese law requires of the outbound messages of this product, stated as data that the core
 engines apply. The pack decides nothing: it declares, and the engine reads.
 
-All of it comes from **Decree 91/2020/ND-CP** on spam messages, email and calls.
+Most of it comes from **Decree 91/2020/ND-CP** on spam messages, email and calls. The rules on
+advertising content come from the `Law on Advertising`.
 
 ## Advertising email needs prior consent, with no exception
 
@@ -44,8 +45,75 @@ come from different laws.
 |---|---|
 | Controller identity | every first message |
 | Privacy contact | every first message |
-| Objection route | advertising |
+| Objection route: web page, email and phone | advertising |
 | Advertiser contact: name, phone, email, address, website | advertising |
+
+## How to refuse (Art. 20)
+
+A recipient must have three ways to refuse advertising: a web page or a network page, an email
+address, and a phone number. So the objection route of the pack names all three. A reply word such as STOP
+may stay as an extra.
+
+Where this pack is in use, settings refuse an objection route that leaves out one of the three, and
+the error names the missing part. The pack is in use when the installation, or an entity it sends
+for, is in Vietnam. At send, a route without all three counts as missing, so the advertising mail
+is refused.
+
+A route that meets the rule:
+
+```text
+trả lời email này với từ STOP, gửi email đến privacy@example.com, gọi số +84 00 0000 0000 hoặc dùng trang [đường dẫn trang tùy chọn nhận tin].
+```
+
+## Company details in Vietnamese
+
+A reader must understand what they act on (`Law 91/2025/QH15` Art. 9.2). So the controller details
+have a Vietnamese version of each text field. A Vietnamese mail or page shows the Vietnamese text where
+it is stated, and the default text where it is not.
+
+The language of the pack is Vietnamese. Before an advertising mail goes to a Vietnamese
+recipient, the objection route and the advertiser contact must be stated in Vietnamese. Until then the
+send is refused. The name and the address may stay in the default text. An installation whose own
+language is Vietnamese meets this with its default text.
+
+## The end of an advertising mail (Art. 19 and 20.1)
+
+An advertising mail ends with the refusal section. It says that the recipient may refuse all advertising
+from the advertiser, then gives the objection route and the opt-out links. Directly before it stands the
+block of the advertiser: name, address, phone, email and website.
+
+The same section tells the recipient that they choose if their data is used for advertising, on the
+page the settings link opens. This meets `Law on Protection of Consumers' Rights` Art. 10.1(b) and
+18.4(b).
+
+## Vietnamese first, and no claim to be the best without proof
+
+`Law on Advertising` Art. 18 asks for advertising content in Vietnamese first. Text in another language
+comes below it, and its size is at most three fourths of the Vietnamese text. Art. 8.11 of that law and
+`Circular 12/2026/TT-BVHTTDL` Art. 3 limit words such as "nhất", "duy nhất", "tốt nhất"
+or "số một". A mail may use one only with a listed proof. The mail must show the name, number and date of the
+proof document.
+
+Both are checked while a mail is written, and neither stops the send:
+
+- A draft whose first paragraph in a known language is not Vietnamese gets a note.
+- A draft that uses a word of `superlatives()` in `vn.go` gets a note, unless a line holds a document
+  number and a date.
+
+The size of text in another language is not checked. A plain text mail has one size, and the check
+does not read the styles of an HTML part.
+
+## Open questions
+
+These two need an answer from legal advice. Marketing mail to Vietnamese recipients is not blocked on
+them.
+
+- **Where the sending server is.** `Decree 330/2026/ND-CP` Art. 38.3(a) fines product information sent
+  by email from a server outside Vietnam (`VND 40-60 million` for a company). The rule it enforces is
+  not found in the texts in use. An installation that sends from outside Vietnam needs an answer.
+- **Advertisers from other countries.** `Law on Advertising` Art. 39.2 asks a company from another
+  country with no business in Vietnam to use a Vietnamese advertising service business. It is not known
+  if this reaches direct email from an installation outside Vietnam.
 
 ## Three per address per day (Art. 13.5)
 

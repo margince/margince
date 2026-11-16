@@ -172,7 +172,9 @@ deps:
     canUse: [pgx, oapi, emersion, xnet, xsemaphore, xtext]
   consent:
     mayDependOn: [contracts, platform]
-    canUse: [pgx, oapi]
+    # xtext: an advertising draft's claim words are matched in NFC, so a
+    # decomposed Vietnamese tone mark cannot hide "tốt nhất" from the check.
+    canUse: [pgx, oapi, xtext]
   collections:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]

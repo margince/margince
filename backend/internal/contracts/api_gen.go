@@ -8680,6 +8680,27 @@ func (e ContactGraphRouteType) Valid() bool {
 	}
 }
 
+// Defines values for ContactMeans.
+const (
+	ContactMeansEmail ContactMeans = "email"
+	ContactMeansPhone ContactMeans = "phone"
+	ContactMeansWeb   ContactMeans = "web"
+)
+
+// Valid indicates whether the value is a known member of the ContactMeans enum.
+func (e ContactMeans) Valid() bool {
+	switch e {
+	case ContactMeansEmail:
+		return true
+	case ContactMeansPhone:
+		return true
+	case ContactMeansWeb:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ContactMomentConfidence.
 const (
 	ContactMomentConfidenceHigh         ContactMomentConfidence = "high"
@@ -12271,6 +12292,24 @@ func (e DomainQuestionSuggestionBasis) Valid() bool {
 	case DomainQuestionSuggestionBasisNameTwin:
 		return true
 	case DomainQuestionSuggestionBasisRedirectTarget:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DraftContentFindingRequirement.
+const (
+	DraftContentFindingRequirementAdvertisingLanguageFirst DraftContentFindingRequirement = "advertising_language_first"
+	DraftContentFindingRequirementClaimWithoutProof        DraftContentFindingRequirement = "claim_without_proof"
+)
+
+// Valid indicates whether the value is a known member of the DraftContentFindingRequirement enum.
+func (e DraftContentFindingRequirement) Valid() bool {
+	switch e {
+	case DraftContentFindingRequirementAdvertisingLanguageFirst:
+		return true
+	case DraftContentFindingRequirementClaimWithoutProof:
 		return true
 	default:
 		return false
@@ -44526,6 +44565,9 @@ type ContactListResponse struct {
 	Page PageInfo  `json:"page"`
 }
 
+// ContactMeans A way of reaching someone that a stated particular must name.
+type ContactMeans string
+
 // ContactMoment One reason this contact is worth attention now, with the evidence behind it.
 //
 // Every moment in this version is DETERMINISTIC: derived from captured activity by a
@@ -45336,6 +45378,11 @@ type ControllerParticulars struct {
 	// as met.
 	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
 
+	// DisclosureLanguages The languages the jurisdiction packs in force ask the objection route and the advertiser
+	// contact to be stated in. The packs in force are those of the installation's country and
+	// of each legal entity's country.
+	DisclosureLanguages *[]string `json:"disclosure_languages,omitempty"`
+
 	// LegalName Who is writing, as the law would name them. Art. 13(1)(a) GDPR's identity of the controller, and the advertiser under Decree 91/2020.
 	LegalName *string `json:"legal_name,omitempty"`
 
@@ -45348,6 +45395,10 @@ type ControllerParticulars struct {
 	// usually the honest answer; an installation whose recipients answer by phone says so here.
 	ObjectionRoute *string `json:"objection_route,omitempty"`
 
+	// ObjectionRouteMeans What every stated objection route must name under the packs in force. Saving a route that
+	// lacks one answers 422 with the field and the missing part.
+	ObjectionRouteMeans *[]ContactMeans `json:"objection_route_means,omitempty"`
+
 	// PostalAddress Where they are, as a block of lines — including a register court and number where a business letter needs one.
 	PostalAddress *string `json:"postal_address,omitempty"`
 
@@ -45356,6 +45407,25 @@ type ControllerParticulars struct {
 
 	// PrivacyPage Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.
 	PrivacyPage *string `json:"privacy_page,omitempty"`
+
+	// Translations The same particulars in other languages, one entry per language. A mail or page in one of
+	// them prints the translated text where it is stated and the text above where it is not.
+	// Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
+	// recipient under that pack is refused until its objection route and advertiser contact are
+	// stated in that language.
+	Translations *[]ControllerParticularsTranslation `json:"translations,omitempty"`
+}
+
+// ControllerParticularsTranslation The controller particulars in one more language. An empty field prints the default text.
+type ControllerParticularsTranslation struct {
+	AdvertiserContact *string `json:"advertiser_contact,omitempty"`
+
+	// Language The language, as a base language the installation can send mail in.
+	Language       string  `json:"language"`
+	LegalName      *string `json:"legal_name,omitempty"`
+	ObjectionRoute *string `json:"objection_route,omitempty"`
+	PostalAddress  *string `json:"postal_address,omitempty"`
+	PrivacyContact *string `json:"privacy_contact,omitempty"`
 }
 
 // ControllerSend Present on a mail sent through the installation's own relay rather than through a
@@ -49096,6 +49166,30 @@ type DomainQuestionSuggestion struct {
 // - `redirect_target`: the site redirects to a domain this company already owns.
 // - `contact_employer`: a sender already has this company as their current employer.
 type DomainQuestionSuggestionBasis string
+
+// DraftContentFinding defines model for DraftContentFinding.
+type DraftContentFinding struct {
+	// Detail What was found, for the composer to read.
+	Detail string `json:"detail"`
+
+	// Language The language the draft must lead with, for `advertising_language_first`.
+	Language *string `json:"language,omitempty"`
+
+	// Requirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+	// proof (the document's name, number and date), and states none.
+	// `advertising_language_first`: the draft does not open in the pack's disclosure
+	// language, which advertising leads with.
+	Requirement DraftContentFindingRequirement `json:"requirement"`
+
+	// Words The claim words found, for `claim_without_proof`.
+	Words *[]string `json:"words,omitempty"`
+}
+
+// DraftContentFindingRequirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+// proof (the document's name, number and date), and states none.
+// `advertising_language_first`: the draft does not open in the pack's disclosure
+// language, which advertising leads with.
+type DraftContentFindingRequirement string
 
 // DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
 type DraftSteering struct {
@@ -58904,6 +58998,8 @@ type PreferenceCenterRefusedReason string
 // PreviewAccountSendRequest PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
 // records this new conversation would belong to.
 type PreviewAccountSendRequest struct {
+	// Body The draft's plain text, checked only for `content_findings`.
+	Body                 *string               `json:"body,omitempty"`
 	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
 	// ConsentPurpose The deprecated purpose key, when the composer still has one. It authorizes
@@ -58917,15 +59013,22 @@ type PreviewAccountSendRequest struct {
 	// Links The records the message would be filed under. They are read through the caller's
 	// own row scope before the engine sees them, so naming a record the caller cannot
 	// open is refused here rather than answered about.
-	Links            []ActivityLinkInput   `json:"links"`
-	MarketingPurpose *string               `json:"marketing_purpose,omitempty"`
-	To               []openapi_types.Email `json:"to"`
+	Links            []ActivityLinkInput `json:"links"`
+	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
+
+	// Subject The draft's subject, checked only for `content_findings`.
+	Subject *string               `json:"subject,omitempty"`
+	To      []openapi_types.Email `json:"to"`
 }
 
-// PreviewSendRequest What a composer is about to write, in the shape the engine judges. It carries no
-// `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
-// draft to the server to be told whether it may exist would be the wrong way round.
+// PreviewSendRequest What a composer is about to write, in the shape the engine judges. A `subject` and
+// `body` never reach a consent decision. When given, they are checked against the
+// advertising content rules of each recipient's jurisdiction pack and answered as
+// `content_findings`.
 type PreviewSendRequest struct {
+	// Body The draft's plain text, checked only for `content_findings`.
+	Body *string `json:"body,omitempty"`
+
 	// CommunicationContext What the sender says this message is. Checked against the record, never believed:
 	// a claim the record does not bear out comes back as `review` naming what is
 	// missing, rather than a quiet downgrade to something weaker that happens to be
@@ -58944,6 +59047,9 @@ type PreviewSendRequest struct {
 
 	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// Subject The draft's subject, checked only for `content_findings`.
+	Subject *string `json:"subject,omitempty"`
 
 	// To The addressees. Cc and Bcc join this list at send, and both are asked about
 	// exactly as a To is — a blind copy is blind to the RECIPIENTS and never to the
@@ -64744,8 +64850,13 @@ type SendAuthorizationPreview struct {
 	// Allowed Whether the whole message would go. A CONJUNCTION: one refused recipient refuses
 	// the message, because a rep who wrote to four contacts and reached three without
 	// being told which has been lied to about what happened.
-	Allowed    bool                                `json:"allowed"`
-	Recipients []SendAuthorizationPreviewRecipient `json:"recipients"`
+	Allowed bool `json:"allowed"`
+
+	// ContentFindings What the draft's `subject` and `body` do not meet among the advertising content rules
+	// of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
+	// Empty when no subject or body was given, or when the message is not advertising.
+	ContentFindings *[]DraftContentFinding              `json:"content_findings,omitempty"`
+	Recipients      []SendAuthorizationPreviewRecipient `json:"recipients"`
 }
 
 // SendAuthorizationPreviewRecipient One recipient's answer. It describes the MESSAGE, never the contact's file.

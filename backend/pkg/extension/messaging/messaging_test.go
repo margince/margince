@@ -150,6 +150,33 @@ func TestAMalformedJurisdictionIsRefused(t *testing.T) {
 	}
 }
 
+// A means the engine cannot recognise in text would be an obligation no
+// stated particular could ever meet.
+func TestADisclosureMeansMustBeOneTheEngineRecognises(t *testing.T) {
+	if err := (Disclosure{Kind: ObjectionRoute, Means: []ContactMeans{"fax"}}).Validate(); err == nil {
+		t.Error("a means nothing recognises was accepted")
+	}
+	if err := (Disclosure{Kind: ObjectionRoute, Means: []ContactMeans{MeansWeb, MeansEmail, MeansPhone}}).Validate(); err != nil {
+		t.Errorf("the three recognised means were refused: %v", err)
+	}
+}
+
+func TestAClaimWordMustMatchSomethingAndNotEverything(t *testing.T) {
+	for _, c := range []struct {
+		words []string
+		ok    bool
+	}{
+		{[]string{"tốt nhất"}, true},
+		{[]string{""}, false},
+		{[]string{" nhất"}, false},
+	} {
+		r := Rules{Jurisdiction: "zz", Version: 1, ClaimsNeedProof: c.words}
+		if err := r.Validate(); (err == nil) != c.ok {
+			t.Errorf("Validate(%q) = %v, want ok=%v", c.words, err, c.ok)
+		}
+	}
+}
+
 func TestADisclosureLanguageNeedsARecipientBoundLawAndACode(t *testing.T) {
 	for _, c := range []struct {
 		rules Rules

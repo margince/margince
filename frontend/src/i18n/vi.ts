@@ -22474,4 +22474,23 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.withdrawTitle": "Rút lại mục tiêu của {name} năm {year}?",
   "goals.withdrawBody":
     "Cả mười hai tháng không còn được tính là mục tiêu. Lịch sử vẫn giữ chúng.",
+  "particulars.title": "Thông tin công ty trong email",
+  "particulars.intro":
+    "Email bạn gửi kết thúc bằng các thông tin mà luật yêu cầu. Mỗi trường chứa tối đa 500 ký tự.",
+  "particulars.legalName": "Tên pháp lý",
+  "particulars.postalAddress": "Địa chỉ bưu chính",
+  "particulars.privacyContact": "Liên hệ về bảo vệ dữ liệu",
+  "particulars.objectionRoute": "Cách từ chối quảng cáo",
+  "particulars.advertiserContact": "Liên hệ bên quảng cáo",
+  "particulars.objectionMeans":
+    "Nêu một trang web hoặc đường dẫn mạng xã hội, một địa chỉ email và một số điện thoại. Có thể thêm từ trả lời như STOP.",
+  "particulars.translationTitle": "Bằng {language}",
+  "particulars.translationIntro":
+    "Email và trang bằng {language} hiển thị nội dung này ở những trường bạn điền. Quảng cáo phải viết bằng {language} chỉ được gửi khi cách từ chối và liên hệ bên quảng cáo đã được điền ở đây.",
+  "particulars.objectionExample": "Ví dụ: {example}",
+  "compose.contentFinding.title": "Quy định quảng cáo cho email này",
+  "compose.contentFinding.claim":
+    "Chỉ được dùng “{words}” khi có bằng chứng. Hãy thêm tên, số và ngày của tài liệu chứng minh vào email.",
+  "compose.contentFinding.language":
+    "Viết email này bằng {language} trước. Nội dung bằng ngôn ngữ khác đặt bên dưới và không lớn hơn phần bằng {language}.",
 };

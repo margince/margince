@@ -41,6 +41,8 @@ type (
 	ExceptionKind = pub.ExceptionKind
 	// DisclosureKind names something a first message must carry.
 	DisclosureKind = pub.DisclosureKind
+	// ContactMeans names one way of reaching someone a disclosure must name.
+	ContactMeans = pub.ContactMeans
 )
 
 // The published constants, re-exported.
@@ -55,6 +57,12 @@ const (
 	ObjectionRoute = pub.ObjectionRoute
 	// AdvertiserContact is the advertiser's own reachability.
 	AdvertiserContact = pub.AdvertiserContact
+	// MeansWeb is a web page or a social-network link.
+	MeansWeb = pub.MeansWeb
+	// MeansEmail is an email address.
+	MeansEmail = pub.MeansEmail
+	// MeansPhone is a phone number.
+	MeansPhone = pub.MeansPhone
 )
 
 var (
@@ -92,7 +100,11 @@ func clone(r Rules) Rules {
 	out := r
 	out.MarketingExceptions = slices.Clone(r.MarketingExceptions)
 	out.Disclosures = slices.Clone(r.Disclosures)
+	for i := range out.Disclosures {
+		out.Disclosures[i].Means = slices.Clone(r.Disclosures[i].Means)
+	}
 	out.Instruments = slices.Clone(r.Instruments)
+	out.ClaimsNeedProof = slices.Clone(r.ClaimsNeedProof)
 
 	if r.FrequencyCap != nil {
 		copied := *r.FrequencyCap
@@ -218,7 +230,21 @@ func stricter(a, b Rules) Rules {
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.
 	out.MarketingExceptions = commonExceptions(a.MarketingExceptions, b.MarketingExceptions)
+	foldAdvertisingContent(&out, b)
 	return out
+}
+
+// foldAdvertisingContent adds b's advertising content rules to out. A claim
+// either side restricts stays restricted.
+func foldAdvertisingContent(out *Rules, b Rules) {
+	out.RefusalSectionLast = out.RefusalSectionLast || b.RefusalSectionLast
+	claims := slices.Clone(out.ClaimsNeedProof)
+	for _, word := range b.ClaimsNeedProof {
+		if !slices.Contains(claims, word) {
+			claims = append(claims, word)
+		}
+	}
+	out.ClaimsNeedProof = claims
 }
 
 // shorterWindow picks the tighter of two windows, treating zero as "this

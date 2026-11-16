@@ -51,7 +51,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 		}
 		page := wireSubscriptionCard(card)
 		page.Language = pageLanguage(ref)
-		if page.Controller, err = h.pageController(r); err != nil {
+		if page.Controller, err = h.pageController(r, ref.QuestionLocale); err != nil {
 			writeConsentErr(w, r, err)
 			return
 		}
@@ -73,6 +73,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 			writeConsentErr(w, r, err)
 			return
 		}
+		info.Controller = info.Controller.In(ref.QuestionLocale)
 		page := wirePrivacyInformation(info)
 		page.Language = pageLanguage(ref)
 		httperr.WriteJSON(w, http.StatusOK, page)
@@ -97,7 +98,7 @@ func (h Handlers) GetConfirmDetails(w http.ResponseWriter, r *http.Request, toke
 	page := wireConfirmCard(card)
 	page.Language = pageLanguage(ref)
 	page.AsksNews = &ref.AsksNews
-	if page.Controller, err = h.pageController(r); err != nil {
+	if page.Controller, err = h.pageController(r, ref.QuestionLocale); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
@@ -120,12 +121,12 @@ func (h Handlers) pageQuestion(r *http.Request, ref ConfirmRef) (*crmcontracts.C
 
 // pageController names the controller on a confirm page the way the mail that
 // carried the link named it.
-func (h Handlers) pageController(r *http.Request) (*crmcontracts.PrivacyInformationController, error) {
+func (h Handlers) pageController(r *http.Request, language string) (*crmcontracts.PrivacyInformationController, error) {
 	particulars, err := h.store.controllerParticulars(r.Context())
 	if err != nil {
 		return nil, err
 	}
-	return wireController(particulars), nil
+	return wireController(particulars.In(language)), nil
 }
 
 // pageLanguage is the language the link's mail was written in, which its page
