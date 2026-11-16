@@ -80,8 +80,6 @@ func newDealSeeder(t *testing.T, e *stagingEnv) *dealSeeder {
 	t.Helper()
 	ctx := context.Background()
 	s := &dealSeeder{env: e, pipeline: ids.NewV7(), stage: ids.NewV7()}
-	// The name carries the id because pipeline names are unique installation-wide
-	// and this package's suites share one database.
 	if _, err := e.owner.Exec(ctx,
 		`INSERT INTO pipeline (id, name, is_default, position) VALUES ($1, $2, false, 0)`,
 		s.pipeline, "Counted "+s.pipeline.String()); err != nil {
@@ -147,6 +145,7 @@ func (e *stagingEnv) policyOf(t *testing.T, rep ids.UUID) (mode string, clean, e
 }
 
 func TestADecisionCountsTowardTheDecidingRepsRecord(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seed := newDealSeeder(t, e)
 	ctx := e.asRep(e.rep)
@@ -167,6 +166,7 @@ func TestADecisionCountsTowardTheDecidingRepsRecord(t *testing.T) {
 }
 
 func TestARejectionAndAnEditAreCountedApartFromACleanApproval(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seed := newDealSeeder(t, e)
 	ctx := e.asRep(e.rep)
@@ -193,6 +193,7 @@ func TestARejectionAndAnEditAreCountedApartFromACleanApproval(t *testing.T) {
 // payload is corrected every time is the kind the software must keep asking
 // about, and counting those as clean approvals would promote it fastest.
 func TestAnEditedApprovalIsNotACleanOne(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seed := newDealSeeder(t, e)
 	ctx := e.asRep(e.rep)
@@ -229,6 +230,7 @@ func TestAnEditedApprovalIsNotACleanOne(t *testing.T) {
 // case for the outcome mapping: fold rejection into approved_clean and the
 // ladder offers autonomy to a rep who has refused the kind every time.
 func TestRejectionsNeverEarnACleanApproval(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seed := newDealSeeder(t, e)
 	ctx := e.asRep(e.rep)
@@ -252,6 +254,7 @@ func TestRejectionsNeverEarnACleanApproval(t *testing.T) {
 // the same kind must build two records, or one colleague's refusals would hold
 // down another's earned standing.
 func TestOneRepsRecordIsNotAnother(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seed := newDealSeeder(t, e)
 	other := e.secondRep(t)
@@ -273,6 +276,7 @@ func TestOneRepsRecordIsNotAnother(t *testing.T) {
 }
 
 func TestCountingDecisionsPreservesAnOffChoice(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seed := newDealSeeder(t, e)
 	ctx := e.asRep(e.rep)

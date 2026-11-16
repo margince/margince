@@ -38,15 +38,14 @@ type busEnv struct {
 
 func setup(t *testing.T) *busEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
+	db := testdb.New(t)
 	redisAddr := os.Getenv("MARGINCE_TEST_REDIS")
-	if ownerDSN == "" || appDSN == "" || redisAddr == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN / MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	if redisAddr == "" {
+		t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
 	}
 	ctx := t.Context()
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting as owner: %v", err)
 	}
@@ -55,18 +54,6 @@ func setup(t *testing.T) *busEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// Brought to head once per test process; every later test resets the data
-	// only — the discipline backend/gates/integrationmigrateonce_test.go enforces
-	// module-wide. Either way the app pool below gets the GRANT USAGE ON SCHEMA
-	// public TO margince_app it depends on: EnsureSchema issues it when it
-	// rebuilds the schema, and a lane clone inherits it from the migration that
-	// grants it (core 0015) when EnsureSchema reuses one.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatalf("migrating the test schema: %v", err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting test data: %v", err)
-	}
 
 	// The relay needs a workspace row only because fixtures reference one
 	// in their envelopes; the outbox itself is infra-owned (no RLS).
@@ -76,7 +63,7 @@ func setup(t *testing.T) *busEnv {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 
-	pool, err := testdb.OwnPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}
@@ -155,6 +142,7 @@ func (e *busEnv) streamEventIDs(t *testing.T, stream string) []string {
 	return eventIDs
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
 	e := setup(t)
 	env := e.stage(t, "contact.created", ids.NewV7())
@@ -187,6 +175,7 @@ func TestRelayShipsACommittedRowExactlyOnceInSteadyState(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
 	e := setup(t)
 	env := e.stage(t, "deal.created", ids.NewV7())
@@ -234,6 +223,7 @@ func TestRelayCrashBeforeStampRepublishes_atLeastOnce(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestRelayPreservesCommitOrderPerEntity(t *testing.T) {
 	e := setup(t)
 	entity := ids.NewV7()
@@ -290,6 +280,7 @@ func consumeUntil(t *testing.T, s *Subscriber, deadline time.Duration, done func
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
 	e := setup(t)
 	e.stage(t, "contact.created", ids.NewV7())
@@ -335,6 +326,7 @@ func TestSubscriberDeliversEveryEntryAndAcksIt(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestSubscriberReclaimRedeliversAfterHandlerCrash(t *testing.T) {
 	e := setup(t)
 	env := e.stage(t, "lead.created", ids.NewV7())
@@ -369,6 +361,7 @@ func TestSubscriberReclaimRedeliversAfterHandlerCrash(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestSubscriberEnsuresEverySpecGroup(t *testing.T) {
 	e := setup(t)
 	noop := func(context.Context, kevents.Envelope) error { return nil }
@@ -402,6 +395,8 @@ func TestSubscriberEnsuresEverySpecGroup(t *testing.T) {
 // event. This test pins both halves — no mark while the effect has not
 // succeeded (so a crash there re-runs, never drops), and a mark once it
 // has (so the third delivery is absorbed).
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestDedupeMarksOnlyAfterTheEffectSucceeded(t *testing.T) {
 	e := setup(t)
 	env := e.stage(t, "contact.created", ids.NewV7())

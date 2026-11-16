@@ -13,7 +13,6 @@ package ai
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -33,13 +32,9 @@ type rateEnv struct {
 
 func setupRateStore(t *testing.T) *rateEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,28 +43,13 @@ func setupRateStore(t *testing.T) *rateEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 
 	return &rateEnv{owner: owner, pool: pool}
@@ -137,6 +117,7 @@ func (e *rateEnv) insertCall(ctx context.Context, t *testing.T, c callFixture) {
 }
 
 func TestRateForResolvesEffectiveDateAcrossARateChange(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -256,6 +237,7 @@ func buildCostReportFixture() costReportFixture {
 }
 
 func TestCostReportPricesTheWindowAndCountsUnpriced(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -321,6 +303,7 @@ func TestCostReportPricesTheWindowAndCountsUnpriced(t *testing.T) {
 // grain AIRT-WIRE-1's /ai/usage merge (usage.go) depends on to attach
 // cost onto the right day's task row.
 func TestCostReportGroupsByCalendarDay(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -368,6 +351,7 @@ func TestCostReportGroupsByCalendarDay(t *testing.T) {
 // Each line mixes calls priced at different rates, so a call matched to another
 // call's rate shows as a wrong total. The figures are worked out by hand.
 func TestCostReportPricesEachCallAtItsOwnModelAndDay(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -424,6 +408,7 @@ func TestCostReportPricesEachCallAtItsOwnModelAndDay(t *testing.T) {
 // from its own tier's calls — rather than one task-day total that a
 // caller would broadcast onto both tier rows and double-count.
 func TestCostReportGroupsByTierNotJustTask(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -502,6 +487,7 @@ func TestCostReportGroupsByTierNotJustTask(t *testing.T) {
 // sheet, not hand-rolled fixture rates, so this also proves the seed rows
 // this fix added (gemini-embedding-001, ollama/bge-m3) actually resolve.
 func TestCostReportPricesEmbeddingCallsHonestly(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -564,6 +550,7 @@ func TestCostReportPricesEmbeddingCallsHonestly(t *testing.T) {
 // languages, and a zero read as "free" would lower the reported cost of every
 // call that hit a warm cache.
 func TestCostReportPricesAZeroCachePriceAtTheInputRate(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -600,6 +587,7 @@ func TestCostReportPricesAZeroCachePriceAtTheInputRate(t *testing.T) {
 // in the cost report. A call at the line costs the row's own. RateFor returns
 // the band, so a Go reader prices the same call to the same figure.
 func TestCostReportPricesAPromptAboveTheBandAtTheBand(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -654,6 +642,7 @@ func (e *rateEnv) dbFor(ws ids.UUID) *database.DB {
 }
 
 func TestSheetHeadLeavesOutTheRowThatNamesNoModelWhilePricingStillReadsIt(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)

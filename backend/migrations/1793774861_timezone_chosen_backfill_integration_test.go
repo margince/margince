@@ -16,6 +16,7 @@ import (
 // A user who saved the working-hours form picked their zone there, so the
 // backfill marks it chosen. Everybody else's zone stays a guess.
 func TestTheTimezoneChosenBackfillMarksOnlyWorkingHoursSavers(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

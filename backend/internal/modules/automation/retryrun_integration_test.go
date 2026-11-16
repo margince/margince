@@ -92,6 +92,7 @@ func (fx *autoFixture) failedRunID(t *testing.T, handler string) (ids.UUID, stri
 }
 
 func TestARetriedRunAppliesOnTheSecondPass(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "retry_me"
 	fx.seedAutomation(t, handler)
@@ -124,6 +125,7 @@ func TestARetriedRunAppliesOnTheSecondPass(t *testing.T) {
 }
 
 func TestARetryRefusesARunThatDidNotFail(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "applied_cleanly"
 	fx.seedAutomation(t, handler)
@@ -148,6 +150,7 @@ func TestARetryRefusesARunThatDidNotFail(t *testing.T) {
 }
 
 func TestARetryRefusesAHandlerThatWouldRepeatItsEffect(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "unaudited"
 	fx.seedAutomation(t, handler)
@@ -174,6 +177,7 @@ func TestARetryRefusesAHandlerThatWouldRepeatItsEffect(t *testing.T) {
 }
 
 func TestARetryRefusesARunWhoseTriggerEventIsGone(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "clock_shaped"
 	fx.seedAutomation(t, handler)
@@ -212,6 +216,7 @@ func TestARetryRefusesARunWhoseTriggerEventIsGone(t *testing.T) {
 }
 
 func TestARetriedRunStaysVisibleToTheHealthLane(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "still_broken"
 	fx.seedAutomation(t, handler)
@@ -255,6 +260,7 @@ func TestARetriedRunStaysVisibleToTheHealthLane(t *testing.T) {
 }
 
 func TestRetryingARetryIsItsOwnAttempt(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "twice_broken"
 	fx.seedAutomation(t, handler)
@@ -300,6 +306,7 @@ func TestRetryingARetryIsItsOwnAttempt(t *testing.T) {
 }
 
 func TestRetryNumbersSurviveRemovalOfEarlierAttempts(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "retry_after_history_cleanup"
 	fx.seedAutomation(t, handler)
@@ -333,6 +340,7 @@ func TestRetryNumbersSurviveRemovalOfEarlierAttempts(t *testing.T) {
 }
 
 func TestAFailedRunKeepsTheEnvelopeIdentityNeededForRetry(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	const handler = "retained_retry"
 	fx.seedAutomation(t, handler)

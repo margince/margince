@@ -167,6 +167,7 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 
 // The rekey moves a lifted row to its keyed hash with its lift. A subject who
 // came back before the key was bound is not refused after it.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheRekeyKeepsALift(t *testing.T) {
 	apptest.BindEnv(t, nil)

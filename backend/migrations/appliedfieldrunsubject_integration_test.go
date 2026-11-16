@@ -26,6 +26,7 @@ import (
 )
 
 func TestAFilledFieldMustBelongToTheRunItNames(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -59,6 +60,7 @@ func TestAFilledFieldMustBelongToTheRunItNames(t *testing.T) {
 // to match. Both erasure paths delete the markers before scrubbing the run;
 // this is what stops that becoming optional.
 func TestScrubbingARunAfterItsMarkersAreGoneIsStillAllowed(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)

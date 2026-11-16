@@ -20,6 +20,7 @@ import (
 )
 
 func TestTroubledRunsCarriesFailedAndBlockedAcrossLiveRulesOnly(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)

@@ -31,6 +31,7 @@ import (
 // no vault at all. Asserted first, because a refusal that fired here would stop
 // every one of them.
 func TestNoRootKeyAndNothingSealedIsNotAnError(t *testing.T) {
+	t.Parallel()
 	pool := singleConnPool(t)
 
 	vault, configured, err := keyvault.FromEnv(t.Context(), pool, config.Static(nil))
@@ -43,6 +44,7 @@ func TestNoRootKeyAndNothingSealedIsNotAnError(t *testing.T) {
 }
 
 func TestSealedSecretsWithNoRootKeyRefuseTheBoot(t *testing.T) {
+	t.Parallel()
 	pool := singleConnPool(t)
 	ctx := t.Context()
 
@@ -81,6 +83,7 @@ func TestSealedSecretsWithNoRootKeyRefuseTheBoot(t *testing.T) {
 // Here rather than beside the unit tests because the configured direction needs
 // a pool — the local provider refuses to build without one.
 func TestForRoleHandsBackNilForExactlyAnUnconfiguredVault(t *testing.T) {
+	t.Parallel()
 	pool := singleConnPool(t)
 	configured := map[string]string{keyvault.EnvRootKey: base64.StdEncoding.EncodeToString(rootKey(t))}
 

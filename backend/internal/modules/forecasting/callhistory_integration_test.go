@@ -7,13 +7,6 @@ package forecasting
 
 // The chain a call leaves behind, read back.
 //
-// Each case works in its OWN period, and the distinct years are load-bearing.
-// An installation holds exactly one workspace, so these tests share a database:
-// two cases calling the same (period, scope) would see each other's rows, and
-// the count assertions would fail on a collision rather than on a defect. That
-// stays true whether they run together or in sequence — the periods keep them
-// independent of each other's ORDER as well as of each other's timing.
-//
 // These need real Postgres for the reason the snapshot tests do: the ordering
 // is SQL's, the scope match is SQL's, and the NULL-versus-value distinction
 // that decides whether a workspace call finds its own predecessor cannot be

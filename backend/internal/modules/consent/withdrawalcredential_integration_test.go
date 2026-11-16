@@ -64,6 +64,7 @@ func pressCtx(e *channelConsentEnv) context.Context {
 // test: the preference token rotates and dies, and the withdrawal link written
 // into the same mail still withdraws.
 func TestAWithdrawalLinkSurvivesTheReadTokensRotation(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
@@ -110,6 +111,7 @@ func TestAWithdrawalLinkSurvivesTheReadTokensRotation(t *testing.T) {
 //
 // So every send mints its own and the old ones keep working.
 func TestAnOlderMessagesLinkKeepsWorkingAfterANewerSend(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	address := "subject-" + e.contact.String() + "@example.test"
@@ -140,6 +142,7 @@ func TestAnOlderMessagesLinkKeepsWorkingAfterANewerSend(t *testing.T) {
 // lead-only recipient gets no unsubscribe surface at all today: the send simply
 // carries no header.
 func TestALeadOnlyRecipientGetsAWorkingOptOut(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	var leadID ids.UUID
 	if err := e.owner.QueryRow(context.Background(),
@@ -173,6 +176,7 @@ func TestALeadOnlyRecipientGetsAWorkingOptOut(t *testing.T) {
 // preference token, so refusing them would ship the fix with every existing
 // withdrawal link still broken.
 func TestAnExpiredPreferenceTokenStillWithdraws(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	var legacy string
@@ -202,6 +206,7 @@ func TestAnExpiredPreferenceTokenStillWithdraws(t *testing.T) {
 // THE THREE REASONS THAT ARE NOT ROTATIONS. Honouring any of them would let a
 // link act for a subject who is gone, or for a holder who is not the recipient.
 func TestATokenRevokedForErasureOrCompromiseNeverWithdrawsAgain(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	for _, reason := range []string{"erasure", "compromise", "merged_predecessor"} {
@@ -225,6 +230,7 @@ func TestATokenRevokedForErasureOrCompromiseNeverWithdrawsAgain(t *testing.T) {
 // Unknown, revoked and expired answer alike, so the surface is not an oracle
 // for which of the three a probe found.
 func TestAnUnknownWithdrawalTokenIsIndistinguishableFromARevokedOne(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	address := "subject-" + e.contact.String() + "@example.test"
@@ -257,6 +263,7 @@ func TestAnUnknownWithdrawalTokenIsIndistinguishableFromARevokedOne(t *testing.T
 // THE SEND PATH mints the credential the mail's List-Unsubscribe header
 // carries, and it reaches a lead — which the preference token cannot.
 func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO lead (full_name, email, source, captured_by)
@@ -287,6 +294,7 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 // uq_contact_email_dedupe bounds contact_email alone — so this is reachable in a
 // way two live CONTACTS are not.
 func TestAContactWinsOverALeadHoldingTheSameAddress(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	shared := "both-records@example.test"
 	if _, err := e.owner.Exec(context.Background(),
@@ -326,6 +334,7 @@ func TestAContactWinsOverALeadHoldingTheSameAddress(t *testing.T) {
 // and a lead holds none. That handed a lead a link that worked right up to the
 // moment it mattered.
 func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	var leadID ids.UUID
 	if err := e.owner.QueryRow(context.Background(),
@@ -389,6 +398,7 @@ func TestALeadsPressRecordsAStopRatherThanRefusing(t *testing.T) {
 // This drives the REAL writer rather than writing the reason by hand, which is
 // what let the first version of these tests pass over the defect.
 func TestTheProductionRotationNamesItsReason(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	address := "subject-" + e.contact.String() + "@example.test"
@@ -443,6 +453,7 @@ func TestTheProductionRotationNamesItsReason(t *testing.T) {
 // Both credential families answer here now, which is why the test calls the
 // writer both routes share rather than a credential-only one.
 func TestAnUnsubscribeLeavesBusinessCorrespondenceRunning(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	for _, p := range []struct{ key, class string }{
@@ -488,6 +499,7 @@ func TestAnUnsubscribeLeavesBusinessCorrespondenceRunning(t *testing.T) {
 // a successful first press told the recipient "these were already switched
 // off, nothing changed".
 func TestACredentialPressHidesNamesButNotWhetherItWorked(t *testing.T) {
+	t.Parallel()
 	stopped := answeredKeys([]string{"newsletter_blast", "cold_calling"}, true)
 	replayed := answeredKeys([]string{}, true)
 
@@ -518,6 +530,7 @@ func TestACredentialPressHidesNamesButNotWhetherItWorked(t *testing.T) {
 // and the named-purpose branch took it as given, which is right for a
 // preference token and wrong for a credential whose scope says marketing.
 func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	for _, p := range []struct{ key, class string }{
@@ -583,6 +596,7 @@ func TestAnAllMarketingLinkRefusesToStopCorrespondenceByName(t *testing.T) {
 // Both directions on both doors, because a refusal alone would also pass
 // against a mint that refuses everybody.
 func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	as := func(grant principal.ObjectGrant) context.Context {
@@ -661,6 +675,7 @@ func TestTheMintDoorsAskForTheGrantTheirQuestionNeeds(t *testing.T) {
 // than discovering — a case pinned to one of them would report the belt gone
 // while the braces held.
 func TestTheMintRefusesASubjectWhoseRecordIsGone(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	// It works first, so the refusal below is about the erasure and not about
@@ -707,6 +722,7 @@ func TestTheMintRefusesASubjectWhoseRecordIsGone(t *testing.T) {
 // principal that simply cannot do anything: the same caller with a WRITE grant
 // mints successfully.
 func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	colleague := ids.NewV7()
 
@@ -772,6 +788,7 @@ func TestAReadShareOnAContactIsNotAuthorityToMintTheirOptOut(t *testing.T) {
 // the kind, and the source that says an unauthenticated press wrote it. The
 // press still reports that it moved something, because it did.
 func TestAPressOnAnAddressNoRecordHoldsStillStops(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	token := mintWithdrawal(t, e, WithdrawalMintInput{
 		Address: "nobody-at-all@example.test",
@@ -807,6 +824,7 @@ func TestAPressOnAnAddressNoRecordHoldsStillStops(t *testing.T) {
 // assembles: the refusal is what stops a malformed one writing a suppression
 // bound to nobody, which no later read could find and no lift could revoke.
 func TestAWithdrawalRefNamingNobodyIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	var stopped bool
@@ -839,6 +857,7 @@ func TestAWithdrawalRefNamingNobodyIsRefused(t *testing.T) {
 // body carries the anonymous placeholder instead, and the replay below is what
 // pins the two apart: same door, same token, one answer each way.
 func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	address := "one-click-" + e.ws.String() + "@example.test"
 	token := mintWithdrawal(t, e, WithdrawalMintInput{
@@ -882,6 +901,7 @@ func TestTheOneClickPressOnACredentialRecordsTheStop(t *testing.T) {
 // lift where a per-purpose withdrawal belonged. The refusal is what keeps a
 // caller assembling a ref by hand from reaching through.
 func TestAContactsCredentialIsRefusedByTheAddressStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	var stopped bool
@@ -913,6 +933,7 @@ func TestAContactsCredentialIsRefusedByTheAddressStop(t *testing.T) {
 // with that column unanswered — a live suppression a later reader cannot
 // attribute, and one no lift can be authorised against.
 func TestAPressWithNoActorBoundRecordsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	address := "no-actor-" + e.ws.String() + "@example.test"
 	unattributed := principal.WithWorkspaceID(context.Background(), e.ws)

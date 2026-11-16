@@ -40,6 +40,7 @@ func deadCounts(t *testing.T, health jobs.Health, kind string) (dead, recent int
 }
 
 func TestTheDeadBannerCountsTheWindowAndTheReportCountsTheWeek(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool := migratedAppPool(t)
 	ws := ids.NewV7()
@@ -100,6 +101,7 @@ func TestTheDeadBannerCountsTheWindowAndTheReportCountsTheWeek(t *testing.T) {
 // worst direction — an undated terminal row would fall out of every window and
 // the banner would go quiet about the one row nobody can date.
 func TestATerminalRowMustCarryTheMomentItDied(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	_, pool := migratedAppPool(t)
 	ws := ids.NewV7()

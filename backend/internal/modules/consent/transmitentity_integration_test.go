@@ -73,6 +73,7 @@ func (e *resolveEnv) sendThrough(t *testing.T, sender context.Context) (staged, 
 }
 
 func TestTransmitJudgesTheEntityStagingStoredForAHumanAndAnAgent(t *testing.T) {
+	t.Parallel()
 	for name, sender := range map[string]func(t *testing.T, e *resolveEnv, user ids.UUID) context.Context{
 		"a rep":                 func(_ *testing.T, e *resolveEnv, user ids.UUID) context.Context { return e.seatCtx(user) },
 		"an agent for that rep": func(t *testing.T, e *resolveEnv, user ids.UUID) context.Context { return e.agentFor(t, user) },
@@ -94,6 +95,7 @@ func TestTransmitJudgesTheEntityStagingStoredForAHumanAndAnAgent(t *testing.T) {
 }
 
 func TestTheWorkerNeverSendsOnTheDefaultEntitysVouchForABranchMessage(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -107,6 +109,7 @@ func TestTheWorkerNeverSendsOnTheDefaultEntitysVouchForABranchMessage(t *testing
 }
 
 func TestTransmitRefusesADeliveryWhosePurposeDiffersFromTheStagedOne(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")

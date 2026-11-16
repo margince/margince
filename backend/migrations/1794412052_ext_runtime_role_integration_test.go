@@ -26,6 +26,7 @@ const extRuntimeVersion = "1794412052"
 // that rolls back. It names a probe role in place of ext_runtime, because a
 // role is cluster-wide and other test runs use the real one.
 func TestTheExtRuntimeMigrationRefusesARoleThatHoldsTooMuch(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

@@ -26,6 +26,7 @@ import (
 )
 
 func TestFiringPathRecordsEveryTerminalOutcomeWithItsReason(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	stagedApproval := ids.New[ids.ApprovalKind]()
 
@@ -80,6 +81,7 @@ func TestFiringPathRecordsEveryTerminalOutcomeWithItsReason(t *testing.T) {
 // "secret_table" substring; sanitizedReason (engine_run.go) is what
 // makes it pass.
 func TestFailedRunReasonNeverLeaksRawProviderErrorInternals(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	rawProviderErr := errors.New(`pq: relation "secret_table" does not exist (SQLSTATE 42P01)`)
 	h := scriptedWorkflow{

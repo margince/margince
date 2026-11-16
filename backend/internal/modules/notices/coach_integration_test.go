@@ -50,6 +50,7 @@ func (t teammatesSaying) SharesLiveTeamWithCaller(context.Context, ids.UUID) (bo
 }
 
 func TestALeadCoachesATeammateAndTheNoticeIsTheirs(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	lead, rep := e.other, e.recipient
 
@@ -95,6 +96,7 @@ func TestALeadCoachesATeammateAndTheNoticeIsTheirs(t *testing.T) {
 // The ROLE gate on its own: a rep is refused even for somebody they share a
 // team with. Coaching is a thing a lead does.
 func TestARepDoesNotCoachEvenATeammate(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
@@ -116,6 +118,7 @@ func TestARepDoesNotCoachEvenATeammate(t *testing.T) {
 // The TEAMMATE gate on its own: a lead is refused for somebody on no team of
 // theirs, over the same role that just succeeded.
 func TestALeadDoesNotCoachSomebodyOnAnotherTeam(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
@@ -129,6 +132,7 @@ func TestALeadDoesNotCoachSomebodyOnAnotherTeam(t *testing.T) {
 // A system flow raises its own kinds through the notifier seam. One arriving
 // here would be a background pass writing in a contact's voice.
 func TestASystemPassDoesNotCoach(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
@@ -147,6 +151,7 @@ func TestASystemPassDoesNotCoach(t *testing.T) {
 // publishes but not one this endpoint should confirm to somebody it is about to
 // turn away.
 func TestARefusedCallerCannotTellAValidRequestFromAnInvalidOne(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	rep := e.asSeat(e.other, false)
 
@@ -172,6 +177,7 @@ func TestARefusedCallerCannotTellAValidRequestFromAnInvalidOne(t *testing.T) {
 // decision: the caller may well coach, and asked for something that is not a
 // coaching notice.
 func TestAnUnknownKindIsRefusedBeforeAnythingIsWritten(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
@@ -196,6 +202,7 @@ func TestAnUnknownKindIsRefusedBeforeAnythingIsWritten(t *testing.T) {
 // A note past its ceiling is refused rather than silently truncated: the coach
 // would otherwise believe they had said something the recipient never reads.
 func TestAnOversizeNoteIsRefusedRatherThanTrimmed(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
@@ -218,6 +225,7 @@ func TestAnOversizeNoteIsRefusedRatherThanTrimmed(t *testing.T) {
 // Coaching yourself is not a notice. It would sit in the raiser's own queue
 // looking like somebody had asked them for something.
 func TestCoachingYourselfIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	_, err := e.store.RaiseCoachNotice(
@@ -232,6 +240,7 @@ func TestCoachingYourselfIsRefused(t *testing.T) {
 // A notice with no note still says what it is about, which is why the kind is
 // closed and the note is not required.
 func TestANoticeWithNoNoteStillSaysWhatItIsAbout(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	notice, err := e.store.RaiseCoachNotice(

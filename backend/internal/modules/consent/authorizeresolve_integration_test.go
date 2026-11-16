@@ -15,7 +15,6 @@ package consent
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -45,13 +44,9 @@ type resolveEnv struct {
 
 func setupResolve(t *testing.T) *resolveEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -60,12 +55,6 @@ func setupResolve(t *testing.T) *resolveEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &resolveEnv{
 		ws: ids.NewV7(), user: ids.NewV7(),
@@ -103,7 +92,7 @@ func setupResolve(t *testing.T) *resolveEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -294,6 +283,7 @@ func (e *resolveEnv) resolve(t *testing.T, req commsauthz.Request) resolution {
 // thread alone. This is the answer the old purpose model could not reach: it
 // saw a consent_purpose and had no way to know the subject wrote first.
 func TestAReplyToAThreadTheSubjectStartedIsAReply(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 
@@ -315,6 +305,7 @@ func TestAReplyToAThreadTheSubjectStartedIsAReply(t *testing.T) {
 // subject may have written only the first — asking whether they wrote THIS
 // message would refuse an entirely ordinary reply.
 func TestAReplyIsAboutTheThreadNotTheOneMessage(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-48*time.Hour))
 	ours := e.outboundTo(t, "thread-1", e.address, time.Now().Add(-time.Hour))
@@ -334,6 +325,7 @@ func TestAReplyIsAboutTheThreadNotTheOneMessage(t *testing.T) {
 // Mutation: drop the role = 'from' clause and this passes with a bare copy
 // recipient counted as a correspondent.
 func TestBeingCopiedOnAThreadIsNotWritingIntoIt(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	// An inbound message somebody ELSE wrote, on which our subject is a 'to'.
 	anchor := e.activity(t, "thread-1", "inbound", time.Now().Add(-time.Hour), e.address, "to")
@@ -354,6 +346,7 @@ func TestBeingCopiedOnAThreadIsNotWritingIntoIt(t *testing.T) {
 // Mutation: drop the account-matching OR arm from authorIsTheSubject and
 // this fails — the address arm alone never matches a row with no address.
 func TestAChannelParticipantAnswersTheThreadArm(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	ctx := e.ctx
 	anchor := ids.NewV7()
@@ -387,6 +380,7 @@ func TestAChannelParticipantAnswersTheThreadArm(t *testing.T) {
 // account on the same provider, on the same thread, is a different human and
 // answers for nobody's reply.
 func TestADifferentChannelAccountOnTheSameProviderIsNotTheSubject(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	ctx := e.ctx
 	anchor := ids.NewV7()
@@ -420,6 +414,7 @@ func TestADifferentChannelAccountOnTheSameProviderIsNotTheSubject(t *testing.T) 
 // is what the anchor establishes; a message the subject sent about something
 // else is not an invitation to answer on this one.
 func TestAnInboundOnAnotherThreadDoesNotSupportThisReply(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.inboundFrom(t, "thread-other", e.address, time.Now().Add(-time.Hour))
 	anchor := e.outboundTo(t, "thread-1", e.address, time.Now())
@@ -440,6 +435,7 @@ func TestAnInboundOnAnotherThreadDoesNotSupportThisReply(t *testing.T) {
 // Mutation: drop the `anchor.thread_key IS NOT NULL` guard and this passes with
 // an unrelated threadless message counted as the subject writing in.
 func TestAnAnchorWithNoThreadSupportsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	// The subject wrote something, but on no thread at all.
 	e.activityWithoutThread(t, "inbound", e.address, "from")
@@ -456,6 +452,7 @@ func TestAnAnchorWithNoThreadSupportsNothing(t *testing.T) {
 // An anchor that does not exist, or was archived, supports nothing. A caller
 // naming a stale activity id must not fall through to an allow.
 func TestAMissingAnchorSupportsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	got := e.resolve(t, commsauthz.Request{AnchorActivityID: ids.NewV7()})
@@ -468,6 +465,7 @@ func TestAMissingAnchorSupportsNothing(t *testing.T) {
 // A live deal the recipient is a stakeholder on, and asked about, supports an
 // unprompted follow-up.
 func TestALiveDealTheRecipientIsAStakeholderOnSupportsAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
 	e.enquiredAbout(t, deal)
@@ -487,6 +485,7 @@ func TestALiveDealTheRecipientIsAStakeholderOnSupportsAFollowUp(t *testing.T) {
 // into a licence to mail everyone at the company. And a stakeholder row on a
 // closed deal is history: the opportunity that justified the follow-up is over.
 func TestADealSupportsAFollowUpOnlyWhenLiveAndTheRecipientIsOnIt(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name        string
 		status      string
@@ -513,6 +512,7 @@ func TestADealSupportsAFollowUpOnlyWhenLiveAndTheRecipientIsOnIt(t *testing.T) {
 // reply: the subject wrote to us and has not withdrawn, which is the strongest
 // ground a message can have, so it is checked before anything the caller said.
 func TestAThreadOutranksAMistakenClaim(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 
@@ -531,6 +531,7 @@ func TestAThreadOutranksAMistakenClaim(t *testing.T) {
 // should be told that; being silently re-labelled as marketing and refused for
 // want of consent would send them looking in the wrong place entirely.
 func TestAnUnsupportedClaimIsReviewedUnderItsOwnName(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryInvoiceOrPayment})
@@ -551,6 +552,7 @@ func TestAnUnsupportedClaimIsReviewedUnderItsOwnName(t *testing.T) {
 // now resolves to an account notice that is NOT supported, and says exactly
 // why — the disagreement is recorded while the old gate still decides.
 func TestTheLegacyTransactionalPurposeNoLongerCarriesItself(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO consent_purpose (id, key, label, class, requires_double_opt_in)
@@ -588,6 +590,7 @@ func TestTheLegacyTransactionalPurposeNoLongerCarriesItself(t *testing.T) {
 // The lead arm closed this already (TestALeadTakesNoAuthorityFromATransactionalPurpose
 // in leadconsent_integration_test.go); contacts were the remaining half.
 func TestTheLegacyTransactionalPurposeDoesNotAllowTheSend(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "transactional", "transactional")
 
@@ -612,6 +615,7 @@ func TestTheLegacyTransactionalPurposeDoesNotAllowTheSend(t *testing.T) {
 // unsupported — the strictest reading, because an unknown purpose is not a
 // reason to assume an operational one.
 func TestAnUnknownPurposeResolvesStrictly(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	got := e.resolve(t, commsauthz.Request{LegacyPurposeKey: "no-such-purpose"})
@@ -628,6 +632,7 @@ func TestAnUnknownPurposeResolvesStrictly(t *testing.T) {
 // the thread and one not, get different answers — which is what makes a refusal
 // explainable to the contact it is about.
 func TestTwoRecipientsOnOneMessageGetTheirOwnAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 
@@ -670,6 +675,7 @@ func TestTwoRecipientsOnOneMessageGetTheirOwnAnswers(t *testing.T) {
 // is written here so a reader who deletes one and sees a green suite knows the
 // second is now the only thing holding it.
 func TestAnUnsupportedClaimIsRecordedButNeverResolvedTo(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
 
@@ -693,6 +699,7 @@ func TestAnUnsupportedClaimIsRecordedButNeverResolvedTo(t *testing.T) {
 // from the record, not a claim. Without this the test above would pass with an
 // engine that never resolved anything.
 func TestASupportedResolutionSetsTheResolvedCategory(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 
@@ -713,6 +720,7 @@ func TestASupportedResolutionSetsTheResolvedCategory(t *testing.T) {
 //
 // Mutation: drop `r.archived_at IS NULL` and this fails.
 func TestARemovedStakeholderSupportsNoFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
 	if _, err := e.owner.Exec(context.Background(),
@@ -735,6 +743,7 @@ func TestARemovedStakeholderSupportsNoFollowUp(t *testing.T) {
 //
 // Mutation: drop `p.contact_id IS NULL` from the address arm and this fails.
 func TestAReassignedAddressDoesNotInheritTheThread(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	// Somebody ELSE wrote into the thread from the address our subject now holds.
 	previous := ids.New[ids.ContactKind]()
@@ -772,6 +781,7 @@ func TestAReassignedAddressDoesNotInheritTheThread(t *testing.T) {
 // Mutation: read one row for the delivery (ORDER BY decided_at DESC LIMIT 1)
 // instead of DISTINCT ON the recipient, and this fails.
 func TestEachRecipientsStagedClaimIsRecoveredSeparately(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	// Two recipients on one delivery, staged in one transaction with different
@@ -800,6 +810,7 @@ func TestEachRecipientsStagedClaimIsRecoveredSeparately(t *testing.T) {
 // else's. This is also the shape of a delivery staged before the engine
 // existed, which must keep sending exactly as it did.
 func TestARecipientWithNoStagedClaimInheritsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	e.plantStagingDecision(t, delivery, "first@corp.test", commsauthz.CategoryInvoiceOrPayment)
@@ -907,6 +918,7 @@ func (e *resolveEnv) issueLinkRow(t *testing.T, kind string, expires time.Time, 
 // `d.Requested = res.Category` in decideResolved, and the requested assertion
 // fails. Either alone stays green, because the other sets the same claim.
 func TestAFailedDealClaimStaysOnThePreviewWithoutResolving(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.inboundFrom(t, "thread-earlier", e.address, clocktest.Now(t).AddDate(0, 0, -30))
 	deal := e.openDeal(t, "open", false)

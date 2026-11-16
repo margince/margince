@@ -23,6 +23,7 @@ var leaseColumns = []string{
 }
 
 func TestAnOldShapeInsertStartsTheLeaseAtAttemptZero(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	id := seedLegacyRun(t, conn, legacyRun{status: "running", sourceRef: "ws/import/lease"})
@@ -43,6 +44,7 @@ func TestAnOldShapeInsertStartsTheLeaseAtAttemptZero(t *testing.T) {
 }
 
 func TestThePhaseCheckRefusesAnUnknownPhase(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	id := seedLegacyRun(t, conn, legacyRun{status: "running", sourceRef: "ws/import/phase"})
@@ -66,6 +68,7 @@ func TestThePhaseCheckRefusesAnUnknownPhase(t *testing.T) {
 }
 
 func TestTheLeaseDownMigrationDropsEveryLeaseColumn(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	seedLegacyRun(t, conn, legacyRun{status: "complete", sourceRef: "ws/import/kept"})

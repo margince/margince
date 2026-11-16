@@ -21,6 +21,7 @@ import (
 )
 
 func TestAnAdmittedTransactionKeepsItsSlotAfterTheLeaseBackendDies(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	slot := "test:slot:" + ids.NewV7().String()
@@ -74,6 +75,7 @@ func TestAnAdmittedTransactionKeepsItsSlotAfterTheLeaseBackendDies(t *testing.T)
 }
 
 func TestTransactionOwnershipIsCheckedOnSnapshotJoinsAndDetachedWrites(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {

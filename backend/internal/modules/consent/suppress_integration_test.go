@@ -45,6 +45,7 @@ func liveSuppressionRow(t *testing.T, e *channelConsentEnv, contact ids.ContactI
 // by SAR, and written by nothing — so a rep told on a call to stop had nowhere
 // to put it.
 func TestARepRecordsTheSubjectsOwnRequest(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	err := e.store.Suppress(e.ctx, SuppressInput{
@@ -80,6 +81,7 @@ func TestARepRecordsTheSubjectsOwnRequest(t *testing.T) {
 // what answers "who stopped this contact and when", and the outbox row is what
 // lets anything downstream react. They commit together or not at all.
 func TestTheWriteCarriesItsAuditAndItsEvent(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if err := e.store.Suppress(e.ctx, SuppressInput{
@@ -132,6 +134,7 @@ func TestTheWriteCarriesItsAuditAndItsEvent(t *testing.T) {
 // too hard to lift costs an awkward conversation; one too easy costs mail
 // somebody explicitly refused.
 func TestOnlyAStopTheSubjectAskedForIsRecordableByHand(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	for _, kind := range []string{"hard_bounce", ""} {
@@ -163,6 +166,7 @@ func TestOnlyAStopTheSubjectAskedForIsRecordableByHand(t *testing.T) {
 // TestAnUnknownSubjectIsNotSuppressible closes the plainest arm: an id that
 // names nothing answers not-found rather than writing a row.
 func TestAnUnknownSubjectIsNotSuppressible(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	err := e.store.Suppress(e.ctx, SuppressInput{
@@ -183,6 +187,7 @@ func TestAnUnknownSubjectIsNotSuppressible(t *testing.T) {
 // with nothing on screen explaining it — and the 204/404 difference would tell
 // the caller which ids are real.
 func TestAContactAnotherRepCannotSeeIsNotSuppressible(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	// A contact the mailbox sync invented for somebody else, never promoted.
@@ -220,6 +225,7 @@ func TestAContactAnotherRepCannotSeeIsNotSuppressible(t *testing.T) {
 // TestASeatWithoutWriteAuthorityIsRefused proves the gate is the store's, not
 // the handler's.
 func TestASeatWithoutWriteAuthorityIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	readOnly := principal.WithWorkspaceID(context.Background(), e.ws)
@@ -249,6 +255,7 @@ func TestASeatWithoutWriteAuthorityIsRefused(t *testing.T) {
 // a permanent stop on one contact, written by any seat holding contact.update,
 // which is the denial of service the level system exists to prevent.
 func TestARepsRowIsWrittenAtTheRepsOwnLevel(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	// A contact this rep owns. EnsureWritable's write-authority arm refuses a
@@ -283,6 +290,7 @@ func TestARepsRowIsWrittenAtTheRepsOwnLevel(t *testing.T) {
 // somebody else's record — a refusal its owner sees on every send with nothing
 // on screen explaining it.
 func TestARepCannotStopAContactTheyOnlyRead(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	// Owned by somebody else, but workspace-visible: every seat can READ it.
@@ -325,6 +333,7 @@ func TestARepCannotStopAContactTheyOnlyRead(t *testing.T) {
 // back refused at 500. Both now call requireReason, and this test is what fails
 // if one of them stops.
 func TestASuppressionNeedsAReasonSomebodyCanReview(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	// Only the BOUND. Empty is legal here and refused on the lift door, because
@@ -354,6 +363,7 @@ func TestASuppressionNeedsAReasonSomebodyCanReview(t *testing.T) {
 // here would answer 422 to that body and stop a rep recording a stop somebody
 // actually asked for.
 func TestASuppressionMayCarryNoReason(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if err := e.store.Suppress(e.ctx, SuppressInput{
@@ -376,6 +386,7 @@ func TestASuppressionMayCarryNoReason(t *testing.T) {
 // rep's own level would be liftable by any admin — an installation quietly
 // undoing a stop the contact asked for.
 func TestARepRecordsAnObjectionAtTheSubjectsOwnLevel(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if err := e.store.Suppress(e.ctx, SuppressInput{
@@ -404,6 +415,7 @@ func TestARepRecordsAnObjectionAtTheSubjectsOwnLevel(t *testing.T) {
 // the subject's. Only an admin correcting a mistake gets past it
 // (TestAnAdminCorrectsAnObjectionAColleagueTyped).
 func TestNoRepLiftsAnObjectionItRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	contact := repOwnedContact(t, e)
 	rep := boundedRepCtx(e.ws, e.user)
@@ -458,6 +470,7 @@ func TestNoRepLiftsAnObjectionItRecorded(t *testing.T) {
 // bound every category — so the contact's invoices stopped with their marketing.
 // An objection reaches marketing and nothing else.
 func TestAnObjectionLeavesTheInvoiceAlone(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if err := e.store.Suppress(e.ctx, SuppressInput{
@@ -489,6 +502,7 @@ func TestAnObjectionLeavesTheInvoiceAlone(t *testing.T) {
 // controller owes whatever the subject wants sent, and binding them meant a
 // contact who asked us to stop never heard that we had.
 func TestAStopEverythingStillConfirmsItself(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if err := e.store.Suppress(e.ctx, SuppressInput{
@@ -517,6 +531,7 @@ func TestAStopEverythingStillConfirmsItself(t *testing.T) {
 // A reason of only spaces says nothing, and the stop's recorded explanation
 // must not read as if somebody had written one.
 func TestASuppressionReasonOfOnlySpacesRecordsNoReason(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	if err := e.store.Suppress(e.ctx, SuppressInput{

@@ -22,13 +22,14 @@ package consent
 
 import (
 	"context"
-	"os"
+	"encoding/json"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -40,7 +41,7 @@ import (
 // held while the code under test runs on a different backend.
 func holdingSession(t *testing.T) *pgx.Conn {
 	t.Helper()
-	holder, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	holder, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening the holding connection: %v", err)
 	}
@@ -83,20 +84,30 @@ const capWindow = 24 * time.Hour
 
 // The ISO user-assigned QM–QZ and XA–XZ ranges keep these tests separate from sibling Z codes.
 var capJurisdictions = struct {
-	mu   sync.Mutex
-	next int
-}{}
+	mu     sync.Mutex
+	next   int
+	byRule map[string]jurisdiction.Code
+}{byRule: map[string]jurisdiction.Code{}}
 
 const (
 	reservedQSlots        = int('z' - 'm' + 1)
 	testJurisdictionSlots = reservedQSlots + int('z'-'a'+1)
 )
 
-// Jurisdictions are process-wide and cannot be registered twice.
-func testJurisdiction(t *testing.T) jurisdiction.Code {
+// testJurisdiction registers rules under a minted code and answers it. The
+// registry is process-wide and refuses a code twice. So tests that ask for the
+// same rules share one code, and their own databases keep their rows apart.
+func testJurisdiction(t *testing.T, rules messagingrules.Rules) jurisdiction.Code {
 	t.Helper()
+	key, err := json.Marshal(rules)
+	if err != nil {
+		t.Fatalf("keying the rules: %v", err)
+	}
 	capJurisdictions.mu.Lock()
 	defer capJurisdictions.mu.Unlock()
+	if code, ok := capJurisdictions.byRule[string(key)]; ok {
+		return code
+	}
 	index := capJurisdictions.next
 	if index >= testJurisdictionSlots {
 		t.Fatalf("this package exhausted its %d distinct test jurisdictions", testJurisdictionSlots)
@@ -106,18 +117,19 @@ func testJurisdiction(t *testing.T) jurisdiction.Code {
 		prefix, suffix = 'x', rune('a'+index-reservedQSlots)
 	}
 	capJurisdictions.next++
-	return jurisdiction.Code(string([]rune{prefix, suffix}))
+	rules.Jurisdiction = jurisdiction.Code(string([]rune{prefix, suffix}))
+	messagingrules.Register(rules)
+	capJurisdictions.byRule[string(key)] = rules.Jurisdiction
+	return rules.Jurisdiction
 }
 
-// cappedGate registers a ceiling under a freshly minted jurisdiction, puts the
+// cappedGate registers a ceiling under a test jurisdiction, puts the
 // env's recipient in it, and returns a gate. grantMarketingTo places later
 // recipients there too.
 func (e *capEnv) cappedGate(t *testing.T, messages int) *Gate {
 	t.Helper()
-	code := testJurisdiction(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: code, Version: 1,
-		FrequencyCap: &messagingrules.FrequencyCap{Messages: messages, Window: capWindow},
+	code := testJurisdiction(t, messagingrules.Rules{
+		Version: 1, FrequencyCap: &messagingrules.FrequencyCap{Messages: messages, Window: capWindow},
 	})
 	e.capCountry = string(code)
 	e.subjectLivesIn(t, e.capCountry)
@@ -172,6 +184,7 @@ func (e *capEnv) transmitForAddress(address string, attempt int) commsauthz.Tran
 // count before the other's decision lands, and the ceiling is exceeded by
 // however many are running.
 func TestADispatchWaitsForTheAddressCapLock(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 3)
@@ -216,6 +229,7 @@ func TestADispatchWaitsForTheAddressCapLock(t *testing.T) {
 // What it says: the key is derived from the address, and one busy mailbox does
 // not serialize every advertising send in the installation.
 func TestADispatchToAnotherAddressIsNotHeldBehindThisOne(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 3)
@@ -278,6 +292,7 @@ func TestADispatchToAnotherAddressIsNotHeldBehindThisOne(t *testing.T) {
 // dispatch that counted first is holding a number taken before the row existed
 // and allows. The difference is the whole defect.
 func TestTheCountIsTakenAfterTheLockNotBeforeIt(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 1)
@@ -339,6 +354,7 @@ func TestTheCountIsTakenAfterTheLockNotBeforeIt(t *testing.T) {
 // enough, and a version that hoped they would passed cleanly with the lock
 // deleted.
 func TestTwoConcurrentDispatchesCannotBothTakeTheLastSlot(t *testing.T) {
+	t.Parallel()
 	e := setupCap(t)
 	e.seedMarketingSubject(t)
 	gate := e.cappedGate(t, 2)

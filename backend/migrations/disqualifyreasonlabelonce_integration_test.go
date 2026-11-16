@@ -20,6 +20,7 @@ import (
 const disqualifyLabelOnceMigration = "core/1791627793_one_disqualification_reason_per_label.up.sql"
 
 func TestDisqualifyReasonTwinsAreRenamedBeforeTheLabelIsHeldOnce(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

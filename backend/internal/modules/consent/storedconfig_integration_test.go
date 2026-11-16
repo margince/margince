@@ -16,6 +16,7 @@ import (
 // Particulars the environment sets are what a message discloses, over the
 // row an admin saved. Not parallel: the binding is the process's own.
 func TestBootSetParticularsAreWhatAMessageDiscloses(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "zb",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity})

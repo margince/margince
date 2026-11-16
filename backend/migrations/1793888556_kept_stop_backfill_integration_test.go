@@ -20,6 +20,7 @@ import (
 // first row of its carry chain, and a chain whose first row is gone reads
 // unknown.
 func TestTheKeptStopBackfillHashesTheAddressAndReadsTheChain(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

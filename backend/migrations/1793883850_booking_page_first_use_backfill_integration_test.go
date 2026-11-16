@@ -49,6 +49,7 @@ func seedLiveBookingPage(t *testing.T, conn *pgx.Conn, host, slug string) {
 // A page counts as used from its first public booking, erased ones included.
 // A page whose host only sent invitations stays unused.
 func TestTheFirstUseBackfillCountsErasedPublicBookings(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

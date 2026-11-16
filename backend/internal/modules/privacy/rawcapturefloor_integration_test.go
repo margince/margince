@@ -8,7 +8,6 @@ package privacy
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
@@ -49,12 +48,10 @@ func init() {
 // destroying transaction. The same original is kept under a jurisdiction
 // whose floor shields its message, and destroyed under one with no floor.
 func TestTheRawCaptureEraseAsksTheFloorInForce(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,9 +60,6 @@ func TestTheRawCaptureEraseAsksTheFloorInForce(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	for _, c := range []struct {
 		country jurisdiction.Code
 		kept    bool
@@ -112,12 +106,10 @@ func TestTheRawCaptureEraseAsksTheFloorInForce(t *testing.T) {
 // The hold is asked of every matching activity for that reason. Asked of one,
 // it answers about whichever row the join happened to offer.
 func TestARawCaptureHeldThroughOneOfItsActivitiesSurvives(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -126,9 +118,6 @@ func TestARawCaptureHeldThroughOneOfItsActivitiesSurvives(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -192,12 +181,10 @@ func TestARawCaptureHeldThroughOneOfItsActivitiesSurvives(t *testing.T) {
 // Shielded, the delete matches nothing and the stage reports a row kept by
 // the floor.
 func TestARawCaptureRestrictedThroughOneOfItsActivitiesSurvives(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -206,9 +193,6 @@ func TestARawCaptureRestrictedThroughOneOfItsActivitiesSurvives(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -259,6 +243,7 @@ func TestARawCaptureRestrictedThroughOneOfItsActivitiesSurvives(t *testing.T) {
 }
 
 func TestArchivedOriginalRetentionFollowsItsObjectAndEveryHold(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	blob := blobstore.NewMemory()
 	ctx := originalstore.Bind(e.ctx, e.db, blob)

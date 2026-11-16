@@ -47,6 +47,7 @@ func wantBusyNaming(t *testing.T, what string, err error, holder RunID) {
 }
 
 func TestAResumeBesideAnActiveRunOfItsNameIsAConflictNamingIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	stopped := seedFairRun(ctx, t, db, StatusFailed)
@@ -66,6 +67,7 @@ func TestAResumeBesideAnActiveRunOfItsNameIsAConflictNamingIt(t *testing.T) {
 }
 
 func TestAnUndoClosesTheUnwrittenRunsOfItsName(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	done := seedFairRun(ctx, t, db, StatusComplete)
@@ -82,6 +84,7 @@ func TestAnUndoClosesTheUnwrittenRunsOfItsName(t *testing.T) {
 }
 
 func TestAnUndoBesideAWritingRunOfItsNameIsAConflictNamingIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	done := seedFairRun(ctx, t, db, StatusComplete)
@@ -95,6 +98,7 @@ func TestAnUndoBesideAWritingRunOfItsNameIsAConflictNamingIt(t *testing.T) {
 }
 
 func TestAReplacedRunAnswersWithTheRunThatReplacedIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	older := toReport(ctx, t, s, newDraft(ctx, t, s, fairName))
@@ -111,6 +115,7 @@ func TestAReplacedRunAnswersWithTheRunThatReplacedIt(t *testing.T) {
 }
 
 func TestASecondCancelAnswersTheCancelledRun(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	draft := newDraft(ctx, t, s, "")
@@ -128,6 +133,7 @@ func TestASecondCancelAnswersTheCancelledRun(t *testing.T) {
 }
 
 func TestAFlipRunKeepsNoSession(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	draft := newDraft(ctx, t, s, "")
@@ -144,6 +150,7 @@ func TestAFlipRunKeepsNoSession(t *testing.T) {
 }
 
 func TestAStoppedCommitWithoutItsFileCannotResume(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	released := seedFairRun(ctx, t, db, StatusFailed)
@@ -172,6 +179,7 @@ func openerWith(ctx context.Context, id string, grant principal.ObjectGrant) con
 }
 
 func TestTheOpenerOfADraftDiscardsItWithTheGrantThatOpenedIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	createOnly := principal.ObjectGrant{Create: true}
@@ -194,6 +202,7 @@ func TestTheOpenerOfADraftDiscardsItWithTheGrantThatOpenedIt(t *testing.T) {
 }
 
 func TestAnApprovedRunKeepsNoProfile(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	report := toReport(ctx, t, s, newDraft(ctx, t, s, ""))

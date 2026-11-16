@@ -32,6 +32,7 @@ func directRoute(introducer ids.UUID) RouteKey {
 // this rep the door is free while the index holds it shut, and they would find
 // out by being refused after writing the whole ask.
 func TestAnotherRepsOpenAskTakesTheRoute(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	if _, err := e.store.Create(e.asUser(e.requester), e.ask()); err != nil {
 		t.Fatalf("Create: %v", err)
@@ -52,6 +53,7 @@ func TestAnotherRepsOpenAskTakesTheRoute(t *testing.T) {
 // OPEN ask, so a declined route is still askable — the tab says the colleague
 // said no before, and lets the rep decide.
 func TestARefusedRouteReportsRefusedAndStaysAskable(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -81,6 +83,7 @@ func TestARefusedRouteReportsRefusedAndStaysAskable(t *testing.T) {
 // A live ask outranks an old refusal on the same route: the rep can act on
 // neither, and the live one is the truer sentence.
 func TestALiveAskOutranksAnEarlierRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	first, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -109,6 +112,7 @@ func TestALiveAskOutranksAnEarlierRefusal(t *testing.T) {
 // A settled ask stops holding its route: the tab offers it again, exactly as
 // the guard index does.
 func TestASettledAskReleasesItsRoute(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -138,6 +142,7 @@ func TestASettledAskReleasesItsRoute(t *testing.T) {
 // EnsureVisibleLive is the same probe the graph's own anchor read takes, and
 // the scope arm is held there.
 func TestRouteStatesRefusesAContactTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 
 	_, err := e.store.RouteStates(
@@ -167,6 +172,7 @@ func TestRouteStatesRefusesAContactTheCallerCannotSee(t *testing.T) {
 // caller is not party to — and that trade is only safe while a contact is
 // behind it.
 func TestRouteStatesNeedsAContactBehindIt(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
@@ -191,6 +197,7 @@ func TestRouteStatesNeedsAContactBehindIt(t *testing.T) {
 // turned somebody down over this contact. ForContact calls that the
 // introducer's answer to give; this read does not overrule it.
 func TestARefusalIsToldOnlyToTheRepWhoWasRefused(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {

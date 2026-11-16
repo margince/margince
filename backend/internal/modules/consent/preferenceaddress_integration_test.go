@@ -41,6 +41,7 @@ func address(t *testing.T, e *channelConsentEnv, email string, primary bool) {
 }
 
 func TestThePreferencePageNamesTheAddressTheLinkWentTo(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -82,6 +83,7 @@ func TestThePreferencePageNamesTheAddressTheLinkWentTo(t *testing.T) {
 // There is no way to learn after the fact which address it went to, so the
 // primary is the honest fallback — and it is what the page always showed.
 func TestAPreferenceTokenWithNoAddressStillOpensThePage(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
@@ -117,6 +119,7 @@ func TestAPreferenceTokenWithNoAddressStillOpensThePage(t *testing.T) {
 // the page would name the first address again — the defect one level down from
 // the column.
 func TestEachAddressGetsItsOwnPreferenceToken(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())

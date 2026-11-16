@@ -113,6 +113,7 @@ func meteredAttention(t *testing.T, e *Env, at time.Time) (*attention.Service, *
 
 // The stages of one worklist read account for every statement the pool's
 // tracer saw for it, and the read opens its snapshot once.
+//
 //testdb:serial reads attention.StageCosts, a process-wide meter every Home read adds to
 func TestAWorklistReadsStatementsAddUpToWhatThePoolSaw(t *testing.T) {
 	e := Setup(t)
@@ -237,6 +238,7 @@ func TestHomesReadStaysWithinItsStatementAndRoundTripBudgets(t *testing.T) {
 
 // Team exceptions reads the assembled day inside its own snapshot. Its stages
 // are charged to it once, never to a read nested in it.
+//
 //testdb:serial reads attention.StageCosts, a process-wide meter every Home read adds to
 func TestTeamExceptionsChargesTheDayItReadsToItselfOnce(t *testing.T) {
 	e := Setup(t)

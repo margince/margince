@@ -48,6 +48,7 @@ func seedContactWithEmail(t *testing.T, e *channelConsentEnv, address string, ar
 // does not filter archived rows could resolve to the contact who no longer holds
 // the address, and mail THEIR unsubscribe link to the contact who does.
 func TestAnUnsubscribeLinkNamesTheLivingHolderOfTheAddress(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	address := "shared-" + e.contact.String() + "@example.test"
 
@@ -81,6 +82,7 @@ func TestAnUnsubscribeLinkNamesTheLivingHolderOfTheAddress(t *testing.T) {
 // An address nobody live-holds carries no unsubscribe surface, which is
 // found=false rather than a token for the contact who detached it.
 func TestAnArchivedAddressAloneMintsNoLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	address := "detached-" + e.contact.String() + "@example.test"
 	seedContactWithEmail(t, e, address, true)
@@ -99,6 +101,7 @@ func TestAnArchivedAddressAloneMintsNoLink(t *testing.T) {
 // wire carried `locked` and nothing else, so a double-opt-in purpose rendered
 // as an ordinary toggle and every grant through it was refused.
 func TestThePreferenceCentreNamesThePurposesItCannotGrant(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	choices, err := e.store.PublicPurposeStates(e.ctx, e.contact)

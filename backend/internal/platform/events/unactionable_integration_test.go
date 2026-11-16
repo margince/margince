@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestAnUnactionableEntryIsAckedRatherThanRetried(t *testing.T) {
 	e := setup(t)
 	e.stage(t, "contact.created", ids.NewV7())
@@ -61,6 +62,8 @@ func TestAnUnactionableEntryIsAckedRatherThanRetried(t *testing.T) {
 //
 // A handler reporting every error as unactionable would ack away the ordering
 // race this bus absorbs.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestAnOrdinaryFailureStaysPending(t *testing.T) {
 	e := setup(t)
 	e.stage(t, "contact.created", ids.NewV7())

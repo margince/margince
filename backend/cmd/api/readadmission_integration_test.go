@@ -6,18 +6,15 @@
 package main
 
 import (
-	"os"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestBootAppliesTheConfiguredReadAllowance(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN is required; run through make test-it")
-	}
-	cfg, _, err := loadAPIConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=" + dsn, "MARGINCE_DATABASE_READ_CONCURRENCY=1"})
+	cfg, _, err := loadAPIConfig(nil, []string{"MARGINCE_ENV=dev", "MARGINCE_DSN=" + testdb.For(t).AppDSN, "MARGINCE_DATABASE_READ_CONCURRENCY=1"})
 	if err != nil {
 		t.Fatal(err)
 	}

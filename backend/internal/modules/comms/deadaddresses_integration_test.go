@@ -37,6 +37,7 @@ func (e *storeEnv) deadFor(t *testing.T, addresses ...string) map[string]time.Ti
 }
 
 func TestADeadAddressIsTheOneTheReportNamedAndAWorkingSendRevivesIt(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 
 	// The suite's standard send carries a CC; the report names only the
@@ -77,6 +78,7 @@ func TestADeadAddressIsTheOneTheReportNamedAndAWorkingSendRevivesIt(t *testing.T
 // recipient with the owner connection: RecordBounce, which stamps it, did not
 // exist when those rows were written.
 func TestALegacyBounceRowMarksOnlyASoleRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 
 	soloInput := e.baseInput(e.activity, "legacy-sole@myco.test")

@@ -49,6 +49,8 @@ func aPassport() ids.UUID { return ids.New[ids.PassportKind]().UUID }
 // The bound's arithmetic, end to end: charges accumulate across calls, and the
 // threshold is crossed by their sum rather than by any single call. Four charges
 // of 30 trip a limit of 100 that no one of them approaches.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestChargesAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
@@ -78,6 +80,8 @@ func TestChargesAccumulateAcrossCallsUntilTheThresholdIsCrossed(t *testing.T) {
 
 // A single call over the threshold trips it on its own. This is the evasion
 // §2.2 names by hand: "a single search_records returning 5,000 rows trips it".
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
@@ -94,6 +98,8 @@ func TestOneOversizedCallTripsTheThresholdByItself(t *testing.T) {
 
 // Two Passports reading the same workspace do not spend each other's budget —
 // otherwise one busy agent would step-up every other agent the workspace runs.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
@@ -117,6 +123,8 @@ func TestOnePassportsReadingDoesNotRefuseAnother(t *testing.T) {
 // The window is FIXED with expiry, so a Passport that crossed the threshold is
 // released when the window rolls — asserted by advancing the injected clock
 // rather than by waiting for one.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
@@ -142,6 +150,8 @@ func TestTheWindowRollsOverAndReleasesTheThreshold(t *testing.T) {
 // Confirm-and-continue, against a real counter. An agent that crossed its write
 // threshold is refused. Its human releases the window it was refused in, and it
 // writes again. This proves BYO-STEP-2 end to end, not by arithmetic.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestAReleaseLetsARefusedAgentWriteAgainInTheSameWindow(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
@@ -175,6 +185,8 @@ func TestAReleaseLetsARefusedAgentWriteAgainInTheSameWindow(t *testing.T) {
 // A release widens ONE window. The agent that spends the released allowance too
 // is refused again and needs a second human decision — which is the only bound
 // the ladder has, so it must actually hold.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
@@ -199,6 +211,8 @@ func TestASecondCrossingAfterAReleaseNeedsASecondDecision(t *testing.T) {
 // A release of one counter does not widen another. Sharing them would let a human
 // confirming more writes also lift the send ceiling. That is the tightest on the
 // surface, and nothing may release it.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10, Egress: 10}, time.Hour, frozen(&at))
@@ -225,6 +239,8 @@ func TestAReleaseWidensOnlyTheCounterItNamed(t *testing.T) {
 // The four governed counters are four independent windows for one Passport. A
 // shared one would let a busy reader exhaust its own send allowance — or, worse,
 // let a caller spend the loose volume budget to escape the tight one.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t),
@@ -252,6 +268,8 @@ func TestEachCounterIsItsOwnWindowForOnePassport(t *testing.T) {
 // Asserted here rather than in the unit suite because the failing edge needs a
 // store that is genuinely unreachable, and constructing a client to point at
 // nothing is exactly what the unit lane refuses.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100}, time.Hour, frozen(&at))
@@ -289,6 +307,8 @@ func TestTheAgentBoundReportsWhetherItCanReachItsStore(t *testing.T) {
 
 // A renewal retires a connection's passport and mints another under the same
 // grant. Both passports draw on one allowance, so a renewal never resets it.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestAConnectionsRenewedPassportKeepsItsCount(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 10}, time.Hour, frozen(&at))
@@ -311,6 +331,8 @@ func TestAConnectionsRenewedPassportKeepsItsCount(t *testing.T) {
 
 // An admin's lowered allowance binds in the running window: a passport already
 // past it is refused on its next call.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestALoweredAllowanceRefusesTheNextCall(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: Policy{Limits: Limits{Writes: 200}, Window: WindowPlan{Length: time.Hour}}}
@@ -331,6 +353,8 @@ func TestALoweredAllowanceRefusesTheNextCall(t *testing.T) {
 }
 
 // A saved length takes over at the reset; until then the count keeps running.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheCountKeepsRunningUntilTheResetThenTheNewLengthBinds(t *testing.T) {
 	at := time.Date(2026, 8, 8, 10, 0, 0, 0, time.UTC)
 	plan := WindowPlan{Length: 24 * time.Hour}.Reschedule(at, 12*time.Hour)
@@ -353,6 +377,8 @@ func TestTheCountKeepsRunningUntilTheResetThenTheNewLengthBinds(t *testing.T) {
 }
 
 // One usage read answers every subject's counts and releases at once.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestUsageReadsEverySubjectInOneRoundTrip(t *testing.T) {
 	at := time.Date(2026, 8, 8, 9, 30, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{Writes: 100, Egress: 10}, time.Hour, frozen(&at))

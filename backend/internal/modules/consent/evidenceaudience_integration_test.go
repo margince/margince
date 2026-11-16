@@ -17,6 +17,7 @@ import (
 )
 
 func TestAPrivateActivitySupportsOnlyItsAudience(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"inbound", "meeting", "inquiry"} {
 		t.Run(kind, func(t *testing.T) {
 			e := setupResolve(t)
@@ -59,6 +60,7 @@ func TestAPrivateActivitySupportsOnlyItsAudience(t *testing.T) {
 }
 
 func TestAnsweringAnOldReviewKeepsTheOriginalCompany(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	branch := e.secondEntity(t)
 	sourceReview := e.unassessedSource(t)

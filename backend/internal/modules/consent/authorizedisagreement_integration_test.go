@@ -44,6 +44,7 @@ func (e *resolveEnv) plantDecision(t *testing.T, category, reason, engine, legac
 // Mutation: swap the two sides of the EngineIsStricter comparison and this
 // fails.
 func TestTheReportSaysWhichWayADisagreementRuns(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	// The legacy transactional allow the engine will not reproduce.
 	e.plantDecision(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
@@ -73,6 +74,7 @@ func TestTheReportSaysWhichWayADisagreementRuns(t *testing.T) {
 // where the two agreed are the overwhelming majority — including them would
 // bury the answer in the thing that is already fine.
 func TestTheReportCarriesOnlyDisagreements(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.plantDecision(t, "reply_to_inbound", commsauthz.ReasonAllowed,
 		string(commsauthz.VerdictAllow), string(commsauthz.VerdictAllow))
@@ -87,6 +89,7 @@ func TestTheReportCarriesOnlyDisagreements(t *testing.T) {
 // unknown in SQL, so this passes today; it is asserted so a rewrite that
 // coalesced the column would fail rather than invent thousands of differences.
 func TestADecisionWithNoLegacyAnswerIsNotADisagreement(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	if _, err := e.owner.Exec(context.Background(), `
@@ -108,6 +111,7 @@ func TestADecisionWithNoLegacyAnswerIsNotADisagreement(t *testing.T) {
 // enforcement costs is asking how many SENDS stop, not how many rows changed —
 // counting recipients would inflate the number by the size of the To line.
 func TestOneMessageToSeveralRecipientsCountsOnce(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	for _, address := range []string{"a@corp.test", "b@corp.test", "c@corp.test"} {
@@ -138,6 +142,7 @@ func TestOneMessageToSeveralRecipientsCountsOnce(t *testing.T) {
 // installation's own settings rather than on a contact. A caller without that
 // grant is refused.
 func TestTheReportNeedsTheSettingsReadGrant(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.dropGrant(t, authorizationModesObject)
 
@@ -169,6 +174,7 @@ func (e *resolveEnv) report(t *testing.T) []Disagreement {
 // because it is the single largest population the report will show and the one
 // an operator has to understand before flipping anything.
 func TestTheLegacyTransactionalAllowIsWhatEnforcementWouldStop(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	for range 3 {
 		e.plantDecision(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
@@ -223,6 +229,7 @@ func (e *resolveEnv) reportSince(t *testing.T, since time.Time) []Disagreement {
 // Mutation: drop the decided_at clause from the query and this fails, the old
 // row coming back inside a window it is far outside.
 func TestTheWindowExcludesADisagreementOlderThanIt(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	now := time.Now()
 	e.plantDecisionAt(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
@@ -248,6 +255,7 @@ func TestTheWindowExcludesADisagreementOlderThanIt(t *testing.T) {
 // promise: DisagreementReport must keep answering about all of history however
 // the windowed one is later tuned.
 func TestAZeroWindowReadsEveryDecisionOnRecord(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	now := time.Now()
 	e.plantDecisionAt(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
@@ -267,6 +275,7 @@ func TestAZeroWindowReadsEveryDecisionOnRecord(t *testing.T) {
 // disagreement nobody ever reports is the failure this whole reading exists to
 // prevent.
 func TestTheWindowHasNoUpperBound(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.plantDecisionAt(t, "account_notice", commsauthz.ReasonLegacyTransactionalUnevidenced,
 		string(commsauthz.VerdictReview), string(commsauthz.VerdictAllow),

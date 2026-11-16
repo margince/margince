@@ -31,6 +31,7 @@ import (
 // turns that into an error somebody sees rather than a row that quietly
 // contradicts the column beside it.
 func TestACauseIsRefusedWithoutTheClaimItExplains(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	id, err := e.store.Create(e.engineCtx(), NewNotice{
 		Recipient: e.recipient,
@@ -78,6 +79,7 @@ func TestACauseIsRefusedWithoutTheClaimItExplains(t *testing.T) {
 // outlive the notice it names — an erasure, a purge — so "nothing to record" has
 // to be an answer rather than a silent success.
 func TestACauseForANoticeThatIsGoneReportsItAbsent(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	err := e.store.EmailFailed(e.engineCtx(), ids.NewV7(), "relay refused the recipient")
@@ -89,6 +91,7 @@ func TestACauseForANoticeThatIsGoneReportsItAbsent(t *testing.T) {
 // A release frees every claim of the send or none. Three claims, one of them
 // taken again since: nothing is released and the caller is told.
 func TestAReleaseWithOneChangedClaimReleasesNone(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	var attempts []EmailAttempt
 	for _, subject := range []string{"First", "Second", "Third"} {

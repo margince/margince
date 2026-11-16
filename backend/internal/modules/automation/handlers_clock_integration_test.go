@@ -123,6 +123,7 @@ func checkInClockEvent(t *testing.T, ws ids.UUID, automationID ids.AutomationID,
 // occurrence_integration_test.go's convention proof, generalized to the
 // concrete handler Task 14b ships.
 func TestCheckInCadenceFiresOncePerQuietSpell(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	provider := &fakeCreateTaskProvider{}
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
@@ -187,6 +188,7 @@ func TestCheckInCadenceFiresOncePerQuietSpell(t *testing.T) {
 // transport, seams.go's ErrNoNotificationTransport) — never a crash,
 // never a fabricated firing.
 func TestRenewalReminderScanIsANoOpWhenUnconfigured(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil)
 	engine.RegisterWorkflow(renewalReminder{ex: Executors{}}) // Apply is never reached: Match never runs for an un-enumerated handler

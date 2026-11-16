@@ -24,6 +24,7 @@ import (
 )
 
 func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 
 	contact := ids.NewV7()
@@ -155,6 +156,7 @@ func TestParkedSendsForCarriesTheCallersAbandonedSendsOnly(t *testing.T) {
 // A caller whose role lacks the activity read grant is refused like any other
 // timeline read: the subject lines of their sends are activity content.
 func TestParkedSendsForRefusesAReaderWithoutTheActivityGrant(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	if _, err := e.store.ParkedSendsFor(e.ctx, e.clockValue.Add(-time.Hour), 8); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("ParkedSendsFor without the activity grant = %v, want the permission sentinel", err)

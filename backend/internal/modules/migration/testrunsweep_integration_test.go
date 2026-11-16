@@ -19,6 +19,7 @@ func (q *jobQueue) requeue(ctx context.Context, tx pgx.Tx, run Run) (bool, error
 }
 
 func TestAStaleTestRunIsRequeuedAsANewAttempt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
@@ -43,6 +44,7 @@ func TestAStaleTestRunIsRequeuedAsANewAttempt(t *testing.T) {
 // A stopped test yields its attempt and starts again from the top, so no
 // reader sees how far the stopped read had come.
 func TestAYieldedTestRunShowsNoProgressOfItsStoppedRead(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
@@ -68,6 +70,7 @@ func readSomeRows(ctx context.Context, t *testing.T, s *RunStore, l Lease) {
 }
 
 func TestPastTheResumeLimitATestRunReturnsToDraft(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := claimedTest(ctx, t, s)
@@ -88,6 +91,7 @@ func TestPastTheResumeLimitATestRunReturnsToDraft(t *testing.T) {
 }
 
 func TestALostTestRunJobIsQueuedAgain(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := startTest(ctx, t, s, newDraft(ctx, t, s, ""), &jobQueue{})
@@ -106,6 +110,7 @@ func TestALostTestRunJobIsQueuedAgain(t *testing.T) {
 // request, with no job. If the pod dies, the lost-job rule queues that attempt;
 // the stale-claim rule leaves it, since no job ever claimed it.
 func TestATestRunAnOldPodLeftIsQueuedByTheLostJobRule(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	claimed := claimedTest(ctx, t, s)

@@ -20,6 +20,7 @@ import (
 // survives the real write path and the column's CHECK, and an unknown value is
 // refused rather than stored as a claim nothing produces.
 func TestTheCallTraceRecordsWhetherGenerationHeldTheSchema(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)

@@ -56,6 +56,7 @@ func readFeedback(ctx context.Context, t *testing.T, db *database.DB, subject id
 }
 
 func TestRepeatedCorrectionsRemainAboutTheOriginalSource(t *testing.T) {
+	t.Parallel()
 	ctx, db, subject := feedbackSubject(t)
 	store := NewFeedbackStore(db)
 	stamp := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
@@ -89,6 +90,7 @@ func TestRepeatedCorrectionsRemainAboutTheOriginalSource(t *testing.T) {
 }
 
 func TestCorrectionOverlayRequiresTheSameSourceVersion(t *testing.T) {
+	t.Parallel()
 	stamp := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
 	newer, older := stamp.Add(time.Hour), stamp.Add(-time.Hour)
 	for _, tc := range []struct {
@@ -145,6 +147,7 @@ func TestCorrectionOverlayRequiresTheSameSourceVersion(t *testing.T) {
 }
 
 func TestLegacyCorrectionKeepsItsOrderingWhenEdited(t *testing.T) {
+	t.Parallel()
 	for _, newerSource := range []bool{false, true} {
 		name := "overlay on the old source"
 		if newerSource {
@@ -195,6 +198,7 @@ func TestLegacyCorrectionKeepsItsOrderingWhenEdited(t *testing.T) {
 }
 
 func TestAStaleOverlayAndConfirmationCannotReplaceTheCurrentCorrection(t *testing.T) {
+	t.Parallel()
 	for _, verdict := range []string{VerdictCorrected, VerdictConfirmed} {
 		t.Run(verdict, func(t *testing.T) {
 			ctx, db, subject := feedbackSubject(t)

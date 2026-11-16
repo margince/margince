@@ -16,6 +16,7 @@ import (
 )
 
 func TestMeetingNotesRollbackRestoresTheValidatedProviderVocabulary(t *testing.T) {
+	t.Parallel()
 	for _, version := range []string{"1794412054", "1794379079"} {
 		t.Run(version, func(t *testing.T) { assertMeetingNotesRollback(t, version) })
 	}

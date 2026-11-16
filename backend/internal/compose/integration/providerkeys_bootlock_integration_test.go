@@ -130,6 +130,7 @@ func TestAnEnvProviderKeyWinsAndIsNeverCopiedIntoTheVault(t *testing.T) {
 // A key a boot source sets refuses every write over HTTP, before the value
 // sent is judged. It refuses a change and its own value, which would confirm a
 // guess of it. It refuses a bad credential, both fields, and a removal.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestAProviderKeySetByEnvIsLockedAgainstAChange(t *testing.T) {
 	vault := keyvault.NewMemory()
@@ -168,6 +169,7 @@ func TestAProviderKeySetByEnvIsLockedAgainstAChange(t *testing.T) {
 
 // The boot key appears in no error, no log line, no API body and no overview:
 // only its name and origin do.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestASecretNeverAppearsInAnErrorALogOrTheOverview(t *testing.T) {
 	vault := keyvault.NewMemory()

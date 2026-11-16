@@ -23,6 +23,7 @@ import (
 const causeSourceTaken = "another run of this upload holds its file, so this one cannot resume; upload the file again to go on"
 
 func TestTheNewerOfTwoCommitsOfOneNameKeepsIt(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	stale := seedLegacyRun(t, conn, legacyRun{
@@ -43,6 +44,7 @@ func TestTheNewerOfTwoCommitsOfOneNameKeepsIt(t *testing.T) {
 }
 
 func TestAnUndoKeepsItsNameAgainstACommit(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	undo := seedLegacyRun(t, conn, legacyRun{
@@ -62,6 +64,7 @@ func TestAnUndoKeepsItsNameAgainstACommit(t *testing.T) {
 }
 
 func TestTwoUndosOfOneNameStopTheMigrationNamingThem(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	first := seedLegacyRun(t, conn, legacyRun{status: "undoing", sourceRef: "ws/import/a", sourceName: "Fair 2026"})
@@ -79,6 +82,7 @@ func TestTwoUndosOfOneNameStopTheMigrationNamingThem(t *testing.T) {
 }
 
 func TestTheNewerOfTwoStoppedCommitsOfOneUploadKeepsTheFile(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	older := seedLegacyRun(t, conn, legacyRun{
@@ -98,6 +102,7 @@ func TestTheNewerOfTwoStoppedCommitsOfOneUploadKeepsTheFile(t *testing.T) {
 }
 
 func TestACommitInFlightKeepsItsUploadAgainstAStoppedOne(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	inFlight := seedLegacyRun(t, conn, legacyRun{status: "running", sourceRef: "ws/import/same", age: 2 * time.Hour})

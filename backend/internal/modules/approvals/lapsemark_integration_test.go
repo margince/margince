@@ -61,6 +61,7 @@ func (e *stagingEnv) pastTheWindow() {
 }
 
 func TestAnApprovalTheAgentNeverRedeemedIsMarkedRatherThanLeftSilent(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id := e.lapsed(t)
 
@@ -104,6 +105,7 @@ func TestAnApprovalTheAgentNeverRedeemedIsMarkedRatherThanLeftSilent(t *testing.
 }
 
 func TestTheLapseSweepIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id := e.lapsed(t)
 	e.pastTheWindow()
@@ -131,6 +133,7 @@ func TestTheLapseSweepIsIdempotent(t *testing.T) {
 }
 
 func TestTheLapseSweepLeavesAlone(t *testing.T) {
+	t.Parallel()
 	// One environment per case: the sweep is installation-wide, so a row seeded
 	// for one case would be a candidate in the next.
 	t.Run("an approval the agent DID redeem", func(t *testing.T) {
@@ -246,6 +249,7 @@ func TestTheLapseSweepLeavesAlone(t *testing.T) {
 // caller may trigger — each row would look exactly like a finding the sweep had
 // made.
 func TestOnlyTheExpirySweepMayMarkLapsedRedemptions(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id := e.lapsed(t)
 	e.pastTheWindow()

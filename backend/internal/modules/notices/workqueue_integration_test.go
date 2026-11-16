@@ -16,6 +16,7 @@ import (
 )
 
 func TestStageHistoryStaysInTheBellWithoutBecomingOutstandingWork(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	useful, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: "lead_sla", Subject: "A lead needs a reply"})
 	if err != nil {
@@ -65,6 +66,7 @@ func TestStageHistoryStaysInTheBellWithoutBecomingOutstandingWork(t *testing.T) 
 }
 
 func TestApprovalNotificationsStayInTheBellWithoutDuplicatingDecisions(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	useful, err := e.store.Create(e.engineCtx(), NewNotice{Recipient: e.recipient, Kind: "lead_sla", Subject: "A lead needs a reply"})
 	if err != nil {

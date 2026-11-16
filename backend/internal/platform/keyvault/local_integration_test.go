@@ -27,7 +27,6 @@ package keyvault_test
 import (
 	"context"
 	"crypto/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -44,13 +43,10 @@ import (
 // same observable event and the test does not have to race a real burst.
 func singleConnPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := t.Context()
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting as owner: %v", err)
 	}
@@ -59,14 +55,8 @@ func singleConnPool(t *testing.T) *pgxpool.Pool {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatalf("migrating the test schema: %v", err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting test data: %v", err)
-	}
 
-	cfg, err := pgxpool.ParseConfig(appDSN)
+	cfg, err := pgxpool.ParseConfig(db.AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
@@ -93,6 +83,7 @@ func rootKey(t *testing.T) []byte {
 }
 
 func TestLocalGetOnReadsThroughTheCallersTransaction(t *testing.T) {
+	t.Parallel()
 	pool := singleConnPool(t)
 	vault, err := keyvault.New(keyvault.Config{RootKey: rootKey(t), Pool: pool})
 	if err != nil {

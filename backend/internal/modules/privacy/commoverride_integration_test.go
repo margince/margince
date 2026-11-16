@@ -63,6 +63,7 @@ func countOverrides(ctx context.Context, t *testing.T, conn execer, column strin
 // beside, a leftover override could go on authorising sends to nobody's mailbox
 // in particular but the erased subject's own.
 func TestArt17ErasureDeletesTheSubjectsOverride(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedOverride(e.ctx, t, e.owner, &e.contact.UUID, nil)
 
@@ -79,6 +80,7 @@ func TestArt17ErasureDeletesTheSubjectsOverride(t *testing.T) {
 // a lead carries lead_id and no contact_id, so a contact-keyed statement alone
 // cannot see it.
 func TestArt17ErasureDeletesTheLeadTwinsOverride(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -114,6 +116,7 @@ func TestArt17ErasureDeletesTheLeadTwinsOverride(t *testing.T) {
 // onto, and a subject who returns arrives as a new record with nobody yet
 // vouching for them, so it is deleted outright.
 func TestRetentionAnonymizeDeletesTheContactsOverride(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -143,6 +146,7 @@ func TestRetentionAnonymizeDeletesTheContactsOverride(t *testing.T) {
 // own case: a lead nobody was promoted from, reached by the lead retention
 // action rather than the contact-driven twin sweep.
 func TestRetentionAnonymizeDeletesTheLeadsOverride(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -172,6 +176,7 @@ func TestRetentionAnonymizeDeletesTheLeadsOverride(t *testing.T) {
 // suppression read: Art. 15 owes the subject the record that a human decided
 // to write to them despite a machine refusal, and why.
 func TestTheExportCarriesTheSubjectsOverride(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	seedOverride(e.ctx, t, e.owner, &e.contact.UUID, nil)
 
@@ -196,6 +201,7 @@ func TestTheExportCarriesTheSubjectsOverride(t *testing.T) {
 // as evidence. Erasing the survivor that leaves the predecessor's vouch behind
 // leaves the subject's own record of being vouched for.
 func TestArt17ErasureDeletesAMergedPredecessorsOverride(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	predecessor := seedMergedPredecessor(e.ctx, t, e, e.contact)
 	seedOverride(e.ctx, t, e.owner, &predecessor.UUID, nil)
@@ -210,6 +216,7 @@ func TestArt17ErasureDeletesAMergedPredecessorsOverride(t *testing.T) {
 // TestArt17ErasureDeletesAMergedPredecessorsSuppression is the suppression twin:
 // a stop and a vouch are the same statement about the same contact.
 func TestArt17ErasureDeletesAMergedPredecessorsSuppression(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	predecessor := seedMergedPredecessor(e.ctx, t, e, e.contact)
 	mustExec(e.ctx, t, e.owner, `
@@ -231,6 +238,7 @@ func TestArt17ErasureDeletesAMergedPredecessorsSuppression(t *testing.T) {
 // TestRetentionAnonymizeDeletesAMergedPredecessorsOverride holds the retention
 // sweep to the same reach as the eraser.
 func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -262,6 +270,7 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
 // of the override case above, with the opposite outcome. An override goes. A
 // stop is pinned to the hash of the subject's address, so it never expires.
 func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -305,6 +314,7 @@ func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 // A lifted stop stops nothing. The anonymize keeps it on the record as
 // evidence, with no address, and copies only the active stops onto addresses.
 func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -317,8 +327,6 @@ func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
 	mustExec(ctx, t, tx,
 		`INSERT INTO contact (id, full_name, source, captured_by)
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
-	// Addresses of this test alone: the count below reads the whole table, and
-	// another test may leave a stop on a shared address.
 	work, home := "hedda-"+contact.String()+"@anon.test", "hedda.home-"+contact.String()+"@anon.test"
 	for _, address := range []string{work, home} {
 		mustExec(ctx, t, tx,

@@ -55,6 +55,7 @@ func standingStops(t *testing.T, e *channelConsentEnv) map[string]string {
 // binds a system principal with no grants, so authorityOf would answer
 // LevelUser and any seat could then lift what the subject themselves recorded.
 func TestStopAllContactRecordsAnObjectionTheSubjectOwns(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
@@ -87,6 +88,7 @@ func TestStopAllContactRecordsAnObjectionTheSubjectOwns(t *testing.T) {
 // objection says the processing must stop whether or not consent was ever its
 // basis. Recording the second as the first is what the old sweep did.
 func TestStopAllMarketingIsAnObjectionAndNotAWithdrawal(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
@@ -110,6 +112,7 @@ func TestStopAllMarketingIsAnObjectionAndNotAWithdrawal(t *testing.T) {
 // The seat door beside this one records both deliberately, because a rep
 // relaying a second phone call IS a second occasion and the reason may differ.
 func TestAReplayRecordsNothingNewAndAnswersTheSameReceipt(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
@@ -138,6 +141,7 @@ func TestAReplayRecordsNothingNewAndAnswersTheSameReceipt(t *testing.T) {
 // everything to stop; defaulting to the broader one would stop invoices nobody
 // asked to stop. Neither is a safe direction, so there is no default.
 func TestAnUnrecognisedActionIsRefusedRatherThanDefaulted(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
@@ -161,6 +165,7 @@ func TestAnUnrecognisedActionIsRefusedRatherThanDefaulted(t *testing.T) {
 // this stays green — which is why both tests exist. Write a subject_request
 // from the unsubscribe path and this fails.
 func TestAnUnsubscribeWritesNoStopThatBindsCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	if _, err := e.owner.Exec(context.Background(),
@@ -192,6 +197,7 @@ func TestAnUnsubscribeWritesNoStopThatBindsCorrespondence(t *testing.T) {
 // receipt — after which an admin lifts the rep's row and nothing the subject
 // did is on the record.
 func TestARepsWeakerStopDoesNotSwallowTheSubjectsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
@@ -259,6 +265,7 @@ func pressStop(t *testing.T, e *channelConsentEnv, token, action string) int {
 // is as narrow as the link: the smaller one objects to all direct marketing,
 // and the link speaks for one subscription.
 func TestANamedSubscriptionLinkCannotStopEverything(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
@@ -288,6 +295,7 @@ func TestANamedSubscriptionLinkCannotStopEverything(t *testing.T) {
 // TestAnAllMarketingLinkMayStillObject is the positive control: the refusal
 // above must be about the link's scope and not about the route being broken.
 func TestAnAllMarketingLinkMayStillObject(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
@@ -320,6 +328,7 @@ func TestAnAllMarketingLinkMayStillObject(t *testing.T) {
 // stop_all_contact, neither of which names one — so this stands in for a
 // future narrow press without inventing a new door for it.
 func TestPublicStopStandingIsScopedToPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 

@@ -18,6 +18,7 @@ import (
 // A saved routing document is warned about as a boot would warn about it.
 // The warning reads the document the process will serve, not the stored one.
 func TestASavedRoutingWhoseLaddersReachOneAPIIsWarnedAbout(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	_, wsCtx := e.seedWorkspace(context.Background(), t)
 	ctx := routingWriter(wsCtx)

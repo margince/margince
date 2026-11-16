@@ -23,6 +23,7 @@ import (
 
 // TestTheExportNamesThePurposeAPerPurposeStopWasNarrowedTo.
 func TestTheExportNamesThePurposeAPerPurposeStopWasNarrowedTo(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 
 	var purposeID ids.UUID
@@ -69,6 +70,7 @@ func TestTheExportNamesThePurposeAPerPurposeStopWasNarrowedTo(t *testing.T) {
 //
 // Mutation: put back the plain-address arm alone and this fails.
 func TestTheExportCarriesAStopKeptAsTheHashOfTheSubjectsAddress(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	if _, err := e.owner.Exec(e.ctx, `
 		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)

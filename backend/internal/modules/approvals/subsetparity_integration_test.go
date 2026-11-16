@@ -178,6 +178,7 @@ func (w *parityWorld) readers(t *testing.T) map[string]context.Context {
 // Every subset probe must answer what its single-row twin answers, for every
 // reader over every row shape, duplicates and missing ids included.
 func TestTheSubsetProbesAnswerAsTheSingleRowProbes(t *testing.T) {
+	t.Parallel()
 	w := newParityWorld(t)
 	rules := map[auth.RowRule]func(context.Context, pgx.Tx, string, ids.UUID) error{
 		auth.RuleVisibleLive: auth.EnsureVisibleLive, auth.RuleWritableLive: auth.EnsureWritableLive, auth.RuleWritable: auth.EnsureWritable,
@@ -240,6 +241,7 @@ func agreeRowByRow(rowIDs []ids.UUID, subset map[ids.UUID]bool, subsetErr error,
 // A batch mixes target types, a repeated target, an unknown type, offers and
 // lead reversals. Each row answers as it answers alone, and as the rule says.
 func TestAMixedBatchAnswersEachRowAsItAnswersAlone(t *testing.T) {
+	t.Parallel()
 	w := newParityWorld(t)
 	target := func(kind, targetType string, id ids.UUID) row {
 		return row{ID: ids.From[ids.ApprovalKind](ids.NewV7()), Kind: kind, TargetType: &targetType, TargetID: &id}

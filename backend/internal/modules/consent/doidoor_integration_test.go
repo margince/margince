@@ -38,6 +38,7 @@ type issuedBody struct {
 }
 
 func TestTheDoubleOptInDoorMintsALinkForTheNamedPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
@@ -78,6 +79,7 @@ func TestTheDoubleOptInDoorMintsALinkForTheNamedPurpose(t *testing.T) {
 // The property the retired endpoint failed: the plaintext never comes back, so
 // the operator cannot close the round trip the subject is supposed to close.
 func TestTheDoubleOptInDoorReturnsNoPlaintext(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
@@ -108,6 +110,7 @@ func TestTheDoubleOptInDoorReturnsNoPlaintext(t *testing.T) {
 // the link could evidence. The door must say so rather than mint against an
 // address nobody holds.
 func TestTheDoubleOptInDoorRefusesWhenThereIsNoMailbox(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	// Deliberately no seedSubjectAddress.
@@ -135,6 +138,7 @@ func TestTheDoubleOptInDoorRefusesWhenThereIsNoMailbox(t *testing.T) {
 // records their answer as a marketing grant, and it is invisible without the
 // lane.
 func TestTheDoubleOptInMailAsksTheConsentQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
@@ -176,6 +180,7 @@ func TestTheDoubleOptInMailAsksTheConsentQuestion(t *testing.T) {
 // holds. An operator told only "not found" would hunt for a purpose to
 // unarchive that they cannot see in the list either.
 func TestTheDoubleOptInDoorRefusesAnArchivedPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	seedSubjectAddress(t, e)
@@ -209,6 +214,7 @@ func TestTheDoubleOptInDoorRefusesAnArchivedPurpose(t *testing.T) {
 // reason. The endpoint's whole subject is the double-opt-in purpose, and the
 // contract says so.
 func TestTheDoubleOptInDoorRefusesAPurposeThatNeedsNoConfirmation(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	var plain ids.PurposeID

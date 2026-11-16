@@ -15,6 +15,7 @@ import (
 )
 
 func TestMailTopicsSplitOnlyWithoutSharedMeaningfulWords(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -63,6 +64,7 @@ func TestMailTopicsSplitOnlyWithoutSharedMeaningfulWords(t *testing.T) {
 }
 
 func TestHistoricalTopicRepairsRequireReview(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

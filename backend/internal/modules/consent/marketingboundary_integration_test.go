@@ -24,6 +24,7 @@ var reviewableMarketingCountry = sync.OnceValue(func() string {
 })
 
 func TestMarketingNeedsConsentOrASupportedStatutoryRoute(t *testing.T) {
+	t.Parallel()
 	if _, registered := messagingrules.For("zz"); registered {
 		t.Fatal("the unsupported-country fixture has a messaging profile")
 	}
@@ -57,6 +58,7 @@ func TestMarketingNeedsConsentOrASupportedStatutoryRoute(t *testing.T) {
 }
 
 func TestCategoryOnlyLeadMarketingKeepsItsBoundaryAtStagingAndDispatch(t *testing.T) {
+	t.Parallel()
 	e := setupLeadConsent(t)
 	gate := NewGate(e.store)
 	delivery := plantConsentDelivery(t, e.owner, e.user)

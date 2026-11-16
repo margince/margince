@@ -18,6 +18,7 @@ import (
 )
 
 func TestSubjectAccessIncludesHeldCaptureFactsWithinTheContentAudience(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, pair, _ := seedDedupePairs(ctx, t, tx)

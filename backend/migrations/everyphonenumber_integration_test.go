@@ -45,6 +45,7 @@ var everyNumberContact = ids.MustParse("01920000-0000-7000-8000-0000000000f1")
 // derives, so the next statement of that number lands on it rather than
 // beside it; a single-answer field keys on nothing.
 func TestTheBackfillKeysAStoredNumberTheWayTheWriterWill(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -81,6 +82,7 @@ func TestTheBackfillKeysAStoredNumberTheWayTheWriterWill(t *testing.T) {
 // Going back to one row per field keeps each contact's most recently stated
 // number, so the restored unique constraint can be built at all.
 func TestTheRollbackKeepsTheNewestNumber(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -151,6 +153,7 @@ func valueKeys(t *testing.T, conn *pgx.Conn) map[string]string {
 // differs by one invisible character never meets the number's next observation
 // or its restore.
 func TestTheBackfillKeysEveryStoredValueAsParsePhoneDoes(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

@@ -16,6 +16,7 @@ import (
 )
 
 func TestOutstandingApprovalScanRequiresSystemAndBoundedPages(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if _, err := e.store.OutstandingApprovalNotices(e.asUser(e.recipient), nil, ids.Nil, 200); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("human-wide notice scan returned %v", err)

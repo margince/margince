@@ -19,6 +19,7 @@ import (
 // The sweep read the attempt as stale, then its slice beat before the settle.
 // Past the resume limit the run is left running, not failed under the slice.
 func TestARunPastTheLimitWhoseSliceBeatSinceTheReadStaysRunning(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)
@@ -42,6 +43,7 @@ func TestARunPastTheLimitWhoseSliceBeatSinceTheReadStaysRunning(t *testing.T) {
 // Approving, approving again and undoing each start a new budget: the sweep
 // counts the resumes of the attempt they open from zero.
 func TestAMoveThatQueuesWorkCountsItsResumesFromZero(t *testing.T) {
+	t.Parallel()
 	for name, move := range map[string]func(context.Context, *testing.T, *RunStore, *database.DB) RunID{
 		"an approval": func(ctx context.Context, t *testing.T, s *RunStore, db *database.DB) RunID {
 			run := toReport(ctx, t, s, newDraft(ctx, t, s, ""))

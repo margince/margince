@@ -20,6 +20,7 @@ import (
 )
 
 func TestAFirstAttemptKeepsItsLeaseWhileWaitingForTheReceiver(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	ctx := e.asHolding(map[string]principal.ObjectGrant{rbacObject: {Read: true, Update: true}})
 	written, release := make(chan struct{}), make(chan struct{})
@@ -64,6 +65,7 @@ func TestAFirstAttemptKeepsItsLeaseWhileWaitingForTheReceiver(t *testing.T) {
 }
 
 func TestAFirstSendCannotOutrunItsRemainingLease(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	ctx := e.asHolding(map[string]principal.ObjectGrant{rbacObject: {Read: true, Update: true}})
 	receiver, posts := countingReceiver(t)

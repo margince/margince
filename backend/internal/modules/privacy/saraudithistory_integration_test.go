@@ -17,6 +17,7 @@ import (
 )
 
 func TestRelatedAuditHistoryProvesEachImageBelongsToTheSubject(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, other, record := ids.NewV7(), ids.NewV7(), ids.NewV7()

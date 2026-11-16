@@ -29,6 +29,7 @@ func (e *runsEnv) restrict(t *testing.T, contact ids.ContactID) {
 }
 
 func TestNoProviderIsAskedAboutARestrictedContactUntilTheLift(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	e.restrict(t, e.mine)
 
@@ -62,6 +63,7 @@ func TestNoProviderIsAskedAboutARestrictedContactUntilTheLift(t *testing.T) {
 // A run queued before the restriction is held at the lease: nothing is sent,
 // and the run stays queued for after the lift.
 func TestARunQueuedBeforeARestrictionIsNotSubmitted(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	run := queueFor(t, e, e.mine.String())

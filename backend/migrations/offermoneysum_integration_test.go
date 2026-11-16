@@ -30,6 +30,7 @@ const offerRow = `
 	VALUES (gen_random_uuid(), 'A-1', 'EUR', 'manual', 'human:test', $1, $2, $3)`
 
 func TestAnOfferGrossIsItsNetPlusTax(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

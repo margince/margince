@@ -111,6 +111,7 @@ func readSessionRow(t *testing.T, conn *pgx.Conn, id string) sessionRow {
 }
 
 func TestTheBackfillCancelsEveryLegacyValidationFailure(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	stopped := seedLegacyRun(t, conn, legacyRun{
@@ -132,6 +133,7 @@ func TestTheBackfillCancelsEveryLegacyValidationFailure(t *testing.T) {
 }
 
 func TestTheBackfillDeclaresEveryReleasedUploadToTheReaper(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	seedLegacyRun(t, conn, legacyRun{
@@ -161,6 +163,7 @@ func TestTheBackfillDeclaresEveryReleasedUploadToTheReaper(t *testing.T) {
 }
 
 func TestTheBackfillStampsApprovalOnEveryRunThatWrote(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	wrote := map[string]string{}
@@ -190,6 +193,7 @@ func TestTheBackfillStampsApprovalOnEveryRunThatWrote(t *testing.T) {
 }
 
 func TestTheOlderOfTwoNamedReportsIsCancelled(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	older := seedLegacyRun(t, conn, legacyRun{
@@ -226,6 +230,7 @@ func TestTheOlderOfTwoNamedReportsIsCancelled(t *testing.T) {
 }
 
 func TestAnUnnamedRunAndAFlipRunAreActiveBesideANamedOne(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	for _, run := range []legacyRun{
@@ -261,6 +266,7 @@ func TestAnUnnamedRunAndAFlipRunAreActiveBesideANamedOne(t *testing.T) {
 }
 
 func TestTwoActiveRunsOfOneNameAreRefused(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	seedLegacyRun(t, conn, legacyRun{status: "running", sourceRef: "ws/import/a", sourceName: "Fair 2026"})
@@ -275,6 +281,7 @@ func TestTwoActiveRunsOfOneNameAreRefused(t *testing.T) {
 }
 
 func TestOneUnreleasedRunPerSource(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	rewindImportSession(t, conn)
 	finished := seedLegacyRun(t, conn, legacyRun{status: "complete", sourceRef: "ws/import/same", age: 3 * time.Hour})
@@ -309,6 +316,7 @@ func TestOneUnreleasedRunPerSource(t *testing.T) {
 }
 
 func TestTheSourceNameFollowsTheMapping(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	named := seedLegacyRun(t, conn, legacyRun{status: "validating", sourceRef: "ws/import/a", sourceName: "Fair 2026"})
@@ -329,6 +337,7 @@ func TestTheSourceNameFollowsTheMapping(t *testing.T) {
 }
 
 func TestTheDownMigrationDeletesDraftsAndCancelledRuns(t *testing.T) {
+	t.Parallel()
 	conn := connect(t, ownerDSNOf(t))
 	headSchema(t, conn)
 	seedLegacyRun(t, conn, legacyRun{status: "pending", sourceRef: "ws/import/draft"})

@@ -40,6 +40,7 @@ SELECT contact_id, id, 'art14', now() + interval '1 month', 'open' FROM e RETURN
 }
 
 func TestAContactAVerdictWithdrewEndsItsNoticeDuty(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

@@ -46,6 +46,7 @@ func officerCtx(e *channelConsentEnv) context.Context {
 // TestTakingADutyShowsWhoIsWorkingIt is the queue's whole reason for the
 // assigned state: an owned case reads differently from an unclaimed one.
 func TestTakingADutyShowsWhoIsWorkingIt(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -70,6 +71,7 @@ func TestTakingADutyShowsWhoIsWorkingIt(t *testing.T) {
 // filters on the unresolved states, so an assigned-and-completed row is a
 // contradiction the state column cannot hold.
 func TestAnEndedDutyTakesNoOwner(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -93,6 +95,7 @@ func TestAnEndedDutyTakesNoOwner(t *testing.T) {
 // and not_required, which records the same conclusion with nothing to defend
 // it. An auditor asking why a case is closed reads this column.
 func TestExcusingADutyKeepsTheGround(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -126,6 +129,7 @@ func TestExcusingADutyKeepsTheGround(t *testing.T) {
 // table's CHECK sees a non-null value there and would let " " close a
 // compliance record with nothing written on it.
 func TestAnExcuseWithoutAGroundIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 
@@ -146,6 +150,7 @@ func TestAnExcuseWithoutAGroundIsRefused(t *testing.T) {
 // a raw constraint violation reads as a database fault — the writer gets blamed
 // for what is a bad argument.
 func TestAGroundLongerThanTheColumnIsRefusedByName(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -165,6 +170,7 @@ func TestAGroundLongerThanTheColumnIsRefusedByName(t *testing.T) {
 // real discharge and then read as the reason it happened — the audit trail
 // would say a mail went out because the subject already had the information.
 func TestADischargedDutyIsNotExcusedAfterwards(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -188,6 +194,7 @@ func TestADischargedDutyIsNotExcusedAfterwards(t *testing.T) {
 // note: the case stops being owed, which the queue derives from the terminal
 // set rather than a second list.
 func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -231,6 +238,7 @@ func TestAnExcusedDutyLeavesTheQueue(t *testing.T) {
 // otherwise read an empty page and conclude there are no duties, which is the
 // one wrong answer a compliance queue must not give quietly.
 func TestTheQueueRefusesAStateThatDoesNotExist(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 
@@ -246,6 +254,7 @@ func TestTheQueueRefusesAStateThatDoesNotExist(t *testing.T) {
 // is the ordinary rep, and these rows say how a named contact was obtained and
 // whether anybody has told them yet.
 func TestTheNoticeQueueIsGatedOnThePrivacyObject(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
 
@@ -266,6 +275,7 @@ func TestTheNoticeQueueIsGatedOnThePrivacyObject(t *testing.T) {
 // this installation sent was delivered, and letting this path write it would
 // let an officer certify a mail that never existed.
 func TestExcusingRefusesAStateThatIsNotAnExcuse(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -291,6 +301,7 @@ func TestExcusingRefusesAStateThatIsNotAnExcuse(t *testing.T) {
 // leaves the obstacle behind is refused by the database as a raw constraint
 // violation, and the officer reads a fault rather than a refusal.
 func TestABlockedDutyCanStillBeExcused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -325,6 +336,7 @@ func TestABlockedDutyCanStillBeExcused(t *testing.T) {
 // state alone would record "assigned to assigned" and lose the only fact the
 // write actually carries.
 func TestAReassignmentRecordsWhoHadItBefore(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -362,6 +374,7 @@ func TestAReassignmentRecordsWhoHadItBefore(t *testing.T) {
 // surface that opens one case, and it has to agree with the list about what a
 // case is — which is why both go through noticeCaseColumns.
 func TestOneDutyReadsTheSameAsItDoesInTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
@@ -390,6 +403,7 @@ func TestOneDutyReadsTheSameAsItDoesInTheQueue(t *testing.T) {
 // TestADutyThatDoesNotExistIsNotFound, rather than an empty case that reads as
 // one with no deadline.
 func TestADutyThatDoesNotExistIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 
@@ -402,6 +416,7 @@ func TestADutyThatDoesNotExistIsNotFound(t *testing.T) {
 // not see one of its rows either — a narrower detail read would be a different
 // answer to the same question.
 func TestTheDetailReadIsGatedLikeTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	id := seedNoticeCase(t, e, "purchased_or_imported", []string{"record_confirmation"})
 
@@ -465,6 +480,7 @@ func walkQueue(ctx context.Context, t *testing.T, e *channelConsentEnv, perPage 
 // no sign a tail existed. A privacy officer working the queue in good faith
 // would believe they had seen every duty the installation owes.
 func TestEveryDutyIsReachableHoweverManyThereAre(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 
@@ -495,6 +511,7 @@ func TestEveryDutyIsReachableHoweverManyThereAre(t *testing.T) {
 // installation where two duties share a second, which is ordinary once a
 // nightly import files a batch of them.
 func TestTwoDutiesFallingDueTogetherAreBothReached(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 
@@ -526,6 +543,7 @@ func TestTwoDutiesFallingDueTogetherAreBothReached(t *testing.T) {
 // officer there is nothing left to do, which is the one answer this route must
 // never guess at.
 func TestACursorTheQueueDidNotMintIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	seedNoticeCaseDue(t, e, time.Now().Add(time.Hour))
@@ -563,6 +581,7 @@ func TestACursorTheQueueDidNotMintIsRefused(t *testing.T) {
 // the contract declares: `data` and `page`, with a cursor that is accepted back
 // on the next request.
 func TestTheQueuesWireCarriesItsPage(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	base := time.Now().Add(24 * time.Hour).Truncate(time.Second)

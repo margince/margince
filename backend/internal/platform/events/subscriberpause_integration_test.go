@@ -19,6 +19,8 @@ import (
 
 // A held group reads nothing, so an entry published while it is held waits in
 // the stream and is delivered once the hold lifts.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestAPausedSubscriberDeliversNothingUntilItResumes(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
 	group := kevents.Groups()[0]

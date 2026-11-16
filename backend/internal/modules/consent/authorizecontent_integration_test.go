@@ -99,6 +99,7 @@ func transmitStaged(
 // because without it every refusal below could be a refusal about something
 // else entirely — a category, a suppression, a missing basis.
 func TestTheSameWordingStillTransmits(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 
@@ -111,6 +112,7 @@ func TestTheSameWordingStillTransmits(t *testing.T) {
 
 // TestABodyEditedAfterStagingDoesNotTransmit is the defect this closes.
 func TestABodyEditedAfterStagingDoesNotTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 
@@ -134,6 +136,7 @@ func TestABodyEditedAfterStagingDoesNotTransmit(t *testing.T) {
 // sentence moved between them is a different message — a subject rewritten
 // while the body stands is exactly the edit a body-only check would miss.
 func TestASubjectEditedAfterStagingDoesNotTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 
@@ -159,6 +162,7 @@ func TestASubjectEditedAfterStagingDoesNotTransmit(t *testing.T) {
 // question here is narrow — does an absent fingerprint read as "changed"? — so
 // it is asked of the function that answers it.
 func TestADeliveryWithNoStagedWordingIsNotTreatedAsEdited(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 
@@ -204,6 +208,7 @@ func TestADeliveryWithNoStagedWordingIsNotTreatedAsEdited(t *testing.T) {
 // an auditor asking "what did somebody try to send" is owed the message that
 // was actually presented, and the staging row beside it holds the other.
 func TestTheTransmitRowRecordsTheWordingThatWouldHaveGone(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	edited := "Actually, pay this to a different account entirely."
@@ -251,6 +256,7 @@ func TestTheTransmitRowRecordsTheWordingThatWouldHaveGone(t *testing.T) {
 // changed" would tell an operator to re-approve a message somebody had
 // objected to, which is the one reading that turns a refusal into an invitation.
 func TestARefusedSendKeepsItsOwnReason(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 
@@ -301,6 +307,7 @@ func TestARefusedSendKeepsItsOwnReason(t *testing.T) {
 // every attempt. A check that parked on the second try would turn every
 // transient provider failure into a permanent one.
 func TestARetryOfAnUneditedMessageStillTransmits(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	recipients := []connector.Recipient{{Email: e.address}}
@@ -343,6 +350,7 @@ func TestARetryOfAnUneditedMessageStillTransmits(t *testing.T) {
 // claiming the message was unchanged. The plain body here is IDENTICAL in both
 // phases, so nothing but the markup can account for the refusal.
 func TestMarkupEditedAfterStagingDoesNotTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	e.issueLinkRow(t, LinkRecordConfirmation, time.Now().Add(14*24*time.Hour), nil)
@@ -389,6 +397,7 @@ func TestMarkupEditedAfterStagingDoesNotTransmit(t *testing.T) {
 // shortcut: the current writer cannot produce the old shape, so the only way to
 // test the compatibility path is to plant what the old writer left behind.
 func TestADeliveryStagedUnderTheOlderDigestStillTransmits(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	e.issueLinkRow(t, LinkRecordConfirmation, time.Now().Add(14*24*time.Hour), nil)
@@ -426,6 +435,7 @@ func TestADeliveryStagedUnderTheOlderDigestStillTransmits(t *testing.T) {
 // answers a narrower question than the one being asked — and let the markup be
 // anything at all.
 func TestTheOlderDigestIsNotAcceptedForAMessageWithMarkup(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 	e.issueLinkRow(t, LinkRecordConfirmation, time.Now().Add(14*24*time.Hour), nil)

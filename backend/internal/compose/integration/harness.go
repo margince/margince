@@ -74,11 +74,6 @@ type Env struct {
 // the workspace/user/team fixture, returning the ready Env.
 func Setup(t *testing.T) *Env {
 	t.Helper()
-	// Refused rather than reported: a leaked runner's workers lose their
-	// database mid-job when its test ends, and fail in whichever test runs then.
-	if leaked := leakedRunners(); leaked != "" {
-		t.Fatalf("a job runner outlived the test that started it:%s", leaked)
-	}
 	db := testdb.New(t)
 	ctx := context.Background()
 

@@ -52,6 +52,7 @@ var (
 // correctly, and a checker that cried wolf would be turned off, which is worse
 // than one that is narrow.
 func TestEveryScriptNamesColumnsTheSchemaHas(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

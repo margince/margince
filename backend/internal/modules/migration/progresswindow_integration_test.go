@@ -12,6 +12,7 @@ import (
 // The window is folded inside the flush's own transaction, on the database
 // clock. A reader gets the samples and the clock they were taken on in one read.
 func TestAFlushRecordsASampleOnTheDatabaseClock(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)

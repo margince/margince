@@ -48,6 +48,7 @@ func (e *stagingEnv) decideAsync(ctx context.Context, id ids.ApprovalID) <-chan 
 // The second retry finds the approval already redeemed by the first, which is
 // still running. Its refusal says nothing about the work, so the mark stays.
 func TestARetryThatLosesTheRedemptionLeavesNoFailure(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deciding := e.asHumanWith(decidesEverything())
 	id := e.failedDecision(deciding, t, (&flakyEffect{e: e, failing: true}).run)
@@ -97,6 +98,7 @@ func TestARetryThatLosesTheRedemptionLeavesNoFailure(t *testing.T) {
 // A failure from an attempt that started before the work ran is out of date
 // once it has run, and may not mark the row.
 func TestAFailureFromBeforeTheWorkRanIsNotRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deciding := e.asHumanWith(decidesEverything())
 	id := e.stageInto(deciding, t, ids.NewV7(), e.company(t), kindSiteLead, "lead-anna")

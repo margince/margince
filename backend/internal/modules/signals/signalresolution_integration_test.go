@@ -19,7 +19,6 @@ package signals
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -32,12 +31,9 @@ import (
 
 func resolutionEnv(t *testing.T) *pgx.Conn {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, dsn)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,9 +42,6 @@ func resolutionEnv(t *testing.T) *pgx.Conn {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	return owner
 }
 
@@ -70,6 +63,7 @@ func seedSignal(t *testing.T, owner *pgx.Conn) ids.SignalID {
 }
 
 func TestASignalCarriesTheAnswerAHumanGaveIt(t *testing.T) {
+	t.Parallel()
 	owner := resolutionEnv(t)
 	ctx := context.Background()
 	id := seedSignal(t, owner)
@@ -129,6 +123,7 @@ func TestASignalCarriesTheAnswerAHumanGaveIt(t *testing.T) {
 // the four columns arrive NULL together from the lateral join, and an object
 // full of zero values would read as an answer somebody gave.
 func TestAnUnansweredSignalCarriesNoResolution(t *testing.T) {
+	t.Parallel()
 	owner := resolutionEnv(t)
 	ctx := context.Background()
 	id := seedSignal(t, owner)

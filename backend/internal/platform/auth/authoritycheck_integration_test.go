@@ -24,6 +24,7 @@ func recordingAs(perms principal.Permissions) (context.Context, func() RecordedC
 // Every refusal a gate answers is recorded as the check it refused, so a
 // recorder can tell it from a 403 no gate made. A branch records nothing.
 func TestEveryGateRefusalIsRecordedAndABranchIsNot(t *testing.T) {
+	t.Parallel()
 	ctx, recorded := recordingAs(principal.Permissions{RowScope: principal.RowScopeOwn, Objects: map[string]principal.ObjectGrant{"deal": {Read: true}}})
 	if Allows(ctx, "deal", principal.ActionUpdate) {
 		t.Fatal("deal.update is admitted, and the seat holds only deal.read")
@@ -55,6 +56,7 @@ func TestEveryGateRefusalIsRecordedAndABranchIsNot(t *testing.T) {
 // A store's own refusal of a record goes through RefuseRow, which answers the
 // store's words and notes it.
 func TestAStoresRowRefusalIsRecordedInItsOwnWords(t *testing.T) {
+	t.Parallel()
 	ctx, recorded := recordingAs(principal.Permissions{})
 	refusal := errors.New("recorded at a level you do not outrank: permission denied")
 	if err := RefuseRow(ctx, "communication_suppression", refusal); !errors.Is(err, refusal) {
@@ -68,6 +70,7 @@ func TestAStoresRowRefusalIsRecordedInItsOwnWords(t *testing.T) {
 // A team's week records the three grants its reach reads, refuses a seat it
 // reaches no team for, and admits an overseer.
 func TestATeamWeekRecordsTheGrantsItsReachReads(t *testing.T) {
+	t.Parallel()
 	read := principal.ObjectGrant{Read: true}
 	ctx, recorded := recordingAs(principal.Permissions{RowScope: principal.RowScopeAll, Objects: map[string]principal.ObjectGrant{"deal": read}})
 	if _, err := RequireTeamWeekReach(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {

@@ -15,7 +15,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -44,13 +43,9 @@ type qualifyingEnv struct {
 
 func setupQualifying(t *testing.T) *qualifyingEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,12 +54,6 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &qualifyingEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7(), contact: ids.New[ids.ContactKind]()}
 	purposeID := ids.New[ids.PurposeKind]()
@@ -92,7 +81,7 @@ func setupQualifying(t *testing.T) *qualifyingEnv {
 		Class: ClassBusinessCorrespondence,
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,6 +162,7 @@ func (e *qualifyingEnv) inbound(t *testing.T, at time.Time) {
 }
 
 func TestAnInPersonExchangeMakesCorrespondenceLawful(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	// Before: nobody has written, no deal connects them, and the honest answer
@@ -214,6 +204,7 @@ func TestAnInPersonExchangeMakesCorrespondenceLawful(t *testing.T) {
 // world. Before this kind existed the rep's only way to say otherwise was
 // `in_person`, which claims they were in a room together when they were not.
 func TestARequestTheSubjectMadeMakesCorrespondenceLawful(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	if before := e.verdict(t); before.State != VerdictUnknown {
@@ -255,6 +246,7 @@ func TestARequestTheSubjectMadeMakesCorrespondenceLawful(t *testing.T) {
 // proves the store refuses it first, with a field a screen can highlight,
 // rather than letting a constraint error surface from inside a send.
 func TestARequestTheSubjectMadeStillNeedsItsNote(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	_, err := e.store.RecordQualifyingEvent(e.ctx, e.contact, RecordQualifyingEventInput{
@@ -275,6 +267,7 @@ func TestARequestTheSubjectMadeStillNeedsItsNote(t *testing.T) {
 }
 
 func TestRecordingAnExchangeRefusesWhatItCannotStandBehind(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	when := time.Now().Add(-time.Hour)
 
@@ -313,6 +306,7 @@ func TestRecordingAnExchangeRefusesWhatItCannotStandBehind(t *testing.T) {
 // claiming a second meeting happened. A double click, or a client that resends
 // on a timeout, is one exchange.
 func TestRecordingTheSameExchangeTwiceKeepsOneRow(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	in := RecordQualifyingEventInput{
 		Kind:       "in_person",
@@ -343,6 +337,7 @@ func TestRecordingTheSameExchangeTwiceKeepsOneRow(t *testing.T) {
 }
 
 func TestRecordingAnExchangeNeedsAuthorityOverTheSubject(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 	readOnly := principal.WithWorkspaceID(context.Background(), e.ws)
 	readOnly = principal.WithCorrelationID(readOnly, ids.NewV7())

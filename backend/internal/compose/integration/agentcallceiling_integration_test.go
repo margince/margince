@@ -64,6 +64,7 @@ func callsCharged(t *testing.T, e *apptest.AppEnv, meter *agentvolume.Meter, pas
 // A passport that has spent its window is refused on the REST door too. Before
 // this, /v1 sat outside the control entirely: a credential that spent its calls
 // through MCP could keep reading the same records over REST.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-rest", 100)
@@ -96,6 +97,7 @@ func TestASpentWindowRefusesTheSamePassportOnTheRestDoor(t *testing.T) {
 // A HUMAN session is never touched by it, however much any agent has called. A
 // busy agent must not be able to lock its own operator out of the product it is
 // acting inside.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-human", 100)
@@ -112,6 +114,7 @@ func TestAHumanSessionIsUnaffectedByASpentAgentWindow(t *testing.T) {
 // A door that refuses on a counter also pays into it. One request is one call
 // however many records it returns. A page of four and a single record cost the
 // same, which is what a reader of the usage meter expects.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestARestReadSpendsOneCallWhateverItReturns(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-charge", 100)
@@ -155,6 +158,7 @@ func TestARestReadSpendsOneCallWhateverItReturns(t *testing.T) {
 // Each counter is measured across the one request that must charge it, because a
 // total taken at the end cannot say which door paid. A read must move Calls by
 // one, so a second charge on a read-only route is caught.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 	e, meter := boundedApp(t, "call-ceiling-census", 1000)
@@ -218,6 +222,7 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 // REST requests ALONE can spend the window, reads included, and once they have
 // the same passport's writes are refused too. A passport that only reads over
 // /v1 must approach the same ceiling as one calling over /mcp.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestRestCallsAloneCanSpendTheWindow(t *testing.T) {
 	e, _ := boundedApp(t, "call-ceiling-selfspend", 4)

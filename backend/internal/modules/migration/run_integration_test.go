@@ -8,9 +8,7 @@ package migration
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -27,20 +25,14 @@ import (
 // needs (the overlay module's testsupport_integration.go pattern). It
 // fails loudly rather than skipping — a silently skipped gate looks
 // exactly like a passing one.
-var (
-	migrationResetMu  sync.Mutex
-	migrationResetFor = map[string]bool{}
-)
-
+//
+// The tenant-fence tests call it twice, once per workspace, so both calls
+// take the test's one database.
 func testWorkspaceCtx(t *testing.T, grants map[string]principal.ObjectGrant) (context.Context, *database.DB) {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.For(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting the owner DSN: %v", err)
 	}
@@ -49,38 +41,8 @@ func testWorkspaceCtx(t *testing.T, grants map[string]principal.ObjectGrant) (co
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	ws := ids.NewV7()
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	//
-	// Once per TEST, not per call. The tenant-fence tests here ask this helper
-	// twice — once for workspace A, once for B — and a reset on the second call
-	// would delete A before the cross-workspace assertions ran, leaving them
-	// asserting nothing.
-	migrationResetMu.Lock()
-	if !migrationResetFor[t.Name()] {
-		if err := testdb.Reset(ctx, owner); err != nil {
-			migrationResetMu.Unlock()
-			t.Fatal(err)
-		}
-		migrationResetFor[t.Name()] = true
-		t.Cleanup(func() {
-			migrationResetMu.Lock()
-			defer migrationResetMu.Unlock()
-			delete(migrationResetFor, t.Name())
-		})
-	}
-	migrationResetMu.Unlock()
-
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
@@ -91,14 +53,12 @@ func testWorkspaceCtx(t *testing.T, grants map[string]principal.ObjectGrant) (co
 		t.Fatalf("seeding app_user: %v", err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatalf("opening the app pool: %v", err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 
 	opCtx := principal.WithWorkspaceID(context.Background(), ws)
@@ -124,6 +84,7 @@ func adminImportRunGrant() map[string]principal.ObjectGrant {
 }
 
 func TestRunStoreLifecycleWithAuditAndResume(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 
@@ -204,6 +165,7 @@ func TestRunStoreLifecycleWithAuditAndResume(t *testing.T) {
 }
 
 func TestIdentityMapIsIdempotentAndRefusesAnUnknownRun(t *testing.T) {
+	t.Parallel()
 	ctxA, dbA := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(dbA)
 	run, err := s.Create(ctxA, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal-a", Source: "import_api"})
@@ -249,6 +211,7 @@ func TestIdentityMapIsIdempotentAndRefusesAnUnknownRun(t *testing.T) {
 // A run id that names no run reads as not-found rather than as a scan error on
 // zero rows — the read is keyed, so this is the only answer it can honestly give.
 func TestRunStoreReadOfAnUnknownRunIsNotFound(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	if _, err := NewRunStore(db).Get(ctx, RunID(ids.NewV7())); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("Get of an unknown run = %v, want ErrNotFound", err)

@@ -98,6 +98,7 @@ func (s cancellingSender) SendEmail(context.Context, connector.Auth, connector.E
 // identity, and the recipient is mailed a second time. A bookkeeping failure
 // costs one duplicate timeline row, never a duplicate email.
 func TestRecordSentKeepsTheReceiptWhenTheReconcileFails(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 	fault := errors.New("activity is unavailable")
@@ -129,6 +130,7 @@ func TestRecordSentKeepsTheReceiptWhenTheReconcileFails(t *testing.T) {
 // failed send: the breadcrumb names the misconfiguration where an operator
 // reads, and the receipt for an already-transmitted message stands.
 func TestRecordSentKeepsTheReceiptWhenTheStoreHasNoReconciler(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 
@@ -157,6 +159,7 @@ func TestRecordSentKeepsTheReceiptWhenTheStoreHasNoReconciler(t *testing.T) {
 // not in that transaction. Written together, the receipt's own UPDATE would go
 // down with the aborted re-key and never commit.
 func TestRecordSentKeepsTheReceiptWhenTheReconcileHitsAUniqueViolation(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 	// The captured echo that won the race: it already holds the natural key the
@@ -205,6 +208,7 @@ func TestRecordSentKeepsTheReceiptWhenTheReconcileHitsAUniqueViolation(t *testin
 // the receipt for an already-transmitted message with it, fail the job, and let
 // the redelivery mail the recipient a second time.
 func TestRecordSentKeepsTheReceiptWhenTheReconcilePanics(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 
@@ -241,6 +245,7 @@ func TestRecordSentKeepsTheReceiptWhenTheReconcilePanics(t *testing.T) {
 // assertion: nothing shorter can show that a cancelled attempt does not come
 // back on the ladder.
 func TestDispatchRecordsTheReceiptWhenTheJobContextIsCancelledDuringTheSend(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 	ctx, cancel := context.WithCancel(e.asSendWorker())
@@ -286,6 +291,7 @@ func TestDispatchRecordsTheReceiptWhenTheJobContextIsCancelledDuringTheSend(t *t
 // inside that transaction can answer it — the receipt is safe because it is not
 // in there, having committed on its own connection before the re-key began.
 func TestRecordSentKeepsTheReceiptWhenTheReconcilesTransactionIsLost(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 
@@ -318,6 +324,7 @@ func TestRecordSentKeepsTheReceiptWhenTheReconcilesTransactionIsLost(t *testing.
 // gone wrong. Escaping here would unwind the dispatch attempt and cost the
 // second email the whole ordering exists to prevent.
 func TestRecordSentKeepsTheReceiptWhenTheFaultReportItselfPanics(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 
@@ -356,6 +363,7 @@ func TestRecordSentKeepsTheReceiptWhenTheFaultReportItselfPanics(t *testing.T) {
 // refusal — a constraint, an RLS WITH CHECK, a full disk — fails the write
 // identically, and this one needs no DDL on a shared database.
 func TestRecordSentKeepsTheReceiptWhenTheBreadcrumbItselfCannotBeWritten(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))
 	unloggable := errors.New("activity is unavailable\x00")
@@ -390,6 +398,7 @@ func TestRecordSentKeepsTheReceiptWhenTheBreadcrumbItselfCannotBeWritten(t *test
 // Telegram for it — parked without it, the send log would record a message the
 // recipient is holding with no way to point at it.
 func TestParkTransmittedKeepsTheProvidersMessageId(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stageReply(t)
 

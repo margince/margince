@@ -86,6 +86,7 @@ func seedFigures(t *testing.T) figuresFixture {
 }
 
 func TestCallStatsCountsFailuresTimeoutsAndCost(t *testing.T) {
+	t.Parallel()
 	f := seedFigures(t)
 
 	rows, err := f.reader.CallStats(f.ctx, CallStatsQuery{Window: 7 * 24 * time.Hour, GroupBy: GroupByProvider, Filter: CallStatsFilter{Task: f.task}})
@@ -110,6 +111,7 @@ func TestCallStatsCountsFailuresTimeoutsAndCost(t *testing.T) {
 }
 
 func TestTaskFlowCountsTheUnansweredLogicalCall(t *testing.T) {
+	t.Parallel()
 	f := seedFigures(t)
 
 	flow, err := f.reader.TaskFlow(f.ctx, f.task, 7*24*time.Hour)
@@ -129,6 +131,7 @@ func TestTaskFlowCountsTheUnansweredLogicalCall(t *testing.T) {
 }
 
 func TestAnEmptyWindowReturnsNoRows(t *testing.T) {
+	t.Parallel()
 	f := seedFigures(t)
 	f.reader.now = func() time.Time { return time.Now().Add(40 * 24 * time.Hour) }
 
@@ -143,6 +146,7 @@ func TestAnEmptyWindowReturnsNoRows(t *testing.T) {
 }
 
 func TestTheCallListNarrowsToOneProviderAndTier(t *testing.T) {
+	t.Parallel()
 	f := seedFigures(t)
 
 	page, err := f.reader.ListCalls(f.ctx, nil, nil, CallListFilter{Task: string(f.task), Provider: providerOpenAICompatible, Tier: string(TierCheapCloud)})
@@ -161,6 +165,7 @@ func TestTheCallListNarrowsToOneProviderAndTier(t *testing.T) {
 }
 
 func TestAnUnknownGroupingIsRefused(t *testing.T) {
+	t.Parallel()
 	f := seedFigures(t)
 	var faults routingFaults
 	_, err := f.reader.CallStats(f.ctx, CallStatsQuery{Window: time.Hour, GroupBy: "colour"})
@@ -173,6 +178,7 @@ func TestAnUnknownGroupingIsRefused(t *testing.T) {
 // The task flow counts it unanswered, while the call figures still count each
 // attempt as answered: the model responded, and a refusal is no outage.
 func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	meter := NewCallMeter(env.dbFor(ws))
@@ -220,6 +226,7 @@ func TestARefusedLadderIsUnansweredInTheFlowButNoProviderFailure(t *testing.T) {
 
 // A caller that stopped waiting is a call, and not a failure of its provider.
 func TestCallStatsLeaveACanceledCallOutOfTheFailures(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)

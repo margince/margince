@@ -23,7 +23,6 @@ package customfields
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -52,13 +51,9 @@ type candidatesFixture struct {
 
 func setupCandidates(t *testing.T) *candidatesFixture {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,16 +62,6 @@ func setupCandidates(t *testing.T) *candidatesFixture {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	ws := ids.NewV7()
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
@@ -94,16 +79,14 @@ func setupCandidates(t *testing.T) *candidatesFixture {
 		t.Fatal(err)
 	}
 
-	appPool, err := testdb.Pool(ctx, appDSN)
+	appPool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	schemaPool, err := testdb.Pool(ctx, ownerDSN)
+	schemaPool, err := testdb.Pool(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -162,6 +145,7 @@ func (f *candidatesFixture) archiveLead(t *testing.T, id ids.UUID) {
 }
 
 func TestDateFieldCandidates_RefusesAnUnknownColumn(t *testing.T) {
+	t.Parallel()
 	f := setupCandidates(t)
 	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
@@ -172,6 +156,7 @@ func TestDateFieldCandidates_RefusesAnUnknownColumn(t *testing.T) {
 }
 
 func TestDateFieldCandidates_RefusesANonDateColumn(t *testing.T) {
+	t.Parallel()
 	f := setupCandidates(t)
 	from := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2026, 12, 31, 0, 0, 0, 0, time.UTC)
@@ -182,6 +167,7 @@ func TestDateFieldCandidates_RefusesANonDateColumn(t *testing.T) {
 }
 
 func TestDateFieldCandidates_LiteralBetweenMatchesTheStoredValue(t *testing.T) {
+	t.Parallel()
 	f := setupCandidates(t)
 	inWindow := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
 	outWindow := time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -213,6 +199,7 @@ func TestDateFieldCandidates_LiteralBetweenMatchesTheStoredValue(t *testing.T) {
 // real scan path must agree, or an archived record could still surface
 // a task the workspace has no reason to expect.
 func TestDateFieldCandidates_ExcludesArchivedRows(t *testing.T) {
+	t.Parallel()
 	f := setupCandidates(t)
 	inWindow := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
 	activeID := f.seedLead(t, inWindow)
@@ -248,6 +235,7 @@ func TestDateFieldCandidates_ExcludesArchivedRows(t *testing.T) {
 // window's later year — exactly a birthday recurring across a New Year's
 // boundary.
 func TestDateFieldCandidates_RecurringWrapsTheYearBoundary(t *testing.T) {
+	t.Parallel()
 	f := setupCandidates(t)
 	// Stored years are deliberately unrelated to the scan window's years —
 	// a recurring field's own stored year carries no meaning (candidates.go's
@@ -295,6 +283,7 @@ func TestDateFieldCandidates_RecurringWrapsTheYearBoundary(t *testing.T) {
 // (Mar 1, against an Aug 13 → Aug 13-next-year window) and asserts it
 // still matches — the case that was silently dropped before the fix.
 func TestDateFieldCandidates_RecurringFullYearWindowMatchesEveryMonthDay(t *testing.T) {
+	t.Parallel()
 	f := setupCandidates(t)
 	farFromBoundary := f.seedLead(t, time.Date(1990, 3, 1, 0, 0, 0, 0, time.UTC))
 
@@ -326,12 +315,10 @@ func TestDateFieldCandidates_RecurringFullYearWindowMatchesEveryMonthDay(t *test
 // real clock-scan pass into a runtime 42703/500, not a compile error or
 // a caught test failure, unless this test is the one asserting it.
 func TestFieldObjectsAllCarryArchivedAt(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

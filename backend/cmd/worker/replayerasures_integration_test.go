@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -36,6 +37,8 @@ const restoredAddress = "geloescht@betroffene.example"
 // The restore the replay exists for. The database went back to a point before
 // an erasure, so the contact's rows came back and the suppression list lost
 // the entry. Only the journal in the object store still names the address.
+//
+//testdb:serial sets the environment through a helper, which Go refuses in a parallel test
 func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 	e := integration.Setup(t)
 	eraser := journalledEraser(t, e)
@@ -58,6 +61,8 @@ func TestReplayErasuresTakesAgainWhatARestoreBroughtBack(t *testing.T) {
 
 // A contact known only by a chat account carries no address. The replay
 // matches the account itself, as the erasure hashed it.
+//
+//testdb:serial sets the environment through a helper, which Go refuses in a parallel test
 func TestReplayErasuresTakesAgainAContactKnownOnlyByAChatAccount(t *testing.T) {
 	e := integration.Setup(t)
 	eraser := journalledEraser(t, e)
@@ -80,6 +85,8 @@ func TestReplayErasuresTakesAgainAContactKnownOnlyByAChatAccount(t *testing.T) {
 
 // The journal ends at its last export. The command says when, so the operator
 // knows which erasures to take again by hand.
+//
+//testdb:serial sets the environment through a helper, which Go refuses in a parallel test
 func TestReplayErasuresSaysWhichErasuresItCannotCover(t *testing.T) {
 	e := integration.Setup(t)
 	eraser := journalledEraser(t, e)
@@ -103,6 +110,8 @@ func TestReplayErasuresSaysWhichErasuresItCannotCover(t *testing.T) {
 
 // An empty journal is most often a store pointed at the wrong place. The
 // operator has to say it is right before the replay reports a clean pass.
+//
+//testdb:serial sets the environment through a helper, which Go refuses in a parallel test
 func TestReplayErasuresRefusesAnEmptyJournalUnlessTold(t *testing.T) {
 	e := integration.Setup(t)
 	configureObjectStore(t)
@@ -121,6 +130,8 @@ func TestReplayErasuresRefusesAnEmptyJournalUnlessTold(t *testing.T) {
 
 // Without the object store the journal cannot be read. A pass over the
 // rolled-back list alone would report a clean run it cannot vouch for.
+//
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestReplayErasuresRefusesToRunWithoutTheObjectStore(t *testing.T) {
 	e := integration.Setup(t)
 	t.Setenv(blobstore.EnvEndpoint, "")
@@ -137,6 +148,8 @@ const workerProgramEnv = "MARGINCE_TEST_WORKER_PROGRAM"
 // The restore drill runs the command as an operator types it, through the
 // worker's whole boot. The boot registers extensions once per process, so the
 // test runs it in a child process of its own.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheWorkerProgramRunsReplayErasures(t *testing.T) {
 	if os.Getenv(workerProgramEnv) != "" {
 		if err := run(t.Context(), []string{"replay-erasures", "--empty-journal-ok"}, os.Stdout); err != nil {
@@ -152,7 +165,7 @@ func TestTheWorkerProgramRunsReplayErasures(t *testing.T) {
 	configureObjectStore(t)
 	child := exec.CommandContext(t.Context(), os.Args[0], "-test.run=^TestTheWorkerProgramRunsReplayErasures$", "-test.v")
 	child.Env = append(os.Environ(), workerProgramEnv+"=1", "MARGINCE_ENV=dev",
-		dbsettings.DSN.Env()+"="+os.Getenv("MARGINCE_TEST_APP_DSN"))
+		dbsettings.DSN.Env()+"="+testdb.For(t).AppDSN)
 	out, err := child.CombinedOutput()
 	if err != nil || !strings.Contains(string(out), "holds no entry") {
 		t.Fatalf("worker replay-erasures: %v\n%s\nwant the empty journal named", err, out)

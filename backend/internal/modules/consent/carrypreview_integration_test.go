@@ -19,6 +19,7 @@ import (
 )
 
 func TestLeadCarryPreviewNamesTheRecordedBasisWithoutChangingItsValidity(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	lead := seedLead(t, e, "Dana Buyer", "basis@example.test")
 	ctx := principal.WithActor(e.ctx, principal.Principal{
@@ -63,6 +64,7 @@ func TestLeadCarryPreviewNamesTheRecordedBasisWithoutChangingItsValidity(t *test
 }
 
 func TestCarryPreviewRefusesAnOversizedScopeWithoutReturningPartialLinks(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	lead := seedLead(t, e, "Large history", "history@example.test")
 	ctx := principal.WithActor(e.ctx, principal.Principal{

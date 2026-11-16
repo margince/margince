@@ -19,6 +19,7 @@ import (
 const directionPrefixIndex, directionPageIndex = "idx_activity_direction", "idx_activity_direction_page"
 
 func TestTheDirectionIndexReplacementKeepsARecordedIndexAcrossRetries(t *testing.T) {
+	t.Parallel()
 	owner, _ := dsns(t)
 	conn := connect(t, owner)
 	headSchema(t, conn)

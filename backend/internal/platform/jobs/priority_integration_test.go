@@ -49,6 +49,7 @@ func priorityOf(ctx context.Context, t *testing.T, pool *pgxpool.Pool, kind, arg
 }
 
 func TestPromotePriorityRaisesAnAvailableJobMatchedByItsArg(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 	seedPriorityJob(ctx, t, pool, "promote_test_kind", "available", "dossier_id", "d1", 4)
@@ -66,6 +67,7 @@ func TestPromotePriorityRaisesAnAvailableJobMatchedByItsArg(t *testing.T) {
 }
 
 func TestPromotePriorityNeverLowersAJobAlreadyAtOrAboveTheRequestedTier(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 	seedPriorityJob(ctx, t, pool, "promote_test_kind", "available", "dossier_id", "d2", 1)
@@ -83,6 +85,7 @@ func TestPromotePriorityNeverLowersAJobAlreadyAtOrAboveTheRequestedTier(t *testi
 }
 
 func TestPromotePriorityLeavesAJobPastItsQueuedStatesAlone(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 	seedPriorityJob(ctx, t, pool, "promote_test_kind", "running", "dossier_id", "d3", 4)
@@ -100,6 +103,7 @@ func TestPromotePriorityLeavesAJobPastItsQueuedStatesAlone(t *testing.T) {
 }
 
 func TestPromotePriorityReportsTheUnderlyingErrorRatherThanSwallowingIt(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	cancelledCtx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -114,6 +118,7 @@ func TestPromotePriorityReportsTheUnderlyingErrorRatherThanSwallowingIt(t *testi
 }
 
 func TestPromotePriorityMatchesNoRowWithoutError(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 

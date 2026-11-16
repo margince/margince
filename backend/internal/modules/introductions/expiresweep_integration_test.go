@@ -76,6 +76,7 @@ func (e *introEnv) overdue(t *testing.T, id ids.UUID) {
 // holds that (contact, colleague) pair permanently — the duplicate guard, which
 // exists to stop two tabs racing, becomes a refusal the rep can never clear.
 func TestAnUnansweredAskExpiresAndFreesItsRoute(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -113,6 +114,7 @@ func TestAnUnansweredAskExpiresAndFreesItsRoute(t *testing.T) {
 // one a colleague accepted and then dropped are different stories about that
 // colleague, and only the before-image tells them apart.
 func TestAnExpiryLandsInTheWriteShapeUnderTheClocksName(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -168,6 +170,7 @@ func TestAnExpiryLandsInTheWriteShapeUnderTheClocksName(t *testing.T) {
 // quietly: the colleague said yes, nothing happened, and the record still reads
 // as a promise being kept.
 func TestExpiryReachesAnAcceptedAskAndALentName(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	for _, answer := range []Status{StatusAccepted, StatusNameDropApproved} {
 		ask := e.ask()
@@ -199,6 +202,7 @@ func TestExpiryReachesAnAcceptedAskAndALentName(t *testing.T) {
 // Re-closing a decided ask would rewrite its outcome, and the audit trail would
 // carry two endings for one question.
 func TestTheSweepLeavesASettledAskAlone(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -232,6 +236,7 @@ func TestTheSweepLeavesASettledAskAlone(t *testing.T) {
 // Without this, every other case here would pass against a sweep that closed
 // every open ask regardless of the clock.
 func TestTheSweepLeavesAnAskInsideItsWindow(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	if _, err := e.store.Create(e.asUser(e.requester), e.ask()); err != nil {
 		t.Fatalf("Create: %v", err)
@@ -253,6 +258,7 @@ func TestTheSweepLeavesAnAskInsideItsWindow(t *testing.T) {
 // installation at once — each one audited as though the clock had done it, with
 // their name nowhere in the record.
 func TestOnlyTheClockMayExpireIntroductions(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {

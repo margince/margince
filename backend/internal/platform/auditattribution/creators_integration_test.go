@@ -8,7 +8,6 @@ package auditattribution
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"testing"
 	"time"
 
@@ -38,12 +37,9 @@ func (n planNode) walk(visit func(planNode)) {
 // the test ends, so the audit rows it seeds never outlive it.
 func creatorsTx(t *testing.T) pgx.Tx {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dsn)
+	conn, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting to the test database: %v", err)
 	}
@@ -52,9 +48,6 @@ func creatorsTx(t *testing.T) pgx.Tx {
 			t.Errorf("closing the test connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, conn); err != nil {
-		t.Fatalf("bringing the test database to head: %v", err)
-	}
 	if err := testdb.CapStatements(ctx, conn); err != nil {
 		t.Fatalf("capping the test connection's statements: %v", err)
 	}
@@ -80,6 +73,7 @@ func seedAudit(t *testing.T, tx pgx.Tx, id ids.UUID, action string, entity ids.U
 }
 
 func TestCreatorsNameTheEarliestCreateRowOncePerRecord(t *testing.T) {
+	t.Parallel()
 	tx := creatorsTx(t)
 	at := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
 	replayed, tied, uncreated := ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -112,6 +106,7 @@ func TestCreatorsNameTheEarliestCreateRowOncePerRecord(t *testing.T) {
 // A page names its creators on every read, so the work per record must stay
 // flat however long that record's history grows.
 func TestCreatorsReadAFewAuditRowsPerRecordWhateverItsHistory(t *testing.T) {
+	t.Parallel()
 	const records, updatesEach, rowsPerRecord = 200, 2000, 4
 	tx := creatorsTx(t)
 	ctx := context.Background()

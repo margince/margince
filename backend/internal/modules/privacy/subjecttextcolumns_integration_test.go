@@ -23,7 +23,6 @@ package privacy
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -54,6 +53,7 @@ var subjectRowWriters = map[string]func(context.Context, pgx.Tx, ids.ContactID, 
 }
 
 func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
+	t.Parallel()
 	for name, anonymize := range subjectRowWriters {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
@@ -106,6 +106,7 @@ func TestErasureClearsTheSubjectTextColumnsItUsedToLeave(t *testing.T) {
 // from — so the twin sweep above never sees it. A fourth writer of the same
 // columns, and the one a contact-driven test cannot reach.
 func TestTheLeadRetentionActionClearsTheSameColumns(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -150,6 +151,7 @@ var deliveryScrubs = map[string]func(context.Context, pgx.Tx, []ids.UUID, Payloa
 }
 
 func TestEveryDeliveryScrubClearsTheBounceTextThatQuotesTheAddress(t *testing.T) {
+	t.Parallel()
 	for name, scrub := range deliveryScrubs {
 		t.Run(name, func(t *testing.T) {
 			ctx := context.Background()
@@ -206,11 +208,7 @@ func (p noPayloads) Delete(_ context.Context, ref string) error {
 // so the lane database is left as it was found.
 func subjectColumnsTx(ctx context.Context, t *testing.T) pgx.Tx {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -219,9 +217,6 @@ func subjectColumnsTx(ctx context.Context, t *testing.T) pgx.Tx {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)

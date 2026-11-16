@@ -10,18 +10,15 @@ package owndomain
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 func TestCoversSQLAnswersAsCoversDomain(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
-	pool, err := testdb.OwnPool(context.Background(), dsn)
+	t.Parallel()
+	db := testdb.New(t)
+	pool, err := testdb.OwnPool(context.Background(), db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

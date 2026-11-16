@@ -22,7 +22,6 @@ package webhooks
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -46,13 +45,9 @@ type contractVisEnv struct {
 
 func setupContractVis(t *testing.T) *contractVisEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,10 +56,6 @@ func setupContractVis(t *testing.T) *contractVisEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// EnsureSchema must verify the empty clone before the fixture seeds any rows.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &contractVisEnv{owner: owner, ws: ids.NewV7(), user: ids.NewV7(), company: ids.NewV7(), deal: ids.NewV7()}
 	for _, seed := range []struct {
@@ -83,7 +74,7 @@ func setupContractVis(t *testing.T) *contractVisEnv {
 			t.Fatalf("seeding: %v", err)
 		}
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,6 +129,7 @@ func (e *contractVisEnv) asHolding(objects map[string]principal.ObjectGrant) con
 }
 
 func TestAContractSubjectNeedsNoGrantOnItsAnchor(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	contract := e.seedDealAndContract(t)
 
@@ -157,6 +149,7 @@ func TestAContractSubjectNeedsNoGrantOnItsAnchor(t *testing.T) {
 
 // The grant it does need.
 func TestAContractSubjectStillNeedsContractRead(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	contract := e.seedDealAndContract(t)
 
@@ -174,6 +167,7 @@ func TestAContractSubjectStillNeedsContractRead(t *testing.T) {
 // An archived anchor is the divergence in the direction that leaks: the HTTP
 // read answers 404 through it, so delivery must not carry on.
 func TestAContractOnAnArchivedAnchorIsNotDelivered(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	contract := e.seedDealAndContract(t)
 	if _, err := e.owner.Exec(context.Background(),
@@ -194,6 +188,7 @@ func TestAContractOnAnArchivedAnchorIsNotDelivered(t *testing.T) {
 }
 
 func TestALegacyContractUsesItsOwnCompanyWhenTheDealNamesAnother(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	contract := e.seedDealAndContract(t)
 	otherOwner := ids.NewV7()
@@ -233,6 +228,7 @@ func TestALegacyContractUsesItsOwnCompanyWhenTheDealNamesAnother(t *testing.T) {
 }
 
 func TestAnArchivedContractIsStillVisibleForItsHistory(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	contract := e.seedDealAndContract(t)
 	if _, err := e.owner.Exec(t.Context(), `UPDATE contract SET archived_at=now() WHERE id=@id`, pgx.StrictNamedArgs{"id": contract}); err != nil {

@@ -28,6 +28,7 @@ import (
 // advisory lock is this code's business; deciding that somebody else's bound no
 // longer applies is not.
 func TestTheOccurrenceLockRestoresTheTimeoutItFound(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 

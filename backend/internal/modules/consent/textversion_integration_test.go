@@ -12,13 +12,13 @@ package consent
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // The one wording these tests publish. Every test here asks what the database
@@ -52,6 +52,7 @@ func publishFixture(t *testing.T, e *channelConsentEnv) {
 // describing a screen the subject never saw — and nothing in the tree would
 // notice, because the pointer stays valid.
 func TestPublishedWordingCannotBeEdited(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 
@@ -67,6 +68,7 @@ func TestPublishedWordingCannotBeEdited(t *testing.T) {
 // rewriting what it said, so the window columns stay writable. Without this the
 // only way to retire wording would be to leave it live forever.
 func TestAPublishedVersionMayStillBeWithdrawn(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 
@@ -79,6 +81,7 @@ func TestAPublishedVersionMayStillBeWithdrawn(t *testing.T) {
 // TestADraftIsStillEditable — the trigger keys on published_at, so wording being
 // worked on is not frozen before anybody has stood behind it.
 func TestADraftIsStillEditable(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	if _, err := e.owner.Exec(context.Background(),
 		`INSERT INTO consent_text_version (key, version, body) VALUES ('draft', 'v1', 'Working on it.')`); err != nil {
@@ -94,6 +97,7 @@ func TestADraftIsStillEditable(t *testing.T) {
 // publishes on every boot, so the second call must find its row rather than
 // collide with it.
 func TestRepublishingTheSameWordingIsANoOp(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 	publishFixture(t, e)
@@ -113,6 +117,7 @@ func TestRepublishingTheSameWordingIsANoOp(t *testing.T) {
 // see. An author who edits a template and leaves its version alone is making
 // exactly the change the trigger forbids, one call further out.
 func TestRepublishingChangedWordingIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 
@@ -136,6 +141,7 @@ func TestRepublishingChangedWordingIsRefused(t *testing.T) {
 // TestAProofRowNamesTheWordingItWasRenderedFrom is the link the table was added
 // for: the sentence on the event, and the published version it came from.
 func TestAProofRowNamesTheWordingItWasRenderedFrom(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 
@@ -170,6 +176,7 @@ func TestAProofRowNamesTheWordingItWasRenderedFrom(t *testing.T) {
 // on every boot, so a second pass must find each version already published
 // rather than collide with the partial unique index.
 func TestPublishingTheCatalogTwiceIsANoOp(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	now := time.Now()
 	for i := range 2 {
@@ -227,12 +234,13 @@ func TestPublishingTheCatalogTwiceIsANoOp(t *testing.T) {
 // not catch that, because after the delete there is no published row left to
 // compare against.
 func TestPublishedWordingCannotBeDeleted(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 
 	// The RUNTIME role, not the owner: the owner may delete anything, so a test
 	// running as owner would prove nothing about what the application can do.
-	app, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
+	app, err := pgx.Connect(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("connecting as the runtime role: %v", err)
 	}
@@ -254,6 +262,7 @@ func TestPublishedWordingCannotBeDeleted(t *testing.T) {
 // claim it was live on a day it was not, which is how a proof row from March is
 // made to resolve against wording published in June.
 func TestAPublishedVersionsScopeIsFrozenToo(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	publishFixture(t, e)
 

@@ -56,6 +56,7 @@ func seedAppUserForConnection(t *testing.T, conn *pgx.Conn, email string) string
 }
 
 func TestTheTestMailboxDownMigrationSurvivesADisconnectedConnection(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -100,6 +101,7 @@ func TestTheTestMailboxDownMigrationSurvivesADisconnectedConnection(t *testing.T
 // safety guarantee (never strand a sealed secret) has to survive right next
 // to the fix that lets a fully-disconnected row through.
 func TestTheTestMailboxDownMigrationStillRefusesALiveConnection(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

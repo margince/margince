@@ -25,7 +25,6 @@ package privacy
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -38,12 +37,10 @@ import (
 )
 
 func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,9 +49,6 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	tx, err := owner.Begin(ctx)
 	if err != nil {
@@ -181,12 +175,10 @@ func mustExec(ctx context.Context, t *testing.T, conn execer, sql string, args .
 // it cleared an introduction's prose for a contact it never found — the shape where a
 // cascade step quietly skips and the certificate still says the data is gone.
 func TestRedactingAnAbsentContactsIntroductionsRefuses(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -195,9 +187,6 @@ func TestRedactingAnAbsentContactsIntroductionsRefuses(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	tx, err := owner.Begin(ctx)
 	if err != nil {
 		t.Fatal(err)

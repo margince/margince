@@ -23,6 +23,7 @@ import (
 )
 
 func TestAgentStagingRequiresTheEffectsObjectGrant(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	in := e.mergeCall(e.seedTag(t, "source"), e.seedTag(t, "target"))
@@ -53,6 +54,7 @@ func TestAgentStagingRequiresTheEffectsObjectGrant(t *testing.T) {
 }
 
 func TestRevokedProposerAuthorityLeavesTheApprovalPending(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	ctx := e.asPassport(passport)
@@ -84,6 +86,7 @@ func TestRevokedProposerAuthorityLeavesTheApprovalPending(t *testing.T) {
 }
 
 func TestAgentStagePrecheckRunsAgainBeforeDecision(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	passport := e.seedPassport(t)
 	ctx := e.asPassport(passport)
@@ -110,6 +113,7 @@ func TestAgentStagePrecheckRunsAgainBeforeDecision(t *testing.T) {
 }
 
 func TestAgentStagingRefusesMissingOperandGrants(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		kind, target string
 		objects      map[string]principal.ObjectGrant
@@ -137,6 +141,7 @@ func TestAgentStagingRefusesMissingOperandGrants(t *testing.T) {
 }
 
 func TestAnAgentApprovalCannotBeDecidedWithoutResolvingItsProposer(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	id, _, err := e.svc.StageAgentCall(e.asPassport(e.seedPassport(t)), e.agentCall(e.seedCompany(t)))
 	if err != nil {
@@ -152,6 +157,7 @@ func TestAnAgentApprovalCannotBeDecidedWithoutResolvingItsProposer(t *testing.T)
 }
 
 func TestAnAgentCallCannotMintAHumanAgreement(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	in := e.agentCall(e.seedCompany(t))
 	in.Kind = approvalsubject.KindOwnershipTransfer

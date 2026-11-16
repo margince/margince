@@ -29,6 +29,7 @@ import (
 const aScheduledKind = "capture_classify"
 
 func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	next := time.Now().Add(20 * time.Minute).Truncate(time.Second)
@@ -54,6 +55,7 @@ func TestAScheduledRunIsWhenThePassRuns(t *testing.T) {
 }
 
 func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	ran := time.Now().Add(-12 * time.Minute).Truncate(time.Second)
@@ -93,6 +95,7 @@ func TestWithNothingScheduledThePassIsTheLastRunPlusItsCadence(t *testing.T) {
 // that has been and gone; read as nothing it falls through to a projection off
 // the last completed run, which is a different lie. It is its own answer.
 func TestADueRunIsReportedAsQueuedRatherThanAsATime(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	due := time.Now().Add(-3 * time.Minute)
@@ -118,6 +121,7 @@ func TestADueRunIsReportedAsQueuedRatherThanAsATime(t *testing.T) {
 // A retry is a pass that is still coming, and reporting the cadence past it
 // would promise a run at a time when what is pending is an attempt.
 func TestARetryableRunCountsAsQueued(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	seedJob(ctx, t, pool, seed{
@@ -134,6 +138,7 @@ func TestARetryableRunCountsAsQueued(t *testing.T) {
 }
 
 func TestARunningPassSaysSoRatherThanNamingATime(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	seedJob(ctx, t, pool, seed{Kind: aScheduledKind, State: "running"})
@@ -152,6 +157,7 @@ func TestARunningPassSaysSoRatherThanNamingATime(t *testing.T) {
 // never run at all, answers NOTHING. Nil is not "soon": a caller owed a time
 // this deployment cannot compute must say the cadence instead of inventing one.
 func TestAKindWithNoHistoryNamesNoTime(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -171,6 +177,7 @@ func TestAKindWithNoHistoryNamesNoTime(t *testing.T) {
 // A kind no clock runs answers a zero cadence rather than a made-up one, which
 // is a different sentence from "the next run is unknown".
 func TestAnUndeclaredKindHasNoCadence(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -190,6 +197,7 @@ func TestAnUndeclaredKindHasNoCadence(t *testing.T) {
 // reached the table. The kind is in the message because two surfaces ask about
 // different ones and a log line that names neither cannot say which stopped.
 func TestAFailedReadIsAnErrorRatherThanASilentAbsenceOfAClock(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	stopped, cancel := context.WithCancel(t.Context())
 	cancel()

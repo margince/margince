@@ -14,6 +14,7 @@ import (
 )
 
 func TestProtocolCounterIncludesPreparationsAndBatches(t *testing.T) {
+	t.Parallel()
 	ctx, base := laneEnv(t)
 	for _, test := range []struct {
 		mode       pgx.QueryExecMode

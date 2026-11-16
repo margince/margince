@@ -28,6 +28,7 @@ import (
 // idempotency, not a cache. A dedupe in Redis answers this correctly until it is
 // flushed and then answers it wrong — quietly, by filing the same finding twice.
 func TestBundlingTheSameFindingTwiceIsANoOp(t *testing.T) {
+	t.Parallel()
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
 	exception := e.seedException(t, "bundle-once", e.seedDealSubject(t))
@@ -59,6 +60,7 @@ func TestBundlingTheSameFindingTwiceIsANoOp(t *testing.T) {
 // That is what bundling means. Without it a deal with four problems produces
 // four tasks, and a rep clearing them clears the same deal four times.
 func TestFindingsAboutOneDealShareOneTask(t *testing.T) {
+	t.Parallel()
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
 	deal := e.seedDealSubject(t)
@@ -95,6 +97,7 @@ func TestFindingsAboutOneDealShareOneTask(t *testing.T) {
 // A CLOSED cycle bundles nothing. Its window is over, and a finding after it
 // belongs to the next pass.
 func TestAClosedCycleBundlesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
 	if err := e.store.CloseCycle(e.as(), cycle); err != nil {
@@ -125,6 +128,7 @@ func TestAClosedCycleBundlesNothing(t *testing.T) {
 // whole table exists to prevent, arriving one level up where the row constraint
 // cannot see it.
 func TestOnlyOneCycleIsOpenPerScope(t *testing.T) {
+	t.Parallel()
 	e := setupScan(t)
 	first := e.openCycle(t, t.Name())
 
@@ -150,6 +154,7 @@ func TestOnlyOneCycleIsOpenPerScope(t *testing.T) {
 
 // Closing a cycle twice does not move the moment it closed.
 func TestClosingACycleTwiceIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
 	if err := e.store.CloseCycle(e.as(), cycle); err != nil {
@@ -172,6 +177,7 @@ func TestClosingACycleTwiceIsRefused(t *testing.T) {
 // two exceptions about deal S could be filed under subjects X and Y, clear the
 // constraint, and mint the second task the whole table exists to prevent.
 func TestTheBundledRowCarriesTheExceptionsOwnSubject(t *testing.T) {
+	t.Parallel()
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
 	deal := e.seedDealSubject(t)
@@ -207,12 +213,7 @@ func TestTheBundledRowCarriesTheExceptionsOwnSubject(t *testing.T) {
 	}
 }
 
-// openCycle opens one over a scope named for the calling test.
-//
-// The scope is the test's own name because only ONE cycle may be open per scope
-// and these tests share a database — a shared literal would have the first test
-// to run block every other, which says nothing about the product and everything
-// about the fixture.
+// openCycle opens one over the scope the calling test names.
 func (e *scanEnv) openCycle(t *testing.T, scope string) ids.UUID {
 	t.Helper()
 	id, err := e.store.OpenCycle(e.as(), scope)
@@ -308,6 +309,7 @@ func (e *scanEnv) taskCount(t *testing.T, cycle ids.UUID) int {
 // Several findings sharing a task is proven above; this proves the constraint
 // that stops them drifting onto two.
 func TestASubjectCannotAcquireASecondTaskInOneCycle(t *testing.T) {
+	t.Parallel()
 	e := setupScan(t)
 	cycle := e.openCycle(t, t.Name())
 	deal := e.seedDealSubject(t)

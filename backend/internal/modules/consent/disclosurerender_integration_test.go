@@ -18,7 +18,6 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 
@@ -72,14 +71,13 @@ func operatorCtx(e *channelConsentEnv) context.Context {
 // production too.
 func settingsStoreFor(t *testing.T) *config.Config {
 	t.Helper()
-	pool, err := testdb.Pool(context.Background(), os.Getenv("MARGINCE_TEST_APP_DSN"))
+	pool, err := testdb.Pool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any
 	// cleanup of its own, so it runs last and sees a package that has
-	// genuinely stopped — a goroutine still holding a connection would go on
-	// writing into the database the NEXT test just reset.
+	// genuinely stopped.
 	testdb.AssertPoolsQuiesced(t)
 	return configtest.StoredOver(t, pool, ConfigSettings())
 }
@@ -146,6 +144,7 @@ func disclosures(
 // TestADeclaredDisclosureIsRenderedFromTheStatedParticulars is the register
 // line this closes: the kinds were a closed set nothing turned into text.
 func TestADeclaredDisclosureIsRenderedFromTheStatedParticulars(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "zd",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity},
@@ -178,6 +177,7 @@ func TestADeclaredDisclosureIsRenderedFromTheStatedParticulars(t *testing.T) {
 // itself look identical to one in a jurisdiction that demands nothing — the
 // first is a compliance gap somebody has to close.
 func TestAnUnconfiguredInstallationReportsTheDisclosureMissing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "ze",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity})
@@ -196,6 +196,7 @@ func TestAnUnconfiguredInstallationReportsTheDisclosureMissing(t *testing.T) {
 // nothing this function can name, and says so by answering nothing at all —
 // which a caller tells from the case above by the empty slice.
 func TestNoPackDeclaresNoDisclosure(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stateParticulars(t, e, ControllerParticulars{LegalName: "Beispiel GmbH"})
 
@@ -211,6 +212,7 @@ func TestNoPackDeclaresNoDisclosure(t *testing.T) {
 // unsubscribe line under a payment reminder, which is both wrong and the kind
 // of thing a recipient reads as an invitation to stop receiving invoices.
 func TestAMarketingOnlyDisclosureStaysOffAnInvoice(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "zf",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity},
@@ -237,6 +239,7 @@ func TestAMarketingOnlyDisclosureStaysOffAnInvoice(t *testing.T) {
 // from where they are registered. Folding it onto the postal address would
 // answer a phone-number obligation with a street.
 func TestTheAdvertiserContactIsItsOwnParticular(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "zg",
 		messagingrules.Disclosure{Kind: messagingrules.AdvertiserContact, MarketingOnly: true})
@@ -268,6 +271,7 @@ func TestTheAdvertiserContactIsItsOwnParticular(t *testing.T) {
 // somebody who stated a name had identified themselves. The kind's own
 // definition says otherwise.
 func TestAnIdentityNeedsBothItsHalves(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "zh",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity})
@@ -286,6 +290,7 @@ func TestAnIdentityNeedsBothItsHalves(t *testing.T) {
 // TestTheParticularsRoundTrip. What a read returns is what a write of the same
 // body would store — otherwise a form shows somebody a value that is not saved.
 func TestTheParticularsRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := operatorCtx(e)
 	in := ControllerParticulars{
@@ -313,6 +318,7 @@ func TestTheParticularsRoundTrip(t *testing.T) {
 // bottom of every message this installation sends, so changing them changes
 // what every recipient is told.
 func TestStatingTheParticularsNeedsTheSettingsGrant(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	store := settingsStoreFor(t)
@@ -329,6 +335,7 @@ func TestStatingTheParticularsNeedsTheSettingsGrant(t *testing.T) {
 // TestAnOverlongParticularIsRefused. Every field goes into every message, so an
 // unbounded one is a way to make all of them arbitrarily large.
 func TestAnOverlongParticularIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := operatorCtx(e)
 
@@ -344,6 +351,7 @@ func TestAnOverlongParticularIsRefused(t *testing.T) {
 // and discloses nothing, which is worse than leaving it empty: the empty one is
 // reported missing and gets fixed.
 func TestAWhitespaceParticularIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := operatorCtx(e)
 
@@ -363,6 +371,7 @@ func TestAWhitespaceParticularIsRefused(t *testing.T) {
 // same request — with the mutation already committed and nothing telling them
 // it had happened.
 func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := settingsStoreFor(t)
 	stated := ControllerParticulars{
@@ -410,6 +419,7 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 // Mutation: return the installation's particulars from controllerOf and this
 // fails.
 func TestAFurtherEntityNamesItselfAsTheController(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := inJurisdiction(t, e, "zk",
 		messagingrules.Disclosure{Kind: messagingrules.ControllerIdentity},

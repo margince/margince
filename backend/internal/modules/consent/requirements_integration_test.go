@@ -41,20 +41,15 @@ func composerCtx(e *channelConsentEnv) context.Context {
 }
 
 // THE CODE IS MINTED, never written down. testJurisdiction (authorizecaplock)
-// hands out the qm-qz range from a shared counter, and this package's cap tests
-// draw from the same one — so a literal here takes a code that helper will hand
-// to somebody else, and Register panics for every test after it. The failure
-// passes alone and fails in the suite, which is the worst shape to diagnose.
+// hands out the qm-qz range, so a literal here takes a code that helper will
+// hand to somebody else, and Register panics for every test after it.
 //
 // The label is the decree's own, which is why it is a constant rather than a
 // parameter: a test that could choose it would be testing string comparison,
 // and what these tests are about is that the pack's label reaches the check.
 func labelledIn(t *testing.T, e *channelConsentEnv) *Store {
 	t.Helper()
-	code := testJurisdiction(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: code, Version: 1, SubjectPrefix: "[QC]",
-	})
+	code := testJurisdiction(t, messagingrules.Rules{Version: 1, SubjectPrefix: "[QC]"})
 	e.judgedUnder = string(code)
 	return e.store
 }
@@ -114,6 +109,7 @@ func judgedAs(
 // TestAnAdvertisingSubjectWithoutItsLabelIsAFinding is the register line this
 // closes.
 func TestAnAdvertisingSubjectWithoutItsLabelIsAFinding(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
@@ -135,6 +131,7 @@ func TestAnAdvertisingSubjectWithoutItsLabelIsAFinding(t *testing.T) {
 // finding above must be about the missing label and not about the check
 // refusing everything.
 func TestALabelledAdvertisingSubjectIsNoFinding(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
@@ -161,6 +158,7 @@ func TestALabelledAdvertisingSubjectIsNoFinding(t *testing.T) {
 // advertisement: a false statement made to satisfy a check, which is worse than
 // the omission it would be fixing.
 func TestAnInvoiceNeverCarriesTheAdvertisingLabel(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryInvoiceOrPayment)
@@ -178,6 +176,7 @@ func TestAnInvoiceNeverCarriesTheAdvertisingLabel(t *testing.T) {
 // are the same value and different facts; the caller parks on a finding, so
 // answering one here would refuse lawful mail.
 func TestAnInstallationUnderNoPackOwesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
 
@@ -194,6 +193,7 @@ func TestAnInstallationUnderNoPackOwesNothing(t *testing.T) {
 // evidence rather than on evidence of absence would refuse deliveries this
 // check knows nothing about.
 func TestADeliveryTheEngineNeverJudgedOwesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 
@@ -217,6 +217,7 @@ func TestADeliveryTheEngineNeverJudgedOwesNothing(t *testing.T) {
 // Mutation: answer no finding as soon as any row is not marketing and the
 // first case fails.
 func TestEachAdvertisingRowOwesItsOwnLabel(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	stamp := func(set, address string, labelled bool) {
@@ -264,6 +265,7 @@ func TestEachAdvertisingRowOwesItsOwnLabel(t *testing.T) {
 // delivery id alone picked among them, so a send authorized as marketing could
 // be judged by an earlier non-marketing row and go out unlabelled.
 func TestAStaleDecisionSetDoesNotJudgeThisSend(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, stale := judgedAs(t, e, commsauthz.CategoryActiveDealFollowup)
@@ -309,6 +311,7 @@ func TestAStaleDecisionSetDoesNotJudgeThisSend(t *testing.T) {
 // send worker is a system principal and passes; a seat without the grant does
 // not.
 func TestACallerWhoCannotReadTheTimelineLearnsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing)
@@ -329,6 +332,7 @@ func TestACallerWhoCannotReadTheTimelineLearnsNothing(t *testing.T) {
 // Mutation: return no finding from CheckMessage when any recipient is under the
 // baseline and this fails.
 func TestOneRecipientsPackLabelsTheWholeSubject(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	store := labelledIn(t, e)
 	delivery, set := judgedAs(t, e, commsauthz.CategoryMarketing, commsauthz.CategoryMarketing)

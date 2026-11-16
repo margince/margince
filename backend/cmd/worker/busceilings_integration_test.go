@@ -22,6 +22,7 @@ import (
 // With every bus connection taken, a shared ceiling must still answer: it rides
 // its own client, not the bus pool.
 func TestCeilingsStillAnswerWhileEveryBusConnectionIsTaken(t *testing.T) {
+	t.Parallel()
 	addr := os.Getenv("MARGINCE_TEST_REDIS")
 	if addr == "" {
 		t.Skip("MARGINCE_TEST_REDIS not set")

@@ -151,6 +151,7 @@ func TestAnErasedSubjectIsStoredAgainOnlyThroughTheMailedLink(t *testing.T) {
 
 // A link names the erasure it was mailed for. A second erasure of the same
 // address, while the list still refuses it, spends the link.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
 	d := openReturnDoor(t)
@@ -169,6 +170,7 @@ func TestASecondErasureSpendsALinkMailedBeforeIt(t *testing.T) {
 
 // Every spelling of one mailbox shares one budget of one link a day. The link
 // goes to the spelling the erasure list matches, and that is what is stored.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
 	d := openReturnDoor(t)
@@ -193,6 +195,7 @@ func TestEverySpellingOfAnAddressSharesOneBudget(t *testing.T) {
 
 // The wording the confirm records is this installation's own. A caller cannot
 // put words of its own on the subject's consent.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
 	d := openReturnDoor(t)
@@ -222,6 +225,7 @@ func TestTheRecordedConsentIsTheServersWording(t *testing.T) {
 // The return adopts a contact a booking made while the address was erased,
 // which already holds the grant. The lift still cites a consent event the
 // return wrote, and the replay keeps the adopted contact.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.T) {
 	d := openReturnDoor(t)
@@ -250,6 +254,7 @@ func TestAnAdoptedContactCitesTheReturnsOwnGrantAndOutlivesTheReplay(t *testing.
 
 // The replay keeps the contact the return created, and still erases a
 // restored contact from before the erasure that holds the same mailbox.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheReplayKeepsTheReturnAndErasesWhatARestoreBroughtBack(t *testing.T) {
 	d := openReturnDoor(t)

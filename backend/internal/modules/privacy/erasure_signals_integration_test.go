@@ -22,6 +22,7 @@ import (
 )
 
 func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 
@@ -71,6 +72,7 @@ func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
 }
 
 func TestErasingAContactRedactsTheExtensionEvidenceAboutThem(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	signaltypes.Register("erasetest", []extension.SignalTypeDeclaration{{

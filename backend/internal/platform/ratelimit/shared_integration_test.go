@@ -52,6 +52,9 @@ func replicas(t *testing.T, name string, kind Kind, limit int, span time.Duratio
 	t.Helper()
 	_, rdb := sharedTestRedis(t)
 	addr := os.Getenv("MARGINCE_TEST_REDIS")
+	if addr == "" {
+		t.Fatal("MARGINCE_TEST_REDIS not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
 	second := redis.NewClient(&redis.Options{Addr: addr, DB: testdb.RedisDB(t)})
 	t.Cleanup(func() {
 		if err := second.Close(); err != nil {
@@ -67,6 +70,8 @@ func replicas(t *testing.T, name string, kind Kind, limit int, span time.Duratio
 // admitted six. This is also what fails if somebody later puts a local map
 // back in front of the shared store as a cache — the two replicas would each
 // admit three again, and every single-process test would still pass.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestTwoReplicasSharingOneRedisEnforceOneCeiling(t *testing.T) {
 	a, b := replicas(t, "test/one-ceiling", FailClosed, 3, time.Minute)
 
@@ -87,6 +92,8 @@ func TestTwoReplicasSharingOneRedisEnforceOneCeiling(t *testing.T) {
 // shared store or comms.MailboxRatePolicy silently stops pacing: it asks
 // Blocked before every send, so a Blocked that spent a slot would exhaust the
 // mailbox's window by asking about it.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestBlockedPeeksAcrossReplicasWithoutSpendingASlot(t *testing.T) {
 	a, b := replicas(t, "test/peek-across", FailOpen, 2, time.Minute)
 
@@ -109,6 +116,8 @@ func TestBlockedPeeksAcrossReplicasWithoutSpendingASlot(t *testing.T) {
 // counted key must carry an expiry. Without one a key that hit its limit would
 // hold that count for the life of the server: a caller limited once would be
 // limited forever, on every replica, with no way back but a manual delete.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestASharedWindowExpires(t *testing.T) {
 	ctx, rdb := sharedTestRedis(t)
 	l := Shared(rdb).New("test/expiry", FailClosed, 1, 90*time.Second)
@@ -130,6 +139,8 @@ func TestASharedWindowExpires(t *testing.T) {
 // with a shared store the counters it has to reach are on a server the wipe
 // does not otherwise touch. Scoped to the limiter doing the resetting, because
 // clearing every ceiling in the store would clear ones no operator asked about.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestResetClearsTheSharedBucketsItOwnsAndNoOthers(t *testing.T) {
 	ctx, rdb := sharedTestRedis(t)
 	reg := Shared(rdb)

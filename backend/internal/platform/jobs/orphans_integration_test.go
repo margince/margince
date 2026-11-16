@@ -57,6 +57,7 @@ func timeoutOf(t *testing.T, kind string) time.Duration {
 // timeout plus the completion margin may be a live run. A row past that
 // cutoff, or with no attempt time at all, is closed.
 func TestDiscardOrphanedRunsClosesOnlyRunningRowsPastTheKindsTimeout(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 	timeout := timeoutOf(t, timedKind)
@@ -94,6 +95,7 @@ func TestDiscardOrphanedRunsClosesOnlyRunningRowsPastTheKindsTimeout(t *testing.
 // A kind with no timeout has no age that tells a live run from a dead one, so
 // the lock alone judges its rows.
 func TestDiscardOrphanedRunsClosesEveryOtherRunningRowOfAKindWithNoTimeout(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 	recent := seedRun(ctx, t, pool, untimedKind, "running", time.Second)
@@ -111,6 +113,7 @@ func TestDiscardOrphanedRunsClosesEveryOtherRunningRowOfAKindWithNoTimeout(t *te
 }
 
 func TestDiscardOrphanedRunsRefusesAnUndeclaredKind(t *testing.T) {
+	t.Parallel()
 	ctx := t.Context()
 	_, pool := migratedAppPool(t)
 	stale := seedRun(ctx, t, pool, "orphan_test_kind", "running", 24*time.Hour)
@@ -123,6 +126,7 @@ func TestDiscardOrphanedRunsRefusesAnUndeclaredKind(t *testing.T) {
 }
 
 func TestDiscardOrphanedRunsReportsADatabaseFailure(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	pool.Close()
 	if _, err := jobs.DiscardOrphanedRuns(t.Context(), pool, timedKind, 1); err == nil {

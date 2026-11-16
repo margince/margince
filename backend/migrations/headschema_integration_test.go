@@ -26,11 +26,10 @@ package migrations_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // headFingerprint is the catalog of the schema this process built at head,
@@ -52,6 +51,10 @@ var headFingerprint string
 // give back the whole saving.
 var headRebuilds int
 
+// headMu guards headFingerprint and headRebuilds for the tests that run in
+// parallel, each on a database of its own.
+var headMu sync.Mutex
+
 // headSchema hands the caller a database at head with no rows in it.
 //
 // The FIRST call in the process rebuilds unconditionally — drop, then replay
@@ -64,20 +67,15 @@ var headRebuilds int
 // Later calls compare the live catalog against that reference and rebuild only
 // on a mismatch, which is what the rewinding suites in this package produce.
 // Matching costs one query instead of a full replay.
-//
-// Data is emptied by testdb.Reset either way, so a caller may write rows; it
-// gets the same clean slate a rebuild gave it.
 func headSchema(t *testing.T, conn *pgx.Conn) {
 	t.Helper()
-	ctx := context.Background()
+	headMu.Lock()
+	defer headMu.Unlock()
 	if headFingerprint == "" || catalogDigest(t, conn) != headFingerprint {
 		resetSchema(t, conn)
 		migrateAll(t, conn)
 		headFingerprint = catalogDigest(t, conn)
 		headRebuilds++
-	}
-	if err := testdb.Reset(ctx, conn); err != nil {
-		t.Fatalf("emptying the head schema: %v", err)
 	}
 }
 
@@ -248,6 +246,8 @@ const catalogParts = `
 // Both matter, and they fail in opposite directions — rebuilding always gives up
 // the entire saving silently, rebuilding never hands a rewound schema to a test
 // that asserts on the head catalog and blames the migration it was reading.
+//
+//testdb:serial reads headRebuilds, which every parallel test's headSchema call adds to
 func TestHeadSchemaDoesNotRebuildADatabaseAlreadyAtHead(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -347,6 +347,7 @@ var schemaMoves = []struct {
 	}},
 }
 
+//testdb:serial reads headRebuilds, which every parallel test's headSchema call adds to
 func TestHeadSchemaRebuildsWhateverTheDigestClaimsToWatch(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)

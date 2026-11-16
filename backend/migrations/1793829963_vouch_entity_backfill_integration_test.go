@@ -21,6 +21,7 @@ import (
 // follows its chain's first recorder. A row whose recorder nobody can name is
 // revoked, never handed to the default entity.
 func TestTheVouchEntityBackfillFollowsTheRecorderAndRevokesTheUnnamed(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

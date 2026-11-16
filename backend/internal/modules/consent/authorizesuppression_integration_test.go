@@ -49,6 +49,7 @@ func (e *resolveEnv) suppress(t *testing.T, kind string) {
 // It beats consent, the German existing-customer exception and every other
 // basis for that category, and no mode softens it.
 func TestAMarketingObjectionStopsMarketing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.suppress(t, "marketing_objection")
@@ -69,6 +70,7 @@ func TestAMarketingObjectionStopsMarketing(t *testing.T) {
 // the same contact is owed. An objection to direct marketing says nothing about
 // a message the law requires us to send.
 func TestAMarketingObjectionDoesNotStopAReply(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.suppress(t, "marketing_objection")
 
@@ -89,6 +91,7 @@ func TestAMarketingObjectionDoesNotStopAReply(t *testing.T) {
 
 // A PROCESSING RESTRICTION BINDS EVERYTHING THE SUBJECT IS NOT OWED.
 func TestAProcessingRestrictionStopsOrdinaryCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.suppress(t, "processing_restriction")
 	anchor := e.inboundFrom(t, "thread-restricted", e.address, time.Now().Add(-24*time.Hour))
@@ -108,6 +111,7 @@ func TestAProcessingRestrictionStopsOrdinaryCorrespondence(t *testing.T) {
 // categories are not an exception here — a message nobody receives serves them
 // no better than one nobody sent.
 func TestAHardBounceStopsEvenASubjectServingMessage(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.suppress(t, "hard_bounce")
 
@@ -129,6 +133,7 @@ func TestAHardBounceStopsEvenASubjectServingMessage(t *testing.T) {
 // with no further consent question, so the contact who asked us to stop received
 // an invitation to review their record.
 func TestSomebodyWhoAskedUsToStopIsNotSentARecordConfirmation(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.suppress(t, "subject_request")
 
@@ -150,6 +155,7 @@ func TestSomebodyWhoAskedUsToStopIsNotSentARecordConfirmation(t *testing.T) {
 // write to this contact, and writing one about a restricted subject is itself
 // processing, disclosed back to them under Art. 15.
 func TestARestrictedSubjectGetsNoNewBasisRow(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.suppress(t, "processing_restriction")
 	anchor := e.inboundFrom(t, "thread-nobasis", e.address, time.Now().Add(-24*time.Hour))
@@ -176,6 +182,7 @@ func TestARestrictedSubjectGetsNoNewBasisRow(t *testing.T) {
 // LEAST, so a contact carrying both an objection and a hard bounce had the
 // bounce masked and their invoice sent to a dead mailbox.
 func TestAnObjectionDoesNotMaskAHardBounce(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	// Recorded objection-first, which is the order the old strength sort put
 	// first and the order that hid the bounce.
@@ -202,6 +209,7 @@ func TestAnObjectionDoesNotMaskAHardBounce(t *testing.T) {
 // writes a WITHDRAWAL, not a suppression row, so liveSuppression is blind to it
 // and the thread arm would allow the very message they just stopped.
 func TestAWithdrawalStopsAThreadEvidencedSend(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 	anchor := e.inboundFrom(t, "thread-withdrawn", e.address, time.Now().Add(-24*time.Hour))
@@ -231,6 +239,7 @@ func TestAWithdrawalStopsAThreadEvidencedSend(t *testing.T) {
 // one would silently make everybody who had unsubscribed from it contactable
 // again — on the evidence arms, which never read contact_consent otherwise.
 func TestArchivingAPurposeKeepsItsWithdrawals(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 	anchor := e.inboundFrom(t, "thread-archived", e.address, time.Now().Add(-24*time.Hour))

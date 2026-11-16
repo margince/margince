@@ -53,6 +53,7 @@ func writerCtxAt(ws, user ids.UUID, role string) context.Context {
 // must actually be gone from its point of view, not merely reported as such
 // by the revoke call.
 func TestAdminRevokesAUserOverride(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -98,6 +99,7 @@ func TestAdminRevokesAUserOverride(t *testing.T) {
 // higher seat to take it back — leaving it revocable only by admin, or by
 // nobody at all. Mirrors TestAdminRevokesAUserOverride, recorded one tier up.
 func TestAdminRevokesAnAdminOverride(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantOverride(t, e, e.contact, string(commsauthz.LevelAdmin))
 
@@ -117,6 +119,7 @@ func TestAdminRevokesAnAdminOverride(t *testing.T) {
 // comes back is an admin taking it back. CanRevoke adds admin-revokes-admin
 // without lowering the floor for a rep.
 func TestAUserCannotRevokeAnAdminOverride(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	own := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -196,6 +199,7 @@ func overrideStillLive(t *testing.T, e *channelConsentEnv, id ids.UUID) bool {
 // vouch stays a deliberate escalation rather than something a rep does by
 // pressing a button.
 func TestAUserCannotRevokeAnotherUsersOverride(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	own := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -221,6 +225,7 @@ func TestAUserCannotRevokeAnotherUsersOverride(t *testing.T) {
 // equivalent test does: a row that never existed answers exactly like one
 // this caller was never going to be allowed to touch.
 func TestRevokeUnknownOverrideIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	err := e.store.RevokeOverride(e.ctx, RevokeOverrideInput{
@@ -235,6 +240,7 @@ func TestRevokeUnknownOverrideIsNotFound(t *testing.T) {
 // lift: a vouch that gets taken back is the write most worth being able to
 // explain later, so the reason is mandatory rather than merely bounded.
 func TestRevokeRequiresAReason(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantOverride(t, e, e.contact, string(commsauthz.LevelUser))
 
@@ -255,6 +261,7 @@ func TestRevokeRequiresAReason(t *testing.T) {
 // still holding the retired contact reaches the exception on its survivor. A
 // revoke that pinned the row to the contact in the URL would answer 404.
 func TestARevokeThroughAMergedAwayContactReachesTheRowOnTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	survivor := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -335,6 +342,7 @@ func seedMergedPair(t *testing.T, e *channelConsentEnv) (own, other ids.ContactI
 // retired record take back a vouch somebody recorded on a survivor that seat
 // may not touch.
 func TestARevokeThroughAMergedAwayContactCannotReachTheSurvivorsOwnVouch(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	own, other := seedMergedPair(t, e)
 	theirs := plantOverride(t, e, other, string(commsauthz.LevelAdmin))
@@ -358,6 +366,7 @@ func TestARevokeThroughAMergedAwayContactCannotReachTheSurvivorsOwnVouch(t *test
 // edge of the widened lookup: a row whose chain never touches the contact
 // named or its survivor stays unreachable and unrevealed.
 func TestARevokeNamesTheRowsSubjectOrItsSurvivorAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stranger := seedOverrideContact(t, e, "Unrelated Contact")
 	recorded := plantOverride(t, e, stranger, string(commsauthz.LevelAdmin))
@@ -376,6 +385,7 @@ func TestARevokeNamesTheRowsSubjectOrItsSurvivorAndNothingElse(t *testing.T) {
 // chain is one vouch, so naming the survivor with the original's id takes both
 // back.
 func TestARevokeThroughTheLiveSurvivorReachesTheOriginalItWasCopiedFrom(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	survivor := seedOverrideContact(t, e, "Live Survivor")
 	recorded := plantOverride(t, e, e.contact, string(commsauthz.LevelAdmin))
@@ -400,6 +410,7 @@ func TestARevokeThroughTheLiveSurvivorReachesTheOriginalItWasCopiedFrom(t *testi
 // TestTheRevokeDoorAnswers422ForAnEmptyReason holds the second door's half of
 // the validation contract: a missing reason is the caller's fault, answered 422.
 func TestTheRevokeDoorAnswers422ForAnEmptyReason(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := plantOverride(t, e, e.contact, string(commsauthz.LevelUser))
 	rec := httptest.NewRecorder()

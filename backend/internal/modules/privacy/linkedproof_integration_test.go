@@ -17,6 +17,7 @@ import (
 )
 
 func TestHistoricalCorrectionNeedsAValidEarlierErasureCertificate(t *testing.T) {
+	t.Parallel()
 	for _, mode := range []string{"missing", "malformed", "restriction", "future_entry"} {
 		t.Run(mode, func(t *testing.T) {
 			ctx := principal.SystemActing(context.Background(), "privacy_test")
@@ -65,6 +66,7 @@ func TestHistoricalCorrectionNeedsAValidEarlierErasureCertificate(t *testing.T) 
 }
 
 func TestClosingADisputeDoesNotRetireARequestTheErasureKept(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, _, _ := seedDedupePairs(ctx, t, tx)
@@ -85,6 +87,7 @@ func TestClosingADisputeDoesNotRetireARequestTheErasureKept(t *testing.T) {
 }
 
 func TestAClosedBlankApprovalNeedsAnIdentifiableErasure(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	approval := ids.NewV7()
@@ -99,6 +102,7 @@ func TestAClosedBlankApprovalNeedsAnIdentifiableErasure(t *testing.T) {
 }
 
 func TestHistoricalCorrectionDoesNotRepeatForControllerDecisions(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.NewV7()

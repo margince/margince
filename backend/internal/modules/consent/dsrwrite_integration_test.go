@@ -61,6 +61,7 @@ func (e *dsrEnv) assigned(t *testing.T) dsrRow {
 }
 
 func TestANullAssigneeHandsTheRequestBack(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.assigned(t)
 
@@ -93,6 +94,7 @@ func TestANullAssigneeHandsTheRequestBack(t *testing.T) {
 }
 
 func TestAFailedNameReadStillAnswersTheWriteAndTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	h := e.handlers().WithRecordNames(failingNames{})
 	created := e.sendDSR(http.MethodPost, `{"kind":"access","subject_ref":"`+e.user.String()+`","due_at":"2026-08-31T00:00:00Z"}`,
@@ -118,6 +120,7 @@ func TestAFailedNameReadStillAnswersTheWriteAndTheQueue(t *testing.T) {
 }
 
 func TestANullResolutionClearsAnOpenRequestsAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "draft@dsr.test")
 
@@ -139,6 +142,7 @@ func TestANullResolutionClearsAnOpenRequestsAnswer(t *testing.T) {
 }
 
 func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "closed@dsr.test")
 	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent","identity_check":"id_document"}`); w.Code != http.StatusOK {
@@ -157,6 +161,7 @@ func TestAClosedRequestKeepsItsAnswer(t *testing.T) {
 }
 
 func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "rewrite@dsr.test")
 	if w := e.patchDSR(t, request.ID, `{"status":"rejected","resolution":"first answer","identity_check":"id_document"}`); w.Code != http.StatusOK {
@@ -176,6 +181,7 @@ func TestAClosedRequestRefusesAnotherAnswerAndAcceptsItsOwn(t *testing.T) {
 }
 
 func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
 	// The first erase finds the contact; the retry finds nothing left.
@@ -212,6 +218,7 @@ func TestARepeatedErasureFulfilmentIsAccepted(t *testing.T) {
 // Mutation: drop the refusal in FulfilErasure, or move it after the erase,
 // and this fails.
 func TestAnErasureFulfilledWithTextIsRefusedBeforeErasing(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
 	erased := 0
@@ -239,6 +246,7 @@ func TestAnErasureFulfilledWithTextIsRefusedBeforeErasing(t *testing.T) {
 //
 // Mutation: treat a blank answer as absent and the erase runs.
 func TestAnErasureFulfilledWithAnyAnswerIsRefusedBeforeErasing(t *testing.T) {
+	t.Parallel()
 	cases := map[string]UpdateDSRInput{
 		"empty":         {Resolution: new("")},
 		"blank":         {Resolution: new("   ")},
@@ -268,6 +276,7 @@ func TestAnErasureFulfilledWithAnyAnswerIsRefusedBeforeErasing(t *testing.T) {
 
 // Rejecting an erasure erased nothing, so it keeps the officer's own answer.
 func TestARejectedErasureKeepsItsWrittenAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindErasure, ids.NewV7().String())
 	if w := e.patchDSR(t, request.ID, `{"status":"rejected"}`); w.Code != http.StatusUnprocessableEntity {
@@ -310,6 +319,7 @@ func (e *dsrEnv) auditedResolutionClaims(t *testing.T, id ids.UUID) []any {
 }
 
 func TestResendingTheStoredAnswerWritesNoAuditRow(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "audit-claim@dsr.test")
 	if w := e.patchDSR(t, request.ID, `{"status":"fulfilled","resolution":"package sent","identity_check":"id_document"}`); w.Code != http.StatusOK {
@@ -326,6 +336,7 @@ func TestResendingTheStoredAnswerWritesNoAuditRow(t *testing.T) {
 }
 
 func TestClosingCannotBlankADraftAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "draft-close@dsr.test")
 	if w := e.patchDSR(t, request.ID, `{"resolution":"draft answer"}`); w.Code != http.StatusOK {
@@ -344,6 +355,7 @@ func TestClosingCannotBlankADraftAnswer(t *testing.T) {
 // A key-share lock admits a plain read and the `UPDATE` but stops a `FOR
 // UPDATE` read. A patch that waits on one validated the row it writes.
 func TestAPatchValidatesTheRowItHolds(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "held@dsr.test")
 	holder, err := e.pool.Begin(context.Background())
@@ -411,6 +423,7 @@ func waitsOnARowLock(t *testing.T, e *dsrEnv, finished <-chan error) bool {
 }
 
 func TestANullStatusIsRefusedRatherThanIgnored(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	request := e.mustCreate(t, dsrKindAccess, "status@dsr.test")
 

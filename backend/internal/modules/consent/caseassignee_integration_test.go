@@ -16,6 +16,7 @@ import (
 )
 
 func TestNoticeDutyCanMoveFromAFormerOfficerWithoutRestartingItsDeadline(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := officerCtx(e)
 	former := ids.NewV7()
@@ -43,6 +44,7 @@ func TestNoticeDutyCanMoveFromAFormerOfficerWithoutRestartingItsDeadline(t *test
 }
 
 func TestDSRReassignmentRefusesAFormerOfficerAndPreservesTheCase(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	former := ids.NewV7()
 	if _, err := e.owner.Exec(t.Context(), `INSERT INTO app_user(id,email,display_name) VALUES(@id,'former@example.test','Former officer')`, pgx.StrictNamedArgs{"id": former}); err != nil {

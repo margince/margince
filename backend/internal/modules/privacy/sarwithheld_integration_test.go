@@ -60,6 +60,7 @@ var withheldFromTheExport = map[string][]string{
 // deny-list four SQL spellings walk past, so a column only IT knows about is one
 // nothing effectively guards.
 func TestTheTwoWithholdingRegistriesAgree(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile("../../../gates/piicoverage_test.go")
 	if err != nil {
 		t.Fatalf("reading the withholding registration: %v", err)
@@ -105,12 +106,10 @@ func TestTheTwoWithholdingRegistriesAgree(t *testing.T) {
 }
 
 func TestNoWithheldColumnReachesTheAssembledExport(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,9 +118,6 @@ func TestNoWithheldColumnReachesTheAssembledExport(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	var pkg SARPackage
 	sections, err := sarSections(principal.SystemActing(context.Background(), "sar_test"), &pkg, ids.New[ids.ContactKind](), []string{"subject@sar.test"}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, []ids.UUID{ids.NewV7()}, nil)

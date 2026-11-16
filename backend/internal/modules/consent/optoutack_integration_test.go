@@ -30,10 +30,7 @@ import (
 // stage it on.
 func owingAcknowledgement(t *testing.T, e *channelConsentEnv, owes bool) *recordingStager {
 	t.Helper()
-	code := testJurisdiction(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: code, Version: 1, OptOutAcknowledgement: owes,
-	})
+	code := testJurisdiction(t, messagingrules.Rules{Version: 1, OptOutAcknowledgement: owes})
 	// The receipt follows the stopping subject's country, not the
 	// installation's.
 	if _, err := e.owner.Exec(context.Background(),
@@ -47,6 +44,7 @@ func owingAcknowledgement(t *testing.T, e *channelConsentEnv, owes bool) *record
 
 // TestAMarketingObjectionIsAcknowledged is the register line this closes.
 func TestAMarketingObjectionIsAcknowledged(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -74,6 +72,7 @@ func TestAMarketingObjectionIsAcknowledged(t *testing.T) {
 // "we heard you" is the thing they asked not to receive. A link asking them to
 // do something more would read as a message that did not take the first answer.
 func TestTheAcknowledgementCarriesNoLinkAndNoAdvertising(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -102,6 +101,7 @@ func TestTheAcknowledgementCarriesNoLinkAndNoAdvertising(t *testing.T) {
 // Vietnamese one today, and a message nobody is owed is a message somebody who
 // asked us to stop receives anyway.
 func TestAStopUnderNoSuchObligationAcknowledgesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, false)
@@ -123,6 +123,7 @@ func TestAStopUnderNoSuchObligationAcknowledgesNothing(t *testing.T) {
 // along with everything else. Reading the wider request as not including the
 // narrower one would deny an acknowledgement to the subject who asked for most.
 func TestABroadStopIsAcknowledgedToo(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -143,6 +144,7 @@ func TestABroadStopIsAcknowledgedToo(t *testing.T) {
 // decree adds. Refusing the first because the second cannot be addressed would
 // cost them the thing they wanted to satisfy the thing they did not.
 func TestAContactWithNoAddressStillGetsTheirStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stager := owingAcknowledgement(t, e, true)
 
@@ -175,6 +177,7 @@ func TestAContactWithNoAddressStillGetsTheirStop(t *testing.T) {
 // only the suppression door answered the act a rep records and stayed silent on
 // the one a subject performs — an obligation that looks discharged and is not.
 func TestAnUnsubscribePressIsAcknowledged(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	seedMarketingPurpose(t, e)
@@ -205,6 +208,7 @@ func TestAnUnsubscribePressIsAcknowledged(t *testing.T) {
 // replay changes no state — telling them again that we stopped is a second
 // message they did not ask for.
 func TestAReplayedPressAcknowledgesOnce(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	seedMarketingPurpose(t, e)
@@ -236,6 +240,7 @@ func TestAReplayedPressAcknowledgesOnce(t *testing.T) {
 // — and the case is not hypothetical, since a contact whose address has
 // hard-bounced cannot be acknowledged at all.
 func TestTheStopSurvivesAnAcknowledgementThatCannotBeStaged(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -264,12 +269,12 @@ func TestTheStopSurvivesAnAcknowledgementThatCannotBeStaged(t *testing.T) {
 // receipt fails to stage, under rules that keep refusals a year. The stop
 // still carries its floor, so retention cannot take it early.
 func TestAReceiptThatCannotBeStagedLeavesTheRefusalsFloor(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
-	code := testJurisdiction(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: code, Version: 1, OptOutAcknowledgement: true, OptOutRecordsKeep: 366 * 24 * time.Hour,
+	code := testJurisdiction(t, messagingrules.Rules{
+		Version: 1, OptOutAcknowledgement: true, OptOutRecordsKeep: 366 * 24 * time.Hour,
 	})
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, string(code)); err != nil {
@@ -295,6 +300,7 @@ func TestAReceiptThatCannotBeStagedLeavesTheRefusalsFloor(t *testing.T) {
 // unsubscribe link that names its own purpose, so this is the press most
 // recipients make.
 func TestAPressForOnePurposeIsAcknowledged(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -321,6 +327,7 @@ func TestAPressForOnePurposeIsAcknowledged(t *testing.T) {
 // acknowledgement for refused advertising, and replies to the contact's own
 // enquiries are not advertising.
 func TestWithdrawingCorrespondenceIsNotAnAdvertisingRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -346,6 +353,7 @@ func TestWithdrawingCorrespondenceIsNotAnAdvertisingRefusal(t *testing.T) {
 // owe a receipt (Vietnam's Decree 91) refuses news on the record-confirmation
 // page. That refusal owes the receipt an unsubscribe press owes.
 func TestAWithdrawalOnTheRecordPageIsAcknowledged(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -367,6 +375,7 @@ func TestAWithdrawalOnTheRecordPageIsAcknowledged(t *testing.T) {
 
 // TestAGrantOnTheRecordPageIsNotAcknowledged. Only a refusal owes a receipt.
 func TestAGrantOnTheRecordPageIsNotAcknowledged(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -387,6 +396,7 @@ func TestAGrantOnTheRecordPageIsNotAcknowledged(t *testing.T) {
 // TestEveryDoorThatWithdrawsAcknowledges drives each public and member door
 // that records a withdrawal of a marketing purpose.
 func TestEveryDoorThatWithdrawsAcknowledges(t *testing.T) {
+	t.Parallel()
 	doors := map[string]func(e *channelConsentEnv) error{
 		"preference centre save": func(e *channelConsentEnv) error {
 			_, err := e.store.PublicSaveChoices(e.ctx, e.contact, []PreferenceChoiceInput{
@@ -429,6 +439,7 @@ func TestEveryDoorThatWithdrawsAcknowledges(t *testing.T) {
 // TestOneActWithdrawingTwoPurposesIsOneReceipt. Two purposes stopped by one
 // press are one refusal, so the subject gets one receipt.
 func TestOneActWithdrawingTwoPurposesIsOneReceipt(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -454,6 +465,7 @@ func TestOneActWithdrawingTwoPurposesIsOneReceipt(t *testing.T) {
 // as a booking without a lane mints one. The receipt is in Vietnamese, the
 // language the subject last read from us.
 func TestTheReceiptSpeaksTheLanguageOfTheLastLinkMailWeSent(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
@@ -499,6 +511,7 @@ func seedLinkDelivery(t *testing.T, e *channelConsentEnv, linkID ids.UUID) {
 
 // TestAReceiptWithNoEarlierLinkSpeaksTheInstallationsLanguage.
 func TestAReceiptWithNoEarlierLinkSpeaksTheInstallationsLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)

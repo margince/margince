@@ -21,6 +21,7 @@ import (
 )
 
 func TestARecordGrantGoesWithItsRecord(t *testing.T) {
+	t.Parallel()
 	owner := shapeConn(t)
 	user := seedShapeUser(t, owner, "grant")
 	contact := seedAppliedFieldContact(t, owner, "Grete Lund")
@@ -40,6 +41,7 @@ func TestARecordGrantGoesWithItsRecord(t *testing.T) {
 }
 
 func TestAForecastShareGoesWithItsScope(t *testing.T) {
+	t.Parallel()
 	owner := shapeConn(t)
 	user := seedShapeUser(t, owner, "share")
 	var team string
@@ -117,6 +119,7 @@ func deleteAndExpectGone(t *testing.T, conn *pgx.Conn, deleteRecord, record, cou
 }
 
 func TestAnAssuranceTaskItemGoesWithItsSubject(t *testing.T) {
+	t.Parallel()
 	owner := shapeConn(t)
 	item := seedTaskItemFixture(t, owner)
 
@@ -133,6 +136,7 @@ func TestAnAssuranceTaskItemGoesWithItsSubject(t *testing.T) {
 // A row written before the keys existed has none, and must stay writable. The
 // marker excuses it from the CHECKs, and an update does not key it.
 func TestATaskItemWrittenBeforeTheKeysStaysWritable(t *testing.T) {
+	t.Parallel()
 	owner := shapeConn(t)
 	item := seedTaskItemFixture(t, owner)
 	err := inTx(t, owner, func(tx pgx.Tx) error {
@@ -219,6 +223,7 @@ SELECT d.id::text, c.id::text, e.id::text, task.id::text FROM d, c, e, task`).
 }
 
 func TestASignalGoesWithItsRecord(t *testing.T) {
+	t.Parallel()
 	owner := shapeConn(t)
 	contact := seedAppliedFieldContact(t, owner, "Sigrid Holm")
 
@@ -239,6 +244,7 @@ func TestASignalGoesWithItsRecord(t *testing.T) {
 // A commitment is the rep's record of the week, so the record it links to
 // takes only the link with it when it goes.
 func TestACommitmentLetsGoOfADeletedRecord(t *testing.T) {
+	t.Parallel()
 	owner := shapeConn(t)
 	ctx := context.Background()
 	rep := seedShapeUser(t, owner, "commitment")

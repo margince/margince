@@ -56,6 +56,7 @@ func (e *storeEnv) stageChannel(t *testing.T, in StageChannelInput) ids.UUID {
 }
 
 func TestStageAndLoadRoundTripAChannelDelivery(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	activity := e.telegramActivity(t)
 	in := StageChannelInput{
@@ -115,6 +116,7 @@ func TestStageAndLoadRoundTripAChannelDelivery(t *testing.T) {
 // later by a consent gate asked about nobody, which an operator reads as a
 // customer who opted out.
 func TestStagingAChannelDeliveryWithNoRecipientIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	activity := e.telegramActivity(t)
 	err := database.WithWorkspaceTx(e.ctx, e.store.db.Pool(), func(tx pgx.Tx) error {
@@ -137,6 +139,7 @@ func TestStagingAChannelDeliveryWithNoRecipientIsRefused(t *testing.T) {
 // only spend the whole retry ladder before parking — and the domain guard above
 // this store is not the only caller the row has to survive.
 func TestStagingAChannelDeliveryWithNoBodyIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	for _, body := range []string{"", "  \n "} {
 		activity := e.telegramActivity(t)
@@ -163,6 +166,7 @@ func TestStagingAChannelDeliveryWithNoBodyIsRefused(t *testing.T) {
 // the account id rather than nulling it, because the column is also the shape
 // discriminator.
 func TestABlankPendingChannelRecipientIsRejectedByTheDatabase(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	insert := func(status string) error {
 		_, err := e.owner.Exec(context.Background(), `
@@ -190,6 +194,7 @@ func TestABlankPendingChannelRecipientIsRejectedByTheDatabase(t *testing.T) {
 // scrub depends on this too: it splits into a mail arm and a channel arm because
 // writing mail's empty address lists onto a channel row is refused here.
 func TestTheSchemaRefusesADeliveryThatIsNeitherShape(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	for _, tc := range []struct {
 		name    string

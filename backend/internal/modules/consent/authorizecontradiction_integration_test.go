@@ -37,6 +37,7 @@ func claimingMarketingUnder(purposeKey string) commsauthz.Request {
 
 // The escape path itself, refused.
 func TestAClaimContradictedByItsPurposeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 
@@ -66,6 +67,7 @@ func TestAClaimContradictedByItsPurposeIsRefused(t *testing.T) {
 // The half that makes it a privacy defect rather than a tidiness one: with the
 // remap in place the objection was never reached.
 func TestAMarketingObjectionIsNotWalkedPastByACorrespondencePurpose(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 	e.suppress(t, "marketing_objection")
@@ -93,6 +95,7 @@ func TestAMarketingObjectionIsNotWalkedPastByACorrespondencePurpose(t *testing.T
 // A claim the purpose AGREES with still goes through the legacy lane it always
 // did. The refusal is about disagreement, not about naming both.
 func TestAClaimItsPurposeAgreesWithIsStillDecidedByTheLegacyLane(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
 
@@ -112,6 +115,7 @@ func TestAClaimItsPurposeAgreesWithIsStillDecidedByTheLegacyLane(t *testing.T) {
 // A caller who claims NOTHING is the legacy path, and it is untouched: the
 // purpose alone says what the message is, and there is nothing to contradict.
 func TestAPurposeWithNoClaimStillSpeaksForTheMessage(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "business_correspondence", "business_correspondence")
 
@@ -138,6 +142,7 @@ func TestAPurposeWithNoClaimStillSpeaksForTheMessage(t *testing.T) {
 // with the subject's objection to direct marketing asked about a category it
 // does not bind. The claim was never put to anything at all.
 func TestAClaimContradictedByTheThreadIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	// A reply from the subject: the arm that answers before the purpose is
 	// ever consulted.
@@ -169,6 +174,7 @@ func TestAClaimContradictedByTheThreadIsRefused(t *testing.T) {
 // And the half that makes the above a privacy defect: with the claim ignored,
 // the objection was asked about the wrong category and the mail went out.
 func TestAMarketingObjectionIsNotWalkedPastByAThread(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.inboundFrom(t, "thread-objection", e.address, time.Now().Add(-time.Hour))
 	e.suppress(t, commsauthz.ReasonObjection)
@@ -188,6 +194,7 @@ func TestAMarketingObjectionIsNotWalkedPastByAThread(t *testing.T) {
 // reads as "any evidence-resolved send is refused", which would stop every
 // ordinary reply in the product.
 func TestAnUnclaimedThreadReplyIsStillAllowed(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.inboundFrom(t, "thread-unclaimed", e.address, time.Now().Add(-time.Hour))
 

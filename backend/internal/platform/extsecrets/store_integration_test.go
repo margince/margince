@@ -9,16 +9,14 @@ package extsecrets_test
 // builds is made of SQL predicates — so the suite is an integration suite by
 // necessity: a fake pool would test the wall's drawing, not the wall.
 //
-// The fixture is package-local (its own owner connection and app pool
-// off MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN, the same pair every
-// integration package reads) rather than a shared helper: promoting one
+// The fixture is package-local (its own owner connection and app pool on
+// the test's own database) rather than a shared helper: promoting one
 // would be a change to how every suite in the tree is set up, which is not
 // this package's call to make.
 
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -51,14 +49,10 @@ type env struct {
 // skip.
 func setup(t *testing.T) *env {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,12 +61,6 @@ func setup(t *testing.T) *env {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &env{
 		owner:     owner,
@@ -95,7 +83,7 @@ func setup(t *testing.T) *env {
 	seed(e.ws, e.user, "extsecrets")
 	seed(e.otherWS, e.otherUser, "extsecrets-other")
 
-	pool, err := testdb.OwnPool(ctx, appDSN)
+	pool, err := testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -156,6 +144,7 @@ func (e *env) systemLogActions(t *testing.T) []string {
 // build: the unit name is closed over, never supplied, so two units may use
 // the same bare key name and neither resolves the other's secret.
 func TestSecretsNamespaceIsolation(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	a := extsecrets.For("notes", e.pool, e.vault)
@@ -189,6 +178,7 @@ func TestSecretsNamespaceIsolation(t *testing.T) {
 // destroy a credential rotated on a schedule grows vault_secret without
 // bound — and leaves every superseded credential decryptable at rest.
 func TestSecretsRotationDestroysThePreviousMaterial(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	s := extsecrets.For("notes", e.pool, e.vault)
@@ -236,6 +226,7 @@ func TestSecretsRotationDestroysThePreviousMaterial(t *testing.T) {
 // owner still exist" into an oracle. The ledger keeps the finer reason
 // (outcome "unknown_user" vs. "missing"); only the RETURNED error is unified.
 func TestSecretsUserScopeRefusesAnUnknownUser(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	s := extsecrets.For("notes", e.pool, e.vault)
@@ -255,6 +246,7 @@ func TestSecretsUserScopeRefusesAnUnknownUser(t *testing.T) {
 // TestSecretsScopesAreIndependent: a workspace key and a user key of the
 // same name are two secrets, not one seen two ways.
 func TestSecretsScopesAreIndependent(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	s := extsecrets.For("notes", e.pool, e.vault)
@@ -300,6 +292,7 @@ func TestSecretsScopesAreIndependent(t *testing.T) {
 // TestSecretsDeleteDestroysTheMaterial: the mapping row and the ciphertext
 // go together, or a "deleted" credential is still decryptable at rest.
 func TestSecretsDeleteDestroysTheMaterial(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	s := extsecrets.For("notes", e.pool, e.vault)
@@ -321,6 +314,7 @@ func TestSecretsDeleteDestroysTheMaterial(t *testing.T) {
 
 // TestSecretsRefuseUnusableInput: the failures a caller can fix, named.
 func TestSecretsRefuseUnusableInput(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	s := extsecrets.For("notes", e.pool, e.vault)
@@ -345,6 +339,7 @@ func TestSecretsRefuseUnusableInput(t *testing.T) {
 // TestTheCoreHeldPartOfANamespaceIsWalledOffFromTheUnit: a grant the core keeps
 // for a unit is out of the unit's reach both ways, by read and by overwrite.
 func TestTheCoreHeldPartOfANamespaceIsWalledOffFromTheUnit(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	core := extsecrets.CoreHeld("notes", e.pool, e.vault)
@@ -378,6 +373,7 @@ func TestTheCoreHeldPartOfANamespaceIsWalledOffFromTheUnit(t *testing.T) {
 // a unit misbehaves, and a miss that left no trace would answer that question
 // with silence — so it commits its row and the refusal is raised afterwards.
 func TestSecretsLeaveAnAuditTrail(t *testing.T) {
+	t.Parallel()
 	e := setup(t)
 	ctx := e.ctxFor(e.ws)
 	s := extsecrets.For("notes", e.pool, e.vault)

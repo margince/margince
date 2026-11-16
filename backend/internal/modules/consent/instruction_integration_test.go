@@ -118,6 +118,7 @@ func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, 
 // and one success, because each arm answers a different question about who this
 // authority belongs to.
 func TestOnlyAUserHoldingTheGrantDirectsASend(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ws, user := e.ws, e.user
 	review := seedOpenReview(context.Background(), t, e)
@@ -171,6 +172,7 @@ func TestOnlyAUserHoldingTheGrantDirectsASend(t *testing.T) {
 // refusal saying somebody overrode it, and never replaces it with a grant
 // nobody made. A subject asking why they got the message must be shown both.
 func TestDirectingASendRecordsNoConsentAndLeavesTheRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ws, user := e.ws, e.user
 	review := seedOpenReview(context.Background(), t, e)
@@ -210,6 +212,7 @@ func TestDirectingASendRecordsNoConsentAndLeavesTheRefusal(t *testing.T) {
 // and what they were told when they decided it, and a reason edited afterwards
 // would let the account of an override be improved by whoever gave it.
 func TestAnInstructionCannotBeRewritten(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ws, user := e.ws, e.user
 	review := seedOpenReview(context.Background(), t, e)
@@ -247,6 +250,7 @@ func TestAnInstructionCannotBeRewritten(t *testing.T) {
 // the message has gone, and taking the decision back would leave a sent message
 // with no recorded authority behind it.
 func TestARevocationNamesItselfAndSpareAConsumedInstruction(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ws, user := e.ws, e.user
 	review := seedOpenReview(context.Background(), t, e)
@@ -294,6 +298,7 @@ func TestARevocationNamesItselfAndSpareAConsumedInstruction(t *testing.T) {
 // decision still cannot be improved. What survives is the accountable half:
 // somebody decided, who, when, under which reason. None of it names the subject.
 func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ws, user := e.ws, e.user
 	review := seedOpenReview(context.Background(), t, e)
@@ -343,6 +348,7 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 // Mutation: give the four stops their admin exception back in remedies and the
 // admin cases below are allowed.
 func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := context.Background()
 	input := DirectInput{

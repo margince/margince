@@ -202,6 +202,7 @@ func assertNotTheDatabaseOwner(ctx context.Context, t *testing.T, conn *pgx.Conn
 // hold it either, move the statement to the operator's out-of-band step
 // (extensionsTheOperatorInstalls).
 func TestTheCoreLaneAppliesUnderTheDeployedMigrationRole(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	admin := connect(t, mustOwnerDSN(t))
 	resetSchema(t, admin)

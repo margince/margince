@@ -17,6 +17,7 @@ import (
 // A notice with an unknown kind, no subject, or no acting principal is refused
 // before anything is written.
 func TestANoticeThatIsNotWellFormedIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if err := e.store.db.Tx(e.engineCtx(), func(tx pgx.Tx) error {
 		if _, _, err := e.store.CreateTxNew(e.engineCtx(), tx, NewNotice{Kind: "no-such-kind", Subject: "s", Recipient: e.recipient}); err == nil {

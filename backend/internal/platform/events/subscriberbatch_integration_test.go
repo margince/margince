@@ -54,6 +54,7 @@ func (e *busEnv) pending(t *testing.T, group string) int64 {
 	return p.Count
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestABacklogIsDeliveredAsFewBatchesNotOneCallPerEntry(t *testing.T) {
 	e := setup(t)
 	const burst = 150
@@ -91,6 +92,7 @@ func TestABacklogIsDeliveredAsFewBatchesNotOneCallPerEntry(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestAFailedBatchFallsBackToOneEntryAtATime(t *testing.T) {
 	e := setup(t)
 	const burst = 5
@@ -121,6 +123,7 @@ func TestAFailedBatchFallsBackToOneEntryAtATime(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheBatchDedupeAndThePerEventDedupeShareTheirMarks(t *testing.T) {
 	e := setup(t)
 	envs := e.stageBurst(t, 3)
@@ -175,6 +178,8 @@ func TestTheBatchDedupeAndThePerEventDedupeShareTheirMarks(t *testing.T) {
 // An entry that cannot be decoded can never succeed, so a batch acks it away
 // rather than leaving it to poison the reclaim pass, and the entries around it
 // still reach the handler. A read made only of such entries runs no effect.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestABatchDropsUndecodableEntriesAndDeliversTheRest(t *testing.T) {
 	e := setup(t)
 	group := kevents.Group{Name: "cg:graph-edge", Streams: []string{batchStream}}
@@ -219,6 +224,8 @@ func TestABatchDropsUndecodableEntriesAndDeliversTheRest(t *testing.T) {
 // A dedupe check that cannot reach Redis must not run the effect, and a mark
 // that cannot be written must fail the batch, so the per-entry path re-runs
 // the effect and retries its own mark.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheBatchDedupeFailsClosedWhenRedisDoes(t *testing.T) {
 	e := setup(t)
 	envs := e.stageBurst(t, 2)

@@ -18,6 +18,7 @@ import (
 // human answer, an admission and a suppression stay as they were, and the
 // down migration settles the question back.
 func TestAMachineVendorVerdictBecomesAnOpenQuestionForItsOwner(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

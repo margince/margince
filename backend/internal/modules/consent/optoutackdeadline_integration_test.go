@@ -18,9 +18,8 @@ import (
 // the receipt, the way the Vietnamese pack bounds it to 24 hours.
 func owingAcknowledgementWithin(t *testing.T, e *channelConsentEnv, within time.Duration) *recordingStager {
 	t.Helper()
-	code := testJurisdiction(t)
-	messagingrules.Register(messagingrules.Rules{
-		Jurisdiction: code, Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: within,
+	code := testJurisdiction(t, messagingrules.Rules{
+		Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: within,
 	})
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, e.contact, string(code)); err != nil {
@@ -34,6 +33,7 @@ func owingAcknowledgementWithin(t *testing.T, e *channelConsentEnv, within time.
 // TestTheReceiptIsDueWithinThePacksWindowOfTheRefusal pins the deadline to the
 // moment the refusal was recorded, on both doors that record one.
 func TestTheReceiptIsDueWithinThePacksWindowOfTheRefusal(t *testing.T) {
+	t.Parallel()
 	refused := time.Date(2026, 11, 5, 9, 30, 0, 0, time.UTC)
 	for _, door := range []struct {
 		name   string
