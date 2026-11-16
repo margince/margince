@@ -3,7 +3,7 @@ import { provenanceOf } from "../../design-system/provenanceof";
 import { confidenceLevel } from "../../design-system/trust";
 import { formatDate, formatDateTime } from "../../format/format";
 import { type Locale, translate, useLocale } from "../../i18n";
-import { type OpenSource, useOpenSource } from "../../lib/opensource";
+import { type SourceOpenerFor, useSourceOpener } from "../../lib/opensource";
 import { useViewerZone } from "../../lib/viewerzone";
 
 /**
@@ -47,7 +47,7 @@ export function derivedSource(
   row: EvidenceBearingRow,
   locale: Locale,
   recordZone: string,
-  openSource?: OpenSource | null,
+  openerFor?: SourceOpenerFor,
 ): EvidenceMarkSource | undefined {
   const provenance = provenanceOf(row.captured_by);
   if (provenance.kind === "human") {
@@ -57,7 +57,6 @@ export function derivedSource(
   // it wins where a row carries one. Falling back to updated_at keeps every
   // existing row reading exactly as it did.
   const observed = row.retrieved_at ?? row.updated_at;
-  const meeting = row.source === "meeting" ? row.source_activity_id : null;
   return {
     provenance,
     confidence: confidenceLevel(row.confidence) ?? undefined,
@@ -68,7 +67,10 @@ export function derivedSource(
             date: formatDate(row.source_occurred_at, locale, recordZone),
           })
         : undefined,
-    openOrigin: meeting && openSource ? () => openSource(meeting) : undefined,
+    openOrigin:
+      row.source === "meeting"
+        ? openerFor?.({ id: row.source_activity_id, kind: "meeting" })
+        : undefined,
     sourceUrl: row.source_url,
     at: observed ? formatDateTime(observed, locale, recordZone) : undefined,
   };
@@ -80,6 +82,6 @@ export function useDerivedSource(): (
 ) => EvidenceMarkSource | undefined {
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const openSource = useOpenSource();
-  return (row) => derivedSource(row, locale, zone, openSource);
+  const openerFor = useSourceOpener();
+  return (row) => derivedSource(row, locale, zone, openerFor);
 }

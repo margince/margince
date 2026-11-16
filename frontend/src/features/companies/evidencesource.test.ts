@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it, vi } from "vitest";
+import type { SourceOpenerFor, SourceRef } from "../../lib/opensource";
 import { derivedSource } from "./evidencesource";
 
 const machine = "system:transcript-reader";
@@ -45,17 +46,19 @@ describe("a profile field's source mark", () => {
       source_occurred_at: "2026-11-12T09:00:00Z",
       source_activity_id: "0190a7f2-0000-7000-8000-000000000010",
     };
-    const openSource = vi.fn();
-    derivedSource(meeting, "en", "UTC", openSource)?.openOrigin?.();
-    expect(openSource).toHaveBeenCalledWith(meeting.source_activity_id);
+    const open = vi.fn();
+    const openerFor: SourceOpenerFor = (ref) => {
+      const id = ref.id;
+      return id ? () => open(id, ref.kind) : undefined;
+    };
+    derivedSource(meeting, "en", "UTC", openerFor)?.openOrigin?.();
+    expect(open).toHaveBeenCalledWith(meeting.source_activity_id, "meeting");
 
     const hidden = { ...meeting, source_activity_id: null };
     expect(
-      derivedSource(hidden, "en", "UTC", openSource)?.openOrigin,
+      derivedSource(hidden, "en", "UTC", openerFor)?.openOrigin,
     ).toBeUndefined();
-    expect(
-      derivedSource(meeting, "en", "UTC", null)?.openOrigin,
-    ).toBeUndefined();
+    expect(derivedSource(meeting, "en", "UTC")?.openOrigin).toBeUndefined();
   });
 
   it("opens nothing for a value that does not cite a meeting", () => {
@@ -64,8 +67,9 @@ describe("a profile field's source mark", () => {
       source: "site_read",
       source_activity_id: "0190a7f2-0000-7000-8000-000000000010",
     };
+    const openerFor: SourceOpenerFor = () => vi.fn();
     expect(
-      derivedSource(site, "en", "UTC", vi.fn())?.openOrigin,
+      derivedSource(site, "en", "UTC", openerFor)?.openOrigin,
     ).toBeUndefined();
   });
 });
