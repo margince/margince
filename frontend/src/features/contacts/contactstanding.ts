@@ -13,6 +13,7 @@ import {
 import { bucketLabel } from "../../lib/bucketlabel";
 import { valueFor } from "../../lib/labelfor";
 import { omitted } from "./contact360";
+import { owedPromises } from "./contactpromises";
 import { directionSentence } from "./contactrail";
 import { changeSentence } from "./relationshipchange";
 
@@ -166,22 +167,18 @@ export function contactDims(
   ].filter((dim): dim is StandingDim => dim !== null);
 }
 
-// `claims` returns every open promise of ours uncapped, so the count is whole.
 function promisesDim(
   view: Contact360,
   t: Translator,
   locale: Locale,
 ): StandingDim | null {
-  if (omitted(view, "claims")) {
+  const open = owedPromises(view, t);
+  if (!open) {
     return null;
   }
   const asOf = Date.parse(view.as_of);
-  const open = (view.claims ?? []).filter(
-    (claim) => claim.kind === "commitment_ours" && claim.status === "open",
-  );
   const overdue = open.filter(
-    (claim) =>
-      claim.due_at != null && daysPast(Date.parse(claim.due_at), asOf).late,
+    (owed) => owed.due != null && daysPast(Date.parse(owed.due), asOf).late,
   );
   const label = t("contact.standing.dim.promises");
   const count = (base: PluralBase, n: number) =>
@@ -194,7 +191,7 @@ function promisesDim(
       tone: "neutral",
     };
   }
-  const named = (overdue[0] ?? open[0])?.body;
+  const named = (overdue[0] ?? open[0])?.title;
   if (overdue.length > 0) {
     return {
       key: "promises",

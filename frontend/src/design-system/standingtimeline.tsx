@@ -158,7 +158,8 @@ export function StandingTimeline({
     ...marks.map((mark) => instant(mark.at)),
   ]);
   const older = useOlderHistory(history, zoom === "all" ? null : from);
-  if (events.length === 0) {
+  // A logged item on the line is dated too, so the axis is drawn for it.
+  if (events.length === 0 && marks.length === 0) {
     return (
       <p className="standing-timeline-empty t-caption">
         {t("standing.timeline.empty")}

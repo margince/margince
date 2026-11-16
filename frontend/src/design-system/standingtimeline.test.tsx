@@ -59,6 +59,32 @@ const draw = (
     />,
   );
 
+describe("an axis with nothing dated", () => {
+  const drawOnly = (marks: TimelineMark[]) =>
+    render(
+      <StandingTimeline
+        label="Brandt over time"
+        asOf="2026-08-13T09:00:00Z"
+        record={UTC_ZONE}
+        events={[]}
+        marks={marks}
+      />,
+    );
+
+  it("says nothing is dated when nothing is", () => {
+    drawOnly([]);
+    expect(screen.getByText("Nothing dated here yet.")).toBeInTheDocument();
+  });
+
+  it("draws a logged item rather than saying nothing is dated", () => {
+    drawOnly([mark({ key: "m", at: "2026-08-10", when: "10 Aug" })]);
+    expect(screen.queryByText("Nothing dated here yet.")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Email, 10 Aug" }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("marks on the line", () => {
   it("draws a chip for one logged item and opens a card of who, what and when", async () => {
     const user = userEvent.setup();

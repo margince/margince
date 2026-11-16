@@ -155,6 +155,13 @@ it("leaves out the task the Next bar already shows", async () => {
   ]);
 });
 
+it("says a task's due day once, beside who holds it", async () => {
+  mount(() => view(TASKS, WAITING));
+
+  await screen.findByText("Confirm the delivery date");
+  expect(screen.getAllByText(/2 Sept?/)).toHaveLength(1);
+});
+
 it("completes a task on the tick, and the row leaves on the re-read", async () => {
   let done = false;
   const ifMatch: (string | null)[] = [];

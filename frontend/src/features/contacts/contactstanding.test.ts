@@ -328,6 +328,37 @@ describe("contactDims", () => {
     ]);
   });
 
+  it("counts an open task as a commitment, as the headline above it does", () => {
+    const task = {
+      id: "t-1",
+      kind: "task" as const,
+      subject: "Call Dana back",
+      occurred_at: "2026-08-01T09:00:00Z",
+      occurred_precision: "instant" as const,
+      due_at: "2026-08-07T09:00:00Z",
+      is_done: false,
+      offers_email: false,
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: "2026-08-01T09:00:00Z",
+      updated_at: "2026-08-01T09:00:00Z",
+    };
+    const reminder = { ...task, id: "t-2", captured_by: "system:renewal" };
+    const view: Contact360 = {
+      ...VIEW,
+      claims: [{ ...promise("c-1", null), task_activity_id: "t-1" }],
+      next_steps: { data: [task, reminder], page: { has_more: false } },
+    };
+    expect(contactDims(view, t, "en")[0]).toMatchObject({
+      key: "promises",
+      value: "1 overdue",
+      sub: "of 1 open · Call Dana back",
+    });
+    expect(contactTimelineEvents(view, words)).toMatchObject([
+      { title: "Commitment due", kind: "late" },
+    ]);
+  });
+
   it("does not count recipients of an inbound message as colleagues in touch", () => {
     const dims = contactDims(
       {
