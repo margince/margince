@@ -14,6 +14,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // recordAdmittedTx is the write itself, on input Record has already admitted —
@@ -152,8 +154,14 @@ func (s *Store) answerWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, 
 	if err != nil {
 		return err
 	}
+	key := withdrawalMessageID(sub.id, act)
+	if !slices.Contains(commsauthz.MarketingPurposeClasses(), purposeClass) {
+		// The opt-out receipt answers only advertising, so any other
+		// withdrawal gets the request receipt.
+		return s.answerRequestTx(ctx, tx, sub, RequestTaskWithdrawal, key, at)
+	}
 	who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
-	return s.openRequestTaskTx(ctx, tx, who, RequestTaskWithdrawal, withdrawalMessageID(sub.id, act), at)
+	return s.openRequestTaskTx(ctx, tx, who, RequestTaskWithdrawal, key, at)
 }
 
 // rowProbeFor answers which row probe a recorded state must clear.

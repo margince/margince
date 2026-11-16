@@ -374,17 +374,28 @@ func (s *Store) suppressAdmittedTx(
 		RefusalTimes{ReceivedAt: received, StoppedAt: recordedAt}); err != nil {
 		return err
 	}
-	if acknowledgeableStop(in.Kind) {
-		who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
-		if err := s.openRequestTaskTx(ctx, tx, who, RequestTaskObjection, stopID.String(), recordedAt); err != nil {
-			return err
-		}
+	if err := s.answerStopTx(ctx, tx, sub, in.Kind, stopID, recordedAt); err != nil {
+		return err
 	}
 	// EmitEvent, because the payload declares a STATIC entity: this door writes
 	// about a contact and only a contact, so the fan-out gate resolves delivery
 	// scope from the type rather than from a runtime subject somebody has to
 	// ratify by hand.
 	return storekit.EmitEvent(ctx, tx, auditID, sub.id, suppressionRecordedPayload(in.Kind, level))
+}
+
+// answerStopTx opens what a stop owes under a pack that follows the recipient.
+// An objection or broad stop has its receipt already and gets the dated task.
+// A restriction gets the request receipt and the task.
+func (s *Store) answerStopTx(ctx context.Context, tx pgx.Tx, sub subject, kind string, stopID ids.UUID, at time.Time) error {
+	switch {
+	case acknowledgeableStop(kind):
+		who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
+		return s.openRequestTaskTx(ctx, tx, who, RequestTaskObjection, stopID.String(), at)
+	case kind == kindProcessingRestriction:
+		return s.answerRequestTx(ctx, tx, sub, RequestTaskRestriction, stopID.String(), at)
+	}
+	return nil
 }
 
 // suppressionSource carries what the rep was told, bounded.

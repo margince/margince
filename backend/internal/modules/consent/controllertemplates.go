@@ -58,6 +58,10 @@ const (
 	// TemplateRestrictionLift tells a contact, before it happens, that their
 	// restriction of processing is lifted (GDPR Art. 18(3)). It carries no link.
 	TemplateRestrictionLift = "restriction_lift"
+	// TemplateRequestReceipt is the first answer a data-subject request is
+	// owed under a pack that sets one. It says when the request arrived and
+	// when it will be carried out, and carries no link.
+	TemplateRequestReceipt = "request_receipt"
 )
 
 // Rendered is one template resolved into the words that will be sent.
@@ -184,6 +188,16 @@ var controllerTemplates = map[string]controllerTemplate{
 		closing:  func(w mailcopy.Copy) string { return w.NoticeIgnore },
 		linkless: true,
 	},
+	TemplateRequestReceipt: {
+		version:      1,
+		category:     commsauthz.CategoryOptoutConfirmation,
+		subject:      func(w mailcopy.Copy) string { return w.RequestAckSubject },
+		intro:        func(w mailcopy.Copy) string { return w.RequestAckBody },
+		closing:      func(w mailcopy.Copy) string { return w.OptOutAckIgnore },
+		linkless:     true,
+		refusalTimes: true,
+		unbranded:    true,
+	},
 }
 
 // linkPlaceholder is where the one-time link goes. It is comms.LinkPlaceholder
@@ -243,11 +257,21 @@ const refusalInstantLayout = "15:04, 02/01/2006"
 // RenderOptOutAcknowledgement resolves the opt-out receipt with the times of
 // the refusal it answers.
 func RenderOptOutAcknowledgement(language string, times RefusalTimes) (Rendered, commsauthz.Category, error) {
+	return renderReceipt(TemplateOptOutAcknowledgement, language, times)
+}
+
+// RenderRequestReceipt renders the request receipt. StoppedAt carries the
+// date the request is carried out by.
+func RenderRequestReceipt(language string, times RefusalTimes) (Rendered, commsauthz.Category, error) {
+	return renderReceipt(TemplateRequestReceipt, language, times)
+}
+
+func renderReceipt(key, language string, times RefusalTimes) (Rendered, commsauthz.Category, error) {
 	if times.ReceivedAt.IsZero() || times.StoppedAt.IsZero() {
-		return Rendered{}, "", errors.New("consent: an opt-out receipt states when the refusal arrived and when sending stopped")
+		return Rendered{}, "", errors.New("consent: a receipt states when the request arrived and when it takes effect")
 	}
 	zone := time.FixedZone("", int(times.UTCOffset.Seconds()))
-	return renderLinkless(TemplateOptOutAcknowledgement, language,
+	return renderLinkless(key, language,
 		times.ReceivedAt.In(zone).Format(refusalInstantLayout), times.StoppedAt.In(zone).Format(refusalInstantLayout),
 		"UTC"+times.StoppedAt.In(zone).Format("-07:00"))
 }

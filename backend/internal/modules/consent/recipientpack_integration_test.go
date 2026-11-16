@@ -11,6 +11,8 @@ package consent
 
 import (
 	"context"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -36,7 +38,20 @@ type packPair struct {
 // registerPackPair registers both packs. The recipient's writes its pages in
 // Vietnamese, has no legitimate-interest basis and sets the Decree 356/2025
 // deadlines; the installation's writes in German and sets none.
+// Registered once per process: the registries refuse a second set for a code,
+// and the package has a fixed number of test codes to share.
+var (
+	packPairOnce sync.Once
+	sharedPair   packPair
+)
+
 func registerPackPair(t *testing.T) packPair {
+	t.Helper()
+	packPairOnce.Do(func() { sharedPair = registerPackPairOnce(t) })
+	return sharedPair
+}
+
+func registerPackPairOnce(t *testing.T) packPair {
 	t.Helper()
 	p := packPair{recipient: testJurisdiction(t), installation: testJurisdiction(t)}
 	messagingrules.Register(messagingrules.Rules{
@@ -369,5 +384,105 @@ func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingUser(t *testing.T) {
 	agent := principal.WithActor(e.ctx, principal.Principal{Type: principal.PrincipalAgent, ID: "agent:x"})
 	if _, err := e.store.ConfirmSendWithoutLawfulBasis(agent, []string{e.address}); err == nil {
 		t.Error("an agent confirmed the warning; only the sender may")
+	}
+}
+
+// TestTheOptOutReceiptIsWrittenInTheRecipientsPackLanguage: a contact whose
+// last link mail was in English gets the receipt in the language of the pack
+// that follows them.
+func TestTheOptOutReceiptIsWrittenInTheRecipientsPackLanguage(t *testing.T) {
+	p := registerPackPair(t)
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stateTheController(t, e)
+	stager := &recordingStager{}
+	e.store = underInstallation(e.store, p).
+		WithMailLanguage(MailLanguageFunc(func(context.Context, pgx.Tx) (string, error) {
+			return string(mailcopy.English), nil
+		})).
+		WithConfirmationLane(stager, &recordingVault{}, "https://crm.example.test/")
+	if _, err := e.store.IssueConfirmToken(e.ctx, e.contact, ""); err != nil {
+		t.Fatalf("minting the English link mail: %v", err)
+	}
+	if got := stager.seen.Rendered.Language; got != string(mailcopy.English) {
+		t.Fatalf("the last link mail is in %q, want English for this test to mean anything", got)
+	}
+	placeContact(t, e.owner, e.contact, p.recipient)
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "No more ads.",
+	}); err != nil {
+		t.Fatalf("recording the objection: %v", err)
+	}
+	receipt := stager.seen.Rendered
+	words := mailcopy.For(string(mailcopy.Vietnamese))
+	if receipt.Key != TemplateOptOutAcknowledgement || receipt.Language != string(mailcopy.Vietnamese) {
+		t.Fatalf("the receipt is %q in %q, want the opt-out receipt in Vietnamese", receipt.Key, receipt.Language)
+	}
+	if receipt.Subject != words.OptOutAckSubject {
+		t.Errorf("the receipt subject is %q, want %q", receipt.Subject, words.OptOutAckSubject)
+	}
+	if !strings.Contains(receipt.Body, words.OptOutAckIgnore) {
+		t.Errorf("the receipt body is not the Vietnamese wording:\n%s", receipt.Body)
+	}
+}
+
+// TestARequestTheOptOutReceiptDoesNotCoverIsAnsweredAtOnce: under a pack that
+// follows the recipient, a restriction and a non-marketing withdrawal get the
+// request receipt at once. Each also gets a task due 15 days later.
+func TestARequestTheOptOutReceiptDoesNotCoverIsAnsweredAtOnce(t *testing.T) {
+	p := registerPackPair(t)
+	for _, c := range []struct {
+		name    string
+		request func(t *testing.T, e *channelConsentEnv) error
+		right   string
+	}{
+		{"a restriction", func(t *testing.T, e *channelConsentEnv) error {
+			return e.store.Suppress(e.ctx, SuppressInput{ContactID: e.contact, Kind: kindProcessingRestriction, Reason: "Disputed data."})
+		}, RequestTaskRestriction},
+		{"a withdrawal of a service purpose", func(t *testing.T, e *channelConsentEnv) error {
+			var purpose ids.PurposeID
+			if err := e.owner.QueryRow(context.Background(), `
+				INSERT INTO consent_purpose (key, label, class) VALUES ('rp_service_'||$1, 'Service updates', 'transactional')
+				RETURNING id`, e.contact.String()[:8]).Scan(&purpose); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := e.store.Record(e.ctx, RecordInput{
+				ContactID: e.contact, PurposeID: purpose, NewState: "granted", PolicyText: &grantWording,
+			}); err != nil {
+				return err
+			}
+			_, err := e.store.Record(e.ctx, RecordInput{ContactID: e.contact, PurposeID: purpose, NewState: "withdrawn"})
+			return err
+		}, RequestTaskWithdrawal},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			e := setupChannelConsent(t)
+			seedSubjectAddress(t, e)
+			stateTheController(t, e)
+			placeContact(t, e.owner, e.contact, p.recipient)
+			tasks, stager := &recordingTasks{}, &recordingStager{}
+			e.store = underInstallation(e.store, p).WithRequestTasks(tasks).
+				WithConfirmationLane(stager, &recordingVault{}, "https://crm.example.test/")
+
+			if err := c.request(t, e); err != nil {
+				t.Fatalf("recording the request: %v", err)
+			}
+			receipt := stager.seen.Rendered
+			if stager.calls != 1 || receipt.Key != TemplateRequestReceipt || receipt.Language != string(mailcopy.Vietnamese) {
+				t.Fatalf("staged %d mails, the last %q in %q; want the request receipt in Vietnamese at once",
+					stager.calls, receipt.Key, receipt.Language)
+			}
+			if len(tasks.opened) != 1 || tasks.opened[0].Right != c.right {
+				t.Fatalf("opened tasks %+v, want one %s task", tasks.opened, c.right)
+			}
+			// Due 15 days after the request, and the reply 2 to 4 calendar days
+			// after it, so the two lie 11 to 13 days apart whatever the weekday.
+			task := tasks.opened[0]
+			if gap := task.DueAt.Sub(task.ReplyBy); gap < 11*24*time.Hour || gap > 13*24*time.Hour {
+				t.Errorf("the task is due %s and the reply by %s, want 15 days and 2 working days after the request",
+					task.DueAt, task.ReplyBy)
+			}
+		})
 	}
 }

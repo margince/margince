@@ -116,7 +116,7 @@ Vietnamese data-protection law also follows the recipient. When a contact's or l
 - the privacy notice, the record confirmation and the privacy page are written in Vietnamese, with the Vietnamese rights text;
 - the foot of their mail says who your company is and whom to ask about data;
 - a correction is due in 10 days, an erasure in 20 days, and a request to stop using their data in 15 days. Margince also makes a task for the request, due on that date, with the first answer due in 2 working days. Saturday and Sunday are not working days;
-- an objection to their data's use, or a withdrawal of consent, makes a task due in 15 days;
+- an objection to their data's use, or a withdrawal of consent, makes a task due in 15 days. A request to stop using their data, or a withdrawal of consent to anything other than marketing, also gets an email at once that says when it arrived and when it will be done;
 - the reason recorded for using their data is always their consent with its date, or the agreement you have with them. Your own business need is never enough. Without either, the send screen and the approval card show a warning before you send. You can still send. The audit log records that you confirmed the warning.
 
 Margince learns where a contact is only from the addresses above. A Vietnamese citizen whose address is outside Vietnam is not detected. The Vietnamese rules do not apply to that contact.

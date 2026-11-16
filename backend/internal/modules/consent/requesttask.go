@@ -13,8 +13,11 @@ package consent
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -126,4 +129,48 @@ func requestTaskFor(ctx context.Context, tx pgx.Tx, who ruleSubject, right, key 
 		task.ReplyBy = subjectrightsrules.ReplyBy(received, rules.ReplyWithinWorkingDays)
 	}
 	return task, true, nil
+}
+
+// requestReceipt is the first answer a request is owed under a pack that
+// follows the recipient and sets one.
+var requestReceipt = receiptKind{owed: (*Store).requestReceiptOwedTx, render: RenderRequestReceipt}
+
+// requestReceiptOwedTx answers whether the subject's pack owes a request its
+// first answer, and when. The receipt prints its times in the pack's zone.
+func (s *Store) requestReceiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (receiptTerms, bool, error) {
+	code, err := subjectDataProtectionTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
+	if err != nil || code == "" {
+		return receiptTerms{}, false, err
+	}
+	rights, declared := subjectrightsrules.For(code)
+	if !declared || rights.ReplyWithinWorkingDays <= 0 {
+		return receiptTerms{}, false, nil
+	}
+	rules, _, _ := applicableRules(code)
+	due := subjectrightsrules.ReplyBy(s.now(), rights.ReplyWithinWorkingDays)
+	return receiptTerms{dueAt: &due, utcOffset: rules.OptOutAcknowledgementUTCOffset}, true, nil
+}
+
+// answerRequestTx answers a request the opt-out receipt does not cover: a
+// restriction, or a withdrawal of a purpose that is not marketing. It stages
+// the request receipt at once and opens the dated task.
+func (s *Store) answerRequestTx(ctx context.Context, tx pgx.Tx, sub subject, right, key string, received time.Time) error {
+	who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
+	task, owed, err := requestTaskFor(ctx, tx, who, right, key, received)
+	if err != nil || !owed {
+		return err
+	}
+	digest := sha256.Sum256([]byte(right + "\x00" + key))
+	messageID := "request-ack-" + strings.ReplaceAll(sub.id.String(), "-", "") + "-" +
+		hex.EncodeToString(digest[:8]) + "@margince.invalid"
+	// One receipt per act: a press that withdrew two purposes is one request.
+	first, err := firstAcknowledgementOfActTx(ctx, tx, messageID)
+	if err != nil || !first {
+		return err
+	}
+	if err := s.stageReceiptTx(ctx, tx, requestReceipt, sub, messageID, ids.UUID{},
+		RefusalTimes{ReceivedAt: received, StoppedAt: task.DueAt}); err != nil {
+		return err
+	}
+	return s.openRequestTaskTx(ctx, tx, who, right, key, received)
 }
