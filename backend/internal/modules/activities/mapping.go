@@ -88,7 +88,7 @@ const fieldBody = "body"
 // than ordinary meeting notes, which is what routes it through
 // normalizeTranscript and what the activity/transcript retention selector
 // (privacy/retentionselectors.go) keys its sweep on.
-const transcriptSourceSystem = "transcript"
+const transcriptSourceSystem = provenance.MeetingTranscriptSource
 
 // faultInvalid is the RFC 7807 code every field refusal in this module carries:
 // the value is well-formed enough to have reached us and is still not one this

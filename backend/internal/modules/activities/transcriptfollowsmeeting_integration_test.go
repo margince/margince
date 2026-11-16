@@ -121,3 +121,45 @@ func TestATranscriptKeepsTheReadersOfTheMeetingItRecords(t *testing.T) {
 		t.Errorf("the transcript announced %d audience change(s), want 3", announced)
 	}
 }
+
+// A transcript is read by the meeting's own guests, judged on the meeting. A
+// guest row naming only a seat stands on a hand-logged meeting. That holds even
+// when a connector with no mailbox stamped the transcript. Leaving the meeting
+// ends the access at once.
+func TestATranscriptIsReadByTheMeetingsGuestsJudgedOnTheMeeting(t *testing.T) {
+	e := setupSend(t)
+	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
+	booked := string(crmcontracts.ActivityMeetingStatusBooked)
+	meeting := customerMeeting(t, e, customer, "Quarterly review", clocktest.Now(t).Add(-2*time.Hour), &booked)
+	if _, err := meetingStore(e).SetAudience(meetingCtx(e), meeting,
+		SetAudienceInput{Audience: string(crmcontracts.ActivityAudienceParticipants)}); err != nil {
+		t.Fatalf("limiting the meeting to its guests: %v", err)
+	}
+	created, err := transcriptOf(t, e, meeting, customer, deal)
+	if err != nil {
+		t.Fatalf("logging the transcript: %v", err)
+	}
+	transcript := ids.From[ids.ActivityKind](ids.UUID(created.Id))
+	ctx := context.Background()
+	if _, err := e.owner.Exec(ctx, `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`,
+		meeting, e.other); err != nil {
+		t.Fatalf("adding the colleague as a guest: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx, `UPDATE activity SET captured_by = 'connector:gdocs' WHERE id = $1`, transcript); err != nil {
+		t.Fatalf("stamping the transcript with a connector that has no mailbox: %v", err)
+	}
+	sweepTranscripts(t, e)
+	if !colleagueReads(t, e, meeting) {
+		t.Fatal("the colleague cannot read the meeting they are a guest of")
+	}
+	if !colleagueReads(t, e, transcript) {
+		t.Error("a guest of the meeting cannot read its transcript")
+	}
+
+	if _, err := e.owner.Exec(ctx, `DELETE FROM activity_participant WHERE activity_id = $1 AND user_id = $2`, meeting, e.other); err != nil {
+		t.Fatal(err)
+	}
+	if colleagueReads(t, e, transcript) {
+		t.Error("a guest taken off the meeting still reads its transcript before any sweep")
+	}
+}

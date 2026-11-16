@@ -47,6 +47,10 @@ const (
 	CheckInCadenceSource     = "check_in_cadence"
 )
 
+// MeetingTranscriptSource names a transcript activity. One that records a
+// meeting names it in source_activity_id, and is read by the meeting's guests.
+const MeetingTranscriptSource = "transcript"
+
 // CommitmentTaskSource names a task written for a commitment one of our users
 // made in a captured conversation. Its source_id is the commitment's evidence
 // locator, so a task a rep dismissed is found again instead of being
