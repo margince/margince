@@ -297,7 +297,7 @@ On a phone or a narrow window, most record lists show each record in two lines. 
 - **Projects**: the customer, and the phase as the mark.
 - **Deals** table: the company, stage and close date, and the amount as the mark.
 - **Partners**: the kinds and certification, and the stage as the mark.
-The other columns are not shown. Open the record to see everything, or use a wider window. **View** has no **Columns** step, so your columns do not change these rows. Other tables, such as the members of a list, show every column, each value with its label.
+The other columns are not shown. Open the record to see everything, or use a wider window. On these lists **View** has no **Columns** step, so your columns do not change these rows. Other tables, such as the members of a list, show every column, each value with its label.
 Also called: mobile list, small screen, phone layout.
 
 ## Where to go next
