@@ -381,6 +381,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `confirm_token_hash_key`: `unique, btree (token_hash)`
 - `confirm_token_live_by_kind`: `btree (contact_id, kind, purpose_id) WHERE (consumed_at IS NULL)`
 - `confirm_token_pkey`: `unique, btree (id)`
+- `confirm_token_subject_request_id_idx`: `btree (subject_request_id)`
 - `ix_confirm_token_contact`: `btree (contact_id)`
 - `ix_confirm_token_lead`: `btree (lead_id) WHERE (lead_id IS NOT NULL)`
 
@@ -469,6 +470,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `consent_event_pkey`: `unique, btree (id)`
+- `consent_event_subject_request_id_idx`: `btree (subject_request_id)`
 - `idx_consent_event_contact`: `btree (contact_id, captured_at DESC)`
 - `idx_consent_event_lead`: `btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL)`
 
@@ -842,7 +844,10 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `lawful_basis_confirmation_confirmed_by_cascade_idx`: `btree (confirmed_by)`
+- `lawful_basis_confirmation_contact_id_cascade_idx`: `btree (contact_id)`
 - `lawful_basis_confirmation_delivery`: `btree (delivery_id) WHERE (delivery_id IS NOT NULL)`
+- `lawful_basis_confirmation_lead_id_cascade_idx`: `btree (lead_id)`
 - `lawful_basis_confirmation_open_contact`: `btree (contact_id, confirmed_by) WHERE ((contact_id IS NOT NULL) AND (spent_at IS NULL))`
 - `lawful_basis_confirmation_open_lead`: `btree (lead_id, confirmed_by) WHERE ((lead_id IS NOT NULL) AND (spent_at IS NULL))`
 - `lawful_basis_confirmation_pkey`: `unique, btree (id)`

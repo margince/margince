@@ -70,10 +70,16 @@ func TestTheExpiryLineNamesTheCountryItIsGivenIn(t *testing.T) {
 		expiry linkExpiry
 		want   string
 	}{
-		{"a contact in Vietnam", linkExpiry{at: expires.In(saigon), country: "vn"},
-			"Liên kết có hiệu lực đến 28/11/2026, 15:21 (giờ Việt Nam, UTC+07:00)."},
-		{"a contact with no known zone", linkExpiry{at: expires.In(berlin)},
-			"Liên kết có hiệu lực đến 28/11/2026, 09:21 (UTC+01:00)."},
+		{
+			"a contact in Vietnam",
+			linkExpiry{at: expires.In(saigon), country: "vn"},
+			"Liên kết có hiệu lực đến 28/11/2026, 15:21 (giờ Việt Nam, UTC+07:00).",
+		},
+		{
+			"a contact with no known zone",
+			linkExpiry{at: expires.In(berlin)},
+			"Liên kết có hiệu lực đến 28/11/2026, 09:21 (UTC+01:00).",
+		},
 	}
 	for _, tc := range cases {
 		rendered, _, err := renderTemplate(TemplateRecordConfirmation, tc.expiry, "vi", "")

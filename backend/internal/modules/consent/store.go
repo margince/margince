@@ -440,5 +440,5 @@ func (e *ValidationError) Error() string { return "consent: " + e.Field + ": " +
 // FieldFault is what lets every surface answer the refusal as the 422 it is,
 // without a handler having to know this module's error type.
 func (e *ValidationError) FieldFault() (field, code, message string) {
-	return e.Field, "invalid", e.Reason
+	return e.Field, codeInvalid, e.Reason
 }
