@@ -202,13 +202,9 @@ func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request
 	if !asked {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonDealNotRequested}, nil
 	}
-	basis, err := interestBasisTx(ctx, tx, subject)
-	if err != nil {
-		return resolution{}, err
-	}
 	return resolution{
 		Category:  commsauthz.CategoryActiveDealFollowup,
-		Basis:     basis,
+		Basis:     commsauthz.BasisLegitimateInterests,
 		Supported: true,
 	}, nil
 }

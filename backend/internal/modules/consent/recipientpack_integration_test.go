@@ -11,6 +11,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -19,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -211,12 +213,45 @@ func TestTheRecipientsPackSetsTheRequestDeadline(t *testing.T) {
 	}
 }
 
-// recordingTasks keeps the request tasks a store asked to open.
-type recordingTasks struct{ opened []RequestTask }
+// recordingTasks keeps the request tasks a store asked to open, or fails
+// every write when fail is set.
+type recordingTasks struct {
+	opened []RequestTask
+	fail   error
+}
 
 func (r *recordingTasks) OpenRequestTaskTx(_ context.Context, _ pgx.Tx, task RequestTask) error {
+	if r.fail != nil {
+		return r.fail
+	}
 	r.opened = append(r.opened, task)
 	return nil
+}
+
+// TestARequestWhoseTaskCannotBeWrittenIsNotRecorded: the task commits with
+// the request or neither does, so no request is left without its deadline work.
+func TestARequestWhoseTaskCannotBeWrittenIsNotRecorded(t *testing.T) {
+	p := registerPackPair(t)
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+	stateTheController(t, e)
+	placeContact(t, e.owner, e.contact, p.recipient)
+	e.store = underInstallation(e.store, p).WithRequestTasks(&recordingTasks{fail: errors.New("the task store is down")}).
+		WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test/")
+
+	if err := e.store.Suppress(e.ctx, SuppressInput{
+		ContactID: e.contact, Kind: commsauthz.ReasonObjection, Reason: "Stop using my data.",
+	}); err == nil {
+		t.Fatal("the objection was recorded although its task could not be written")
+	}
+	var stops int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM communication_suppression WHERE contact_id = $1`, e.contact).Scan(&stops); err != nil {
+		t.Fatal(err)
+	}
+	if stops != 0 {
+		t.Errorf("%d stops stand without their task, want the request rolled back", stops)
+	}
 }
 
 // TestARecordPageRequestUnderTheRecipientsPackOpensDatedTasks: a correction
@@ -307,9 +342,10 @@ func TestAnObjectionUnderTheRecipientsPackIsReceiptedAndOpensATask(t *testing.T)
 }
 
 // TestNoDecisionUnderAPackWithoutLegitimateInterestsRestsOnThem: under such a
-// pack, a message the GDPR model sends on legitimate interests rests on the
-// recipient's consent, on an agreement, or on nothing. With nothing, the
-// preview marks the recipient for the warning.
+// pack, a message sent on legitimate interests elsewhere rests on consent to a
+// purpose covering it, or on nothing. A newsletter
+// consent does not cover correspondence. With nothing, the preview marks the
+// recipient for the warning.
 func TestNoDecisionUnderAPackWithoutLegitimateInterestsRestsOnThem(t *testing.T) {
 	p := registerPackPair(t)
 	e := setupResolve(t)
@@ -317,12 +353,24 @@ func TestNoDecisionUnderAPackWithoutLegitimateInterestsRestsOnThem(t *testing.T)
 	e.capturedMail(t, "thread-matter", "cc", true)
 	request := commsauthz.Request{ThreadKey: "thread-matter"}
 
-	d := e.decide(t, request)
-	if d.Verdict != commsauthz.VerdictAllow {
-		t.Fatalf("decision = %+v, want the copied recipient allowed", d)
+	grant := func(key, class string) {
+		t.Helper()
+		if _, err := e.owner.Exec(context.Background(), `
+			INSERT INTO consent_purpose (key, label, class) VALUES ($1, $1, $2) ON CONFLICT (key) DO NOTHING`, key, class); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := e.owner.Exec(context.Background(), `
+			INSERT INTO contact_consent (contact_id, purpose_id, state, lawful_basis, captured_at, source)
+			SELECT $1, id, 'granted', 'consent', now(), 'test' FROM consent_purpose WHERE key = $2`,
+			e.contact, key); err != nil {
+			t.Fatalf("recording the consent: %v", err)
+		}
 	}
-	if d.Basis == commsauthz.BasisLegitimateInterests {
-		t.Fatalf("the decision rests on legitimate interests under a pack that has none")
+	grant("rp_news", "marketing")
+
+	d := e.decide(t, request)
+	if d.Verdict != commsauthz.VerdictAllow || d.Basis != "" || !d.LawfulBasisMissing {
+		t.Fatalf("decision = %+v, want an allow on no basis, marked: a newsletter consent covers no correspondence", d)
 	}
 	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
 		Recipients: []connector.Recipient{{Email: e.address}}, ThreadKey: "thread-matter",
@@ -331,59 +379,119 @@ func TestNoDecisionUnderAPackWithoutLegitimateInterestsRestsOnThem(t *testing.T)
 		t.Fatalf("previewing: %v", err)
 	}
 	if len(set.Decisions) != 1 || !set.Decisions[0].LawfulBasisMissing {
-		t.Fatalf("preview %+v, want the recipient marked: no consent and no agreement on record", set.Decisions)
+		t.Fatalf("preview %+v, want the recipient marked", set.Decisions)
 	}
 
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO consent_purpose (key, label) VALUES ('rp_news', 'News')
-		ON CONFLICT (key) DO NOTHING`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO contact_consent (contact_id, purpose_id, state, lawful_basis, captured_at, source)
-		SELECT $1, id, 'granted', 'consent', now(), 'test' FROM consent_purpose WHERE key = 'rp_news'`,
-		e.contact); err != nil {
-		t.Fatalf("recording the consent: %v", err)
-	}
-	if d := e.decide(t, request); d.Basis != commsauthz.BasisConsent {
-		t.Errorf("with consent on record the decision rests on %q, want consent", d.Basis)
+	grant("rp_correspondence", "business_correspondence")
+	if d := e.decide(t, request); d.Basis != commsauthz.BasisConsent || d.LawfulBasisMissing {
+		t.Errorf("with consent to correspondence the decision rests on %q, want consent", d.Basis)
 	}
 }
 
+// stageTo stages a delivery to the env recipient on the copied thread.
+func stageTo(t *testing.T, e *resolveEnv, ctx context.Context) commsauthz.Decision {
+	t.Helper()
+	delivery := e.plantDelivery(t)
+	var set commsauthz.DecisionSet
+	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		set, err = e.gate.AuthorizeStagingTx(ctx, tx, delivery, commsauthz.Request{
+			Recipients: []connector.Recipient{{Email: e.address}}, ThreadKey: "thread-matter",
+			Subject: "Re: matter", Body: "Thanks.",
+		})
+		return err
+	}); err != nil {
+		t.Fatalf("staging: %v", err)
+	}
+	return set.Decisions[0]
+}
+
+// TestStagingSpendsTheConfirmationOnce: staging refuses a send with no
+// confirmation, lets the confirmed one through, and refuses the next. An agent
+// spends only the confirmation of the user it acts for.
+func TestStagingSpendsTheConfirmationOnce(t *testing.T) {
+	p := registerPackPair(t)
+	e := setupResolve(t)
+	placeContact(t, e.owner, e.contact, p.recipient)
+	e.capturedMail(t, "thread-matter", "cc", true)
+	e.ctx = withActivityCreate(e.ctx)
+	subject := []ConfirmedSubject{{Kind: entityContact, ID: e.contact.UUID}}
+
+	if d := stageTo(t, e, e.ctx); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
+		t.Fatalf("an unconfirmed send staged as %+v, want refused as unconfirmed", d)
+	}
+	if _, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, subject); err != nil {
+		t.Fatalf("confirming: %v", err)
+	}
+	if d := stageTo(t, e, e.ctx); d.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("the confirmed send staged as %+v, want allowed", d)
+	}
+	if d := stageTo(t, e, e.ctx); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
+		t.Errorf("a second send spent the confirmation again: %+v", d)
+	}
+
+	if _, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, subject); err != nil {
+		t.Fatalf("confirming again: %v", err)
+	}
+	stranger := principal.WithActor(e.ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:x", OnBehalfOf: ids.NewV7(),
+		Permissions: principal.Permissions{RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll},
+	})
+	if d := stageTo(t, e, stranger); d.ReasonCode != commsauthz.ReasonLawfulBasisUnconfirmed {
+		t.Errorf("an agent acting for somebody else spent the user's confirmation: %+v", d)
+	}
+}
+
+// withActivityCreate adds the send authority the confirmation asks for.
+func withActivityCreate(ctx context.Context) context.Context {
+	actor, _ := principal.Actor(ctx)
+	grants := map[string]principal.ObjectGrant{}
+	for k, v := range actor.Permissions.Objects {
+		grants[k] = v
+	}
+	grants["activity"] = principal.ObjectGrant{Read: true, Create: true}
+	actor.Permissions.Objects = grants
+	return principal.WithActor(ctx, actor)
+}
+
 // TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingUser: confirming
-// the warning writes one audit row naming the user, and only for a
-// recipient the warning applies to.
+// the warning writes one audit row naming the user, and a retry while the
+// confirmation is open writes no second one. It needs the authority to send.
 func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingUser(t *testing.T) {
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	placeContact(t, e.owner, e.contact, p.recipient)
+	subject := []ConfirmedSubject{{Kind: entityContact, ID: e.contact.UUID}}
 
-	confirmed, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, []string{e.address})
-	if err != nil {
-		t.Fatalf("confirming the warning: %v", err)
+	if _, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, subject); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a reader with no send authority confirmed: %v", err)
 	}
-	if len(confirmed) != 1 {
-		t.Fatalf("confirmed %v, want the one address the warning applies to", confirmed)
+	e.ctx = withActivityCreate(e.ctx)
+	for range 2 {
+		confirmed, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, subject)
+		if err != nil || len(confirmed) != 1 {
+			t.Fatalf("confirming = %v, %v; want the one record", confirmed, err)
+		}
 	}
 	var actor string
+	var rows int
 	if err := e.owner.QueryRow(context.Background(), `
-		SELECT actor_id FROM audit_log
+		SELECT min(actor_id), count(*) FROM audit_log
 		 WHERE entity_type = 'contact' AND entity_id = $1 AND action = 'approve'
-		   AND after->>'warning' = $2`, e.contact, lawfulBasisWarning).Scan(&actor); err != nil {
-		t.Fatalf("reading the confirmation's audit row: %v", err)
+		   AND after->>'warning' = $2`, e.contact, lawfulBasisWarning).Scan(&actor, &rows); err != nil {
+		t.Fatalf("reading the confirmation's audit rows: %v", err)
 	}
-	if want := "human:" + e.user.String(); actor != want {
-		t.Errorf("the confirmation is audited under %q, want the confirming user %q", actor, want)
+	if want := "human:" + e.user.String(); actor != want || rows != 1 {
+		t.Errorf("%d audit rows under %q, want one under the confirming user %q", rows, actor, want)
 	}
 
 	placeContact(t, e.owner, e.contact, p.installation)
-	if confirmed, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, []string{e.address}); err != nil || len(confirmed) != 0 {
+	if confirmed, err := e.store.ConfirmSendWithoutLawfulBasis(e.ctx, subject); err != nil || len(confirmed) != 0 {
 		t.Errorf("confirming outside the pack = %v, %v; want nothing to confirm", confirmed, err)
 	}
-
 	agent := principal.WithActor(e.ctx, principal.Principal{Type: principal.PrincipalAgent, ID: "agent:x"})
-	if _, err := e.store.ConfirmSendWithoutLawfulBasis(agent, []string{e.address}); err == nil {
-		t.Error("an agent confirmed the warning; only the sender may")
+	if _, err := e.store.ConfirmSendWithoutLawfulBasis(agent, subject); err == nil {
+		t.Error("an agent confirmed the warning; only the user sending may")
 	}
 }
 

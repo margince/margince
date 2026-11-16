@@ -2377,6 +2377,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.brief_overnight": "Nächtliche Zusammenfassung",
   "systemJob.captured_deal_refile": "Erfasste Gespräche zuordnen",
   "systemJob.capture": "E-Mail-Erfassung",
+  "systemJob.privacy_request_task": "Aufgaben zu Datenanfragen",
   "systemJob.capture_auto_enrich":
     "Anreicherung von Unternehmensdaten aus E-Mails",
   "systemJob.capture_classify": "E-Mail-Sortierung",
@@ -8014,6 +8015,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":

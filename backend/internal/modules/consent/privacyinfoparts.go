@@ -126,16 +126,17 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 	})
 }
 
-// settleUsesTx is the uses the page lists. A reader whose pack has no
-// legitimate-interest basis is never shown one. A reader with no use on record
-// is shown business correspondence, so the page always names a purpose
+// settleUsesTx is the uses the page lists, judged as the send engine judges
+// them. Under a pack without legitimate interests, a use is shown only on a
+// basis that pack accepts (keptUnderPack). A reader with no use left is shown
+// business correspondence, so the page always names a purpose
 // (GDPR Art. 14(1)(c)). Its basis is defaultUseBasis.
 func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse) ([]NoticeUse, error) {
-	who := ruleSubject{Kind: entityContact, ID: subject.ContactID.String()}
+	who := subjectRef{Kind: entityContact, ID: subject.ContactID.String()}
 	if subject.ContactID.IsZero() {
-		who = ruleSubject{Kind: entityLead, ID: subject.LeadID.String()}
+		who = subjectRef{Kind: entityLead, ID: subject.LeadID.String()}
 	}
-	country, err := recipientCountryTx(ctx, tx, who)
+	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: who.Kind, ID: who.ID})
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +144,7 @@ func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []
 	noInterests := found && rules.NoLegitimateInterests
 	kept := make([]NoticeUse, 0, len(uses))
 	for _, use := range uses {
-		if noInterests && use.Basis == string(commsauthz.BasisLegitimateInterests) {
+		if noInterests && !keptUnderPack(commsauthz.Basis(use.Basis)) {
 			continue
 		}
 		kept = append(kept, use)
@@ -153,8 +154,12 @@ func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []
 	}
 	var onRecord commsauthz.Basis
 	if noInterests {
-		if onRecord, err = lawfulUseOnRecordTx(ctx, tx, subjectRef{Kind: who.Kind, ID: who.ID}); err != nil {
+		consented, err := consentCoversTx(ctx, tx, who, commsauthz.CategoryReplyToInbound)
+		if err != nil {
 			return nil, err
+		}
+		if consented {
+			onRecord = commsauthz.BasisConsent
 		}
 	}
 	return []NoticeUse{{PurposeKey: PurposeBusinessCorrespondence, Basis: defaultUseBasis(noInterests, onRecord)}}, nil

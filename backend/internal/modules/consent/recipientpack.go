@@ -85,47 +85,56 @@ func dataProtectionStampFor(recipient RecipientCountry, entityStamp *string) *st
 	return entityStamp
 }
 
-// interestBasisTx is the ground a message rests on where the GDPR model reads
-// legitimate interests. A recipient whose pack has no such basis gets the
-// consent or the agreement on record instead, or no basis when neither is.
-func interestBasisTx(ctx context.Context, tx pgx.Tx, subject subjectRef) (commsauthz.Basis, error) {
-	rules, _, found := applicableRules(subject.Country.Code)
-	if !found || !rules.NoLegitimateInterests {
-		return commsauthz.BasisLegitimateInterests, nil
-	}
-	return lawfulUseOnRecordTx(ctx, tx, subject)
+// keptUnderPack reports whether a basis is an Art. 19.1 case on its own, so a
+// pack without legitimate interests keeps it: a duty the law imposes, or the
+// protection of life or safety. Every other basis needs the subject's consent.
+func keptUnderPack(basis commsauthz.Basis) bool {
+	return basis == commsauthz.BasisLegalObligation || basis == commsauthz.BasisVitalOrSecurityInterest ||
+		basis == commsauthz.BasisConsent
 }
 
-// lawfulUseOnRecordTx answers the basis on record for using this subject's
-// data under a pack with no legitimate-interest basis. Consent comes first.
-// Then an agreement with the subject (Law 91/2025 Art. 19.1(d)): a live
-// contract basis, or the contact working for a customer. A privacy notice the
-// subject was sent is neither. Empty means nothing on record.
-func lawfulUseOnRecordTx(ctx context.Context, tx pgx.Tx, subject subjectRef) (commsauthz.Basis, error) {
+// settlePackBasisTx is the one place a supported resolution's basis meets a
+// pack without legitimate interests. Preview, staging and transmit reach it
+// through resolveAndRecord, and the privacy page through settleUsesTx. A basis
+// the law does not name becomes the subject's consent to a purpose covering
+// this use, or no basis at all.
+func settlePackBasisTx(ctx context.Context, tx pgx.Tx, subject subjectRef, res resolution) (resolution, error) {
+	rules, _, found := applicableRules(subject.Country.Code)
+	if !found || !rules.NoLegitimateInterests || keptUnderPack(res.Basis) {
+		return res, nil
+	}
+	consented, err := consentCoversTx(ctx, tx, subject, res.Category)
+	if err != nil {
+		return resolution{}, err
+	}
+	if consented {
+		res.Basis = commsauthz.BasisConsent
+		return res, nil
+	}
+	res.Basis, res.BasisMissing = "", true
+	return res, nil
+}
+
+// consentCoversTx answers whether the subject has granted consent to a
+// purpose whose class covers this category. A newsletter consent covers
+// advertising and nothing else.
+func consentCoversTx(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (bool, error) {
+	classes := classesCovering(category)
+	if len(classes) == 0 {
+		return false, nil
+	}
 	column := subjectColumnContact
 	if subject.Kind == entityLead {
 		column = subjectColumnLead
 	}
-	var consented, agreed bool
+	var consented bool
 	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM contact_consent WHERE `+column+` = $1::uuid AND state = 'granted'),
-		       EXISTS (SELECT 1 FROM communication_basis
-		                WHERE `+column+` = $1::uuid AND kind = $2 AND revoked_at IS NULL
-		                  AND (valid_until IS NULL OR valid_until > now()))`,
-		subject.ID, string(commsauthz.BasisContract)).Scan(&consented, &agreed)
+		SELECT EXISTS (SELECT 1 FROM contact_consent cc
+		                 JOIN consent_purpose cp ON cp.id = cc.purpose_id AND cp.archived_at IS NULL
+		                WHERE cc.`+column+` = $1::uuid AND cc.state = 'granted' AND cp.class = ANY($2))`,
+		subject.ID, classes).Scan(&consented)
 	if err != nil {
-		return "", wrapEvidenceRead("the recipient's consent and agreements", err)
+		return false, wrapEvidenceRead("the recipient's consent to this use", err)
 	}
-	if consented {
-		return commsauthz.BasisConsent, nil
-	}
-	if !agreed && subject.Kind == entityContact {
-		if agreed, err = isCustomerTx(ctx, tx, subject.ID); err != nil {
-			return "", err
-		}
-	}
-	if agreed {
-		return commsauthz.BasisContract, nil
-	}
-	return "", nil
+	return consented, nil
 }

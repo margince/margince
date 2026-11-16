@@ -41931,7 +41931,7 @@ components:
             The recipient's country has no legitimate-interest basis, and the record holds neither
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
-            `POST /emails/lawful-basis-confirmations` before the send. Absent or false otherwise.
+            `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
         evidence_subject:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidenceSubject'}]
           description: |-

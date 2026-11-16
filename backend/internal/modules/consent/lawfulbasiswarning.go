@@ -4,17 +4,21 @@
 package consent
 
 // The warning before a send to a recipient whose pack has no legitimate-interest
-// basis. It applies when the record holds neither their consent nor an
-// agreement with them.
+// basis. It applies when the record holds no basis that pack accepts for the
+// use (settlePackBasisTx).
 //
-// It does not block. The preview marks the recipient, the screen shows the
-// warning, and the sender confirms it here first. The confirmation
-// is an audit row against the recipient's record that names that user.
+// The preview marks the recipient and the screen warns. The user sending
+// confirms for each recipient's record, and staging spends one confirmation
+// per record on the delivery it lets through. A send with no confirmation is
+// refused with ReasonLawfulBasisUnconfirmed, which a recorded human decision
+// may still direct. An agent cannot confirm, so its send goes to that review.
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -27,57 +31,48 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // lawfulBasisWarning names the warning in the audit row's after image.
 const lawfulBasisWarning = "lawful_basis_missing"
 
-// maxConfirmedAddresses mirrors the contract's maxItems.
-const maxConfirmedAddresses = 100
+// maxConfirmedSubjects mirrors the contract's maxItems.
+const maxConfirmedSubjects = 100
 
-// lawfulUseMissingTx answers whether a decided recipient falls under a pack
-// with no legitimate-interest basis and has no lawful use on record.
-func lawfulUseMissingTx(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision) (bool, error) {
-	if d.SubjectKind == "" {
-		return false, nil
-	}
-	country, err := recipientRequestCountry(ctx, tx, r, req)
-	if err != nil {
-		return false, err
-	}
-	return lawfulUseMissingFor(ctx, tx, subjectRef{Kind: d.SubjectKind, ID: d.SubjectID.String(), Country: country})
-}
+// confirmationLifetime is how long a confirmation waits for its send. It
+// answers the message being written, not one sent later.
+const confirmationLifetime = 15 * time.Minute
 
-func lawfulUseMissingFor(ctx context.Context, tx pgx.Tx, subject subjectRef) (bool, error) {
-	rules, _, found := applicableRules(subject.Country.Code)
-	if !found || !rules.NoLegitimateInterests {
-		return false, nil
-	}
-	basis, err := lawfulUseOnRecordTx(ctx, tx, subject)
-	return basis == "", err
+// ConfirmedSubject is one record a confirmation names.
+type ConfirmedSubject struct {
+	Kind string
+	ID   ids.UUID
 }
 
 // ConfirmSendWithoutLawfulBasis records that the signed-in user read the
-// warning for each address and chose to send. It answers the addresses the
-// warning still applied to; the rest need no confirmation.
-func (s *Store) ConfirmSendWithoutLawfulBasis(ctx context.Context, addresses []string) ([]string, error) {
+// warning for each record and chose to send. It needs the authority to send.
+// A record the warning no longer applies to is left out of the answer. A
+// record already holding an open confirmation by this user keeps that one.
+func (s *Store) ConfirmSendWithoutLawfulBasis(ctx context.Context, subjects []ConfirmedSubject) ([]ConfirmedSubject, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return nil, apperrors.ErrPermissionDenied
 	}
-	if len(addresses) == 0 || len(addresses) > maxConfirmedAddresses {
-		return nil, &ValidationError{Field: "addresses", Reason: fmt.Sprintf("name 1 to %d addresses", maxConfirmedAddresses)}
+	if len(subjects) == 0 || len(subjects) > maxConfirmedSubjects {
+		return nil, &ValidationError{Field: "subjects", Reason: fmt.Sprintf("name 1 to %d records", maxConfirmedSubjects)}
 	}
-	confirmed := []string{}
+	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
+		return nil, err
+	}
+	confirmed := []ConfirmedSubject{}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		for _, address := range addresses {
-			applies, err := confirmOneTx(ctx, tx, address)
+		for _, subject := range subjects {
+			applies, err := s.confirmOneTx(ctx, tx, actor.UserID, subject)
 			if err != nil {
 				return err
 			}
 			if applies {
-				confirmed = append(confirmed, address)
+				confirmed = append(confirmed, subject)
 			}
 		}
 		return nil
@@ -85,56 +80,133 @@ func (s *Store) ConfirmSendWithoutLawfulBasis(ctx context.Context, addresses []s
 	return confirmed, err
 }
 
-func confirmOneTx(ctx context.Context, tx pgx.Tx, address string) (bool, error) {
-	who, err := subjectOfRecipient(ctx, tx, connector.Recipient{Email: address})
-	if err != nil {
+// requireSubjectVisible admits a record the caller may read, by its literal
+// object name.
+func requireSubjectVisible(ctx context.Context, tx pgx.Tx, subject ConfirmedSubject) error {
+	switch subject.Kind {
+	case entityContact:
+		if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+			return err
+		}
+	case entityLead:
+		if err := auth.Require(ctx, "lead", principal.ActionRead); err != nil {
+			return err
+		}
+	default:
+		return &ValidationError{Field: "subjects", Reason: "name a contact or a lead"}
+	}
+	return auth.EnsureVisible(ctx, tx, subject.Kind, subject.ID)
+}
+
+func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subject ConfirmedSubject) (bool, error) {
+	if err := requireSubjectVisible(ctx, tx, subject); err != nil {
 		return false, err
 	}
-	if who.Kind == "" {
-		return false, fmt.Errorf("consent: no record holds this address: %w", apperrors.ErrNotFound)
-	}
-	id, err := ids.Parse(who.ID)
-	if err != nil {
-		return false, fmt.Errorf("consent: the resolved subject is not an id: %w", err)
-	}
-	if err := auth.Require(ctx, who.Kind, principal.ActionRead); err != nil {
-		return false, err
-	}
-	if err := auth.EnsureVisible(ctx, tx, who.Kind, id); err != nil {
-		return false, err
-	}
+	who := ruleSubject{Kind: subject.Kind, ID: subject.ID.String()}
 	country, err := recipientCountryTx(ctx, tx, who)
 	if err != nil {
 		return false, err
 	}
-	missing, err := lawfulUseMissingFor(ctx, tx, subjectRef{Kind: who.Kind, ID: who.ID, Country: country})
-	if err != nil || !missing {
-		return false, err
+	if rules, _, found := applicableRules(country.Code); !found || !rules.NoLegitimateInterests {
+		return false, nil
 	}
-	_, err = storekit.AuditEvent(ctx, tx, "approve", who.Kind, id, map[string]any{
-		"warning": lawfulBasisWarning, "address": address, "country": string(country.Code),
+	column := confirmationColumn(subject.Kind)
+	var open bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM lawful_basis_confirmation
+		                WHERE `+column+` = $1 AND confirmed_by = $2 AND spent_at IS NULL AND expires_at > now())`,
+		subject.ID, user).Scan(&open); err != nil {
+		return false, fmt.Errorf("consent: reading the open confirmation: %w", err)
+	}
+	if open {
+		return true, nil
+	}
+	var id ids.UUID
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO lawful_basis_confirmation (`+column+`, confirmed_by, expires_at)
+		VALUES ($1, $2, now() + $3::interval) RETURNING id`,
+		subject.ID, user, confirmationLifetime.String()).Scan(&id); err != nil {
+		return false, fmt.Errorf("consent: recording the confirmation: %w", err)
+	}
+	_, err = storekit.AuditEvent(ctx, tx, "approve", subject.Kind, subject.ID, map[string]any{
+		"warning": lawfulBasisWarning, "confirmation_id": id, "country": string(country.Code),
 	})
 	return err == nil, err
 }
 
-// ConfirmSendWithoutLawfulBasis serves POST /emails/lawful-basis-confirmations.
+// confirmationColumn is the subject column of lawful_basis_confirmation, a
+// compile-time literal for each kind.
+func confirmationColumn(kind string) string {
+	if kind == entityLead {
+		return subjectColumnLead
+	}
+	return subjectColumnContact
+}
+
+// requireConfirmationTx answers a staging decision whose recipient has no
+// lawful basis on record. It spends the open confirmation for that record by
+// the sending user, or by the user an agent acts for. With none, the decision
+// becomes a refusal a recorded human decision may still direct.
+func requireConfirmationTx(ctx context.Context, tx pgx.Tx, d commsauthz.Decision, deliveryID ids.UUID) (commsauthz.Decision, error) {
+	if !d.LawfulBasisMissing || d.Verdict != commsauthz.VerdictAllow || d.SubjectKind == "" {
+		return d, nil
+	}
+	user := confirmingUser(ctx)
+	if !user.IsZero() {
+		var spent ids.UUID
+		err := tx.QueryRow(ctx, `
+			UPDATE lawful_basis_confirmation SET spent_at = now(), delivery_id = $3
+			 WHERE id = (SELECT id FROM lawful_basis_confirmation
+			              WHERE `+confirmationColumn(d.SubjectKind)+` = $1 AND confirmed_by = $2
+			                AND spent_at IS NULL AND expires_at > now()
+			              ORDER BY confirmed_at DESC LIMIT 1 FOR UPDATE)
+			RETURNING id`, d.SubjectID, user, deliveryID).Scan(&spent)
+		if err == nil {
+			return d, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return d, fmt.Errorf("consent: spending the confirmation: %w", err)
+		}
+	}
+	d.Verdict, d.ReasonCode, d.Basis = commsauthz.VerdictDeny, commsauthz.ReasonLawfulBasisUnconfirmed, ""
+	return d, nil
+}
+
+// confirmingUser is the user whose confirmation a send may spend: the human
+// sending, or the user an agent sends for. Anyone else has none.
+func confirmingUser(ctx context.Context) ids.UUID {
+	actor, ok := principal.Actor(ctx)
+	switch {
+	case !ok:
+		return ids.UUID{}
+	case actor.Type == principal.PrincipalHuman:
+		return actor.UserID
+	case actor.Type == principal.PrincipalAgent:
+		return actor.OnBehalfOf
+	}
+	return ids.UUID{}
+}
+
+// ConfirmSendWithoutLawfulBasis serves POST /lawful-basis-confirmations.
 func (h Handlers) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.LawfulBasisConfirmationRequest
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	addresses := make([]string, 0, len(req.Addresses))
-	for _, a := range req.Addresses {
-		addresses = append(addresses, string(a))
+	subjects := make([]ConfirmedSubject, 0, len(req.Subjects))
+	for _, s := range req.Subjects {
+		subjects = append(subjects, ConfirmedSubject{Kind: string(s.EntityType), ID: ids.UUID(s.EntityId)})
 	}
-	confirmed, err := h.store.ConfirmSendWithoutLawfulBasis(r.Context(), addresses)
+	confirmed, err := h.store.ConfirmSendWithoutLawfulBasis(r.Context(), subjects)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
-	out := crmcontracts.LawfulBasisConfirmation{Confirmed: make([]openapi_types.Email, 0, len(confirmed))}
-	for _, a := range confirmed {
-		out.Confirmed = append(out.Confirmed, openapi_types.Email(a))
+	out := crmcontracts.LawfulBasisConfirmation{Confirmed: make([]crmcontracts.CommunicationEvidenceSubject, 0, len(confirmed))}
+	for _, c := range confirmed {
+		out.Confirmed = append(out.Confirmed, crmcontracts.CommunicationEvidenceSubject{
+			EntityType: crmcontracts.CommunicationEvidenceSubjectEntityType(c.Kind), EntityId: openapi_types.UUID(c.ID),
+		})
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }

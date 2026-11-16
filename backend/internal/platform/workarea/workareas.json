@@ -1023,6 +1023,7 @@
     "confirmCompanyProfileField": "companies",
     "confirmMeetingReady": "worklist",
     "confirmMyTotp": "own_security",
+    "confirmSendWithoutLawfulBasis": "consent",
     "connectChannel": "connectors",
     "connectConnector": "connectors",
     "connectExtOauth": "extensions",

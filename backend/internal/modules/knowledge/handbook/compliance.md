@@ -111,15 +111,18 @@ The sales-mail rules follow the law where each recipient is, not where you are. 
 
 Under Vietnamese law, a contact who refuses marketing email gets a receipt at once. It states when the refusal reached you and when sending stopped, in the contact's local time, and carries no "Powered by Margince" line. A refusal can come by phone or mail. Then tell your agent when it reached you. The receipt prints that time, not the time it was recorded. A receipt not sent within an hour shows in **Settings → System health** under **Opt-out receipts**.
 
-Vietnamese data-protection law also follows the recipient. When a contact's or lead's address is in Vietnam, the Vietnamese rules apply to them whatever law you chose:
+Vietnamese data-protection law also follows the recipient. When a contact's or lead's address is a Vietnamese one, the Vietnamese rules apply to them whatever law you chose:
 
 - the privacy notice, the record confirmation and the privacy page are written in Vietnamese, with the Vietnamese rights text;
 - the foot of their mail says who your company is and whom to ask about data;
-- a correction is due in 10 days, an erasure in 20 days, and a request to stop using their data in 15 days. Margince also makes a task for the request, due on that date, with the first answer due in 2 working days. Saturday and Sunday are not working days;
-- an objection to their data's use, or a withdrawal of consent, makes a task due in 15 days. A request to stop using their data, or a withdrawal of consent to anything other than marketing, also gets an email at once that says when it arrived and when it will be done;
-- the reason recorded for using their data is always their consent with its date, or the agreement you have with them. Your own business need is never enough. Without either, the send screen and the approval card show a warning before you send. You can still send. The audit log records that you confirmed the warning.
+- a request to fix their details is due in 10 days, to delete them in 20 days, and to stop using them in 15 days. Margince makes a task for each request, due on that date;
+- the first answer to a request is due in 2 working days, counted in Vietnamese time from Monday to Friday;
+- when they object to the use of their data or take back their consent, Margince makes a task due in 15 days;
+- a request to stop using their data, or to take back consent to anything other than marketing, also gets an email at once. It says when the request arrived and when it will be done;
+- the reason recorded for using their data is their consent to that use, with its date. Your own business need is never enough;
+- without that consent, the send screen and the approval card show a warning. You can still send once you confirm it. The audit log records your confirmation, and one confirmation covers one send. A send nobody confirmed is held for a person to decide.
 
-Margince learns where a contact is only from the addresses above. A Vietnamese citizen whose address is outside Vietnam is not detected. The Vietnamese rules do not apply to that contact.
+Margince learns where a contact is only from the addresses above. A Vietnamese person whose address is not a Vietnamese one is not found. The Vietnamese rules do not apply to that contact.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
 

@@ -13,10 +13,7 @@ package consent
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"errors"
-	"log/slog"
+	"fmt"
 	"strings"
 	"time"
 
@@ -79,9 +76,9 @@ func deadlineKindOf(right string) subjectrightsrules.RequestKind {
 }
 
 // openRequestTaskTx opens the task one request owes, when the subject's pack
-// follows the recipient and declares a deadline for it. It runs in a
-// savepoint, so a task that cannot be written never undoes the request. The
-// request is recorded already and still answers the subject.
+// follows the recipient and declares a deadline for it. It writes on the
+// request's own transaction, and a task that cannot be written fails the
+// request. So no request is recorded without the deadline work it owes.
 func (s *Store) openRequestTaskTx(ctx context.Context, tx pgx.Tx, who ruleSubject, right, key string, received time.Time) error {
 	if s.requestTasks == nil {
 		return nil
@@ -90,19 +87,10 @@ func (s *Store) openRequestTaskTx(ctx context.Context, tx pgx.Tx, who ruleSubjec
 	if err != nil || !owed {
 		return err
 	}
-	nested, err := tx.Begin(ctx)
-	if err != nil {
-		return err
+	if err := s.requestTasks.OpenRequestTaskTx(ctx, tx, task); err != nil {
+		return fmt.Errorf("consent: opening the task this request owes: %w", err)
 	}
-	if err := s.requestTasks.OpenRequestTaskTx(ctx, nested, task); err != nil {
-		if rollbackErr := nested.Rollback(ctx); rollbackErr != nil {
-			return errors.Join(err, rollbackErr)
-		}
-		slog.ErrorContext(ctx, "the task for a data-subject request could not be written; the request stays recorded",
-			"subject_type", task.SubjectType, "subject_id", task.SubjectID, "right", right, "cause", err)
-		return nil
-	}
-	return nested.Commit(ctx)
+	return nil
 }
 
 // requestTaskFor builds the task, and answers false where no pack that
@@ -126,7 +114,7 @@ func requestTaskFor(ctx context.Context, tx pgx.Tx, who ruleSubject, right, key 
 		DueAt: deadline.Due(received),
 	}
 	if rules.ReplyWithinWorkingDays > 0 {
-		task.ReplyBy = subjectrightsrules.ReplyBy(received, rules.ReplyWithinWorkingDays)
+		task.ReplyBy = subjectrightsrules.ReplyBy(received, rules.ReplyWithinWorkingDays, rules.UTCOffset)
 	}
 	return task, true, nil
 }
@@ -147,7 +135,7 @@ func (s *Store) requestReceiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject
 		return receiptTerms{}, false, nil
 	}
 	rules, _, _ := applicableRules(code)
-	due := subjectrightsrules.ReplyBy(s.now(), rights.ReplyWithinWorkingDays)
+	due := subjectrightsrules.ReplyBy(s.now(), rights.ReplyWithinWorkingDays, rights.UTCOffset)
 	return receiptTerms{dueAt: &due, utcOffset: rules.OptOutAcknowledgementUTCOffset}, true, nil
 }
 
@@ -160,9 +148,7 @@ func (s *Store) answerRequestTx(ctx context.Context, tx pgx.Tx, sub subject, rig
 	if err != nil || !owed {
 		return err
 	}
-	digest := sha256.Sum256([]byte(right + "\x00" + key))
-	messageID := "request-ack-" + strings.ReplaceAll(sub.id.String(), "-", "") + "-" +
-		hex.EncodeToString(digest[:8]) + "@margince.invalid"
+	messageID := "request-ack-" + right + "-" + messageIDPart(key) + "@margince.invalid"
 	// One receipt per act: a press that withdrew two purposes is one request.
 	first, err := firstAcknowledgementOfActTx(ctx, tx, messageID)
 	if err != nil || !first {
@@ -173,4 +159,15 @@ func (s *Store) answerRequestTx(ctx context.Context, tx pgx.Tx, sub subject, rig
 		return err
 	}
 	return s.openRequestTaskTx(ctx, tx, who, right, key, received)
+}
+
+// messageIDPart keeps the letters and digits of a request's key, so it can
+// stand inside a message id. The key is unique per act already.
+func messageIDPart(key string) string {
+	return strings.Map(func(r rune) rune {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			return r
+		}
+		return -1
+	}, key)
 }

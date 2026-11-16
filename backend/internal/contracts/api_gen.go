@@ -53932,14 +53932,16 @@ type LatestInboundList struct {
 
 // LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
 type LawfulBasisConfirmation struct {
-	// Confirmed The addresses whose warning was recorded as confirmed by the signed-in user.
-	Confirmed []openapi_types.Email `json:"confirmed"`
+	// Confirmed The records whose warning was confirmed by the signed-in user. Each confirmation waits
+	// 15 minutes for its send and is spent by the first send to that record.
+	Confirmed []CommunicationEvidenceSubject `json:"confirmed"`
 }
 
 // LawfulBasisConfirmationRequest defines model for LawfulBasisConfirmationRequest.
 type LawfulBasisConfirmationRequest struct {
-	// Addresses The recipients the preview marked `lawful_basis_missing`.
-	Addresses []openapi_types.Email `json:"addresses"`
+	// Subjects The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+	// them. A pinned lead is named as the lead, never as a contact sharing its address.
+	Subjects []CommunicationEvidenceSubject `json:"subjects"`
 }
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
@@ -64704,7 +64706,7 @@ type SendAuthorizationPreviewRecipient struct {
 	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
 	// their consent nor an agreement with them. A privacy notice they were sent is neither.
 	// Not a refusal: a surface shows a warning and records the sender's confirmation through
-	// `POST /emails/lawful-basis-confirmations` before the send. Absent or false otherwise.
+	// `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
 	LawfulBasisMissing *bool `json:"lawful_basis_missing,omitempty"`
 
 	// Mode How much authority the engine's answer carries for this category on this
@@ -81937,9 +81939,6 @@ type SaveEmailSignatureTemplateJSONRequestBody = EmailSignatureTemplate
 // SendCompanyEmailJSONRequestBody defines body for SendCompanyEmail for application/json ContentType.
 type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 
-// ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
-type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
-
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
@@ -82053,6 +82052,9 @@ type AskCorpusJSONRequestBody AskCorpusJSONBody
 
 // UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
 type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
+
+// ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
+type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
 
 // CreateLeadDisqualifyReasonJSONRequestBody defines body for CreateLeadDisqualifyReason for application/json ContentType.
 type CreateLeadDisqualifyReasonJSONRequestBody = CreateLeadDisqualifyReasonRequest
@@ -97588,9 +97590,6 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
-	// Record that a user read the no-lawful-basis warning and chose to send anyway.
-	// (POST /emails/lawful-basis-confirmations)
-	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// Would a new message with no thread behind it be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
@@ -97909,6 +97908,9 @@ type ServerInterface interface {
 	// Download a document's own bytes.
 	// (GET /knowledge/documents/{id})
 	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Record that a user read the no-lawful-basis warning and chose to send anyway.
+	// (POST /lawful-basis-confirmations)
+	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -102532,12 +102534,6 @@ func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record that a user read the no-lawful-basis warning and chose to send anyway.
-// (POST /emails/lawful-basis-confirmations)
-func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Would a new message with no thread behind it be allowed, and on what ground.
 // (POST /emails:preview)
 func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
@@ -103171,6 +103167,12 @@ func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Reque
 // Download a document's own bytes.
 // (GET /knowledge/documents/{id})
 func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that a user read the no-lawful-basis warning and chose to send anyway.
+// (POST /lawful-basis-confirmations)
+func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -131278,26 +131280,6 @@ func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// ConfirmSendWithoutLawfulBasis operation middleware
-func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ConfirmSendWithoutLawfulBasis(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // PreviewAccountSendAuthorization operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
 
@@ -134648,6 +134630,26 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DownloadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConfirmSendWithoutLawfulBasis operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmSendWithoutLawfulBasis(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -156104,9 +156106,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/emails", wrapper.SendCompanyEmail)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/emails/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)
-	})
-	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)
 	})
 	r.Group(func(r chi.Router) {
@@ -156423,6 +156422,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)

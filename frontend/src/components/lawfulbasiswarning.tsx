@@ -24,6 +24,20 @@ export function lawfulBasisMissing(preview: Preview | undefined): string[] {
     .map((recipient) => recipient.address);
 }
 
+type Subject = components["schemas"]["CommunicationEvidenceSubject"];
+
+/**
+ * The records the server confirms against: each marked recipient's own
+ * record, as the preview names it. A pinned lead stays the lead.
+ */
+function confirmableSubjects(preview: Preview | undefined): Subject[] {
+  return (preview?.recipients ?? []).flatMap((recipient) =>
+    recipient.lawful_basis_missing === true && recipient.evidence_subject
+      ? [recipient.evidence_subject]
+      : [],
+  );
+}
+
 /** The standing warning, drawn wherever the preview is. */
 export function LawfulBasisCallout({
   preview,
@@ -54,11 +68,12 @@ export function LawfulBasisCallout({
 export function useLawfulBasisGate(preview: Preview | undefined) {
   const t = useT();
   const missing = lawfulBasisMissing(preview);
+  const subjects = confirmableSubjects(preview);
   const [pending, setPending] = useState<(() => void) | null>(null);
   const record = useMutation({
-    mutationFn: async (addresses: string[]) => {
-      const answered = await api.POST("/emails/lawful-basis-confirmations", {
-        body: { addresses },
+    mutationFn: async () => {
+      const answered = await api.POST("/lawful-basis-confirmations", {
+        body: { subjects },
       });
       if (!answered.response.ok) {
         throwProblem(answered.error ?? { title: t("lawfulBasis.failed") });
@@ -87,7 +102,7 @@ export function useLawfulBasisGate(preview: Preview | undefined) {
       pending={record.isPending}
       error={record.error ? problemMessageOf(record.error, t) : null}
       onConfirm={() => {
-        record.mutate(missing, {
+        record.mutate(undefined, {
           onSuccess: () => {
             const proceed = pending;
             close();

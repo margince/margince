@@ -22,10 +22,10 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [chatlinks](chatlinks.md) | 2 | 36 | 0 | 4 | 2 |
 | [collections](collections.md) | 13 | 108 | 1 | 10 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
-| [comms](comms.md) | 1 | 45 | 4 | 4 | 1 |
+| [comms](comms.md) | 1 | 45 | 5 | 4 | 1 |
 | [compose](compose.md) | 48 | 433 | 3 | 39 | 36 |
-| [consent](consent.md) | 22 | 305 | 2 | 38 | 20 |
-| [contacts](contacts.md) | 50 | 708 | 75 | 36 | 13 |
+| [consent](consent.md) | 23 | 313 | 2 | 42 | 23 |
+| [contacts](contacts.md) | 50 | 708 | 77 | 36 | 13 |
 | [continuity](continuity.md) | 1 | 8 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
@@ -33,7 +33,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [deals](deals.md) | 29 | 422 | 26 | 19 | 5 |
 | [finance](finance.md) | 5 | 87 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 98 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 206 | 159 | 6 | 5 |
+| [identity](identity.md) | 22 | 206 | 160 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 45 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 61 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |

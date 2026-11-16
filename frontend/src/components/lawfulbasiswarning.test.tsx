@@ -20,6 +20,10 @@ const MARKED: Preview = {
       verdict: "allow",
       reason_code: "allowed",
       lawful_basis_missing: true,
+      evidence_subject: {
+        entity_type: "contact",
+        entity_id: "018f3a1b-0000-7000-8000-000000000042",
+      },
     },
     { address: "anna@example.test", verdict: "allow", reason_code: "allowed" },
   ],
@@ -62,7 +66,7 @@ afterEach(() => {
 describe("the no-lawful-basis warning", () => {
   it("warns, and sends only after the confirmation is recorded", async () => {
     const fetched = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ confirmed: ["lan@example.test"] }), {
+      new Response(JSON.stringify({ confirmed: [] }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -85,8 +89,15 @@ describe("the no-lawful-basis warning", () => {
     const request = fetched.mock.calls[0]?.[0];
     expect(request).toBeInstanceOf(Request);
     if (!(request instanceof Request)) return;
-    expect(request.url).toContain("/emails/lawful-basis-confirmations");
-    expect(await request.json()).toEqual({ addresses: ["lan@example.test"] });
+    expect(request.url).toContain("/lawful-basis-confirmations");
+    expect(await request.json()).toEqual({
+      subjects: [
+        {
+          entity_type: "contact",
+          entity_id: "018f3a1b-0000-7000-8000-000000000042",
+        },
+      ],
+    });
   });
 
   it("sends at once when no recipient is marked", async () => {

@@ -196,6 +196,9 @@ func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
 			t.Errorf("%s is due in %d days, want %d", kind, got, days)
 		}
 	}
+	if rules.UTCOffset != 7*time.Hour {
+		t.Errorf("working days are counted at offset %s, want Vietnam time, UTC+07:00", rules.UTCOffset)
+	}
 	if rules.ReplyWithinWorkingDays != 2 {
 		t.Errorf("a first answer is owed in %d working days, want 2", rules.ReplyWithinWorkingDays)
 	}

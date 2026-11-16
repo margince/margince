@@ -7302,7 +7302,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/emails/lawful-basis-confirmations": {
+    "/lawful-basis-confirmations": {
         parameters: {
             query?: never;
             header?: never;
@@ -7314,14 +7314,15 @@ export interface paths {
         /**
          * Record that a user read the no-lawful-basis warning and chose to send anyway.
          * @description A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
-         *     legitimate-interest basis and the record holds neither their consent nor an agreement with
-         *     them. The composer and the approval card show a warning for such a recipient. This records,
-         *     in the audit log, that the signed-in user read it and chose to send. It sends nothing and
-         *     blocks nothing.
+         *     legitimate-interest basis and the record holds no basis that pack accepts for the use. This
+         *     records, in the audit log, that the signed-in user read the warning and chose to send, and
+         *     leaves one confirmation per record. Staging spends it on the first send by this user, or by
+         *     an agent acting for them, to that record within 15 minutes. A send with none is refused as
+         *     `lawful_basis_unconfirmed`, which a recorded human decision may still direct.
          *
-         *     An address the warning no longer applies to is left out of `confirmed`: consent may have
-         *     been recorded since the preview. An address no record the caller can see holds is refused
-         *     as not found.
+         *     It needs the authority to send (`activity` at `create`) and read access to each record. A
+         *     record the warning does not apply to is left out of `confirmed`. A retry while a
+         *     confirmation is open records nothing new.
          */
         post: operations["confirmSendWithoutLawfulBasis"];
         delete?: never;
@@ -44429,12 +44430,18 @@ export interface components {
             evidence?: components["schemas"]["CommunicationEvidence"];
         };
         LawfulBasisConfirmationRequest: {
-            /** @description The recipients the preview marked `lawful_basis_missing`. */
-            addresses: string[];
+            /**
+             * @description The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+             *     them. A pinned lead is named as the lead, never as a contact sharing its address.
+             */
+            subjects: components["schemas"]["CommunicationEvidenceSubject"][];
         };
         LawfulBasisConfirmation: {
-            /** @description The addresses whose warning was recorded as confirmed by the signed-in user. */
-            confirmed: string[];
+            /**
+             * @description The records whose warning was confirmed by the signed-in user. Each confirmation waits
+             *     15 minutes for its send and is spent by the first send to that record.
+             */
+            confirmed: components["schemas"]["CommunicationEvidenceSubject"][];
         };
         /**
          * @description What the engine would decide, per recipient, for a message nobody has sent.
@@ -44467,7 +44474,7 @@ export interface components {
              * @description The recipient's country has no legitimate-interest basis, and the record holds neither
              *     their consent nor an agreement with them. A privacy notice they were sent is neither.
              *     Not a refusal: a surface shows a warning and records the sender's confirmation through
-             *     `POST /emails/lawful-basis-confirmations` before the send. Absent or false otherwise.
+             *     `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
              */
             lawful_basis_missing?: boolean;
             /**

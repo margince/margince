@@ -63,6 +63,9 @@ type resolution struct {
 	// recorded request alone, and RequestedAt is that request's date.
 	MarketingStopsBind bool
 	RequestedAt        time.Time
+	// BasisMissing says the recipient's pack has no legitimate-interest basis
+	// and the record holds no basis that pack accepts for this use.
+	BasisMissing bool
 }
 
 // resolveCategory works out what this message is for one recipient.
@@ -124,13 +127,9 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		return resolution{}, err
 	}
 	if copied {
-		basis, err := interestBasisTx(ctx, tx, subject)
-		if err != nil {
-			return resolution{}, err
-		}
 		return resolution{
 			Category:  commsauthz.CategoryReplyToInbound,
-			Basis:     basis,
+			Basis:     commsauthz.BasisLegitimateInterests,
 			Supported: true,
 		}, nil
 	}
@@ -139,13 +138,9 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		return resolution{}, err
 	}
 	if live {
-		basis, err := interestBasisTx(ctx, tx, subject)
-		if err != nil {
-			return resolution{}, err
-		}
 		return resolution{
 			Category:  commsauthz.CategoryActiveDealFollowup,
-			Basis:     basis,
+			Basis:     commsauthz.BasisLegitimateInterests,
 			Supported: true,
 		}, nil
 	}

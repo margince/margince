@@ -72,8 +72,8 @@ func clone(r Rules) Rules {
 }
 
 // ReplyBy is the published working-day count, for a core caller.
-func ReplyBy(received time.Time, workingDays int) time.Time {
-	return pub.ReplyBy(received, workingDays)
+func ReplyBy(received time.Time, workingDays int, offset time.Duration) time.Time {
+	return pub.ReplyBy(received, workingDays, offset)
 }
 
 // GDPRRule names the fallback deadline: one calendar month from receipt, GDPR

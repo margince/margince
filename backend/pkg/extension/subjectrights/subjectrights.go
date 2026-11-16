@@ -125,19 +125,27 @@ type Rules struct {
 	// ReplyWithinWorkingDays is how soon a request is owed its first answer,
 	// counted in working days, Monday to Friday. Zero declares none.
 	ReplyWithinWorkingDays int
+
+	// UTCOffset is the offset of the calendar the working days are counted
+	// in: the jurisdiction's own day, not the server's. Zero is UTC.
+	UTCOffset time.Duration
 }
 
+// maxUTCOffset bounds an offset at the furthest civil time zones.
+const maxUTCOffset = 14 * time.Hour
+
 // ReplyBy is the instant a request received at received is owed its first
-// answer: n working days later, a Saturday and a Sunday not counted.
-func ReplyBy(received time.Time, n int) time.Time {
-	out := received
+// answer. That is n working days later on the calendar at offset. A Saturday
+// and a Sunday there do not count.
+func ReplyBy(received time.Time, n int, offset time.Duration) time.Time {
+	out := received.In(time.FixedZone("", int(offset.Seconds())))
 	for n > 0 {
 		out = out.AddDate(0, 0, 1)
 		if out.Weekday() != time.Saturday && out.Weekday() != time.Sunday {
 			n--
 		}
 	}
-	return out
+	return out.In(received.Location())
 }
 
 // Validate checks a whole rule set. The boot refuses a set it cannot apply,
@@ -149,6 +157,10 @@ func (r Rules) Validate() error {
 	if r.Version <= 0 {
 		return fmt.Errorf("subject-rights rules for %q carry version %d; a request records the version its deadline came from, and zero names nothing",
 			string(r.Jurisdiction), r.Version)
+	}
+	if r.UTCOffset < -maxUTCOffset || r.UTCOffset > maxUTCOffset {
+		return fmt.Errorf("subject-rights rules for %q count days at offset %s; state one within 14 hours of UTC",
+			string(r.Jurisdiction), r.UTCOffset)
 	}
 	if r.ReplyWithinWorkingDays < 0 || r.ReplyWithinWorkingDays > maxReplyWorkingDays {
 		return fmt.Errorf("subject-rights rules for %q owe a first answer in %d working days; state 0 to %d",

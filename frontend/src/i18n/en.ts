@@ -2291,6 +2291,7 @@ export const en = {
   "systemJob.brief_overnight": "Overnight summary",
   "systemJob.captured_deal_refile": "Captured conversation filing",
   "systemJob.capture": "Mail capture",
+  "systemJob.privacy_request_task": "Data request tasks",
   "systemJob.capture_auto_enrich": "Company enrichment from mail",
   "systemJob.capture_classify": "Mail sorting",
   "systemJob.capture_credential_backfill": "Mail connection update",
@@ -8016,6 +8017,8 @@ export const en = {
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":

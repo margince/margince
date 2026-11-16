@@ -220,5 +220,7 @@ func subjectRights() subjectrights.Rules {
 			subjectrights.Restriction: {Period: jurisdiction.Period{Days: 15}},
 		},
 		ReplyWithinWorkingDays: 2,
+		// Working days are Vietnamese days.
+		UTCOffset: 7 * time.Hour,
 	}
 }

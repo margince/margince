@@ -2187,10 +2187,6 @@ func (stubs) SendCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "SendCompanyEmail")
 }
 
-func (stubs) ConfirmSendWithoutLawfulBasis(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ConfirmSendWithoutLawfulBasis")
-}
-
 func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
 }
@@ -2613,6 +2609,10 @@ func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) DownloadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DownloadCorpusDocument")
+}
+
+func (stubs) ConfirmSendWithoutLawfulBasis(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmSendWithoutLawfulBasis")
 }
 
 func (stubs) ListLeadDisqualifyReasons(w nethttp.ResponseWriter, r *nethttp.Request) {
