@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
-
-// The task a data-subject request owes under a pack with deadlines of its own
-// (consent/requesttask.go), written through the activities store that owns
-// tasks. It goes to the first privacy operator, the colleagues the missed
-// receipt alarm reaches, and is filed on the subject's record.
+// Package requesttask writes the task a data-subject request owes under a pack
+// with deadlines of its own (consent/requesttask.go). It writes through the
+// activities store that owns tasks. The task goes to the first privacy
+// operator, the colleagues the missed-receipt alarm reaches, and is filed on
+// the subject's record.
+package requesttask
 
 import (
 	"context"
@@ -25,29 +25,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-const privacyRequestTaskActor = "system:privacy-request-task"
+const actor = "system:privacy-request-task"
 
-type privacyRequestTasks struct {
-	tasks *activities.Store
+// operatorObject is what a privacy operator must read: the rights cases.
+const operatorObject = "privacy_request"
+
+// Writer writes request tasks through the activities store.
+type Writer struct {
+	Tasks *activities.Store
 }
 
-var _ consent.RequestTasks = privacyRequestTasks{}
+var _ consent.RequestTasks = Writer{}
 
-func (w privacyRequestTasks) OpenRequestTaskTx(ctx context.Context, tx pgx.Tx, task consent.RequestTask) error {
-	writer := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: privacyRequestTaskActor})
-	operators, err := identity.PrivacyReviewOperatorsTx(writer, tx, receiptAlarmObject)
+// OpenRequestTaskTx writes one request's task on the caller's transaction, in
+// the installation's language.
+func (w Writer) OpenRequestTaskTx(ctx context.Context, tx pgx.Tx, task consent.RequestTask) error {
+	writer := principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: actor})
+	operators, err := identity.PrivacyReviewOperatorsTx(writer, tx, operatorObject)
 	if err != nil {
 		return err
 	}
 	var assignee *ids.UserID
-	lang := identity.BaseLanguageForRecord(writer, tx)
 	if len(operators) > 0 {
 		assignee = &operators[0]
-		if lang, err = seatLanguage(writer, tx, operators[0].UUID); err != nil {
-			return err
-		}
 	}
-	subject, body := requestTaskWords(task)
+	lang := identity.BaseLanguageForRecord(writer, tx)
+	subject, body := words(task)
 	subjectLine, err := subject.Render(lang)
 	if err != nil {
 		return err
@@ -65,16 +68,15 @@ func (w privacyRequestTasks) OpenRequestTaskTx(ctx context.Context, tx pgx.Tx, t
 		DueAt: &due, AssigneeID: assignee, Origin: activities.OriginSystemRemediation,
 		Links: []activities.ActivityLinkInput{{EntityType: task.SubjectType, EntityID: task.SubjectID}},
 	}
-	if _, _, err := w.tasks.LogActivityTx(writer, tx, in); err != nil {
-		return fmt.Errorf("compose: writing the task a data-subject request owes: %w", err)
+	if _, _, err := w.Tasks.LogActivityTx(writer, tx, in); err != nil {
+		return fmt.Errorf("requesttask: writing the task a data-subject request owes: %w", err)
 	}
 	return nil
 }
 
-// requestTaskWords names the work and its dates. The task's own due date is
-// the date to carry it out; the reply date, when the pack sets one, is in the
-// body.
-func requestTaskWords(task consent.RequestTask) (*systemtext.Component, *systemtext.Component) {
+// words names the work and its dates. The task's own due date is the date to
+// carry it out. The reply date, when the pack sets one, is in the body.
+func words(task consent.RequestTask) (*systemtext.Component, *systemtext.Component) {
 	code := "privacy.request.stop"
 	switch task.Right {
 	case consent.RequestTaskRectify:

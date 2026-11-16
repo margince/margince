@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/compose/magic"
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
+	"github.com/margince/margince/backend/internal/compose/requesttask"
 	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -410,7 +411,7 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// send it is one the privacy operators must hear about.
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).
 		// A request under a pack with deadlines of its own becomes a dated task.
-		WithRequestTasks(privacyRequestTasks{tasks: activities.NewStore(InstallationDB(pool))}).
+		WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)

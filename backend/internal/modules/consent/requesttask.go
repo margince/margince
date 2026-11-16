@@ -33,7 +33,7 @@ const (
 	RequestTaskWithdrawal  = "withdrawal"
 )
 
-// RequestTask is one request a person must carry out by a date.
+// RequestTask is one request a colleague must carry out by a date.
 type RequestTask struct {
 	SubjectType string
 	SubjectID   ids.UUID

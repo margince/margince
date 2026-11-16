@@ -7312,11 +7312,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Record that a person read the no-lawful-basis warning and chose to send anyway.
+         * Record that a user read the no-lawful-basis warning and chose to send anyway.
          * @description A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
          *     legitimate-interest basis and the record holds neither their consent nor an agreement with
          *     them. The composer and the approval card show a warning for such a recipient. This records,
-         *     in the audit log, that the signed-in person read it and chose to send. It sends nothing and
+         *     in the audit log, that the signed-in user read it and chose to send. It sends nothing and
          *     blocks nothing.
          *
          *     An address the warning no longer applies to is left out of `confirmed`: consent may have
@@ -44404,7 +44404,7 @@ export interface components {
             addresses: string[];
         };
         LawfulBasisConfirmation: {
-            /** @description The addresses whose warning was recorded as confirmed by the signed-in person. */
+            /** @description The addresses whose warning was recorded as confirmed by the signed-in user. */
             confirmed: string[];
         };
         /**
@@ -73508,7 +73508,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The addresses whose warning this person confirmed. */
+            /** @description The addresses whose warning this user confirmed. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -12,7 +12,7 @@ import { problemMessageOf, throwProblem } from "../lib/problem";
 
 // The warning before a send to a recipient whose country has no
 // legitimate-interest basis. It applies when the record holds neither their
-// consent nor an agreement with them. It does not block: the person sending
+// consent nor an agreement with them. It does not block: the sender
 // confirms it, and the server records that confirmation under their name.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -47,7 +47,7 @@ export function LawfulBasisCallout({
 }
 
 /**
- * Holds a send until the person confirms the warning for every recipient it
+ * Holds a send until the user confirms the warning for every recipient it
  * applies to. `gate(proceed)` runs `proceed` at once when nothing is missing,
  * else after the confirmation is recorded. `dialog` is drawn by the caller.
  */

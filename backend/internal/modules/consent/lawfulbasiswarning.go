@@ -8,8 +8,8 @@ package consent
 // agreement with them.
 //
 // It does not block. The preview marks the recipient, the screen shows the
-// warning, and the person who sends confirms it here first. The confirmation
-// is an audit row against the recipient's record that names that person.
+// warning, and the sender confirms it here first. The confirmation
+// is an audit row against the recipient's record that names that user.
 
 import (
 	"context"
@@ -58,7 +58,7 @@ func lawfulUseMissingFor(ctx context.Context, tx pgx.Tx, subject subjectRef) (bo
 	return basis == "", err
 }
 
-// ConfirmSendWithoutLawfulBasis records that the signed-in person read the
+// ConfirmSendWithoutLawfulBasis records that the signed-in user read the
 // warning for each address and chose to send. It answers the addresses the
 // warning still applied to; the rest need no confirmation.
 func (s *Store) ConfirmSendWithoutLawfulBasis(ctx context.Context, addresses []string) ([]string, error) {

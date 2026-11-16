@@ -53929,7 +53929,7 @@ type LatestInboundList struct {
 
 // LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
 type LawfulBasisConfirmation struct {
-	// Confirmed The addresses whose warning was recorded as confirmed by the signed-in person.
+	// Confirmed The addresses whose warning was recorded as confirmed by the signed-in user.
 	Confirmed []openapi_types.Email `json:"confirmed"`
 }
 
@@ -97499,7 +97499,7 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
-	// Record that a person read the no-lawful-basis warning and chose to send anyway.
+	// Record that a user read the no-lawful-basis warning and chose to send anyway.
 	// (POST /emails/lawful-basis-confirmations)
 	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// Would a new message with no thread behind it be allowed, and on what ground.
@@ -102437,7 +102437,7 @@ func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record that a person read the no-lawful-basis warning and chose to send anyway.
+// Record that a user read the no-lawful-basis warning and chose to send anyway.
 // (POST /emails/lawful-basis-confirmations)
 func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

@@ -58,7 +58,7 @@ var taskSourceWriters = map[string][]string{
 	"compose/decisionseam.go:Record":                                      {provenance.AnalyticsDecisionSource},
 	"compose/leadsla.go:Plan":                                             {provenance.LeadSLATaskSource},
 	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
-	"compose/privacyrequesttask.go:OpenRequestTaskTx":                     {provenance.PrivacyRequestTaskSource},
+	"compose/requesttask/requesttask.go:OpenRequestTaskTx":                {provenance.PrivacyRequestTaskSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
 	"compose/reconcile.go:followUpTaskInput":                              {provenance.OvernightReconcileSource},

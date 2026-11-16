@@ -332,10 +332,10 @@ func TestNoDecisionUnderAPackWithoutLegitimateInterestsRestsOnThem(t *testing.T)
 	}
 }
 
-// TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingPerson: confirming
-// the warning writes one audit row naming the person, and only for a
+// TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingUser: confirming
+// the warning writes one audit row naming the user, and only for a
 // recipient the warning applies to.
-func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingPerson(t *testing.T) {
+func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingUser(t *testing.T) {
 	p := registerPackPair(t)
 	e := setupResolve(t)
 	placeContact(t, e.owner, e.contact, p.recipient)
@@ -355,7 +355,7 @@ func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingPerson(t *testing.T)
 		t.Fatalf("reading the confirmation's audit row: %v", err)
 	}
 	if want := "human:" + e.user.String(); actor != want {
-		t.Errorf("the confirmation is audited under %q, want the confirming person %q", actor, want)
+		t.Errorf("the confirmation is audited under %q, want the confirming user %q", actor, want)
 	}
 
 	placeContact(t, e.owner, e.contact, p.installation)
@@ -365,6 +365,6 @@ func TestSendingDespiteTheWarningIsAuditedUnderTheConfirmingPerson(t *testing.T)
 
 	agent := principal.WithActor(e.ctx, principal.Principal{Type: principal.PrincipalAgent, ID: "agent:x"})
 	if _, err := e.store.ConfirmSendWithoutLawfulBasis(agent, []string{e.address}); err == nil {
-		t.Error("an agent confirmed the warning; only the person sending may")
+		t.Error("an agent confirmed the warning; only the sender may")
 	}
 }
