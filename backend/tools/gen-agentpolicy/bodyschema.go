@@ -193,7 +193,7 @@ func answered(node any) any {
 
 // answeredUnder walks a schema under the currency an enclosing object passes
 // down, by the rule the surface's walk follows. Only a required own currency
-// stops the inheritance: an optional one may be absent from an answer, and
+// stops the inheritance. An optional one may be absent from an answer, so
 // the schema admits every display the answer can carry.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
