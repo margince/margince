@@ -140,7 +140,9 @@ it("saves the host's own address over the latest profile", async () => {
     await screen.findByRole("radio", { name: /Your own link or address/ }),
   );
   const save = screen.getByRole("button", { name: "Save link" });
-  expect(save).toHaveProperty("disabled", true);
+  await user.click(save);
+  expect(writes).toHaveLength(0);
+  expect(screen.getByText("Enter a link or an address.")).toBeTruthy();
   await user.type(
     screen.getByRole("textbox", { name: "Link or address" }),
     "https://zoom.example/ada",
@@ -165,14 +167,14 @@ it("takes any other length from 15 minutes to 8 hours and nothing outside it", a
   for (const outside of ["10", "481"]) {
     await user.clear(minutes);
     await user.type(minutes, outside);
-    expect(save).toHaveProperty("disabled", true);
+    await user.click(save);
+    expect(writes).toHaveLength(0);
     expect(
       screen.getByText("Enter a length from 15 to 480 minutes."),
     ).toBeTruthy();
   }
   await user.clear(minutes);
   await user.type(minutes, "120");
-  expect(save).toHaveProperty("disabled", false);
   await user.click(save);
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({ duration_minutes: 120 });
@@ -324,6 +326,31 @@ it("saves the visible title, custom minutes and location with the lengths", asyn
     video_call: false,
   });
 });
+
+it.each([
+  ["Meeting name", "textbox", "", "Discovery", { title: "Discovery" }],
+  ["Length in minutes", "spinbutton", "10", "120", { duration_minutes: 120 }],
+  ["Link or address", "textbox", " ", "Room 2", { location: "Room 2" }],
+] as const)(
+  "saves the visible correction of %s after a refused save",
+  async (name, role, invalid, corrected, saved) => {
+    const user = userEvent.setup();
+    const { writes } = mount({
+      ...legacy,
+      video_call: false,
+      location: "Room 1",
+      duration_minutes: 75,
+    });
+    const field = await screen.findByRole<HTMLInputElement>(role, { name });
+    field.value = invalid;
+    await user.click(screen.getByRole("button", { name: "Save link" }));
+    expect(writes).toHaveLength(0);
+    field.value = corrected;
+    await user.click(screen.getByRole("button", { name: "Save link" }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject(saved);
+  },
+);
 
 it("keeps corrected values and clears the old length error when the server refuses the save", async () => {
   const user = userEvent.setup();

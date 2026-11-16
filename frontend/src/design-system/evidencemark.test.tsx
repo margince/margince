@@ -33,6 +33,7 @@ function show(ui: React.ReactNode) {
 
 describe("evidence mark", () => {
   it("opens the meeting a value was read from, and closes the receipt", async () => {
+    const user = userEvent.setup();
     const openOrigin = vi.fn();
     show(
       <EvidenceMark
@@ -45,8 +46,8 @@ describe("evidence mark", () => {
       />,
     );
     const trigger = screen.getByRole("button", { name: /Through resellers/ });
-    await userEvent.click(trigger);
-    await userEvent.click(
+    await user.click(trigger);
+    await user.click(
       await screen.findByRole("button", {
         name: "From a meeting on 12 Nov 2026",
       }),
@@ -56,6 +57,7 @@ describe("evidence mark", () => {
   });
 
   it("names a meeting the reader may not open as plain text", async () => {
+    const user = userEvent.setup();
     show(
       <EvidenceMark
         value="Through resellers"
@@ -65,9 +67,7 @@ describe("evidence mark", () => {
         }}
       />,
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Through resellers/ }),
-    );
+    await user.click(screen.getByRole("button", { name: /Through resellers/ }));
     await screen.findByText("From a meeting on 12 Nov 2026");
     expect(
       screen.queryByRole("button", { name: "From a meeting on 12 Nov 2026" }),
@@ -75,6 +75,7 @@ describe("evidence mark", () => {
   });
 
   it("marks a derived value and shows where it came from", async () => {
+    const user = userEvent.setup();
     show(
       <EvidenceMark
         value="Fleet retrofits without downtime"
@@ -92,7 +93,7 @@ describe("evidence mark", () => {
       name: /Fleet retrofits without downtime/,
     });
     expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    await userEvent.click(trigger);
+    await user.click(trigger);
 
     await waitFor(() => {
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
@@ -117,6 +118,7 @@ describe("evidence mark", () => {
   });
 
   it("closes on Escape and hands focus back to the value", async () => {
+    const user = userEvent.setup();
     show(
       <EvidenceMark
         value="1998"
@@ -128,10 +130,10 @@ describe("evidence mark", () => {
     );
 
     const trigger = screen.getByRole("button", { name: /1998/ });
-    await userEvent.click(trigger);
+    await user.click(trigger);
     await screen.findByRole("region");
 
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     await waitFor(() => {
       expect(screen.queryByRole("region")).toBeNull();
     });
@@ -174,13 +176,14 @@ describe("evidence mark", () => {
   });
 
   it("offers no full-history link when there is nowhere to send the reader", async () => {
+    const user = userEvent.setup();
     show(
       <EvidenceMark
         value="1998"
         source={{ provenance: { kind: "agent", agent: "capture" } }}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /1998/ }));
+    await user.click(screen.getByRole("button", { name: /1998/ }));
     // The PANEL FIRST, then the absence inside it. Asserting the link is gone
     // straight after the click passes just as well over a panel that never
     // opened, which is the one outcome this case must not read as success.
@@ -189,6 +192,7 @@ describe("evidence mark", () => {
   });
 
   it("hands the reader through to the full history when one exists", async () => {
+    const user = userEvent.setup();
     let opened = false;
     show(
       <EvidenceMark
@@ -200,8 +204,8 @@ describe("evidence mark", () => {
       />,
     );
     const trigger = screen.getByRole("button", { name: /1998/ });
-    await userEvent.click(trigger);
-    await userEvent.click(screen.getByText("Full history"));
+    await user.click(trigger);
+    await user.click(screen.getByText("Full history"));
 
     expect(opened).toBe(true);
     // The panel closes on the way out, so the reader does not return to a
@@ -212,6 +216,7 @@ describe("evidence mark", () => {
   });
 
   it("moves focus into the panel's own control when a press opened it", async () => {
+    const user = userEvent.setup();
     show(
       <EvidenceMark
         value="1998"
@@ -219,7 +224,7 @@ describe("evidence mark", () => {
         onOpenHistory={() => {}}
       />,
     );
-    await userEvent.click(screen.getByRole("button", { name: /1998/ }));
+    await user.click(screen.getByRole("button", { name: /1998/ }));
     // Portalled to the body, the panel is no longer the trigger's next DOM
     // sibling, so a reader tabbing forward would otherwise land somewhere
     // else on the page entirely rather than on the one control the panel
@@ -255,6 +260,7 @@ describe("evidence mark", () => {
   });
 
   it("keeps one panel open at a time, whatever opened it", async () => {
+    const user = userEvent.setup();
     show(
       <>
         <EvidenceMark
@@ -269,12 +275,12 @@ describe("evidence mark", () => {
     );
 
     // Keyboard only: pointer dismissal is not what should be enforcing this.
-    await userEvent.tab();
-    await userEvent.keyboard("{Enter}");
+    await user.tab();
+    await user.keyboard("{Enter}");
     expect(screen.getAllByRole("region")).toHaveLength(1);
 
-    await userEvent.tab();
-    await userEvent.keyboard("{Enter}");
+    await user.tab();
+    await user.keyboard("{Enter}");
     const open = screen.getAllByRole("region");
     expect(open).toHaveLength(1);
     expect(open[0].getAttribute("aria-label")).toContain("Stuttgart");

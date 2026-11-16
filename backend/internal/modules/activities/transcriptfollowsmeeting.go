@@ -98,41 +98,53 @@ func followRecordedMeetingTx(ctx context.Context, tx pgx.Tx, meeting ids.Activit
 	return nil
 }
 
-// FollowDriftedTranscriptsTx gives up to limit transcripts whose meeting's
-// readers changed the readers they now have. It catches every writer of a
-// meeting's guests, including those outside this module. It returns how many
-// it changed.
-func FollowDriftedTranscriptsTx(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
+// DriftedPage is what one page of FollowDriftedTranscriptsTx did.
+type DriftedPage struct {
+	Changed int
+	// Next is the cursor of the following page, zero after the last page.
+	// Each page starts past the one before, so a pair that stays drifted
+	// cannot hold a sweep on one page.
+	Next ids.ActivityID
+}
+
+// FollowDriftedTranscriptsTx gives up to limit transcripts after the cursor
+// whose meeting's readers changed the readers they now have. It catches every
+// writer of a meeting's guests, including those outside this module.
+func FollowDriftedTranscriptsTx(ctx context.Context, tx pgx.Tx, after ids.ActivityID, limit int) (DriftedPage, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return 0, err
+		return DriftedPage{}, err
 	}
 	rows, err := tx.Query(ctx, `SELECT t.id, m.id FROM activity t JOIN activity m ON m.id = t.source_activity_id
-		 WHERE `+recordingTranscriptSQL+` AND `+transcriptReadersDriftSQL+` ORDER BY t.id LIMIT $1`, limit)
+		 WHERE t.id > $2 AND `+recordingTranscriptSQL+` AND `+transcriptReadersDriftSQL+` ORDER BY t.id LIMIT $1`,
+		limit, after)
 	if err != nil {
-		return 0, fmt.Errorf("activities: finding the transcripts whose meeting's readers changed: %w", err)
+		return DriftedPage{}, fmt.Errorf("activities: finding the transcripts whose meeting's readers changed: %w", err)
 	}
 	drifted, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (recordedPair, error) {
 		var p recordedPair
 		return p, row.Scan(&p.transcript, &p.meeting)
 	})
 	if err != nil {
-		return 0, fmt.Errorf("activities: finding the transcripts whose meeting's readers changed: %w", err)
+		return DriftedPage{}, fmt.Errorf("activities: finding the transcripts whose meeting's readers changed: %w", err)
 	}
-	changed := 0
+	var page DriftedPage
+	if len(drifted) == limit {
+		page.Next = drifted[len(drifted)-1].transcript
+	}
 	for _, p := range drifted {
 		locked, err := lockRecordedPairTx(ctx, tx, p)
 		if err != nil {
-			return 0, err
+			return DriftedPage{}, err
 		}
 		if !locked {
 			continue
 		}
 		if err := followMeetingReadersTx(ctx, tx, p.transcript, p.meeting); err != nil {
-			return 0, err
+			return DriftedPage{}, err
 		}
-		changed++
+		page.Changed++
 	}
-	return changed, nil
+	return page, nil
 }
 
 // recordedPair is a transcript and the meeting it records.

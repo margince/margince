@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"maps"
@@ -293,6 +294,32 @@ func TestAMeetingValueGoesOnceItsTranscriptIsNarrowedOrRedacted(t *testing.T) {
 		if got, ok := m.field(t, company, "sales_motion"); ok {
 			t.Errorf("after %q the field still says %q for a transcript its readers lost", change, got.Value)
 		}
+	}
+}
+
+// One sweep removes every value a narrowed transcript filled, even past what
+// one transaction takes.
+func TestOneSweepRemovesMoreMeetingValuesThanOneBatch(t *testing.T) {
+	m := newMeeting(t, "workspace")
+	entries := make([]saidBy, meetingprofile.SweepBatch+1)
+	for i := range entries {
+		company := m.e.SeedCompany(t, fmt.Sprintf("Brandt IT %d", i), &m.e.Rep1)
+		entries[i] = saidBy{m.employee(t, company, fmt.Sprintf("Dana Brandt %d", i)), "sales_motion", distributors}
+	}
+	m.read(t, entries...)
+	filled := `SELECT count(*) FROM company_profile_field WHERE source = 'meeting' AND source_activity_id = $1`
+	if got := m.e.WsCount(t, filled, m.transcript); got != len(entries) {
+		t.Fatalf("the reading filled %d values, want %d", got, len(entries))
+	}
+	if _, err := integration.OwnerConn(t).Exec(context.Background(),
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`, m.transcript.UUID); err != nil {
+		t.Fatal(err)
+	}
+	if err := (meetingprofile.Sweep{Pool: m.e.Pool}).Workspace(context.Background(), m.e.WS); err != nil {
+		t.Fatalf("sweeping: %v", err)
+	}
+	if got := m.e.WsCount(t, filled, m.transcript); got != 0 {
+		t.Fatalf("one sweep left %d values a narrowed transcript filled", got)
 	}
 }
 
