@@ -665,7 +665,7 @@ So two different unit names can never give one start: `foo-1` and `foo1` would
 otherwise both claim `extFoo1.`. The `composition` tool merges them into the one catalog, so `useT()` finds your
 keys and the core's in the same way. Give **every** language the installation ships (`en`, `de`, `vi`),
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
-refused too: your own copy never writes over core text. To change core wording, use an override, below.
+refused too: your own copy never writes over core text. To change core wording, use an override, below. The steps alone are in [override-core-wording-from-an-extension.md](override-core-wording-from-an-extension.md).
 
 ## Override core wording
 
