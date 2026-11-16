@@ -2118,7 +2118,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.unavailable": "Không thể tải lịch.",
   "brief.schedule.more": "Tải thêm mục lịch trình để xem các cuộc họp còn lại.",
   "brief.schedule.notConnected":
-    "Chưa kết nối lịch nên không thể hiển thị các cuộc họp hôm nay.",
+    "Chưa kết nối lịch. Đang hiển thị các cuộc họp được đặt, ghi lại hoặc nhập vào Margince.",
   "brief.schedule.unreadable":
     "Lịch hiện không đồng bộ nên không thể hiển thị các cuộc họp hôm nay.",
   "brief.schedule.connect": "Kết nối lịch",
@@ -6917,8 +6917,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.needsPrep_other": "{count} cần chuẩn bị",
   "brief.readings.prepUnknown": "Chưa kiểm tra khâu chuẩn bị",
   "brief.readings.prepared": "Đã chuẩn bị đủ",
-  "brief.readings.calendarNotConnected": "Chưa kết nối",
-  "brief.readings.calendarNotConnectedWhy": "Kết nối lịch để đếm cuộc họp.",
+  "brief.readings.calendarNotConnectedWhy":
+    "Kết nối lịch để đếm cả các cuộc họp trong lịch.",
   "brief.readings.calendarUnreadable": "Không đồng bộ",
   "brief.readings.calendarUnreadableWhy": "Kết nối lại lịch để đếm cuộc họp.",
   "brief.readings.nextMeeting": "Cuộc họp tiếp theo: {date} · {subject}",

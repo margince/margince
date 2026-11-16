@@ -102,6 +102,12 @@ export function SchedulePanel({
       >
         {answered(state) && day && (
           <>
+            {withoutCalendar(day) && (
+              <CalendarRow
+                sentence={t("brief.schedule.notConnected")}
+                verb={t("brief.schedule.connect")}
+              />
+            )}
             {meetings.map((item) => (
               <MeetingRow
                 key={item.id}
@@ -122,6 +128,16 @@ export function SchedulePanel({
         )}
       </SurfaceState>
     </Panel>
+  );
+}
+
+/**
+ * Whether the reader has no calendar. Every meeting the panel shows is then
+ * one booked, logged or imported in Margince, and the panel says so.
+ */
+function withoutCalendar(day: Worklist): boolean {
+  return (
+    day.calendar === "not_connected" && calendarDay(day).state !== "unread"
   );
 }
 
@@ -219,21 +235,11 @@ function NoMeetingRows({
       return (
         <NextMeetingRow next={calendar.next} onOpenMeeting={onOpenMeeting} />
       );
+    // The panel's head already says where these meetings come from.
     case "not_connected":
-      return (
-        <>
-          <CalendarRow
-            sentence={t("brief.schedule.notConnected")}
-            verb={t("brief.schedule.connect")}
-          />
-          {calendar.next && (
-            <NextMeetingRow
-              next={calendar.next}
-              onOpenMeeting={onOpenMeeting}
-            />
-          )}
-        </>
-      );
+      return calendar.next ? (
+        <NextMeetingRow next={calendar.next} onOpenMeeting={onOpenMeeting} />
+      ) : null;
     case "unreadable":
       return (
         <>
