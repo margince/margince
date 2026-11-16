@@ -226,7 +226,12 @@ jobs:
       # definition instead of hand-mirrored GH service containers; the lane's
       # database admin goes through cmd/migrate's db verbs on the test DSN
       # (scripts/lib-testdb.sh db_admin), so no host psql is assumed.
+      # The runner is thrown away after the job, so the cluster keeps its data
+      # in RAM and skips the disk syncs that make each clone slow.
       - name: Start the dev infra stack (compose + app role)
+        env:
+          PG_DURABLE: "off"
+          PG_DATA_VOLUME: pgdata-ram
         run: make db-up
       # Needs the checkout and not the binaries, so it runs while they build.
       # The shard step checks it again (INTEGRATION_TEMPLATE_READY).

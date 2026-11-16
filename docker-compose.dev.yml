@@ -163,6 +163,15 @@ services:
       - max_locks_per_transaction=512
       - -c
       - max_connections=408
+      # PG_DURABLE=off is for a throwaway test cluster only: a crash can then
+      # corrupt the data. Together with PG_DATA_VOLUME=pgdata-ram it makes a
+      # template copy about ten times faster (docs/explanation/ci-pipeline.md).
+      - -c
+      - fsync=${PG_DURABLE:-on}
+      - -c
+      - synchronous_commit=${PG_DURABLE:-on}
+      - -c
+      - full_page_writes=${PG_DURABLE:-on}
     environment:
       POSTGRES_USER: margince_owner
       POSTGRES_PASSWORD: dev
@@ -170,7 +179,7 @@ services:
     ports:
       - "15432:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - ${PG_DATA_VOLUME:-pgdata}:/var/lib/postgresql/data
     healthcheck:
       # Probe over TCP, never the unix socket: on first boot the entrypoint's
       # temporary bootstrap server (initdb + init scripts) serves ONLY the
@@ -247,4 +256,9 @@ services:
 
 volumes:
   pgdata: {}
+  # Held in RAM and lost when the container stops.
+  pgdata-ram:
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
   minio-data: {}

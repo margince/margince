@@ -271,9 +271,8 @@ pass, one level down.
 **`defaults.run.working-directory` is not passed on** into a called workflow. Each lane states it again;
 without that, every step would run from the repository root.
 
-Check names inside a lane are reported as `<caller-job> / <lane-job>`, for example
-`integration / integration shard (3/8)`. No check inside a lane is required, so no ruleset depends on those
-names.
+Check names inside a lane read `<caller-job> / <lane-job>`, for example `integration / integration shard (3/8)`.
+No check inside a lane is required, so no ruleset depends on those names.
 
 The pipeline stays **one caller**, and does not split into `pr.yml` and `merge-queue.yml`. The `ci`
 aggregate is the single required build check. Two callers would mean two copies of it that must stay the same
@@ -295,6 +294,7 @@ the longest lane in the pipeline. Running the two slowest jobs one after the oth
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
 - The lane is **sharded** per test over 8 runners: per package, `compose/integration` sets the floor.
+- The shards' Postgres keeps its data in RAM and skips disk syncs (`PG_DURABLE=off`): a template copy takes ~30 ms.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`
