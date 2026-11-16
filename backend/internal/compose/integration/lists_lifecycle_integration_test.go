@@ -111,4 +111,54 @@ func TestALiveListExplainsEachBranchAndKeepsEachFilterInItsHistory(t *testing.T)
 	if withFilter != 2 {
 		t.Errorf("%d history entries carry a filter, want the first and the changed one", withFilter)
 	}
+	refiltered := history.Data[0]
+	if !sameChanges(refiltered["changes"], "filter") || refiltered["previous_definition"] == nil {
+		t.Errorf("the refiltered revision = %v, want the filter named as changed beside the one before", refiltered)
+	}
+}
+
+func TestAListsHistoryNamesTheRecordAndWhatEachRevisionChanged(t *testing.T) {
+	e, _ := listsApp(t, true)
+	var chosen AnyMap
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "History Gamma"}, http.StatusCreated, &chosen)
+	var list listWire
+	mustCall(t, e, "POST", "/v1/lists", AnyMap{"name": "Picked", "entity_type": "contact"}, http.StatusCreated, &list)
+	mustCall(t, e, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
+		"entity_type": "contact", "entity_id": chosen["id"],
+	}, http.StatusCreated, nil)
+	mustCall(t, e, "PATCH", "/v1/lists/"+list.ID, AnyMap{
+		"version": list.Version, "name": "Picked again", "sharing": "workspace",
+	}, http.StatusOK, nil)
+
+	var history pageWire
+	mustCall(t, e, "GET", "/v1/lists/"+list.ID+"/history", nil, http.StatusOK, &history)
+	if len(history.Data) != 3 {
+		t.Fatalf("history = %v, want the revision, the member and the list made", history.Data)
+	}
+	revised, added, made := history.Data[0], history.Data[1], history.Data[2]
+	if !sameChanges(revised["changes"], "name", "sharing") || revised["previous_name"] != "Picked" {
+		t.Errorf("the revision = %v, want name and sharing changed from Picked", revised)
+	}
+	if added["kind"] != "member_added" || added["entity_name"] != "History Gamma" {
+		t.Errorf("the member row = %v, want History Gamma named", added)
+	}
+	if _, said := made["changes"]; said || made["version"] != float64(1) {
+		t.Errorf("the first revision = %v, want version 1 with no earlier version to compare", made)
+	}
+}
+
+// sameChanges reports whether a history entry's changes are want, in order.
+//
+//craft:ignore naked-any the entry is decoded JSON, whose arrays arrive untyped
+func sameChanges(got any, want ...string) bool {
+	list, ok := got.([]any)
+	if !ok || len(list) != len(want) {
+		return false
+	}
+	for i, change := range list {
+		if change != want[i] {
+			return false
+		}
+	}
+	return true
 }

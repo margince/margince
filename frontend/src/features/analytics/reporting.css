@@ -252,7 +252,6 @@
   display: grid;
   gap: var(--space-3);
 }
-.reporting-library-body > .segmented,
 .reporting-library-body > .btn {
   justify-self: start;
 }

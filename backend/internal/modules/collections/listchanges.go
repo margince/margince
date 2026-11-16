@@ -71,7 +71,7 @@ func (s *Store) changesSinceVisit(ctx context.Context, l listRow) (changeSummary
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM list_revision r
 			JOIN list_revision p ON p.list_id = r.list_id AND p.version = r.version - 1
-			WHERE r.list_id = @list_id AND r.changed_at > @since AND r.definition IS DISTINCT FROM p.definition`,
+			WHERE r.list_id = @list_id AND r.changed_at > @since AND `+filterChangedSQL,
 			pgx.StrictNamedArgs{listIDField: l.ID, "since": *since}).Scan(&out.FilterChanges)
 	})
 	return out, found, err
@@ -97,10 +97,10 @@ func movedSince(ctx context.Context, tx pgx.Tx, l listRow, since time.Time, out 
 			       row_number() OVER (PARTITION BY m.action ORDER BY m.at DESC, m.entity_id) AS n
 			FROM moved m)
 		SELECT r.action, r.total, r.entity_id, %[6]s
-		FROM ranked r LEFT JOIN %[7]s t ON t.id = r.entity_id
+		FROM ranked r %[7]s
 		WHERE r.n <= $%[8]d ORDER BY r.action, r.n`,
 		arg(l.ID), arg(since), arg(memberEntered), arg(memberLeft), visible,
-		recordNameExpr(l.EntityType), pgx.Identifier{l.EntityType}.Sanitize(), arg(changeSummaryNamed))
+		recordNameExpr(l.EntityType), recordNameJoin(l.EntityType, "r.entity_id"), arg(changeSummaryNamed))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return err
@@ -131,4 +131,14 @@ func recordNameExpr(entityType string) string {
 		return field.Expr
 	}
 	return "NULL::text"
+}
+
+// recordNameJoin brings the record idColumn names in as alias t, for
+// recordNameExpr to read. A type with no name field joins nothing, so no
+// statement names a table that type may not have.
+func recordNameJoin(entityType, idColumn string) string {
+	if _, ok := standardFields[entityType][nameFilterField]; !ok {
+		return ""
+	}
+	return fmt.Sprintf("LEFT JOIN %s t ON t.id = %s", pgx.Identifier{entityType}.Sanitize(), idColumn)
 }

@@ -130,10 +130,10 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
 		  (contact_id, lead_id, address, kind, source, decided_by_level,
-		   captured_by, carried_from, purpose_id, recorded_through, recorded_for_addresses, recorded_at)
+		   captured_by, carried_from, purpose_id, recorded_through, recorded_for_addresses, recorded_at, received_at, kept_until)
 		SELECT @to_contact, @to_lead, address, kind,
 		       CASE WHEN starts_with(source, @carried_mark) THEN source ELSE @carried_mark || source END,
-		       decided_by_level, @by, id, purpose_id, recorded_through, recorded_for_addresses, @recorded_at
+		       decided_by_level, @by, id, purpose_id, recorded_through, recorded_for_addresses, @recorded_at, received_at, kept_until
 		  FROM (`+stopCarryCandidates+`) candidates
 		RETURNING kind, decided_by_level`, carriedStopArgs(from, to, by, recordedAt))
 	if err != nil {
@@ -155,6 +155,9 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return fmt.Errorf("consent: carrying the subject's stops onto the surviving record: %w", err)
+	}
+	if err := raiseCarriedFloorsTx(ctx, tx, from, to); err != nil {
+		return err
 	}
 	if len(moved) == 0 {
 		// Nothing to carry is the ordinary case — most contacts have no stop —
@@ -206,6 +209,33 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 			suppressionRecordedPayload(c.kind, commsauthz.AuthorityLevel(c.level))); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// raiseCarriedFloorsTx lifts each live survivor stop's retention floor to the
+// latest floor of the retiring subject's live stops of its kind and purpose.
+// The carry skips a source stop the survivor already matches, whose floor
+// would otherwise end with the retiring record.
+func raiseCarriedFloorsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject) error {
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, subjectKey(from), subjectKey(to)); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE communication_suppression held SET kept_until = source.kept_until
+		  FROM (SELECT live.kind, live.purpose_id, max(live.kept_until) AS kept_until
+		          FROM communication_suppression live
+		         WHERE ((@from_contact::uuid IS NOT NULL AND live.contact_id = @from_contact)
+		            OR (@from_lead::uuid IS NOT NULL AND live.lead_id = @from_lead))
+		           AND live.revoked_at IS NULL AND live.kept_until IS NOT NULL
+		         GROUP BY live.kind, live.purpose_id) source
+		 WHERE ((@to_contact::uuid IS NOT NULL AND held.contact_id = @to_contact)
+		     OR (@to_lead::uuid IS NOT NULL AND held.lead_id = @to_lead))
+		   AND held.revoked_at IS NULL
+		   AND held.kind = source.kind AND held.purpose_id IS NOT DISTINCT FROM source.purpose_id
+		   AND (held.kept_until IS NULL OR held.kept_until < source.kept_until)`,
+		carryAuthorityArgs(from, to, "")); err != nil {
+		return fmt.Errorf("consent: keeping the carried refusals' retention floor on the surviving record: %w", err)
 	}
 	return nil
 }

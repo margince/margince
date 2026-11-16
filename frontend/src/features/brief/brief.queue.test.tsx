@@ -376,7 +376,7 @@ it("opens a follow-up on the conversation it waits on", async () => {
   );
   const details = await screen.findByRole("dialog");
   expect(
-    within(details).getByText(en["worklist.pane.conversation"]),
+    await within(details).findByText(en["worklist.pane.conversation"]),
   ).toBeTruthy();
   expect(
     await within(details).findByText("Attached is the quote for both phases."),

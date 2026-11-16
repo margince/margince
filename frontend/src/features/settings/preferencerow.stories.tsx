@@ -58,27 +58,39 @@ const meta: Meta<typeof PreferenceRow> = {
 export default meta;
 type Story = StoryObj<typeof PreferenceRow>;
 
+const lockedAndOpen = [
+  {
+    purpose: purpose({
+      key: "transactional",
+      label: "Deal & service messages",
+      locked: true,
+      choice: "no_objection",
+      can_opt_in: false,
+    }),
+    on: true,
+  },
+  { purpose: purpose({}), on: true },
+];
+
 /** A locked transactional lane above an ordinary one. */
 export const LockedAndOpen: Story = {
   render: () => (
     <StoryProviders>
-      <Rows
-        rows={[
-          {
-            purpose: purpose({
-              key: "transactional",
-              label: "Deal & service messages",
-              locked: true,
-              choice: "no_objection",
-              can_opt_in: false,
-            }),
-            on: true,
-          },
-          { purpose: purpose({}), on: true },
-        ]}
-      />
+      <Rows rows={lockedAndOpen} />
     </StoryProviders>
   ),
+};
+
+/** The locked lane on a phone in German, where the name wraps beside a whole
+ * "Immer an" badge. */
+export const LockedAndOpenPhoneGerman: Story = {
+  render: () => (
+    <StoryProviders locale="de">
+      <Rows rows={lockedAndOpen} />
+    </StoryProviders>
+  ),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 /** Switched off, and a grant needs the confirmation link to count. */

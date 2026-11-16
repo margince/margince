@@ -140,6 +140,7 @@ const (
 type owedResult struct {
 	ID         string            `json:"id"`
 	Verdict    string            `json:"verdict"` // owedVerdictKey
+	Ask        string            `json:"ask"`     // owedverdict.AskKey
 	Confidence schema.Confidence `json:"confidence"`
 }
 
@@ -262,7 +263,8 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 	}
 	judged, err := c.predictBatch(ctx, worded, calls, owedPredictionSink{
 		accept: func(ctx context.Context, msg owedCandidate, result owedResult) (bool, error) {
-			return c.store.SetOwedVerdict(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt)
+			ask := owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body)
+			return c.store.SetOwedVerdictAsked(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt, ask)
 		},
 		decline: func(ctx context.Context, msg owedCandidate, cause error) error {
 			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
@@ -366,8 +368,8 @@ func (c *OwedClassifier) predictEach(ctx context.Context, msgs []owedCandidate, 
 // so no message can close its own span and reach the text of another sender's
 // mail to have it judged.
 //
-//promptlang:exempt the reply is a closed set of verdict enum values keyed by id, never a sentence — validateOwedPayload refuses anything outside owedSchema's vocabulary, so a language instruction could only turn an enum into a parse failure.
-//promptvoice:exempt the reply is a closed set of verdict enum values keyed by id, never a sentence.
+//promptlang:exempt the reply is a closed set of verdict enum values keyed by id, plus an ask copied verbatim from the mail; owedverdict.VerbatimAsk drops any ask that is not a span of it, so a language instruction could only make a quote stop matching.
+//promptvoice:exempt the reply is verdict enum values and a verbatim span of the sender's mail, never a sentence the model writes.
 func owedRequest(batch []owedCandidate) model.Request {
 	fence := promptfence.New()
 	return model.Request{
@@ -450,9 +452,10 @@ func owedSchema(requested []string) json.RawMessage {
 				map[string]schema.Node{
 					"id":                    requestedIDNode(requested),
 					owedVerdictKey:          schema.Enum(activities.OwedVerdictAsksUs, activities.OwedVerdictInformsUs),
+					owedverdict.AskKey:      schema.String(),
 					extractionConfidenceKey: schema.Number(),
 				},
-				"id", owedVerdictKey, extractionConfidenceKey)),
+				"id", owedVerdictKey, owedverdict.AskKey, extractionConfidenceKey)),
 		},
 		owedResultsKey))
 }

@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 672,
-    "tokens": 51129,
+    "tokens": 51169,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1064
+    "mean_tool_tokens": 1065
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4397
+      "tokens": 4437
     },
     {
       "name": "change_settings",

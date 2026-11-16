@@ -441,17 +441,20 @@ export const advanceDeal: Handler = (
   if (advance.status === "won" && !advance.won_without_contract_reason) {
     return json(winEvidenceRequired, 422);
   }
+  const wasWon = (dealPatches[target.id]?.status ?? target.status) === "won";
   dealPatches[target.id] = {
     ...dealPatches[target.id],
-    stage_id: "s4",
-    status: "won",
+    stage_id: advance.to_stage_id,
+    status: advance.status ?? "open",
     won_without_contract_reason: advance.won_without_contract_reason ?? null,
     version: current + 1,
   };
-  // The win starts the delivery it was sold for, in the same write.
-  projectState.startDelivery(
-    dealPatches[target.id]?.project_id ?? target.project_id,
-  );
+  // Only the move into won starts the delivery it was sold for.
+  if (advance.status === "won" && !wasWon) {
+    projectState.startDelivery(
+      dealPatches[target.id]?.project_id ?? target.project_id,
+    );
+  }
   return json({ ...target, ...dealPatches[target.id] });
 };
 

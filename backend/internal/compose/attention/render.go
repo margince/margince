@@ -334,6 +334,7 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Id:             task.ID.String(),
 		Source:         crmcontracts.AttentionItemSource("task"),
 		Title:          &subject,
+		Why:            task.Why,
 		SystemDisplay:  task.SystemDisplay,
 		WebsiteInquiry: task.Inquiry,
 		Subject:        subjectOf(task.LinkType, task.LinkID), MayBeDone: task.MayBeDone,

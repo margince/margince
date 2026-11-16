@@ -101,6 +101,7 @@ func base(
 		WebsiteInquiry:    item.WebsiteInquiry,
 		SummaryParts:      item.SummaryParts,
 		Detail:            item.Detail,
+		Why:               item.Why,
 		NoticeOrigin:      item.NoticeOrigin,
 		PromiseRecipients: item.PromiseRecipients,
 		MayBeDone:         item.MayBeDone,

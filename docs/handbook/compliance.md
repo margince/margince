@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -91,6 +91,7 @@ passing around inside the company; the German versions are the ones to sign.
 | What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
+| Can we show an authority a contact's opt-out history? | On the contact's **Research** tab, **Download opt-out records** in the consent panel: every consent given or withdrawn, every stop with when the refusal arrived and when sending stopped, and every opt-out receipt. Under Vietnamese law no retention rule removes them within a year |
 | Can a manager see each colleague's sales figures? | Not in reports and forecasts while **Show individual performance** is off. Each member sees their own figures. The compliance answer above lists what the switch does not cover |
 
 Margince cannot tell you whether your own way of working is within the law: the
@@ -107,6 +108,8 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 - the sales-mail rules for recipients under that law.
 
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
+
+Under Vietnamese law, a contact who refuses marketing email gets a receipt at once. It states when the refusal reached you and when sending stopped, in the contact's local time, and carries no "Powered by Margince" line. A refusal can come by phone or mail. Then tell your agent when it reached you. The receipt prints that time, not the time it was recorded. A receipt not sent within an hour shows in **Settings → System health** under **Opt-out receipts**.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
 

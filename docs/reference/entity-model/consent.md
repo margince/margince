@@ -279,7 +279,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_suppression
 
-16 columns · primary key `(id)` · referenced by 1 foreign key
+18 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -290,9 +290,11 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `carried_from` | `uuid` |  | Points at `communication_suppression.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `decided_by_level` | `text` | yes | One of `machine`, `user`, `admin`, `subject`. |
+| `kept_until` | `timestamp with time zone` |  |  |
 | `kind` | `text` | yes | One of `marketing_objection`, `processing_restriction`, `hard_bounce`, `subject_request`. |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `purpose_id` | `uuid` |  | Points at `consent_purpose.id`. |
+| `received_at` | `timestamp with time zone` |  |  |
 | `recorded_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `recorded_for_addresses` | `text[]` |  |  |
 | `recorded_through` | `text`, default `'unknown'::text` | yes | One of `colleague`, `agent`, `subject`, `machine`, `unknown`. |
@@ -423,7 +425,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_event
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -435,6 +437,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `double_opt_in_confirmed_at` | `timestamp with time zone` |  |  |
 | `issuance_trigger` | `text` |  |  |
+| `kept_until` | `timestamp with time zone` |  |  |
 | `lawful_basis` | `text` |  |  |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `new_state` | `text` | yes | Proof rows record only transitions to granted/withdrawn (never to unknown). |

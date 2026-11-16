@@ -132,6 +132,28 @@ var admitted = map[string]admittedAction{
 	},
 }
 
+// activityKindSentences name a created or archived activity by its kind, so a
+// line says "Saved an email" where it can. A kind missing here keeps the
+// action's own sentence.
+var activityKindSentences = map[string]map[string]string{
+	actionCreate: {
+		"email":   "magic.action.create_activity_email",
+		"meeting": "magic.action.create_activity_meeting",
+		"call":    "magic.action.create_activity_call",
+		"note":    "magic.action.create_activity_note",
+		"task":    "magic.action.create_activity_task",
+		"message": "magic.action.create_activity_message",
+	},
+	actionArchive: {
+		"email":   "magic.action.archive_activity_email",
+		"meeting": "magic.action.archive_activity_meeting",
+		"call":    "magic.action.archive_activity_call",
+		"note":    "magic.action.archive_activity_note",
+		"task":    "magic.action.archive_activity_task",
+		"message": "magic.action.archive_activity_message",
+	},
+}
+
 // sentenceFor answers the sentence for one action on one kind of record, and
 // whether there is one.
 func (a admittedAction) sentenceFor(entityType string) (string, bool) {

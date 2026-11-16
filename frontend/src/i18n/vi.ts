@@ -2118,7 +2118,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.unavailable": "Không thể tải lịch.",
   "brief.schedule.more": "Tải thêm mục lịch trình để xem các cuộc họp còn lại.",
   "brief.schedule.notConnected":
-    "Chưa kết nối lịch nên không thể hiển thị các cuộc họp hôm nay.",
+    "Chưa kết nối lịch. Đang hiển thị các cuộc họp được đặt, ghi lại hoặc nhập vào Margince.",
   "brief.schedule.unreadable":
     "Lịch hiện không đồng bộ nên không thể hiển thị các cuộc họp hôm nay.",
   "brief.schedule.connect": "Kết nối lịch",
@@ -2961,6 +2961,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.card.summary": "Tóm tắt deal: {name}",
   "deal.card.email": "Viết email: {name}",
   "deal.card.addTask": "Thêm việc cần làm: {name}",
+  "deal.card.summaryItem": "Tóm tắt deal",
+  "deal.card.moveTo": "Chuyển sang {stage}",
+  "deal.card.markWon": "Đánh dấu thắng",
+  "deal.card.markLost": "Đánh dấu thua",
+  "deal.card.closedReopen":
+    "Deal này đã đóng. Mở lại deal trên trang của deal để chuyển giai đoạn.",
+  "deal.card.copyLink": "Sao chép liên kết",
+  "deal.card.linkCopied": "Đã sao chép liên kết",
+  "deal.card.copyFailed":
+    "Không thể sao chép liên kết. Mở deal và sao chép địa chỉ từ thanh địa chỉ của trình duyệt.",
   "deal.mail.sent": "Đã gửi {ago}",
   "deal.mail.received": "Đã nhận {ago}",
   "deal.mail.sentOn": "Đã gửi ngày {date}",
@@ -3549,6 +3559,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.stopLiftBody": "Thư bị lệnh này giữ lại có thể được gửi lại.",
   "consent.stopReason": "Lý do (lưu trong lịch sử hồ sơ)",
   "consent.manage": "Quản lý sự đồng ý và lịch sử bằng chứng",
+  "consent.optOutRecords": "Tải xuống hồ sơ từ chối nhận quảng cáo",
   "contact.consent": "Sự đồng ý",
   "consent.grant": "Ghi nhận sự đồng ý",
   "consent.operatorWording":
@@ -6339,7 +6350,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.archivedReadOnly":
     "Deal này đang trong kho lưu trữ nên không thể thay đổi.",
   "deal.notYoursToChange":
-    "Bạn không có quyền thay đổi deal này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
+    "Bạn có thể ghi nhận hoạt động và thêm việc cần làm. Để thay đổi deal này, người chịu trách nhiệm cần chia sẻ deal với bạn.",
   "deal.closedTakesNoStage":
     "Deal này đã đóng. Mở lại deal để chuyển sang giai đoạn khác.",
   "deal.reopen": "Mở lại",
@@ -6917,8 +6928,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.needsPrep_other": "{count} cần chuẩn bị",
   "brief.readings.prepUnknown": "Chưa kiểm tra khâu chuẩn bị",
   "brief.readings.prepared": "Đã chuẩn bị đủ",
-  "brief.readings.calendarNotConnected": "Chưa kết nối",
-  "brief.readings.calendarNotConnectedWhy": "Kết nối lịch để đếm cuộc họp.",
+  "brief.readings.calendarNotConnectedWhy":
+    "Kết nối lịch để đếm cả các cuộc họp trong lịch.",
   "brief.readings.calendarUnreadable": "Không đồng bộ",
   "brief.readings.calendarUnreadableWhy": "Kết nối lại lịch để đếm cuộc họp.",
   "brief.readings.nextMeeting": "Cuộc họp tiếp theo: {date} · {subject}",
@@ -17671,13 +17682,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.redirectsTo": "Margince sẽ gửi kết quả ủy quyền về {host}.",
   "consent.redirectsToLoopback":
     "Đó là một địa chỉ trên máy tính này, và kết nối này không thể chứng minh chương trình nào đang lắng nghe ở đó.",
-  "consent.scopeNote.read": "xem những gì bạn xem được",
-  "consent.scopeNote.draft": "soạn tin nhắn để bạn xem lại",
+  "consent.scopeNote.read": "Xem những gì bạn xem được",
+  "consent.scopeNote.draft": "Soạn tin nhắn để bạn xem lại",
   "consent.scopeNote.write":
-    "tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
+    "Tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
-    "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
-  "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
+    "Gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
+  "consent.scopeNote.enrich": "Chạy việc AI và mua dữ liệu liên hệ",
+  "consent.scopesLegend": "Được làm những gì",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",
   "consent.preset.label": "Quyền của trợ lý",
@@ -18890,6 +18902,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.saveFilterConflict":
     "Ai đó đã sửa danh sách này sau khi bạn mở. Mở lại danh sách để xem thay đổi đó, rồi sửa bộ lọc.",
   "lists.history.someone": "Ai \u0111\u00f3",
+  "lists.history.created": "Đã tạo danh sách",
+  "lists.history.renamed": "Đã đổi tên từ {before} thành {after}",
+  "lists.history.repurposed": "Đã đổi mục đích",
+  "lists.history.reshared": "Đã đổi phạm vi chia sẻ",
+  "lists.history.handedOver": "Đã giao lại việc phụ trách",
+  "lists.history.refiltered": "Đã đổi bộ lọc",
+  "lists.history.filterBefore": "Trước: {sentence}",
+  "lists.history.filterAfter": "Sau: {sentence}",
+  "lists.history.noFilter": "không có điều kiện",
   "lists.changes.since": "Kể từ lần truy cập ngày {when}:",
   "lists.changes.joined_one": "{count} được thêm vào",
   "lists.changes.joined_other": "{count} được thêm vào",
@@ -20811,6 +20832,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.create_lead": "Đã tạo lead",
   "magic.action.create_project": "Đã tạo dự án",
   "magic.action.create_activity": "Đã lưu email hoặc cuộc họp",
+  "magic.action.create_activity_email": "Đã lưu email",
+  "magic.action.create_activity_meeting": "Đã lưu cuộc họp",
+  "magic.action.create_activity_call": "Đã ghi cuộc gọi",
+  "magic.action.create_activity_note": "Đã lưu ghi chú",
+  "magic.action.create_activity_task": "Đã tạo công việc",
+  "magic.action.create_activity_message": "Đã lưu tin nhắn",
   "magic.action.archive_contact": "Đã chuyển liên hệ vào kho lưu trữ",
   "magic.action.archive_company": "Đã chuyển công ty vào kho lưu trữ",
   "magic.action.archive_deal": "Đã chuyển deal vào kho lưu trữ",
@@ -20818,6 +20845,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.archive_project": "Đã chuyển dự án vào kho lưu trữ",
   "magic.action.archive_activity":
     "Đã chuyển email hoặc cuộc họp vào kho lưu trữ",
+  "magic.action.archive_activity_email": "Đã chuyển email vào kho lưu trữ",
+  "magic.action.archive_activity_meeting": "Đã chuyển cuộc họp vào kho lưu trữ",
+  "magic.action.archive_activity_call": "Đã chuyển cuộc gọi vào kho lưu trữ",
+  "magic.action.archive_activity_note": "Đã chuyển ghi chú vào kho lưu trữ",
+  "magic.action.archive_activity_task": "Đã chuyển công việc vào kho lưu trữ",
+  "magic.action.archive_activity_message": "Đã chuyển tin nhắn vào kho lưu trữ",
   "magic.why.mail_filed": "Địa chỉ bên gửi thuộc về liên hệ này.",
   "magic.why.data_correction": "Một bản cập nhật đã hiệu chỉnh các bản ghi cũ.",
   "magic.why.public_records":
@@ -21973,6 +22006,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công việc CRM bình thường vẫn có thể tiếp tục. Khi xảy ra sự cố, khôi phục có thể lâu hơn hoặc mất nhiều dữ liệu mới hơn mức mục tiêu cho phép.",
   "health.effect.automatic":
     "Công việc tự động có thể đến sai đồng nghiệp, khiến việc theo dõi bị giao sai người cho đến khi sửa cách phân công.",
+  "health.effect.receipts":
+    "Yêu cầu từ chối vẫn có hiệu lực và việc gửi quảng cáo đến các liên hệ này vẫn dừng. Các liên hệ chưa được thông báo, trong khi quy định của quốc gia họ yêu cầu thông báo ngay.",
   "health.effect.readFailed":
     "Kiểm tra này không hiển thị được trạng thái hiện tại. Kiểm tra thất bại không có nghĩa tính năng bên dưới đã dừng.",
   "health.reportCopyFailed": "Không thể sao chép báo cáo kỹ thuật",
@@ -22065,6 +22100,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.source.updates": "Cập nhật dữ liệu",
   "health.source.recovery": "Bằng chứng khôi phục",
   "health.source.automatic": "Chất lượng công việc tự động",
+  "health.source.receipts": "Xác nhận từ chối nhận quảng cáo",
   "health.scope": "Phạm vi ảnh hưởng",
   "health.window": "Khoảng báo cáo",
   "health.observed": "Quan sát mới nhất",
@@ -22090,6 +22126,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.recovery.recovery":
     "Ghi nhận diễn tập khôi phục thành công trong mục tiêu thời gian và mức mất dữ liệu.",
   "health.recovery.automatic": "Đánh giá kết quả phân công trên mẫu đủ lớn.",
+  "health.recovery.receipts":
+    "Mỗi yêu cầu từ chối trong 30 ngày qua phải có xác nhận đã gửi, hoặc cảnh báo của nó đã được xử lý.",
   "health.ownerHandoff":
     "Chủ hộp thư chấp nhận hoặc từ chối liên hệ được đề xuất trong Danh sách công việc → Quyết định. Hội thoại bị giữ được xem xét trong Kết nối, phần Hoạt động.",
   "health.operatorHandoff":
@@ -22163,6 +22201,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.code.automatic_checked":
     "Mẫu đã kiểm tra chưa vượt ngưỡng cần xem lại phân công",
   "health.code.automatic_routing": "Cần xem lại phân công công việc tự động",
+  "health.code.receipts_sent":
+    "Không có xác nhận từ chối nào bị thiếu hoặc quá hạn trong 30 ngày qua",
+  "health.code.receipts_missed": "Một số xác nhận từ chối chưa được gửi",
   "health.code.capture_thread_processing": "Đang phân loại chuỗi thư",
   "health.code.capture_thread_uncertain": "Xem xét hội thoại riêng",
   "health.queueCoverage":
@@ -22185,6 +22226,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Lần thử khôi phục không đạt mục tiêu. Nhờ người vận hành khắc phục và thử lại.",
   "health.impact.automatic":
     "Công việc có thể được giao sai người. Xem xét cách phân công và sửa người chịu trách nhiệm.",
+  "health.impact.receipts":
+    "Liên hệ đã từ chối nhận quảng cáo chưa nhận được xác nhận theo luật định. Mở các thông báo về xác nhận bị thiếu và sửa địa chỉ hoặc cấu hình gửi thư.",
   "analytics.outlook.calledAt": "Dự báo ngày {at}",
   "analytics.prospect.weeksByQualification":
     "Mỗi lead được tính vào tuần đủ điều kiện lần đầu.",

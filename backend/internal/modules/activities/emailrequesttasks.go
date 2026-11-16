@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,6 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // EmailRequestTaskSource identifies tasks derived from a confirmed email request.
@@ -54,17 +57,8 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
-			return err
-		}
-		domains, err := s.ownDomainList(ctx, tx)
+		domains, err := s.tidyEmailRequests(ctx, tx, asOf)
 		if err != nil {
-			return err
-		}
-		if err := s.retireNeverOwedReminders(ctx, tx, asOf, domains); err != nil {
-			return err
-		}
-		if err := s.rehomeSharedReminders(ctx, tx, asOf); err != nil {
 			return err
 		}
 		args := []any{}
@@ -88,15 +82,18 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err != nil {
 			return err
 		}
-		rows, err := tx.Query(ctx, `SELECT a.id, (`+assigneeSQL+`) FROM activity a
+		rows, err := tx.Query(ctx, `SELECT a.id, (`+assigneeSQL+`), coalesce(a.owed_ask, '') FROM activity a
     WHERE `+eligible+` ORDER BY a.occurred_at DESC, a.id LIMIT 64 FOR UPDATE OF a SKIP LOCKED`, args...)
 		if err != nil {
 			return fmt.Errorf("activities: reading email requests: %w", err)
 		}
-		type assignment struct{ message, user ids.UUID }
+		type assignment struct {
+			message, user ids.UUID
+			ask           string
+		}
 		candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (assignment, error) {
 			var value assignment
-			err := row.Scan(&value.message, &value.user)
+			err := row.Scan(&value.message, &value.user, &value.ask)
 			return value, err
 		})
 		if err != nil {
@@ -112,7 +109,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 				}
 				seats[candidate.user] = seat
 			}
-			if err := s.captureEmailRequest(ctx, tx, candidate.message, seat, asOf); err != nil {
+			if err := s.captureEmailRequest(ctx, tx, candidate.message, seat, asOf, candidate.ask); err != nil {
 				return err
 			}
 		}
@@ -120,13 +117,32 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 	})
 }
 
-func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID ids.UUID, seat principal.Principal, asOf time.Time) error {
+// tidyEmailRequests retires and rehomes the reminders already filed, and
+// answers the workspace's own mail domains.
+func (s *Store) tidyEmailRequests(ctx context.Context, tx pgx.Tx, asOf time.Time) ([]string, error) {
+	if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
+		return nil, err
+	}
+	domains, err := s.ownDomainList(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.retireNeverOwedReminders(ctx, tx, asOf, domains); err != nil {
+		return nil, err
+	}
+	return domains, s.rehomeSharedReminders(ctx, tx, asOf)
+}
+
+func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID ids.UUID, seat principal.Principal, asOf time.Time, ask string) error {
 	source, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](messageID), storekit.LiveOnly)
 	if err != nil {
 		return err
 	}
 	request, err := emailRequestTask(ctx, tx, source, seat, asOf)
 	if err != nil {
+		return err
+	}
+	if err := quoteTheAsk(ctx, tx, &request, messageID, ask); err != nil {
 		return err
 	}
 	due, stated, err := s.statedRequestDue(ctx, tx, source, asOf)
@@ -138,4 +154,29 @@ func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID id
 	}
 	_, _, err = s.LogActivityTx(ctx, tx, request)
 	return err
+}
+
+// quoteTheAsk gives the reminder its reason: who asked, and what, in their own
+// words. The words are the mail's own, so the reminder reads as the sender
+// wrote in every reader's language; only the frame around them translates.
+func quoteTheAsk(ctx context.Context, tx pgx.Tx, request *LogActivityInput, message ids.UUID, ask string) error {
+	ask = strings.TrimSpace(ask)
+	if ask == "" {
+		return nil
+	}
+	// The name the sender's own mail gives them, so the reminder says what
+	// every reader of that mail already sees.
+	var sender string
+	err := tx.QueryRow(ctx, `
+		SELECT p.display_name FROM activity_participant p
+		 WHERE p.activity_id = $1 AND p.role = 'from' AND nullif(btrim(p.display_name), '') IS NOT NULL
+		 ORDER BY p.id LIMIT 1`, message).Scan(&sender)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("activities: reading who asked: %w", err)
+	}
+	why := systemtext.Sentence("request.asked_unnamed", systemtext.Text(ask))
+	if sender != "" {
+		why = systemtext.Sentence("request.asked", systemtext.Text(sender), systemtext.Text(ask))
+	}
+	return request.SayWhy(why, textlang.English)
 }

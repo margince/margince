@@ -65,7 +65,7 @@ type retention struct{}
 
 func (retention) Classes() []jurisdiction.RetentionClass { return nil }
 
-// vnAdvertisingCap is the ceiling Decree 91/2020/ND-CP Art. 22(2) places on
+// vnAdvertisingCap is the ceiling Decree 91/2020/ND-CP Art. 13.5 places on
 // advertising email: at most three messages to one address in twenty-four
 // hours, unless the recipient has agreed otherwise.
 //
@@ -77,7 +77,7 @@ const (
 	vnAdvertisingWindow         = 24 * time.Hour
 )
 
-// advertisingLabel is the subject marking Decree 91/2020/ND-CP Art. 12 fixes
+// advertisingLabel is the subject marking Decree 91/2020/ND-CP Art. 18 fixes
 // for an advertising message. The literal lives HERE rather than on the
 // published messaging surface for the reason every country string does: core
 // applies a prefix a pack supplies and knows nothing about which one, so a
@@ -127,7 +127,7 @@ func vnInstruments() []messaging.Instrument {
 // The cross-jurisdiction consequence is that evidence of a German sale
 // authorizes nothing here.
 //
-// THE [QC] PREFIX is Art. 12: an advertising message must be labelled as
+// The [QC] prefix is Art. 18: an advertising message must be labelled as
 // advertising in its subject, and the decree fixes the label. Declaring it
 // while nothing applies it is deliberate: the rule is what the decree says, and
 // a pack that waited would leave the obligation unrecorded until the machinery
@@ -136,19 +136,18 @@ func vnInstruments() []messaging.Instrument {
 // (backend/gates/messagingruleapplied_test.go) holds the answer, and fails when
 // a field is applied or abandoned without the record moving with it.
 //
-// ADVERTISER IDENTIFICATION is Art. 13: an advertising message names the
+// Advertiser identification is Art. 19: an advertising message names the
 // advertiser and gives a way to reach them. It is declared as an
-// AdvertiserContact disclosure alongside the Art. 13 GDPR-shaped controller
-// disclosures, because a Vietnamese recipient is owed BOTH — who is processing
-// their data and who is advertising to them are the same organisation here and
-// need not be, and the two obligations come from different instruments. It also
-// needs an advertiser phone and website, which the installation settings do not
-// carry.
+// AdvertiserContact disclosure beside the controller disclosures GDPR Art. 13
+// shapes. A Vietnamese recipient is owed both. Who processes their data and who
+// advertises to them are often one organisation, and need not be. The two
+// duties come from different instruments. It also needs an advertiser phone and
+// website, which the installation settings do not carry.
 //
-// THE ACKNOWLEDGED OPT-OUT is Art. 16: a recipient who refuses further
-// advertising is owed a confirmation that their refusal was received, sent
-// within twenty-four hours and carrying no advertising of its own. The flag says
-// one is owed; the engine's controller lane is what will send it, which is the
+// The acknowledged opt-out is Art. 20. A recipient who refuses advertising
+// email is owed a receipt at once. It states when the refusal arrived and when
+// sending stopped, and carries no advertising. The deadline below is an
+// internal alert, not the decree's window. The controller lane sends it: the
 // only lane that may write to somebody who has just suppressed themselves.
 //
 // THE DAILY CEILING is the one rule here the engine applies today. It refuses
@@ -184,7 +183,14 @@ func messagingRules() messaging.Rules {
 			Messages: vnAdvertisingMessagesPerDay,
 			Window:   vnAdvertisingWindow,
 		},
-		OptOutAcknowledgement:       true,
-		OptOutAcknowledgementWithin: 24 * time.Hour,
+		OptOutAcknowledgement: true,
+		// Art. 20.3 owes the receipt at once, and it is queued with the refusal.
+		// An hour is when a receipt still unsent raises an alarm.
+		OptOutAcknowledgementWithin: time.Hour,
+		// Art. 20.4(a): the receipt states both times, read here in Vietnam time.
+		OptOutAcknowledgementUTCOffset: 7 * time.Hour,
+		// Art. 11.7 keeps registrations, refusals and receipts at least one
+		// year; 366 days holds across a leap year.
+		OptOutRecordsKeep: 366 * 24 * time.Hour,
 	}
 }

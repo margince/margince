@@ -356,6 +356,9 @@ describe("SetupReminder at phone width", () => {
     const view = mountTopBar();
     const user = userEvent.setup();
     await user.click(screen.getByRole("button", { name: /account$/i }));
+    // The menu draws from lazy chunks, so it is waited on; an earlier case in
+    // the file may or may not have loaded them.
+    await screen.findByRole("menu", { name: "Account" });
     await user.keyboard("{End}");
     const signOut = screen.getByRole("menuitem", { name: "Sign out" });
     expect(document.activeElement).toBe(signOut);
@@ -378,6 +381,7 @@ describe("SetupReminder at phone width", () => {
     const user = userEvent.setup();
     const account = screen.getByRole("button", { name: /account$/i });
     await user.click(account);
+    await screen.findByRole("menu", { name: "Account" });
     await user.keyboard("{End}{ArrowUp}");
     expect(document.activeElement).toBe(
       screen.getByRole("menuitem", { name: /Finish setup/ }),
