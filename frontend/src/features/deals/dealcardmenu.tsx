@@ -38,11 +38,15 @@ export function DealCardMenu({
   copyRefusal: RefusalSlot;
 }>) {
   const t = useT();
-  // An archived deal takes no change, so it keeps only what reads it.
+  // An archived deal takes no change, so it keeps only what reads it. A seat
+  // that may not change this deal is offered none of its writes, as its page.
   const live = !deal.archived_at;
+  const canWrite = useCanWriteRecord("deal", deal);
   return (
     <>
-      {live && <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />}
+      {live && canWrite && (
+        <DealMoves deal={deal} stages={stages} onAdvance={onAdvance} />
+      )}
       {verbs.onSummary && (
         <Button onClick={verbs.onSummary}>{t("deal.card.summaryItem")}</Button>
       )}
@@ -56,7 +60,7 @@ export function DealCardMenu({
       {live && (
         <>
           <AddToShortlistAction entityType="deal" entityId={deal.id} />
-          <ArchiveDeal deal={deal} />
+          {canWrite && <ArchiveDeal deal={deal} />}
         </>
       )}
     </>
@@ -75,11 +79,7 @@ function DealMoves({
 }>) {
   const t = useT();
   const reasonId = useId();
-  const writable = useCanWriteRecord("deal", deal);
   const closeMenu = useCloseOverflowMenu();
-  if (!writable) {
-    return null;
-  }
   const refused = deal.status === "open" ? undefined : reasonId;
   // A pipeline with two won stages has no one stage "won" means.
   const closers = (["won", "lost"] as const).flatMap((semantic) => {

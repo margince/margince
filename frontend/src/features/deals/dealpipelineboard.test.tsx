@@ -296,9 +296,11 @@ describe("DealPipelineBoard", () => {
       expect(itemNames(panel)).toEqual(["Deal summary", "Copy link"]);
     });
 
-    it("offers no move to a seat that may not change the deal", async () => {
+    // The deal page's rule: a seat that may not change the deal is offered
+    // none of its writes, even where the row itself is archivable.
+    it("offers no move and no archive to a seat that may not change the deal", async () => {
       renderBoard([openDeal], null, {
-        deals: [deal({ writable: false })],
+        deals: [deal({ writable: false, archivable: true })],
         stages: pipeline,
         onAdvance,
       });
@@ -307,7 +309,6 @@ describe("DealPipelineBoard", () => {
         "Deal summary",
         "Add task",
         "Copy link",
-        "Archive deal",
       ]);
     });
 
