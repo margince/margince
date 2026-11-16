@@ -140,9 +140,9 @@ func bookMeetingFor(
 	return ids.UUID(meeting.Id)
 }
 
-// An empty day names the soonest booked customer meeting past it, skipping the
-// internal ones and the cancelled one before it, with only the attendees the
-// reader may see in the room.
+// An empty day names the soonest booked customer meeting past it. It skips the
+// internal ones and the cancelled one before it, and names only the attendees
+// the reader may see in the room.
 func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testing.T) {
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
