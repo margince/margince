@@ -71954,6 +71954,11 @@ type WorklistItem struct {
 	// RequestCheck On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
 	RequestCheck *TaskRequestCheck `json:"request_check,omitempty"`
 
+	// Room Who is in a `meeting` row's room, as this reader may see them: the same room
+	// `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+	// reader may not read the meeting.
+	Room *WorklistMeetingRoom `json:"room,omitempty"`
+
 	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
 	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
 	// engine's English sentence.
@@ -72118,6 +72123,22 @@ type WorklistMayBeDone struct {
 
 	// WrotePrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 	WrotePrecision OccurredPrecision `json:"wrote_precision"`
+}
+
+// WorklistMeetingRoom Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+// meeting today and the next one name their attendees by one rule.
+type WorklistMeetingRoom struct {
+	// OtherParticipants The attendees who are not contacts, named after the contacts within the same eight.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
+	// Participants The attendees who are contacts this reader may see, named first.
+	Participants []struct {
+		ContactId openapi_types.UUID `json:"contact_id"`
+		FullName  string             `json:"full_name"`
+	} `json:"participants"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named. Absent when every attendee is named.
+	ParticipantsMore *int `json:"participants_more,omitempty" minimum:"1"`
 }
 
 // WorklistMove The next step this row suggests, and what it would act on.

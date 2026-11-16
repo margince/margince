@@ -2183,9 +2183,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kalender verbinden",
   "brief.schedule.reconnect": "Kalender neu verbinden",
   "brief.schedule.nextAt": "Nächster Termin um {time}",
-  "brief.schedule.now": "Jetzt",
-  "brief.schedule.freeUntil": "Frei bis {time}",
-  "brief.schedule.clearRest": "Heute sonst nichts gebucht",
+  "brief.schedule.clearRest": "Heute keine externen Termine mehr",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
   "brief.readings.unpricedCount_one":
     "{count} Deal ohne Preis · nicht enthalten",
@@ -7071,7 +7069,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
-  "brief.panel.schedule": "Dein Tag",
+  "brief.panel.schedule": "Externe Termine",
   "brief.readings.label": "Zahlen von heute",
   "brief.readings.floorTip":
     "Diese Zahl ist ein Mindestwert, da eine Quelle ihr Limit erreicht hat.",

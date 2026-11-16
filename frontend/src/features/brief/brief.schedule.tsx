@@ -1,20 +1,21 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Fragment } from "react";
-import { EntityRef } from "../../components/entityref";
+import type { components } from "../../api/schema";
 import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
+import { Avatar } from "../../design-system/avatar";
 import { Panel, PanelRow } from "../../design-system/panel";
+import { Chip } from "../../design-system/readings";
 import {
   type SectionState,
   SurfaceState,
 } from "../../design-system/surfacestate";
 import { activityStartsIn, activityTimeOfDay } from "../../format/activitywhen";
-import { formatTimeOfDay } from "../../format/format";
 import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { ENTITY } from "../../lib/entity";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
@@ -31,13 +32,15 @@ import {
 import "./brief.css";
 
 type NextMeeting = NonNullable<Worklist["next_meeting"]>;
+type MeetingRoom = components["schemas"]["WorklistMeetingRoom"];
+type ContactEmployer = components["schemas"]["ContactEmployer"];
 
 // Calendar context is drawn from the same loaded agenda, with explicit partial states.
 const MEETING = "meeting";
 
 /**
  * Whether the calendar answered and holds nothing more for today, which is
- * what lets the Now stop say the rest of the day is clear.
+ * what lets the panel say no external meeting is left.
  */
 function dayIsClear(day: Worklist): boolean {
   if (rowsFrom(day, MEETING).length > 0) return false;
@@ -59,13 +62,10 @@ function answered(state: SectionState): boolean {
 }
 
 /**
- * The day as one line: the meetings already under way, a Now stop, and the
- * meetings still ahead, by start time. The first timed meeting ahead is the
- * next one, set apart with how soon it starts and the way into its brief.
- *
- * A meeting not confirmed ready carries the badge here as well as in the queue.
- * All three places read `isUnprepared`, so the strip's figure and both badges
- * are one answer.
+ * Today's external meetings by start time, each saying who it is with. The
+ * server sends only meetings with somebody from outside the own domains, so
+ * this panel applies no rule of its own. The next timed meeting sits on an
+ * outlined plate with how soon it starts and the way into its brief.
  */
 export function SchedulePanel({
   day,
@@ -80,14 +80,19 @@ export function SchedulePanel({
   onOpenMeeting?: (id: string) => void;
   /** Has Margince write the next meeting's brief; without it there is no button. */
   onPrepareMeeting?: (id: string) => void;
-  /** The clock the Now stop is read against; the live minute when absent. */
+  /** The clock "starts in" counts from; the live minute when absent. */
   now?: number;
 }>) {
   const t = useT();
   const liveNow = useNow(now === undefined ? 60_000 : 0);
   const at = now ?? liveNow;
-  const { started, ahead } = splitAtNow(rowsFrom(day, MEETING), at);
-  const next = ahead.find((item) => item.occurred_precision !== "day");
+  const meetings = byStart(rowsFrom(day, MEETING));
+  const next = meetings.find(
+    (item) =>
+      item.occurred_precision !== "day" &&
+      item.due_at !== undefined &&
+      Date.parse(item.due_at) > at,
+  );
   return (
     <Panel title={t("brief.panel.schedule")} flatHead className="rail-schedule">
       <SurfaceState
@@ -97,19 +102,7 @@ export function SchedulePanel({
       >
         {answered(state) && day && (
           <>
-            {started.map((item) => (
-              <MeetingRow
-                key={item.id}
-                item={item}
-                onOpenMeeting={onOpenMeeting}
-              />
-            ))}
-            <NowRow
-              at={at}
-              freeUntil={started.length === 0 ? next : undefined}
-              clear={dayIsClear(day)}
-            />
-            {ahead.map((item) => (
+            {meetings.map((item) => (
               <MeetingRow
                 key={item.id}
                 item={item}
@@ -118,7 +111,7 @@ export function SchedulePanel({
                 countdownFrom={item === next ? at : undefined}
               />
             ))}
-            {rowsFrom(day, MEETING).length === 0 && (
+            {meetings.length === 0 && (
               <NoMeetingRows
                 clear={dayIsClear(day)}
                 calendar={calendarDay(day)}
@@ -133,53 +126,15 @@ export function SchedulePanel({
 }
 
 /**
- * Today's meetings by start, cut at `now`. A meeting known only by its day
- * has no start to cut at, so it waits at the end of the ones ahead.
+ * Today's meetings by start. A meeting known only by its day has no start, so
+ * it follows the timed ones.
  */
-function splitAtNow(
-  meetings: WorklistItem[],
-  now: number,
-): { started: WorklistItem[]; ahead: WorklistItem[] } {
+function byStart(meetings: WorklistItem[]): WorklistItem[] {
   const startOf = (item: WorklistItem) =>
     item.occurred_precision === "day" || !item.due_at
       ? Number.POSITIVE_INFINITY
       : Date.parse(item.due_at);
-  const sorted = [...meetings].sort((a, b) => startOf(a) - startOf(b));
-  return {
-    started: sorted.filter((item) => startOf(item) <= now),
-    ahead: sorted.filter((item) => startOf(item) > now),
-  };
-}
-
-/** Where the reader stands on the day's line, and what the next hour holds. */
-function NowRow({
-  at,
-  freeUntil,
-  clear,
-}: Readonly<{ at: number; freeUntil?: WorklistItem; clear: boolean }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  const nowIso = new Date(at).toISOString();
-  const until = freeUntil && whenOf(freeUntil, locale, zone);
-  const caption = until
-    ? t("brief.schedule.freeUntil", { time: until })
-    : clear
-      ? t("brief.schedule.clearRest")
-      : undefined;
-  return (
-    <PanelRow className="rail-schedule-row rail-schedule-now">
-      <time className="t-caption rail-schedule-when" dateTime={nowIso}>
-        {formatTimeOfDay(nowIso, locale, zone)}
-      </time>
-      <span className="rail-schedule-what">
-        <span className="t-body rail-schedule-title">
-          {t("brief.schedule.now")}
-        </span>
-        {caption && <span className="t-caption">{caption}</span>}
-      </span>
-    </PanelRow>
-  );
+  return [...meetings].sort((a, b) => startOf(a) - startOf(b));
 }
 
 /**
@@ -221,6 +176,10 @@ function MeetingRow({
       </span>
       <span className="rail-schedule-what">
         <Title item={item} onOpenMeeting={onOpenMeeting} />
+        <MeetingWho
+          company={item.contact?.employer}
+          room={item.room ?? roomOfContact(item)}
+        />
         {(startsIn || isUnprepared(item)) && (
           <span className="rail-schedule-meta">
             {startsIn && <span className="t-caption">{startsIn}</span>}
@@ -250,7 +209,7 @@ function NoMeetingRows({
   onOpenMeeting,
 }: Readonly<{
   calendar: CalendarDay;
-  /** The Now stop already says the day is clear. */
+  /** The calendar answered and holds no external meeting for the rest of today. */
   clear: boolean;
   onOpenMeeting?: (id: string) => void;
 }>) {
@@ -293,7 +252,11 @@ function NoMeetingRows({
     case "unread":
       return <PanelRow>{t("brief.schedule.unavailable")}</PanelRow>;
     case "counted":
-      return clear ? null : <PanelRow>{t("brief.schedule.more")}</PanelRow>;
+      return (
+        <PanelRow>
+          {clear ? t("brief.schedule.clearRest") : t("brief.schedule.more")}
+        </PanelRow>
+      );
   }
 }
 
@@ -357,27 +320,77 @@ function NextMeetingRow({
             {t("brief.schedule.nextAt", { time })}
           </span>
         )}
-        {/* One run of text, so the commas wrap with the names they follow. */}
-        <span className="t-caption rail-schedule-attendees">
-          {next.participants?.map((participant, index) => (
-            <Fragment key={participant.contact_id}>
-              {index > 0 && ", "}
-              <EntityRef
-                kind="contact"
-                id={participant.contact_id}
-                name={participant.full_name}
-              />
-            </Fragment>
-          ))}
-          <MeetingOthers
-            others={next.other_participants}
-            more={next.participants_more}
-            afterContacts={(next.participants?.length ?? 0) > 0}
-          />
-        </span>
+        <MeetingWho room={{ ...next, participants: next.participants ?? [] }} />
       </span>
     </PanelRow>
   );
+}
+
+/**
+ * Who a meeting is with: the account, then the outside contacts, as the same
+ * linked chips a task card names its records with. Outside addresses and how
+ * many more there are follow as text. Colleagues are left out, because every
+ * meeting here has them and the reader is asking which customer it is.
+ */
+function MeetingWho({
+  company,
+  room,
+}: Readonly<{ company?: ContactEmployer; room?: MeetingRoom }>) {
+  const contacts = room?.participants ?? [];
+  const outside = (room?.other_participants ?? []).filter(
+    (other) => other.kind !== "colleague",
+  );
+  const more = room?.participants_more ?? 0;
+  if (!company && contacts.length === 0 && outside.length === 0 && more === 0) {
+    return null;
+  }
+  return (
+    <span className="rail-schedule-attendees">
+      {company && (
+        <RecordMarkChip
+          id={company.company_id}
+          label={company.company_name}
+          href={routeHash(ENTITY.company.route(company.company_id))}
+        />
+      )}
+      {contacts.map((contact) => (
+        <RecordMarkChip
+          key={contact.contact_id}
+          id={contact.contact_id}
+          label={contact.full_name}
+          href={routeHash(ENTITY.contact.route(contact.contact_id))}
+        />
+      ))}
+      {(outside.length > 0 || more > 0) && (
+        <span className="t-caption">
+          <MeetingOthers others={outside} more={more} afterContacts={false} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** One record as the task card's chip: its avatar and name, linked to its page. */
+function RecordMarkChip({
+  id,
+  label,
+  href,
+}: Readonly<{ id: string; label: string; href: string }>) {
+  return (
+    <Chip dense appHref={href} lead={<Avatar name={label} identity={id} />}>
+      {label}
+    </Chip>
+  );
+}
+
+/**
+ * The room a row without one still names: the counterparty the lane chose,
+ * where the reader may read them.
+ */
+function roomOfContact(item: WorklistItem): MeetingRoom | undefined {
+  const label = item.contact?.label;
+  if (!item.contact || !label) return undefined;
+  return { participants: [{ contact_id: item.contact.id, full_name: label }] };
 }
 
 /** The row's own words, linked where the row names a record. */
