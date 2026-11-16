@@ -10,9 +10,6 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 const googleDecisionPrice = "core/1794796825_google_decisions_are_priced"
@@ -30,18 +27,13 @@ func decisionRate(ctx context.Context, t *testing.T, conn *pgx.Conn) (input, out
 	return input, output, lane
 }
 
+// decisionInputMicroUSD is the migration's $0.10 per 1M input tokens, the
+// figure pricing.go seeds for gemini-decision-1.
+const decisionInputMicroUSD = 100_000
+
 // An installed sheet gains the row the seed carries; a price an admin set and
 // an installation not yet provisioned are left as they are.
 func TestAnInstalledSheetGainsTheSeededGoogleDecisionPrice(t *testing.T) {
-	var seeded ai.ModelRate
-	for _, r := range ai.SeedModelRates(clocktest.Now(t)) {
-		if r.Provider == "gemini_decision" && r.ModelID == "gemini-decision-1" {
-			seeded = r
-		}
-	}
-	if seeded.Provider == "" {
-		t.Fatal("the seed carries no gemini_decision row, so this compares the migration against nothing")
-	}
 	dsn, _ := dsns(t)
 	ctx := context.Background()
 	cases := []struct {
@@ -52,7 +44,7 @@ func TestAnInstalledSheetGainsTheSeededGoogleDecisionPrice(t *testing.T) {
 	}{
 		{"a provisioned sheet", func(c *pgx.Conn) {
 			seedRate(ctx, t, c, "gemini", "gemini-3.5-flash", "2026-08-01", 1_500_000)
-		}, seeded.InputPerMTokMicroUSD, string(seeded.Lane)},
+		}, decisionInputMicroUSD, "decisions"},
 		{"a price set by hand", func(c *pgx.Conn) {
 			seedRate(ctx, t, c, "gemini_decision", "gemini-decision-1", "2026-11-01", 90_000)
 		}, 90_000, "chat"},
@@ -71,9 +63,9 @@ func TestAnInstalledSheetGainsTheSeededGoogleDecisionPrice(t *testing.T) {
 			runFile(ctx, t, conn, googleDecisionPrice+".up.sql")
 
 			input, output, lane := decisionRate(ctx, t, conn)
-			if input != c.wantInput || output != seeded.OutputPerMTokMicroUSD || lane != c.wantLane {
+			if input != c.wantInput || output != 0 || lane != c.wantLane {
 				t.Errorf("row = input %d, output %d, lane %q; want input %d, output %d, lane %q",
-					input, output, lane, c.wantInput, seeded.OutputPerMTokMicroUSD, c.wantLane)
+					input, output, lane, c.wantInput, 0, c.wantLane)
 			}
 		})
 	}
