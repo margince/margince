@@ -9,6 +9,7 @@ import {
 } from "../../design-system/overviewcard";
 import { formatMoney } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
+import { useCanWriteRecord } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -56,7 +57,8 @@ export function OffersPanel({
   // A deal priced from its lines makes an offer from them, at this revision,
   // once every line has a quantity and a price. Absent for any other deal.
   fromLines?: { revision: number; currency: string | null; complete: boolean };
-  onCreate: (currency: string, fromRevision?: number) => void;
+  // Absent for a reader who may not write the deal: no New offer is drawn.
+  onCreate?: (currency: string, fromRevision?: number) => void;
 }>) {
   const t = useT();
   const zone = useViewerZone();
@@ -70,27 +72,29 @@ export function OffersPanel({
     <OverviewCard
       title={t("deal.offers")}
       action={
-        <Button
-          variant="link"
-          // A refused control points at its reason. Passing `disabled` beside
-          // it would cancel the refusal, so only the in-flight case uses it.
-          // An empty code is as absent as a null one: Intl throws on it.
-          disabled={!needsCurrency && creating}
-          reasonId={
-            refusedReasonId ?? (needsCurrency ? currencyReasonId : undefined)
-          }
-          onClick={() => {
-            if (currency) {
-              onCreate(currency, fromLines?.revision);
+        onCreate && (
+          <Button
+            variant="link"
+            // A refused control points at its reason. Passing `disabled` beside
+            // it would cancel the refusal, so only the in-flight case uses it.
+            // An empty code is as absent as a null one: Intl throws on it.
+            disabled={!needsCurrency && creating}
+            reasonId={
+              refusedReasonId ?? (needsCurrency ? currencyReasonId : undefined)
             }
-          }}
-        >
-          {t("deal.newOffer")}
-        </Button>
+            onClick={() => {
+              if (currency) {
+                onCreate(currency, fromLines?.revision);
+              }
+            }}
+          >
+            {t("deal.newOffer")}
+          </Button>
+        )
       }
       empty={offers ? t("deal.offersEmpty") : undefined}
       foot={
-        needsCurrency ? (
+        onCreate && needsCurrency ? (
           <span id={currencyReasonId}>
             {fromLines
               ? t("deal.offerNeedsCompleteLines")
@@ -177,6 +181,8 @@ export function DealOverviewPane({
   const plural = usePlural();
   const zone = useViewerZone();
   const { deal, offers, coverage, activities, card } = inputs;
+  // A reader the server would refuse every change to is offered none of them.
+  const canWrite = useCanWriteRecord("deal", deal);
   const lines = useDealLines(deal.id).data;
   // The task the bar names is not one of the others.
   const shown = (card?.next?.evidence ?? []).flatMap((row) =>
@@ -244,7 +250,7 @@ export function DealOverviewPane({
                   }
                 : undefined
             }
-            onCreate={onCreateOffer}
+            onCreate={canWrite ? onCreateOffer : undefined}
           />
           {!deal.archived_at && (
             <DealCommitmentsCard dealId={deal.id} onOpenEmail={onOpenEmail} />
@@ -257,6 +263,7 @@ export function DealOverviewPane({
               withheld={coverage.withheld}
               pending={coverage.pending}
               refusedReasonId={refusedReasonId}
+              canWrite={canWrite}
               roleLabel={(role) => dealRoleLabel(role, t)}
             />
           )}
@@ -278,6 +285,7 @@ export function DealOverviewPane({
                   : null
               }
               refusedReasonId={refusedReasonId}
+              canWrite={canWrite}
             />
           )}
           <DealRoomCard dealId={deal.id} onOpen={() => onOpenTab("room")} />
@@ -286,7 +294,7 @@ export function DealOverviewPane({
             recordId={deal.id}
             canEdit={!readOnly}
           />
-          <DealMarginceChangesCard dealId={deal.id} />
+          <DealMarginceChangesCard dealId={deal.id} canWrite={canWrite} />
         </div>
       </div>
     </>

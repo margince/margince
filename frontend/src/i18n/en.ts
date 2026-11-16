@@ -6470,7 +6470,7 @@ export const en = {
     "Archiving removes this deal from open deals. You can bring it back from its history.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
-    "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.",
+    "You can log activity and add tasks. Changing this deal needs its owner to share it.",
   "deal.closedTakesNoStage":
     "This deal is closed. Reopen it to move it to another stage.",
   "deal.reopen": "Reopen",

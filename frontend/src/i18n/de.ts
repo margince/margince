@@ -6506,7 +6506,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.archivedReadOnly":
     "Dieser Deal ist archiviert und lässt keine Änderungen zu.",
   "deal.notYoursToChange":
-    "Du kannst diesen Deal nicht ändern. Frage die verantwortliche Person, ob sie ihn mit dir teilt, oder einen Admin nach Bearbeitungsrechten.",
+    "Du kannst Aktivitäten erfassen und Aufgaben hinzufügen. Um diesen Deal zu ändern, muss die verantwortliche Person ihn mit dir teilen.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
   "deal.reopen": "Wieder öffnen",

@@ -96,6 +96,7 @@ function Card({
         style={width ? { inlineSize: width } : { padding: "var(--padCard)" }}
       >
         <DealCommitteeCard
+          canWrite
           dealId={DEAL}
           ownerId={OWNER}
           coverage={coverage}
