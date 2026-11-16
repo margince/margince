@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension/reach"
@@ -68,8 +69,28 @@ func moveKindIDSingles(ctx context.Context, tx pgx.Tx, entityType string, source
 		}
 	}
 	// The declared tables follow every record kind the merge moves, the
-	// company's fixed links among them.
-	return sweepreach.Relink(ctx, tx, reach.Record(entityType), sourceID, targetID)
+	// company's fixed links among them. Each moved row's own history names the
+	// survivor from here on.
+	relinked, err := sweepreach.Relink(ctx, tx, reach.Record(entityType), sourceID, targetID)
+	if err != nil {
+		return err
+	}
+	return auditDeclaredMoves(ctx, tx, relinked, sourceID, targetID)
+}
+
+// auditDeclaredMoves writes one audit row for each row the declared relink
+// moved, from the retired record to the survivor. The merge's own event is
+// what a subscriber acts on.
+func auditDeclaredMoves(ctx context.Context, tx pgx.Tx, relinked []sweepreach.Relinked, sourceID, targetID ids.UUID) error {
+	for _, moved := range relinked {
+		before, after := map[string]any{moved.Column: sourceID}, map[string]any{moved.Column: targetID}
+		for _, row := range moved.Rows {
+			if _, err := storekit.Audit(ctx, tx, "update", moved.Entity, row, before, after); err != nil {
+				return fmt.Errorf("audit a %s moving to the merge survivor: %w", moved.Entity, err)
+			}
+		}
+	}
+	return nil
 }
 
 // moveKindIDOwned moves what one reader owns about a record: an unsent draft

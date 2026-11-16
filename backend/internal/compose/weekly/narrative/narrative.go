@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // MaxNarrativeRunes bounds a weekly summary before it reaches storage.
@@ -160,6 +161,7 @@ func Request(in Input, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encodeInput(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: schema.Must(schema.Record(schema.Field("narrative", schema.String()))),
 	}
 }
 

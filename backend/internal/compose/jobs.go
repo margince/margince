@@ -454,6 +454,7 @@ func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
 		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, MeetingProfileRetractSweepArgs{}),
+		periodicFor(cfg, TranscriptAudienceSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
 		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
 		periodicFor(cfg, InitiativeEnrolmentSweepArgs{}),

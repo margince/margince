@@ -6,6 +6,7 @@ package ai
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -268,5 +269,130 @@ func TestASyncWritesTheCataloguesBandWithANewBasePrice(t *testing.T) {
 	want := &ModelRateBand{AboveTokens: 200_000, InputUsd: "5", OutputUsd: "22.5", CacheReadUsd: "0.5", CacheWriteUsd: "0"}
 	if !sameBand(got.LongContext, want) {
 		t.Errorf("band = %+v, want the catalogue's %+v", got.LongContext, want)
+	}
+}
+
+// seededRow is SeedModelRates' row for provider/id, as the sheet lists it.
+func seededRow(t *testing.T, provider, id string) ModelRateRow {
+	t.Helper()
+	for _, r := range SeedModelRates(time.Date(2026, 11, 16, 0, 0, 0, 0, time.UTC)) {
+		if r.Provider == provider && r.ModelID == id {
+			return ModelRateRow{
+				Provider: provider, ModelID: id, Lane: r.Lane, Source: RateSourceSeed,
+				InputUsd: MicroUSDToUsdPerMTok(r.InputPerMTokMicroUSD), OutputUsd: MicroUSDToUsdPerMTok(r.OutputPerMTokMicroUSD),
+				CacheReadUsd:  MicroUSDToUsdPerMTok(r.CacheReadPerMTokMicroUSD),
+				CacheWriteUsd: MicroUSDToUsdPerMTok(r.CacheWritePerMTokMicroUSD),
+			}
+		}
+	}
+	t.Fatalf("no seeded row for %s/%s", provider, id)
+	return ModelRateRow{}
+}
+
+// models.dev does not list Google's decision model, so the seeded price is all
+// the sheet has. The sync keeps it and reports the model unlisted.
+func TestTheSeededGoogleDecisionPriceIsKeptWhileTheCatalogueOmitsIt(t *testing.T) {
+	seeded := seededRow(t, providerGeminiDecision, geminiDecisionModel)
+	if seeded.InputUsd != "0.1" || seeded.OutputUsd != "0" || seeded.Lane != LaneDecisions {
+		t.Fatalf("seeded row = %+v, want $0.10 in, $0 out, on the decisions lane", seeded)
+	}
+	src := vendorSources(t, providerGeminiDecision)
+	if _, listed := src.ModelsDev.entry("google", geminiDecisionModel); listed {
+		t.Fatal("the fixture lists the decision model; this test would read a catalogue price")
+	}
+
+	plan := planPriceSync(src, []ModelRateRow{seeded})
+
+	if got := writesOf(plan); len(got) != 0 {
+		t.Fatalf("writes = %v, want the seeded price left alone", got)
+	}
+	line := reportLine(providerGeminiDecision, plan.lines[providerGeminiDecision], false)
+	if line.Outcome != RefreshNotListed || !slices.Equal(line.Unlisted, []string{geminiDecisionModel}) {
+		t.Errorf("line = %+v, want not_listed naming the model", line)
+	}
+}
+
+// Once models.dev lists it under google, the price is read from there and laid
+// over the seeded row, which keeps its decisions lane.
+func TestAGoogleDecisionPriceIsReadFromTheGoogleCatalogue(t *testing.T) {
+	for _, tc := range []struct {
+		name, input string
+		writes      bool
+	}{
+		{"an unchanged price writes nothing", "0.1", false},
+		{"a new price is written", "0.12", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			catalogue, err := parseModelsDev([]byte(`{"google":{"models":{"gemini-decision-1":` +
+				`{"id":"gemini-decision-1","cost":{"input":` + tc.input + `,"output":0}}}}}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			src := vendorSources(t, providerGeminiDecision)
+			src.ModelsDev = ModelsDevPrices{byKey: catalogue}
+
+			plan := planPriceSync(src, []ModelRateRow{seededRow(t, providerGeminiDecision, geminiDecisionModel)})
+
+			w, wrote := writesOf(plan)["gemini_decision/gemini-decision-1"]
+			if wrote != tc.writes {
+				t.Fatalf("wrote = %v (%+v), want %v", wrote, w, tc.writes)
+			}
+			if wrote && (w.InputUsd != "0.120000" || w.OutputUsd != "0.000000" || w.Lane != "" || w.Source != RateSourceCatalogue) {
+				t.Errorf("write = %+v, want $0.12 in, $0 out, the sheet's lane inherited", w)
+			}
+			if line := plan.lines[providerGeminiDecision]; len(line.Unlisted) != 0 || line.Updated+line.Unchanged != 1 {
+				t.Errorf("line = %+v", line)
+			}
+		})
+	}
+}
+
+// The decision adapter sends the gemini slot's key, so the sync's scope follows
+// that slot.
+func TestABorrowedKeyIsUsableWhenItsSlotIs(t *testing.T) {
+	for _, configured := range []bool{true, false} {
+		usable := usableByProvider([]ProviderKeyStatus{{Provider: providerGemini, Configured: configured, EnvVar: "GEMINI_API_KEY"}})
+		if usable[providerGeminiDecision] != configured {
+			t.Errorf("gemini configured = %v: gemini_decision usable = %v", configured, usable[providerGeminiDecision])
+		}
+	}
+}
+
+// An installation seeded before the model shipped has no row for it. Once the
+// google catalogue lists it, the sync adds it on the decisions lane, whatever
+// lane the catalogue's own label would give it.
+func TestTheSyncAddsGooglesListedDecisionModelOnTheDecisionsLane(t *testing.T) {
+	for label, modalities := range map[string]string{
+		"filed as chat":  `"modalities":{"output":["text"]},`,
+		"filed as image": `"modalities":{"output":["image"]},`,
+		"with no lane":   ``,
+	} {
+		t.Run(label, func(t *testing.T) {
+			catalogue, err := parseModelsDev([]byte(`{"google":{"models":{"gemini-decision-1":{"id":"gemini-decision-1",` +
+				modalities + `"cost":{"input":0.1,"output":0}}}}}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			src := vendorSources(t, providerGeminiDecision, googleDecisionModels()...)
+			src.ModelsDev = ModelsDevPrices{byKey: catalogue}
+
+			plan := planPriceSync(src, nil)
+
+			w, wrote := writesOf(plan)["gemini_decision/gemini-decision-1"]
+			if !wrote || w.Lane != LaneDecisions || w.InputUsd != "0.100000" || w.OutputUsd != "0.000000" {
+				t.Fatalf("write = %+v (wrote %v), want $0.10 in, $0 out, on the decisions lane", w, wrote)
+			}
+			if line := plan.lines[providerGeminiDecision]; line.Added != 1 {
+				t.Errorf("line = %+v, want the model added", line)
+			}
+		})
+	}
+}
+
+// A chat vendor's catalogue label still decides: an image model stays off.
+func TestAChatVendorStillTakesTheCataloguesLane(t *testing.T) {
+	src := vendorSources(t, providerGemini, model.Info{ID: "gemini-2.5-flash-image"})
+	if got := writesOf(planPriceSync(src, nil)); len(got) != 0 {
+		t.Errorf("writes = %v, want none for a model whose output is not text", got)
 	}
 }

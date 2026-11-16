@@ -6,6 +6,8 @@ package reportsetup
 import (
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 func setupInput(site string) Input {
@@ -26,9 +28,13 @@ func setupInput(site string) Input {
 	}
 }
 
+const (
+	reportReply     = `{"name":"Linden press in Germany","filters":[{"field":"product","value":"Linden press line","phrase":"Linden press"},{"field":"country","value":"de","phrase":"in Germany"},{"field":"period","value":"this_quarter","phrase":"this quarter"},{"field":"industry","value":"retail","phrase":"retail"}],"metrics":[{"id":"bookings_won","phrase":"sales"},{"id":"churn","phrase":"churn"}],"charts":[{"id":"bookings_trend","phrase":"over time"},{"id":"stage_distribution","phrase":"by stage"}],"objective":null,"clarifications":["Which stages count as open?"],"unsupported":[{"phrase":"by rep tenure","reason":"No field holds a rep's tenure."}]}`
+	initiativeReply = `{"name":"Linden push","filters":[],"metrics":[{"id":"bookings_won","phrase":"sales"}],"charts":[],"objective":{"metric":"bookings_won","target_value":250000,"deadline":"2026-12-31","phrase":"250k by year end"},"clarifications":[],"unsupported":[]}`
+)
+
 func TestParseResolvesTheCatalogAndNamesBackWhatItCannot(t *testing.T) {
-	reply := `{"name":"Linden press in Germany","filters":[{"field":"product","value":"Linden press line","phrase":"Linden press"},{"field":"country","value":"de","phrase":"in Germany"},{"field":"period","value":"this_quarter","phrase":"this quarter"},{"field":"industry","value":"retail","phrase":"retail"}],"metrics":[{"id":"bookings_won","phrase":"sales"},{"id":"churn","phrase":"churn"}],"charts":[{"id":"bookings_trend","phrase":"over time"},{"id":"stage_distribution","phrase":"by stage"}],"objective":null,"clarifications":["Which stages count as open?"],"unsupported":[{"phrase":"by rep tenure","reason":"No field holds a rep's tenure."}]}`
-	out, err := Parse(reply, setupInput(SiteCustomReport))
+	out, err := Parse(reportReply, setupInput(SiteCustomReport))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,8 +57,7 @@ func TestParseResolvesTheCatalogAndNamesBackWhatItCannot(t *testing.T) {
 }
 
 func TestParseKeepsAnObjectiveOnlyForAnInitiative(t *testing.T) {
-	reply := `{"name":"Linden push","filters":[],"metrics":[{"id":"bookings_won","phrase":"sales"}],"charts":[],"objective":{"metric":"bookings_won","target_value":250000,"deadline":"2026-12-31","phrase":"250k by year end"},"clarifications":[],"unsupported":[]}`
-	out, err := Parse(reply, setupInput(SiteInitiative))
+	out, err := Parse(initiativeReply, setupInput(SiteInitiative))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +67,7 @@ func TestParseKeepsAnObjectiveOnlyForAnInitiative(t *testing.T) {
 	if len(out.Metrics) != 0 || len(out.Unsupported) != 1 || out.Unsupported[0].Code != CodeNotOffered {
 		t.Fatalf("an initiative kept metrics %v, named back %+v", out.Metrics, out.Unsupported)
 	}
-	report, err := Parse(reply, setupInput(SiteCustomReport))
+	report, err := Parse(initiativeReply, setupInput(SiteCustomReport))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,5 +164,25 @@ func TestParseDrawsAKeptMetricTheReplyLeftWithoutAChart(t *testing.T) {
 		if source.Field == "chart" && source.Value == "stage_distribution" {
 			t.Fatalf("named %+v as read from the description, but no words asked for that chart", source)
 		}
+	}
+}
+
+func TestTheRequestSendsTheShapeItsParserReads(t *testing.T) {
+	req := Request(setupInput(SiteInitiative))
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the setup request carries no response schema, so a decoder may write any shape")
+	}
+	openObjective := `{"name":"Linden push","filters":[],"metrics":[],"charts":[],"objective":{"metric":"bookings_won","target_value":null,"deadline":null,"phrase":"Linden push"},"clarifications":["What target should it reach?"],"unsupported":[]}`
+	for name, reply := range map[string]string{"report": reportReply, "initiative": initiativeReply, "open objective": openObjective} {
+		if _, err := Parse(reply, setupInput(SiteInitiative)); err != nil {
+			t.Fatalf("%s: the parser refused the reply: %v", name, err)
+		}
+		if err := schema.ValidateJSON(req.ResponseSchema, reply); err != nil {
+			t.Errorf("%s: the schema refuses a reply the parser keeps: %v", name, err)
+		}
+	}
+	unknownField := strings.Replace(initiativeReply, `"filters":[]`, `"filters":[{"field":"rep","value":"Ann","phrase":"Ann's deals"}]`, 1)
+	if err := schema.ValidateJSON(req.ResponseSchema, unknownField); err == nil {
+		t.Error("the schema admits a filter on a field the parser offers none of")
 	}
 }

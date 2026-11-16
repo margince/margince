@@ -71,8 +71,12 @@ func TestStoredAutomaticNotesRecordTheMeetingWithoutReplacingAnOutcome(t *testin
 			if (want == "held" && held != 1) || (want != "held" && held != 0) {
 				t.Fatalf("held pair count = %d", held)
 			}
-			if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND action='update'`, transcript); got != 1 {
+			if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND action='update' AND after ? 'source_activity_id'`, transcript); got != 1 {
 				t.Fatalf("connection audits = %d, want 1", got)
+			}
+			// The notes take the meeting's readers in an audit of their own.
+			if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id=$1 AND action='update' AND after ? 'participant_users'`, transcript); got != 1 {
+				t.Fatalf("reader audits = %d, want 1", got)
 			}
 			if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 				out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100})

@@ -41,6 +41,14 @@ type loadEnv struct {
 
 func setupLoad(t *testing.T) *loadEnv {
 	t.Helper()
+	emptyDatabase(t)
+	return joinLoad(t)
+}
+
+// joinLoad adds a second workspace beside the one the test already seeded,
+// whose rows stay in place.
+func joinLoad(t *testing.T) *loadEnv {
+	t.Helper()
 	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
 	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
 	if ownerDSN == "" || appDSN == "" {

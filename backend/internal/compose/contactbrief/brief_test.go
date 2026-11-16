@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // The records every fixture here is about.
@@ -295,5 +296,25 @@ func TestNoMoveIsShownBehindAMessageTheReaderMayNotRead(t *testing.T) {
 	}
 	if held.Recent[2].Move != "needs_reply" {
 		t.Error("building the request rewrote the caller's input")
+	}
+}
+
+// The request sends the shape ParseBrief reads, and that shape admits a reply ParseBrief keeps.
+func TestTheBriefRequestSendsTheShapeItsParserReads(t *testing.T) {
+	in := inputFixture()
+	req := BriefRequest(in, string(textlang.English))
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the brief request carries no response schema, so a decoder may write any shape")
+	}
+	good := `{"sentences":[{"text":"Anna runs operations.","nature":"fact","evidence":[{"entity_type":"contact","entity_id":"c1"}]}]}`
+	if kept, err := ParseBrief(good, briefContactID, in); err != nil || len(kept) != 1 {
+		t.Fatalf("the parser kept %d sentences of the well-formed reply (%v), want 1", len(kept), err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, good); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	invented := strings.Replace(good, `"nature":"fact"`, `"nature":"rumour"`, 1)
+	if err := schema.ValidateJSON(req.ResponseSchema, invented); err == nil {
+		t.Error("the schema admits a nature the brief does not label claims with")
 	}
 }

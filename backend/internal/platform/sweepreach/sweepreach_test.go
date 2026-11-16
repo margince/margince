@@ -87,7 +87,7 @@ func TestAnUnsealedSetRefusesTheMergeAndTheErasure(t *testing.T) {
 		installed.mu.Unlock()
 	})
 
-	if err := Relink(context.Background(), nil, reach.Company, ids.NewV7(), ids.NewV7()); !errors.Is(err, ErrNotSealed) {
+	if _, err := Relink(context.Background(), nil, reach.Company, ids.NewV7(), ids.NewV7()); !errors.Is(err, ErrNotSealed) {
 		t.Errorf("Relink() = %v, want ErrNotSealed", err)
 	}
 	if _, err := Erase(context.Background(), nil, ids.NewV7(), "erased"); !errors.Is(err, ErrNotSealed) {

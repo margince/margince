@@ -540,9 +540,9 @@ function workingMorning(meetings: WorklistItem[]) {
 
 export const WorkingMorning: Story = { render: workingMorning([]) };
 
-// Two meetings ahead on the day the page is read. The rail's Your day draws a
-// Now stop at the reader's clock. The next meeting stands on its plate with
-// the way into its brief, and the one after follows.
+// Four external meetings ahead on the day the page is read. The rail lists them
+// by start, each naming its account and contacts, and none is cut at the bottom.
+// The next one says how soon it starts and offers the way into its brief.
 export const MorningWithMeetings: Story = {
   render: workingMorning([
     {
@@ -550,10 +550,51 @@ export const MorningWithMeetings: Story = {
       title: "Nordwind onboarding",
       with_contact: "01a00000-0000-7000-8000-000000000017",
       move: { action: "open_meeting_brief", activity_id: "meet-next" },
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000017",
+            full_name: "Ines Nordwind",
+          },
+        ],
+      },
     },
     {
       ...meetingRow("meet-later", true, "2026-09-13T12:00:00Z"),
       title: "Helio pricing call",
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000021",
+            full_name: "Tomas Helio",
+          },
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000022",
+            full_name: "Mia Sander",
+          },
+        ],
+        participants_more: 2,
+      },
+    },
+    {
+      ...meetingRow("meet-afternoon", false, "2026-09-13T14:30:00Z"),
+      title: "Quarterly review",
+      room: {
+        participants: [],
+        other_participants: [{ kind: "address", name: "cfo@weber.example" }],
+      },
+    },
+    {
+      ...meetingRow("meet-last", false, "2026-09-13T16:00:00Z"),
+      title: "Contract walk-through",
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000031",
+            full_name: "Lena Hartmann",
+          },
+        ],
+      },
     },
   ]),
 };
