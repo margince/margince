@@ -434,3 +434,78 @@ describe("useBeforeUnload", () => {
     expect(asked()).toBe(false);
   });
 });
+
+/** A guard whose address the test moves, and whose Stay goes nowhere yet. */
+function Addressed({
+  onKeep,
+  samePlace,
+}: Readonly<{
+  onKeep: (address: string, depth: number | undefined) => void;
+  samePlace?: (one: string, other: string) => boolean;
+}>) {
+  const [address, setAddress] = useState("#/form?tab=a");
+  return (
+    <LocaleProvider>
+      {["#/form?tab=b", "#/elsewhere", "#/third"].map((to) => (
+        <button key={to} type="button" onClick={() => setAddress(to)}>
+          {`go ${to}`}
+        </button>
+      ))}
+      <UnsavedGuard address={address} onKeep={onKeep} samePlace={samePlace}>
+        {(shown) => (
+          <>
+            <p>{`Showing ${shown}`}</p>
+            <DraftCard />
+          </>
+        )}
+      </UnsavedGuard>
+    </LocaleProvider>
+  );
+}
+
+describe("UnsavedGuard holding a history entry", () => {
+  afterEach(() => {
+    window.history.replaceState(null, "", "#/");
+  });
+
+  it("hands Stay the depth of the entry the held address was live on", async () => {
+    window.history.replaceState({ marginceDepth: { depth: 4, at: "" } }, "");
+    const user = userEvent.setup();
+    const onKeep = vi.fn();
+    render(<Addressed onKeep={onKeep} />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "J");
+    fireEvent.click(screen.getByRole("button", { name: "go #/elsewhere" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(onKeep).toHaveBeenCalledWith("#/form?tab=a", 4);
+  });
+
+  it("follows a move its caller counts as the same place, draft and all", async () => {
+    const user = userEvent.setup();
+    render(
+      <Addressed
+        onKeep={vi.fn()}
+        samePlace={(one, other) => one.split("?")[0] === other.split("?")[0]}
+      />,
+    );
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "J");
+    await user.click(screen.getByRole("button", { name: "go #/form?tab=b" }));
+
+    expect(screen.getByText("Showing #/form?tab=b")).toBeInTheDocument();
+    expect(dialog()).toBeNull();
+  });
+
+  it("stops asking once Stay is answered, and asks again for the next move", async () => {
+    const user = userEvent.setup();
+    render(<Addressed onKeep={vi.fn()} />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "J");
+    fireEvent.click(screen.getByRole("button", { name: "go #/elsewhere" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(dialog()).toBeNull();
+    expect(screen.getByText("Showing #/form?tab=a")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "go #/third" }));
+    expect(dialog()).not.toBeNull();
+  });
+});

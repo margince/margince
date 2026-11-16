@@ -2,7 +2,8 @@ import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
-import { navigate, type Route, useHash } from "../lib/router";
+import { entryDepth } from "../lib/historydepth";
+import { navigate, type Route, useLiveHash } from "../lib/router";
 import {
   type Saver,
   UnsavedContext,
@@ -60,7 +61,9 @@ export function useGuardedLeave(
   const scope = useId();
   useUnsavedGuard(dirty && leaving === null, scope);
   const held = useHasUnsavedChanges(scope);
-  const hash = useHash();
+  // The bar, not the address the page was drawn for: the move it sent is
+  // what this waits to see, while the page itself may still be held.
+  const hash = useLiveHash();
 
   // The other draft's question can be answered Keep, which puts the address
   // back with this page still mounted: its own draft is unsaved again.
@@ -123,23 +126,29 @@ export function useBeforeUnload(dirty: boolean): void {
  * keeps rendering the address it was already showing and asks. Discarding shows
  * the new one; keeping sends the reader back to the one they were editing, which
  * is the only outcome that leaves their work where they can still save it.
+ * `samePlace` names a change that is not leaving, such as a dial turned in place.
  *
  * `onKeep` is how the caller puts the address back, because only the caller
- * knows what the address IS — this component holds content, not routes.
+ * knows what the address IS — this component holds content, not routes. It is
+ * given the depth stamp of the history entry the held address was live on.
  */
 export function UnsavedGuard<Address extends string>({
   address,
   onKeep,
+  samePlace = Object.is,
   children,
 }: Readonly<{
   address: Address;
-  onKeep: (address: Address) => void;
+  onKeep: (address: Address, depth: number | undefined) => void;
+  samePlace?: (one: Address, other: Address) => boolean;
   children: (address: Address) => ReactNode;
 }>) {
   const registry = useUnsavedRegistry(null);
   // The address whose content is on screen. It follows `address` freely until a
   // draft is at stake, and then stops until the question is answered.
-  const [shown, setShown] = useState(address);
+  const [shown, setShown] = useState(() => ({ address, depth: entryDepth() }));
+  // The address Stay was answered on, while the way back is still under way.
+  const [kept, setKept] = useState<Address | null>(null);
 
   const dirty = registry.dirty;
   useBeforeUnload(dirty);
@@ -148,20 +157,29 @@ export function UnsavedGuard<Address extends string>({
   // in an effect: an effect would paint the OLD content for one frame against
   // the NEW page heading the shell has already swapped, which reads as the page
   // half-navigating.
-  if (address !== shown && !dirty) {
-    setShown(address);
+  if (
+    address !== shown.address &&
+    (!dirty || samePlace(address, shown.address))
+  ) {
+    setShown({ address, depth: entryDepth() });
+  }
+  if (kept !== null && address !== kept) {
+    setKept(null);
   }
 
-  const asking = address !== shown && dirty;
+  const asking = address !== shown.address && dirty && address !== kept;
 
   return (
     <UnsavedContext.Provider value={registry}>
-      {children(shown)}
+      {children(shown.address)}
       <LeaveQuestion
         open={asking}
         savers={registry.savers}
-        onStay={() => onKeep(shown)}
-        onLeave={() => setShown(address)}
+        onStay={() => {
+          setKept(address);
+          onKeep(shown.address, shown.depth);
+        }}
+        onLeave={() => setShown({ address, depth: entryDepth() })}
       />
     </UnsavedContext.Provider>
   );

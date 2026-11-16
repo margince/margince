@@ -1,5 +1,6 @@
-import { useMemo } from "react";
-import { announceAddressChanged, useHash } from "./router";
+import { useContext, useMemo } from "react";
+import { announceAddressChanged, samePage, useHash } from "./router";
+import { ScreenAddress } from "./screenaddress";
 
 /**
  * The query half of the address. It names a view of what is on screen: how a
@@ -152,8 +153,10 @@ export function replaceDial(key: string, value: string | undefined): void {
 /**
  * The dials the address carries, and the one way to change them.
  *
- * The setter is module-level and therefore stable, so a caller may depend on it
- * without a memo and an effect keyed on it cannot re-run for a new identity.
+ * Under a routed screen the setter writes only while the bar is on that page,
+ * checked at the write: a screen held past a move, or a save settling after the
+ * reader left, would write into the entry they arrived on. It is stable while
+ * the page is, so an effect keyed on it does not re-run for a dial.
  */
 export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   const hash = useHash();
@@ -162,7 +165,21 @@ export function useUrlParams(): [UrlParams, (next: UrlParams) => void] {
   // long as the reader stays put. A query object rebuilt every render would
   // re-key every react-query read that names it.
   const params = useMemo(() => parseParams(hash), [hash]);
-  return [params, replaceParams];
+  const drawnFor = useContext(ScreenAddress);
+  const page =
+    drawnFor === null ? null : hashWithParams(drawnFor, NO_URL_PARAMS);
+  const write = useMemo(
+    () =>
+      page === null
+        ? replaceParams
+        : (next: UrlParams) => {
+            if (samePage(globalThis.location.hash, page)) {
+              replaceParams(next);
+            }
+          },
+    [page],
+  );
+  return [params, write];
 }
 
 // The two dials the Ask dialog rides on, and these are their only writers. They

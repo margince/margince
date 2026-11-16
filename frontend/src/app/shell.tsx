@@ -13,7 +13,8 @@ import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useFirstScreenSettled } from "../lib/journeymarks";
-import { routeHash, useRoute } from "../lib/router";
+import { useHash, useRoute } from "../lib/router";
+import { ShownAddressSink } from "../lib/screenaddress";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { useShortcutDispatcher, useShortcutHandler } from "../lib/shortcuts";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
@@ -143,16 +144,23 @@ export function Shell({
   // A page opens at its top. The document never scrolls; the content column
   // does, and it is one element on every route, so it would carry the old offset.
   //
-  // Keyed by the ADDRESS, not by `route`: useRoute parses a fresh object every
-  // render, so a dependency on the object would re-run this on every keystroke a
-  // screen handles and fight a reader who has scrolled deliberately.
-  const address = routeHash(route);
+  // Keyed by the ADDRESS the routed screen shows, not the bar: a screen held
+  // past a move is still the one in the column. The whole address, so Back
+  // between two entries that differ only in dials restores each.
+  const [shown, setShown] = useState<string | null>(null);
+  const live = useHash();
+  const address = shown ?? live;
   // A new page opens at its top; a page the reader is returning to opens where
   // they left it. Both live in lib/scrollmemory.ts. The second needs an identity
   // for the history entry, which the browser does not give, and a retry while the
   // column grows. A list restores its rows a moment after the address arrives,
   // so a single assignment lands on a column still short and gets clamped.
   useScrollMemory(scroller, address);
+  const screen = (
+    <ShownAddressSink.Provider value={setShown}>
+      {children}
+    </ShownAddressSink.Provider>
+  );
   usePublishedScrollerHeight(scroller, railless ? "railless" : "workspace");
 
   const toggle = useCallback(() => {
@@ -187,7 +195,7 @@ export function Shell({
               lose. */}
           {route.screen === "onboarding" && <CaptureChip linked={false} />}
           <div className="scroll" ref={scroller}>
-            {children}
+            {screen}
           </div>
         </main>
       </div>
@@ -257,7 +265,7 @@ export function Shell({
                 <PageTitle route={route} actionSlot={setHeadSlot} />
               )}
               <PageHeadSlot.Provider value={headSlot}>
-                {children}
+                {screen}
               </PageHeadSlot.Provider>
             </div>
           </main>
