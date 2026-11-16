@@ -275,7 +275,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithContactTouch(attentionContactTouch{pool: pool}).
 		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
 		WithContactEmployers(newContactsStore(db)).
-		WithMeetingOrganizers(activities.NewStore(db)).
+		WithMeetingOrganizers(activities.NewStore(db)).WithMeetingRooms(activities.NewStore(db)).
 		// Cached cards keep queue reads from starting model work.
 		WithDealMoves(attentionDealMoves{cards: cards}).
 		WithDealStandings(attentionDealStandings{cards: cards}).
