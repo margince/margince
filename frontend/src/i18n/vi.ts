@@ -7846,7 +7846,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "sendPermission.checking": "Đang kiểm tra xem có thể gửi tin nhắn này không…",
   "lawfulBasis.title": "Chưa có sự đồng ý của liên hệ này",
   "lawfulBasis.body":
-    "Theo pháp luật Việt Nam, bạn không được xử lý dữ liệu của người này khi chưa có sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",
+    "Theo pháp luật Việt Nam, bạn không được xử lý dữ liệu này khi chưa có sự đồng ý. Nếu gửi, bạn tự chịu rủi ro.",
   "lawfulBasis.confirm": "Vẫn gửi",
   "lawfulBasis.failed": "Chưa ghi nhận được xác nhận. Hãy thử lại.",
   "privacynotice.purposeLine": "{purpose}: {basis}",
@@ -8032,7 +8032,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.assurance":
     "Bước kiểm tra dự báo hằng đêm đã tạo việc này: dữ liệu đầu vào của deal này cần xem lại. Trang deal liệt kê các dữ liệu đó.",
   "tasks.origin.privacy_request":
-    "Được tạo khi người liên hệ yêu cầu chỉnh sửa, xóa hoặc ngừng sử dụng dữ liệu của họ. Pháp luật nước họ quy định thời hạn của việc này.",
+    "Được tạo khi liên hệ yêu cầu chỉnh sửa, xóa hoặc ngừng sử dụng dữ liệu của họ. Pháp luật nước họ quy định thời hạn của việc này.",
   "tasks.origin.analytics_decision":
     "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":

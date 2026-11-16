@@ -8040,7 +8040,7 @@ export const en = {
   "sendPermission.checking": "Checking whether this message can be sent…",
   "lawfulBasis.title": "No consent on record for this contact",
   "lawfulBasis.body":
-    "Under Vietnamese law you may not process this person’s data without consent. Sending is at your own risk.",
+    "Under Vietnamese law you may not process this recipient’s data without consent. Sending is at your own risk.",
   "lawfulBasis.confirm": "Send anyway",
   "lawfulBasis.failed": "Your confirmation was not recorded. Try again.",
   "privacynotice.purposeLine": "{purpose}: {basis}",

@@ -8039,7 +8039,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
   "lawfulBasis.title": "Für diesen Kontakt ist keine Einwilligung erfasst",
   "lawfulBasis.body":
-    "Nach vietnamesischem Recht darfst du die Daten dieser Person ohne Einwilligung nicht verarbeiten. Du sendest auf eigenes Risiko.",
+    "Nach vietnamesischem Recht darfst du diese Daten ohne Einwilligung nicht verarbeiten. Du sendest auf eigenes Risiko.",
   "lawfulBasis.confirm": "Trotzdem senden",
   "lawfulBasis.failed":
     "Deine Bestätigung wurde nicht gespeichert. Versuche es erneut.",
