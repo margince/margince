@@ -128,7 +128,7 @@ function keyDownHandler(
   actions: IntentActions,
   typing: (at: number) => boolean,
 ) {
-  return (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+  return (event: ReactKeyboardEvent<HTMLElement>) => {
     // A modified press belongs to the browser or the OS (Alt+Arrow is history
     // navigation, Cmd+F is find) — never to a typeahead buffer.
     if (event.altKey || event.ctrlKey || event.metaKey) {
@@ -198,7 +198,7 @@ export type Listbox = Readonly<{
   popup: RefObject<HTMLDivElement | null>;
   listboxId: string;
   optionDomId: (index: number) => string;
-  onKeyDown: (event: ReactKeyboardEvent<HTMLButtonElement>) => void;
+  onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => void;
   onTriggerClick: () => void;
   pick: (index: number) => void;
   hover: (index: number) => void;
@@ -241,6 +241,7 @@ export function useSelectListbox<T extends ListboxOption>(
   openOnMount: boolean,
   onCancel?: () => void,
   onLeave?: () => void,
+  onOpen?: () => void,
 ): Listbox {
   const edge = (step: 1 | -1) =>
     stepEnabled(options, step === 1 ? 0 : options.length - 1, step);
@@ -271,6 +272,9 @@ export function useSelectListbox<T extends ListboxOption>(
   // did: `commit` below never routes through this, because it closes on a
   // value that DID change.
   const abandon = useCallback(() => {
+    if (popup.current?.contains(document.activeElement)) {
+      trigger.current?.focus({ preventScroll: true });
+    }
     setOpen(false);
     onCancel?.();
   }, [onCancel]);
@@ -279,6 +283,7 @@ export function useSelectListbox<T extends ListboxOption>(
   useActiveOptionVisible(open, active, listboxId);
 
   const openFrom = (step: 1 | -1) => {
+    onOpen?.();
     typed.current = { query: "", at: 0 };
     setActive(startingActive(options, selectedIndex, step));
     setOpen(true);

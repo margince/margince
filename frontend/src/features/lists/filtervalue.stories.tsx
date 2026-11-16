@@ -9,6 +9,7 @@ import type { FilterOp, LeafValue } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ValueControl } from "./filtervalue";
@@ -52,6 +53,11 @@ function Editing({
 function story(props: Parameters<typeof Editing>[0]) {
   return () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+      }),
       "GET /users": () =>
         jsonResponse({
           data: [
