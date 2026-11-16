@@ -10,6 +10,7 @@ import {
   useUnsavedRegistry,
 } from "../lib/unsavedclaims";
 import { replaceDial } from "../lib/urlstate";
+import { Heading } from "./heading";
 import { Modal } from "./modal";
 
 // A dialog held in page state has no address of its own. The page moving under
@@ -34,7 +35,9 @@ function StateHeldDialog({ draft = false }: Readonly<{ draft?: boolean }>) {
       labelledBy="t"
       intent="form"
     >
-      <h2 id="t">Log activity</h2>
+      <Heading size="large" id="t">
+        Log activity
+      </Heading>
       {draft && <Draft />}
     </Modal>
   );
