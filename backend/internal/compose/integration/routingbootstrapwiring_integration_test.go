@@ -31,6 +31,7 @@ import (
 )
 
 func TestADeclaredBindingReachesTheDatabaseThroughTheRealBootstrap(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 	// An empty installation: the harness has already provisioned one, and

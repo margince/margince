@@ -83,6 +83,7 @@ func (q *queryEnv) seedBudgetVolume(t *testing.T) ids.UUID {
 // with no rows, and the difference between them is the difference between
 // "narrow your question" and "this workspace holds nobody".
 func TestQueryPlanThatOutlastsItsBudgetIsAbandonedRatherThanServed(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedBudgetVolume(t)
 	q.executor = search.NewQueryExecutorWithBudget(q.Store, nil, search.NewColumnCatalog(q.DB()), time.Millisecond)
@@ -111,6 +112,7 @@ func TestQueryPlanThatOutlastsItsBudgetIsAbandonedRatherThanServed(t *testing.T)
 // set so low that nothing is ever answered, which is the failure mode a timeout
 // invites: a bound tight enough to be safe and useless.
 func TestQueryPlanWithinItsBudgetAnswersCompletely(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	employee := q.seedBudgetVolume(t)
 
@@ -136,6 +138,7 @@ func TestQueryPlanWithinItsBudgetAnswersCompletely(t *testing.T) {
 // thought about the cost. This is the same defect one lane to the left, and it
 // is reachable through the same 🟢 read.
 func TestARankedQueryPlanIsBoundedInTheRankingLaneToo(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedBudgetVolume(t)
 	q.executor = search.NewQueryExecutorWithBudget(q.Store, nil, search.NewColumnCatalog(q.DB()), time.Millisecond)

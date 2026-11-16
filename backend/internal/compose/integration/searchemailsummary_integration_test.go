@@ -50,6 +50,7 @@ func hitFor(page search.Page, id ids.UUID) *search.Hit {
 // access badge, all from the activities projection rather than from a second
 // one built here.
 func TestAnEmailSearchHitCarriesTheCanonicalRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -107,6 +108,7 @@ func TestAnEmailSearchHitCarriesTheCanonicalRow(t *testing.T) {
 // the discover gate would leak what the body says through hit existence,
 // score, ordering and the page boundary.
 func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -176,6 +178,7 @@ func TestAWithheldEmailProducesNoSearchHit(t *testing.T) {
 // generic hit it has always had, so a client branching on email_summary's
 // presence renders them the way it did before.
 func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -213,6 +216,7 @@ func TestANonEmailActivityHitKeepsItsGenericTreatment(t *testing.T) {
 // one statement over the page's ids, and the failure this catches is a batch
 // that quietly reads a prefix — which on a page of one looks exactly right.
 func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -253,6 +257,7 @@ func TestEveryEmailOnAFullPageCarriesItsRow(t *testing.T) {
 // is exported — a future caller reaching it through a discover-gated list would
 // otherwise print a limited conversation's subject to a colleague.
 func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -304,6 +309,7 @@ func TestTheEmailSummaryBatchRefusesAWithheldRowOnItsOwn(t *testing.T) {
 // it gets no row. A content column narrower than the gate would blank the
 // member's subject here.
 func TestASelectedMemberReadsTheLimitedMailsSummaryInFull(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	member := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)

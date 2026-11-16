@@ -24,6 +24,7 @@ import (
 )
 
 func TestSubjectRequestQueueIsTheAdminsAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
 
@@ -72,6 +73,7 @@ func TestSubjectRequestQueueIsTheAdminsAlone(t *testing.T) {
 // filed it could — so a rep, who holds contact.update for their own contact edits
 // and nothing on the queue, must not be able to plant one.
 func TestFilingASubjectRequestTakesTheQueuesOwnGate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := consent.NewStore(e.DB())
 	erasure := consent.CreateDSRInput{

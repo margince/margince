@@ -108,6 +108,7 @@ func advanceProject(ctx context.Context, t *testing.T, e *Env, project ids.Proje
 // an unfiled activity and one under another project are both excluded — and
 // grouping by project_id buckets the unfiled ones under no project.
 func TestActivitiesByKindFiltersAndGroupsByProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Effort Co", nil)
@@ -152,6 +153,7 @@ func TestActivitiesByKindFiltersAndGroupsByProject(t *testing.T) {
 // no project the caller can see answers the existence-hiding 404 — whatever
 // deals the filter would or would not have matched.
 func TestProjectFilterRunsTheProjectReadGate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Gated Co", nil)
@@ -203,6 +205,7 @@ func TestProjectFilterRunsTheProjectReadGate(t *testing.T) {
 // deals are worth in the base currency: the open side prices an open deal in
 // the base currency at its amount, the won side reads the frozen base amount.
 func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, won := DealFixture(t, e)
@@ -253,6 +256,7 @@ func TestProjectsByPhaseCountsAndFoldsDealValue(t *testing.T) {
 // project-commitments lists each project's open and overdue tasks, the most
 // overdue first; a task with no past due date is open but not overdue.
 func TestProjectCommitmentsCountsOpenAndOverdueFirst(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Promise Co", nil)
@@ -281,6 +285,7 @@ func TestProjectCommitmentsCountsOpenAndOverdueFirst(t *testing.T) {
 // against for `days` days: the default window, a narrower one the caller
 // sends, and a project not in flight excluded however long it has sat.
 func TestProjectsGoneQuietHonoursTheDaysThreshold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Quiet Co", nil)
@@ -329,6 +334,7 @@ func (e *Env) readerWith(objects ...string) context.Context {
 // alone is served the count and none of those columns, and is refused by
 // name when it asks for one.
 func TestProjectReportMeasuresTakeTheirOwnRecordGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
@@ -384,6 +390,7 @@ func TestProjectReportMeasuresTakeTheirOwnRecordGrant(t *testing.T) {
 // which takes the project grant: a seat holding activity.read alone is refused
 // both the id and the label dimension by name.
 func TestActivitiesByProjectDimensionsTakeTheProjectGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Label Co", nil)

@@ -80,6 +80,7 @@ func seedDailySystemHealth(t *testing.T, e *apptest.AppEnv, scale float64, owner
 }
 
 func TestSystemHealthBudgets(t *testing.T) {
+	t.Parallel()
 	scale, err := dailyScale()
 	if err != nil {
 		t.Fatal(err)

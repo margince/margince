@@ -60,6 +60,7 @@ func (p *neighbourPlanTx) Query(ctx context.Context, sql string, args ...any) (p
 }
 
 func TestMailNeighboursSeekPastUnrelatedHistory(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	// A stale all-null thread statistic must not send point lookups through the partial thread index.
 	if _, err := e.Owner.Exec(e.Admin(), `INSERT INTO activity (kind,source,captured_by)

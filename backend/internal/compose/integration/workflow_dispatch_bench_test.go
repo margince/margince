@@ -92,6 +92,7 @@ const workflowDispatchBudget = 200 * time.Millisecond
 const dispatchSampleSize = 200
 
 func TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedAllStarterAutomations(t, e)
 	engine := compose.NewWorkflowEngine(e.DB())

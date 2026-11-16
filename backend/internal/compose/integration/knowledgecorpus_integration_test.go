@@ -46,6 +46,7 @@ func howTo(name string) knowledge.NewCorpus {
 }
 
 func TestCreatingACorpusStampsTheDefaultFloor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -68,6 +69,7 @@ func TestCreatingACorpusStampsTheDefaultFloor(t *testing.T) {
 // An explicit floor is the caller's, not the default's — the transport passes
 // it through rather than defaulting, so the two cases stay distinguishable.
 func TestAnExplicitFloorSurvivesTheCreate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -87,6 +89,7 @@ func TestAnExplicitFloorSurvivesTheCreate(t *testing.T) {
 // Two defaults is a palette that asks a different corpus depending on row
 // order, so the second one moves the flag rather than joining it.
 func TestASecondDefaultCorpusTakesTheFlagFromTheFirst(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -118,6 +121,7 @@ func TestASecondDefaultCorpusTakesTheFlagFromTheFirst(t *testing.T) {
 // The same rule on the edit path: raising the flag by patch moves it too, and
 // the partial unique index is never the thing that reports the collision.
 func TestPatchingTheDefaultFlagMovesItRatherThanColliding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -152,6 +156,7 @@ func TestPatchingTheDefaultFlagMovesItRatherThanColliding(t *testing.T) {
 // An empty patch is a read, not a write: no audit row, and the same corpus
 // back. A caller that PATCHes nothing has changed nothing.
 func TestAnEmptyPatchWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -173,6 +178,7 @@ func TestAnEmptyPatchWritesNothing(t *testing.T) {
 // transaction. A chunk left live under an archived corpus stays retrievable,
 // and would be cited by name out of a corpus the screen no longer shows.
 func TestArchivingACorpusTakesItsDocumentsAndChunks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -201,6 +207,7 @@ func TestArchivingACorpusTakesItsDocumentsAndChunks(t *testing.T) {
 // A repeat archive is the same answer and no second audit row — the caller who
 // retries a 204 has not archived it twice.
 func TestArchivingACorpusTwiceWritesOneAuditRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -224,6 +231,7 @@ func TestArchivingACorpusTwiceWritesOneAuditRow(t *testing.T) {
 
 // An archived corpus leaves the list. The screen's list is the live set.
 func TestAnArchivedCorpusLeavesTheList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -251,6 +259,7 @@ func TestAnArchivedCorpusLeavesTheList(t *testing.T) {
 // The seeded posture: a rep asks, and cannot move the floor the answer is
 // refused under. Object denial is 403, never a silent no-op.
 func TestARepMayReadACorpusAndMayNotDefineOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	admin := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -277,6 +286,7 @@ func TestARepMayReadACorpusAndMayNotDefineOne(t *testing.T) {
 
 // A corpus that does not exist is absent, not forbidden.
 func TestReadingAMissingCorpusIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -323,6 +333,7 @@ func corpusAuditRows(t *testing.T, e *Env, corpusID ids.UUID) int {
 // A corpus with no override reports the floor measured for the binding in
 // force, and an override reports itself.
 func TestACorpusReportsTheFloorOfTheBindingThatReadsIt(t *testing.T) {
+	t.Parallel()
 	e := newIngestEnv(t)
 	store := e.store.WithEmbedIdentity(func() string { return "gemini/gemini-embedding-001@1536" })
 	got, err := store.ReadCorpus(e.ctx, e.corpus)

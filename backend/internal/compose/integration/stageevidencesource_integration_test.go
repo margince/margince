@@ -118,6 +118,7 @@ func missingBySource(t *testing.T, e *Env, reader principal.Permissions, user id
 }
 
 func TestEvidenceShowsASourceTheReaderCannotOpenAsMissing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	src := seedEvidenceSources(t, e)
 
@@ -156,6 +157,7 @@ func TestEvidenceShowsASourceTheReaderCannotOpenAsMissing(t *testing.T) {
 // The source pair has no foreign key, so a hard delete of a cited activity
 // goes through. No product path hard-deletes one, so the delete is SQL.
 func TestEvidenceOutlivesADeletedActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	src := seedEvidenceSources(t, e)
 	e.WsExec(t, `DELETE FROM activity WHERE id = $1`, src.activity)

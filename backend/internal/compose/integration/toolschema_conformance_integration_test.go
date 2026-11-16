@@ -64,6 +64,7 @@ import (
 // by the encoder-agreement test in the agents package, but not against a live
 // handler.
 func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -685,6 +686,7 @@ func coinTagThroughTheToolSurface(ctx context.Context, t *testing.T, registry *a
 // it is shown failing: a schema deliberately declaring a member no result
 // carries has to be reported, against a REAL answer rather than a fixture.
 func TestTheConformanceCheckFailsAgainstAMisdeclaredSchema(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	DealFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -780,6 +782,7 @@ func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) briefs.BriefRun
 // It asserts the property rather than the call count, so a later fixture that
 // covers the crossing some other way keeps it.
 func TestTheBriefFixtureCoversBothDaysTheReadCanAskFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	snapshotBriefRun(ctx, t, e)

@@ -131,6 +131,7 @@ func prose(paragraphs int) string {
 // job enqueued outside it can wake before the row exists, or survive a rollback
 // that leaves it pointing at nothing.
 func TestAnUploadedDocumentLandsQueuedWithItsIngestAsked(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
 
@@ -153,6 +154,7 @@ func TestAnUploadedDocumentLandsQueuedWithItsIngestAsked(t *testing.T) {
 // the previous attempt wrote, so a crash halfway through is invisible to the
 // next one.
 func TestARetriedIngestDoesNotDoubleTheChunks(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(3))
 
@@ -172,6 +174,7 @@ func TestARetriedIngestDoesNotDoubleTheChunks(t *testing.T) {
 // The same rule for an attempt that DIED mid-flight: BeginIngest is what clears
 // the debris, so a half-written attempt costs the next one nothing.
 func TestAnAttemptThatDiedMidFlightLeavesTheNextOneClean(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(3))
 
@@ -195,6 +198,7 @@ func TestAnAttemptThatDiedMidFlightLeavesTheNextOneClean(t *testing.T) {
 // A terminally failed document leaves no chunks behind: a chunk it left would
 // be retrievable and citable out of a document the screen shows as failed.
 func TestATerminallyFailedIngestLeavesNoChunks(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(3))
 	ie.ingest(t, docID)
@@ -225,6 +229,7 @@ func TestATerminallyFailedIngestLeavesNoChunks(t *testing.T) {
 // The refusal names what IS accepted. A PDF arriving as an empty corpus is
 // worse than a PDF refused.
 func TestAPDFIsRefusedNamingTheAcceptedTypes(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
 		CorpusID:    ie.corpus,
@@ -254,6 +259,7 @@ func TestAPDFIsRefusedNamingTheAcceptedTypes(t *testing.T) {
 // part of the type would refuse every real upload while passing every test that
 // spelled the type bare.
 func TestAContentTypeCarryingParametersIsStillAccepted(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown; charset=utf-8", prose(1))
 	docs, err := ie.store.ListDocuments(ie.ctx, ie.corpus)
@@ -274,6 +280,7 @@ func TestAContentTypeCarryingParametersIsStillAccepted(t *testing.T) {
 // Without that re-read an attempt already past the archive would write live
 // chunks under an archived document a moment later.
 func TestADocumentArchivedMidIngestLeavesNoLiveChunk(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
 
@@ -298,6 +305,7 @@ func TestADocumentArchivedMidIngestLeavesNoLiveChunk(t *testing.T) {
 // A file of only blank lines is a document with nothing in it, not a failure.
 // Saying so helps more than a refusal the uploader cannot act on.
 func TestABlankDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "empty.md", "text/markdown", "   \n\n  ")
 
@@ -316,6 +324,7 @@ func TestABlankDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
 // A file of no bytes is refused before anything is stored: filed, it would read
 // like success and answer nothing.
 func TestAZeroByteFileIsRefusedBeforeAnythingIsStored(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
 		CorpusID:    ie.corpus,
@@ -335,6 +344,7 @@ func TestAZeroByteFileIsRefusedBeforeAnythingIsStored(t *testing.T) {
 // The upload with no object store bound refuses as OUR fault. Carrying on would
 // write a row promising bytes that are nowhere.
 func TestAnUploadWithNoObjectStoreRefusesRatherThanWritingARow(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	storeless := knowledge.NewStore(ie.env.DB())
 
@@ -354,6 +364,7 @@ func TestAnUploadWithNoObjectStoreRefusesRatherThanWritingARow(t *testing.T) {
 
 // Uploading into a corpus that does not exist is absent, not a stored orphan.
 func TestAnUploadIntoAMissingCorpusStoresNothing(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
 		CorpusID:    ids.NewV7(),
@@ -373,6 +384,7 @@ func TestAnUploadIntoAMissingCorpusStoresNothing(t *testing.T) {
 // is admin/ops-only because uploading puts third-party prose into the body
 // every seat then asks.
 func TestARepMayListDocumentsAndMayNotUploadOne(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	ie.upload(t, "operating.md", "text/markdown", prose(1))
 	rep := ie.env.As(ie.env.Rep1, nil, corpusRepPerms)
@@ -395,6 +407,7 @@ func TestARepMayListDocumentsAndMayNotUploadOne(t *testing.T) {
 // and "no such corpus" are different answers and the screen renders them
 // differently.
 func TestListingDocumentsOfAMissingCorpusIsNotFound(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	if _, err := ie.store.ListDocuments(ie.ctx, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("list of an unknown corpus = %v, want ErrNotFound", err)
@@ -409,6 +422,7 @@ func TestListingDocumentsOfAMissingCorpusIsNotFound(t *testing.T) {
 // under test is the refusal, and a test that took a minute to reach it would be
 // deleted by the next contact who ran the suite.
 func TestADocumentCrossingTheCorpusPassageCeilingIsRefused(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	filler := ie.upload(t, "filler.md", "text/markdown", prose(1))
 	fillToPassageCeiling(t, ie.env, ie.corpus, filler)
@@ -459,6 +473,7 @@ func fillToPassageCeiling(t *testing.T, e *Env, corpusID, documentID ids.UUID) {
 // bounds PASSAGES, not storage: a document refused by that ceiling would
 // otherwise keep its megabytes forever, once per attempt anyone cares to make.
 func TestATerminallyFailedIngestTakesItsStoredFileWithIt(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
 	key := wsText(t, ie.env, `SELECT storage_key FROM knowledge_document WHERE id = $1`, docID)
@@ -492,6 +507,7 @@ func TestATerminallyFailedIngestTakesItsStoredFileWithIt(t *testing.T) {
 // chunk_count half of what it holds, and passes the per-corpus ceiling while
 // over it.
 func TestTwoAttemptsAtOneDocumentCannotBothWriteItsPassages(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(3))
 
@@ -527,6 +543,7 @@ func TestTwoAttemptsAtOneDocumentCannotBothWriteItsPassages(t *testing.T) {
 // two apparently different documents, and both copies would count against the
 // corpus ceiling.
 func TestUploadingTheSameBytesTwiceIsRefusedNamingWhatHoldsThem(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	ie.upload(t, "operating.md", "text/markdown", prose(2))
 
@@ -554,6 +571,7 @@ func TestUploadingTheSameBytesTwiceIsRefusedNamingWhatHoldsThem(t *testing.T) {
 // A DIFFERENT file with the same name is not a duplicate: the bytes decide, not
 // the filename.
 func TestADifferentFileWithTheSameNameIsNotADuplicate(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	ie.upload(t, "operating.md", "text/markdown", prose(2))
 	ie.upload(t, "operating.md", "text/markdown", prose(3))
@@ -566,6 +584,7 @@ func TestADifferentFileWithTheSameNameIsNotADuplicate(t *testing.T) {
 // The ceiling is a statement about the CORPUS, so it must hold across two
 // documents ingesting at once — not only across two attempts at one.
 func TestTheCeilingHoldsAcrossTwoDocumentsInOneCorpus(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	filler := ie.upload(t, "filler.md", "text/markdown", prose(1))
 	// Room for one of the two documents and not both, so the ceiling is what
@@ -613,6 +632,7 @@ func fillToPassageCeilingLess(t *testing.T, e *Env, corpusID, documentID ids.UUI
 // answers not_ready permanently — every other document in it unaskable because
 // one upload's worker was killed.
 func TestAnIngestThatStoppedWithoutFinishingIsClosedBytheSweep(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
 	if _, err := ie.store.BeginIngest(ie.ctx, docID); err != nil {
@@ -648,6 +668,7 @@ func TestAnIngestThatStoppedWithoutFinishingIsClosedBytheSweep(t *testing.T) {
 // A document still INSIDE its wall clock is slow, not gone, and the sweep must
 // leave it alone. Closing it would fail an ingest that is about to succeed.
 func TestASweepLeavesAnIngestThatIsMerelySlowAlone(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
 	if _, err := ie.store.BeginIngest(ie.ctx, docID); err != nil {
@@ -668,6 +689,7 @@ func TestASweepLeavesAnIngestThatIsMerelySlowAlone(t *testing.T) {
 // A platform with no registry entry for `.md` sends an EMPTY content type. The
 // route's flagship file would then be refused, and so would a curl upload with no part header.
 func TestAnUploadWithNoContentTypeIsReadByItsFilename(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	for _, c := range []struct{ filename, want string }{
 		{"handbook.md", "text/markdown"},
@@ -693,6 +715,7 @@ func TestAnUploadWithNoContentTypeIsReadByItsFilename(t *testing.T) {
 // A readable ending names the type, so a PDF renamed .md is refused by its
 // bytes, which contradict the type its name claims.
 func TestAPDFNamedAsMarkdownIsRefusedByItsBytes(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
 		CorpusID:    ie.corpus,
@@ -709,6 +732,7 @@ func TestAPDFNamedAsMarkdownIsRefusedByItsBytes(t *testing.T) {
 // And an extension this route does not read is still refused, so the fallback
 // widens nothing.
 func TestAnUploadWithNoContentTypeAndAnUnreadableExtensionIsRefused(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
 		CorpusID:    ie.corpus,

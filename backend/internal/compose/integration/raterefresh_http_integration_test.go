@@ -32,6 +32,7 @@ func (f *fakeRateEnqueue) Enqueue(_ context.Context, args river.JobArgs, opts *r
 }
 
 func TestProposeRefreshEndpointsEnqueue(t *testing.T) {
+	t.Parallel()
 	fake := &fakeRateEnqueue{}
 	e := apptest.SetupAppWithOptions(t, compose.WithRateRefresh(fake))
 	e.BootstrapWorkspace(t)

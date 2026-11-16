@@ -63,6 +63,7 @@ func overdueTask(t *testing.T, e *apptest.AppEnv, assignee ids.UUID, subject str
 }
 
 func TestHomeOpensOnItsCachedWorklistUntilTheFenceOrTheReadersWriteEndsIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Cache", "admin@homecache.test", "Admin")
 	var admin ids.UUID
@@ -109,6 +110,7 @@ func TestHomeOpensOnItsCachedWorklistUntilTheFenceOrTheReadersWriteEndsIt(t *tes
 // Past its freshness the kept day is still served, and says so, so the browser
 // asks again for the one read behind it.
 func TestHomeServesItsKeptDayPastItsLifeAndSaysItIsStale(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Stale", "admin@homestale.test", "Admin")
 	var admin ids.UUID
@@ -146,6 +148,7 @@ func TestHomeServesItsKeptDayPastItsLifeAndSaysItIsStale(t *testing.T) {
 // The first page's cursor is minted under the question the service resolved.
 // A request that leaves the scope to its default is still cached and served.
 func TestACachedFirstPageKeepsTheWalkItsDefaultSpellingStarted(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Walk", "admin@homewalk.test", "Admin")
 	var admin ids.UUID
@@ -233,6 +236,7 @@ func receiptComputedAt(t *testing.T, e *apptest.AppEnv) string {
 }
 
 func TestHomesReceiptIsServedFromCacheWhileAMachineWrites(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Receipt", "admin@homereceipt.test", "Admin")
 
@@ -271,6 +275,7 @@ func worklistAnswer(t *testing.T, e *apptest.AppEnv, ifNoneMatch string) (status
 }
 
 func TestAnUnchangedWorklistComesBackAs304AndNoSharedCacheKeepsIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Home Tag", "admin@hometag.test", "Admin")
 	var admin ids.UUID

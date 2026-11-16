@@ -69,6 +69,7 @@ func seedVoiceCandidate(t *testing.T, pool *pgxpool.Pool, profileID ids.UUID, pr
 }
 
 func TestVoiceProfileAndCorpusAreOwnerPrivate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	voice := ai.NewVoiceStore(e.DB())
 
@@ -189,6 +190,7 @@ Kurz: das Angebot steht, Freitag entscheiden wir.
 `
 
 func TestVoiceDerivedRebuildVersionsArtifactAndPreservesIdentity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	voice := ai.NewVoiceStore(e.DB())
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, voiceRepPerms)
@@ -348,6 +350,7 @@ func TestVoiceDerivedRebuildVersionsArtifactAndPreservesIdentity(t *testing.T) {
 }
 
 func TestVoiceCandidateTransitionsUseCandidateConcurrencyAndForwardRollback(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ownerDB := SchemaPool(t)
 	voice := ai.NewVoiceStore(e.DB())
@@ -408,6 +411,7 @@ func TestVoiceCandidateTransitionsUseCandidateConcurrencyAndForwardRollback(t *t
 }
 
 func TestVoiceConcurrentBuildRequestsConvergeOnOneDurableRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ownerDB := SchemaPool(t)
 	voice := ai.NewVoiceStore(e.DB())
@@ -464,6 +468,7 @@ func TestVoiceConcurrentBuildRequestsConvergeOnOneDurableRow(t *testing.T) {
 }
 
 func TestVoiceDraftRejectionIsIdempotentAndTerminalSafe(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ownerDB := SchemaPool(t)
 	voice := ai.NewVoiceStore(e.DB())
@@ -531,6 +536,7 @@ func TestVoiceDraftRejectionIsIdempotentAndTerminalSafe(t *testing.T) {
 // Clearing the corpus erases the drafted text a sent learning signal still
 // holds, and archives the signal.
 func TestVoiceClearCorpusScrubsASentLearningSignal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ownerDB := SchemaPool(t)
 	voice := ai.NewVoiceStore(e.DB())

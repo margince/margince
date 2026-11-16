@@ -79,6 +79,7 @@ func readProjectStamp(t *testing.T, e *Env, activity ids.UUID) projectStampRow {
 // Filing an activity under a project stamps it, in the transaction that wrote
 // the link — there is no window in which an erasure sees it unclassified.
 func TestFilingAnActivityUnderAProjectStampsIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 
@@ -116,6 +117,7 @@ func TestFilingAnActivityUnderAProjectStampsIt(t *testing.T) {
 // is evidence of nothing: it cannot say what the record was called when the
 // obligation arose.
 func TestTheProjectNameIsFrozenAtQualification(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 
@@ -137,6 +139,7 @@ func TestTheProjectNameIsFrozenAtQualification(t *testing.T) {
 // The behaviour is surprising enough that the product documents it, so it is
 // held by a test rather than by the comment claiming it.
 func TestRelinkingAwayFromAProjectLeavesTheStampStanding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 	other := ids.NewV7()
@@ -168,6 +171,7 @@ func TestRelinkingAwayFromAProjectLeavesTheStampStanding(t *testing.T) {
 // a deal that concluded and a project it is filed under are two separate facts,
 // and collapsing them would lose one of the obligations.
 func TestAnActivityCanQualifyThroughBothADealAndAProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 
@@ -254,6 +258,7 @@ const backfillStatement = `
 // first is why the PR is not leaving a backlog of destroyable Handelsbriefe,
 // the second is why a partial failure can simply be re-run.
 func TestTheBackfillStampsPreExistingLinksAndIsIdempotent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 
@@ -293,6 +298,7 @@ func TestTheBackfillStampsPreExistingLinksAndIsIdempotent(t *testing.T) {
 // succeeds silently, leaving evidence that reads back as a fact about a record
 // that never qualified anything.
 func TestTheProjectEvidenceColumnsAreFrozenAtTheDatabase(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectStampFixture(t, e)
 	if _, err := e.Activities.RelinkActivity(e.Admin(), ids.ActivityID{UUID: f.email},

@@ -148,6 +148,7 @@ func liveEntries(t *testing.T, e *Env, fx accrualFixture) []int64 {
 }
 
 func TestWinningAPartnerDealAccruesAtTheTierRate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 
@@ -166,6 +167,7 @@ func TestWinningAPartnerDealAccruesAtTheTierRate(t *testing.T) {
 // The replay guard is the stored trigger_event_id, not the Redis dedupe cache
 // in front of it — so delivering the SAME envelope twice must not pay twice.
 func TestARedeliveredWinDoesNotAccrueTwice(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier1_15")
 
@@ -184,6 +186,7 @@ func TestARedeliveredWinDoesNotAccrueTwice(t *testing.T) {
 // only thing standing between a partner and a second payment for the same win
 // is the stored trigger_event_id.
 func TestAWinRedeliveredAfterItsEntryWasVoidedDoesNotPayAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
@@ -206,6 +209,7 @@ func TestAWinRedeliveredAfterItsEntryWasVoidedDoesNotPayAgain(t *testing.T) {
 }
 
 func TestReopeningAWonDealReversesWhatItEarned(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier3_25")
 	winAndDeliver(t, e, fx)
@@ -284,6 +288,7 @@ func TestAWinWhosePartnerWasArchivedBeforeDeliveryStillAccrues(t *testing.T) {
 // win must still be recorded as won — a refusal here would wedge the consumer
 // group on a deal that will never become accruable by itself.
 func TestAWinForAPartnerWithNoTierAccruesNothingAndDoesNotFail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
@@ -327,6 +332,7 @@ func TestAWinForAPartnerWithNoTierAccruesNothingAndDoesNotFail(t *testing.T) {
 // pay failed on every entry, and only the reopen sweep (which locks and applies
 // under its own filter) ever worked.
 func TestAnAccrualIsApprovedThenPaid(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)

@@ -84,6 +84,7 @@ func listIDs(ctx context.Context, t *testing.T, svc *approvals.Service, in appro
 // The whole point of the filter: a record page asks for its own staged
 // actions and gets those, not the workspace's queue.
 func TestApprovalListFilteredToOneTarget(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	f := seedSiteReadStagings(t, svc, e)
@@ -133,6 +134,7 @@ func TestApprovalListFilteredToOneTarget(t *testing.T) {
 // The kind filter must narrow the UNFILTERED inbox too: it was declared for
 // the whole surface, not for the target-scoped read alone.
 func TestApprovalListKindFilterNarrowsTheWholeInbox(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	f := seedSiteReadStagings(t, svc, e)
@@ -156,6 +158,7 @@ func TestApprovalListKindFilterNarrowsTheWholeInbox(t *testing.T) {
 // own read gives. Accounts are readable by every seat, so the hidden one here
 // is capture-private to its owner.
 func TestApprovalListFilteredToAnOutOfScopeTargetIsEmpty(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 
@@ -191,6 +194,7 @@ func TestApprovalListFilteredToAnOutOfScopeTargetIsEmpty(t *testing.T) {
 // the kind. Triage is the decision gate — what you cannot decide you cannot
 // browse (C3/ADR-0036).
 func TestApprovalListFilteredStillPrunesUndecidableKinds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	f := seedSiteReadStagings(t, svc, e)
@@ -230,6 +234,7 @@ func TestApprovalListFilteredStillPrunesUndecidableKinds(t *testing.T) {
 // always reported false would let a client draw four of a company's forty
 // staged contacts and call it the whole list.
 func TestApprovalListFilteredReportsHasMore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -269,6 +274,7 @@ func TestApprovalListFilteredReportsHasMore(t *testing.T) {
 // last one stopped, and the walk sees every staged approval exactly once. A
 // server that ignored the cursor would answer the same first page forever.
 func TestApprovalListPagesForwardWithTheCursor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -330,6 +336,7 @@ func TestApprovalListPagesForwardWithTheCursor(t *testing.T) {
 // it reaches the transport as storekit's malformed-cursor fault rather than as
 // a panic or a 500.
 func TestApprovalListRefusesAMalformedCursor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, siteReadPerms)

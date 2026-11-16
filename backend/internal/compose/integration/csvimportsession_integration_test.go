@@ -30,6 +30,7 @@ func readImportRun(t *testing.T, e *apptest.AppEnv, id string) importjobtest.Run
 }
 
 func TestCreateImportRunAdvancesTheDraftOfItsSource(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	if profile.RunID == "" || profile.RowCount != 3 {
@@ -49,6 +50,7 @@ func TestCreateImportRunAdvancesTheDraftOfItsSource(t *testing.T) {
 }
 
 func TestImportAnywayRetestsTheSameRun(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	tested, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
@@ -91,6 +93,7 @@ func TestImportAnywayRetestsTheSameRun(t *testing.T) {
 }
 
 func TestASavedDraftTestedTwiceAtItsVersionStartsOneTest(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	var saved importjobtest.Run
@@ -118,6 +121,7 @@ func TestASavedDraftTestedTwiceAtItsVersionStartsOneTest(t *testing.T) {
 }
 
 func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	tested, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
@@ -159,6 +163,7 @@ func TestTestsOfOneVersionAtOnceAllAnswerTheOneRun(t *testing.T) {
 }
 
 func TestCancelReleasesTheSource(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 
@@ -195,6 +200,7 @@ func testFairRun(t *testing.T, e *apptest.AppEnv) importjobtest.Run {
 }
 
 func TestAnUndoClosesAWaitingReportOfItsName(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	done := testFairRun(t, e)
 	if status := importCall(t, e, done.ID, "approve", nil, nil); status != http.StatusAccepted {
@@ -211,6 +217,7 @@ func TestAnUndoClosesAWaitingReportOfItsName(t *testing.T) {
 }
 
 func TestApprovingAReplacedReportNamesTheRunThatReplacedIt(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	older := testFairRun(t, e)
 	newer := testFairRun(t, e)
@@ -227,6 +234,7 @@ func TestApprovingAReplacedReportNamesTheRunThatReplacedIt(t *testing.T) {
 }
 
 func TestAnAgentChangesTestsAndCancelsADraftImport(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	var minted struct {

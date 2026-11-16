@@ -24,6 +24,7 @@ import (
 )
 
 func TestADealMayOnlyNameARealPartner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
@@ -104,6 +105,7 @@ func TestADealMayOnlyNameARealPartner(t *testing.T) {
 // would orphan every attribution silently, which is the exact failure the
 // check exists to prevent.
 func TestMergingAPartnerLeavesItsDealsNamingAPartner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)

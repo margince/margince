@@ -36,6 +36,7 @@ func relinkAgentCtx(e *Env, passport ids.UUID) context.Context {
 }
 
 func TestAutomaticWorkIsRefusedABatchRelinkOntoAProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)

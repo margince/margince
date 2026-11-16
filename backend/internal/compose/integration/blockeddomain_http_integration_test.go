@@ -34,6 +34,7 @@ type blockedDomainListDTO struct {
 }
 
 func TestBlockedDomainsOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -117,6 +118,7 @@ func TestBlockedDomainsOverHTTP(t *testing.T) {
 // it is. A read seat must be able to see that a domain was refused — otherwise
 // they cannot tell a refusal from an empty CRM — while changing it is refused.
 func TestBlockedDomainsSplitTheReadFromTheWrite(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -157,6 +159,7 @@ func TestBlockedDomainsSplitTheReadFromTheWrite(t *testing.T) {
 // cursor is cleared, so nothing asks again on its own — and this endpoint is the
 // only way somebody can put the question back.
 func TestReopeningAnUndecidedDomainOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -193,6 +196,7 @@ func TestReopeningAnUndecidedDomainOverHTTP(t *testing.T) {
 // creates the company, so a seat that may not decide a domain may not queue one
 // either — and it is refused rather than hidden, like every other write here.
 func TestReopeningIsRefusedToAReadSeat(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

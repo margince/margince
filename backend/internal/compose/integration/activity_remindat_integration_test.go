@@ -17,6 +17,7 @@ import (
 )
 
 func TestRemindAtIsTaskOnlyAndRoundTrips(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Reminders", "admin@reminders.test", "Admin")
 

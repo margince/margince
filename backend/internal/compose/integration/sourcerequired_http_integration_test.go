@@ -18,6 +18,7 @@ import (
 )
 
 func TestARecordCreateWithoutASourceIsRefusedOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Origin Contact", "source": "manual"})

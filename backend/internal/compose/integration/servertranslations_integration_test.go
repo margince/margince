@@ -55,6 +55,7 @@ func reading(ctx context.Context, t *testing.T, locale string) context.Context {
 }
 
 func TestTheCompanyPageAndTheMoveConfirmationNameStagesInTheReadersLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Globex", nil)
 	first, err := e.Deals.GetDeal(e.Admin(), ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Globex renewal", company)), storekit.LiveOnly)
@@ -111,6 +112,7 @@ func TestTheCompanyPageAndTheMoveConfirmationNameStagesInTheReadersLanguage(t *t
 }
 
 func TestReportableChoicesCarryTheReadersNames(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := customfields.NewService(e.Pool, SchemaPool(t))
 	admin := e.As(e.Rep1, nil, CustomFieldAdminPerms)

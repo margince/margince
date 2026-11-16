@@ -75,6 +75,7 @@ func liveReviewID(t *testing.T, c *consentEnv) string {
 
 // THE MESSAGE GOES, AND THE REFUSAL STAYS A REFUSAL.
 func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 
@@ -147,6 +148,7 @@ func TestADesignatedUserSendsTheMessageTheEngineRefused(t *testing.T) {
 // contact — which is a standing consent grant nobody gave, wearing an override's
 // name.
 func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 
@@ -176,6 +178,7 @@ func TestTheNextMessageToTheSameContactNeedsItsOwnDecision(t *testing.T) {
 }
 
 func TestARepDirectsOneMessagePastASubjectsStop(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"subject_request", "marketing_objection", "processing_restriction"} {
 		t.Run(kind, func(t *testing.T) {
 			c := setupConsent(t)
@@ -223,6 +226,7 @@ func TestARepDirectsOneMessagePastASubjectsStop(t *testing.T) {
 // Mutation: drop the refusal's RemedyException in commsauthz.remedies and the
 // direction is refused.
 func TestARepDirectsOneMessagePastAPolicyRefusal(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	demoteToRep(t, c.AppEnv)
 
@@ -266,6 +270,7 @@ func TestARepDirectsOneMessagePastAPolicyRefusal(t *testing.T) {
 // Mutation: drop everyRefusalWasShown from staging and the message goes out
 // under the decision, past the objection.
 func TestAStopRecordedAfterTheDecisionStillStopsTheMessage(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -299,6 +304,7 @@ func TestAStopRecordedAfterTheDecisionStillStopsTheMessage(t *testing.T) {
 
 // AN UNACKNOWLEDGED DECISION IS NOT A DECISION. The tick is the act.
 func TestAnUnacknowledgedDirectionSendsNothing(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -331,6 +337,7 @@ func TestAnUnacknowledgedDirectionSendsNothing(t *testing.T) {
 // Held by the database rather than by the code that writes it, because the code
 // is what a mistake would be in.
 func TestASpentDecisionCannotBeRePointedAtAnotherMessage(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 
@@ -368,6 +375,7 @@ func TestASpentDecisionCannotBeRePointedAtAnotherMessage(t *testing.T) {
 // shown the review beside the decision, and a queue that emptied itself by
 // forgetting would answer nothing.
 func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 
@@ -418,6 +426,7 @@ func TestADirectedSendClosesTheReviewItAnswered(t *testing.T) {
 // So the review serves the words and the version together, and the door refuses
 // a version this installation does not serve.
 func TestTheWarningADirectorAcknowledgesIsTheServersOwn(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 
@@ -477,6 +486,7 @@ func TestTheWarningADirectorAcknowledgesIsTheServersOwn(t *testing.T) {
 // Left live, it shows a decider work about a message that is already dead, and
 // somebody may record an override for a send that cannot happen.
 func TestCancellingAHeldMessageClosesItsReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {

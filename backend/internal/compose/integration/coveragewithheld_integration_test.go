@@ -53,6 +53,7 @@ func coverageReaderPerms(withEdge bool) principal.Permissions {
 }
 
 func TestCoverageIsWithheldRatherThanReportedCleanWithoutTheEdgeGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Kessler Systems", nil)
 	companyID := ids.From[ids.CompanyKind](company)

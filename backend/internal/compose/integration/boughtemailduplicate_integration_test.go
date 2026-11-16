@@ -61,6 +61,7 @@ func openContactPairsOf(t *testing.T, e *Env, subject ids.UUID) (count int, othe
 }
 
 func TestABoughtTaggedAddressFilesOnePairWithItsBase(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	incumbent, subject := boughtEmailSetup(t, e)
 	applyPurchase(t, e, subject, "surfe", boughtEmail("ab+accounting@example.com"))
@@ -72,6 +73,7 @@ func TestABoughtTaggedAddressFilesOnePairWithItsBase(t *testing.T) {
 }
 
 func TestABoughtUnrelatedAddressFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, subject := boughtEmailSetup(t, e)
 	applyPurchase(t, e, subject, "surfe", boughtEmail("anna.beispiel@elsewhere.example"))
@@ -156,6 +158,7 @@ func isDeadlock(err error) bool {
 // another contact. Neither is aborted by a deadlock: the purchase takes the
 // address-base lock before it writes the address.
 func TestABoughtAddressAndACreateOfItNeverDeadlock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := ids.NewV7()

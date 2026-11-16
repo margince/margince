@@ -17,6 +17,7 @@ import (
 // the deciders' queue: both routes are gone. Calling the old ask raises no
 // approval card and leaves the review with the rep.
 func TestTheRetiredAskAndQueueAreGone(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
 		t.Fatalf("marketing send with no grant → %d, want 409", status)
@@ -47,6 +48,7 @@ func TestTheRetiredAskAndQueueAreGone(t *testing.T) {
 // A card raised under the retired communication_review kind stays readable and
 // cannot be approved: nothing would carry out a yes.
 func TestARetiredReviewCardIsReadableAndCannotBeApproved(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	seat := apptest.SessionUserID(t, c.AppEnv)
 	ctx := context.Background()

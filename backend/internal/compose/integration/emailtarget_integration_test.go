@@ -61,6 +61,7 @@ func (s *standingEnv) targetOf(t *testing.T, row ids.UUID) (*crmcontracts.Activi
 }
 
 func TestATaskEmailsItsContactElseItsLiveLeadElseItsCompany(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	type want struct {
 		kind    crmcontracts.ActivityEmailTargetEntityType
@@ -153,6 +154,7 @@ func TestATaskEmailsItsContactElseItsLiveLeadElseItsCompany(t *testing.T) {
 
 // A caller without the lead grant is told about no lead.
 func TestALeadTheReaderMayNotReadIsNoTarget(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	row := s.writtenAbout(t, "task", s.leadAt(t, "Lena Lead", "lena@prospect.test"))
 	ctx, h := s.reader(), s.replyHandlers()
@@ -167,6 +169,7 @@ func TestALeadTheReaderMayNotReadIsNoTarget(t *testing.T) {
 
 // A draft about a task on a lead goes to the lead, by the rule Write email uses.
 func TestADraftAboutATaskOnALeadIsAddressedToTheLead(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	row := s.writtenAbout(t, "task", s.leadAt(t, "Lena Lead", "lena@prospect.test"))
 	if got := draftedTo(s.leadReader(), t, s.replyHandlers(), row); !slices.Equal(got, []string{"lena@prospect.test"}) {
@@ -198,6 +201,7 @@ func (s *standingEnv) worksAt(t *testing.T, contact, company activities.Activity
 // they name. That is the deal's one stakeholder, else its company, else the
 // company the contacts share.
 func TestATaskOnADealOrOnContactsWritesToTheOneRecordTheyName(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	anna, ben := s.contactAt(t, "Anna Weber", "anna@buyer.test"), s.contactAt(t, "Ben Kraus", "ben@buyer.test")
 	acme, globex := s.companyLink(t, "Acme"), s.companyLink(t, "Globex")

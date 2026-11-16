@@ -82,6 +82,7 @@ func employerOf(t *testing.T, e *apptest.AppEnv, email string) string {
 }
 
 func TestAContactLinksToACompanyInTheSameZip(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{
 		"companies.csv": "ref,name\nCO-1,Linked GmbH\n",
@@ -108,6 +109,7 @@ func TestAContactLinksToACompanyInTheSameZip(t *testing.T) {
 }
 
 func TestABrokenLinkSkipsTheRowUnlessTheRunSaysImportAnyway(t *testing.T) {
+	t.Parallel()
 	for _, policy := range []string{"skip_row", "drop_link"} {
 		t.Run(policy, func(t *testing.T) {
 			e := setupImportApp(t)
@@ -150,6 +152,7 @@ func stageRefRun(t *testing.T, e *apptest.AppEnv, files map[string]string, polic
 // The words match a company that does not exist, or they would tell the
 // importer the company is there.
 func TestACompanyTheCallerCannotSeeIsNotFoundByIDOrByName(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	// A colleague is invited only once the workspace has described its company.
 	e.DescribeCompany(t)
@@ -189,6 +192,7 @@ func TestACompanyTheCallerCannotSeeIsNotFoundByIDOrByName(t *testing.T) {
 // same upload linking to that ref is created and linked by the commit, as the
 // test run said it would be.
 func TestAContactLinksToACompanyTheZipNamesByID(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
 	files := map[string]string{
@@ -216,6 +220,7 @@ func TestAContactLinksToACompanyTheZipNamesByID(t *testing.T) {
 // A new employer name creates its company in CSV and ZIP imports.
 // A missing company reference still follows the broken-link policy.
 func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
+	t.Parallel()
 	nameParts := []AnyMap{{"file": "contacts.csv", "object": "contact", "mapping": AnyMap{
 		"ref": "ref", "email": "email", "name": "full_name", "company": "company_name",
 	}}}
@@ -262,6 +267,7 @@ func TestACompanyNameThatFindsNothingFollowsTheZipsPolicy(t *testing.T) {
 // A name only a company of the same ZIP wears resolves in the test run as at
 // commit. The default skip_row then keeps the contact.
 func TestAContactNamesACompanyOfTheSameZip(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{
 		"companies.csv": "ref,name\nCO-1,Zipped Works\n",
@@ -291,6 +297,7 @@ func TestAContactNamesACompanyOfTheSameZip(t *testing.T) {
 // A lead's company_name is text it stores, not a link, so a ZIP run lands the
 // lead whatever the name finds.
 func TestALeadsCompanyNameNeverSkipsTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := map[string]string{"leads.csv": "ref,email,name,company\nL-1,lea@lead.example,Lea,Nowhere Ltd\n"}
 	parts := []AnyMap{{"file": "leads.csv", "object": "lead", "mapping": AnyMap{
@@ -358,6 +365,7 @@ func failAfterTheCompanyRow(t *testing.T, e *apptest.AppEnv, runID, named string
 // A resumed commit has passed the company row, yet the contact still finds the
 // company that row named by id, as the test run said.
 func TestAResumedCommitStillFindsACompanyNamedByID(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
 	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")
@@ -371,6 +379,7 @@ func TestAResumedCommitStillFindsACompanyNamedByID(t *testing.T) {
 // A resumed commit checks the company a passed row named by id under the
 // principal resuming it. One the importer can no longer see is a broken link.
 func TestAResumedCommitDoesNotLinkACompanyTheCallerCanNoLongerSee(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	e.DescribeCompany(t)
 	colleague := createdID(t, e, "/v1/users", AnyMap{
@@ -393,6 +402,7 @@ func TestAResumedCommitDoesNotLinkACompanyTheCallerCanNoLongerSee(t *testing.T) 
 // A company row naming its record by id still binds its ref when the update is
 // refused for a domain another company holds. The contact links as predicted.
 func TestARefusedUpdateStillBindsTheCompanyItNamed(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Holder", "domains": []AnyMap{
 		{"domain": "held.example", "is_primary": true},
@@ -415,6 +425,7 @@ func TestARefusedUpdateStillBindsTheCompanyItNamed(t *testing.T) {
 // A company row naming its record by id binds its ref for good. A later import
 // under the same source name links a contact to it by that ref.
 func TestALaterImportFindsTheRefOfAnIdNamedCompany(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
 	approveAndRead(t, e, namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n").ID)
@@ -436,6 +447,7 @@ func TestALaterImportFindsTheRefOfAnIdNamedCompany(t *testing.T) {
 // Undo archives what a run created. The company a row named by id existed
 // before the run, so it stays live while the contact the run created goes.
 func TestUndoLeavesTheCompanyAFileNamedByID(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
 	run := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")

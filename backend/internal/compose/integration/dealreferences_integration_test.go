@@ -77,6 +77,7 @@ func seedDealReferenceFixture(t *testing.T, e *Env) dealReferenceFixture {
 }
 
 func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedDealReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
@@ -146,6 +147,7 @@ func TestADealDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 // TestTheDealListWithholdsTheSameReferencesAsTheGet proves the page path, not
 // only the single-row one: a list is where an existence oracle is cheapest.
 func TestTheDealListWithholdsTheSameReferencesAsTheGet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedDealReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
@@ -217,6 +219,7 @@ func assertMaskNames(t *testing.T, d crmcontracts.Deal, want ...string) {
 // A table over the entry points rather than one case each, so a sixth deal
 // mutation is a compile-time addition to this list, not a silent omission.
 func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedDealReferenceFixture(t, e)
 
@@ -271,6 +274,7 @@ func TestEveryDealMutationResponseWithholdsTheSameReferences(t *testing.T) {
 // empty page a company with no deals gives — never a 404, which would itself
 // say the company is real.
 func TestFilteringByAnUnreadableReferenceAnswersTheEmptyPage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedDealReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
@@ -300,6 +304,7 @@ func TestFilteringByAnUnreadableReferenceAnswersTheEmptyPage(t *testing.T) {
 // list refuses it the filter by company, which would name the deals a company
 // holds. The same seat with the grant is answered above.
 func TestFilteringByACompanyWithoutTheCompanyGrantIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedDealReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(AccountRepPerms, "company"))

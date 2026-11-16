@@ -20,6 +20,7 @@ import (
 // newest message to a contact, before anyone wrote again: the message the
 // contact page's waiting card rests on.
 func TestDoneOnASentMessageIsTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "sent-done-doors", "read", "write")
 	now := clocktest.Now(t)
 	mail := func(contact, direction string, ago time.Duration) string {

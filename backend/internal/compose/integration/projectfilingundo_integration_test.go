@@ -87,6 +87,7 @@ func refusalCode(t *testing.T, err error) string {
 // The undo unfiles the activity and withdraws the class in one transaction with
 // its audit entry and event, and the decision reads back on the activity.
 func TestUndoingAProjectFilingWithdrawsTheClassAndRecordsTheDecision(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	id := ids.ActivityID{UUID: f.email}
@@ -135,6 +136,7 @@ func TestUndoingAProjectFilingWithdrawsTheClassAndRecordsTheDecision(t *testing.
 // A project the activity was moved away from is no longer listed as a filing.
 // Its evidence still holds the class, so the undo is refused.
 func TestAFilingListsOnlyTheProjectThatStillHoldsTheLink(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	id := ids.ActivityID{UUID: f.email}
@@ -174,6 +176,7 @@ func TestAFilingListsOnlyTheProjectThatStillHoldsTheLink(t *testing.T) {
 // Evidence of a project that was deleted after the activity moved on is not a
 // current filing either.
 func TestADeletedProjectIsNotListedAsAFiling(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	id := ids.ActivityID{UUID: f.email}
@@ -200,6 +203,7 @@ func TestADeletedProjectIsNotListedAsAFiling(t *testing.T) {
 // Another qualifying basis keeps the class, so the project filing alone cannot
 // be undone while a won deal still holds the correspondence.
 func TestAFilingIsNotUndoneWhileAWonDealStillQualifiesTheActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	deal := seedStampFixture(t, e)
@@ -220,6 +224,7 @@ func TestAFilingIsNotUndoneWhileAWonDealStillQualifiesTheActivity(t *testing.T) 
 // A deal won before the activity was linked to it left no evidence row behind,
 // but the correspondence still qualifies through it.
 func TestAFilingIsNotUndoneWhileALinkedDealStillQualifiesWithoutEvidence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	deal := seedStampFixture(t, e)
@@ -236,6 +241,7 @@ func TestAFilingIsNotUndoneWhileALinkedDealStillQualifiesWithoutEvidence(t *test
 // A hold that has started never shortens: a restricted activity keeps its class
 // and its project, whoever asks.
 func TestAFilingIsNotUndoneOnceAStatutoryHoldHasStarted(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	reason, err := privacy.ParseStatedReason("controller pin")
@@ -258,6 +264,7 @@ func TestAFilingIsNotUndoneOnceAStatutoryHoldHasStarted(t *testing.T) {
 // Who decides, and on what words: no reason, no grant, or an agent changes
 // nothing — even an agent holding every permission, acting for the member.
 func TestOnlyANamedMemberWithAReasonUndoesAFiling(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := filedUnderAProject(t, e)
 	id := ids.ActivityID{UUID: f.email}
@@ -302,6 +309,7 @@ func TestOnlyANamedMemberWithAReasonUndoesAFiling(t *testing.T) {
 // The shield is what an erasure reads. An activity the project filing alone
 // held is ordinary again once undone; one a won deal ALSO holds is still held.
 func TestUndoingAFilingMovesTheErasureShieldOnlyWhereTheFilingWasAlone(t *testing.T) {
+	t.Parallel()
 	alone := Setup(t)
 	f := seedProjectErasureFixture(t, alone)
 	if _, err := alone.Activities.RelinkActivity(alone.Admin(), ids.ActivityID{UUID: f.email},
@@ -320,6 +328,7 @@ func TestUndoingAFilingMovesTheErasureShieldOnlyWhereTheFilingWasAlone(t *testin
 }
 
 func TestACorrespondenceTheDealStillQualifiesStaysHeldWhenItsFilingIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedProjectErasureFixture(t, e)
 	id := ids.ActivityID{UUID: f.email}

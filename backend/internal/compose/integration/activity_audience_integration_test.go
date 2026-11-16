@@ -27,6 +27,7 @@ import (
 // direction and kind, not subject or body. The author keeps reading it, a
 // named member is let in, and nobody but a writer of the row may set it.
 func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -128,6 +129,7 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 // half of the same bug — the field is optional on the wire, so both a dropped
 // reason and a leaked one pass unnoticed by everything downstream.
 func TestTheContactPageWithholdsALimitedMessagesReasonFromAColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)

@@ -101,6 +101,7 @@ func assertNoCF(t *testing.T, got map[string]any, key string) {
 }
 
 func TestCustomFieldValues_ContactRoundTrip(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
 
@@ -146,6 +147,7 @@ func TestCustomFieldValues_ContactRoundTrip(t *testing.T) {
 }
 
 func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "company", Label: "Region", Type: customfields.TypeText, Source: "manual"})
 
@@ -200,6 +202,7 @@ func TestCustomFieldValues_CompanyRoundTrip(t *testing.T) {
 // units, number as json.Number, date as "YYYY-MM-DD", boolean, text and
 // picklist as themselves.
 func TestCustomFieldValues_AllSixTypesRoundTrip(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	eur := "EUR"
 	text := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Note", Type: customfields.TypeText, Source: "manual"})
@@ -250,6 +253,7 @@ func assertRefusedCF(t *testing.T, err error, key, code string) {
 // column is refused by name, on a create and on an update. An update's refusal
 // leaves the stored value standing.
 func TestCustomFieldValues_WrongShapeRefused(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
@@ -283,6 +287,7 @@ func TestCustomFieldValues_WrongShapeRefused(t *testing.T) {
 // per column type. Currency wants a float64, a date a string, a boolean a bool.
 // Each type's mismatch needs its own proof.
 func TestCustomFieldValues_WrongShapeRefusedAcrossTypes(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	eur := "EUR"
 	currency := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "manual"})
@@ -313,6 +318,7 @@ func TestCustomFieldValues_WrongShapeRefusedAcrossTypes(t *testing.T) {
 // takes a float64, a json.Number and a plain decimal string, and all three
 // round-trip. A string that does not parse as a number is refused.
 func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
@@ -345,6 +351,7 @@ func TestCustomFieldValues_NumberAcceptsJSONNumberAndDecimalString(t *testing.T)
 // 'NaN' reads back through pgtype.Numeric with Valid and NaN both true.
 // extractNumber leaves it out of the read, because NaN has no JSON-number shape.
 func TestCustomFieldValues_NumberNaNDropped(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
@@ -359,6 +366,7 @@ func TestCustomFieldValues_NumberNaNDropped(t *testing.T) {
 }
 
 func TestCustomFieldValues_UnknownKeyRefused(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 
 	_, err := f.store.CreateContact(f.ctx, contacts.CreateContactInput{
@@ -374,6 +382,7 @@ func TestCustomFieldValues_UnknownKeyRefused(t *testing.T) {
 // stored value survives physically (retire never drops the column;
 // un-retire is a catalog re-activation away).
 func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "manual"})
 	if err != nil {
@@ -424,6 +433,7 @@ func TestCustomFieldValues_RetiredFieldHiddenButPreserved(t *testing.T) {
 // same storekit.Patch as core fields, so the audit row's before/after
 // carries the change with no extra bookkeeping.
 func TestCustomFieldValues_UpdateAuditCarriesDiff(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "contact", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
 

@@ -244,6 +244,7 @@ func assertDeliveryIntact(t *testing.T, e *Env, d delivered, what string) {
 // on its own, which would destroy a Handelsbrief the nightly evaluator refuses
 // to touch.
 func TestErasureRedactsTheDeliveryBehindARedactedActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedMailRecipient(t, e)
 	// Both terminal shapes, because the scrub has to clear a different column
@@ -293,6 +294,7 @@ func TestErasureRedactsTheDeliveryBehindARedactedActivity(t *testing.T) {
 // address, the message subject and its body. The erase has to reach them
 // through the delivery's address lists or it leaves the whole message readable.
 func TestErasureReachesAMessageWhereTheSubjectIsOnlyACcRecipient(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedMailRecipient(t, e)
 	// Nothing on the timeline names the subject: no contact link, and the
@@ -334,6 +336,7 @@ func TestErasureReachesAMessageWhereTheSubjectIsOnlyACcRecipient(t *testing.T) {
 // keeps its status and its receipt, because rewriting those would falsify the
 // send log.
 func TestErasureParksAPendingDeliveryInsteadOfLeavingItToTransmit(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedMailRecipient(t, e)
 	// Aged past the statutory correspondence floor, which decides whether the
@@ -403,6 +406,7 @@ func linkToHeldDeal(t *testing.T, e *Env, activityID ids.UUID) {
 // recent email survives on the floor alone, which would keep this green with
 // the hold exclusion removed.
 func TestErasurePreservesUnlinkedMailUnderATransitiveLegalHold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedMailRecipient(t, e)
 	held := seedDelivery(t, e, "9 years", "Disputed renewal terms",
@@ -440,6 +444,7 @@ func TestErasurePreservesUnlinkedMailUnderATransitiveLegalHold(t *testing.T) {
 // through the timeline links and by their own address on the recipient list —
 // a message the send path never linked to a record is still data about them.
 func TestSARIncludesTheSubjectsSentMessages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedMailRecipient(t, e)
 	// One fixture per arm, and neither can satisfy the other: the linked
@@ -480,6 +485,7 @@ func TestSARIncludesTheSubjectsSentMessages(t *testing.T) {
 // activity it belongs to. The activity's own erase action nulls its body, and
 // the send log must not keep serving the same words afterwards.
 func TestRetentionRedactsTheDeliveryOfAnAgedOutActivity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `

@@ -135,6 +135,7 @@ func echoAlreadyCaptured(subject, stamped string) []byte {
 // The breadcrumb count is what separates the two outcomes: an absorb that
 // worked and a reconcile that quietly gave up both leave one row on the key.
 func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -197,6 +198,7 @@ func TestAnEchoCapturedBeforeTransmitIsAbsorbedByTheReceiptItself(t *testing.T) 
 // carries, the echo of that same message collapses onto it, and the reply the
 // counterparty roots at the wire identity attributes to the send.
 func TestAGmailRewrittenIdentityStillYieldsOneActivityAndOneReplyTarget(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

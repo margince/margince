@@ -91,6 +91,7 @@ func (e *SearchEnv) scopedReaderOf(object string, user *ids.UUID, team *ids.UUID
 }
 
 func TestListFieldsServesTheProjectDescriptor(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	provider := compose.NewProvider(e.Pool)
 
@@ -110,6 +111,7 @@ func TestListFieldsServesTheProjectDescriptor(t *testing.T) {
 }
 
 func TestAdHocProjectReportCountsUnderRowScope(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	companyID := e.seedProjects(t, "delivering", &e.Rep3, 2)
 	provider := compose.NewProvider(e.Pool)
@@ -183,6 +185,7 @@ func TestAdHocProjectReportCountsUnderRowScope(t *testing.T) {
 }
 
 func TestAdHocProjectReportRefusesWithoutTheObjectGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedProjects(t, "delivering", nil, 1)
 	provider := compose.NewProvider(e.Pool)

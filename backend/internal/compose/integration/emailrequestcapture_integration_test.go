@@ -23,6 +23,7 @@ import (
 )
 
 func TestCapturedRequestUsesTheParsedEnvelopeNotHeadersInsideTheBody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	// Connection configuration is the external boundary; messages and tasks
 	// below land through the production mapper, sink and worker.

@@ -16,6 +16,7 @@ import (
 // The link in an invitation signs in to the room as the buyer. An agent sends
 // invitations and never holds that link. A signed-in colleague is handed it.
 func TestAnAgentSendsARoomInvitationWithoutHoldingItsLink(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "room-credential", "read", "write", "send")
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Credential renewal")
 	room := createdRecord(t, d.e, "/v1/deal-rooms", AnyMap{"deal_id": deal, "title": "Credential room", "source": "manual"})

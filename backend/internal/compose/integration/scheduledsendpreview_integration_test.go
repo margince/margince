@@ -45,6 +45,7 @@ func (p *preflightEnv) scheduledOnTheWire(t *testing.T, id ids.UUID) scheduledOn
 }
 
 func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -94,6 +95,7 @@ func TestAScheduledAccountSendReadsBackWhatItWillAskTheEngine(t *testing.T) {
 // origin-shape CHECK requires of a reply row is the case this holds: read as
 // "none", never as a row the list cannot show.
 func TestAScheduledReplyNamesItsAnchorAndNoRecords(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 

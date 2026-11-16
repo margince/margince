@@ -75,6 +75,7 @@ func textGuardMigrations(t *testing.T) (ups, downs []string) {
 }
 
 func TestATranslationUpsertKeepsItsUnchangedEarlierLongName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, offerLanguagePerms)
 	id := seedRetainer(t, e)
@@ -102,6 +103,7 @@ func TestATranslationUpsertKeepsItsUnchangedEarlierLongName(t *testing.T) {
 }
 
 func TestACompanyEditKeepsItsUnchangedEarlierLongDescription(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	created, err := f.store.CreateCompany(f.ctx, contacts.CreateCompanyInput{DisplayName: "Earlier description", Source: "manual"})
 	if err != nil {
@@ -140,6 +142,7 @@ func TestACompanyEditKeepsItsUnchangedEarlierLongDescription(t *testing.T) {
 }
 
 func TestATypedContactNamePastTheLabelLimitIsRefusedForEveryRole(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	tooLong := strings.Repeat("界", values.TextLabelCharacters+1)

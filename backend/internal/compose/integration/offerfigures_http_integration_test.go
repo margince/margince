@@ -46,6 +46,7 @@ func expectFieldRefused(t *testing.T, e *apptest.AppEnv, method, path string, bo
 }
 
 func TestAnOfferLineHoldsTheContractsFigures(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	offer := createOfferInCurrency(t, e, offerFixture(t, e), "EUR")
@@ -86,6 +87,7 @@ func TestAnOfferLineHoldsTheContractsFigures(t *testing.T) {
 }
 
 func TestAProductHoldsTheContractsFigures(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

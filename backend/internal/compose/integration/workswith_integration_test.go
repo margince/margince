@@ -49,6 +49,7 @@ func peerSuggested(nodes []crmcontracts.ContactGraphNode, contact ids.UUID) bool
 // One pair is one row, whichever order it was recorded in: the reversed
 // second write is a conflict, not a second fact.
 func TestWorksWithIsOnePairOneRowEitherWayRound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
@@ -73,6 +74,7 @@ func TestWorksWithIsOnePairOneRowEitherWayRound(t *testing.T) {
 // The suggestion flag rides a peer with enough shared evidence, and vanishes
 // the moment the edge is recorded — the read tells the truth about the record.
 func TestPeerSuggestionAppearsAndVanishesOnceRecorded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	peer := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
@@ -107,6 +109,7 @@ func TestPeerSuggestionAppearsAndVanishesOnceRecorded(t *testing.T) {
 // The peer itself still renders — the observation is contact-gated, not
 // relationship-gated.
 func TestPeerSuggestionNeedsTheRelationshipReadGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	peer := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
@@ -145,6 +148,7 @@ func TestPeerSuggestionNeedsTheRelationshipReadGrant(t *testing.T) {
 // end sits in — otherwise the row discloses a capture-private contact's
 // existence to everyone who can read the near end.
 func TestAWorksWithEdgeHidesWithItsFarEnd(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	hidden := e.SeedContact(t, "Their Contact", &e.Rep3)
@@ -176,6 +180,7 @@ func TestAWorksWithEdgeHidesWithItsFarEnd(t *testing.T) {
 // and merging a contact re-homes their pairs whichever side they sit on — a
 // self-pair or a duplicate is archived rather than doubled.
 func TestWorksWithFollowsArchiveAndMergeOnEitherColumn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)

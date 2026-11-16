@@ -20,6 +20,7 @@ import (
 // Each case archives through the product's own writer, so the row is in the
 // state that writer leaves it in.
 func TestRecordTagsOfAnArchivedRecordAnswerNotFoundLikeItsSiblings(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	ctx := e.Admin()

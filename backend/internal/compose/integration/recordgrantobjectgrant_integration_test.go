@@ -25,6 +25,7 @@ import (
 // says this seat does not see deals — including which deals were shared, with
 // whom, and why.
 func TestTheGrantListWithholdsSharesOfARecordTypeTheSeatCannotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.AdminUser, nil, AdminPerms)
 	shares := identity.NewServiceFor(e.DB())

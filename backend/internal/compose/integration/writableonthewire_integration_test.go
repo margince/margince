@@ -32,6 +32,7 @@ import (
 )
 
 func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := identity.NewService(e.Pool)
 	pipeline, open, _ := DealFixture(t, e)
@@ -118,6 +119,7 @@ func TestARecordSaysWhetherItIsThisCallersToChange(t *testing.T) {
 // reads as NOT writable — so a missing stamp takes the edit buttons away from
 // the owner in the moment right after they saved.
 func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asFullSeat(e, companyWriterPermsFor(t))
 	name := "Echo Test GmbH"
@@ -150,6 +152,7 @@ func TestAMutationEchoCarriesWritabilityToo(t *testing.T) {
 // refused by every mutation — and a flag that ignored that would offer an edit
 // the server declines.
 func TestAnArchivedRecordIsNotWritableOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := asFullSeat(e, companyWriterPermsFor(t))
 	created, err := e.Contacts.CreateCompany(rep, contacts.CreateCompanyInput{
@@ -176,6 +179,7 @@ func TestAnArchivedRecordIsNotWritableOnTheWire(t *testing.T) {
 // cannot: the list is a different code path, and a page that reported every row
 // writable would put an edit affordance on every colleague's record at once.
 func TestAListPageCarriesWritabilityOnEveryRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Mine on the page", &e.Rep1)
 	theirs := e.SeedContact(t, "Theirs on the page", &e.Rep3)

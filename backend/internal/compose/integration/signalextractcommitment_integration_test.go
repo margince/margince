@@ -57,6 +57,7 @@ const pricingPromise = "We will send the revised pricing over by Friday."
 
 // The customer's promise is filed on them to watch, and never becomes a task.
 func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Contacts.SetClock(func() time.Time { return extractClock })
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -96,6 +97,7 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 // A customer's promise in mail no member owns is watched, and nobody is
 // asked to follow it up in their place.
 func TestACustomersPromiseInMailNobodyOwnsAsksNobodyToFollowItUp(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Contacts.SetClock(func() time.Time { return extractClock })
 	ines := employeeOf(t, e, e.SeedCompany(t, "Acme", &e.Rep1), "Ines Huber")
@@ -117,6 +119,7 @@ func TestACustomersPromiseInMailNobodyOwnsAsksNobodyToFollowItUp(t *testing.T) {
 // A colleague's confident promise in their own mail is their task, dated as
 // the mail said, and tied to the claim on the customer it was made to.
 func TestAColleaguesEmailedPromiseIsTheirTask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Huber")
@@ -150,6 +153,7 @@ func TestAColleaguesEmailedPromiseIsTheirTask(t *testing.T) {
 // nobody. The colleague gets no task, the mailbox owner gets no request, and
 // the finding stays on the message.
 func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Huber")
@@ -177,6 +181,7 @@ func TestAPromiseInPrivateMailStaysWithItsOwner(t *testing.T) {
 // acts reports no promiser. The sender gets no task and nobody is asked; the
 // finding stays on the message.
 func TestACommitmentForAColleagueNotOnTheMailFilesNoTaskForTheSender(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Huber")
@@ -202,6 +207,7 @@ func TestACommitmentForAColleagueNotOnTheMailFilesNoTaskForTheSender(t *testing.
 
 // A customer's reply quoting our promise back to us is not their promise.
 func TestAQuotedPromiseIsNotTheRepliersPromise(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, body string }{
 		{"quoted reply", "Thanks, sounds good.\n\nOn Monday, Rep wrote:\n> " + pricingPromise},
 		{"Apple forward", "FYI.\n\nBegin forwarded message:\nFrom: Rep <rep@workspace.example>\n\n" + pricingPromise},
@@ -237,6 +243,7 @@ func TestAQuotedPromiseIsNotTheRepliersPromise(t *testing.T) {
 // An old signal is settled even when the reading finds its commitment in
 // another message: only a commitment on the message the signal cited is filed.
 func TestAnOldSignalReadElsewhereIsSettledEmpty(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Huber")
@@ -261,6 +268,7 @@ func TestAnOldSignalReadElsewhereIsSettledEmpty(t *testing.T) {
 // A promise its owner made in their own private mail is their task, and the
 // task is visible to them alone.
 func TestAPromiseInPrivateMailByItsOwnerIsTheirPrivateTask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Huber")
@@ -284,6 +292,7 @@ func TestAPromiseInPrivateMailByItsOwnerIsTheirPrivateTask(t *testing.T) {
 // An old signal whose message has since been archived is settled with
 // nothing filed: there are no words left to file a claim on.
 func TestAnOldSignalWhoseMessageIsGoneIsSettledEmpty(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Huber")
@@ -316,6 +325,7 @@ func TestAnOldSignalWhoseMessageIsGoneIsSettledEmpty(t *testing.T) {
 // through it — around ITS message, however far back in the thread that is —
 // and settled, once.
 func TestAnOldCommitmentSignalIsReadThroughTheRuleOnce(t *testing.T) {
+	t.Parallel()
 	for _, test := range []struct {
 		name     string
 		messages int
@@ -384,6 +394,7 @@ func TestAnOldCommitmentSignalIsReadThroughTheRuleOnce(t *testing.T) {
 }
 
 func TestACurrentQuotedPromiseSurvivesALongSignature(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	buyer := employeeOf(t, e, company, "Pat Buyer")
@@ -457,6 +468,7 @@ func captureCommitmentMessage(t *testing.T, e *Env, contact ids.UUID, key, subje
 }
 
 func TestLaterReplyDistinguishesUnreadContentFromQuotedHistory(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"quoted history", "unread current text", "inline answer after quoted history"} {
 		t.Run(kind, func(t *testing.T) {
 			e := Setup(t)
@@ -490,6 +502,7 @@ func TestLaterReplyDistinguishesUnreadContentFromQuotedHistory(t *testing.T) {
 }
 
 func TestCapturedOldPromiseNeedsACurrentDeadline(t *testing.T) {
+	t.Parallel()
 	for _, current := range []bool{false, true} {
 		t.Run(map[bool]string{false: "history", true: "future deadline"}[current], func(t *testing.T) {
 			e := Setup(t)
@@ -539,6 +552,7 @@ func TestCapturedOldPromiseNeedsACurrentDeadline(t *testing.T) {
 }
 
 func TestPartialDeliveryKeepsTheOriginalCommitmentTask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	buyer := employeeOf(t, e, company, "Pat Buyer")
@@ -562,6 +576,7 @@ func TestPartialDeliveryKeepsTheOriginalCommitmentTask(t *testing.T) {
 }
 
 func TestDismissedHistoricalPromiseDoesNotBecomeAFreshAccountSignal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	buyer := employeeOf(t, e, company, "Pat Buyer")

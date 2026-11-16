@@ -45,6 +45,7 @@ func seedSignalRow(t *testing.T, owner *pgx.Conn, sql string) ids.UUID {
 }
 
 func TestListSignalsByCompanyCoversResolvedAndDirectSubjects(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, signalReaderPerms)

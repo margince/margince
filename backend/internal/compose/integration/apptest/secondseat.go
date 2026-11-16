@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
-	"os"
 	"sync/atomic"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // AsSecondSeat is e signed in as another active seat with password. It has its
@@ -34,7 +34,7 @@ func (e *AppEnv) AsSecondSeat(t *testing.T, email, password string) *AppEnv {
 	own := transport.Clone()
 	t.Cleanup(own.CloseIdleConnections)
 	seat.Client = &http.Client{Transport: forwardedFor{next: own, addr: nextSeatAddr()}, Jar: jar}
-	seat.Owner = connectOwner(t, os.Getenv("MARGINCE_TEST_DSN"))
+	seat.Owner = connectOwner(t, testdb.For(t).OwnerDSN)
 	if status := seat.signIn(t, email, password); status != http.StatusOK {
 		t.Fatalf("signing in as %s → %d", email, status)
 	}

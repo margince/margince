@@ -62,6 +62,7 @@ func planFor(
 // a plan proposing workstreams, an ownership handover, and a pile of newer
 // unrelated traffic that recency alone would have shown instead.
 func TestTheMeetingPlanRecognisesWhatTheAccountAskedFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, nil, roomPerms)
@@ -128,6 +129,7 @@ func TestTheMeetingPlanRecognisesWhatTheAccountAskedFor(t *testing.T) {
 // The old reader stopped at the ten newest rows. On any account with traffic
 // that is the last week, and the last week is rarely what the meeting is about.
 func TestTheArcReadsPastTheNewestPage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, nil, roomPerms)
@@ -160,6 +162,7 @@ func TestTheArcReadsPastTheNewestPage(t *testing.T) {
 // and the brief must SAY that something was kept out — a thin arc nobody
 // explains reads exactly like a quiet account.
 func TestTheArcNamesNoConversationTheCallerMayNotRead(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ language, prefix string }{{"en", "1 conversation"}, {"de", "Du darfst ein Gespräch"}, {"vi", "Bạn không có quyền đọc một cuộc trao đổi"}} {
 		t.Run(tc.language, func(t *testing.T) {
 			e := Setup(t)
@@ -225,6 +228,7 @@ func valueOf[T any](p *[]T) []T {
 
 // A gap is a fact about the record. It must vanish when the record answers.
 func TestThePlanNamesTheAbsenceOfADeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := e.As(e.Rep1, nil, roomPerms)

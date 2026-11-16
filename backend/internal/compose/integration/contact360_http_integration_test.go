@@ -52,6 +52,7 @@ func call(ctx context.Context, method, path string,
 // confirm the record exists and only its contents are withheld. Capture
 // privacy is what puts a colleague's contact out of scope.
 func TestContact360SurfacesAllRefuseAForeignContactWith404(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -80,6 +81,7 @@ func TestContact360SurfacesAllRefuseAForeignContactWith404(t *testing.T) {
 // root record present and the omitted list always an array — never null, which
 // a client would have to special-case.
 func TestGetContact360AnswersOneParseableComposite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -111,6 +113,7 @@ func TestGetContact360AnswersOneParseableComposite(t *testing.T) {
 // it would destroy the very "what changed" answer the caller opened the page
 // to read, and make a prefetch indistinguishable from a visit.
 func TestTheViewBaselineMovesOnlyOnTheAcknowledgement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -164,6 +167,7 @@ func TestTheViewBaselineMovesOnlyOnTheAcknowledgement(t *testing.T) {
 // enriched, which is a different fact from the endpoint refusing. The list is
 // never null: a client would have to special-case that.
 func TestGetContactProfileFieldsAnswersAnArrayWhenNothingIsEnriched(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -196,6 +200,7 @@ func TestGetContactProfileFieldsAnswersAnArrayWhenNothingIsEnriched(t *testing.T
 // keyed to the omission shape assemble.go actually produces rather than to one
 // a test invented.
 func TestAMomentDoesNotClaimAbsenceForASectionTheReaderCouldNotSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	h := contactHandlers(e)
@@ -242,6 +247,7 @@ func TestAMomentDoesNotClaimAbsenceForASectionTheReaderCouldNotSee(t *testing.T)
 // A deal seat says whether its deal is still open and whether the seat itself
 // has ended. The composer then offers only a deal a follow-up can rest on.
 func TestADealSeatSaysWhetherItsDealIsOpen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)

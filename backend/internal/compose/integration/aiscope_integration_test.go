@@ -59,6 +59,7 @@ func unfiledTask(t *testing.T, e *Env, f scopeFixture) {
 }
 
 func TestAskScopedToOneProjectDropsTheOtherEngagementAndReportsTheScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	unfiledTask(t, e, f)
@@ -110,6 +111,7 @@ func TestAskScopedToOneProjectDropsTheOtherEngagementAndReportsTheScope(t *testi
 }
 
 func TestAskScopedToAProjectTheCallerCannotSeeAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	ghost := ids.From[ids.ProjectKind](ids.NewV7())
@@ -124,6 +126,7 @@ func TestAskScopedToAProjectTheCallerCannotSeeAnswersNotFound(t *testing.T) {
 // unscoped one never serve each other from the cache: the project rides the
 // fingerprint, so the switch back is a rewrite rather than a stale read.
 func TestCompanyBriefScopedToOneProjectWritesFromTheScopedSummaryOnly(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	lane := &recordingLane{}
@@ -183,6 +186,7 @@ func TestCompanyBriefScopedToOneProjectWritesFromTheScopedSummaryOnly(t *testing
 // mail is the NEWEST touch on the account and its held meeting the only
 // earlier one, so either leaking shows in the text.
 func TestMeetingBriefTakesARequestedProjectForAnUnattributedMeeting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	logMeeting := func(subject string, status string, at time.Time, within *ids.ProjectID) ids.UUID {
@@ -266,6 +270,7 @@ func meetingBriefText(brief crmcontracts.MeetingBrief) string {
 // A meeting filed under one project is not available as a brief about
 // another, and the refusal hides which project it IS filed under.
 func TestMeetingBriefRefusesAProjectTheMeetingIsNotFiledUnder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	meeting := ids.MustParse(f.erpMeeting)

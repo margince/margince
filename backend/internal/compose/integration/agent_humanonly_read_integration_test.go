@@ -23,6 +23,7 @@ import (
 )
 
 func TestAgentBearerIsRefusedOnHumanOnlyReads(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

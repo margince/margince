@@ -117,6 +117,7 @@ func createEmployment(ctx context.Context, t *testing.T, r *agents.Registry, con
 }
 
 func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -196,6 +197,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 // who said nothing, and a tool that could not say false would have no way to
 // record a job somebody holds without claiming it is their main one.
 func TestTheToolSurfaceCanBothOmitAndStateTheCurrentPrimaryFlag(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -225,6 +227,7 @@ func primaryFlag(t *testing.T, fields edgeFields) bool {
 }
 
 func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	admin := e.As(e.Rep1, nil, AdminPerms)
@@ -293,6 +296,7 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 // write that succeeded would tell the caller the record on the other end exists,
 // and would attach one of their own records to it.
 func TestAnEdgeCannotBeCreatedOverAnEndpointTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	admin := e.As(e.Rep1, nil, AdminPerms)
@@ -325,6 +329,7 @@ func TestAnEdgeCannotBeCreatedOverAnEndpointTheCallerCannotSee(t *testing.T) {
 // surface — which never runs the HTTP mapper, so a verdict that lived only in a
 // transport branch would arrive as an internal fault with advice to retry.
 func TestAMisshapenEdgeIsRefusedWithSomethingTheCallerCanAct(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, nil, AdminPerms)
@@ -384,6 +389,7 @@ func TestAMisshapenEdgeIsRefusedWithSomethingTheCallerCanAct(t *testing.T) {
 // A date range that runs backwards names the field at fault, on this surface as
 // on the other one.
 func TestAnEdgeEndingBeforeItBeganNamesTheDateField(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, nil, AdminPerms)
@@ -424,6 +430,7 @@ func TestAnEdgeEndingBeforeItBeganNamesTheDateField(t *testing.T) {
 // unguarded, its project endpoint vanished on the way in and the database
 // refused the edge for a pair the caller HAD supplied.
 func TestAProjectStakeholderEdgeKeepsTheProjectItNames(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -460,6 +467,7 @@ func TestAProjectStakeholderEdgeKeepsTheProjectItNames(t *testing.T) {
 // against a weaker rule than the one claimed. Only this case separates a
 // CONJUNCTION from a check of whichever endpoint happens to be looked at first.
 func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	admin := e.As(e.Rep1, nil, AdminPerms)

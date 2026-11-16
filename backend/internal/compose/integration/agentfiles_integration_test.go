@@ -108,6 +108,7 @@ func (d *twoDoors) toolFileIDs(t *testing.T, entityType, entityID string) []stri
 // files list_documents names. The audit and outbox rows of the upload name
 // the agent, not the human who lent it.
 func TestAPassportListsAndUploadsFilesOverREST(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "files-doors", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Filing Works", "source": "manual"})
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
@@ -163,6 +164,7 @@ func assertTheAgentWrote(t *testing.T, e *apptest.AppEnv, entity, action string)
 // A passport lent without `write` is refused the upload by its cap, before the
 // file is read.
 func TestAReadOnlyPassportCannotUploadAFile(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "files-read-only", "read")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Read Only Works", "source": "manual"})
 	status, raw := apptest.UploadAs(t, d.e, d.bearer, "company", company, []byte("%PDF-1.4"))
@@ -197,6 +199,7 @@ func capturedPrivately(t *testing.T, e *apptest.AppEnv, owner, address string) s
 // A record the lending human cannot see is absent to the passport. Its files
 // list as not found, and a file sent to it lands nowhere.
 func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "files-hidden", "read", "write")
 	d.e.DescribeCompany(t)
 	colleague := createdID(t, d.e, "/v1/users", AnyMap{
@@ -222,6 +225,7 @@ func TestAFileOnARecordOutsideTheRowScopeIsNotFound(t *testing.T) {
 // A passport reads a file's bytes through the tool, as the signed-in admin reads
 // them on the route. An archived file is gone from that door too.
 func TestAPassportReadsAFileThroughTheToolUntilItIsArchived(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "files-read", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Kept Works", "source": "manual"})
 	content := []byte("%PDF-KEPT\x00\xff")
@@ -257,6 +261,7 @@ func TestAPassportReadsAFileThroughTheToolUntilItIsArchived(t *testing.T) {
 // words, as a 422 on the part that carried it. A human's upload of the same
 // file keeps the route's larger limit.
 func TestAnAgentUploadOverTheToolsLimitIsRefusedAsTheToolRefusesIt(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "files-over-cap", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Heavy Works", "source": "manual"})
 	limit := agents.AttachLimit(uploadCeiling)
@@ -309,6 +314,7 @@ func filedRowOf(t *testing.T, e *apptest.AppEnv, attachment string) filedRow {
 // One file filed on a meeting note and against the account's contract lands as
 // one row on either door. The parent, contract, bytes and author agree.
 func TestAFileOnAMeetingAndAContractLandsAlikeOnBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "files-contract", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Signed Works", "source": "manual"})
 	contract := createdID(t, d.e, "/v1/contracts", AnyMap{"company_id": company, "title": "Master services agreement"})

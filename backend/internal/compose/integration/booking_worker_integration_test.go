@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T) {
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
@@ -76,6 +77,7 @@ func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T
 	}
 }
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestALeadBookingSurvivesReplayPromotionDeliveryAndCancellation(t *testing.T) {
 	e, _ := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)

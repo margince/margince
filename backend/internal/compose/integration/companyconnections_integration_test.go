@@ -52,6 +52,7 @@ func ourSideUsers(t *testing.T, e *integration.Env, contacts []ids.UUID) map[ids
 }
 
 func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	now := time.Now().UTC()
@@ -108,6 +109,7 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 }
 
 func TestADepartedColleagueIsNotOfferedAsAWayIn(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Now().UTC()
 

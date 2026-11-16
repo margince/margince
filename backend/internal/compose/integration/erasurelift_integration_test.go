@@ -30,6 +30,7 @@ import (
 const liftedAddress = "zurueck@betroffene.example"
 
 func TestALiftedAddressMayBeStoredAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	armForLift(t)
 	if !addressRefused(t, e) {
@@ -44,6 +45,7 @@ func TestALiftedAddressMayBeStoredAgain(t *testing.T) {
 }
 
 func TestASecondErasureArmsALiftedAddressAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	armForLift(t)
 	liftAddress(t, e)
@@ -57,6 +59,7 @@ func TestASecondErasureArmsALiftedAddressAgain(t *testing.T) {
 }
 
 func TestALinkLiftsOneErasureOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	armForLift(t)
 	erasedAt := erasedAtOf(t, e, liftedAddress)
@@ -77,6 +80,7 @@ func TestALinkLiftsOneErasureOnce(t *testing.T) {
 // lift is their request to be stored from now on, not a pardon for that record.
 // One address is held by one live contact at a time, so the two run in turn.
 func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, nil)
 	armForLift(t)
@@ -91,6 +95,7 @@ func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
 // The journal carries the lift across a restore that took the list with it.
 // A contact from before the lift is erased again.
 func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -102,6 +107,7 @@ func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
 }
 
 func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -114,6 +120,7 @@ func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
 
 // A journal exported before the lift is older than the list, and the list wins.
 func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -129,6 +136,7 @@ func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
 // A journal newer than a restored lift holds a second erasure the restore
 // rolled back, and the replay applies it.
 func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
@@ -159,6 +167,7 @@ func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 
 // The rekey moves a lifted row to its keyed hash with its lift. A subject who
 // came back before the key was bound is not refused after it.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheRekeyKeepsALift(t *testing.T) {
 	apptest.BindEnv(t, nil)
 	e := Setup(t)

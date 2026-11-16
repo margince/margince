@@ -19,6 +19,7 @@ import (
 )
 
 func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
+	t.Parallel()
 	for _, occupied := range []bool{false, true} {
 		t.Run(fmt.Sprintf("occupied=%t", occupied), func(t *testing.T) {
 			e := integration.Setup(t)
@@ -111,6 +112,7 @@ func TestContactMergePreviewShowsANumberTheSurvivorHolds(t *testing.T) {
 }
 
 func TestCompanyMergePreviewShowsDomainDemotions(t *testing.T) {
+	t.Parallel()
 	for _, occupied := range []bool{false, true} {
 		t.Run(fmt.Sprintf("occupied=%t", occupied), func(t *testing.T) {
 			e := integration.Setup(t)

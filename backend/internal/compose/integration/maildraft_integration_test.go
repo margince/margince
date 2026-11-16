@@ -65,6 +65,7 @@ func (p *preflightEnv) draftRows(t *testing.T) int {
 // The answers the composer is built on: 404 when there is nothing to restore,
 // 409 when a save would overwrite a draft it never read, 204 on discard.
 func TestTheDraftRoutesAnswerTheComposersQuestions(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 
 	if status := p.replyDraftStatus(t); status != http.StatusNotFound {
@@ -101,6 +102,7 @@ func TestTheDraftRoutesAnswerTheComposersQuestions(t *testing.T) {
 // that is refused: a refusal leaves the rep in the composer with what they
 // wrote, even when the refused message is frozen for review.
 func TestADraftStaysThroughARefusalAndGoesWithTheAcceptedSend(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	_, draft := p.saveReplyDraft(t, "As discussed.", nil)
@@ -130,6 +132,7 @@ func TestADraftStaysThroughARefusalAndGoesWithTheAcceptedSend(t *testing.T) {
 // Art. 17 reaches the message a rep started to the subject and never sent: it
 // holds their address and the words meant for them before any activity does.
 func TestErasingARecipientDeletesTheDraftsAddressedToThem(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.saveReplyDraft(t, "Written and never sent.", nil)
 
@@ -149,6 +152,7 @@ func TestErasingARecipientDeletesTheDraftsAddressedToThem(t *testing.T) {
 // The scheduled twin of the send above: the draft goes when the schedule
 // commits, not when the message later fires.
 func TestAScheduledReplyTakesItsDraftWithIt(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	_, draft := p.saveReplyDraft(t, "Written the night before.", nil)
@@ -172,6 +176,7 @@ func TestAScheduledReplyTakesItsDraftWithIt(t *testing.T) {
 // their own blind copy and not who else was blind-copied. A draft opened on
 // their record is theirs too; one to somebody else on another record is not.
 func TestASubjectAccessExportCarriesTheDraftsWrittenToThem(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	file := p.seedDraftFile(t, "price-list.pdf")
 	if status := p.Call(t, "PUT", "/v1/mail-drafts", AnyMap{
@@ -277,6 +282,7 @@ func (p *preflightEnv) seedStranger(t *testing.T) string {
 // their message to somebody else. A draft to somebody else on another record
 // is neither.
 func TestTheExportAndTheErasureAgreeOnWhichDraftsAreTheSubjects(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	lead := p.seedLiveLead(t)
 	stranger := p.seedStranger(t)
@@ -353,6 +359,7 @@ func (p *preflightEnv) promoteLead(t *testing.T, lead string) {
 // A save replaces the whole draft, so a null html_body stores none: the plain
 // body is all the draft holds afterwards.
 func TestADraftSavedWithANullHTMLBodyHoldsNone(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	draft := func(html any) AnyMap {
 		return AnyMap{

@@ -16,6 +16,7 @@ import (
 // Words to a buyer reach them at once, so they spend send on every door. A passport
 // with write opens the room and writes nothing into it.
 func TestAWritePassportWritesNothingABuyerReads(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "room-write-only", "read", "write")
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Room renewal")
 	room := recordIDOf(t, d.tool(t, "create_record", map[string]any{"record_type": "deal_room", "fields": map[string]any{
@@ -44,6 +45,7 @@ func TestAWritePassportWritesNothingABuyerReads(t *testing.T) {
 // A send passport opens a thread and replies in it. The buyer reads the user's name
 // on the words, and the audit row names the agent.
 func TestASendPassportWritesToTheBuyer(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "room-send", "read", "write", "send")
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Room renewal")
 	room := recordIDOf(t, d.tool(t, "create_record", map[string]any{"record_type": "deal_room", "fields": map[string]any{

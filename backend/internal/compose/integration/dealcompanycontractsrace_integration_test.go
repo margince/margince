@@ -36,6 +36,7 @@ const (
 // The move locks the deal first. A filing for Acme that arrives meanwhile
 // waits on the deal, then reads the company the move committed, and is refused.
 func TestAContractFiledDuringADealCompanyMoveSeesTheNewCompany(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	admin := f.e.Admin()
 	deal := f.dealFor(t, nil, nil)
@@ -81,6 +82,7 @@ func TestAContractFiledDuringADealCompanyMoveSeesTheNewCompany(t *testing.T) {
 // The filing locks the deal first. A move that arrives meanwhile waits on the
 // deal, then reads the contract the filing committed, and is refused.
 func TestADealCompanyMoveDuringAContractFilingSeesTheContract(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	admin := f.e.Admin()
 	deal := f.dealFor(t, nil, nil)

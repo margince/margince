@@ -26,6 +26,7 @@ import (
 )
 
 func TestModifyThenApproveRebindsTheAuthority(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -138,6 +139,7 @@ func assertEditAuditCarriesBothSides(t *testing.T, owner *pgx.Conn, approvalID i
 // untouched original target. The edit is pinned to the records the staging
 // named; nothing else about it is constrained.
 func TestModifyThenApproveCannotRetargetTheEffect(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvalEngineWithLiveProposer(t, e)
@@ -212,6 +214,7 @@ func TestModifyThenApproveCannotRetargetTheEffect(t *testing.T) {
 // An edit that cannot canonicalize is refused as a validation error and
 // decides nothing: the staging stays pending and decidable.
 func TestMalformedEditLeavesTheStagingPending(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvalEngineWithLiveProposer(t, e)

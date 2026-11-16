@@ -17,6 +17,7 @@ import (
 // record as I read it". A stale version has to be refused with version_skew and
 // leave both records alone; the current version, or no header, goes through.
 func TestAMergeHonoursTheSourcesIfMatchVersion(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Merge If-Match", "merge-ifmatch@test.test", "Admin")
 

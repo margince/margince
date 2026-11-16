@@ -62,6 +62,7 @@ func attachmentEvents(t *testing.T, e *Env, parent string) []map[string]any {
 }
 
 func TestEveryAttachmentMutationStatesItselfOnTheBus(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -180,6 +181,7 @@ func TestEveryAttachmentMutationStatesItselfOnTheBus(t *testing.T) {
 // stand-in, a test that supplies its own version of that path would prove
 // nothing about it.
 func TestACapturedFileEmitsNoAttachmentEventOfItsOwn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Captured Attach", &e.Rep1)
@@ -237,6 +239,7 @@ func lastEventType(events []map[string]any) string {
 // Asserted because an event emitted on a refused mutation would be worse than
 // one missing, a subscriber would act on a change that never happened.
 func TestAMutationOnAFileThatIsNotThereAnnouncesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Absent File", &e.Rep1)

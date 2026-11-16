@@ -44,6 +44,7 @@ func baseCurrency(t *testing.T, e *apptest.AppEnv) string {
 }
 
 func TestFxRatesOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	today := time.Now().UTC().Format("2006-01-02")
@@ -99,6 +100,7 @@ type aiModelRateListDTO struct {
 }
 
 func TestAiModelRatesOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	today := time.Now().UTC().Format("2006-01-02")
@@ -152,6 +154,7 @@ func TestAiModelRatesOverHTTP(t *testing.T) {
 // blank half of the key is a 422, and an agent bearer is refused before the
 // handler looks at the sheet.
 func TestDeleteAiModelRateOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	today := time.Now().UTC().Format("2006-01-02")
@@ -202,6 +205,7 @@ func TestDeleteAiModelRateOverHTTP(t *testing.T) {
 // never `null`. The base and a written rate's code come back. An agent bearer
 // is refused, because the read feeds the web app's pickers only.
 func TestFxRateCurrenciesOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

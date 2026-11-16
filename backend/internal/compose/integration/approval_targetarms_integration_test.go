@@ -25,6 +25,7 @@ import (
 )
 
 func TestAnAgentArchivePerformsOrIsRefusedForEveryTargetArm(t *testing.T) {
+	t.Parallel()
 	// The webhook-subscription route seals a signing secret, so the suite boots
 	// with the deployment key the create path needs.
 	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))

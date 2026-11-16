@@ -52,6 +52,7 @@ func seedDealWithPartner(t *testing.T, e *Env) (ids.DealID, ids.CompanyID) {
 }
 
 func TestNamingAPartnerStoresTheSourcedClaimWithIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, partner := seedDealWithPartner(t, e)
 
@@ -68,6 +69,7 @@ func TestNamingAPartnerStoresTheSourcedClaimWithIt(t *testing.T) {
 }
 
 func TestADealCanBeReAttributedToInfluencedWithoutMovingThePartner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, partner := seedDealWithPartner(t, e)
 	influenced := crmcontracts.DealPartnerAttribution("influenced")
@@ -92,6 +94,7 @@ func TestADealCanBeReAttributedToInfluencedWithoutMovingThePartner(t *testing.T)
 }
 
 func TestAttributingADealThatNamesNoPartnerIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Direct renewal", pipeline, open, &e.Rep1))
@@ -113,6 +116,7 @@ func TestAttributingADealThatNamesNoPartnerIsRefused(t *testing.T) {
 // Writing the half-set row directly proves the constraint is on the table, so a
 // future writer that forgets the rule is stopped by the database.
 func TestTheDatabaseItselfRefusesAHalfSetPartnerPair(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, _ := seedDealWithPartner(t, e)
 
@@ -128,6 +132,7 @@ func TestTheDatabaseItselfRefusesAHalfSetPartnerPair(t *testing.T) {
 // FK clears partner_company_id, and without the trigger that clears the attribution
 // with it the delete would breach the pairing CHECK instead of succeeding.
 func TestDeletingAPartnerCompanyDetachesItsDealsIntact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, partner := seedDealWithPartner(t, e)
 
@@ -150,6 +155,7 @@ func TestDeletingAPartnerCompanyDetachesItsDealsIntact(t *testing.T) {
 // instead, this write would set one half and earn the constraint violation the
 // test above proves is really there.
 func TestForgettingADealsPartnerForgetsItsClaimToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, _ := seedDealWithPartner(t, e)
 
@@ -170,6 +176,7 @@ func TestForgettingADealsPartnerForgetsItsClaimToo(t *testing.T) {
 }
 
 func TestForgettingThePartnerWhileClaimingSomethingOfThemIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, _ := seedDealWithPartner(t, e)
 	influenced := "influenced"
@@ -189,6 +196,7 @@ func TestForgettingThePartnerWhileClaimingSomethingOfThemIsRefused(t *testing.T)
 // partner-add names both halves as null, and refusing either would leave that
 // reversal impossible to express.
 func TestNamingTheClaimForgetsTheWholePair(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, _ := seedDealWithPartner(t, e)
 
@@ -213,6 +221,7 @@ func TestNamingTheClaimForgetsTheWholePair(t *testing.T) {
 // deal's partner — masked_fields says so — could still destroy the attribution a
 // commission accrues on.
 func TestForgettingAPartnerTheReaderCannotSeeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	partnerCompany := e.SeedPartnerCompany(t, "Northgate Partners", nil, &e.Rep3)
@@ -263,6 +272,7 @@ func partnerPairOnTheRow(t *testing.T, e *Env, deal ids.DealID) (partner, claim 
 
 // The company arm of the same rule.
 func TestForgettingACompanyTheReaderCannotSeeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Meridian Labs", &e.Rep3)
@@ -290,6 +300,7 @@ func TestForgettingACompanyTheReaderCannotSeeIsRefused(t *testing.T) {
 // reachable. It was not: the edit form offers unsetting the company, and the
 // store refused the null it sent.
 func TestADealCanBeUnlinkedFromItsCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Kestrel renewal", pipeline, open, &e.Rep1))

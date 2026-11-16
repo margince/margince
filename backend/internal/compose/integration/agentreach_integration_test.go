@@ -20,6 +20,7 @@ import (
 // A read-only passport reaches no route-backed act, on either door. The census
 // comes from the routes the build serves, so a new write action is held here.
 func TestAReadOnlyPassportReachesNoRouteBackedWrite(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-read-only", "read")
 	writes := 0
 	for n, v := range compose.RouteVerbs() {
@@ -85,6 +86,7 @@ func colleagueDoors(t *testing.T, d *twoDoors, adminEmail string) *twoDoors {
 // A colleague's agent cannot reach another user's items. A rep's own grants turn
 // some away, and the rest answer as a record that is not there.
 func TestAColleaguesAgentReachesNoneOfAnotherUsersItems(t *testing.T) {
+	t.Parallel()
 	const adminEmail = "agent-colleague@fable.test"
 	d := newTwoDoors(t, "agent-colleague", "read", "write", "send")
 	colleague := colleagueDoors(t, d, adminEmail)
@@ -147,6 +149,7 @@ func TestAColleaguesAgentReachesNoneOfAnotherUsersItems(t *testing.T) {
 // Consent is read under the contact's row scope. A contact private to its owner
 // reads as not there for a colleague's agent, as it does for the colleague.
 func TestAColleaguesAgentReadsNoConsentOnAPrivateContact(t *testing.T) {
+	t.Parallel()
 	const adminEmail = "agent-consent-scope@fable.test"
 	d := newTwoDoors(t, "agent-consent-scope", "read", "write", "send")
 	colleague := colleagueDoors(t, d, adminEmail)

@@ -43,6 +43,7 @@ type toolPipeline struct {
 }
 
 func TestADealCanBeCreatedFromNothingButTheToolSurface(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	DealFixture(t, e) // the workspace's seeded default pipeline
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -122,6 +123,7 @@ func TestADealCanBeCreatedFromNothingButTheToolSurface(t *testing.T) {
 // The move, from the same starting point: advance_deal's to_stage_id has the
 // same problem create_record's stage_id had, and the same answer.
 func TestADealCanBeAdvancedToAStageObtainedFromTheToolSurface(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Advance discovery", pipeline, open, &e.Rep1)

@@ -19,6 +19,7 @@ import (
 )
 
 func TestALimitedActivityWithholdsItsCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	catalog := customfieldsmod.NewService(e.Pool, SchemaPool(t))
 	field, err := catalog.Create(e.As(e.Rep1, nil, CustomFieldAdminPerms), customfieldsmod.FieldSpec{

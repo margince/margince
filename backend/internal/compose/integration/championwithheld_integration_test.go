@@ -62,6 +62,7 @@ func championSeatReader() principal.Permissions {
 // This is the case the whole tri-state exists for: the reader sees the deal,
 // cannot see the seat, and must not be told nobody is carrying it.
 func TestAChampionTheReaderMayNotSeeIsReportedWithheldRatherThanAbsent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.Rep1
 	company := e.SeedCompany(t, "Kessler Systems", &rep)
@@ -109,6 +110,7 @@ func TestAChampionTheReaderMayNotSeeIsReportedWithheldRatherThanAbsent(t *testin
 // committee as withheld — a gate refusing everybody looks exactly like a gate
 // working, and the queue would silently stop saying `no_champion` at all.
 func TestAVisibleCommitteeIsAnsweredRatherThanWithheld(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.Rep1
 	company := e.SeedCompany(t, "Turbinenbau", &rep)
@@ -182,6 +184,7 @@ func TestAChampionStoredInOtherCaseIsNamed(t *testing.T) {
 // wrong reason, which breaks the day somebody makes the grouped query emit a
 // row for an empty group.
 func TestACommitteeWhollyOutOfSightIsWithheldRatherThanMissing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.Rep1
 	company := e.SeedCompany(t, "Nordwerk", &rep)
@@ -241,6 +244,7 @@ func TestACommitteeWhollyOutOfSightIsWithheldRatherThanMissing(t *testing.T) {
 // The CHAMPION here is fully readable. That is the point: the contact arm admits
 // this seat, so only a probe reading the whole conjunction can find it refused.
 func TestAChampionRefusedByANonContactEndpointIsWithheldRatherThanAbsent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.Rep1
 	company := e.SeedCompany(t, "Halden Werke", &rep)
@@ -317,6 +321,7 @@ func makeCompanyCapturePrivate(t *testing.T, e *Env, company ids.UUID, owner ids
 // this test is what keeps the disagreement from mattering if a new archive path
 // or a backfill ever misses it.
 func TestAnEdgeOnAnArchivedContactIsNoWithheldSeat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.Rep1
 	company := e.SeedCompany(t, "Stillgelegt AG", &rep)

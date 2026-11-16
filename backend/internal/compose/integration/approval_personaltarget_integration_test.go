@@ -33,6 +33,7 @@ import (
 )
 
 func TestAStagedViewArchiveIsDecidableByItsOwnerAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	views := collections.NewStore(e.DB())

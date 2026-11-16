@@ -59,6 +59,7 @@ func companyField(t *testing.T, e *apptest.AppEnv, displayName, column string) s
 }
 
 func TestACustomFieldColumnLandsOnCreateAndOnUpdate(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tier\nCustom One GmbH,A\n")
@@ -82,6 +83,7 @@ func TestACustomFieldColumnLandsOnCreateAndOnUpdate(t *testing.T) {
 }
 
 func TestAZipPartSuggestsAndLandsAContactCustomFieldByItsLabel(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "contact", "label": "Segment", "type": "text", "source": "manual"})
 	profile := uploadZip(t, e, "crm.zip", zipBytes(t, map[string]string{
@@ -100,6 +102,7 @@ func TestAZipPartSuggestsAndLandsAContactCustomFieldByItsLabel(t *testing.T) {
 }
 
 func TestTheDryRunAndTheCommitSkipTheSameRowForTheSameCell(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold", "Silver"}, "source": "manual"})
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")
@@ -135,6 +138,7 @@ func TestTheDryRunAndTheCommitSkipTheSameRowForTheSameCell(t *testing.T) {
 
 // A typed value lands in its type, and an unedited re-import changes nothing.
 func TestATypedCustomFieldLandsInItsTypeAndAReimportIsUnchanged(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	active := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Active", "type": "boolean", "source": "manual"})
 	value := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Value", "type": "currency", "currency": "EUR", "source": "manual"})
@@ -160,6 +164,7 @@ func TestATypedCustomFieldLandsInItsTypeAndAReimportIsUnchanged(t *testing.T) {
 // A caller-opened create that sends values with no catalog is refused before
 // it writes, so a value is never dropped silently.
 func TestACallerOpenedCreateWithValuesAndNoCatalogIsStillRefused(t *testing.T) {
+	t.Parallel()
 	f := setupGates(t)
 	values := map[string]any{"cf_x": "y"}
 	creates := map[string]func(tx pgx.Tx) error{

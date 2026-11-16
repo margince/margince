@@ -203,6 +203,7 @@ func assertSubjectErased(t *testing.T, e *Env, contactID ids.UUID) {
 }
 
 func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	admin := e.Admin()
@@ -268,6 +269,7 @@ func TestErasureRemovesPIIEverywhereAndSticksViaSuppression(t *testing.T) {
 // consent_event, audit and outbox rows against them — through the very
 // capability the erasure destroyed the record of.
 func TestErasureRetiresTheSubjectsPreferenceToken(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	token := seededPreferenceToken(contactID)
@@ -302,6 +304,7 @@ func TestErasureRetiresTheSubjectsPreferenceToken(t *testing.T) {
 // subject-only activity with no hold IS redacted, proving the predicate
 // discriminates rather than blanket-skipping.
 func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -409,6 +412,7 @@ func TestErasurePreservesActivityUnderTransitiveHold(t *testing.T) {
 // null its body. A same-age note is not correspondence and IS redacted, so
 // the floor discriminates rather than blanket-skipping the whole timeline.
 func TestEraseContactHonoursCommercialCorrespondenceFloor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -505,6 +509,7 @@ func TestEraseContactHonoursCommercialCorrespondenceFloor(t *testing.T) {
 // tested is that the cascade reaches what capture actually writes. A row the
 // test inserted itself would prove only that a DELETE matches an INSERT.
 func TestErasureRetiresTheSubjectsMessageIdentities(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	admin := e.Admin()

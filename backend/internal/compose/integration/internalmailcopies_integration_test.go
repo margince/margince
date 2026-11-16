@@ -40,6 +40,7 @@ func (m operationalMailbox) Sync(ctx context.Context, _ connector.Auth, cursor c
 }
 
 func TestAnInternalCopyInASharedMailboxRetainsItsRestrictionAndAdmitsOnlyAnActualParticipant(t *testing.T) {
+	t.Parallel()
 	ctx, connecting, vault, ws, pool := newInternalMailRegistryFixture(t)
 	first, err := connecting.Connect(ctx, "gmail", connector.Auth("fixture-token"))
 	if err != nil {

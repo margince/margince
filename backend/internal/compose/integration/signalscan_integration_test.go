@@ -86,6 +86,7 @@ func openSignalKinds(t *testing.T, e *Env, company ids.UUID) []string {
 }
 
 func TestGhostedThreadIsRaisedOnceAndSurvivesARepeatPass(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Now().UTC()
 
@@ -113,6 +114,7 @@ func TestGhostedThreadIsRaisedOnceAndSurvivesARepeatPass(t *testing.T) {
 }
 
 func TestADismissedGhostedSignalDoesNotComeBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Now().UTC()
 
@@ -132,6 +134,7 @@ func TestADismissedGhostedSignalDoesNotComeBack(t *testing.T) {
 }
 
 func TestGhostedStaysQuietWhenTheyWroteLastOrNobodyIsWorkingTheAccount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Now().UTC()
 

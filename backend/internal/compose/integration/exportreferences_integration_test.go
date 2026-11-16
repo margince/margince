@@ -67,6 +67,7 @@ func (e *SearchEnv) dealAndCompanyReader(user ids.UUID) context.Context {
 }
 
 func TestAFilteredExportWithholdsACompanyTheExporterCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	deal, hidden := seedDealOnAPrivateCompany(t, e)
 
@@ -96,6 +97,7 @@ func TestAFilteredExportWithholdsACompanyTheExporterCannotOpen(t *testing.T) {
 // And the reader who CAN open it still gets it, so the rule withholds from a
 // reader rather than emptying the column for everyone.
 func TestAFilteredExportKeepsACompanyTheExporterCanOpen(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	_, hidden := seedDealOnAPrivateCompany(t, e)
 

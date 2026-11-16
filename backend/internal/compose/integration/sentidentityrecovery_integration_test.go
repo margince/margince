@@ -176,6 +176,7 @@ func (r recoveryEnv) convergedOnTheSend(t *testing.T) {
 // re-keys the send and lands on it as a replay. The message was sent once, and
 // the capture started no second activity.
 func TestAThrottledReadBackThenItsEchoLeaveOneActivityAndOneSend(t *testing.T) {
+	t.Parallel()
 	r := setupRecovery(t)
 	gmail := r.sendRefusingReadBack(t, http.StatusTooManyRequests, "rateLimitExceeded")
 	if r.countActivities(t, `source_id = $1`, r.minted) != 1 {
@@ -202,6 +203,7 @@ func TestAThrottledReadBackThenItsEchoLeaveOneActivityAndOneSend(t *testing.T) {
 // The echo lands before the receipt. The receipt finds it by the provider's
 // message id and absorbs it, as after a read-back that answered.
 func TestAnEchoCapturedBeforeAFailedReadBackIsAbsorbedByTheReceipt(t *testing.T) {
+	t.Parallel()
 	r := setupRecovery(t)
 	r.captureOwnEcho(r.ownMailbox(t), t, echoAlreadyCaptured("Re: Inbound question", gmailStamped))
 	echo := r.activityOnTheStampedIdentity(t)
@@ -230,6 +232,7 @@ func TestAnEchoCapturedBeforeAFailedReadBackIsAbsorbedByTheReceipt(t *testing.T)
 // A worker that died after the receipt committed and before the reconcile: the
 // replayed job sends nothing, and the echo still finds the send.
 func TestACrashAfterTheReceiptThenAReplayThenTheEchoSendsOnceAndConverges(t *testing.T) {
+	t.Parallel()
 	r := setupRecovery(t)
 	worker := compose.SendWorkerContext(context.Background(), r.workspaceID(t))
 	// The durable state a crash after commitReceipt leaves: the receipt, and no
@@ -252,6 +255,7 @@ func TestACrashAfterTheReceiptThenAReplayThenTheEchoSendsOnceAndConverges(t *tes
 // A mailbox that refuses the read leaves an explicit outcome, and the send's
 // row stays the one row.
 func TestADeniedReadBackIsRecordedAndTheSendStaysOneRow(t *testing.T) {
+	t.Parallel()
 	r := setupRecovery(t)
 	gmail := r.sendRefusingReadBack(t, http.StatusForbidden, "insufficientPermissions")
 
@@ -293,6 +297,7 @@ func (r recoveryEnv) sendIsUntouched(t *testing.T) {
 // Another seat's mailbox can hold its own sent message with the same Gmail id.
 // It never re-keys this rep's send.
 func TestAnotherMailboxsSentMessageWithTheSameIDLeavesTheSendAlone(t *testing.T) {
+	t.Parallel()
 	r := setupRecovery(t)
 	r.sendRefusingReadBack(t, http.StatusTooManyRequests, "rateLimitExceeded")
 	r.DescribeCompany(t)
@@ -314,6 +319,7 @@ func TestAnotherMailboxsSentMessageWithTheSameIDLeavesTheSendAlone(t *testing.T)
 // connection to another account, a message there with the same id is not the
 // earlier send's echo.
 func TestAMessageInAReboundAccountLeavesTheEarlierSendAlone(t *testing.T) {
+	t.Parallel()
 	r := setupRecovery(t)
 	r.sendRefusingReadBack(t, http.StatusTooManyRequests, "rateLimitExceeded")
 	const rebound = "rebound@fable.test"
@@ -329,6 +335,7 @@ func TestAMessageInAReboundAccountLeavesTheEarlierSendAlone(t *testing.T) {
 // Mail the rep sent from a second verified address arrives inbound until
 // capture re-reads it as theirs. The echo is still recognised as the send's.
 func TestAnEchoSentFromTheSeatsSecondAddressStillFindsTheSend(t *testing.T) {
+	t.Parallel()
 	r := setupRecovery(t)
 	const alias = "alias@fable.test"
 	if status := r.Call(t, "POST", "/v1/capture/owner-identities", AnyMap{"kind": "address", "value": alias}, nil, nil); status != http.StatusCreated {

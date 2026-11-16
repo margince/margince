@@ -74,6 +74,7 @@ func invite(t *testing.T, e *apptest.AppEnv, email string, refusal *problemDocum
 }
 
 func TestInviteAtTheLicensedCeilingIsRefusedWithTheNumberTheScreenShows(t *testing.T) {
+	t.Parallel()
 	e, granted := setupLicensedApp(t)
 
 	var before licenseEntitlement
@@ -113,6 +114,7 @@ func TestInviteAtTheLicensedCeilingIsRefusedWithTheNumberTheScreenShows(t *testi
 // request succeeds. Without this, a gate that refused everything would pass the
 // test above.
 func TestInviteBelowTheLicensedCeilingIsAdmitted(t *testing.T) {
+	t.Parallel()
 	e, granted := setupLicensedApp(t)
 
 	var before licenseEntitlement
@@ -145,6 +147,7 @@ func TestInviteBelowTheLicensedCeilingIsAdmitted(t *testing.T) {
 // screen shows that ceiling, and an invite beyond it is refused, so a lapse
 // never lifts the seat limit.
 func TestARefusedLicenseHoldsAnInviteToTheLastValidCeiling(t *testing.T) {
+	t.Parallel()
 	held := &atomic.Int64{}
 	e := apptest.SetupAppWithOptions(t, compose.WithLicensePosture(func() licensecheck.Posture {
 		return licensecheck.Posture{

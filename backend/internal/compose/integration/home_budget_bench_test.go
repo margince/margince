@@ -68,6 +68,7 @@ var (
 // TestHomeBudget times Home's reads for the heaviest owner of a small fixed
 // corpus, cold and warm, and fails any read over its budget. Home has no
 // known-issue allowance: a slow worklist fails it like any other read.
+//testdb:serial reads attention.StageCosts, a process-wide meter every Home read adds to
 func TestHomeBudget(t *testing.T) {
 	if os.Getenv(database.SQLCensusDirEnv) != "" {
 		t.Fatal("SQL file capture changes latency; unset " + database.SQLCensusDirEnv + " for this gate")

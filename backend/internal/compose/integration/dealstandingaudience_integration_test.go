@@ -45,6 +45,7 @@ import (
 )
 
 func TestACachedStandingStopsRestatingAMessageTheReaderMayNoLongerRead(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 
@@ -101,6 +102,7 @@ func TestACachedStandingStopsRestatingAMessageTheReaderMayNoLongerRead(t *testin
 // predicate alone would not stop this: that clause renders a ROW filter, and a
 // row filter answers "which of them", never "may this seat read any".
 func TestACachedStandingStopsWhenTheSeatLosesActivitiesEntirely(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 
 	pipeline := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position)
@@ -149,6 +151,7 @@ func TestACachedStandingStopsWhenTheSeatLosesActivitiesEntirely(t *testing.T) {
 // Without this case the fix could be "drop every cached standing" and both tests
 // above would still pass — the feature gone, and the leak closed by deleting it.
 func TestACachedStandingCitingNoMessageIsUnaffectedByAnAudience(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 
 	pipeline := e.SeedID(t, `INSERT INTO pipeline (id, name, is_default, position)

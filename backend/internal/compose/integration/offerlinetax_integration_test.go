@@ -103,6 +103,7 @@ func offerIDOf(offer crmcontracts.Offer) ids.OfferID {
 }
 
 func TestALineTakesTheRateOfItsEntitysCountry(t *testing.T) {
+	t.Parallel()
 	f := newLineTaxFixture(t)
 	vienna := seedVienna(t, f.e).ID
 
@@ -157,6 +158,7 @@ func TestALineTakesTheRateOfItsEntitysCountry(t *testing.T) {
 }
 
 func TestTheSendDayPicksTheRate(t *testing.T) {
+	t.Parallel()
 	f := newLineTaxFixture(t)
 	sentToday := f.offer(t, nil)
 	draft := f.offer(t, nil)
@@ -197,6 +199,7 @@ func TestTheSendDayPicksTheRate(t *testing.T) {
 }
 
 func TestASendWithNoRateForTheCountryIsRefused(t *testing.T) {
+	t.Parallel()
 	f := newLineTaxFixture(t)
 	draft := f.offer(t, nil)
 	// The installation moves to a country the sheet holds no rate for, and the
@@ -216,6 +219,7 @@ func TestASendWithNoRateForTheCountryIsRefused(t *testing.T) {
 }
 
 func TestADraftedLineOnAClassifiedProductTakesTheSheetsRate(t *testing.T) {
+	t.Parallel()
 	f := newLineTaxFixture(t)
 	draft := f.offer(t, nil)
 	evidence := deals.StagedOfferLineEvidence{Snippet: "they want the consulting", SourceID: "activity:1"}
@@ -252,6 +256,7 @@ func TestADraftedLineOnAClassifiedProductTakesTheSheetsRate(t *testing.T) {
 }
 
 func TestARevisionTakesTodaysRates(t *testing.T) {
+	t.Parallel()
 	f := newLineTaxFixture(t)
 	sent := f.offer(t, nil)
 	if _, err := f.e.Deals.SendOffer(f.desk, offerIDOf(sent), nil); err != nil {
@@ -275,6 +280,7 @@ func TestARevisionTakesTodaysRates(t *testing.T) {
 }
 
 func TestALinePatchAuditsTheCategoryItReplaced(t *testing.T) {
+	t.Parallel()
 	f := newLineTaxFixture(t)
 	if _, _, err := record(f.desk, f.e, "de", "reduced", "7", time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)); err != nil {
 		t.Fatalf("record the reduced rate: %v", err)

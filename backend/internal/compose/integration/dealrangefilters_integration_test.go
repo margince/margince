@@ -72,6 +72,7 @@ func assertListed(t *testing.T, what string, got []string, want ...string) {
 // The close-date range reads the Close column's day. A won deal counts by the
 // day it closed, an open deal by its expected date, an undated deal by neither.
 func TestTheDealListNarrowsByCloseDay(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.rangeDeal(t, "February", deals.CreateDealInput{Source: "manual", ExpectedClose: calendarDay(t, "2020-02-10")})
 	f.rangeDeal(t, "May", deals.CreateDealInput{Source: "manual", ExpectedClose: calendarDay(t, "2020-05-01")})
@@ -94,6 +95,7 @@ func TestTheDealListNarrowsByCloseDay(t *testing.T) {
 // The value range compares the base-currency value the Value sort orders by.
 // Mixed currencies meet on one scale, and an unpriceable deal is in no range.
 func TestTheDealListNarrowsByValueAcrossCurrencies(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	f.rate(t, "USD", "0.5", valuationDate)
 	f.rate(t, "JPY", "0.006", valuationDate)
@@ -130,6 +132,7 @@ var rangeReaderPerms = principal.Permissions{
 // The country is the company's address country. A deal with no company has no
 // country, and a company the reader may not see does not answer for its deal.
 func TestTheDealListNarrowsByTheCompanyCountry(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	country := func(name, code string, owner ids.UUID) *ids.CompanyID {
 		company, err := f.e.Contacts.CreateCompany(f.e.Admin(), contacts.CreateCompanyInput{
@@ -176,6 +179,7 @@ type codeRefusal struct {
 // Over HTTP, a currency or country takes either case. A code of the wrong shape
 // is refused by name, never answered with an empty page that reads as "no deals".
 func TestTheDealListTakesACodeInEitherCaseAndRefusesAMalformedOne(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pipelineID, stageID, _ := companyRollupOpenStage(t, e)
@@ -218,6 +222,7 @@ func TestTheDealListTakesACodeInEitherCaseAndRefusesAMalformedOne(t *testing.T) 
 // The agent's filter reaches the same store. It takes a lower-case code and
 // refuses a malformed one by name, as the HTTP list does.
 func TestTheAgentsDealFilterTakesACodeInEitherCaseAndRefusesAMalformedOne(t *testing.T) {
+	t.Parallel()
 	f := setupValuation(t)
 	dollars := f.rangeDeal(t, "USD 500", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(50000)), Currency: new("USD")})
 	f.rangeDeal(t, "EUR 300", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(30000)), Currency: new("EUR")})

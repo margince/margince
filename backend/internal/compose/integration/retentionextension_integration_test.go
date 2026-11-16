@@ -113,6 +113,7 @@ func (f keptFixture) audits(t *testing.T, id ids.UUID, action string) int {
 const twentyYears = 20 * 365 * 24 * time.Hour
 
 func TestRetentionClearsAnExtensionRowPastItsWindowOnce(t *testing.T) {
+	t.Parallel()
 	f := setupKeptTable(t)
 	contact := f.e.SeedContact(t, "Old Correspondent", nil)
 	old := f.seed(t, keptRow{contact: &contact, age: twentyYears})
@@ -140,6 +141,7 @@ func TestRetentionClearsAnExtensionRowPastItsWindowOnce(t *testing.T) {
 }
 
 func TestRetentionStripsTheStoredHistoryOfAnExpiredExtensionRow(t *testing.T) {
+	t.Parallel()
 	f := setupKeptTable(t)
 	old := f.seed(t, keptRow{age: twentyYears})
 	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
@@ -159,6 +161,7 @@ func TestRetentionStripsTheStoredHistoryOfAnExpiredExtensionRow(t *testing.T) {
 }
 
 func TestRetentionEraseDeletesAnExtensionRowPastItsWindow(t *testing.T) {
+	t.Parallel()
 	f := setupKeptTable(t)
 	old := f.seed(t, keptRow{age: twentyYears})
 	f.policy(t, "erase")
@@ -174,6 +177,7 @@ func TestRetentionEraseDeletesAnExtensionRowPastItsWindow(t *testing.T) {
 }
 
 func TestRetentionKeepsAnExtensionRowLinkedToAHeldRecord(t *testing.T) {
+	t.Parallel()
 	f := setupKeptTable(t)
 	heldContact := f.e.SeedContact(t, "Held Contact", nil)
 	heldCompany := f.e.SeedCompany(t, "Held Company", nil)
@@ -208,6 +212,7 @@ func TestRetentionKeepsAnExtensionRowLinkedToAHeldRecord(t *testing.T) {
 }
 
 func TestErasureKeepsAnExtensionRowThatAlsoLinksAHeldRecord(t *testing.T) {
+	t.Parallel()
 	f := setupKeptTable(t)
 	subject := f.e.SeedContact(t, "Erased Subject Candidate", nil)
 	heldCompany := f.e.SeedCompany(t, "Held Company", nil)
@@ -261,6 +266,7 @@ func probeTables(t *testing.T, owner *pgx.Conn, key string, names ...string) ext
 }
 
 func TestOneBusyExtensionTableLeavesTheNextItsShareOfAPass(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	registry := probeTables(t, owner, "PRIMARY KEY", "ext_probe_busy", "ext_probe_quiet")
@@ -289,6 +295,7 @@ func TestOneBusyExtensionTableLeavesTheNextItsShareOfAPass(t *testing.T) {
 }
 
 func TestAnExtensionRowActedOnTwiceUnderOneIDRollsBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	registry := probeTables(t, owner, "NOT NULL", "ext_probe_twin")
@@ -316,6 +323,7 @@ func TestAnExtensionRowActedOnTwiceUnderOneIDRollsBack(t *testing.T) {
 }
 
 func TestACarriedFloorKeepsOnlyTheExtensionRowsFromBeforeItsChange(t *testing.T) {
+	t.Parallel()
 	f := setupKeptTable(t)
 	now := clocktest.Now(t)
 	year := 365 * 24 * time.Hour
@@ -346,6 +354,7 @@ func TestACarriedFloorKeepsOnlyTheExtensionRowsFromBeforeItsChange(t *testing.T)
 // A hold placed while the pass decides about a row cannot slip past it. The pass
 // holds the linked records FOR SHARE, so it waits for the hold and keeps the row.
 func TestARetentionPassWaitsForAHoldBeingPlacedOnALinkedRecord(t *testing.T) {
+	t.Parallel()
 	for name, link := range map[string]func(f keptFixture, record ids.UUID) keptRow{
 		"a linked contact": func(_ keptFixture, record ids.UUID) keptRow {
 			return keptRow{contact: &record, age: twentyYears}

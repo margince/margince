@@ -49,6 +49,7 @@ func partText(s *string) string {
 }
 
 func TestCSVImportSplitsAWholeAddressMappedToLineOne(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	const file = "Company,Address\n" +
 		`Splitwerk GmbH,"Example Street 4, 12345 Example City, Germany"` + "\n" +
@@ -84,6 +85,7 @@ func TestCSVImportSplitsAWholeAddressMappedToLineOne(t *testing.T) {
 }
 
 func TestCSVImportKeepsLineOneAsWrittenWhenTheCityIsMapped(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	const file = "Company,Street,City\n" + `Mapwerk GmbH,"Example Street 4, 12345 Example City",Example City` + "\n"
 	profile, _ := importjobtest.UploadCSV(t, e, "company", file)
@@ -98,6 +100,7 @@ func TestCSVImportKeepsLineOneAsWrittenWhenTheCityIsMapped(t *testing.T) {
 }
 
 func TestCSVUpdateWithASplitLineOneClearsTheStaleParts(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	const full = "Company,Street,Suite,Region,Postal,City,Country\n" +
 		"Movewerk GmbH,Old Road 2,Old Suite,CA,94043,Mountain View,US\n"

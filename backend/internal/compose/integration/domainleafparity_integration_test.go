@@ -27,6 +27,7 @@ import (
 )
 
 func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	lists := collections.NewStore(e.DB())
@@ -74,6 +75,7 @@ func TestADomainFilterAnswersTheSameAccountOnBothSurfaces(t *testing.T) {
 // Empty would bind and match nothing, which reads to a caller exactly like a
 // domain nobody uses — and in a saved view the mistake would stay invisible.
 func TestASegmentRefusesAValueThatIsNotADomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	lists := collections.NewStore(e.DB())
 

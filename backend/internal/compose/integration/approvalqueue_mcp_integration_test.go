@@ -158,6 +158,7 @@ func answered[T any](t *testing.T, out string) T {
 // enrich fetches a page the model named, which cannot be unfetched, so its
 // proposer does not release it.
 func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "proposing agent", "read", "write", "enrich"))
 	companyID, approvalID := q.stageAConfirmFirstCall(t, invoke, "Queue Subject")
@@ -262,6 +263,7 @@ func TestAStagedCallIsSeenAndAnsweredFromTheConversationThatStagedIt(t *testing.
 // same as holding everything they hold: the caps are the half of a passport its
 // human chose, and a decision spends write.
 func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	_, approvalID := q.stageAConfirmFirstCall(t, q.invoker(t, q.mintPassport(t, "staging agent", "read", "write", "enrich")), "Read Only Subject")
 
@@ -292,6 +294,7 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 // Each attach after a logged meeting once staged a card the app would never
 // have asked for, which is the shape this holds against.
 func TestAnAgentOnAPassportRelinksWithoutAskingExceptToAProject(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	token := q.mintPassport(t, "relinking agent", "read", "write")
 	invoke := q.invoker(t, token)
@@ -400,6 +403,7 @@ func TestAnAgentOnAPassportRelinksWithoutAskingExceptToAProject(t *testing.T) {
 // model reads the WARNING without being asked, and acts on the DATA — the other
 // record's id, which no sentence should make it parse out of prose.
 func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "duplicate reporter", "read", "write"))
 
@@ -504,6 +508,7 @@ func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
 // collided with nothing says nothing. A surface that warned on every create
 // would be a surface nobody reads the warnings of.
 func TestACleanCreateCarriesNoDuplicateReport(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "clean creator", "read", "write"))
 

@@ -25,6 +25,7 @@ import (
 )
 
 func TestNarrowingAMailsAudienceTakesItsFileOutOfTheRoom(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)

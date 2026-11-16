@@ -92,6 +92,7 @@ func retentionPolicyAudits(t *testing.T, e *Env) int {
 // uniqueness the scheduler's pass bound depends on is enforced by
 // retention_policy_unique, for a named category AND for the NULL one.
 func TestOneRetentionPolicyPerScopeIsTheDatabasesRule(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 
@@ -128,6 +129,7 @@ func TestOneRetentionPolicyPerScopeIsTheDatabasesRule(t *testing.T) {
 // whole surface: the gate, the conflict, the unknown scope, and the audit row
 // that has to commit with the policy.
 func TestAuthoringARetentionPolicyIsGatedAuditedAndScopeBounded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	store := privacy.NewPolicyStore(e.DB())
@@ -198,6 +200,7 @@ func sevenYearWonPolicy(t *testing.T) privacy.PolicyInput {
 // TestRetainOnlyPostureSuppressesDestructionButNotArchival is GCS-AC-11: the
 // posture outranks every policy without editing one.
 func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	staleLead, _, staleDeal, transcript := seedOverAgeRecords(t, e)
@@ -276,6 +279,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 // GCS-AC-11: an enabled policy that will not act has to say why, or an admin
 // reads the screen as a promise the engine is not keeping.
 func TestRetainOnlyPostureIsReportedOnEveryPolicyItOverrides(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	store := privacy.NewPolicyStore(e.DB())
@@ -368,6 +372,7 @@ func bootstrapWithRetentionPosture(t *testing.T, retention *deployconfig.Retenti
 // between seeding the ladder and the first admin login is never governed by a
 // destructive default.
 func TestBootstrapTakesItsRetentionPostureFromTheDeploymentConfiguration(t *testing.T) {
+	t.Parallel()
 	// The seeded ladder is the data-model's pins under BOTH postures, so this is
 	// asserted per case rather than once: a posture that quietly planted fewer
 	// rows would hide the ladder an admin is entitled to see.
@@ -428,6 +433,7 @@ func seedEmbedCallWithPayload(t *testing.T, e *Env, daysBack int, embeddedText s
 // still swept (the hygiene the sweep exists for, and the default state with
 // capture off), the payload-bearing one is not.
 func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	bare := seedEmbedCall(t, e, 91)
@@ -490,6 +496,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 // ordered, so one poisoned row used to take every later policy with it, nightly,
 // and storage limitation stopped installation-wide until somebody found it.
 func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	store := privacy.NewPolicyStore(e.DB())
@@ -559,6 +566,7 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 // name them. An untested path there is an Art. 17 obligation nobody has watched
 // run.
 func TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 
@@ -623,6 +631,7 @@ func TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote(t *testing.
 // installation's own clock said the subject was gone — data imported from a
 // colleague's export without that contact ever being asked.
 func TestTheClockReachesEveryLinkedInGhostAnErasureWould(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 

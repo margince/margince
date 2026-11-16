@@ -74,6 +74,7 @@ var harnessSeatFixtures = map[string]principal.Permissions{
 }
 
 func TestEverySeatFixtureIsRegisteredWithTheParityGate(t *testing.T) {
+	t.Parallel()
 	declared := declaredSeatFixtures(t)
 	for _, name := range declared {
 		if _, ok := harnessSeatFixtures[name]; !ok {
@@ -89,6 +90,7 @@ func TestEverySeatFixtureIsRegisteredWithTheParityGate(t *testing.T) {
 }
 
 func TestTheAdminFixtureHoldsEveryGrantANarrowerSeatFixtureDoes(t *testing.T) {
+	t.Parallel()
 	seed := seededRoleGrants(t)
 	names := make([]string, 0, len(harnessSeatFixtures))
 	for name := range harnessSeatFixtures {
@@ -329,6 +331,7 @@ func grantDiff(held, against principal.ObjectGrant) []string {
 // object it does name — that is a fixture claiming to be an admin while
 // answering like somebody else.
 func TestTheAdminFixtureIsNotNarrowerThanTheSeededAdminRole(t *testing.T) {
+	t.Parallel()
 	seeded := seededRoleGrants(t)[seatRole(t, adminFixture)]
 	if len(seeded) == 0 {
 		t.Fatal("the seeded admin document decoded to no objects — this gate is comparing " +
@@ -369,6 +372,7 @@ func TestTheAdminFixtureIsNotNarrowerThanTheSeededAdminRole(t *testing.T) {
 // the admin grid, and the arm above already refuses a fixture narrower than the
 // seat it stands in for.
 func TestTheOpsFixtureMatchesTheSeededOpsRoleOnGovernance(t *testing.T) {
+	t.Parallel()
 	seed := seededRoleGrants(t)
 	ops := seed[seatRole(t, "OpsPerms")]
 	if len(ops) == 0 {
@@ -410,6 +414,7 @@ func TestTheOpsFixtureMatchesTheSeededOpsRoleOnGovernance(t *testing.T) {
 // Exhaustive over all 256 pairs, because the defect is per-verb and a sampled
 // table would miss exactly the verb somebody forgot.
 func TestGrantDiffAgreesWithContains(t *testing.T) {
+	t.Parallel()
 	grants := make([]principal.ObjectGrant, 0, 16)
 	for bits := range 16 {
 		grants = append(grants, principal.ObjectGrant{

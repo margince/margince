@@ -19,6 +19,7 @@ import (
 )
 
 func TestACorpusIsRefusedPastTheContractsCapsAndWithoutATopic(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
@@ -42,6 +43,7 @@ func TestACorpusIsRefusedPastTheContractsCapsAndWithoutATopic(t *testing.T) {
 }
 
 func TestEditingACorpusIsHeldToTheSameCapsAndKeepsATopic(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := e.As(e.Rep1, nil, corpusAdminPerms)

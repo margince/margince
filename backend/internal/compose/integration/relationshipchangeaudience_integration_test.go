@@ -25,6 +25,7 @@ import (
 // the change fires for a colleague. Held, it fires for the author, who can open
 // the reply, and not for the colleague, who cannot.
 func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name     string
 		audience string
@@ -116,6 +117,7 @@ func hasKind(changes []relstrength.Change, kind string) bool {
 // in that span shortens the silence only for a reader who can open it. Twelve
 // days is below ReplyGapDays, so counting it takes the change away entirely.
 func TestAHeldMessageDoesNotShortenTheGapAReplyBroke(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name        string
 		intervening string

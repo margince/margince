@@ -16,6 +16,7 @@ import (
 // The brief's history reads a held meeting's invitation mail as the meeting,
 // as History does: the invitation copies are not conversations of their own.
 func TestTheBriefsHistoryFoldsAMeetingsInvitationMailOntoIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	attendee := e.SeedContact(t, "Ana Roth", &e.Rep1)

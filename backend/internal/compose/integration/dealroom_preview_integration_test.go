@@ -20,6 +20,7 @@ import (
 )
 
 func TestASellerPreviewsTheRoomAsABuyerAndCanChangeNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -103,6 +104,7 @@ func TestASellerPreviewsTheRoomAsABuyerAndCanChangeNothing(t *testing.T) {
 // as the NEW link having expired, because that was the link they had just
 // asked for — the tab reporting the failure was the old one.
 func TestASecondPreviewLeavesTheFirstTabWorking(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -138,6 +140,7 @@ func TestASecondPreviewLeavesTheFirstTabWorking(t *testing.T) {
 // it exists. Previewing used to be refused until a publish, which was the same
 // gate that showed an invited buyer an empty page.
 func TestAFreshRoomIsLiveAndCanBePreviewedAtOnce(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -171,6 +174,7 @@ func TestAFreshRoomIsLiveAndCanBePreviewedAtOnce(t *testing.T) {
 }
 
 func TestADeactivatedSellersPreviewEndsWithTheirSeat(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -209,6 +213,7 @@ func TestADeactivatedSellersPreviewEndsWithTheirSeat(t *testing.T) {
 // The check is on the SCHEMA the migrations build, not on a row this test
 // inserted: the default is what decides every room created from here on.
 func TestNoRoomCanBeCreatedInDraftAnyMore(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var def string
@@ -231,6 +236,7 @@ func TestNoRoomCanBeCreatedInDraftAnyMore(t *testing.T) {
 // archived — and this holds the two together: a room that says yes issues, and
 // the field travels on the LIST read, which is where the screen gets its room.
 func TestARoomSaysWhetherItsPreviewWillOpen(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

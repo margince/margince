@@ -22,6 +22,7 @@ import (
 )
 
 func TestARenewedOldPromiseUsesItsCurrentDeadlineWithoutDuplicatingWork(t *testing.T) {
+	t.Parallel()
 	for _, historyGap := range []bool{false, true} {
 		t.Run(map[bool]string{false: "complete thread", true: "history gap"}[historyGap], func(t *testing.T) {
 			e := Setup(t)
@@ -76,6 +77,7 @@ func TestARenewedOldPromiseUsesItsCurrentDeadlineWithoutDuplicatingWork(t *testi
 }
 
 func TestRenewalUpdatesAutomaticWorkAndKeepsHumanWork(t *testing.T) {
+	t.Parallel()
 	for _, state := range []string{"automatic", "edited", "completed", "archived"} {
 		t.Run(state, func(t *testing.T) {
 			e := Setup(t)
@@ -146,6 +148,7 @@ func TestRenewalUpdatesAutomaticWorkAndKeepsHumanWork(t *testing.T) {
 }
 
 func TestCustomerRenewalUpdatesTheExistingHistoricalClaimDeadline(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	buyer := employeeOf(t, e, company, "Pat Buyer")
@@ -184,6 +187,7 @@ func TestCustomerRenewalUpdatesTheExistingHistoricalClaimDeadline(t *testing.T) 
 }
 
 func TestUnverifiedRenewalRemainsDueForAnotherReading(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	buyer := employeeOf(t, e, company, "Pat Buyer")
@@ -227,6 +231,7 @@ func TestUnverifiedRenewalRemainsDueForAnotherReading(t *testing.T) {
 }
 
 func TestRefusedClaimRenewalRollsBackTheTaskAndItsTrace(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	buyer := employeeOf(t, e, company, "Pat Buyer")
@@ -276,6 +281,7 @@ func TestRefusedClaimRenewalRollsBackTheTaskAndItsTrace(t *testing.T) {
 }
 
 func TestLegacySignalRefusalPreservesInvalidReadingsForRetry(t *testing.T) {
+	t.Parallel()
 	for _, invalidMeaning := range []bool{false, true} {
 		t.Run(map[bool]string{false: "unverified renewal", true: "invalid meaning"}[invalidMeaning], func(t *testing.T) {
 			e := Setup(t)

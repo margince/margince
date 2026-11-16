@@ -43,6 +43,7 @@ func seedAgentSeat(t *testing.T) ids.UserID {
 }
 
 func TestATaskCannotBeCreatedOnAnAgentSeat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seat := seedAgentSeat(t)
 	subject := "Chase the renewal"
@@ -55,6 +56,7 @@ func TestATaskCannotBeCreatedOnAnAgentSeat(t *testing.T) {
 }
 
 func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seat := seedAgentSeat(t)
 	subject := "Send the summary"
@@ -76,6 +78,7 @@ func TestATaskCannotBeReassignedToAnAgentSeat(t *testing.T) {
 // The admission case, over the same fixture: a CONTACT still takes the work.
 // Without it every assertion above would pass on a door that refused everyone.
 func TestATaskStillReachesAContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject := "Book the call"
 	due := time.Now().Add(24 * time.Hour)

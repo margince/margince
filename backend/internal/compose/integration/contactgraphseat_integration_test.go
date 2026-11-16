@@ -44,6 +44,7 @@ func coworkerLabels(t *testing.T, e *Env, viewer, contact ids.UUID) map[string]b
 // contact from every viewer. An alias a seat only typed hides it from that
 // seat alone, because any seat can type a client's address as its own.
 func TestContactGraphKeepsSeatsOutOfTheirCompanyLane(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	var rep3Login string
@@ -94,6 +95,7 @@ func agentCoworkerLabels(ctx context.Context, t *testing.T, e *Env, contact ids.
 // A passport agent is read as the user it acts for. That user's typed alias
 // hides the contact from the agent too, and row scope still applies.
 func TestContactGraphReadsAPassportAgentAsItsUser(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)

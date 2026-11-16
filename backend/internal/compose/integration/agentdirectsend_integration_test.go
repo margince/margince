@@ -25,6 +25,7 @@ import (
 // read the review and put it to them, but has no action to decide it, and the
 // route refuses its bearer. The user's own decision names no agent.
 func TestOnlyTheUserDecidesARefusedSendNotTheirAgent(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "agent-direct-send", []compose.Option{compose.WithOperatorMail(apptest.DiscardingMailer{})}, "read", "write")
 	c := seedConsentSubject(t, d.e)
 	c.useReviewableMarketingProfile(t)
@@ -69,6 +70,7 @@ func TestOnlyTheUserDecidesARefusedSendNotTheirAgent(t *testing.T) {
 
 // The mail an agent would send is the mail the user would see in the composer.
 func TestAnAgentPreviewsAContactsPrivacyMailAsTheUserDoes(t *testing.T) {
+	t.Parallel()
 	// An hour off the wall clock, so a preview the clock never reached shows
 	// another expiry. Its link must still be live.
 	issued := clocktest.Now(t).Truncate(time.Minute).Add(-time.Hour)

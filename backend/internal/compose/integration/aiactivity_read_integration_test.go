@@ -64,6 +64,7 @@ func (f *readingFixture) midnight(t *testing.T) time.Time {
 // A queued reading is LIVE for the contact who asked for it — queued is work in
 // progress to them, not an absence.
 func TestAQueuedReadingIsLiveInItsOwnContactsFeed(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.drain(t)
 
@@ -81,6 +82,7 @@ func TestAQueuedReadingIsLiveInItsOwnContactsFeed(t *testing.T) {
 // as a name: the rail makes the name a way to open the record, and a label
 // with nothing behind it is a word it can only print.
 func TestTheFeedIdentifiesTheRecordAnOccurrenceIsAbout(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.drain(t)
 
@@ -99,6 +101,7 @@ func TestTheFeedIdentifiesTheRecordAnOccurrenceIsAbout(t *testing.T) {
 // The feed is PERSONAL. Another seat sees none of it, and the separation is the
 // row's own actor rather than anything the caller passes.
 func TestOneContactsWorkIsNotInAnothersFeed(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.drain(t)
 
@@ -113,6 +116,7 @@ func TestOneContactsWorkIsNotInAnothersFeed(t *testing.T) {
 // A live occurrence past the lease its own source declared reads as `stalled`,
 // and it is DERIVED — nothing stores the word, so no writer can forget it.
 func TestALiveOccurrencePastItsLeaseReadsAsStalled(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	if _, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease); err != nil {
 		t.Fatalf("BeginExtractionRead: %v", err)
@@ -144,6 +148,7 @@ func TestALiveOccurrencePastItsLeaseReadsAsStalled(t *testing.T) {
 // A settled occurrence never goes stale, whatever its lease said: it is not
 // claiming to be working, so there is nothing to be past.
 func TestASettledOccurrenceIsNeverStalled(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	claim, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease)
 	if err != nil {
@@ -173,6 +178,7 @@ func TestASettledOccurrenceIsNeverStalled(t *testing.T) {
 // A read with nobody bound is refused rather than answered with everybody's
 // work. There is no id to pass, so this is the ONLY way to ask wrongly.
 func TestAFeedWithNoContactIsRefused(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	if _, err := aiactivity.NewStore(f.env.DB()).
 		Mine(context.Background(), f.midnight(t), nil); err == nil {
@@ -283,6 +289,7 @@ func failuresIn(items []aiactivity.Item) int {
 // Eleven readings, all through the real writer and the real projection. The
 // fault settles FIRST, so it is the oldest and the one `recent` drops.
 func TestAFaultSurvivesTheSettledBoundLaterSuccessesFill(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.settleOne(t, "overnight.pdf", activities.ExtractionReadFailed,
 		"the provider refused the document")
@@ -318,6 +325,7 @@ func TestAFaultSurvivesTheSettledBoundLaterSuccessesFill(t *testing.T) {
 // narrated kinds still learns the AI is busy, or the rail says idle while a
 // transcript is being read.
 func TestTheLiveTotalCountsAKindTheFilterLeavesOut(t *testing.T) {
+	t.Parallel()
 	f := newTranscriptFixture(t)
 	f.drain(t)
 	reading := &readingFixture{env: f.env}
@@ -333,6 +341,7 @@ func TestTheLiveTotalCountsAKindTheFilterLeavesOut(t *testing.T) {
 
 // Filtered to the kind that is live, the count and the list agree.
 func TestTheLiveTotalMatchesTheListWhenTheFilterAdmitsTheLiveKind(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.drain(t)
 
@@ -345,6 +354,7 @@ func TestTheLiveTotalMatchesTheListWhenTheFilterAdmitsTheLiveKind(t *testing.T) 
 // The bound caps what ships, never what is counted: twenty-six live readings
 // list twenty-five and count twenty-six. The fixture's own reading is the 26th.
 func TestTheLiveTotalIsNotCappedByTheLiveBound(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	for i := range 25 {
 		att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal,
@@ -369,6 +379,7 @@ func TestTheLiveTotalIsNotCappedByTheLiveBound(t *testing.T) {
 // a pulse for it would claim work nobody is doing. The list still shows it
 // stalled when its kind is asked for.
 func TestTheLiveTotalLeavesOutARunPastItsLease(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	if _, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease); err != nil {
 		t.Fatalf("BeginExtractionRead: %v", err)

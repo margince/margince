@@ -17,6 +17,7 @@ import (
 // a word of the name or the description finds the deal, and a deal that holds
 // neither stays off the page. A fragment reaches the name only.
 func TestTheDealsListFindsADealByItsNameOrDescription(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pipelineID, stageID, _ := companyRollupOpenStage(t, e)

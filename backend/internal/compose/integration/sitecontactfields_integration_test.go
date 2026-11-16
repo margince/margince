@@ -65,6 +65,7 @@ func seatedTitle(t *testing.T, e *integration.Env, contact ids.UUID) *string {
 }
 
 func TestApplySiteContactFieldsMatchesAnEmployeeByName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", nil)
@@ -109,6 +110,7 @@ func TestApplySiteContactFieldsMatchesAnEmployeeByName(t *testing.T) {
 }
 
 func TestApplySiteContactFieldsRefusesToGuess(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", nil)
@@ -145,6 +147,7 @@ func TestApplySiteContactFieldsRefusesToGuess(t *testing.T) {
 }
 
 func TestApplySiteContactFieldsStaysInsideTheCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	acme := e.SeedCompany(t, "Acme", nil)
@@ -170,6 +173,7 @@ func TestApplySiteContactFieldsStaysInsideTheCompany(t *testing.T) {
 }
 
 func TestApplySiteContactFieldsNeverTouchesAHumansAnswer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", nil)
@@ -241,6 +245,7 @@ var siteContactRepPerms = principal.Permissions{
 // probe existed. The four tests above all use e.Admin() for the same reason and
 // are equally unable to see this.
 func TestApplySiteContactFieldsWillNotWriteAnEmployeeTheCallerCannotChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	// The company is the other team's, shared with nobody — but every seat
@@ -287,6 +292,7 @@ func TestApplySiteContactFieldsWillNotWriteAnEmployeeTheCallerCannotChange(t *te
 // pass the test above while breaking the feature, and nothing else in this file
 // runs under a bounded seat to catch it.
 func TestApplySiteContactFieldsStillFillsAnEmployeeTheCallerMayChange(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	store := contacts.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", &e.Rep1)

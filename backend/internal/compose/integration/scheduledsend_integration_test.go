@@ -291,6 +291,7 @@ func (p *preflightEnv) setCorrespondenceConsent(t *testing.T, state string) {
 }
 
 func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -352,6 +353,7 @@ func TestAScheduledMessageWritesNothingUntilItFires(t *testing.T) {
 // the button. Anything else leaves a rep looking at a message that demonstrably
 // arrived while its record still says it was merely handed over.
 func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -382,6 +384,7 @@ func TestAConfirmedReceiptCarriesTheScheduledSendToSent(t *testing.T) {
 // is the shape where `?status=sent` returns nothing and `?status=released`
 // returns rows that read "sent" — each half correct, the pair useless.
 func TestFilteringByStatusFindsTheStateTheListActuallyShows(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -567,6 +570,7 @@ func (p *preflightEnv) listScheduledIDs(t *testing.T, status string) []string {
 }
 
 func TestConsentWithdrawnBeforeFiringHoldsTheMessage(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -602,6 +606,7 @@ func TestConsentWithdrawnBeforeFiringHoldsTheMessage(t *testing.T) {
 // card vanish, and still have a message sitting stopped — a decision reported
 // but never made. So this asserts the ACTION, not the appearance.
 func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -643,6 +648,7 @@ func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
 // effect the card would leave the inbox while the message waited forever for a
 // decision nobody would make again.
 func TestARepCanAbandonAHeldMessageFromTheirInbox(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -676,6 +682,7 @@ func TestARepCanAbandonAHeldMessageFromTheirInbox(t *testing.T) {
 // cancel then finds no pending row and fails, which must take the rejection down
 // with it rather than leaving a decided card over a message in the wrong state.
 func TestARejectionThatCannotCancelLeavesTheCardRetryable(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -714,6 +721,7 @@ func TestARejectionThatCannotCancelLeavesTheCardRetryable(t *testing.T) {
 // stopping their fresh intention for a reason about the older one would undo a
 // choice they had just made.
 func TestAStaleAttemptDoesNotHoldAMessageTheRepJustRescheduled(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -748,6 +756,7 @@ func TestAStaleAttemptDoesNotHoldAMessageTheRepJustRescheduled(t *testing.T) {
 // hold on its own claim; a failed attempt may not, and sharing one sentinel
 // between them would let this case take that arm.
 func TestAnAttemptThatNeverReadTheRowDoesNotHoldARescheduledMessage(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -772,6 +781,7 @@ func TestAnAttemptThatNeverReadTheRowDoesNotHoldARescheduledMessage(t *testing.T
 // Simulated by scheduling a message and letting its moment pass without ever
 // driving the timer — which is exactly the state a discarded job leaves behind.
 func TestARecoveryPassReArmsAMessageWhoseAlarmIsGone(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -804,6 +814,7 @@ func TestARecoveryPassReArmsAMessageWhoseAlarmIsGone(t *testing.T) {
 }
 
 func TestAMessageFiredTooLateIsHeldRatherThanSent(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -824,6 +835,7 @@ func TestAMessageFiredTooLateIsHeldRatherThanSent(t *testing.T) {
 }
 
 func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -850,6 +862,7 @@ func TestACancelledMessageIsNotSentWhenItsTimerFires(t *testing.T) {
 }
 
 func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -880,6 +893,7 @@ func TestTwoTimersFiringTheSameMessageSendItOnce(t *testing.T) {
 // they meant. Frozen at composition and replayed, or a scheduled reply files
 // differently from the immediate one written beside it.
 func TestAScheduledReplyFilesItselfUnderWhatTheComposerNamed(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

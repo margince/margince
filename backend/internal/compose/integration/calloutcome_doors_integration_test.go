@@ -22,6 +22,7 @@ type outcomeRow struct {
 // and none. An outcome alone is a whole call. An outcome on a note and an
 // unknown outcome are refused. The list filters calls by outcome.
 func TestACallRecordsHowItEndedOverBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "call-outcome-doors", "read", "write")
 	outcomes := []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}
 	log := func(t *testing.T, door string, fields map[string]any) json.RawMessage {
@@ -100,6 +101,7 @@ func TestACallRecordsHowItEndedOverBothDoors(t *testing.T) {
 // change; resending the stored outcome is no change; an outcome on a note is
 // refused; and a call keeps standing on its outcome when its subject goes.
 func TestAPatchSetsAndChangesACallOutcome(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "call-outcome-patch", "read", "write")
 	call := anIDIn(t, d.restStatus(t, "POST", "/v1/activities",
 		map[string]any{"kind": "call", "subject": "Ring the buyer", "source": "manual"}, http.StatusCreated))

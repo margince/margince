@@ -70,6 +70,7 @@ func (f accountFixture) accountWorklistTouch(reader context.Context, t *testing.
 }
 
 func TestAReplyTheReaderCanOpenMovesTheirAccountsLastInbound(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	f.caseyReplies(t)
 	replyAt := roomAgo(2 * 24 * time.Hour)
@@ -87,6 +88,7 @@ func TestAReplyTheReaderCanOpenMovesTheirAccountsLastInbound(t *testing.T) {
 }
 
 func TestAReplyTheReaderCannotOpenLeavesTheirAccountAsItWas(t *testing.T) {
+	t.Parallel()
 	f := newAccountFixture(t)
 	before := f.accountPage(f.blair, t)
 	f.caseyReplies(t)

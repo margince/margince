@@ -83,6 +83,7 @@ func owedRepair(t *testing.T, e *integration.Env, contact ids.ContactID) bool {
 }
 
 func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := syncedMeeting(t, e)
 	guest := cohortContact(t, e, "Guest Attendee", cohortGuest)
@@ -120,6 +121,7 @@ func TestTheCohortRepairLeavesAMeetingAMemberRefiledElsewhere(t *testing.T) {
 }
 
 func TestTheCohortRepairLeavesArchivedAndFullMeetingsAlone(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	archived := syncedMeeting(t, e)
 	e.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, archived)
@@ -142,6 +144,7 @@ func TestTheCohortRepairLeavesArchivedAndFullMeetingsAlone(t *testing.T) {
 }
 
 func TestARepairedMeetingReadsAsItsAudienceSays(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	meeting := syncedMeeting(t, e)
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team2}, principal.Permissions{

@@ -24,6 +24,7 @@ import (
 )
 
 func TestAHumanDownloadsTheSkillAndAPassportIsRefusedIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -64,6 +65,7 @@ func TestAHumanDownloadsTheSkillAndAPassportIsRefusedIt(t *testing.T) {
 }
 
 func TestAPassportReadsTheOpenAPIDocumentAndNoCredentialIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -102,6 +104,7 @@ func TestAPassportReadsTheOpenAPIDocumentAndNoCredentialIsRefused(t *testing.T) 
 }
 
 func TestTheAPIBaseURLWinsOverThePublicOne(t *testing.T) {
+	t.Parallel()
 	const apiBase = "https://api.example.test"
 	e := apptest.SetupAppWithOptions(t, compose.WithAPIBaseURL(apiBase))
 	e.BootstrapWorkspace(t)
@@ -155,6 +158,7 @@ func zipFile(t *testing.T, archive []byte, name string) string {
 }
 
 func TestTheSkillReadmeLeadsWithTheConnectorAddressWhileItIsOn(t *testing.T) {
+	t.Parallel()
 	var resource string
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		resource = origin + "/mcp"

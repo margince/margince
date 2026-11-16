@@ -33,6 +33,7 @@ func listsApp(t *testing.T, on bool) (*apptest.AppEnv, *apptest.MCPClient) {
 }
 
 func TestListsAreAbsentWhenAnOperatorSwitchesThemOff(t *testing.T) {
+	t.Parallel()
 	e, agent := listsApp(t, false)
 	someList := ids.NewV7().String()
 	for _, call := range []struct{ method, path string }{
@@ -111,6 +112,7 @@ type listDTO struct {
 }
 
 func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
+	t.Parallel()
 	e, agent := listsApp(t, true)
 	var list listDTO
 	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
@@ -156,6 +158,7 @@ func TestAUserAndTheirAgentReadOneListTheSameWay(t *testing.T) {
 }
 
 func TestAnAgentPreviewOfAListDefinitionIsLoggedAsARead(t *testing.T) {
+	t.Parallel()
 	e, agent := listsApp(t, true)
 	e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Previewed Contact"}, nil, nil)
 	before := countPreviews(t, e)

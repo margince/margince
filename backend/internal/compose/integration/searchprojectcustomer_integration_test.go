@@ -152,6 +152,7 @@ func assertSameIDs(t *testing.T, what string, got map[ids.UUID]bool, want ...ids
 }
 
 func TestSearchFiltersAProjectByAnyReadableLiveCompany(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedProjectCompanies(t)
 	readers := q.projectReaders()
@@ -184,6 +185,7 @@ func TestSearchFiltersAProjectByAnyReadableLiveCompany(t *testing.T) {
 }
 
 func TestSearchHopsBetweenAProjectAndAnyReadableLiveCompany(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedProjectCompanies(t)
 	readers := q.projectReaders()
@@ -219,6 +221,7 @@ func TestSearchHopsBetweenAProjectAndAnyReadableLiveCompany(t *testing.T) {
 }
 
 func TestASearchHitNamesOnlyTheReadableFirstCustomer(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedProjectCompanies(t)
 	readers := q.projectReaders()
@@ -250,6 +253,7 @@ func TestASearchHitNamesOnlyTheReadableFirstCustomer(t *testing.T) {
 
 // The query_workspace tool runs the same plan executor.
 func TestTheQueryToolFiltersAProjectByAnyReadableLiveCompany(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	f := q.seedProjectCompanies(t)
 	readers := q.projectReaders()

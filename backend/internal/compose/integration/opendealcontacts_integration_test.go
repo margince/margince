@@ -91,6 +91,7 @@ func fundedOrFail(
 }
 
 func TestOnlyContactsOnAnOpenDealTheReaderMaySeeAreReportedAsFunded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Kessler Systems", nil)
 	companyID := ids.From[ids.CompanyKind](company)
@@ -195,6 +196,7 @@ func TestOnlyContactsOnAnOpenDealTheReaderMaySeeAreReportedAsFunded(t *testing.T
 // any more, and ranking their silence as if they did would send a rep chasing
 // business that is already decided.
 func TestAContactWhoseOnlyDealHasClosedCarriesNoOpenDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Kessler Systems", nil)
 	companyID := ids.From[ids.CompanyKind](company)

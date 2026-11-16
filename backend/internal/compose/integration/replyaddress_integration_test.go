@@ -54,6 +54,7 @@ func seedReplyThread(t *testing.T, e *Env, direction string, parties ...replyPar
 }
 
 func TestAReplyIsAddressedToTheCounterpartyWhoWroteIn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := seedReplyThread(t, e, "inbound",
 		replyParty{role: "from", address: "anna@example.com"},
@@ -72,6 +73,7 @@ func TestAReplyIsAddressedToTheCounterpartyWhoWroteIn(t *testing.T) {
 // The case a `from`-first rank gets wrong. On our own outbound message the
 // sender is us, and the contact to answer is the ADDRESSEE.
 func TestAReplyToOurOwnOutboundGoesToTheAddresseeNotOurselves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := seedReplyThread(t, e, "outbound",
 		replyParty{role: "from", address: "rep@ourcompany.test", ours: true},
@@ -95,6 +97,7 @@ func TestAReplyToOurOwnOutboundGoesToTheAddresseeNotOurselves(t *testing.T) {
 // planner emitted first. A contact with a personal address on file and a work
 // one marked primary must be answered at work.
 func TestAParticipantWithNoAddressFallsBackToThePrimaryEmail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Anna Weber", nil)
 	// Inserted with the NON-primary first, so a query that ignores the flag
@@ -123,6 +126,7 @@ func TestAParticipantWithNoAddressFallsBackToThePrimaryEmail(t *testing.T) {
 // is a refusal an operator can act on — not an empty string that reaches the
 // send and arrives there as "no recipients", which reads as a different bug.
 func TestAThreadWithNoCounterpartyRefusesRatherThanGuessing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := seedReplyThread(t, e, "outbound",
 		replyParty{role: "from", address: "rep@ourcompany.test", ours: true},

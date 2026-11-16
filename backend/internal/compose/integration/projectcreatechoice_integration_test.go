@@ -42,6 +42,7 @@ func keyRefusal(t *testing.T, err error) string {
 }
 
 func TestAChosenKeyIsStoredAndFilesMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Nordwind AG", nil)
 	chosen := " nord "
@@ -66,6 +67,7 @@ func TestAChosenKeyIsStoredAndFilesMail(t *testing.T) {
 }
 
 func TestAChosenKeyThatWouldMisfileMailIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Nordwind AG", nil)
 	e.WsExec(t, `UPDATE app_user SET display_name = 'Sofia Meier' WHERE id = $1`, e.Rep2)
@@ -98,6 +100,7 @@ func TestAChosenKeyThatWouldMisfileMailIsRefused(t *testing.T) {
 }
 
 func TestTheKeyPreviewIsTheKeyTheCreateMints(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Contoso", nil)
 	for range 2 {
@@ -116,6 +119,7 @@ func TestTheKeyPreviewIsTheKeyTheCreateMints(t *testing.T) {
 }
 
 func TestAProjectStartsInTheChosenPhaseButNeverClosed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Initech", nil)
 	created, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -153,6 +157,7 @@ var projectCreatorPerms = principal.Permissions{
 }
 
 func TestAProjectCreatedFromADealLinksItUnderTheDealsWriteCheck(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	company := e.SeedCompany(t, "Globex", nil)
@@ -224,6 +229,7 @@ func TestAProjectCreatedFromADealLinksItUnderTheDealsWriteCheck(t *testing.T) {
 // The approval preview runs the create's own deal check. It never offers a
 // create that would take a deal from its project.
 func TestTheApprovalPreviewRefusesTheDealsTheCreateRefuses(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Globex", nil)
 	deal := ids.From[ids.DealKind](e.SeedOpenDealOn(t, "Globex deal", company))

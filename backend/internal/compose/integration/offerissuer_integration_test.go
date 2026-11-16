@@ -68,6 +68,7 @@ func entityOf(offer crmcontracts.Offer) ids.UUID {
 }
 
 func TestAnOfferIsIssuedByItsAuthorsEntityUntilItIsSent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vienna := seedVienna(t, e)
 	pipeline, open, _ := DealFixture(t, e)
@@ -108,6 +109,7 @@ func TestAnOfferIsIssuedByItsAuthorsEntityUntilItIsSent(t *testing.T) {
 }
 
 func TestASentOfferKeepsTheIssuerItWasSentWith(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vienna := seedVienna(t, e)
 	pipeline, open, _ := DealFixture(t, e)
@@ -152,6 +154,7 @@ func TestASentOfferKeepsTheIssuerItWasSentWith(t *testing.T) {
 // A draft of an installation with one entity prints what it printed before
 // entities: the installation's name, from the default entity.
 func TestADefaultEntityDraftIssuesUnderTheInstallationName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Default issuer deal", pipeline, open, &e.Rep1)
@@ -209,6 +212,7 @@ func renderThrough(ctx context.Context, t *testing.T, e *Env, h deals.Handlers, 
 // entity retires it, and the send drops the draft's rendering. So the PDF a
 // sent offer hands out names the entity it was sent under.
 func TestAnIssuerChangeRetiresTheRenderingAndTheSentPDFNamesTheNewIssuer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vienna := seedVienna(t, e)
 	pipeline, open, _ := DealFixture(t, e)
@@ -251,6 +255,7 @@ func TestAnIssuerChangeRetiresTheRenderingAndTheSentPDFNamesTheNewIssuer(t *test
 }
 
 func TestAnEntityArchivedBeforeTheSendIssuesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vienna := seedVienna(t, e)
 	pipeline, open, _ := DealFixture(t, e)
@@ -275,6 +280,7 @@ func TestAnEntityArchivedBeforeTheSendIssuesNothing(t *testing.T) {
 // A revision another colleague regenerates keeps the issuer of the offer it
 // revises, not its author's.
 func TestARegeneratedRevisionKeepsItsIssuer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vienna := seedVienna(t, e)
 	pipeline, open, _ := DealFixture(t, e)

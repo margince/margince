@@ -99,6 +99,7 @@ func assertSignedInAsRep(t *testing.T, e *apptest.AppEnv) {
 // planner's business; pinning it is what turns "may pick either" into something
 // a test can assert.
 func TestDemoteToRepDemotesTheSeatMakingTheRequests(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Demotion", "admin@demote.test", "Admin")
 	e.DescribeCompany(t)

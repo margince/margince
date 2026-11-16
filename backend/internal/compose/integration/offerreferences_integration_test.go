@@ -144,6 +144,7 @@ func draftOfferOnAColleaguesCompany(t *testing.T, e *Env) (ids.OfferID, ids.Deal
 
 // A reader who cannot open the company gets the offer without it.
 func TestAnOfferWithholdsABuyerTheReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, deal, _ := seedOfferOnAPrivateCompany(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
@@ -175,6 +176,7 @@ func TestAnOfferWithholdsABuyerTheReaderCannotOpen(t *testing.T) {
 // And the colleague who CAN open it still sees it, so the rule withholds from a
 // reader rather than emptying the field for everyone.
 func TestAnOfferKeepsABuyerTheReaderCanOpen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, _, _ := seedOfferOnAPrivateCompany(t, e)
 
@@ -205,6 +207,7 @@ func TestAnOfferKeepsABuyerTheReaderCanOpen(t *testing.T) {
 // asserted here: the stored record names the company, and the response the
 // sender gets does not.
 func TestASendFreezesTheRealBuyerEvenWhenTheSenderCannotSeeIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -266,6 +269,7 @@ func TestASendFreezesTheRealBuyerEvenWhenTheSenderCannotSeeIt(t *testing.T) {
 // frozen a blank legal block: destroying the evidence rather than protecting
 // it, and silently, since the offer would look sent.
 func TestTheSendFreezesTheRealBuyerWhateverTheResponseWithholds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, _, privateCompany := seedOfferOnAPrivateCompany(t, e)
 
@@ -296,6 +300,7 @@ func TestTheSendFreezesTheRealBuyerWhateverTheResponseWithholds(t *testing.T) {
 // one offer disagreeing about the same record, with the more disclosing half
 // being the one that gets stored and sent.
 func TestARenderSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, _, privateCompany := seedOfferOnAPrivateCompany(t, e)
 	desk := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDeskWideNoCompanyPerms)
@@ -321,6 +326,7 @@ func TestARenderSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
 // producing an offer PDF with no buyer on it, which is not a quieter answer but
 // a broken one.
 func TestARenderKeepsTheBuyerBlockForASeatThatCanOpenIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, _, _ := seedOfferOnAPrivateCompany(t, e)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
@@ -348,6 +354,7 @@ func TestARenderKeepsTheBuyerBlockForASeatThatCanOpenIt(t *testing.T) {
 // drops the reference with the buyer, and the download answers the 404 an offer
 // never rendered gets.
 func TestADownloadSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, deal, _ := seedOfferOnAPrivateCompany(t, e)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)
@@ -388,6 +395,7 @@ func TestADownloadSaysNoMoreAboutTheBuyerThanTheReadDoes(t *testing.T) {
 // judged by the NEW buyer's visibility and handed to a seat the old buyer is
 // hidden from.
 func TestANewBuyerRetiresTheRenderingThatPrintsTheOldOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, _, privateCompany := draftOfferOnAColleaguesCompany(t, e)
 	e.MakeCapturePrivate(t, "company", privateCompany, e.Rep3)
@@ -428,6 +436,7 @@ func (failingDeleteStore) Delete(context.Context, string) error {
 // Reclaiming the retired PDF is housekeeping after the edit commits, so a store
 // that refuses the delete leaves an orphan and the edit still stands.
 func TestABuyerChangeStandsWhenTheRetiredPdfCannotBeDeleted(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, _, _ := draftOfferOnAColleaguesCompany(t, e)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team1}, offerDeskCompanyPerms)

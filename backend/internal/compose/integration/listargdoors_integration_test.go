@@ -17,6 +17,7 @@ import (
 // A list's text query narrows list_records as it narrows the record type's
 // list route, together with its filters.
 func TestListRecordsTakesTheListRoutesTextQuery(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "list-q-doors", "read", "write")
 	wanted := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Zelda Quorn"})
 	createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Otto Brandt"})
@@ -36,6 +37,7 @@ type carriedTag struct {
 // list_tags counts each word's records when asked, as GET /tags does, and
 // list_pipelines lists a retired pipeline when asked, as GET /pipelines does.
 func TestReferenceListsTakeTheirRoutesWidenings(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "widen-doors", "read", "write")
 	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ada Tagged"})
 	tag := createdRecord(t, d.e, "/v1/tags", AnyMap{"name": "Carried"})
@@ -64,6 +66,7 @@ func TestReferenceListsTakeTheirRoutesWidenings(t *testing.T) {
 
 // An invited colleague is listed when asked for, as GET /users lists them.
 func TestListColleaguesTakesTheRostersWidening(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "roster-doors", "read")
 	d.e.DescribeCompany(t)
 	invited := createdID(t, d.e, "/v1/users", AnyMap{"email": "invited@roster-doors.test", "display_name": "Ines Invited", "role": "rep"})

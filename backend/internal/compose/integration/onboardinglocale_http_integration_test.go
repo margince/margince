@@ -17,6 +17,7 @@ import (
 // The refusal for an unknown locale lists every locale the contract accepts,
 // because the list comes from the contract and not from the handler.
 func TestTheOnboardingLocaleRefusalNamesEveryAcceptedLocale(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

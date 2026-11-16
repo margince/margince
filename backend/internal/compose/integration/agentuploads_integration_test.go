@@ -37,6 +37,7 @@ func fileArgs(action, name, contentType, encoded string) map[string]any {
 // A vCard an agent uploads runs the import a user's upload runs. The contact
 // lands and names the agent. The card overwrites no value typed on a contact it matches.
 func TestAVCardFromAnAgentImportsAsTheUploadDoes(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-vcard", "read", "write")
 	typed := createdRecord(t, d.e, "/v1/contacts", AnyMap{
 		"source": "manual", "full_name": "Dana Typed", "title": "Typed title",
@@ -72,6 +73,7 @@ func TestAVCardFromAnAgentImportsAsTheUploadDoes(t *testing.T) {
 // A logo an agent uploads is the logo the app draws, and a file the route refuses
 // answers the route's own reason.
 func TestALogoFromAnAgentIsTheLogoTheAppDraws(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-logo", "read", "write")
 	if status := d.e.Call(t, "PUT", "/v1/company", wellFormedCompany(), nil, nil); status != 200 {
 		t.Fatalf("describing the company → %d", status)
@@ -102,6 +104,7 @@ func TestALogoFromAnAgentIsTheLogoTheAppDraws(t *testing.T) {
 // A file past its route's ceiling is refused as a browser's is. A fixed ceiling and
 // one an operator sets are held the same way, and neither file changes anything.
 func TestAnAgentsUploadPastItsRoutesCeilingIsRefused(t *testing.T) {
+	t.Parallel()
 	limits := compose.DefaultUploadLimits()
 	limits.CSVImport = 4 << 10
 	d := newTwoDoorsWith(t, "agent-upload-ceiling", []compose.Option{compose.WithUploadLimits(limits)}, "read", "write")
@@ -129,6 +132,7 @@ func TestAnAgentsUploadPastItsRoutesCeilingIsRefused(t *testing.T) {
 
 // A read-only passport uploads nothing, whichever action it names.
 func TestAReadOnlyPassportUploadsNoFile(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-upload-readonly", "read")
 	for _, call := range []struct{ tool, action string }{
 		{"change_settings", "upload_company_logo"}, {"change_capture", "import_vcards"}, {"change_capture", "import_linkedin_connections"},

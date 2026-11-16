@@ -106,6 +106,7 @@ func runLease(t *testing.T, e *apptest.AppEnv, id string) (attempt int, claimed 
 }
 
 func TestApproveAnswersBeforeAnyRowIsWritten(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run := testedLeadRun(t, e, prospectCSV)
 	approveQueued(t, e, run.ID)
@@ -126,6 +127,7 @@ func TestApproveAnswersBeforeAnyRowIsWritten(t *testing.T) {
 }
 
 func TestUndoAnswersBeforeAnyRowIsReversed(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run := testedLeadRun(t, e, prospectCSV)
 	approveAndRead(t, e, run.ID)
@@ -144,6 +146,7 @@ func TestUndoAnswersBeforeAnyRowIsReversed(t *testing.T) {
 }
 
 func TestTagsAreCreatedOnlyByTheCommitJob(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nTagged Jobs GmbH,Fresh\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
@@ -159,6 +162,7 @@ func TestTagsAreCreatedOnlyByTheCommitJob(t *testing.T) {
 }
 
 func TestASnoozedSliceIsClaimedWithTheSameAttempt(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	// One row past a slice, so the first slice snoozes for the second.
 	run := testedLeadRun(t, e, leadFile(501))
@@ -206,6 +210,7 @@ func TestASnoozedSliceIsClaimedWithTheSameAttempt(t *testing.T) {
 }
 
 func TestATimedOutSliceFailsAndDoesNotSnooze(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run := testedLeadRun(t, e, leadFile(400))
 	approveQueued(t, e, run.ID)
@@ -224,6 +229,7 @@ func TestATimedOutSliceFailsAndDoesNotSnooze(t *testing.T) {
 }
 
 func TestAWorkerWithNoObjectStoreFailsTheRun(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run := testedLeadRun(t, e, prospectCSV)
 	approveQueued(t, e, run.ID)
@@ -242,6 +248,7 @@ func TestAWorkerWithNoObjectStoreFailsTheRun(t *testing.T) {
 }
 
 func TestAShutdownFlushesAndSnoozesWithoutFailing(t *testing.T) {
+	t.Parallel()
 	store := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(store))
 	e.BootstrapWorkspace(t)

@@ -38,6 +38,7 @@ import (
 )
 
 func TestTheRetentionSweepDestroysTheClaimsQuotingTheMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	contact := e.SeedContact(t, "Ute Sommer", nil)

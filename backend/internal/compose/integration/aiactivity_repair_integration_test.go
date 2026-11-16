@@ -69,6 +69,7 @@ func (f *readingFixture) ageTheOccurrence(t *testing.T, by time.Duration) {
 // worker's start and its expired lease, and the rail renders an actively
 // running retry as stalled for the whole of its run.
 func TestALeaseExpiryReclaimIsANewAttemptTheProjectionCanSee(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	if _, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease); err != nil {
 		t.Fatalf("BeginExtractionRead: %v", err)
@@ -103,6 +104,7 @@ func TestALeaseExpiryReclaimIsANewAttemptTheProjectionCanSee(t *testing.T) {
 // dated by the row's created_at is stale the instant it is re-queued: the rail
 // says stalled from the button press until a worker happens to claim it.
 func TestAReQueuedAttemptGetsALeaseThatHasNotAlreadyExpired(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	// The reading has to be OLDER than a lease for this to be a test at all: a
 	// re-queue dated by created_at is only expired once created_at is far
@@ -137,6 +139,7 @@ func TestAReQueuedAttemptGetsALeaseThatHasNotAlreadyExpired(t *testing.T) {
 // loses it from their display permanently, at exactly the moment the repair
 // fires, and the source is settled so no later event ever puts it back.
 func TestTheRepairKeepsTheReadingWithTheContactWhoAskedForIt(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.drain(t)
 	before := f.projection(t)
@@ -174,6 +177,7 @@ func (f *readingFixture) reconcileCtx() context.Context {
 // reconciled, and a permanently-live one writes a ledger row every tick for an
 // announcement the guard then refuses.
 func TestABoundedReconcilePassRotatesRatherThanReselectingTheSameReading(t *testing.T) {
+	t.Parallel()
 	first := newReadingFixture(t)
 	second := first.secondReading(t)
 
@@ -232,6 +236,7 @@ func (f *readingFixture) lastAnnounced(t *testing.T) string {
 // until it exceeded the job's own timeout and rolled back every repair it had
 // staged.
 func TestTheReconcilePassesArmsCanEachBeAnsweredByAnIndex(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	ctx := context.Background()
 	for _, arm := range []struct {
@@ -295,6 +300,7 @@ func explain(ctx context.Context, t *testing.T, f *readingFixture, query string)
 // display there is: a reading whose closing event was lost renders as running
 // forever, and nothing else will ever correct it.
 func TestALiveBacklogDoesNotStarveTheSettledArmOfTheReconcilePass(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 
 	// The settled reading whose closing event was lost.

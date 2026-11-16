@@ -153,6 +153,7 @@ func seedVoiceDraftSignal(t *testing.T, e *apptest.AppEnv, profileID string, own
 }
 
 func TestVoiceLifecycleHTTPRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)

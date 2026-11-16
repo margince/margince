@@ -51,6 +51,7 @@ func backlogCountsOnly() bool { return os.Getenv(backlogCountsOnlyEnv) == "1" }
 // of reading the whole admitted day. Run it through make bench-worklist-backlog.
 // It records nothing and gates nothing.
 func TestDailyWorklistBacklog(t *testing.T) {
+	t.Parallel()
 	scale, sizes := backlogScale(t), backlogSizes(t)
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

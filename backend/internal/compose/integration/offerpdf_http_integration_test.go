@@ -27,6 +27,7 @@ import (
 )
 
 func TestOfferPdfHTTP_DownloadBeforeRenderReturns404(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
@@ -49,6 +50,7 @@ func TestOfferPdfHTTP_DownloadBeforeRenderReturns404(t *testing.T) {
 }
 
 func TestOfferPdfHTTP_DownloadNonexistentOfferReturns404(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -58,6 +60,7 @@ func TestOfferPdfHTTP_DownloadNonexistentOfferReturns404(t *testing.T) {
 }
 
 func TestOfferPdfHTTP_DownloadWhenTheBlobIsGoneReturns404(t *testing.T) {
+	t.Parallel()
 	e, blob := setupWithBlobstore(t)
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
@@ -92,6 +95,7 @@ func TestOfferPdfHTTP_DownloadWhenTheBlobIsGoneReturns404(t *testing.T) {
 }
 
 func TestOfferPdfHTTP_DownloadAfterRenderReturnsTheRenderedBytes(t *testing.T) {
+	t.Parallel()
 	e, _ := setupWithBlobstore(t)
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)

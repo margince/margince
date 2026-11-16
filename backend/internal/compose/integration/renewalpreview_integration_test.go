@@ -22,6 +22,7 @@ import (
 )
 
 func TestRenewalPreviewAndDeliveryShareDatesAndTheChosenRecipient(t *testing.T) {
+	t.Parallel()
 	for _, recipient := range []string{"record_owner", "authorizer"} {
 		for _, recurring := range []bool{false, true} {
 			name := recipient + "/one date"

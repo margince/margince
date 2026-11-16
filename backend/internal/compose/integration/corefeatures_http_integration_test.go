@@ -20,6 +20,7 @@ import (
 )
 
 func TestCoreFeatureSwitchesBlockBothDoorsAndKeepDataForReenable(t *testing.T) {
+	t.Parallel()
 	var disabled []string
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		return []compose.Option{compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"), compose.WithListsEnabled(true), compose.WithDisabledCoreFeatures(disabled)}

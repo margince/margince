@@ -29,6 +29,7 @@ import (
 )
 
 func TestAgentMintedStagingDoesNotInvokeAServerSideEffect(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// A real seeded user: approval rows foreign-key both the proposer and
 	// the decider, so a synthetic principal id is rejected by the database
@@ -76,6 +77,7 @@ func TestAgentMintedStagingDoesNotInvokeAServerSideEffect(t *testing.T) {
 // the provenance check narrows the collision rather than disabling the
 // confirm-first proposal flows.
 func TestServerMintedProposalStillInvokesItsEffect(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// A real seeded user: approval rows foreign-key both the proposer and
 	// the decider, so a synthetic principal id is rejected by the database

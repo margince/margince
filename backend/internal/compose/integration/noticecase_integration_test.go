@@ -50,6 +50,7 @@ func noticeCaseFor(t *testing.T, e *apptest.AppEnv, contactID string) (rule, sta
 // us — so Art. 14 gives the controller a month to say so. Before this the duty
 // existed and was invisible: there was no way to ask who had not been told.
 func TestABoughtContactIsOwedANotice(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Bought Contact", "purchased_or_imported")
@@ -82,6 +83,7 @@ func TestABoughtContactIsOwedANotice(t *testing.T) {
 // that took it. A case here would be a duty nobody owes, on a queue that exists
 // to show real ones.
 func TestAContactWhoWroteToUsOwesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Wrote To Us", "subject_initiated")
@@ -99,6 +101,7 @@ func TestAContactWhoWroteToUsOwesNothing(t *testing.T) {
 // system held it under its own notice duty, so the move opens no case — before
 // this, one portal import put a disclosure per contact on the Focus list.
 func TestAContactCarriedOverFromAnotherCRMOwesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var contact struct {
@@ -131,6 +134,7 @@ func TestAContactCarriedOverFromAnotherCRMOwesNothing(t *testing.T) {
 // dedupe cache in front of it — which marks AFTER the effect, so a crash in
 // that window replays and replay has to be free.
 func TestARedeliveredCreationRecordsOneDuty(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Twice Delivered", "referral")
@@ -200,6 +204,7 @@ func contactAcquiredAs(t *testing.T, e *apptest.AppEnv, name, kind string) strin
 // than deletes the source, no cascade ever cleans it up. An erasure of the
 // survivor would miss it too.
 func TestAMergeCarriesTheDutyToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	survivor := contactAcquiredAs(t, e, "Survivor", "subject_initiated")
@@ -238,6 +243,7 @@ func TestAMergeCarriesTheDutyToTheSurvivor(t *testing.T) {
 // while contact.created fired only once. Handling the first would leave the rest
 // owed and unrecorded forever — nothing looks at them again.
 func TestEveryUncasedAcquisitionGetsItsDuty(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Twice Acquired", "purchased_or_imported")
@@ -276,6 +282,7 @@ func TestEveryUncasedAcquisitionGetsItsDuty(t *testing.T) {
 // This is the failure the product must not have: a compliance deadline that is
 // wrong in the direction of looking fine.
 func TestADutyAcquiredLastYearIsAlreadyLate(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Long Ago Contact", "purchased_or_imported")

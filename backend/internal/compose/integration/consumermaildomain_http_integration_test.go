@@ -31,6 +31,7 @@ type consumerMailDomainListDTO struct {
 }
 
 func TestConsumerMailDomainsOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -100,6 +101,7 @@ func TestConsumerMailDomainsOverHTTP(t *testing.T) {
 }
 
 func TestConsumerMailDomainsRefusesWhatTheMatcherCouldNeverRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

@@ -15,6 +15,7 @@ import (
 )
 
 func TestAMailboxThenAnotherMembersImportKeepsOneReading(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "mailbox-before-admin@counterparty.example"
 	connectAs(t, e, e.Rep1, "gmail", ownerAddr)
@@ -30,6 +31,7 @@ func TestAMailboxThenAnotherMembersImportKeepsOneReading(t *testing.T) {
 }
 
 func TestProvenImportAddsLinksWithoutRowUpdateOrWideningHeldContent(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const message = "held-mailbox-before-import@counterparty.example"
 	connectAs(t, e, e.Rep1, "gmail", ownerAddr)

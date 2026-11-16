@@ -50,6 +50,7 @@ func projectToolHealth(t *testing.T, e *Env, id ids.ProjectID) *toolHealth {
 // An agent reads a project's health from the same read the page does. It sees
 // an AI reading while it stands, and "not judged" once a user undid it.
 func TestTheProjectToolReadsHealthAsThePageDoes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP rollout", &e.Rep1, now)

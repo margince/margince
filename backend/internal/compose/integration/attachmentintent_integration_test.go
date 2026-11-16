@@ -41,6 +41,7 @@ func (s archivingStore) Put(ctx context.Context, key string, r io.Reader, size i
 // that transaction fails the key stays provisional, and the sweep finds its
 // bytes as the orphan they are.
 func TestAnAttachmentClearsItsIntentOnlyWithItsRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	pipeline, stage, _ := integration.DealFixture(t, e)
@@ -75,6 +76,7 @@ func TestAnAttachmentClearsItsIntentOnlyWithItsRow(t *testing.T) {
 // A captured file clears its key on the capture's own transaction. A capture
 // that rolls back leaves the key provisional; one that commits settles it.
 func TestACapturedFileClearsItsIntentOnlyWithItsRow(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	intents := attachmentIntents(e)

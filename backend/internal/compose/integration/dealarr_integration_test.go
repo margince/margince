@@ -28,6 +28,7 @@ import (
 // pairing CHECK this row was illegal, which is the whole reason the constraint
 // was rewritten rather than supplemented.
 func TestADealMayCarryRecurringRevenueWithNoOneOffAmount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -55,6 +56,7 @@ func TestADealMayCarryRecurringRevenueWithNoOneOffAmount(t *testing.T) {
 // without it. Both halves are asserted because the refusal names a different
 // field depending on which one the caller left out.
 func TestRecurringRevenueNeedsItsCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -89,6 +91,7 @@ func TestRecurringRevenueNeedsItsCurrency(t *testing.T) {
 // This is the drift TestOneFunctionDecidesWhetherADealsMoneyPairIsLegal keeps
 // shut in source; this proves the shared rule actually behaves.
 func TestTheUpdatePathAgreesWithCreateAboutRecurringRevenue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -133,6 +136,7 @@ func TestTheUpdatePathAgreesWithCreateAboutRecurringRevenue(t *testing.T) {
 // figures and its original currency — and the caller is pointed at the ARR,
 // which is the field they have to settle before the accept can go through.
 func TestAcceptingAnOfferInAnotherCurrencyRefusesOverRecurringRevenue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription plus project", pipeline, open, &e.Rep1)
@@ -191,6 +195,7 @@ func TestAcceptingAnOfferInAnotherCurrencyRefusesOverRecurringRevenue(t *testing
 // refusal above could be passing because it refuses every accept over an ARR,
 // which would make recurring deals unclosable.
 func TestAcceptingAnOfferInTheSameCurrencyKeepsRecurringRevenue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Subscription, same currency", pipeline, open, &e.Rep1)
@@ -245,6 +250,7 @@ func TestAcceptingAnOfferInTheSameCurrencyKeepsRecurringRevenue(t *testing.T) {
 // So a currency move requires every populated figure to be restated in the same
 // request, even to the same numeral, which puts the reprice in the diff.
 func TestChangingTheCurrencyAloneIsRefusedOverFiguresNobodyRestated(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()
@@ -312,6 +318,7 @@ func TestChangingTheCurrencyAloneIsRefusedOverFiguresNobodyRestated(t *testing.T
 // because a code left standing with nothing to price is the state the pairing
 // CHECK refuses.
 func TestClearingTheRecurringFigureTakesTheCurrencyOnlyWhenNothingIsLeftToPrice(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	admin := e.Admin()

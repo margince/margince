@@ -64,6 +64,7 @@ func connectedOnAny(ctx context.Context, t *testing.T, e *SearchEnv, user ids.UU
 // Each calendar provider on its own answers true, so a workspace on Microsoft
 // is not told its diary is unread because the set happens to lead with Google.
 func TestEachCalendarProviderBacksTheAnswerOnItsOwn(t *testing.T) {
+	t.Parallel()
 	for _, provider := range calendarProvidersUnderTest {
 		t.Run(provider, func(t *testing.T) {
 			ctx := context.Background()
@@ -82,6 +83,7 @@ func TestEachCalendarProviderBacksTheAnswerOnItsOwn(t *testing.T) {
 // A grant that is not delivering is not a calendar. Each of these carries a
 // row and carries no events.
 func TestAConnectionThatIsNotDeliveringDoesNotBackTheAnswer(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"error", "reauth_required", "disconnected"} {
 		t.Run(status, func(t *testing.T) {
 			ctx := context.Background()
@@ -97,6 +99,7 @@ func TestAConnectionThatIsNotDeliveringDoesNotBackTheAnswer(t *testing.T) {
 
 // And it answers for the user asked about, not for whoever is connected.
 func TestAnotherUsersConnectionDoesNotBackThisOne(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	e := SetupSearch(t)
 	seedConnection(ctx, t, e, "gcal", e.Rep1, "connected")

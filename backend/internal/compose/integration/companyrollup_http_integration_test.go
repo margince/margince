@@ -228,6 +228,7 @@ func assertCompanyRollupFXUnavailable(t *testing.T, e *apptest.AppEnv, pipelineI
 }
 
 func TestCompanyRollupHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pipelineID, stageID, winProbability := companyRollupOpenStage(t, e)

@@ -111,6 +111,7 @@ func contractReaderPerms(without ...string) principal.Permissions {
 }
 
 func TestAContractDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedContractReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, contractReaderPerms())
@@ -185,6 +186,7 @@ func TestAContractDoesNotNameRecordsItsReaderCannotRead(t *testing.T) {
 // who reads the PROJECT and not the company must not be handed that company's
 // id by the paper hanging off it.
 func TestAContractIsNotTheWayBackToACompanyTheProjectAlreadyWithholds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)
@@ -233,6 +235,7 @@ func TestAContractIsNotTheWayBackToACompanyTheProjectAlreadyWithholds(t *testing
 // The page path, not only the single-row one: a list is where an existence
 // oracle is cheapest, so it must not be the looser door.
 func TestTheContractListWithholdsTheSameReferencesAsTheGet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedContractReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, contractReaderPerms())
@@ -268,6 +271,7 @@ func TestTheContractListWithholdsTheSameReferencesAsTheGet(t *testing.T) {
 // contract mutation is a compile-time addition to this list rather than a
 // silent omission.
 func TestEveryContractMutationResponseWithholdsTheSameReferences(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedContractReferenceFixture(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, contractReaderPerms())

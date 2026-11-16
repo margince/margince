@@ -34,6 +34,7 @@ type userListWire struct {
 }
 
 func TestAdminUserManagementOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -311,6 +312,7 @@ type accessWire struct {
 // routing: the role and the teams now ride the query, and nothing below the
 // handler would notice if they stopped arriving.
 func TestTheAccessPreviewIsAReadAndAnswersOnTheQuery(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -341,6 +343,7 @@ func TestTheAccessPreviewIsAReadAndAnswersOnTheQuery(t *testing.T) {
 // The invite form ticks several teams, and the frontend client repeats the
 // parameter once per team rather than joining them with commas.
 func TestTheAccessPreviewTakesSeveralTeamsAsTheClientSendsThem(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -370,6 +373,7 @@ func TestTheAccessPreviewTakesSeveralTeamsAsTheClientSendsThem(t *testing.T) {
 // grants beside it: a deactivated member's stored access is exactly what the
 // answer lists, and login refuses them.
 func TestTheAccessReadCarriesTheMembersStatusOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

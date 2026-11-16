@@ -70,6 +70,7 @@ func draftInCurrency(t *testing.T, e *Env, company ids.UUID, currency string) id
 }
 
 func TestActivationFreezesTheContractsConversion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
@@ -106,6 +107,7 @@ func TestActivationFreezesTheContractsConversion(t *testing.T) {
 // carries a rate keeps it, so re-activating after a cancellation does not
 // re-price an agreement nobody renegotiated.
 func TestReActivationDoesNotRePriceTheAgreement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
@@ -134,6 +136,7 @@ func TestReActivationDoesNotRePriceTheAgreement(t *testing.T) {
 // what the agreement was worth — so an activated contract refuses the swap, while
 // a draft, which has frozen nothing, still takes it.
 func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
@@ -205,6 +208,7 @@ func TestAnActivatedContractKeepsTheCurrencyItsRateWasFrozenFor(t *testing.T) {
 // contract the freeze guard cannot count, which is the state this exists to
 // end.
 func TestActivationRefusesWhenNoRateIsPublished(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 
@@ -235,6 +239,7 @@ func TestActivationRefusesWhenNoRateIsPublished(t *testing.T) {
 // nobody renegotiating it — the rollup multiplies the new figure by a rate
 // frozen for the old currency.
 func TestReturningAContractToDraftClearsTheFrozenConversion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	seedRate(t, e, "USD", "EUR", "0.9", time.Now())
@@ -299,6 +304,7 @@ func TestReturningAContractToDraftClearsTheFrozenConversion(t *testing.T) {
 // A contract with no currency has nothing to convert, and freezing nothing is
 // the right answer rather than a refusal.
 func TestAContractWithNoCurrencyActivatesWithoutARate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 

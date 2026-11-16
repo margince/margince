@@ -170,6 +170,7 @@ func evidenceNoted(answer agents.SearchReportEvidenceResult, code string) bool {
 // counterexamples, and the share is stated because nothing was out of reach.
 // The task and the deal also say "pricing" and are never cited.
 func TestReportEvidenceSearchesOnlyTheCellsRecords(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
 	ctx := e.evidenceReader()
@@ -210,6 +211,7 @@ func TestReportEvidenceSearchesOnlyTheCellsRecords(t *testing.T) {
 // Without a cell the search covers every cell the run served, so the task's
 // mention of pricing becomes evidence; the cell above narrowed it away.
 func TestReportEvidenceWithoutACellSearchesTheWholeRun(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
 	ctx := e.evidenceReader()
@@ -233,6 +235,7 @@ func TestReportEvidenceWithoutACellSearchesTheWholeRun(t *testing.T) {
 // and every figure is over what they can still read — which the answer says
 // on every call, not only on this one.
 func TestReportEvidenceCountsOnlyWhatTheReaderCanRead(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
 	ctx := e.evidenceReader()
@@ -257,6 +260,7 @@ func TestReportEvidenceCountsOnlyWhatTheReaderCanRead(t *testing.T) {
 // A record the reader cannot read changes nothing in the answer, however well
 // it matches: its presence must not be learnable from any field.
 func TestAHiddenRecordChangesNothingInTheAnswer(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedEvidenceFixture(t, e)
 	ctx := e.evidenceReader()
@@ -282,6 +286,7 @@ func TestAHiddenRecordChangesNothingInTheAnswer(t *testing.T) {
 // A record with no text to judge is an abstention, and it too keeps the
 // share from being stated.
 func TestReportEvidenceReportsAbstentions(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedEvidenceFixture(t, e)
 	silent := e.SeedID(t, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
@@ -306,6 +311,7 @@ func TestReportEvidenceReportsAbstentions(t *testing.T) {
 // An abstention serves an id, and a served id is a read. The envelope sources
 // it, so the answer counts as having handed a record over.
 func TestAnAbstentionIsCountedAsARead(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedEvidenceFixture(t, e)
 	silent := e.SeedID(t, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
@@ -326,6 +332,7 @@ func TestAnAbstentionIsCountedAsARead(t *testing.T) {
 // know of but not read as content_state "withheld" — the value the read-back
 // drops a record on.
 func TestTheProviderMarksAnUnreadableActivityWithheld(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedEvidenceFixture(t, e)
 	hideFromTheReader(t, e, f.pricingMeetings[0])
@@ -349,6 +356,7 @@ func TestTheProviderMarksAnUnreadableActivityWithheld(t *testing.T) {
 // Without a cell, a cell the privacy floor withholds stays closed: its
 // records are never evidence, and the answer says cells were left out.
 func TestTheWholeRunNeverOpensAWithheldCell(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	seedEvidenceFixture(t, e)
 	var small []ids.UUID
@@ -376,6 +384,7 @@ func TestTheWholeRunNeverOpensAWithheldCell(t *testing.T) {
 // measure only themselves asks projects-by-phase by owner and is answered
 // about their own projects; the whole run must not reach a colleague's.
 func TestTheWholeRunKeepsTheNarrowingItsGroupingBrought(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Sunworks', 'manual', 'human:x')`)
 	project := func(owner ids.UUID, name string) ids.UUID {
@@ -427,6 +436,7 @@ func TestTheWholeRunKeepsTheNarrowingItsGroupingBrought(t *testing.T) {
 // A run id nothing was saved under is not found, the same answer the report
 // drawer gives.
 func TestReportEvidenceForAnUnknownRunIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	_, _, err := searchEvidence(e.evidenceReader(), e,
 		`{"run_id":"`+ids.NewV7().String()+`","query":"pricing"}`)
@@ -440,6 +450,7 @@ func TestReportEvidenceForAnUnknownRunIsNotFound(t *testing.T) {
 // the query's own text would lead an unbounded page; bounded, it never
 // appears, and neither does its word-for-word lexical twin.
 func TestABoundedSearchFindsNothingOutsideItsRecords(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	embedder := fakeEmbedder(t, ai.NewFakeClient())
 	inside := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Solar Panels', 'manual', 'human:x')`)

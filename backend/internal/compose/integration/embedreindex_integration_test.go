@@ -217,6 +217,7 @@ func embedReindexDecode[T any](t *testing.T, e *apptest.AppEnv, method, path str
 // version for a single-workspace installation — which is exactly how the
 // summing version survived in the transport after the store stopped doing it.
 func TestStatusEntitiesPendingDoesNotGrowWithTheWorkspaceCount(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-count-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
@@ -243,6 +244,7 @@ func TestStatusEntitiesPendingDoesNotGrowWithTheWorkspaceCount(t *testing.T) {
 }
 
 func TestEmbedReindexStatusAndPreviewReflectPendingEntities(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-status-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
@@ -291,6 +293,7 @@ func TestEmbedReindexStatusAndPreviewReflectPendingEntities(t *testing.T) {
 // The banner's identities read answers the status read's two identities under
 // the status read's own gate, so the shell can drop the backlog scan.
 func TestEmbedReindexIdentitiesMatchTheStatusUnderItsGate(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-identities-v1")
 	e := setupEmbedReindex(t, router)
 	seedStaleEmbeddingRow(t, e, apptest.InstallationWorkspaceID(context.Background(), t, e.Owner))
@@ -318,6 +321,7 @@ func TestEmbedReindexIdentitiesMatchTheStatusUnderItsGate(t *testing.T) {
 // rbacgate_test.go waiver's own promise that this transport is what
 // gates search.Store's binding-marker methods.
 func TestEmbedReindexConfirmRequiresAdminOrOps(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-rbac-v1")
 	e := setupEmbedReindex(t, router)
 
@@ -348,6 +352,7 @@ func TestEmbedReindexConfirmRequiresAdminOrOps(t *testing.T) {
 // the real workers then fans the fleet out, re-embeds it, and the status
 // read returns to idle/not-needed with the marker claimable again.
 func TestEmbedReindexConfirmLifecycle(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-lifecycle-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
@@ -409,6 +414,7 @@ func TestEmbedReindexConfirmLifecycle(t *testing.T) {
 // pending set. Finalizing the dispatcher row by hand is that moment made
 // deterministic: the run is still on, and the confirm must still refuse.
 func TestEmbedReindexRepeatConfirmIsRefusedAfterItsDispatcherFinishes(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-singleflight-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
@@ -439,6 +445,7 @@ func TestEmbedReindexRepeatConfirmIsRefusedAfterItsDispatcherFinishes(t *testing
 // for it (a second, driftless confirm right after still gets a fresh 202,
 // proving the drifted attempt left no live claim behind).
 func TestEmbedReindexConfirmRefusesIdentityDrift(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-drift-v1")
 	e := setupEmbedReindex(t, router)
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
@@ -473,6 +480,7 @@ func TestEmbedReindexConfirmRefusesIdentityDrift(t *testing.T) {
 // config that is exactly what the fleet now needs. Nothing was re-embedded, and
 // nothing claims otherwise — populated_identity is unmoved.
 func TestEmbedReindexIdentityMismatchedJobCancels(t *testing.T) {
+	t.Parallel()
 	enqueueRouter := apptest.EmbedReindexRouter(t, "reindex-cancel-enqueue-v1")
 	e := setupEmbedReindex(t, enqueueRouter)
 	before, _ := enqueueRouter.EmbedIdentity()
@@ -528,6 +536,7 @@ func TestEmbedReindexIdentityMismatchedJobCancels(t *testing.T) {
 // still completes a real re-embed pass — the force path is not merely
 // accepted, it actually runs.
 func TestEmbedReindexForceReindexWhenNotNeeded(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "reindex-force-v1")
 	e := setupEmbedReindex(t, router)
 

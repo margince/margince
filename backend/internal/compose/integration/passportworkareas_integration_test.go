@@ -80,6 +80,7 @@ func topicsOffered(t *testing.T, client *apptest.MCPClient) []string {
 }
 
 func TestAPassportIsHeldToTheAreasItsUserChose(t *testing.T) {
+	t.Parallel()
 	e := areasApp(t)
 	minted := mintWithAreas(t, e, AnyMap{"mode": "custom", "areas": []string{"business"}})
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
@@ -134,6 +135,7 @@ func TestAPassportIsHeldToTheAreasItsUserChose(t *testing.T) {
 // Every passport starts at all areas, stored as NULL so an area added later
 // is reached, and the list says so.
 func TestAPassportStartsAtAllAreas(t *testing.T) {
+	t.Parallel()
 	e := areasApp(t)
 	minted := mintWithAreas(t, e, nil)
 
@@ -171,6 +173,7 @@ func TestAPassportStartsAtAllAreas(t *testing.T) {
 // Both doors refuse a choice the screen never offers, and another user's
 // passport reads as absent.
 func TestAnAreaChoiceNoScreenOffersIsRefused(t *testing.T) {
+	t.Parallel()
 	e := areasApp(t)
 	minted := mintWithAreas(t, e, nil)
 	for name, body := range map[string]AnyMap{
@@ -197,6 +200,7 @@ func TestAnAreaChoiceNoScreenOffersIsRefused(t *testing.T) {
 // A rep reaches every area but admin settings. A choice of an area the role
 // does not reach is refused on each door that takes one.
 func TestARepChoosesOnlyAmongTheAreasTheirRoleReaches(t *testing.T) {
+	t.Parallel()
 	e := areasApp(t)
 	demoteToRep(t, e)
 

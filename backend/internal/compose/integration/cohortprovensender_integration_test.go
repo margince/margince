@@ -60,6 +60,7 @@ func sentBy(t *testing.T, e *Env, mail, contact ids.UUID) bool {
 }
 
 func TestTheCohortRepairDoesNotMakeTheNewHolderOfAMovedAddressTheSender(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const moved = "moved.inbox@customer.test"
 	contactWithAddress(t, e, "Former Holder", moved, true)
@@ -86,6 +87,7 @@ func TestTheCohortRepairDoesNotMakeTheNewHolderOfAMovedAddressTheSender(t *testi
 }
 
 func TestTheCohortRepairNamesTheProvenSender(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const address = "proven.writer@customer.test"
 	writer := contactWithAddress(t, e, "Proven Writer", address, false)

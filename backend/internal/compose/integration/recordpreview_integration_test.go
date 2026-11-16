@@ -15,6 +15,7 @@ import (
 )
 
 func TestRecordCardsArePublicButExposeOnlyTheirLimitedContext(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	cardClient := *e.TS.Client()
@@ -120,6 +121,7 @@ func TestRecordCardsArePublicButExposeOnlyTheirLimitedContext(t *testing.T) {
 // rules out a deal's company once any role masks the link, and a company that
 // capture privacy keeps for its mailbox owner.
 func TestRecordCardsNameNothingASeatIsDenied(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	customer := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Masked Customer", "source": "manual"})
@@ -171,6 +173,7 @@ func recordCard(t *testing.T, e *apptest.AppEnv, kind, id string) (int, string) 
 }
 
 func TestRecordCardsRemainAvailableWhenRelatedCompanyIsArchived(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Former employer", "source": "manual"})

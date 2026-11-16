@@ -48,6 +48,7 @@ func auditedValue(t *testing.T, e *Env, id ids.UUID, action, image, column strin
 }
 
 func TestAcceptingAnEmailRequestKeepsItsCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, column := visitNoteStore(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
@@ -82,6 +83,7 @@ func TestAcceptingAnEmailRequestKeepsItsCustomFieldValues(t *testing.T) {
 }
 
 func TestAPatchSetsAndClearsAnActivitysCustomFieldValue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, column := visitNoteStore(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
@@ -124,6 +126,7 @@ func TestAPatchSetsAndClearsAnActivitysCustomFieldValue(t *testing.T) {
 }
 
 func TestNoiseRedactionEmptiesAnActivitysCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, column := visitNoteStore(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)

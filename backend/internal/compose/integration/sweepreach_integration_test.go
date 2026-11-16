@@ -12,7 +12,6 @@ package integration
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/sweepreach"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -47,11 +47,12 @@ var unitNote = reach.Table{
 }
 
 // withUnitNoteTable creates the unit table and installs its declaration beside
-// the core ones, undoing both when the test ends.
+// the core ones. The declarations are process state, so they go back when the
+// test ends.
 func withUnitNoteTable(t *testing.T) {
 	t.Helper()
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	owner, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,9 +65,6 @@ func withUnitNoteTable(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DROP TABLE ext.ext_reachtest_note`); err != nil {
-			t.Errorf("dropping the unit table: %v", err)
-		}
 		if err := owner.Close(context.Background()); err != nil {
 			t.Errorf("closing the owner connection: %v", err)
 		}
@@ -98,6 +96,7 @@ const planLinesNaming = `SELECT count(*) FROM weekly_plan_commitment WHERE linke
 // The weekly plan's declared pair follows a company, a contact and a lead
 // merge. A line naming a record nobody merged stays where it is.
 func TestEveryMergeMovesThePlanLinesTheWeeklyPlanDeclared(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	src, tgt := seedMergePair(t, e, "Plan lines")
@@ -139,6 +138,7 @@ func TestEveryMergeMovesThePlanLinesTheWeeklyPlanDeclared(t *testing.T) {
 
 // The kind column decides which rows move. A contact-kind row holding the
 // merged company's uuid names some other record and stays where it is.
+//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 	e := Setup(t)
 	withUnitNoteTable(t)
@@ -175,6 +175,7 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 
 // A unit's declared company column follows the company merge; a row naming a
 // third company is left alone.
+//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 	e := Setup(t)
 	withUnitNoteTable(t)
@@ -202,6 +203,7 @@ func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 
 // The declared relink runs in the caller's transaction, so a merge that rolls
 // back leaves the unit's rows where they were.
+//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 	e := Setup(t)
 	withUnitNoteTable(t)
@@ -226,6 +228,7 @@ func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 
 // The erasure clears what a unit's table says about the subject, leaves a row
 // about somebody else, and tombstones each row it cleared.
+//testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestTheErasureClearsAUnitsDeclaredColumns(t *testing.T) {
 	e := Setup(t)
 	withUnitNoteTable(t)
@@ -251,6 +254,7 @@ func TestTheErasureClearsAUnitsDeclaredColumns(t *testing.T) {
 // The boot refuses a unit declaring reach into a table outside its own
 // namespace, before anything is applied.
 func TestTheBootRefusesAUnitReachingATableItDoesNotOwn(t *testing.T) {
+	t.Parallel()
 	err := compose.RegisterExtensions([]extension.Extension{{
 		Name: "reachtest", Version: "1", Description: "Declares reach into a core table.",
 		Reach: []reach.Table{{Name: "finance_invoice", Links: []reach.Link{{Column: "company_id", Record: reach.Company}}}},
@@ -263,6 +267,7 @@ func TestTheBootRefusesAUnitReachingATableItDoesNotOwn(t *testing.T) {
 // AuditEach writes one audit row per id past its statement chunk, each by the
 // bound actor with the shared images.
 func TestAuditEachWritesOneRowPerIDAcrossChunks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	moved := make([]ids.UUID, 1001)
 	for i := range moved {

@@ -99,6 +99,7 @@ func refusedAtCommit(t *testing.T, owner *pgx.Conn, steps ...step) string {
 // commits with no evidence behind it. The database also refuses the clear of a
 // class by a writer that never declared anything, when nothing else would stop it.
 func TestADeclarationAloneDoesNotStripTheProofOrTheClass(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	f := filedUnderAProject(t, e)
@@ -128,6 +129,7 @@ func TestADeclarationAloneDoesNotStripTheProofOrTheClass(t *testing.T) {
 }
 
 func TestTheTriggersAdmitOnlyTheDeclaredUndoOfAProjectFiling(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	f := filedUnderAProject(t, e)

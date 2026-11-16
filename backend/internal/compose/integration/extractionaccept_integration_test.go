@@ -183,6 +183,7 @@ func (a acceptEnv) requireUntouchedDeal(t *testing.T) {
 }
 
 func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 	// A real seeded user: the machine-stamped notes carry the accepting
 	// human on on_behalf_of, which is an FK into app_user.
@@ -234,6 +235,7 @@ func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
 }
 
 func TestAcceptAttachmentExtractionEditFlipsProvenanceAndCapturedBy(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 	ctx := a.As(a.Rep1, []ids.UUID{a.Team1}, AdminPerms)
 
@@ -273,6 +275,7 @@ func TestAcceptAttachmentExtractionEditFlipsProvenanceAndCapturedBy(t *testing.T
 }
 
 func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	company := e.SeedCompany(t, "Non-Deal Accept Parent", &e.Rep1)
@@ -292,6 +295,7 @@ func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
 }
 
 func TestAcceptAttachmentExtractionRefusesUngroundedKeyWholeRequest(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 
 	// amount_minor IS grounded and valid — but it must not land, because
@@ -308,6 +312,7 @@ func TestAcceptAttachmentExtractionRefusesUngroundedKeyWholeRequest(t *testing.T
 }
 
 func TestAcceptAttachmentExtractionRefusesFieldOutsideAllowlist(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 
 	_, err := a.engine.Accept(a.Admin(), ids.UUID(a.att.Id), crmcontracts.AcceptExtractionRequest{
@@ -322,6 +327,7 @@ func TestAcceptAttachmentExtractionRefusesFieldOutsideAllowlist(t *testing.T) {
 }
 
 func TestAcceptAttachmentExtractionRequiresFieldKeys(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 
 	_, err := a.engine.Accept(a.Admin(), ids.UUID(a.att.Id), crmcontracts.AcceptExtractionRequest{ExtractionId: openapi_types.UUID(a.reading), FieldKeys: []string{}})
@@ -337,6 +343,7 @@ func TestAcceptAttachmentExtractionRequiresFieldKeys(t *testing.T) {
 // deal, and the team row scope still binds writes: the accept is refused as
 // a denial, and the deal is untouched.
 func TestAcceptAttachmentExtractionRefusesAWriteToAnotherTeamsDeal(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 
 	ctx := a.As(a.Rep3, []ids.UUID{a.Team2}, RepPerms)
@@ -351,6 +358,7 @@ func TestAcceptAttachmentExtractionRefusesAWriteToAnotherTeamsDeal(t *testing.T)
 }
 
 func TestAcceptAttachmentExtractionRequiresDealUpdateGrant(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 
 	// Read-only sees the deal (row scope all) but holds no deal update.
@@ -366,6 +374,7 @@ func TestAcceptAttachmentExtractionRequiresDealUpdateGrant(t *testing.T) {
 }
 
 func TestAcceptAttachmentExtractionEditedAcceptRequiresActivityGrant(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 
 	// Rep1 may update the deal but holds no activity grant: an edited
@@ -407,6 +416,7 @@ func TestAcceptAttachmentExtractionEditedAcceptRequiresActivityGrant(t *testing.
 // reading id and spend it against any document they can see, which is a way to
 // write one document's values onto another document's deal.
 func TestAcceptAttachmentExtractionRefusesAReadingOfAnotherDocument(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 	h := activities.NewHandlers(a.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	other := uploadDealAttachment(a.Admin(), t, h, a.deal, "other.pdf", []byte("%PDF-1.4 other bytes"))
@@ -424,6 +434,7 @@ func TestAcceptAttachmentExtractionRefusesAReadingOfAnotherDocument(t *testing.T
 // TestAcceptAttachmentExtractionRefusesWhenNothingHasReadTheDocument pins what
 // an accept finds when no reading exists: nothing to accept, and no write.
 func TestAcceptAttachmentExtractionRefusesWhenNothingHasReadTheDocument(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	pipeline, open, _ := DealFixture(t, e)
@@ -452,6 +463,7 @@ func TestAcceptAttachmentExtractionRefusesWhenNothingHasReadTheDocument(t *testi
 // forced rollback below would arrive too late — both rows would already
 // be durable. Neither is: the rollback discards both.
 func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 	ctx := a.As(a.Rep1, []ids.UUID{a.Team1}, AdminPerms)
 
@@ -508,6 +520,7 @@ const acceptDealEntityForTest = "deal"
 // latest. Under the shape that re-ran the extractor per accept, and under one
 // that resolved the newest stored reading, this test fails.
 func TestAcceptAttachmentExtractionWritesTheReadingItWasShownNotTheNewest(t *testing.T) {
+	t.Parallel()
 	a := setupExtractionAccept(t)
 	shown := a.reading
 	// A REAL seeded user: the accept's audit note carries on_behalf_of, which is
@@ -559,6 +572,7 @@ func TestAcceptAttachmentExtractionWritesTheReadingItWasShownNotTheNewest(t *tes
 // A chat reading is never accepted onto a deal, even when a field carries a
 // deal field's name. Only a deal-facts reading holds values a deal can take.
 func TestAcceptAttachmentExtractionRefusesAChatReading(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	store := activities.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())

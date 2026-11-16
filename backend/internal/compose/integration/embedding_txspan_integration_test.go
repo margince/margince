@@ -39,6 +39,7 @@ func (p *txProbeEmbedder) Embed(ctx context.Context, req model.EmbedRequest) (mo
 }
 
 func TestUpsertHoldsNoTransactionAcrossTheEmbedCall(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	// pg_stat_activity hides another role's state from an unprivileged reader,
 	// which would read as zero open transactions and pass for the wrong reason.
@@ -84,6 +85,7 @@ func (r *racingEmbedder) Embed(ctx context.Context, req model.EmbedRequest) (mod
 }
 
 func TestUpsertYieldsToAWriterThatLandedDuringTheEmbedCall(t *testing.T) {
+	t.Parallel()
 	fake := ai.NewFakeClient()
 	cases := []struct {
 		name, race, column, want string

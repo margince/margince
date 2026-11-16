@@ -78,6 +78,7 @@ func contractOnArchivedDeal(t *testing.T, e *Env) ids.ContractID {
 // The admin is the caller the old clause exempted: unbounded row scope, so
 // nothing to narrow, so no clause — and the liveness filter disappeared with it.
 func TestAnUnboundedCallerCannotReadAContractOnAnArchivedAnchor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	id := contractOnArchivedDeal(t, e)
 
@@ -92,6 +93,7 @@ func TestAnUnboundedCallerCannotReadAContractOnAnArchivedAnchor(t *testing.T) {
 // The ordinary case still works: a live anchor is readable, so the change is a
 // narrowing of exactly one shape rather than of the surface.
 func TestAContractOnALiveAnchorStaysReadable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	pipeline, open, _ := DealFixture(t, e)

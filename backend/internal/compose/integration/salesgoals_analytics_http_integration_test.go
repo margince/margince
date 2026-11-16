@@ -42,6 +42,7 @@ func quarterSalesWon(t *testing.T, e *apptest.AppEnv, kind, id string) crmcontra
 }
 
 func TestAnalyticsHoldsAQuarterAgainstThePublishedSalesGoals(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := signedInUser(t, e)
@@ -94,6 +95,7 @@ func TestAnalyticsHoldsAQuarterAgainstThePublishedSalesGoals(t *testing.T) {
 }
 
 func TestASellerReadsNoTeamInProgress(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
@@ -129,6 +131,7 @@ func TestASellerReadsNoTeamInProgress(t *testing.T) {
 }
 
 func TestTheGoalRosterNamesADraftsYearlySum(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := signedInUser(t, e)

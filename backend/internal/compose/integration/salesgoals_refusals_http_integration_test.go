@@ -31,6 +31,7 @@ func goalMonthsOf(value int64, gap int) []any {
 }
 
 func TestASalesGoalPlanRefusesWhatItCannotKeep(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := signedInUser(t, e)
@@ -88,6 +89,7 @@ func TestASalesGoalPlanRefusesWhatItCannotKeep(t *testing.T) {
 }
 
 func TestProgressRefusesAPeriodOrScopeItCannotRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	year := clocktest.Now(t).Year()
@@ -106,6 +108,7 @@ func TestProgressRefusesAPeriodOrScopeItCannotRead(t *testing.T) {
 // While individual performance is off, Progress and the open deals behind it
 // refuse a colleague's scope alike. The reader's own deals still answer.
 func TestProgressAndItsDealsRefuseAColleagueWhileIndividualPerformanceIsOff(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	colleague := seedColleague(t, e)
@@ -128,6 +131,7 @@ func TestProgressAndItsDealsRefuseAColleagueWhileIndividualPerformanceIsOff(t *t
 // A team's open deals name each member's work one by one. While individual
 // performance is off the team list is refused, and the reader's own answers.
 func TestProgressRefusesATeamsDealsWhileIndividualPerformanceIsOff(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := signedInUser(t, e)

@@ -19,6 +19,7 @@ import (
 )
 
 func TestErasingTheRecipientEmptiesTheVoiceSampleOfAHeldMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedRestrictionFixture(t, e)
 	owner := e.As(e.Rep1, nil, voiceRepPerms)

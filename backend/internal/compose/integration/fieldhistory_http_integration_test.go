@@ -98,7 +98,7 @@ func fieldHistoryHTTPEnv(t *testing.T, e *apptest.AppEnv) *Env {
 	t.Helper()
 	ctx := context.Background()
 	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Owner)
-	pool, err := testdb.OwnPool(ctx, apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(ctx, testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}
@@ -283,6 +283,7 @@ func assertFieldHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx fieldHistor
 }
 
 func TestFieldHistoryHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dbEnv := fieldHistoryHTTPEnv(t, e)

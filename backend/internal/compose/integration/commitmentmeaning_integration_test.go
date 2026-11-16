@@ -14,6 +14,7 @@ import (
 )
 
 func TestMailReadingKeepsValidNonActionsAndRetriesInvalidMeaning(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name, words, state, condition, precision, deadline string
 		tasks, calls                                       int
@@ -65,6 +66,7 @@ func TestMailReadingKeepsValidNonActionsAndRetriesInvalidMeaning(t *testing.T) {
 }
 
 func TestInvalidCommitmentDoesNotHideAValidRiskOrAdvanceTheReading(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Example buyer", &e.Rep1)
 	buyer := employeeOf(t, e, company, "Example buyer contact")

@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -79,6 +80,7 @@ func TestPublicBookingPendingCancellationAndPausedPage(t *testing.T) {
 	}
 }
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestProposalReplayRehydratesTheVaultWithoutStoringTheCapability(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)

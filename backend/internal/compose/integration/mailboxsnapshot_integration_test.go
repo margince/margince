@@ -17,6 +17,7 @@ import (
 )
 
 func TestPreparedMailboxProofUsesOneReadAndStaysInItsTransaction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `INSERT INTO capture_connection(user_id,provider,status,credential_ref,account_label)
  VALUES(@proved,'gmail','connected','fixture-reference','proved@example.test'),

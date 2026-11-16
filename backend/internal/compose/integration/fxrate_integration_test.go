@@ -37,6 +37,7 @@ func fxRateOf(rows []deals.FxRateRow, from string) (string, bool) {
 var fxTestNow = time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
 
 func TestFxRateAppendForward(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
@@ -79,6 +80,7 @@ func TestFxRateAppendForward(t *testing.T) {
 }
 
 func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
@@ -105,6 +107,7 @@ func TestFxRateRejectsPastBaseAndNonPositive(t *testing.T) {
 // earliest rate it prices days that had none. Anywhere later it would change a
 // rate some day was already priced at.
 func TestFxRateHistoryExtendsOnlyBeforeTheEarliestRate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()
@@ -153,6 +156,7 @@ func TestFxRateHistoryExtendsOnlyBeforeTheEarliestRate(t *testing.T) {
 }
 
 func TestFxRateWriteDeniedForNonAdmin(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	_, err := e.Deals.SetFxRate(repCtx, deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9", EffectiveDate: time.Now().UTC()})
@@ -162,6 +166,7 @@ func TestFxRateWriteDeniedForNonAdmin(t *testing.T) {
 }
 
 func TestFxRateReadDeniedForNonAdmin(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	roCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, ReadOnlyPerms)
 	if _, err := e.Deals.ListLatestFxRates(roCtx); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -170,6 +175,7 @@ func TestFxRateReadDeniedForNonAdmin(t *testing.T) {
 }
 
 func TestFxRateWritesAuditRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	if _, err := e.Deals.SetFxRate(e.Admin(), deals.SetFxRateInput{FromCurrency: "USD", Rate: "0.9", EffectiveDate: fxTestNow}); err != nil {
@@ -204,6 +210,7 @@ func fxRatePerms(g principal.ObjectGrant) principal.Permissions {
 // `update`, and neither grant substitutes for the other. Every refusal is the
 // 403 sentinel, and a refused write leaves the sheet untouched.
 func TestFxRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	today := fxTestNow.Truncate(24 * time.Hour)
@@ -255,6 +262,7 @@ func TestFxRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
 // audit_log.authorization_rule attributes the update grant rather than the
 // create grant the insert used.
 func TestFxRateOverwriteAuditsAsUpdate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return fxTestNow })
 	ctx := e.Admin()

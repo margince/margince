@@ -51,6 +51,7 @@ func tagCurator(e *Env) context.Context {
 }
 
 func TestTheContactListNarrowsByTagID(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	tagged := e.SeedContact(t, "Tagged Contact", nil)
 	e.SeedContact(t, "Untagged Contact", nil)
@@ -92,6 +93,7 @@ func TestTheContactListNarrowsByTagID(t *testing.T) {
 }
 
 func TestTheCompanyListNarrowsByDomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	held, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: "Acme", Domains: []contacts.CompanyDomainInput{{Domain: "acme.example", IsPrimary: true}},
@@ -133,6 +135,7 @@ func TestTheCompanyListNarrowsByDomain(t *testing.T) {
 // for archived accounts BY domain: the page would come back empty, reading
 // "no account ever held this". The two dials are one question.
 func TestTheDomainFilterFindsAnArchivedAccountWhenAskedForOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	held, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: "Gone", Domains: []contacts.CompanyDomainInput{{Domain: "gone.example", IsPrimary: true}},
@@ -166,6 +169,7 @@ func TestTheDomainFilterFindsAnArchivedAccountWhenAskedForOne(t *testing.T) {
 }
 
 func TestTheActivityListNarrowsToTheOpenTasksOneAssigneeHolds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// A fixed instant rather than the host clock: the assertion is about which
 	// tasks the filter returns, and a due date that moves with the wall clock
@@ -205,6 +209,7 @@ func (e *Env) logTask(t *testing.T, subject string, assignee ids.UUID, due time.
 }
 
 func TestThePipelineListAnswersIncludeArchived(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if _, err := e.Deals.CreatePipeline(e.Admin(), deals.CreatePipelineInput{Name: "Live"}); err != nil {
 		t.Fatalf("seeding the live pipeline: %v", err)
@@ -255,6 +260,7 @@ func pipelineNames(page []crmcontracts.Pipeline) []string {
 }
 
 func TestTheContactListNarrowsToOneTeamsRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Rep1 and Rep2 share Team1; Rep3 sits in Team2.
 	mine := e.SeedContact(t, "Owned By Rep1", &e.Rep1)
@@ -286,6 +292,7 @@ func TestTheContactListNarrowsToOneTeamsRows(t *testing.T) {
 }
 
 func TestTheContactListNarrowsToTheUnownedQueue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.SeedContact(t, "Owned By Rep1", &e.Rep1)
 	unowned := e.SeedContact(t, "Owned By Nobody", nil)
@@ -315,6 +322,7 @@ func TestTheContactListNarrowsToTheUnownedQueue(t *testing.T) {
 }
 
 func TestTheOwnerDialsRefuseEachOther(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.SeedContact(t, "Owned By Rep1", &e.Rep1)
 
@@ -354,6 +362,7 @@ func teamScopedRep(e *Env, user ids.UUID, teams []ids.UUID) context.Context {
 // the visibility predicate, so it can only ever subtract: a capture-private
 // contact of that team stays out of the page.
 func TestTheTeamFilterCannotReachAnotherTeamsPrivateCapture(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Rep1+Rep2 share Team1; Rep3 sits in Team2.
 	e.SeedContact(t, "Owned By Rep1", &e.Rep1)
@@ -380,6 +389,7 @@ func TestTheTeamFilterCannotReachAnotherTeamsPrivateCapture(t *testing.T) {
 }
 
 func TestTheCompanyListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	held := e.SeedCompany(t, "Owned By Rep1", &e.Rep1)
 	e.SeedCompany(t, "Owned By Rep3", &e.Rep3)
@@ -410,6 +420,7 @@ func TestTheCompanyListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
 // (DM-VOCAB-OWN-1) — bound through the one shared clause, so the three cannot
 // drift. Its absence here is what once made the UI grow a second owner chip.
 func TestTheLeadListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	held := seedLead(t, e, "Owned By Rep1", "rep1@lead.test", &e.Rep1)
 	seedLead(t, e, "Owned By Rep3", "rep3@lead.test", &e.Rep3)
@@ -442,6 +453,7 @@ func TestTheLeadListNarrowsToOneTeamAndToTheUnownedQueue(t *testing.T) {
 }
 
 func TestTheContactListNarrowsToOneEmployer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", nil)
 	other := e.SeedCompany(t, "Other", nil)
@@ -501,6 +513,7 @@ func setFirmographics(t *testing.T, e *Env, company ids.UUID, industry, band str
 }
 
 func TestTheCompanyListNarrowsByIndustryAndSizeBand(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	small := e.SeedCompany(t, "Small Software", nil)
 	big := e.SeedCompany(t, "Big Software", nil)
@@ -549,6 +562,7 @@ func TestTheCompanyListNarrowsByIndustryAndSizeBand(t *testing.T) {
 // gate exists to name. The pair here is what makes the answer checkable — the
 // same three rows, twice, and only the direction moves.
 func TestTheActivityListOrdersByTheSortItWasGiven(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	base := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
 	oldest := e.logAt(t, base)
@@ -586,6 +600,7 @@ func TestTheActivityListOrdersByTheSortItWasGiven(t *testing.T) {
 // the honoured sort trustworthy: a list that silently ignores what it cannot do
 // is one a caller cannot tell from a list that did it.
 func TestTheActivityListRefusesASortItCannotDo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	kind := "kind"
 	_, _, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{Sort: &kind})
@@ -602,6 +617,7 @@ func TestTheActivityListRefusesASortItCannotDo(t *testing.T) {
 // had no keyset that could continue it — so a queue longer than one page was
 // silently truncated, with only a separate count to hint at the rest.
 func TestTheOpenTaskQueueHandsOutACursorThatContinuesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	due := time.Date(2026, 7, 1, 9, 0, 0, 0, time.UTC)
 	first := e.logTask(t, "Nearest", e.Rep1, due)

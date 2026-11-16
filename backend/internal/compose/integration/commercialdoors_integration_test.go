@@ -26,6 +26,7 @@ type sharedOffer struct {
 // and change_record_parts as it does through the offer routes. The two answers agree
 // on the deal's offers and on each offer's lines.
 func TestOfferRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "offer-doors", "read", "write")
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Offer renewal")
 	product := createdRecord(t, d.e, "/v1/products", AnyMap{
@@ -75,6 +76,7 @@ type sharedFact struct {
 // A fact stated or confirmed through change_record_parts is the row the facts
 // routes write.
 func TestCompanyFactRoutesAnswerAsTheirTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "fact-doors", "read", "write")
 	viaREST := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Door REST GmbH", "source": "manual"})
 	viaTool := createdRecord(t, d.e, "/v1/companies", AnyMap{"display_name": "Fact Door Tool GmbH", "source": "manual"})
@@ -111,6 +113,7 @@ type confirmedFact struct {
 
 // A room and a thread in it are made, listed and read alike on either door.
 func TestDealRoomRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "room-doors", "read", "write", "send")
 	deal := openDeal(t, d.e, apptest.DiscoverSeededPipeline(t, d.e), "Room renewal")
 

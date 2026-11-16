@@ -21,6 +21,7 @@ import (
 // Here rather than beside the other evidence cases because a pin needs the
 // floor this package arms.
 func TestPinningAMessageClearsTheStageEvidenceQuotingIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const quote = "The terms work for us, please send the order form."
 	pinned := ids.NewV7()

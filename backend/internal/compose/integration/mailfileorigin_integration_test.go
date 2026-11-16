@@ -32,6 +32,7 @@ func mailFromBuyer(t *testing.T, e *Env, contact ids.UUID, subject string) (mail
 }
 
 func TestAMailFileNamesTheMailItCameWith(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	contact := e.SeedContact(t, "Ada", &e.Rep1)
@@ -84,6 +85,7 @@ func TestAMailFileNamesTheMailItCameWith(t *testing.T) {
 }
 
 func TestAMailFileTheReaderMayNotReadNamesNoMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	contact := e.SeedContact(t, "Ada", &e.Rep1)

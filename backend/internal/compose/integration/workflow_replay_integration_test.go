@@ -73,6 +73,7 @@ type workflowRunTrace struct {
 }
 
 func TestWorkflowRunReplaysFromItsPersistedTrace(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedAllStarterAutomations(t, e)
 

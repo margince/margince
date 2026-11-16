@@ -53,6 +53,7 @@ func everyGrantAllScope(objects ...string) principal.Permissions {
 // arm answers this identically, so a target type enrolled later inherits the case
 // instead of waiting for the list to be extended.
 func TestNoStagedApprovalIsDecidableAgainstATargetThatIsNotThere(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 
@@ -106,6 +107,7 @@ func TestNoStagedApprovalIsDecidableAgainstATargetThatIsNotThere(t *testing.T) {
 // caller can produce would exercise the probe while claiming to cover the
 // workflow.
 func TestAStagedApprovalStopsBeingDecidableOnceItsTargetIsArchived(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	pipeline, open, _ := DealFixture(t, e)

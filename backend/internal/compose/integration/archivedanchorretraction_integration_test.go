@@ -51,6 +51,7 @@ var retractionAdmin = principal.Permissions{
 // deal is the moment somebody reaches to cut a buyer off — and the moment a
 // blanket "the anchor blocks" would take that control away.
 func TestArchivingADealFreezesItsRoomsInvitesAndNeverItsRevocations(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, retractionAdmin)
 	rooms := dealrooms.NewStore(e.DB())
@@ -114,6 +115,7 @@ func TestArchivingADealFreezesItsRoomsInvitesAndNeverItsRevocations(t *testing.T
 // A file on a retired deal must still be delistable, and must not be put back:
 // the two branches of one gate, on one archived anchor.
 func TestArchivingADealFreezesRelistingItsDocumentAndNeverDelisting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, retractionAdmin)
 	files, _ := attachmentStore(e)
@@ -157,6 +159,7 @@ func TestArchivingADealFreezesRelistingItsDocumentAndNeverDelisting(t *testing.T
 // is exactly the one somebody needs to take back, and none of it may be
 // approved or paid out any more.
 func TestArchivingADealFreezesACommissionApprovalAndNeverItsVoid(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
@@ -208,6 +211,7 @@ func TestArchivingADealFreezesACommissionApprovalAndNeverItsVoid(t *testing.T) {
 // retiring the record is precisely when somebody reaches to clear it. Before
 // this it could not be cleared at all: mayRevoke probed the live spelling.
 func TestAShareOnAnArchivedRecordCanStillBeRevoked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, retractionAdmin)
 	company := e.SeedCompany(t, "Northgate Holding", &e.Rep1)

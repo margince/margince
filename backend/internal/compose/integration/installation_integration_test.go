@@ -44,6 +44,7 @@ func assertPurposeClass(ctx context.Context, t *testing.T, e *apptest.AppEnv, ke
 }
 
 func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	pwFile := filepath.Join(t.TempDir(), "admin-password")
 	if err := os.WriteFile(pwFile, []byte("correct-horse-battery"), 0o600); err != nil {
@@ -182,6 +183,7 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 // every one of that workspace's ai_call rows UNPRICED with no operator
 // action able to explain why.
 func TestBootstrapSeedsTheAiModelRatePriceSheet(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	ctx := context.Background()
@@ -206,6 +208,7 @@ func TestBootstrapSeedsTheAiModelRatePriceSheet(t *testing.T) {
 // actually presents: /app/secrets carries no VOLUME, so a new container starts
 // without it.
 func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	pwFile := filepath.Join(t.TempDir(), "admin-password")
 	if err := os.WriteFile(pwFile, []byte("correct-horse-battery"), 0o600); err != nil {
@@ -238,6 +241,7 @@ func TestBootBindsWithoutReadingASpentBootstrapSecret(t *testing.T) {
 // bootstrap_admin whose secret cannot be read is an operator error, and it has
 // to surface as one rather than as a silently unbootstrapped installation.
 func TestFirstBootStillFailsLoudlyOnAnUnreadableSecret(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	cfg := deployconfig.Bootstrap{
 		Version:   1,
@@ -259,6 +263,7 @@ func TestFirstBootStillFailsLoudlyOnAnUnreadableSecret(t *testing.T) {
 }
 
 func TestSecondActiveWorkspaceTurnsTheSurfaceUnavailable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

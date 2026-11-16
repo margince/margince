@@ -46,6 +46,7 @@ func countDismissals(t *testing.T, e *apptest.AppEnv, contactID string) int {
 }
 
 func TestANudgeDismissalGoesFromSetAsideToStoppedAndBackToFollowing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Nudge journey", "journey@fable.test", "Admin")
 	contact := createContact(t, e, AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Gone Quiet", "source": "manual"})
@@ -83,6 +84,7 @@ func TestANudgeDismissalGoesFromSetAsideToStoppedAndBackToFollowing(t *testing.T
 }
 
 func TestAHiddenContactIsNotFoundThroughItsNudgePreference(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Nudge scope", "scope@fable.test", "Admin")
 	e.DescribeCompany(t)

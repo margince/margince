@@ -125,6 +125,7 @@ Klicken Sie hier, um an der Besprechung teilzunehmen <https://teams.microsoft.co
 `
 
 func TestASignatureAboveALongFooterLandsItsTitleAndBothNumbers(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := seedSigner(t, e, "Anna Weber", "anna.weber@beispiel.example", annaWebersMail)
 	brain := &signatureFieldsBrain{fields: []map[string]any{
@@ -164,6 +165,7 @@ func readSignatureState(t *testing.T, e *Env, contact ids.UUID) signatureReadSta
 }
 
 func TestARejectedReadIsAskedAgainUntilItsCapConsumesTheMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	bob := seedSigner(t, e, "Bob Contact", "bob@acme.example", "Sounds good.\n\nBest,\nBob Contact\nCTO\nAcme GmbH")
 	mail := e.WsScalar(t, `SELECT activity_id::text FROM activity_link WHERE contact_id = $1`, bob)
@@ -194,6 +196,7 @@ func TestARejectedReadIsAskedAgainUntilItsCapConsumesTheMail(t *testing.T) {
 }
 
 func TestAPassOfOnlyRejectedReadsQueuesNoContinuation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	signers := make([]ids.UUID, 0, 100)
 	for i := range 100 {
@@ -216,6 +219,7 @@ func TestAPassOfOnlyRejectedReadsQueuesNoContinuation(t *testing.T) {
 }
 
 func TestSomebodyElsesSignatureIsReadOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	bob := seedSigner(t, e, "Bob Contact", "bob@acme.example", "Forwarding this.\n\nBest,\nKim Vendor\nCEO, Vendor Ltd")
 	mail := e.WsScalar(t, `SELECT activity_id::text FROM activity_link WHERE contact_id = $1`, bob)
@@ -232,6 +236,7 @@ func TestSomebodyElsesSignatureIsReadOnce(t *testing.T) {
 }
 
 func TestAReopenedSignatureGetsANewRetryBudget(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	bob := seedSigner(t, e, "Bob Contact", "bob@acme.example", "Best,\nBob Contact\nCTO")
 	brain := &signatureFieldsBrain{fields: []map[string]any{signatureClaim("title", "Chief Technology Officer")}}

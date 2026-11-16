@@ -25,6 +25,7 @@ type orderedPipeline struct {
 }
 
 func TestStageReorderMovesTheLadderInOneWrite(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Stage Order", "stage-order@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)
@@ -74,6 +75,7 @@ func TestStageReorderMovesTheLadderInOneWrite(t *testing.T) {
 }
 
 func TestStageReorderRefusesAnOrderItCannotTrust(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Stage Order Guard", "stage-order-guard@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)
@@ -119,6 +121,7 @@ func TestStageReorderRefusesAnOrderItCannotTrust(t *testing.T) {
 // The ladder keeps its closing stages last and its version moving through
 // every write that reshapes it, not only through a reorder.
 func TestEveryLadderWriteKeepsItsShapeAndMovesItsVersion(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Ladder Shape", "ladder-shape@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)
@@ -176,6 +179,7 @@ func TestEveryLadderWriteKeepsItsShapeAndMovesItsVersion(t *testing.T) {
 }
 
 func TestPipelineReorderSetsTheCatalogOrder(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Pipeline Order", "pipeline-order@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)

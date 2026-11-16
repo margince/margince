@@ -21,6 +21,7 @@ import (
 // whatever the body sent. Only the profile differs, by design. It names
 // the host, and every other field is neutral.
 func TestAPausedPageAnswersExactlyAsAnUnknownSlug(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	paused := bookingSlug(t, e)
 	if status := e.Call(t, http.MethodPut, "/v1/scheduling/profile", map[string]any{

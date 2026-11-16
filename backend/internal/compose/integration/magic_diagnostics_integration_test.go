@@ -33,6 +33,7 @@ import (
 // The unplaceable count is every machine action in the installation that no arm
 // can place, not the reader's own, so it reaches only a diagnostics seat.
 func TestTheUnplaceableCountReachesOnlyADiagnosticsSeat(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := clocktest.Now(t).Add(-time.Hour)
 	seedUnplaceableMachineAction(t, e)
@@ -95,6 +96,7 @@ func seedUpkeepMachineAction(t *testing.T, e *Env) {
 }
 
 func TestInfrastructureUpdatesDoNotMakeAQuietReceiptIncomplete(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "bootstrap")
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {

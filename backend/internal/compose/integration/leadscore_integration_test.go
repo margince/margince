@@ -27,6 +27,7 @@ import (
 )
 
 func TestLeadScoreRecomputesFromLinkedActivities(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	engine := compose.NewWorkflowEngine(e.DB())
 	ctx := e.AsFullUser()

@@ -45,6 +45,7 @@ func served(ctx context.Context, t *testing.T, c *homecache.Cache, reader ids.UU
 }
 
 func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -67,6 +68,7 @@ func TestACachedHomeAnswerIsServedToItsReaderUntilTheFenceMoves(t *testing.T) {
 // A read that began before its reader's write and stores after it must not
 // pass as current. It stays marked behind the write.
 func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServedAsCurrent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -93,6 +95,7 @@ func TestAnAnswerComputedBeforeItsReadersWriteIsNeverServedAsCurrent(t *testing.
 
 // Expiry writes nothing, so it bounds the answer's life instead.
 func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -116,6 +119,7 @@ func TestAnAnswerLivesNoLongerThanTheNextGrantToExpire(t *testing.T) {
 // A snooze runs out without a write, so an answer that hid the snoozed item is
 // not served past the moment it comes back.
 func TestAnAnswerLivesNoLongerThanTheNextSnoozeToEnd(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -159,6 +163,7 @@ func startWalk(t *testing.T, e *Env, reader ids.UUID) ids.UUID {
 }
 
 func TestACachedFirstPageSaysWhenTheWalkItStartedHasEnded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -177,6 +182,7 @@ func TestACachedFirstPageSaysWhenTheWalkItStartedHasEnded(t *testing.T) {
 // A walk ends after four hours and a day answer is kept for the day. Back from
 // a longer break, the reader sees the kept day at once, paging without the walk.
 func TestAKeptDayOutlivesTheWalkItsFirstPageStarted(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -221,6 +227,7 @@ func TestAKeptDayOutlivesTheWalkItsFirstPageStarted(t *testing.T) {
 // Home may lag background work by its five minutes, so a machine's write ends
 // neither answer.
 func TestAMachineWriteLeavesTheCachedReceiptAndWorklist(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -237,6 +244,7 @@ func TestAMachineWriteLeavesTheCachedReceiptAndWorklist(t *testing.T) {
 }
 
 func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -265,6 +273,7 @@ func TestAnAnswerNearTheEndOfItsLifeIsServedAndReadAgainBehindIt(t *testing.T) {
 }
 
 func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -312,6 +321,7 @@ func TestAnAnswerPastItsLifeIsServedStaleUntilItsGraceEnds(t *testing.T) {
 }
 
 func TestAReceiptPastItsLifeIsReadFresh(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -336,6 +346,7 @@ func TestAReceiptPastItsLifeIsReadFresh(t *testing.T) {
 // A background refresh that began before a reader's miss must not replace the
 // newer answer that miss kept.
 func TestAnOlderAnswerNeverReplacesANewerOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -357,6 +368,7 @@ func TestAnOlderAnswerNeverReplacesANewerOne(t *testing.T) {
 // The cache only saves work. A kept answer this build cannot read, written by an
 // older one, is passed over for the fresh read, which is kept in its place.
 func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -383,6 +395,7 @@ func TestAnUnreadableKeptAnswerIsServedFreshAndReplaced(t *testing.T) {
 
 // /metrics counts each Home read Serve answered, so the hit rate is measured.
 func TestServeCountsItsHitsAndMissesOnMetrics(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -439,6 +452,7 @@ func serveToday(ctx context.Context, t *testing.T, c *homecache.Cache, reader id
 }
 
 func TestAReadersWriteLeavesTheKeptDayServedStaleAndReadsItAgainBehind(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -463,6 +477,7 @@ func TestAReadersWriteLeavesTheKeptDayServedStaleAndReadsItAgainBehind(t *testin
 }
 
 func TestAReceiptBehindAReadersWriteIsReadFresh(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -485,6 +500,7 @@ func TestAReceiptBehindAReadersWriteIsReadFresh(t *testing.T) {
 // narrows (a record moves to a colleague, a team membership ends) it is never
 // shown, even marked stale.
 func TestAStaleDayIsNeverServedAcrossAChangeInWhoMayReadWhat(t *testing.T) {
+	t.Parallel()
 	changes := map[string]func(*testing.T, *Env, ids.UUID){
 		"a record leaves the reader's reach": func(t *testing.T, e *Env, contact ids.UUID) {
 			e.WsExec(t, `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.Rep2, contact)
@@ -518,6 +534,7 @@ func TestAStaleDayIsNeverServedAcrossAChangeInWhoMayReadWhat(t *testing.T) {
 // request never makes, so no per-writer mark reaches their cache. The access
 // fence must end the kept day, fresh or marked behind a write.
 func TestAMemberChangeByAnotherUserNeverLeavesTheKeptDayServed(t *testing.T) {
+	t.Parallel()
 	changes := map[string]string{
 		"their role assignment is removed":    `DELETE FROM role_assignment WHERE user_id = $1`,
 		"a role's permissions are narrowed":   `UPDATE role SET permissions = '{}'::jsonb WHERE id IN (SELECT role_id FROM role_assignment WHERE user_id = $1)`,
@@ -555,6 +572,7 @@ func TestAMemberChangeByAnotherUserNeverLeavesTheKeptDayServed(t *testing.T) {
 // An answer under another day's key is never asked for again, and it holds
 // display text, so the reader's next kept answer removes it.
 func TestKeepingAnAnswerRemovesTheReadersAnswersThatCanNoLongerBeServed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	c := homecache.New(e.Pool)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)

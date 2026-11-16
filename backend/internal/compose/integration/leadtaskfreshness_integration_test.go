@@ -19,6 +19,7 @@ import (
 )
 
 func TestLeadAndAssignedTaskReadsKeepHistoricalAutomaticWorkOut(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
 	old := now.AddDate(-2, 0, 0)

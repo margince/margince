@@ -30,6 +30,7 @@ import (
 )
 
 func TestABoundedCallerIsToldTheAnswerIsBoundedAndNeverHowMuch(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 
@@ -145,6 +146,7 @@ func recordCount(t *testing.T, payload json.RawMessage) int {
 // that "nothing I can see" and "nothing exists" read differently. They get the
 // bounded rep's answer, and before this it carried no warning.
 func TestAnAdministratorIsToldWhenCapturePrivacyWithheldARow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	for _, name := range []string{"Withheld Alpha", "Withheld Beta"} {
@@ -175,6 +177,7 @@ func TestAnAdministratorIsToldWhenCapturePrivacyWithheldARow(t *testing.T) {
 // A warning raised because the arm applied would ride nearly every answer, and
 // say as little as one riding none.
 func TestAnAnswerNothingWithheldCarriesNoWarning(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	// Readable by the workspace, so capture privacy has nothing to take.

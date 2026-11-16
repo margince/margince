@@ -44,6 +44,7 @@ func sendOneProductOffer(ctx context.Context, t *testing.T, e *Env, dealID ids.U
 }
 
 func TestEachUserFacesCustomersAsTheirOwnEntity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.Deals.SetClock(func() time.Time { return lineTaxNoon })
 	e.WsExec(t, `INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"de"'::jsonb, now())`)

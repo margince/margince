@@ -26,6 +26,7 @@ import (
 )
 
 func TestInternalMailHasNoWithheldRowAndSharesOnlyOneMessageWithNamedColleagues(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	participant := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, AdminPerms)
@@ -160,6 +161,7 @@ func seedRestrictedInternalMail(participant context.Context, t *testing.T, e *En
 }
 
 func TestRetentionControllerCanPinInternalMailWithoutReadingIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	participant := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	id := seedRestrictedInternalMail(participant, t, e)

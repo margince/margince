@@ -82,6 +82,7 @@ func touch(t *testing.T, e *apptest.AppEnv, entityType, id string, n int) {
 }
 
 func TestTheStandardContactFieldsSelectTheirRecords(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	acme := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Acme Werke", "source": "manual"})
 	anna := createdID(t, e, "/v1/contacts", AnyMap{
@@ -145,6 +146,7 @@ func TestATextConditionIgnoresCapitalsSpacesAndAccents(t *testing.T) {
 }
 
 func TestTheStandardCompanyFieldsSelectTheirRecords(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	quiet := createdID(t, e, "/v1/companies", AnyMap{
 		"display_name": "Quiet Maschinenbau", "source": "manual",
@@ -167,6 +169,7 @@ func TestTheStandardCompanyFieldsSelectTheirRecords(t *testing.T) {
 }
 
 func TestTheStandardDealFieldsSelectTheirRecordsAndNeverMixCurrencies(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Deal Holder", "source": "manual"})
 	pipeline, stage, _ := companyRollupOpenStage(t, e)
@@ -198,6 +201,7 @@ func TestTheStandardDealFieldsSelectTheirRecordsAndNeverMixCurrencies(t *testing
 }
 
 func TestTheStandardLeadFieldsSelectTheirRecords(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	webinar := createdID(t, e, "/v1/leads", AnyMap{
 		"full_name": "Carla Webinar", "email": "carla@lead.example", "source": "webform",
@@ -234,6 +238,7 @@ type clauseWire struct {
 }
 
 func TestAQuietForFortyFiveDaysListHoldsTheQuietContactAndSaysWhy(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	quiet := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Quiet Contact", "source": "manual"})
 	busy := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Busy Contact", "source": "manual"})
@@ -274,6 +279,7 @@ func TestAQuietForFortyFiveDaysListHoldsTheQuietContactAndSaysWhy(t *testing.T) 
 }
 
 func TestATextClauseExplainsWithTheRecordsOwnValue(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	named := createdID(t, e, "/v1/contacts", AnyMap{
 		"full_name": "Explained Contact", "source": "manual",
@@ -304,6 +310,7 @@ func touchAt(t *testing.T, e *apptest.AppEnv, id string, at time.Time) {
 }
 
 func TestADayRunsFromOneMidnightToTheNext(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	// App pools use UTC even when the maintenance session uses another zone.
 	midnight := time.Date(2026, 3, 10, 0, 0, 0, 0, time.UTC)
@@ -326,6 +333,7 @@ func TestADayRunsFromOneMidnightToTheNext(t *testing.T) {
 }
 
 func TestAMoneyFieldTellsTheBuilderWhichCurrencyItCounts(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	var custom AnyMap

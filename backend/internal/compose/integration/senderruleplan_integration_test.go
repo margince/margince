@@ -57,6 +57,7 @@ func senderRulePlan(t *testing.T, tx pgx.Tx, e *Env, sql string, args ...any) se
 }
 
 func TestTheSenderRuleReadsByIndexOverUnrelatedRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Planned Sender", &e.Rep1)
 	// A seed of this size outlasts the request ceiling on a slow runner, so it

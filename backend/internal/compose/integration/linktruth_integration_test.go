@@ -52,6 +52,7 @@ func askForALink(t *testing.T, c *consentEnv) string {
 // consent link — frequently at a moment they were asleep, and always in the
 // direction that flatters the controller.
 func TestAScannerFetchingTheLinkIsNotAnOpening(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	token := askForALink(t, c)
 
@@ -72,6 +73,7 @@ func TestAScannerFetchingTheLinkIsNotAnOpening(t *testing.T) {
 // stopped writing opened_at altogether — which would lose the middle of the
 // chain rather than making it truthful.
 func TestSomebodyOpeningTheLinkIsRecordedAsOne(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	token := askForALink(t, c)
 
@@ -89,6 +91,7 @@ func TestSomebodyOpeningTheLinkIsRecordedAsOne(t *testing.T) {
 
 // Repeated scanner fetches do not add up to an opening.
 func TestRepeatedScannerFetchesNeverBecomeAnOpening(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	token := askForALink(t, c)
 

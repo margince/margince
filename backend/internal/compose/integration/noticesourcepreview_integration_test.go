@@ -34,6 +34,7 @@ type sourceReviewEnv struct {
 }
 
 func TestSourceEvidenceListsOnlyReadableRelevantRecordsAndRechecksAccess(t *testing.T) {
+	t.Parallel()
 	f := sourceReviewFixture(t)
 	p := &preflightEnv{AppEnv: f.AppEnv, user: apptest.SessionUserID(t, f.AppEnv), ws: apptest.InstallationWorkspaceUUID(context.Background(), t, f.Pool).String()}
 	colleague := *p
@@ -133,6 +134,7 @@ func (f *sourceReviewEnv) preview(t *testing.T, input AnyMap) crmcontracts.Notic
 }
 
 func TestTheSourcePreviewAndConfirmationUseTheSameAssessmentAcrossHTTPAndTools(t *testing.T) {
+	t.Parallel()
 	f := sourceReviewFixture(t)
 	var page consent.SourceEvidencePage
 	if status := f.Call(t, "GET", f.sourcePath(), nil, nil, &page); status != http.StatusOK {
@@ -185,6 +187,7 @@ func TestTheSourcePreviewAndConfirmationUseTheSameAssessmentAcrossHTTPAndTools(t
 }
 
 func TestSourceEvidencePagesKeepTheOriginalAndDoNotRepeatRecords(t *testing.T) {
+	t.Parallel()
 	f := sourceReviewFixture(t)
 	for range 21 {
 		if status := f.Call(t, "POST", "/v1/activities", AnyMap{
@@ -217,6 +220,7 @@ func TestSourceEvidencePagesKeepTheOriginalAndDoNotRepeatRecords(t *testing.T) {
 }
 
 func TestSourceEvidenceRejectsFutureAndUnrelatedRecordsAndUnknownOriginals(t *testing.T) {
+	t.Parallel()
 	f := sourceReviewFixture(t)
 	for _, variant := range []string{"future", "unrelated"} {
 		contact := f.contactID
@@ -271,6 +275,7 @@ func sourceCaseSnapshot(t *testing.T, f *sourceReviewEnv) (string, int, int) {
 }
 
 func TestASourcePreviewCannotConfirmChangedEvidenceOrAChangedAnswer(t *testing.T) {
+	t.Parallel()
 	for _, change := range []string{"answer", "note", "evidence", "assignment", "archived", "meeting assertion"} {
 		t.Run(change, func(t *testing.T) {
 			f := sourceReviewFixture(t)
@@ -316,6 +321,7 @@ func TestASourcePreviewCannotConfirmChangedEvidenceOrAChangedAnswer(t *testing.T
 }
 
 func TestASelectedSourceRecordsTheSameFaceToFaceMeetingAsTheSourceAnswer(t *testing.T) {
+	t.Parallel()
 	f := sourceReviewFixture(t)
 	var created time.Time
 	if err := f.Owner.QueryRow(context.Background(), `SELECT created_at FROM privacy_notice_case WHERE id = @id`, pgx.NamedArgs{"id": f.caseID}).Scan(&created); err != nil {

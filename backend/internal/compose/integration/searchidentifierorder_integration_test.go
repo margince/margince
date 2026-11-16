@@ -33,6 +33,7 @@ func identifierCompany(t *testing.T, e *Env, name, domain string, employee bool)
 }
 
 func TestAnAddressPrefixRanksItsLeadAndCompanyBeforeDomainFragments(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	for _, domain := range []string{"examplecorp.net", "exampleconsulting.net", "examplecommerce.net"} {
 		identifierCompany(t, e, domain, domain, true)
@@ -69,6 +70,7 @@ func TestAnAddressPrefixRanksItsLeadAndCompanyBeforeDomainFragments(t *testing.T
 }
 
 func TestDomainClosenessOrdersBothGroupedAndRankedPages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	identifierCompany(t, e, "Old long account", "exampleconsulting.net", false)
 	nearest := identifierCompany(t, e, "New close account", "example.test", false)
@@ -102,6 +104,7 @@ func TestDomainClosenessOrdersBothGroupedAndRankedPages(t *testing.T) {
 }
 
 func TestAMatchedAddressOutranksACloserUnrelatedDomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	identifierCompany(t, e, "Closer fragment", "exam.io", false)
 	target := identifierCompany(t, e, "Contact's employer", "exampleinternationalconsulting.com", false)
@@ -118,6 +121,7 @@ func TestAMatchedAddressOutranksACloserUnrelatedDomain(t *testing.T) {
 }
 
 func TestADomainFragmentDoesNotSeedEmployeesThroughTheNameIndex(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	identifierCompany(t, e, "Neutral account", "exampleconsulting.net", true)
 	store := search.NewStore(e.DB())
@@ -138,6 +142,7 @@ func TestADomainFragmentDoesNotSeedEmployeesThroughTheNameIndex(t *testing.T) {
 }
 
 func TestAnUnreadableSubjectCannotPromoteACompanyMatch(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	nearest := identifierCompany(t, e, "Close account", "exam.io", false)
 	associated := identifierCompany(t, e, "Hidden contact's company", "exampleinternationalconsulting.com", false)
@@ -162,6 +167,7 @@ func TestAnUnreadableSubjectCannotPromoteACompanyMatch(t *testing.T) {
 }
 
 func TestAPrivateContactsAddressDoesNotBoostItsCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	nearest := identifierCompany(t, e, "Close account", "exam.io", false)
 	identifierCompany(t, e, "Private contact's company", "exampleinternationalconsulting.com", false)
@@ -178,6 +184,7 @@ func TestAPrivateContactsAddressDoesNotBoostItsCompany(t *testing.T) {
 }
 
 func TestIdentifierTiersCarryEvidenceAcrossRankedPages(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	exact := seedContactWithEmail(e.Admin(), t, e, "Unrelated exact", "a_b%tag@example.com", nil)
 	prefix := seedContactWithEmail(e.Admin(), t, e, "Unrelated prefix", "a_b%tag@example.com.au", nil)
@@ -208,6 +215,7 @@ func TestIdentifierTiersCarryEvidenceAcrossRankedPages(t *testing.T) {
 }
 
 func TestOnlyInteractiveSearchUsesAddressCompanyAssociation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	target := identifierCompany(t, e, "Unrelated account", "exampleinternationalconsulting.com", false)
 	seedContactWithEmail(e.Admin(), t, e, "Lena", "lena@exampleinternationalconsulting.com", nil)
@@ -228,6 +236,7 @@ func TestOnlyInteractiveSearchUsesAddressCompanyAssociation(t *testing.T) {
 }
 
 func TestAnApostropheInACompanyNameStillSeedsItsEmployees(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := identifierCompany(t, e, "O'Reilly", "neutral-company.test", false)
 	member := ids.From[ids.ContactKind](seedContactWithEmail(e.Admin(), t, e, "Mira Voss", "mira@independent.test", nil))
@@ -245,6 +254,7 @@ func TestAnApostropheInACompanyNameStillSeedsItsEmployees(t *testing.T) {
 }
 
 func TestAMatchedAddressUsesItsStoredFoldedDomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	target := identifierCompany(t, e, "Independent account", "xn--bcher-kva.example", false)
 	if _, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Email: new("lena@bücher.example"), FullName: new("Lena"), Source: "manual"}); err != nil {

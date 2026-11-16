@@ -33,6 +33,10 @@ import (
 // refuses a copy while a session is open on it.
 const TemplateEnv = "MARGINCE_TEST_TEMPLATE"
 
+// InPlaceEnv set to 1 makes New and For answer the lane's database itself and
+// keep it. The bench targets seed a corpus there and read it after the run.
+const InPlaceEnv = "MARGINCE_TEST_IN_PLACE"
+
 // Owner and app DSNs of the lane's package database. A test's own database
 // takes their credentials and host, and only the database name changes.
 const (
@@ -115,6 +119,9 @@ func For(t testing.TB) Database {
 func create(t testing.TB) Database {
 	t.Helper()
 	sweepreach.InstallForTestDatabase()
+	if os.Getenv(InPlaceEnv) == "1" {
+		return inPlace(t)
+	}
 	db, err := copyTemplate(t.Context())
 	if err != nil {
 		t.Fatalf("testdb: %v", err)
@@ -124,6 +131,34 @@ func create(t testing.TB) Database {
 			t.Errorf("testdb: %v", err)
 		}
 	})
+	databasesMu.Lock()
+	current[t.Name()] = db
+	databasesMu.Unlock()
+	return db
+}
+
+// inPlace answers the lane's database itself, brought to head, and keeps it
+// after the test.
+func inPlace(t testing.TB) Database {
+	t.Helper()
+	db := Database{OwnerDSN: os.Getenv(ownerDSNEnv), AppDSN: os.Getenv(appDSNEnv)}
+	name, err := databaseName(db.OwnerDSN)
+	if err != nil {
+		t.Fatalf("testdb: %v", err)
+	}
+	db.Name = name
+	owner, err := pgx.Connect(t.Context(), db.OwnerDSN)
+	if err != nil {
+		t.Fatalf("testdb: connecting to %s: %v", name, err)
+	}
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("testdb: closing the owner connection: %v", err)
+		}
+	}()
+	if err := EnsureSchema(t.Context(), owner); err != nil {
+		t.Fatalf("testdb: %v", err)
+	}
 	databasesMu.Lock()
 	current[t.Name()] = db
 	databasesMu.Unlock()

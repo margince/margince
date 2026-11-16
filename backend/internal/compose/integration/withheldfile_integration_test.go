@@ -56,6 +56,7 @@ func withheldFileOnDealMail(t *testing.T, e *Env, store *activities.Store) (ids.
 }
 
 func TestAWithheldFileHasNothingToDownloadOrRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, _ := attachmentStore(e)
 	_, file := withheldFileOnDealMail(t, e, store)
@@ -74,6 +75,7 @@ func TestAWithheldFileHasNothingToDownloadOrRead(t *testing.T) {
 }
 
 func TestAWithheldFileStaysOutOfTheDealsFiles(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, _ := attachmentStore(e)
 	deal, file := withheldFileOnDealMail(t, e, store)
@@ -92,6 +94,7 @@ func TestAWithheldFileStaysOutOfTheDealsFiles(t *testing.T) {
 // A withheld file that reached a staged send parks it with the reason at the
 // carriage gate, rather than failing at transmit and retrying on nothing.
 func TestEnsureTransmittableParksAWithheldFile(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, blob := attachmentStore(e)
 	_, file := withheldFileOnDealMail(t, e, store)

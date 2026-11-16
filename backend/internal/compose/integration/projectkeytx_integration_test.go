@@ -23,7 +23,6 @@ package integration_test
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -38,13 +37,9 @@ import (
 )
 
 func TestTheSubjectKeyRungNeedsNoSecondConnection(t *testing.T) {
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
-	owner, err := pgx.Connect(context.Background(), ownerDSN)
+	t.Parallel()
+	db := testdb.New(t)
+	owner, err := pgx.Connect(context.Background(), db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,14 +48,11 @@ func TestTheSubjectKeyRungNeedsNoSecondConnection(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(context.Background(), owner); err != nil {
-		t.Fatal(err)
-	}
 	ws := ids.New[ids.WorkspaceKind]()
 	if _, err := owner.Exec(context.Background(), `INSERT INTO workspace (id) VALUES ($1)`, ws.UUID); err != nil {
 		t.Fatal(err)
 	}
-	cfg, err := pgxpool.ParseConfig(appDSN)
+	cfg, err := pgxpool.ParseConfig(db.AppDSN)
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}

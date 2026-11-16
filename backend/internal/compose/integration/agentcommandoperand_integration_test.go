@@ -36,6 +36,7 @@ import (
 // which TestAnOperandCommandOfAnUnseeableRecordStagesNothing (agentcommandoperand_test.go)
 // can only fake.
 func TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -98,6 +99,7 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing(t *testing.
 // named. A site read still waits on a colleague's passport, as the model picks
 // the address.
 func TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	companyID := createdID(t, e, "/v1/companies", AnyMap{

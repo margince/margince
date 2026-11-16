@@ -39,6 +39,7 @@ type meUser struct {
 }
 
 func TestMeServesTheZoneTheSeatWasStoredWith(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Zone E2E", "ada@example.com", "Ada Admin")
 
@@ -83,6 +84,7 @@ func TestMeServesTheZoneTheSeatWasStoredWith(t *testing.T) {
 // and fails on. Omitted says "ask the browser"; empty says "here is a zone"
 // and lies.
 func TestMeOmitsTheZoneRatherThanServingOneThatIsNotThere(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Zone E2E", "ada@example.com", "Ada Admin")
 

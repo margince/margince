@@ -21,6 +21,7 @@ func ownAct(t *testing.T, d *twoDoors, action string, args map[string]any) json.
 // Each own setting lands on the agent's user, as the user's own door reads it,
 // and its audit row names the agent.
 func TestAnAgentChangesItsOwnUsersSettingsAndIsNamedForIt(t *testing.T) {
+	t.Parallel()
 	const email = "agent-own@fable.test"
 	d := newTwoDoors(t, "agent-own", "read", "write")
 	user := memberID(t, d, email)
@@ -62,6 +63,7 @@ func TestAnAgentChangesItsOwnUsersSettingsAndIsNamedForIt(t *testing.T) {
 // What the product tells a user about their agent is the user's alone. So is how
 // they sign in: the seat lookup that opened for own settings must not open these.
 func TestAnAgentNeverDecidesWhatReachesItsUserNorTheirSignIn(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-own-limits", "read", "write", "send", "enrich")
 	for _, call := range []struct {
 		method, path string
@@ -82,6 +84,7 @@ func TestAnAgentNeverDecidesWhatReachesItsUserNorTheirSignIn(t *testing.T) {
 // The voice an agent sets up belongs to its user, who reads it on their own door.
 // Their words stay theirs: a colleague's agent finds nothing there.
 func TestAnAgentSetsUpItsOwnUsersVoice(t *testing.T) {
+	t.Parallel()
 	const adminEmail = "agent-voice@fable.test"
 	d := newTwoDoors(t, "agent-voice", "read", "write", "send")
 	profile := decodeVersioned(t, string(ownAct(t, d, "create_voice_profile", map[string]any{"request_body": AnyMap{"personality_md": "Short sentences."}})))
@@ -121,6 +124,7 @@ func TestAnAgentSetsUpItsOwnUsersVoice(t *testing.T) {
 // Marking a record seen spends the user's own since-last-visit, so it is the
 // action the tool says to ask about. It moves their marker and names the agent.
 func TestAnAgentMarkingACompanySeenMovesItsUsersMarker(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-view-ack", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Seen Co"})
 	d.tool(t, "change_attention", map[string]any{"action": "acknowledge_company_view", "id": company})

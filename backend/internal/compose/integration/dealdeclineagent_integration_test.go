@@ -27,6 +27,7 @@ import (
 // unrelated, the deal's own project link comes off, and the audit row names the
 // agent, its passport and its member. A revoked passport, or a member who has left, changes nothing.
 func TestAnAgentsDeclineTakesTheDealsProjectThroughBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-deal-decline", "read", "write")
 	d.e.DescribeCompany(t)
 	const email, password = "granter@agent-deal-decline.test", "agent-deal-decline-password"

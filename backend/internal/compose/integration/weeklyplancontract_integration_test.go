@@ -32,6 +32,7 @@ import (
 // obligation every mutation in this tree carries, and a plan's prose is a
 // mutation like any other.
 func TestRisksAndCapacityNoteAreAuditedAndEmitted(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	plan, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
@@ -78,6 +79,7 @@ func TestRisksAndCapacityNoteAreAuditedAndEmitted(t *testing.T) {
 // read; a plan that kept accepting prose would let a rep rewrite what their
 // lead already saw.
 func TestAClosedWeeksContractCannotBeRewritten(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: new("As planned"), SetCapacityNote: true, CapacityNote: nil}); err != nil {
@@ -99,6 +101,7 @@ func TestAClosedWeeksContractCannotBeRewritten(t *testing.T) {
 // calendar has not looked at next week; reporting "nothing booked" would tell a
 // rep their week is free on the strength of a missing integration.
 func TestAnAbsentCapacitySeamLeavesCapacityAbsentNotZero(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	// setupPlan builds the store WITHOUT WithCapacity, which is the state under
 	// test: no calendar reader composed.
@@ -137,6 +140,7 @@ func (s stubCapacity) ForWeek(_ context.Context, _ ids.UUID, weekStart time.Time
 // above: a rep whose next week is genuinely empty gets 0, and that 0 is a fact
 // about their calendar rather than about the installation.
 func TestAComposedCapacitySeamReportsEvenAnEmptyWeek(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	e.store = e.store.WithCapacity(stubCapacity{})
 	if _, err := e.store.StartWeek(e.rep1Ctx, planClock); err != nil {
@@ -158,6 +162,7 @@ func TestAComposedCapacitySeamReportsEvenAnEmptyWeek(t *testing.T) {
 // silently erase a capacity note somebody wrote — the two halves travel
 // together and each keeps its own state.
 func TestWritingOneHalfOfTheContractLeavesTheOtherAlone(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
 		SetRisks: true, Risks: new("Sponsor risk"),
@@ -183,6 +188,7 @@ func TestWritingOneHalfOfTheContractLeavesTheOtherAlone(t *testing.T) {
 // nothing to name; one who never wrote has said nothing. Both reach the
 // surface, so both must survive a round trip.
 func TestAClearedRiskIsTellableFromOneNeverWritten(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	if _, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{SetRisks: true, Risks: new("Something"), SetCapacityNote: true, CapacityNote: nil}); err != nil {
 		t.Fatal(err)
@@ -211,6 +217,7 @@ func TestAClearedRiskIsTellableFromOneNeverWritten(t *testing.T) {
 // readPlan knows would tell a client "no calendar composed" moments after a GET
 // told it otherwise.
 func TestASavedContractStillCarriesTheCountedCapacity(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	var priced time.Time
 	e.store = e.store.WithCapacity(stubCapacity{
@@ -242,6 +249,7 @@ func TestASavedContractStillCarriesTheCountedCapacity(t *testing.T) {
 // the column's CHECK counts characters, so a note in German or Vietnamese must
 // not hit a ceiling the same length in English clears.
 func TestProseIsBoundedInCharactersSoAccentsDoNotCostDouble(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	// 1500 accented characters — well inside 2000 — but 3000 BYTES.
 	long := strings.Repeat("é", 1500)
@@ -276,6 +284,7 @@ func deref(s *string) string {
 }
 
 func TestAContractSaveThatChangesNothingWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	saved, err := e.store.SetContract(e.rep1Ctx, planClock, weeklyplan.ContractEdit{
 		SetRisks: true, Risks: new("one contact out"),
@@ -315,6 +324,7 @@ func TestAContractSaveThatChangesNothingWritesNothing(t *testing.T) {
 }
 
 func TestClearingAnUnwrittenHalfIsNoChangeButClearingTextIs(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	owner, ctx := integration.OwnerConn(t), context.Background()
 	cleared := weeklyplan.ContractEdit{SetRisks: true, Risks: nil}

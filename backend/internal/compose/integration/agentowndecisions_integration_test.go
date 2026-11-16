@@ -17,6 +17,7 @@ import (
 // A sample the user filed or left out stays as they decided. An agent cannot
 // replace its text under the same reference or put back what they excluded.
 func TestAnAgentKeepsTheVoiceSamplesTheUserDecided(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-voice-decided", "read", "write")
 	var profile struct {
 		ID string `json:"id"`
@@ -69,6 +70,7 @@ func TestAnAgentKeepsTheVoiceSamplesTheUserDecided(t *testing.T) {
 // What a web form promises a visitor, and where it takes posts from, stays with
 // a user. Sending the value it already holds is no change. The audit keeps the wording.
 func TestAnAgentChangesNoFormConsentOrOrigin(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-form-consent", "read", "write")
 	site := []string{"https://site.example"}
 	var form struct {
@@ -113,6 +115,7 @@ func TestAnAgentChangesNoFormConsentOrOrigin(t *testing.T) {
 // An allowlist means the same in any order, so an agent resending it reordered
 // changes no promise and its other edit goes through.
 func TestAnAgentResendingAFormsOriginsInAnotherOrderIsNoChange(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-form-origins-order", "read", "write")
 	var form struct {
 		ID      string `json:"id"`
@@ -162,6 +165,7 @@ func automationKeyed(t *testing.T, d *twoDoors, key string) automationRow {
 
 // An agent cannot retune or remove an unreviewed starter. A user reviews it first.
 func TestAnAgentCannotQuietASeededRule(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-seeded-rule", "read", "write")
 	rule := automationKeyed(t, d, "stage_change_notify")
 	if rule.Status != "paused" {
@@ -194,6 +198,7 @@ func TestAnAgentCannotQuietASeededRule(t *testing.T) {
 
 // A rule runs with its owner's authority, so an agent changes no rule's owner.
 func TestAnAgentHandsNoRuleToAColleague(t *testing.T) {
+	t.Parallel()
 	const adminEmail = "agent-rule-owner@fable.test"
 	d := newTwoDoors(t, "agent-rule-owner", "read", "write", "send")
 	user := memberID(t, d, adminEmail)
@@ -231,6 +236,7 @@ func TestAnAgentHandsNoRuleToAColleague(t *testing.T) {
 // A recap rule composes each draft with a model, so enabling it spends AI budget
 // from then on. A passport without enrich cannot switch that on.
 func TestEnablingARuleThatSpendsAModelNeedsEnrich(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-rule-enrich", "read", "write")
 	rule := automationKeyed(t, d, "post_meeting_recap")
 	args := map[string]any{"action": "update_automation", "id": rule.ID, "if_version": rule.Version, "request_body": AnyMap{"status": "enabled"}}
@@ -251,6 +257,7 @@ func TestEnablingARuleThatSpendsAModelNeedsEnrich(t *testing.T) {
 
 // A permanent delete stays with a user, on either door.
 func TestAnAgentDeletesNoPartnerStageOrTranslation(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-no-delete", "read", "write", "send", "enrich")
 	placeholder := placeholderFor("id")
 	for _, path := range []string{"/v1/partner-stages/" + placeholder, "/v1/products/" + placeholder + "/translations/de"} {
@@ -266,6 +273,7 @@ func TestAnAgentDeletesNoPartnerStageOrTranslation(t *testing.T) {
 // "Set my time zone to Berlin" takes effect through an agent, and a later browser
 // guess leaves it. The row and the audit name the agent, until the user chooses.
 func TestATimeZoneAnAgentSetsHoldsAndNamesIt(t *testing.T) {
+	t.Parallel()
 	const email = "agent-zone@fable.test"
 	d := newTwoDoors(t, "agent-zone", "read", "write")
 	user := memberID(t, d, email)
@@ -310,6 +318,7 @@ func TestATimeZoneAnAgentSetsHoldsAndNamesIt(t *testing.T) {
 
 // Working hours carry a time zone too, and that door names the agent the same way.
 func TestATimeZoneSentWithWorkingHoursNamesTheAgent(t *testing.T) {
+	t.Parallel()
 	const email = "agent-hours-zone@fable.test"
 	d := newTwoDoors(t, "agent-hours-zone", "read", "write")
 	user := memberID(t, d, email)
@@ -327,6 +336,7 @@ func TestATimeZoneSentWithWorkingHoursNamesTheAgent(t *testing.T) {
 // A signal an agent resolves does not read as resolved by its user. The row names
 // the agent, as part of what the audit already says.
 func TestASignalAnAgentResolvesDoesNotNameTheUser(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-signal", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Signal Co"})
 	var signal struct {
@@ -361,6 +371,7 @@ func TestASignalAnAgentResolvesDoesNotNameTheUser(t *testing.T) {
 // A captured call holds what was sent to a model and what came back, which reach
 // past the user's row scope. An agent reads the call and not the payload.
 func TestAnAgentReadsAnAICallWithoutItsPayload(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-ai-call", "read", "write")
 	var call string
 	if err := d.e.Owner.QueryRow(t.Context(), `

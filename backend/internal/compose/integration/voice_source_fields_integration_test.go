@@ -25,6 +25,7 @@ func sampleBody(overrides AnyMap) AnyMap {
 }
 
 func TestSampleWeightAbsentDefaultsToOneAndExplicitZeroIsKept(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	base := "/v1/voice-profiles/" + createVoiceProfile(t, e).ID
@@ -40,6 +41,7 @@ func TestSampleWeightAbsentDefaultsToOneAndExplicitZeroIsKept(t *testing.T) {
 }
 
 func TestSampleLabelAndReferenceLimitsAreEnforced(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	base := "/v1/voice-profiles/" + createVoiceProfile(t, e).ID
@@ -70,6 +72,7 @@ func TestSampleLabelAndReferenceLimitsAreEnforced(t *testing.T) {
 }
 
 func TestSampleReferenceIsTrimmedSoPaddedAndBareShareOneKey(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	base := "/v1/voice-profiles/" + createVoiceProfile(t, e).ID

@@ -53,6 +53,7 @@ func setClientCheck(t *testing.T, e *apptest.AppEnv, on bool) {
 // The switch is read beside the other agent_client switches, on the admin's
 // client list. The settings answer every role reads stays free of it.
 func TestTheClientCheckSwitchIsOffByDefaultAndReadOnTheClientList(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -80,6 +81,7 @@ func TestTheClientCheckSwitchIsOffByDefaultAndReadOnTheClientList(t *testing.T) 
 // installation's other settings. A rep granted installation_settings update
 // moves a messenger switch and is still refused this one.
 func TestOnlyAgentClientUpdateMovesTheClientCheckSwitch(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	demoteToRep(t, e)
@@ -146,6 +148,7 @@ func modernCheck(t *testing.T, e *apptest.AppEnv, bearer map[string]string, extr
 // the switch is on. The gate is the one compose wires, read over /mcp, and the
 // form goes out through the signed in-chat question every tool shares.
 func TestTheClientCheckToolExistsOnlyForAnAdminWhileTheSwitchIsOn(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		return []compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
@@ -186,6 +189,7 @@ func TestTheClientCheckToolExistsOnlyForAnAdminWhileTheSwitchIsOn(t *testing.T) 
 // check_client is held to its schema here, not in the no-approval sweep. That
 // sweep's seat is not an admin, and its installation has the switch off.
 func TestEveryClientCheckAnswerKeepsItsAdvertisedSchema(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
 		return []compose.Option{
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),

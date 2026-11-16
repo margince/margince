@@ -106,6 +106,7 @@ func contactsLive(t *testing.T, e *apptest.AppEnv, items []bulkItemDTO) int {
 	return countOwned(t, e, `SELECT count(*) FROM contact WHERE id::text = ANY($1) AND archived_at IS NULL`, ids)
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsUndoABulkArchiveOnce(t *testing.T) {
 	e, doors := bulkUndoApp(t, "bulk-undo")
 	for _, door := range doors {
@@ -130,6 +131,7 @@ func TestBothDoorsUndoABulkArchiveOnce(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsNeedTheUndoPreviewsTokenAboveTen(t *testing.T) {
 	e, doors := bulkUndoApp(t, "bulk-undo-token")
 	colleague := seedColleague(t, e)
@@ -157,6 +159,7 @@ func TestBothDoorsNeedTheUndoPreviewsTokenAboveTen(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestTheStatusReadAnswersWhatABatchDidAndWhoUndidIt(t *testing.T) {
 	e, doors := bulkUndoApp(t, "bulk-status")
 	web := doors[0]

@@ -90,6 +90,7 @@ func (p *preflightEnv) auditActor(t *testing.T, entityType string, entityID ids.
 // re-read live at fire, so preserving the identity cannot widen what the message
 // may do.
 func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -158,6 +159,7 @@ func TestAnAgentScheduledSendFiresUnderTheAgentThatScheduledIt(t *testing.T) {
 // So the row records the agent and leaves the human NULL. The absence is the
 // honest record of an actor that named nobody, and the identity survives.
 func TestAnAgentWithNoHumanBehindItStillRecordsWhichAgent(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -237,6 +239,7 @@ func (p *preflightEnv) storedProvenance(t *testing.T, id ids.UUID) (actorID *str
 // which is what makes "may it still go" a question asked now rather than at
 // schedule time.
 func TestARevokedPassportHoldsTheMessageItWasScheduledUnder(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 

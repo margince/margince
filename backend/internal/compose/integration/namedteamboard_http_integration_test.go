@@ -32,6 +32,7 @@ func inviteOntoTeam(t *testing.T, e *apptest.AppEnv, email, team string) string 
 }
 
 func TestANamedTeamBoardListsItsInvitedSeatAndNotItsDeactivatedOne(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

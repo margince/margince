@@ -71,6 +71,7 @@ func storageKeyOf(t *testing.T, e *Env, documentID ids.UUID) string {
 
 // The blob goes with the row.
 func TestDeletingADocumentRemovesItsChunksItsVectorsAndItsBlob(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("embed: %v", err)
@@ -104,6 +105,7 @@ func TestDeletingADocumentRemovesItsChunksItsVectorsAndItsBlob(t *testing.T) {
 // the document is gone while the file it was made from is still there — with
 // nothing left pointing at it — is the worst available outcome.
 func TestDeletingWithNoObjectStoreConfiguredRefuses(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	storeless := knowledge.NewStore(ee.env.DB())
 
@@ -121,6 +123,7 @@ func TestDeletingWithNoObjectStoreConfiguredRefuses(t *testing.T) {
 }
 
 func TestADeletedDocumentsPassagesAreNeverRetrievedAgain(t *testing.T) {
+	t.Parallel()
 	ae := newAskEnv(t)
 	ae.embedder.vectors["how is a message filed"] = []float32{1, 0, 0, 0}
 	if _, passages := ae.ask(t, "how is a message filed"); len(passages) == 0 {
@@ -144,6 +147,7 @@ func TestADeletedDocumentsPassagesAreNeverRetrievedAgain(t *testing.T) {
 // Widening an audit image has silently changed authorization outcomes in this
 // tree before — if this test fails, argue with it rather than editing it.
 func TestTheDocumentAuditImageCarriesNoDocumentText(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	// The passage text is distinctive, so its presence anywhere in the trail is
 	// unambiguous rather than a substring coincidence.
@@ -186,6 +190,7 @@ func TestTheDocumentAuditImageCarriesNoDocumentText(t *testing.T) {
 
 // Deleting twice is absent, not a second tombstone.
 func TestDeletingADocumentTwiceIsNotFound(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if err := ee.store.DeleteDocument(ee.ctx, ee.doc); err != nil {
 		t.Fatalf("first delete: %v", err)
@@ -198,6 +203,7 @@ func TestDeletingADocumentTwiceIsNotFound(t *testing.T) {
 // A rep may not delete: the delete is hard and takes a third party's uploaded
 // prose with it, which is admin/ops authority.
 func TestARepMayNotDeleteADocument(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	rep := ee.env.As(ee.env.Rep1, nil, corpusRepPerms)
 

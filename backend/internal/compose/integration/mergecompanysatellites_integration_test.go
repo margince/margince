@@ -38,6 +38,7 @@ func seedMergePair(t *testing.T, e *Env, name string) (ids.CompanyID, ids.Compan
 // sidecars were stranded on the archived loser, where no read of the survivor
 // reaches them.
 func TestMergeCompany_enrichmentFollowsTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	src, tgt := seedMergePair(t, e, "Enrichment")
@@ -91,6 +92,7 @@ func TestMergeCompany_enrichmentFollowsTheSurvivor(t *testing.T) {
 // rows did was stay on a record no page returns, which reads to a finance user
 // as the contract having vanished with the duplicate.
 func TestMergeCompany_theMoneyFollowsTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	src, tgt := seedMergePair(t, e, "Ledger")
@@ -117,6 +119,7 @@ func TestMergeCompany_theMoneyFollowsTheSurvivor(t *testing.T) {
 // without the role would read two genuinely different responsibilities as one
 // and delete the source's.
 func TestMergeCompany_oneColleagueKeepsTwoRoles(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	src, tgt := seedMergePair(t, e, "Responsibility")
@@ -163,6 +166,7 @@ func TestMergeCompany_oneColleagueKeepsTwoRoles(t *testing.T) {
 // number VIES issued — the receipt that this installation asked, on that date,
 // about that number — and a re-check cannot reproduce a historical one.
 func TestMergeCompany_theVATReceiptIsNeverDestroyed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	src, tgt := seedMergePair(t, e, "VAT")
@@ -199,6 +203,7 @@ func TestMergeCompany_theVATReceiptIsNeverDestroyed(t *testing.T) {
 // the pair between the two merging companies is left alone rather than
 // rewritten into a self-pair the CHECK refuses.
 func TestMergeCompany_dedupePairsSurviveTheirOwnMerge(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	// Deliberately unalike names. Creating a company files a fuzzy candidate
@@ -257,6 +262,7 @@ func TestMergeCompany_dedupePairsSurviveTheirOwnMerge(t *testing.T) {
 // survivor with a blank address stayed blank beside a retired record holding a
 // full one.
 func TestMergeCompany_theAddressFills(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 

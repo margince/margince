@@ -58,6 +58,7 @@ func checkProjectAnchor(t *testing.T, got crmcontracts.Project, want projectAnch
 }
 
 func TestProjectAnchorMaskIsIndependentOfVisibleCompanyEdges(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name                                                                                string
 		private, partner, customer, removed, noCompany, noRelationships, readOnly, allScope bool
@@ -137,6 +138,7 @@ type listedCustomer struct {
 // A list row carries no company list. Its company_id and mask must still
 // match what a single read answers.
 func TestProjectListRowsNameOnlyAReadableFirstCustomer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	hidden := e.SeedCompany(t, "Private Customer", &e.Rep3)
 	open := e.SeedCompany(t, "Open Customer", nil)
@@ -215,6 +217,7 @@ func TestProjectListRowsNameOnlyAReadableFirstCustomer(t *testing.T) {
 // Ordering by company reads the same first customer company_id names, so a
 // withheld one sorts last instead of by a later customer's name.
 func TestProjectsSortByTheirReadableFirstCustomer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	hidden := e.SeedCompany(t, "Aaron Private", &e.Rep3)
 	zeta := e.SeedCompany(t, "Zeta Open", nil)
@@ -240,6 +243,7 @@ func TestProjectsSortByTheirReadableFirstCustomer(t *testing.T) {
 }
 
 func TestProjectMutationEchoesKeepTheHiddenAnchorMask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := e.SeedCompany(t, "Private Customer", &e.Rep3)
 	p := seedProject(e.Admin(), t, e, "Delivery", anchor, &e.Rep1)
@@ -277,6 +281,7 @@ func TestProjectMutationEchoesKeepTheHiddenAnchorMask(t *testing.T) {
 }
 
 func TestProjectCreateEchoWithoutEdgeGrantWithholdsTheCustomer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Visible Customer", nil)
 	creator := OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{

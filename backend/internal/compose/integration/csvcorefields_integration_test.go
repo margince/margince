@@ -56,6 +56,7 @@ func contactPhones(t *testing.T, e *apptest.AppEnv, id string) []string {
 }
 
 func TestAContactsPhoneAndLinkedInLandAndAReImportKeepsTheOthers(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "contact", "email,name,phone,linkedin\nmy@core.example,My,+49 30 1234567,https://www.linkedin.com/in/my-core\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone", "linkedin": "linkedin_url"})
@@ -78,6 +79,7 @@ func TestAContactsPhoneAndLinkedInLandAndAReImportKeepsTheOthers(t *testing.T) {
 }
 
 func TestAPhoneWithoutACountryCodeIsAProblemNotAFailedRun(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "contact", "email,name,phone\nno@cc.example,No,030 1234567\nok@cc.example,Ok,+49 30 1\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "contact", profile.SourceRef, map[string]string{"email": "email", "name": "full_name", "phone": "phone"})
@@ -89,6 +91,7 @@ func TestAPhoneWithoutACountryCodeIsAProblemNotAFailedRun(t *testing.T) {
 }
 
 func TestACompanyAndALeadCarryTheirLinkedInURL(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	companies, _ := importjobtest.UploadCSV(t, e, "company", "Name,LinkedIn\nVoltaq GmbH,https://www.linkedin.com/company/voltaq/about\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", companies.SourceRef, map[string]string{"Name": "display_name", "LinkedIn": "linkedin_url"})
@@ -113,6 +116,7 @@ func TestACompanyAndALeadCarryTheirLinkedInURL(t *testing.T) {
 }
 
 func TestACompanyWhoseLinkedInURLIsHeldIsSkippedInThePreviewAndTheCommit(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	var held struct {
 		ID string `json:"id"`

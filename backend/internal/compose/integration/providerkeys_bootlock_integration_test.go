@@ -87,6 +87,7 @@ func sealedEarlier(ctx context.Context, t *testing.T, e *apptest.AppEnv, vault k
 	return string(ref)
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnEnvProviderKeyWinsAndIsNeverCopiedIntoTheVault(t *testing.T) {
 	vault := keyvault.NewMemory()
 	e := apptest.SetupAppWithEnv(t, keyEnviron(), compose.WithKeyvault(vault))
@@ -129,6 +130,7 @@ func TestAnEnvProviderKeyWinsAndIsNeverCopiedIntoTheVault(t *testing.T) {
 // A key a boot source sets refuses every write over HTTP, before the value
 // sent is judged. It refuses a change and its own value, which would confirm a
 // guess of it. It refuses a bad credential, both fields, and a removal.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAProviderKeySetByEnvIsLockedAgainstAChange(t *testing.T) {
 	vault := keyvault.NewMemory()
 	e := apptest.SetupAppWithEnv(t, keyEnviron(), compose.WithKeyvault(vault))
@@ -166,6 +168,7 @@ func TestAProviderKeySetByEnvIsLockedAgainstAChange(t *testing.T) {
 
 // The boot key appears in no error, no log line, no API body and no overview:
 // only its name and origin do.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestASecretNeverAppearsInAnErrorALogOrTheOverview(t *testing.T) {
 	vault := keyvault.NewMemory()
 	e := apptest.SetupAppWithEnv(t, keyEnviron(), compose.WithKeyvault(vault))
@@ -225,6 +228,7 @@ func TestASecretNeverAppearsInAnErrorALogOrTheOverview(t *testing.T) {
 // StoredVal opens it. A rotation retires the replaced blob, and a removal
 // retires the last one.
 func TestASavedSecretIsSealedAndReadBack(t *testing.T) {
+	t.Parallel()
 	vault := keyvault.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(vault))
 	e.BootstrapWorkspace(t)
@@ -276,6 +280,7 @@ var frozenSecret = config.DefineStored(config.Spec[string]{
 // A save the transaction refuses retires the blob it sealed and leaves the
 // row naming the old one, which still opens.
 func TestARefusedSecretSaveRetiresItsBlobAndKeepsTheOld(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := keyvault.NewMemory()
 	cfg := compose.WithVault(configtest.StoredOver(t, e.Pool, []config.Any{frozenSecret}), vault, discard())

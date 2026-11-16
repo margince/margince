@@ -141,6 +141,7 @@ func liveEdgesOf(t *testing.T, e *apptest.AppEnv, contact string) []relationship
 // there was nothing to put back" — a real write reported as a no-op, which no
 // assertion about the edge alone would catch.
 func TestEndToEnd_anEdgeIsUnlinkedByReversingTheLineThatMadeIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
@@ -168,6 +169,7 @@ func TestEndToEnd_anEdgeIsUnlinkedByReversingTheLineThatMadeIt(t *testing.T) {
 // histories, so both must be able to act on it — and the anchor's rules apply
 // whichever page the contact was reading.
 func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
@@ -199,6 +201,7 @@ func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
 // goes on offering "Put back" on a link already put back, and the change and its
 // undo never collapse into one line.
 func TestEndToEnd_aLinkAlreadyPutBackSaysSoOnTheNextRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
@@ -219,6 +222,7 @@ func TestEndToEnd_aLinkAlreadyPutBackSaysSoOnTheNextRead(t *testing.T) {
 // an un-archive, which no write path here performs — so the refusal says so
 // rather than hiding behind a generic reason, and the trail is unchanged after it.
 func TestEndToEnd_reversingAnUnlinkRefusesByNameAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
@@ -257,6 +261,7 @@ func TestEndToEnd_reversingAnUnlinkRefusesByNameAndWritesNothing(t *testing.T) {
 // project must keep at least one company. A generic reverse reaching it could
 // archive the last company on a project its caller cannot write.
 func TestEndToEnd_reversingAProjectCompanyRefusesByNameAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var company struct {
@@ -300,6 +305,7 @@ func TestEndToEnd_reversingAProjectCompanyRefusesByNameAndWritesNothing(t *testi
 // Reversing a CHANGE to a link replays what the link held, onto the link — not
 // onto either record, which never carried the field at all.
 func TestEndToEnd_reversingAnEdgeChangeReplaysWhatTheLinkHeld(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
@@ -334,6 +340,7 @@ func TestEndToEnd_reversingAnEdgeChangeReplaysWhatTheLinkHeld(t *testing.T) {
 // starts bumping the anchor, the reasoning above stops being true and this is
 // what says so.
 func TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
@@ -364,6 +371,7 @@ func TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion(t *testing.T) {
 // forces that overtake on a channel; this one is the end-to-end shape over the
 // real route, including the two ends being different records.
 func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)
@@ -422,6 +430,7 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 // guard binds on one branch and not the other means two different things
 // depending on which row a contact pressed Undo on.
 func TestEndToEnd_reversingALinkFromAStaleRecordScreenIsRefusedAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	pair := seedEmploymentOverHTTP(t, e)

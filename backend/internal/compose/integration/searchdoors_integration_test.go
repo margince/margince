@@ -88,6 +88,7 @@ func seedSearchDoors(t *testing.T, d *twoDoors) searchDoorsSeed {
 const toolDefaultTypes = "types=contact,company,deal,lead,project"
 
 func TestSearchRouteAndSearchRecordsRankAlike(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-ranked-doors", "read")
 	seed := seedSearchDoors(t, d)
 	perType := 1
@@ -141,6 +142,7 @@ func TestSearchRouteAndSearchRecordsRankAlike(t *testing.T) {
 // type, the tool the five record types. An activity carrying the word is the
 // record that tells the two defaults apart.
 func TestTheRouteDefaultSearchesTheTimelineAndTheToolDefaultDoesNot(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-default-types", "read")
 	seedSearchDoors(t, d)
 	task := createdRecord(t, d.e, "/v1/activities", AnyMap{"kind": "task", "subject": "Zephyrwind follow-up"})
@@ -164,6 +166,7 @@ func TestTheRouteDefaultSearchesTheTimelineAndTheToolDefaultDoesNot(t *testing.T
 // A whole word resolves to the tool's top hit. A fragment search_records does
 // not find is refused.
 func TestARecordNameResolvesAsSearchRecordsFindsIt(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-record-name", "read")
 	seed := seedSearchDoors(t, d)
 
@@ -199,6 +202,7 @@ func TestARecordNameResolvesAsSearchRecordsFindsIt(t *testing.T) {
 
 // The employee found through its employer says where it works on the tool too.
 func TestSearchRecordsSaysWhereAnEmployeeWorks(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-works-at", "read")
 	seed := seedSearchDoors(t, d)
 	tool := decodedAs[toolSearchPage](t, d.tool(t, "search_records",
@@ -213,6 +217,7 @@ func TestSearchRecordsSaysWhereAnEmployeeWorks(t *testing.T) {
 
 // A grouped page takes no cursor, and both doors refuse it naming per_type.
 func TestBothDoorsRefuseAGroupedPageWithACursor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-refused-doors", "read")
 	var refused struct {
 		Details struct {
@@ -232,6 +237,7 @@ func TestBothDoorsRefuseAGroupedPageWithACursor(t *testing.T) {
 }
 
 func TestBothDoorsOfferTheSameNearMatchesWhenNothingMatches(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-near-doors", "read")
 	anna := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Anna Kowalczyk"})
 
@@ -267,6 +273,7 @@ func TestBothDoorsOfferTheSameNearMatchesWhenNothingMatches(t *testing.T) {
 }
 
 func TestBothSearchDoorsCarryTheSameIdentifierEvidence(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "identifier-search-doors", "read")
 	createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Unrelated exact", "emails": []AnyMap{{"email": "a_b@example.com", "is_primary": true}}})
 	createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Unrelated prefix", "emails": []AnyMap{{"email": "a_b@example.com.au", "is_primary": true}}})

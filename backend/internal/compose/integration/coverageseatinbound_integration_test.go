@@ -25,6 +25,7 @@ import (
 )
 
 func TestADealSeatCarriesWhenTheContactLastWroteAsADay(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
@@ -56,6 +57,7 @@ func TestADealSeatCarriesWhenTheContactLastWroteAsADay(t *testing.T) {
 // The status card, the assistant and the intro paths read CoverageFor and show
 // no seat dates. So it leaves them unread, and none of them pays for that read.
 func TestCoverageForLeavesTheSeatDatesToTheCoveragePage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)

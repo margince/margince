@@ -22,6 +22,7 @@ import (
 )
 
 func TestEveryCapturePurgeKeepsAMessagePinnedAfterSelection(t *testing.T) {
+	t.Parallel()
 	for _, withCheck := range []bool{false, true} {
 		t.Run(map[bool]string{false: "owner rule", true: "mailbox deletion"}[withCheck], func(t *testing.T) {
 			e := Setup(t)

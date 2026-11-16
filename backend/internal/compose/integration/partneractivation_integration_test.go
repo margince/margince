@@ -49,6 +49,7 @@ func winAndActivate(t *testing.T, e *Env, fx accrualFixture) func() error {
 }
 
 func TestASourcedWinActivatesItsPartnerOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	partnerOnReady(t, e, fx, "sourced")
@@ -81,6 +82,7 @@ func TestASourcedWinActivatesItsPartnerOnce(t *testing.T) {
 }
 
 func TestAnInfluencedWinNeverActivatesItsPartner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	partnerOnReady(t, e, fx, "influenced")

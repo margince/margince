@@ -25,6 +25,7 @@ import (
 )
 
 func TestOnlyADeclaredImporterReachesTheImportBirth(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, _, won := DealFixture(t, e)
 	closed := time.Date(2025, 6, 30, 0, 0, 0, 0, time.UTC)
@@ -47,6 +48,7 @@ func TestOnlyADeclaredImporterReachesTheImportBirth(t *testing.T) {
 }
 
 func TestTheDealArchiveReAsksUntouchedInsideItsTransaction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)

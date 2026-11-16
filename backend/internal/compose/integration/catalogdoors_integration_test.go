@@ -16,6 +16,7 @@ import (
 // refuses a product with no price on both doors. A product the tools write is
 // the product the route then reads.
 func TestAPassportKeepsTheCatalogThroughTheRecordTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "catalog-doors", "read", "write")
 
 	unpriced := map[string]any{"name": "Free by accident", "currency": "EUR"}

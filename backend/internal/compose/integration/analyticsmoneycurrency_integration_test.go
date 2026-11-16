@@ -73,6 +73,7 @@ func askMoney(t *testing.T, d *twoDoors, query map[string]any) moneyAnswer {
 }
 
 func TestANativeMoneyAggregateAcrossCurrenciesIsRefusedOnBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-currency-refused", "read")
 	seedMixedCurrencyPipeline(t, d)
 
@@ -115,6 +116,7 @@ func TestANativeMoneyAggregateAcrossCurrenciesIsRefusedOnBothDoors(t *testing.T)
 }
 
 func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-currency-split", "read")
 	seedMixedCurrencyPipeline(t, d)
 	sum := []any{map[string]any{"fn": "sum", "field": "amount_minor", "as": "total"}}
@@ -141,6 +143,7 @@ func TestEachCurrencyIsSummedInItsOwnMinorUnits(t *testing.T) {
 
 // Every money population adds the deals that convert, as the reports do.
 func TestTheBaseMeasureAddsTheDealsThatConvertAndNamesWhatItLeavesOut(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-currency-base", "read")
 	seedMixedCurrencyPipeline(t, d)
 	// 5×100000 EUR + 5×(10000 USD cents × 0.5) + 5×(1000 yen × 0.006 × 100 cents).
@@ -198,6 +201,7 @@ func TestTheBaseMeasureAddsTheDealsThatConvertAndNamesWhatItLeavesOut(t *testing
 }
 
 func TestASumNoDealConvertsIntoStaysBlankAndSaysWhy(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-currency-none", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	for range dealsPerCurrency {
@@ -234,6 +238,7 @@ func TestASumNoDealConvertsIntoStaysBlankAndSaysWhy(t *testing.T) {
 
 // Each group states its own gap: one leaves out deals with no rate, the other deals with no value.
 func TestEachGroupOfASumStatesItsOwnGapOnBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "money-group-gaps", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	noRate := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "No rate Ltd", "source": "manual"})

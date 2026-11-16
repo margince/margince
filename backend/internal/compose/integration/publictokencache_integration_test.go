@@ -148,6 +148,7 @@ func redactToken(path string) string {
 
 // The preference edge, across every state its token can be in.
 func TestEveryPreferenceAnswerIsUncacheable(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))
 	live, manage := sendAndAssertUnsubscribeLink(t, c)
@@ -211,6 +212,7 @@ func TestEveryPreferenceAnswerIsUncacheable(t *testing.T) {
 // Its GET discloses the contact's stored record rather than a list of switches,
 // so a cached answer here is a larger disclosure than on the preference edge.
 func TestEveryConfirmAnswerIsUncacheable(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/confirm-request",
@@ -270,6 +272,7 @@ func TestEveryConfirmAnswerIsUncacheable(t *testing.T) {
 // the wrapper back under and this fails while every hand-built unit case in
 // compose/credentialpathcache_test.go still passes.
 func TestANotBootstrappedInstallationAnswersUncacheable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t)
 	// No BootstrapWorkspaceSession: the installation has no active
 	// company, which is what makes the session middleware answer first.
@@ -297,6 +300,7 @@ func TestANotBootstrappedInstallationAnswersUncacheable(t *testing.T) {
 // cheap, repeated, and identical. It is also the one a reviewer would not think
 // to check, which is exactly why it is here.
 func TestARateLimitedAnswerIsUncacheable(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	for _, edge := range []struct{ name, path string }{
@@ -353,6 +357,7 @@ func freshExpiredConfirmToken(t *testing.T, c *consentEnv) string {
 }
 
 func TestMeetingCapabilityRefusalsAreUncacheable(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	driven := assertNoStore(t, c.AppEnv, []tokenCase{
 		{"unknown management token", "GET", "/v1/public/meeting/unknown", nil},

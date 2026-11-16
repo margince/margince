@@ -15,6 +15,7 @@ import (
 // refuse it on create, and on a patch that moves either date against the one
 // stored. The refusal names the date the caller sent.
 func TestATargetEndBeforeTheStartIsRefusedOnEveryDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "project-date-order", "read", "write")
 	company := anIDIn(t, d.restStatus(t, "POST", "/v1/companies",
 		map[string]any{"display_name": "Order GmbH", "source": "manual"}, http.StatusCreated))

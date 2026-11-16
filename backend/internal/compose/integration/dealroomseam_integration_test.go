@@ -89,6 +89,7 @@ func listsOnly(listed []ids.UUID, want ids.UUID) bool {
 // An agent opens a room, speaks in it and is answered. Every step reads back
 // on the seam as the seller's routes would show it.
 func TestAnAgentOpensARoomAndHoldsItsConversationOnTheSeam(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dealID := apptest.CreateOpenDeal(t, e, apptest.DiscoverSeededPipeline(t, e))
@@ -161,6 +162,7 @@ func TestAnAgentOpensARoomAndHoldsItsConversationOnTheSeam(t *testing.T) {
 // A room's documents list and read on the seam, and a thread opened on one
 // is what the document_id filter narrows the room's threads to.
 func TestARoomsDocumentsAndTheirThreadsReadOnTheSeam(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)

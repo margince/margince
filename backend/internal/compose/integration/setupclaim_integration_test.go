@@ -80,6 +80,7 @@ func claimBody(token string) string {
 }
 
 func TestSetupStatusIsReachableWithNoCompany(t *testing.T) {
+	t.Parallel()
 	srv, _ := unprovisionedServer(t)
 
 	// Every /v1 route answers 503 in this state. The claim surface must not,
@@ -104,6 +105,7 @@ func TestSetupStatusIsReachableWithNoCompany(t *testing.T) {
 }
 
 func TestAClaimOverHTTPProvisionsTheInstallation(t *testing.T) {
+	t.Parallel()
 	srv, token := unprovisionedServer(t)
 
 	resp, err := srv.Client().Post(srv.URL+"/setup/claim", "application/json", strings.NewReader(claimBody(token)))
@@ -146,6 +148,7 @@ func TestAClaimOverHTTPProvisionsTheInstallation(t *testing.T) {
 }
 
 func TestAClaimWithTheWrongTokenIsUnauthorized(t *testing.T) {
+	t.Parallel()
 	srv, _ := unprovisionedServer(t)
 
 	if got := claimStatus(t, srv, claimBody("not-the-token")); got != http.StatusUnauthorized {
@@ -164,6 +167,7 @@ func TestAClaimWithTheWrongTokenIsUnauthorized(t *testing.T) {
 // token is the credential, so nothing about the body may be disclosed before it
 // matches.
 func TestAWrongTokenIsRefusedBeforeTheBodyIsJudged(t *testing.T) {
+	t.Parallel()
 	srv, token := unprovisionedServer(t)
 
 	// A body that would fail validation twice over, presented with a token that
@@ -181,6 +185,7 @@ func TestAWrongTokenIsRefusedBeforeTheBodyIsJudged(t *testing.T) {
 }
 
 func TestAClaimWithoutABasisIsRefused(t *testing.T) {
+	t.Parallel()
 	srv, token := unprovisionedServer(t)
 
 	// The old client sent a hardcoded currency and no language at all. Both are
@@ -206,6 +211,7 @@ func TestAClaimWithoutABasisIsRefused(t *testing.T) {
 // The claim's answer is what the installation is measured in from then on —
 // not the defaults, and not what the browser guessed.
 func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
+	t.Parallel()
 	srv, token, owner := unprovisionedServerWithOwner(t)
 
 	body := `{"setup_token":"` + token + `","company_name":"Zurich Co","timezone":"Europe/Zurich",` +
@@ -231,6 +237,7 @@ func TestAClaimedInstallationKeepsTheBasisItWasGiven(t *testing.T) {
 }
 
 func TestAClaimWithAWeakPasswordIsRefusedAsValidation(t *testing.T) {
+	t.Parallel()
 	srv, token := unprovisionedServer(t)
 
 	body := `{"setup_token":"` + token + `","company_name":"Weak Co","timezone":"Europe/Berlin",` +
@@ -247,6 +254,7 @@ func TestAClaimWithAWeakPasswordIsRefusedAsValidation(t *testing.T) {
 }
 
 func TestAMalformedClaimBodyIsRefusedWithoutTouchingTheToken(t *testing.T) {
+	t.Parallel()
 	srv, token := unprovisionedServer(t)
 
 	if got := claimStatus(t, srv, `{"setup_token":`); got != http.StatusUnprocessableEntity {
@@ -265,6 +273,7 @@ func TestAMalformedClaimBodyIsRefusedWithoutTouchingTheToken(t *testing.T) {
 // TestAnUnprovisionedBootMintsAndAnnouncesTheToken covers the boot half: an
 // empty database with no configured bootstrap_admin must not fail to start, and
 // must leave the operator a credential they can actually find.
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
@@ -355,6 +364,7 @@ func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
 // The logged value is proven to BE the credential by claiming with it, not by
 // matching the attribute key. A test that greps for "setup_token" passes against
 // a line that logs a truncated value, a placeholder, or the hash.
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T) {
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
@@ -416,6 +426,7 @@ func loggedAttr(t *testing.T, records, key string) string {
 // The claim's jurisdiction is stored, and status offers the compiled-in packs
 // while the installation is claimable.
 func TestAClaimStoresTheChosenJurisdiction(t *testing.T) {
+	t.Parallel()
 	srv, token, owner := unprovisionedServerWithOwner(t)
 	status, err := srv.Client().Get(srv.URL + "/setup/status")
 	if err != nil {

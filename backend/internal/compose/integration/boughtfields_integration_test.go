@@ -134,6 +134,7 @@ func phoneRowOf(t *testing.T, e *Env, subject ids.UUID) ids.UUID {
 // TestTheContactReadMarksWhatAPurchaseStillHolds: every value the purchase
 // filled is listed, and each drops out once somebody replaces it.
 func TestTheContactReadMarksWhatAPurchaseStillHolds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject, store := boughtSubject(t, e)
 	boughtPhone := phoneRowOf(t, e, subject)
@@ -175,6 +176,7 @@ func TestTheContactReadMarksWhatAPurchaseStillHolds(t *testing.T) {
 // TestTheMarksAndTheRevertAgree: whatever the page marks, the revert removes,
 // except an employment another provider also supports — bought, and kept.
 func TestTheMarksAndTheRevertAgree(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject, store := boughtSubject(t, e)
 	filledEdge := employmentMark(t, boughtTargets(e.Admin(), t, store, subject))
@@ -242,6 +244,7 @@ func archivedEdge(t *testing.T, e *Env, edge string) bool {
 // TestABoughtEmployerTheReaderCannotSeeIsNotListed: an edge discloses its
 // company, so a seat without the company grant gets no entry for it.
 func TestABoughtEmployerTheReaderCannotSeeIsNotListed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject, store := boughtSubject(t, e)
 	objects := maps.Clone(AdminPerms.Objects)
@@ -261,6 +264,7 @@ func TestABoughtEmployerTheReaderCannotSeeIsNotListed(t *testing.T) {
 // TestDeletingBoughtDataUnmarksWhatItClearedAndKeepsWhatItCouldNot, then the
 // erasure removes what is left.
 func TestDeletingBoughtDataUnmarksWhatItClearedAndKeepsWhatItCouldNot(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	cleared, store := boughtSubject(t, e)
 	unreachable := ids.NewV7()
@@ -295,6 +299,7 @@ func TestDeletingBoughtDataUnmarksWhatItClearedAndKeepsWhatItCouldNot(t *testing
 // employer held the current flag, and one other employment is current. After
 // the revert the other one holds the flag, and both edges have an audit row.
 func TestRevertingABoughtCurrentEmployerPromotesTheOtherAndRecordsBoth(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject, store := boughtSubject(t, e)
 	bought := employmentMark(t, boughtTargets(e.Admin(), t, store, subject))
@@ -352,6 +357,7 @@ func TestRevertingABoughtCurrentEmployerPromotesTheOtherAndRecordsBoth(t *testin
 // TestRevertingTwoBoughtCurrentEmployersPromotesTheOneTypedIn: whichever of the
 // two bought edges the revert retires first, the typed one ends current.
 func TestRevertingTwoBoughtCurrentEmployersPromotesTheOneTypedIn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	subject, store := boughtSubject(t, e)
 	if _, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{

@@ -72,6 +72,7 @@ var licenseOnlyPerms = principal.Permissions{
 }
 
 func TestSeatUsageAdmitsTheCapacityGrantAndRefusesAReader(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := identity.NewSeatUsage(e.DB())
 
@@ -101,6 +102,7 @@ func TestSeatUsageAdmitsTheCapacityGrantAndRefusesAReader(t *testing.T) {
 // point of splitting rather than widening: a reader who may see how full the
 // installation is still may not see what it pays.
 func TestSeatUsageDoesNotAdmitTheEntitlement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	management := e.As(e.Rep1, []ids.UUID{e.Team1}, seatUsageOnlyPerms)
 
@@ -115,6 +117,7 @@ func TestSeatUsageDoesNotAdmitTheEntitlement(t *testing.T) {
 // this is what fails, and it fails on the number rather than on the shape — the
 // drift a second query causes is silent everywhere else.
 func TestBothDoorsReportOneMeter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := identity.NewSeatUsage(e.DB())
 
@@ -135,6 +138,7 @@ func TestBothDoorsReportOneMeter(t *testing.T) {
 // not the route: a handler wired to the wrong store, or not wired at all, is
 // invisible to every case above it.
 func TestTheSeatUsageEndpointAnswersItsHolder(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

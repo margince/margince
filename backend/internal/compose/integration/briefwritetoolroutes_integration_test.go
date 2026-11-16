@@ -47,6 +47,7 @@ type briefItemRef struct {
 // A finding written onto a brief item over either door reads back the same: the
 // same members appear on the item, with the same text.
 func TestAnnotateBriefLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "brief-write-doors", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	for _, name := range []string{"Brief deal one", "Brief deal two", "Brief deal three"} {

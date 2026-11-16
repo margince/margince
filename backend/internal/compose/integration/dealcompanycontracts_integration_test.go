@@ -88,6 +88,7 @@ func (f companyMoveFixture) dealStillNames(t *testing.T, deal ids.DealID, want *
 // A legacy mismatch follows the contract's own company rather than widening
 // its audience through another company's deal.
 func TestALegacyCrossCompanyContractFollowsItsOwnCompanyScope(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	e := f.e
 	acme := e.SeedCompany(t, "Acme private", &e.Rep1)
@@ -121,6 +122,7 @@ func TestALegacyCrossCompanyContractFollowsItsOwnCompanyScope(t *testing.T) {
 // each before writing. One deal was filed for Acme and corrected to Contoso.
 // The other named no company when Acme's contract was filed.
 func TestMovingADealsCompanyIsRefusedWhileItsContractsNameAnother(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	for name, born := range map[string]*ids.CompanyID{
 		"filed for Acme, moved to Contoso":    &f.acme,
@@ -150,6 +152,7 @@ func TestMovingADealsCompanyIsRefusedWhileItsContractsNameAnother(t *testing.T) 
 // The agent tools write deals through the compose provider; the same move is
 // refused there, as the same typed fault.
 func TestTheAgentToolSurfaceRefusesTheSameCompanyMove(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	deal := f.dealFor(t, &f.acme, nil)
 	f.acmeContractOn(t, deal, "MSA-2026")
@@ -167,6 +170,7 @@ func TestTheAgentToolSurfaceRefusesTheSameCompanyMove(t *testing.T) {
 // The refusal tells the user to detach the contract or file it against a deal
 // of the right company; either one clears it.
 func TestADetachedOrRefiledContractNoLongerBlocksTheMove(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	admin := f.e.Admin()
 
@@ -198,6 +202,7 @@ func TestADetachedOrRefiledContractNoLongerBlocksTheMove(t *testing.T) {
 // Moves the rule does not speak to stay allowed: they show no company's
 // contracts to another company's readers.
 func TestTheCompanyMovesThatShowNoContractToAnotherCompanyStayAllowed(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	admin := f.e.Admin()
 
@@ -235,6 +240,7 @@ func TestTheCompanyMovesThatShowNoContractToAnotherCompanyStayAllowed(t *testing
 
 // An archived contract still reads through its deal, so it blocks too.
 func TestAnArchivedContractStillBlocksTheMove(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	deal := f.dealFor(t, &f.acme, nil)
 	contract := f.acmeContractOn(t, deal, "MSA-5")
@@ -249,6 +255,7 @@ func TestAnArchivedContractStillBlocksTheMove(t *testing.T) {
 // A company merge moves the deal and its contracts in one transaction, so it
 // never splits them and is not refused.
 func TestACompanyMergeCarriesTheDealAndItsContractsTogether(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	deal := f.dealFor(t, &f.acme, nil)
 	contract := f.acmeContractOn(t, deal, "MSA-6")
@@ -266,6 +273,7 @@ func TestACompanyMergeCarriesTheDealAndItsContractsTogether(t *testing.T) {
 // before. A role without contract read learns how many contracts block, not
 // what they are called.
 func TestTheRefusalKeepsTheDealGatesAndTheContractReadGrant(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	e := f.e
 	f.acme = ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme of Rep1", &e.Rep1))
@@ -294,6 +302,7 @@ func TestTheRefusalKeepsTheDealGatesAndTheContractReadGrant(t *testing.T) {
 // The filing check holds from the contract's side too: a contract cannot be
 // re-pointed at a deal of another company.
 func TestAContractCannotBeRepointedAtADealOfAnotherCompany(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	acmeDeal := f.dealFor(t, &f.acme, nil)
 	contract := f.acmeContractOn(t, acmeDeal, "MSA-8")
@@ -312,6 +321,7 @@ func TestAContractCannotBeRepointedAtADealOfAnotherCompany(t *testing.T) {
 }
 
 func TestACompanyMergeRefusesALegacyThirdCompanyContract(t *testing.T) {
+	t.Parallel()
 	f := newCompanyMoveFixture(t)
 	deal := f.dealFor(t, &f.acme, nil)
 	contract := f.acmeContractOn(t, deal, "Legacy MSA")

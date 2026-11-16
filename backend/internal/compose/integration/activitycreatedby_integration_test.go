@@ -22,6 +22,7 @@ import (
 )
 
 func TestEveryReadOfAnAgentLoggedNoteNamesTheColleagueItWorkedFor(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	link := s.contactAt(t, "Anna Weber", "")
 	note := s.agentNote(t, link)
@@ -61,6 +62,7 @@ func TestEveryReadOfAnAgentLoggedNoteNamesTheColleagueItWorkedFor(t *testing.T) 
 // Whose agent wrote a private note, and through which tool, is content: a
 // reader outside the note's audience gets the withheld row and no creator.
 func TestAWithheldAgentNoteNamesNoCreator(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	link := s.contactAt(t, "Anna Weber", "")
 	note := s.agentNote(t, link)

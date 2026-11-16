@@ -16,6 +16,7 @@ import (
 // contact links to the other file's company by its ref. read_import answers the
 // finished run with both parts and their counts.
 func TestAnAgentImportsTwoLinkedFilesAsOneRun(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "import-files-tool", nil, "read", "write")
 	var preview struct {
 		Run struct {

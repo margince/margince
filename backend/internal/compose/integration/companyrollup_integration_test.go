@@ -189,6 +189,7 @@ func fixedClock(instant time.Time) func() time.Time {
 // aggregated_account_count), a NULL-amount deal contributes 0, and a
 // non-base-currency open deal converts at the stored as-of rate.
 func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", nil, nil)
@@ -271,6 +272,7 @@ func TestCompanyRollupReconcilesTreeToSelves(t *testing.T) {
 // is neither summed nor separately disclosed), and a live record_grant
 // flips the child and its readable subtree back in on the next call.
 func TestCompanyRollupRestrictedNodeDisclosedAndGrantRestores(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", &e.Rep1, nil)
@@ -324,6 +326,7 @@ func TestCompanyRollupRestrictedNodeDisclosedAndGrantRestores(t *testing.T) {
 // money already sitting in that stage (matching the forecast report's
 // stage join, which carries no archived_at filter either).
 func TestCompanyRollupWeightedPipelineSurvivesStageArchival(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", nil, nil)
@@ -343,6 +346,7 @@ func TestCompanyRollupWeightedPipelineSurvivesStageArchival(t *testing.T) {
 // currency with no stored rate to base fails the WHOLE read with the
 // typed error — never a partial sum, never a silent rate of 1.
 func TestCompanyRollupFXRateUnavailableFailsWholeRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", nil, nil)
@@ -372,6 +376,7 @@ func TestCompanyRollupFXRateUnavailableFailsWholeRead(t *testing.T) {
 // out-of-window) quarter — pinning removes the wall-clock dependency
 // entirely rather than merely making it a rare flake.
 func TestCompanyRollupClosedWonQuarterWindow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", nil, nil)
@@ -398,6 +403,7 @@ func TestCompanyRollupClosedWonQuarterWindow(t *testing.T) {
 // root and an out-of-scope root both answer 404, indistinguishable by
 // design; an out-of-vocabulary scope is refused, not defaulted.
 func TestCompanyRollupRootGates(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	foreign := seedRollupCompany(t, e, "Foreign Company", &e.Rep3, nil)
 	e.MakeCapturePrivate(t, "company", foreign, e.Rep3)
@@ -466,6 +472,7 @@ func TestCompanyRollupRootGates(t *testing.T) {
 // figures without consulting child readability at all — unreadable
 // children neither block the read nor appear as restricted.
 func TestCompanyRollupSelfScopeSkipsPruning(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	root := seedRollupCompany(t, e, "Root Co", &e.Rep1, nil)
@@ -496,6 +503,7 @@ func TestCompanyRollupSelfScopeSkipsPruning(t *testing.T) {
 // contacts — which is what capture does — reported a fraction of what the
 // page below it displayed, and the busier the account the wider the gap.
 func TestCompanyRollupCounts30dActivityThroughEveryLinkTheTimelineWalks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	company := seedRollupCompany(t, e, "Reachable Co", nil, nil)
@@ -522,6 +530,7 @@ func TestCompanyRollupCounts30dActivityThroughEveryLinkTheTimelineWalks(t *testi
 // EXISTS: one message linked to both the account and its deal is one
 // message, and a join would have counted it per link.
 func TestCompanyRollupCountsAnActivityReachingTheTreeTwiceOnlyOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedRollupStages(t, e)
 	company := seedRollupCompany(t, e, "Double Linked Co", nil, nil)

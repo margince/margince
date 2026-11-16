@@ -30,6 +30,7 @@ func sessionSeat(t *testing.T, e *apptest.AppEnv) context.Context {
 // An agent that records a meeting held over MCP asks the lead's owner to
 // qualify the lead. A meeting the agent records as canceled asks nobody.
 func TestAnAgentMarkingALeadMeetingHeldOverMCPAsksTheOwnerToQualify(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "lead-qualify", "read", "write")
 	e := d.e
 	met := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Lena Prospect", "email": "lena@prospect.example"})

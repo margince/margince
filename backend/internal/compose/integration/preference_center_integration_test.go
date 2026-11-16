@@ -318,6 +318,7 @@ func assertWithdrawalProvenanceAndWriteShape(t *testing.T, c *consentEnv, token,
 }
 
 func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	grantPurpose(t, c, c.purposes["transactional"])
@@ -399,6 +400,7 @@ func TestPreferenceCenterOneClickUnsubscribe(t *testing.T) {
 // seeded read_only role reads them all, workspace-wide, while holding no
 // write grant at all), and the 202 would hand it to the sender.
 func TestPreferenceTokenNeverReachesTheRecordedActivity(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))
 
@@ -461,6 +463,7 @@ func TestPreferenceTokenNeverReachesTheRecordedActivity(t *testing.T) {
 // refused as absent, so probing cannot tell a real recipient from a
 // fabricated one (the surface is not a consent-state oracle).
 func TestPreferenceCenterTokenGuards(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if s := publicCall(t, c.AppEnv, "GET", "/v1/public/preferences/pref_does_not_exist", nil, nil, nil); s != http.StatusNotFound {
@@ -477,6 +480,7 @@ func TestPreferenceCenterTokenGuards(t *testing.T) {
 // A REVOKED token reads identically to an unknown one (404), so revoking
 // a recipient's link cannot be turned into a "this contact exists" oracle.
 func TestPreferenceCenterRevokedTokenReadsAsAbsent(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var newsletter struct {
@@ -521,6 +525,7 @@ func TestPreferenceCenterRevokedTokenReadsAsAbsent(t *testing.T) {
 // refused (422) before the per-choice loop, so a valid token cannot amplify
 // one body into tens of thousands of serial transactions.
 func TestPreferenceCenterRejectsOversizedChoiceArray(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var newsletter struct {
@@ -547,6 +552,7 @@ func TestPreferenceCenterRejectsOversizedChoiceArray(t *testing.T) {
 // The anonymous surface is throttled per token: a flood of one-click POSTs
 // meets 429 before it can hammer the consent engine.
 func TestPreferenceCenterRateLimited(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	last := 0

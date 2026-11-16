@@ -58,6 +58,7 @@ func seedEmail(t *testing.T, e *queryEnv, contact ids.UUID, address string) {
 // The positive control: an address a caller may see resolves to that record, as
 // a RECORD — fields and a version, not a bare id.
 func TestResolveEntitiesAnswersARecordForAnAddressTheCallerHolds(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	f := seedResolveFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -94,6 +95,7 @@ func TestResolveEntitiesAnswersARecordForAnAddressTheCallerHolds(t *testing.T) {
 // turns that into an answer this caller is entitled to, and the answer must be
 // the same word a genuine miss gets.
 func TestAnAddressOutsideTheCallersScopeResolvesToNothingItCanTellApart(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	f := seedResolveFixture(t, e)
 	// Ownership alone leaves a contact readable by every seat with the grant;
@@ -127,6 +129,7 @@ func TestAnAddressOutsideTheCallersScopeResolvesToNothingItCanTellApart(t *testi
 // duplicate this tool exists to prevent — while raising it only when something
 // WAS withheld would make its presence the disclosure.
 func TestTheNarrowedAnswerSaysSoWithoutSizingTheHiddenSet(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	seedResolveFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -170,6 +173,7 @@ func TestTheNarrowedAnswerSaysSoWithoutSizingTheHiddenSet(t *testing.T) {
 // charger, and saying so is the point — a comment claiming this test holds them
 // would be a gate nobody has.
 func TestResolveEntitiesSourcesEveryRecordItServes(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	f := seedResolveFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -214,6 +218,7 @@ func resolvePayload(t *testing.T, payload json.RawMessage) agents.ResolveEntitie
 // The resolver reads the workspace's own consumer-mail list, not only the
 // shipped one: a domain an admin listed must never resolve to a company.
 func TestADomainOnTheWorkspacesConsumerMailListResolvesToNoCompany(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	company := e.SeedID(t, `INSERT INTO company (id, owner_id, display_name, source, captured_by)
 		VALUES ($1, $2, 'Kleinpost Kunde GmbH', 'manual', 'human:x')`, e.Rep1)

@@ -80,6 +80,7 @@ func confirmTokensMinted(t *testing.T, c *consentEnv) int {
 
 // PRESSING SUBSCRIBE SENDS A CONFIRMATION RATHER THAN WRITING A DEAD GRANT.
 func TestResubscribingSendsAConfirmationInsteadOfADeadGrant(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	createDOIPurpose(t, c)
 	// A mail has to go out for the subject to hold a preference link at all,
@@ -128,6 +129,7 @@ func TestResubscribingSendsAConfirmationInsteadOfADeadGrant(t *testing.T) {
 // which made a withdrawal permanent — the one thing the guard's own comment
 // says it does not do.
 func TestASubjectMayAskAgainAfterWithdrawing(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	createDOIPurpose(t, c)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))
@@ -167,6 +169,7 @@ func TestASubjectMayAskAgainAfterWithdrawing(t *testing.T) {
 // guard for everybody would let a rep press the double-opt-in verb on somebody
 // who unsubscribed, which is what it was built to stop.
 func TestAnOperatorStillCannotAskAgainAfterAWithdrawal(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	purposeID := createDOIPurpose(t, c)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))
@@ -187,6 +190,7 @@ func TestAnOperatorStillCannotAskAgainAfterAWithdrawal(t *testing.T) {
 // Sending a confirmation nobody asked for would be a mail this contact did not
 // need, and the grant is effective the moment it is written.
 func TestANonDoubleOptInSubscribeStillTakesEffectAtOnce(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	newsletter := createNewsletterPurpose(t, c)
 	grantPurpose(t, c, newsletter)
@@ -227,6 +231,7 @@ func TestANonDoubleOptInSubscribeStillTakesEffectAtOnce(t *testing.T) {
 // confirmation moment, and the message still refused. The repair would have
 // been a no-op against exactly the shape it was built to repair.
 func TestSpendingTheResubscribeLinkLeavesAGrantTheGateHonours(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	createDOIPurpose(t, c)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))
@@ -280,6 +285,7 @@ func TestSpendingTheResubscribeLinkLeavesAGrantTheGateHonours(t *testing.T) {
 // started. The tests above cannot see it, because the new path never writes
 // that row; this one puts it there first, the way the old code did.
 func TestAnUnconfirmedGrantIsRepairedByTheConfirmation(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	purposeID := createDOIPurpose(t, c)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))
@@ -334,6 +340,7 @@ func TestAnUnconfirmedGrantIsRepairedByTheConfirmation(t *testing.T) {
 // still pass, while a subject re-ticking a box they already hold would be sent
 // a confirmation for a decision they already made.
 func TestReTickingAConfirmedSubscriptionMailsNothing(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	createDOIPurpose(t, c)
 	grantPurpose(t, c, createNewsletterPurpose(t, c))

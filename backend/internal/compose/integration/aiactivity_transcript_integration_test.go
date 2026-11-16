@@ -140,6 +140,7 @@ func (f *transcriptFixture) projection(t *testing.T) projectedOccurrence {
 // The line the router could never draw: a reading is live and the rep's own
 // from the moment they ask for it, not from the moment it finishes.
 func TestAQueuedTranscriptReadingIsProjectedAsTheContactsOwnLiveWork(t *testing.T) {
+	t.Parallel()
 	f := newTranscriptFixture(t)
 	f.drain(t)
 
@@ -165,6 +166,7 @@ func TestAQueuedTranscriptReadingIsProjectedAsTheContactsOwnLiveWork(t *testing.
 // The claim moves it to running under a start time, which is what the rail ages
 // the live line from.
 func TestAClaimedTranscriptReadingIsProjectedAsRunning(t *testing.T) {
+	t.Parallel()
 	f := newTranscriptFixture(t)
 	if _, err := f.store.BeginTranscriptRead(f.ctx, f.readID, activities.TranscriptReadLease); err != nil {
 		t.Fatalf("BeginTranscriptRead: %v", err)
@@ -183,6 +185,7 @@ func TestAClaimedTranscriptReadingIsProjectedAsRunning(t *testing.T) {
 // A settled reading stops carrying a lease: nothing about a closed occurrence
 // can go stale.
 func TestAFinishedTranscriptReadingSettlesInTheProjection(t *testing.T) {
+	t.Parallel()
 	f := newTranscriptFixture(t)
 	if _, err := f.store.BeginTranscriptRead(f.ctx, f.readID, activities.TranscriptReadLease); err != nil {
 		t.Fatalf("BeginTranscriptRead: %v", err)
@@ -208,6 +211,7 @@ func TestAFinishedTranscriptReadingSettlesInTheProjection(t *testing.T) {
 // it replaces — otherwise the rail shows a dead reading as live until its lease
 // runs out, which is the failure the projection exists to prevent.
 func TestARearmedTranscriptReadingOutranksTheDeadClaimItReplaces(t *testing.T) {
+	t.Parallel()
 	f := newTranscriptFixture(t)
 	if _, err := f.store.BeginTranscriptRead(f.ctx, f.readID, activities.TranscriptReadLease); err != nil {
 		t.Fatalf("BeginTranscriptRead: %v", err)

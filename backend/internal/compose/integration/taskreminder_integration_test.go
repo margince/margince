@@ -16,6 +16,7 @@ import (
 // The reminder filter answers alike through the route and the agent's tool,
 // and moving the task's due date over HTTP ends the reminder.
 func TestTheReminderFilterAnswersAlikeThroughBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "task-reminder", "read", "write")
 	now := clocktest.Now(t).UTC()
 	var created struct {

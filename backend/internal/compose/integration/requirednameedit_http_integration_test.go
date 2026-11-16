@@ -17,6 +17,7 @@ import (
 )
 
 func TestAnEditCannotBlankARecordsRequiredNameOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -56,6 +57,7 @@ func TestAnEditCannotBlankARecordsRequiredNameOverHTTP(t *testing.T) {
 // The same rule on the records whose names were left out of the first pass:
 // an offer template, a knowledge corpus and a lead's name when one is sent.
 func TestASiblingRecordsRequiredNameIsRefusedBlankOnCreateAndEdit(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

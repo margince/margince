@@ -47,6 +47,7 @@ func stageVersion(t *testing.T, stage crmcontracts.Stage) int64 {
 }
 
 func TestAStageEditAnswersTheVersionItsNextWriteIsGuardedBy(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Stage Ver", "stage-ver@fable.test", "Admin")
 	first := (*listedPipeline(t, e).Stages)[0]
@@ -80,6 +81,7 @@ func TestAStageEditAnswersTheVersionItsNextWriteIsGuardedBy(t *testing.T) {
 }
 
 func TestAReorderMovesTheVersionOfEveryStageItMoves(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Stage Ver Order", "stage-ver-order@fable.test", "Admin")
 	before := listedPipeline(t, e)
@@ -151,6 +153,7 @@ func stageReads(ctx context.Context, t *testing.T, e *Env, pipeline ids.Pipeline
 }
 
 func TestAStageCountsItsLiveExitCriteriaOnEveryRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, won := DealFixture(t, e)
@@ -185,6 +188,7 @@ func TestAStageCountsItsLiveExitCriteriaOnEveryRead(t *testing.T) {
 }
 
 func TestAStageCountsItsLiveDealsForASeatThatReadsDeals(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, won := DealFixture(t, e)

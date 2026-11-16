@@ -15,6 +15,7 @@ import (
 )
 
 func TestAZipUploadProfilesEveryFileAndListsWhatItIgnores(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{
 		"export/companies.csv": "\ufeffref,name,domain\nCO-1,Acme,acme.example\n",
@@ -45,6 +46,7 @@ func TestAZipUploadProfilesEveryFileAndListsWhatItIgnores(t *testing.T) {
 }
 
 func TestAZipWithAFileThatIsNotUTF8IsRefusedNamingTheFile(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "name\nM\xfcller GmbH\n"})
 	raw, status := postZipFile(t, e, "x.zip", body)
@@ -54,6 +56,7 @@ func TestAZipWithAFileThatIsNotUTF8IsRefusedNamingTheFile(t *testing.T) {
 }
 
 func TestAReaderWhoNamesTheTypeOfAnUntypedCSVLeavesNoChoiceByNothing(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	raw, status := importjobtest.PostCSVFile(t, e, "", prospectCSV)
 	var profile struct {
@@ -79,6 +82,7 @@ func TestAReaderWhoNamesTheTypeOfAnUntypedCSVLeavesNoChoiceByNothing(t *testing.
 }
 
 func TestACSVUploadWithoutATypeIsTypedByItsColumns(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	for _, tc := range []struct {
 		name, csv, object, chosenBy string
@@ -123,6 +127,7 @@ func TestACSVUploadWithoutATypeIsTypedByItsColumns(t *testing.T) {
 }
 
 func TestAZipHoldingOneTypeTwiceIsRefusedAsABundle(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "name\nAcme\n", "a/company.csv": "name\nBeta\n"})
 	raw, status := postZipFile(t, e, "x.zip", body)
@@ -138,6 +143,7 @@ func TestAZipHoldingOneTypeTwiceIsRefusedAsABundle(t *testing.T) {
 }
 
 func TestAnEmptyZipAndARaggedRowAreRefusedWithWhatTheirSentencesName(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	raw, status := postZipFile(t, e, "empty.zip", zipBytes(t, nil))
 	if errs := fieldRefusalsOf(t, raw); status != http.StatusUnprocessableEntity || len(errs) != 1 ||
@@ -155,6 +161,7 @@ func TestAnEmptyZipAndARaggedRowAreRefusedWithWhatTheirSentencesName(t *testing.
 // .csv. The server knows the ZIP by its content and reads each part's type from
 // its file name, as the contract states.
 func TestAZipSentWithAnObjectIsProfiledByItsFileNames(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "ref,name\nCO-1,Acme\n"})
 	raw, status := importjobtest.PostCSVFile(t, e, "lead", string(body))
@@ -171,6 +178,7 @@ func TestAZipSentWithAnObjectIsProfiledByItsFileNames(t *testing.T) {
 // A workbook, or a ZIP of files no type takes, opens no draft. The upload is
 // refused before anything is stored, and says what to send instead.
 func TestAZipWithNoImportableFileIsRefusedAndLeavesNoDraft(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	for name, c := range map[string]struct {
 		files  map[string]string

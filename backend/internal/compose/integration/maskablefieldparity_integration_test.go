@@ -44,6 +44,7 @@ const maskableFixture = "../../../migrations/testdata/maskable_fields.txt"
 const foreignKeyViolation = "23503"
 
 func TestTheMigratedCatalogOffersExactlyWhatTheCodeWithholds(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 
@@ -79,6 +80,7 @@ func TestTheMigratedCatalogOffersExactlyWhatTheCodeWithholds(t *testing.T) {
 }
 
 func TestAMaskNamingSomethingNothingWithholdsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 

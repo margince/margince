@@ -84,7 +84,7 @@ func TestHostedMCPTransportSharesTheGovernedSurface(t *testing.T) {
 	_, body := o.exchange(t, url.Values{"code": {code}})
 	token := body["access_token"].(string)
 
-	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

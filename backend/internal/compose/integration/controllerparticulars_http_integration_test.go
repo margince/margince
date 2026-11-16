@@ -15,6 +15,7 @@ import (
 // The form that says who the controller is opens empty, saves, and refuses a
 // value the entry's own validator rejects.
 func TestTheControllerParticularsFormOpensSavesAndRefuses(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Controller Particulars", "admin@particulars.test", "Admin")
 	const path = "/v1/privacy/controller-particulars"

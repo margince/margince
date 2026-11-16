@@ -49,6 +49,7 @@ func assertOwner(t *testing.T, e *Env, id ids.ProjectID, want ids.UUID, why stri
 // project are left alone. Each move is its own audit row with the owner_id
 // images and its own outbox event, exactly what two single updates write.
 func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	first := seedProject(e.Admin(), t, e, "ERP replacement", company, &e.Rep1)
@@ -107,6 +108,7 @@ func TestTransferProjectOwnershipMovesEveryLiveProjectTheFromOwnerHolds(t *testi
 // door would let them change. Rep1's own row scope does not hold Rep2, and
 // Rep2 still receives.
 func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	shared := seedProject(e.Admin(), t, e, "Shared for writing", company, &e.Rep3)
@@ -152,6 +154,7 @@ func TestTransferProjectOwnershipMovesOnlyWhatTheCallerCouldWrite(t *testing.T) 
 // and the from-owner themselves are both refused as 422 field faults, and
 // nothing moves.
 func TestTransferProjectOwnershipRefusesAReceiverWhoCannotOwn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "BAER Pharma", nil)
 	project := seedProject(e.Admin(), t, e, "ERP replacement", company, &e.Rep1)

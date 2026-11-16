@@ -73,6 +73,7 @@ func previewCompanies(t *testing.T, d *twoDoors, sourceName string) previewAnswe
 }
 
 func TestAPreviewOfAStoredSourceAdvancesItsDraft(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "preview-advances", "read", "write")
 	preview := previewCompanies(t, d, "")
 	runs := storedImportRuns(t, d.e)
@@ -93,6 +94,7 @@ func TestAPreviewOfAStoredSourceAdvancesItsDraft(t *testing.T) {
 }
 
 func TestAFailedPreviewCancelsItsDraft(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "preview-cancels", "read", "write")
 	refusal := d.toolRefused(t, "preview_import", map[string]any{
 		"object": "company", "csv": "id,Company\nx,Acme\n",
@@ -107,6 +109,7 @@ func TestAFailedPreviewCancelsItsDraft(t *testing.T) {
 }
 
 func TestABusySourceAnswersTheOtherRunsID(t *testing.T) {
+	t.Parallel()
 	// The commit job is never worked, so the first run stays writing.
 	d := newTwoDoorsWith(t, "preview-busy", nil, "read", "write")
 	writing := previewCompanies(t, d, "Fair 2026")

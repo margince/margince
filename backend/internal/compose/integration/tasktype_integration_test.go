@@ -50,6 +50,7 @@ func (s *standingEnv) readTaskType(t *testing.T, row ids.UUID) crmcontracts.Task
 }
 
 func TestATaskReadsTheTypeItWasGivenAndOnlyAMailTypeOffersEmail(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	for _, tc := range []struct {
 		taskType crmcontracts.TaskType
@@ -75,6 +76,7 @@ func TestATaskReadsTheTypeItWasGivenAndOnlyAMailTypeOffersEmail(t *testing.T) {
 }
 
 func TestAnUntypedTaskReadsTheTypeOfWhatMadeIt(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	for _, tc := range []struct {
 		name, origin, source string
@@ -98,6 +100,7 @@ func TestAnUntypedTaskReadsTheTypeOfWhatMadeIt(t *testing.T) {
 }
 
 func TestAPatchRetypesATaskAndATypeOnAnotherKindIsRefused(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	ctx := s.As(s.Rep1, []ids.UUID{s.Team1}, activityLifecyclePerms)
 	row := s.typedTask(t, crmcontracts.TaskTypeReachOut, s.contactAt(t, "Emil Roth", "emil@buyer.test"))
@@ -117,6 +120,7 @@ func TestAPatchRetypesATaskAndATypeOnAnotherKindIsRefused(t *testing.T) {
 }
 
 func TestAReplyOrReachOutNamesTheWayItsConversationWent(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	for _, tc := range []struct {
 		name, sourceKind string
@@ -150,6 +154,7 @@ func TestAReplyOrReachOutNamesTheWayItsConversationWent(t *testing.T) {
 // kind of a message they cannot open. The workspace case is the control: a
 // source the reader can see still names email, so the nil is the gate.
 func TestAReplyWithdrawsTheKindOfASourceTheReaderCannotSee(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	email := crmcontracts.ActivityReplyChannelEmail
 	for _, tc := range []struct {

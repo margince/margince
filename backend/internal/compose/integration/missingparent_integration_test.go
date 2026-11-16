@@ -16,6 +16,7 @@ import (
 // empty list reads as "nothing here yet" to a client holding a stale or
 // mistyped id.
 func TestSubResourceReadsOfAMissingParentAnswerNotFound(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	const missing = "00000000-0000-7000-8000-0000000000ee"
@@ -51,6 +52,7 @@ func TestSubResourceReadsOfAMissingParentAnswerNotFound(t *testing.T) {
 // The agent surface reads the same library the tabs read, so a missing parent
 // is refused there too, for every record type the tool names.
 func TestListDocumentsOfAMissingRecordIsRefusedOnTheAgentDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "missingparent", "read")
 	const missing = "00000000-0000-7000-8000-0000000000ee"
 
@@ -62,6 +64,7 @@ func TestListDocumentsOfAMissingRecordIsRefusedOnTheAgentDoor(t *testing.T) {
 }
 
 func TestResearchSaveRefusesAMissingContactAndADroppedClaimsField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	const missing = "00000000-0000-7000-8000-0000000000ee"

@@ -73,6 +73,7 @@ func setRunStatus(t *testing.T, e *apptest.AppEnv, runID, status string) {
 // The email is one key however it is cased: a corrected file that spells the
 // address differently updates the contact the first file made.
 func TestAReImportMatchesAnEmailWhateverItsCase(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	importContactFile(t, e, "Email,Full Name,Title\nAda@Lovelace.example,Ada Lovelace,Old title\n")
 
@@ -89,6 +90,7 @@ func TestAReImportMatchesAnEmailWhateverItsCase(t *testing.T) {
 // A contact archived by hand is not re-created as a twin: the row is skipped
 // and says why.
 func TestAReImportSkipsARowWhoseContactWasArchived(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	file := "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Analyst\n"
 	importContactFile(t, e, file)
@@ -112,6 +114,7 @@ func TestAReImportSkipsARowWhoseContactWasArchived(t *testing.T) {
 // A key whose run is only part-way through an undo is still bound: re-importing
 // updates the record and leaves the paused undo's rows in place.
 func TestAReImportDoesNotTakeOverAKeyWhileItsUndoIsRunning(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	runID, _ := importContactFile(t, e, "Email,Full Name,Title\nada@lovelace.example,Ada Lovelace,Old title\n")
 	setRunStatus(t, e, runID, "undoing")

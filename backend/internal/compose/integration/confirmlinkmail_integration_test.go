@@ -98,6 +98,7 @@ func confirmLinkToken(t *testing.T, e *apptest.AppEnv) string {
 // that ignores the setting; that the German is the catalog's rules out one that
 // differs for any other reason.
 func TestTheConfirmMailIsWrittenInTheInstallationsLanguage(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	english := stagedConfirmSubject(t, c)

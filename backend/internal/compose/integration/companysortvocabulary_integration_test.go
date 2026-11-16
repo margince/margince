@@ -49,6 +49,7 @@ func companyIDsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.
 
 // The two plain columns the vocabulary simply did not name.
 func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
@@ -72,6 +73,7 @@ func TestTheAccountsListSortsByTheDescriptionAndLifecycleItDraws(t *testing.T) {
 // The Website header orders by the HOST it prints, off the primary domain row
 // that website_url is derived from.
 func TestTheAccountsListSortsByTheWebsiteItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
@@ -110,6 +112,7 @@ func TestTheAccountsListSortsByTheWebsiteItDraws(t *testing.T) {
 // The Contacts header orders by the number it prints — counted per row, under
 // the same scope the page's own count applies.
 func TestOrderingAccountsByContactsAgreesWithTheCountTheyShow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms)
 
@@ -146,6 +149,7 @@ func TestOrderingAccountsByContactsAgreesWithTheCountTheyShow(t *testing.T) {
 // through the order — read it both ways and the largest pipeline is at whichever
 // end. Every such row sits in the tail instead.
 func TestAWithheldCountOrdersTheAccountsListByNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 

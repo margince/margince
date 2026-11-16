@@ -132,6 +132,7 @@ func (f *listRuleFixture) notices(t *testing.T, needle string) int {
 }
 
 func TestARuleFiresOncePerRecordThatJoinedAndActsForItsOwner(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	shortlist := f.shortlist(t)
 	f.rule(t, "list_membership_shortlist", map[string]any{"direction": "entered", "shortlist_id": shortlist.String()})
@@ -162,6 +163,7 @@ func TestARuleFiresOncePerRecordThatJoinedAndActsForItsOwner(t *testing.T) {
 }
 
 func TestALeaveRuleFiresOnlyForRecordsThatLeft(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	stays := f.contactTitled(t, "Stays", "Buyer")
 	goes := f.contactTitled(t, "Goes", "Buyer")
@@ -185,6 +187,7 @@ func TestALeaveRuleFiresOnlyForRecordsThatLeft(t *testing.T) {
 }
 
 func TestAChangedFilterFiresNoRule(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.contactTitled(t, "Old Match", "Buyer")
 	f.contactTitled(t, "New Match", "Seller")
@@ -209,6 +212,7 @@ func TestAChangedFilterFiresNoRule(t *testing.T) {
 }
 
 func TestAnEventFromAnOlderFilterFiresNothing(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	f.check(t)
@@ -230,6 +234,7 @@ func TestAnEventFromAnOlderFilterFiresNothing(t *testing.T) {
 }
 
 func TestMoreThanAHundredChangesPauseTheRuleAndTellItsOwner(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	id := f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	f.check(t)
@@ -257,6 +262,7 @@ func TestMoreThanAHundredChangesPauseTheRuleAndTellItsOwner(t *testing.T) {
 }
 
 func TestExactlyAHundredChangesStillFire(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	f.check(t)
@@ -271,6 +277,7 @@ func TestExactlyAHundredChangesStillFire(t *testing.T) {
 }
 
 func TestArchivingTheWatchedListPausesTheRuleAndRestoringDoesNotResumeIt(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	id := f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	if _, err := f.store.SetArchivedView(f.e.Admin(), f.list, true); err != nil {
@@ -297,6 +304,7 @@ func TestArchivingTheWatchedListPausesTheRuleAndRestoringDoesNotResumeIt(t *test
 }
 
 func TestABrokenFilterPausesTheRule(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	id := f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	f.e.WsExec(t, `UPDATE list SET definition = '{"field": "cf_gone", "op": "eq", "value": "x"}' WHERE id = $1`, f.list)
@@ -307,6 +315,7 @@ func TestABrokenFilterPausesTheRule(t *testing.T) {
 }
 
 func TestARecordOutsideTheOwnersScopeIsSkipped(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	f.check(t)
@@ -340,6 +349,7 @@ func (f *listRuleFixture) shortlist(t *testing.T) ids.ListID {
 }
 
 func TestAddingARecordAlreadyOnTheShortlistChangesNothing(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	shortlist := f.shortlist(t)
 	f.rule(t, "list_membership_shortlist", map[string]any{"direction": "entered", "shortlist_id": shortlist.String()})
@@ -362,6 +372,7 @@ func TestAddingARecordAlreadyOnTheShortlistChangesNothing(t *testing.T) {
 }
 
 func TestTheListNamesTheRulesThatDependOnIt(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	shortlist := f.shortlist(t)
 	f.rule(t, "list_membership_shortlist", map[string]any{"direction": "entered", "shortlist_id": shortlist.String()})
@@ -385,6 +396,7 @@ func TestTheListNamesTheRulesThatDependOnIt(t *testing.T) {
 }
 
 func TestTheWhatChangedSummaryNamesOnlyRecordsTheReaderCanSee(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	leaves := f.contactTitled(t, "Leaving Buyer", "Buyer")
 	f.check(t)
@@ -410,6 +422,7 @@ func TestTheWhatChangedSummaryNamesOnlyRecordsTheReaderCanSee(t *testing.T) {
 }
 
 func TestAFollowUpTaskNamesNoPrivateList(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	private, err := f.store.CreateList(f.author(), collections.CreateListInput{
 		Name: "Rep1 secret targets", EntityType: "contact", ListType: "dynamic", Sharing: "private",
@@ -435,6 +448,7 @@ func TestAFollowUpTaskNamesNoPrivateList(t *testing.T) {
 }
 
 func TestAnArchiveNewsOlderThanARestoreAndResumePausesNothing(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	id := f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	if _, err := f.store.SetArchivedView(f.e.Admin(), f.list, true); err != nil {
@@ -450,6 +464,7 @@ func TestAnArchiveNewsOlderThanARestoreAndResumePausesNothing(t *testing.T) {
 }
 
 func TestAReaderWithoutTheListGrantReadsNoObservedChange(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.check(t)
 	f.contactTitled(t, "Seen Buyer", "Buyer")
@@ -471,6 +486,7 @@ func TestAReaderWithoutTheListGrantReadsNoObservedChange(t *testing.T) {
 }
 
 func TestTheSummaryWaitsForAVisitAndCountsFilterChanges(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.check(t)
 	summary := func() *crmcontracts.ListChangeSummary {
@@ -515,6 +531,7 @@ func TestTheSummaryWaitsForAVisitAndCountsFilterChanges(t *testing.T) {
 }
 
 func TestANoticeRuleTellsItsOwnerWhichListARecordJoined(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.rule(t, "list_membership_notify", map[string]any{"direction": "entered"})
 	f.check(t)

@@ -97,6 +97,7 @@ func contactRoomService(e *Env) *contact360.Service {
 // withheld, which is the disclosure existence-hiding is for. A colleague's
 // contact leaves the caller's row scope through capture privacy.
 func TestContact360RefusesAContactOutsideTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -112,6 +113,7 @@ func TestContact360RefusesAContactOutsideTheCallersRowScope(t *testing.T) {
 // forbidden are different facts, and a page that renders them the same way
 // tells the reader a relationship is cold when it is only invisible.
 func TestContact360NamesTheSectionsACallerMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "My Contact", &e.Rep1)
 
@@ -151,6 +153,7 @@ func TestContact360NamesTheSectionsACallerMayNotRead(t *testing.T) {
 // corrected one shows the human's value. The claim key is the claim's PATH, so
 // this has to survive the row being re-derived rather than re-read.
 func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -219,6 +222,7 @@ func TestCorrectionLedgerSurvivesRederivation(t *testing.T) {
 // only half the fix: it has to be handed the date the VALUE took its current
 // form, and a reader passing the wrong clock would satisfy every unit case.
 func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -301,6 +305,7 @@ func TestACorrectionDoesNotOutliveTheValueItCorrected(t *testing.T) {
 // The verdict names what the client RENDERED, so the comparison is an equality
 // and the clocks stop mattering.
 func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -390,6 +395,7 @@ func TestACorrectionIsAboutTheValueTheReaderHadInFrontOfThem(t *testing.T) {
 //
 // Both stamps are the server's own, so they rank. The stale one is refused.
 func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -455,6 +461,7 @@ func TestAStaleCorrectionDoesNotOverwriteTheVerdictAboutTheValueThatStands(t *te
 // The write is gated on the SUBJECT's own grant. A caller who may read a
 // contact but not edit them cannot overrule what the system says about them.
 func TestCorrectionLedgerRefusesAWriteWithoutTheSubjectsUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 
@@ -474,6 +481,7 @@ func TestCorrectionLedgerRefusesAWriteWithoutTheSubjectsUpdateGrant(t *testing.T
 // A verdict about a capture-private contact is a not-found, so the endpoint
 // cannot be used to probe which record ids exist.
 func TestCorrectionLedgerRefusesASubjectOutsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -491,6 +499,7 @@ func TestCorrectionLedgerRefusesASubjectOutsideRowScope(t *testing.T) {
 // Re-deciding replaces rather than appends: a verdict is the current answer to
 // "has a human decided this", and two answers is no answer.
 func TestCorrectionLedgerKeepsOneVerdictPerClaim(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -544,6 +553,7 @@ func TestCorrectionLedgerKeepsOneVerdictPerClaim(t *testing.T) {
 // subject's title, employer and the verbatim sentence naming them survive an
 // erasure the controller certified complete.
 func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -582,6 +592,7 @@ func TestErasureReachesTheEnrichmentSidecarAndTheLedger(t *testing.T) {
 // not get; this proves the sections actually assemble from real rows — a page
 // that refuses correctly and renders nothing is not a working page.
 func TestContact360AssemblesEverySectionFromRealRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	company := e.SeedCompany(t, "ScaleCommerce", &e.Rep1)
@@ -658,6 +669,7 @@ func TestContact360AssemblesEverySectionFromRealRows(t *testing.T) {
 // away, a reply arrives, and the page stays silent about the thing that just
 // changed. Keyed on the evidence, it re-arms.
 func TestADismissalHoldsUntilTheEvidenceMoves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -730,6 +742,7 @@ func contactChanges(ctx context.Context, t *testing.T, e *Env, contactID ids.Con
 // what it reports comes from the timeline rather than from a stored number —
 // which is the whole reason there is no table.
 func TestRelationshipChangesAreDerivedFromTheTimeline(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -765,6 +778,7 @@ func TestRelationshipChangesAreDerivedFromTheTimeline(t *testing.T) {
 // A contact nobody has ever spoken to has not gone quiet — they were never
 // loud. Saying otherwise turns every dormant record into an alert.
 func TestRelationshipChangesSayNothingAboutAContactWithNoHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)
@@ -781,6 +795,7 @@ func TestRelationshipChangesSayNothingAboutAContactWithNoHistory(t *testing.T) {
 // The changes explain a score, and both are reads of the same record — so a
 // contact outside the caller's row scope is a not-found here too.
 func TestRelationshipChangesRefuseAContactOutsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	theirs := e.SeedContact(t, "Their Contact", &e.Rep3)
 	e.MakeCapturePrivate(t, "contact", theirs, e.Rep3)
@@ -796,6 +811,7 @@ func TestRelationshipChangesRefuseAContactOutsideRowScope(t *testing.T) {
 // would vanish at a merge nobody expected to lose it — and the row would
 // outlive the merged-away record's own archival.
 func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	survivor := e.SeedContact(t, "Anna Weber", &e.Rep1)
@@ -887,6 +903,7 @@ func TestMergeCarriesTheEnrichmentSidecarToTheSurvivor(t *testing.T) {
 // what regressed was a SELECT list — a grep for the column name would have
 // passed on a query that selected it into a variable nobody scanned.
 func TestTheContact360TimelineNamesTheTransportThatCarriedAMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Luu Nguyen Thanh", &e.Rep1)
@@ -932,6 +949,7 @@ func TestTheContact360TimelineNamesTheTransportThatCarriedAMessage(t *testing.T)
 // for "version" would pass on a query that selected it into a variable
 // nobody scanned onto the wire row.
 func TestTheContact360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Version Carrier", &e.Rep1)
@@ -972,6 +990,7 @@ func TestTheContact360TimelineCarriesTheVersionAWriteNeeds(t *testing.T) {
 // regressed is a SELECT list, and a grep for the column name passes on a query
 // that selects it into a variable nobody scans.
 func TestTheContact360TimelineSaysAMeetingCameFromATranscript(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	mine := e.SeedContact(t, "Transcript Speaker", &e.Rep1)

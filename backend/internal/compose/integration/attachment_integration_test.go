@@ -33,6 +33,7 @@ import (
 // the real HTTP surface (multipart parse, streamed download, status codes),
 // end to end against real Postgres + an in-memory store.
 func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -114,6 +115,7 @@ func TestAttachmentHandlersHTTPRoundTrip(t *testing.T) {
 
 // TestAttachmentHandlersErrorPaths covers the handlers' 404/422 branches.
 func TestAttachmentHandlersErrorPaths(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -172,6 +174,7 @@ func TestAttachmentHandlersErrorPaths(t *testing.T) {
 // TestAttachmentHandlersAnswer501WithoutAStore proves a role that wired no
 // object store declares attachments unavailable rather than nil-derefing.
 func TestAttachmentHandlersAnswer501WithoutAStore(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling) // no WithBlobstore
 	ctx := e.Admin()
@@ -205,6 +208,7 @@ func ownContactPerms() principal.Permissions {
 }
 
 func TestAttachmentUploadThenDownloadRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, _ := attachmentStore(e)
 	ctx := e.Admin()
@@ -248,6 +252,7 @@ func TestAttachmentUploadThenDownloadRoundTrip(t *testing.T) {
 }
 
 func TestAttachmentUploadDeniedForInvisibleParent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, _ := attachmentStore(e)
 	// The contact is capture-private to Rep1; Rep3 cannot see it.
@@ -282,6 +287,7 @@ func TestAttachmentUploadDeniedForInvisibleParent(t *testing.T) {
 // a caller and somebody else's document, and an unproven sole gate is one
 // refactor away from being no gate.
 func TestOpenAttachmentHidesAnInvisibleParent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, _ := attachmentStore(e)
 	// Capture-private to Rep1; Rep3 cannot see it, and neither can anyone
@@ -323,6 +329,7 @@ func TestOpenAttachmentHidesAnInvisibleParent(t *testing.T) {
 }
 
 func TestErasureQueuesAttachmentObjectsForDeletion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	store := e.Activities.WithBlobstore(blob)
@@ -354,6 +361,7 @@ func TestErasureQueuesAttachmentObjectsForDeletion(t *testing.T) {
 }
 
 func TestErasureWithoutStoreRollsBackRatherThanHalfErasing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	store := e.Activities.WithBlobstore(blob)
@@ -388,6 +396,7 @@ func TestErasureWithoutStoreRollsBackRatherThanHalfErasing(t *testing.T) {
 }
 
 func TestArchiveAttachmentHidesItButKeepsTheObject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, blob := attachmentStore(e)
 	ctx := e.Admin()
@@ -441,6 +450,7 @@ func TestArchiveAttachmentHidesItButKeepsTheObject(t *testing.T) {
 // Asserted with the ordinary upload beside it, because a check that refused
 // everything would satisfy the empty case on its own.
 func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	ctx := e.Admin()
@@ -477,6 +487,7 @@ func TestAnEmptyFileIsRefusedOnUpload(t *testing.T) {
 // archive or relabel a file on it. One that may not see the record learns
 // nothing, as before.
 func TestAReaderIsRefusedAChangeToAFileItCanSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, _ := attachmentStore(e)
 	contact := e.SeedContact(t, "Readable Contact", &e.Rep1)

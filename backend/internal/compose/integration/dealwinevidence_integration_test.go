@@ -53,6 +53,7 @@ func dealWithSignedDraft(t *testing.T, e *Env) (deal ids.UUID, contract, file id
 }
 
 func TestTheWinEvidenceReadAgreesWithTheAdvanceAtEveryStepOfAnAgreement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, contract, file, won := dealWithSignedDraft(t, e)
 	dealID := ids.From[ids.DealKind](deal)
@@ -98,6 +99,7 @@ func TestTheWinEvidenceReadAgreesWithTheAdvanceAtEveryStepOfAnAgreement(t *testi
 }
 
 func TestTheWinEvidenceReadFollowsTheDealReadsReach(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal, _, _, _ := dealWithSignedDraft(t, e)
 	dealID := ids.From[ids.DealKind](deal)

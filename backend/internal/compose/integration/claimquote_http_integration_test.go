@@ -15,6 +15,7 @@ import (
 // A claim is stored only against words its note holds. An ungrounded one reads
 // as trustworthy as a grounded one.
 func TestAClaimIsRecordedOnlyAgainstWordsTheNoteHolds(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

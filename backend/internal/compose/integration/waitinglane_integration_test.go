@@ -96,6 +96,7 @@ func seedWaitingMessageLinked(
 // An unanswered message reaches the reader. The ADMISSION case, first: a lane
 // that answered nobody would pass every refusal test in this file.
 func TestAnUnansweredMessageReachesTheReader(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-waiting-admit", "inbound", "Re: pricing", waitingInstant.Add(-20*24*time.Hour))
 
@@ -112,6 +113,7 @@ func TestAnUnansweredMessageReachesTheReader(t *testing.T) {
 // A message somebody answered is not waiting. The reply ends the wait even
 // though it is a separate row in the same thread.
 func TestAnAnsweredMessageIsNotWaiting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-waiting-answered", "inbound", "Re: timing", waitingInstant.Add(-10*24*time.Hour))
 	seedWaitingMessage(t, e, "thread-waiting-answered", "outbound", "Re: timing", waitingInstant.Add(-9*24*time.Hour))
@@ -129,6 +131,7 @@ func TestAnAnsweredMessageIsNotWaiting(t *testing.T) {
 // Only the NEWEST inbound of a thread is the wait. A customer who wrote three
 // times is waiting once, and three rows would read as three obligations.
 func TestOnlyTheNewestInboundOfAThreadIsTheWait(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-waiting-many", "inbound", "First ask", waitingInstant.Add(-20*24*time.Hour))
 	seedWaitingMessage(t, e, "thread-waiting-many", "inbound", "Second ask", waitingInstant.Add(-2*24*time.Hour))
@@ -150,6 +153,7 @@ func TestOnlyTheNewestInboundOfAThreadIsTheWait(t *testing.T) {
 // Mail carries the sender's own Date header, so a future date is a thing that
 // happens rather than a thing that cannot.
 func TestAFutureDatedMessageDoesNotSuppressTheWaitingOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-waiting-future", "inbound", "Waiting now", waitingInstant.Add(-5*24*time.Hour))
 	seedWaitingMessage(t, e, "thread-waiting-future", "outbound", "Dated ahead", waitingInstant.Add(365*24*time.Hour))
@@ -168,6 +172,7 @@ func TestAFutureDatedMessageDoesNotSuppressTheWaitingOne(t *testing.T) {
 // simplest form: a rep's dentist wrote, nobody replied, and the queue called it
 // a customer waiting because unanswered was the only test it applied.
 func TestMailLinkedToNothingIsNotWaitingWork(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessageLinked(t, e, "thread-personal", "inbound", "Your appointment",
 		waitingInstant.Add(-3*24*time.Hour), ids.UUID{})
@@ -185,6 +190,7 @@ func TestMailLinkedToNothingIsNotWaitingWork(t *testing.T) {
 // Past the horizon a wait is history. The bands decide what is urgent among
 // what survives; this decides what is still a wait at all.
 func TestAWaitOlderThanTheHorizonIsNotReported(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedWaitingMessage(t, e, "thread-ancient", "inbound", "Six months ago",
 		waitingInstant.Add(-200*24*time.Hour))
@@ -209,6 +215,7 @@ func TestAWaitOlderThanTheHorizonIsNotReported(t *testing.T) {
 // leaves the queue with or without money on it; the deal's own risk lane
 // speaks for a deal that has gone quiet.
 func TestAnOldWaitWithAnOpenDealAgesOutLikeAnyOther(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedWaitingContact(t, e)
 	deal := seedWaitingDeal(t, "open")
@@ -232,6 +239,7 @@ func TestAnOldWaitWithAnOpenDealAgesOutLikeAnyOther(t *testing.T) {
 // query that answered true for everything would pass the first half alone, and
 // that is the answer that keeps every ancient thread in the day forever.
 func TestAWaitReportsWhetherAnOpenDealIsOnIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedWaitingContact(t, e)
 	deal := seedWaitingDeal(t, "open")
@@ -253,6 +261,7 @@ func TestAWaitReportsWhetherAnOpenDealIsOnIt(t *testing.T) {
 // A deal that is WON is not money still on the thread. Without the status
 // predicate every closed deal would keep its thread in the day forever.
 func TestAClosedDealIsNotAnOpenOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedWaitingContact(t, e)
 	deal := seedWaitingDeal(t, "won")
@@ -332,6 +341,7 @@ func containsSubject(rows []activities.WaitingReply, subject string) bool {
 // every unanswered thread in the workspace, and not every message on this
 // contact.
 func TestWaitingReplyListFilterFindsTheEntitysUnansweredThread(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	admin := e.Admin()
@@ -359,6 +369,7 @@ func TestWaitingReplyListFilterFindsTheEntitysUnansweredThread(t *testing.T) {
 // An answered thread contributes nothing to the entity's waiting list either
 // — the same rule WaitingReplies enforces workspace-wide.
 func TestWaitingReplyListFilterOmitsAnAnsweredThread(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	admin := e.Admin()
@@ -387,6 +398,7 @@ func TestWaitingReplyListFilterOmitsAnAnsweredThread(t *testing.T) {
 // capture-private contact does not surface just because the caller asked
 // waiting_reply=true instead of the plain list.
 func TestWaitingReplyListFilterDropsRowsOutOfCallersScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -416,6 +428,7 @@ func TestWaitingReplyListFilterDropsRowsOutOfCallersScope(t *testing.T) {
 // already does — waiting_reply changes what the list narrows to, not the
 // existence-hiding gate that runs before any SQL is built.
 func TestWaitingReplyListFilterRefusesAnOutOfScopeEntity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	theirPrivate := e.SeedContact(t, "Their Private Contact", &e.Rep3)
@@ -442,6 +455,7 @@ func TestWaitingReplyListFilterRefusesAnOutOfScopeEntity(t *testing.T) {
 // column of the grouped activity itself — and this is the test that says so
 // rather than leaving it to be re-derived.
 func TestAMessageFiledUnderTwoRecordsIsOneWaitingRowCarryingItsKind(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	first := seedWaitingContact(t, e)
 	id := seedWaitingMessageLinked(t, e, "thread-two-links", "inbound", "Filed twice",

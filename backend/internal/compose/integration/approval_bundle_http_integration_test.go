@@ -48,6 +48,7 @@ type approvalListBody struct {
 // contacts clearing the same inbox — must not re-decide anything, and must be told
 // so per member rather than by a bare 409 that says nothing about which.
 func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Door", "ada@bundle.test", "Ada Admin")
 
@@ -110,6 +111,7 @@ func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 // empty 200 would tell a caller the id is real and holds nothing, which is the
 // existence oracle the single-approval read already refuses to be.
 func TestAnUnknownBundleIsNotFoundThroughTheAPI(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Absent", "ada@absent.test", "Ada Admin")
 
@@ -128,6 +130,7 @@ func TestAnUnknownBundleIsNotFoundThroughTheAPI(t *testing.T) {
 // the members stay pending, which is the half a status code alone would not
 // prove.
 func TestABundleDecisionRefusesAReadOnlyPassport(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Passport", "ada@passport.test", "Ada Admin")
 

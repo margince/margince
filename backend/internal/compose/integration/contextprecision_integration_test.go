@@ -36,6 +36,7 @@ func itemFor(t *testing.T, assembled retrieval.Context, section string, id ids.U
 // A day entry reaches an agent's context as a day, named by its own date. In
 // Auckland its stored noon is the next morning, and the date still holds.
 func TestAnAssembledDayEntryIsADay(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	f := seedMeetingFixture(t, e)
 	if _, err := e.Owner.Exec(context.Background(),

@@ -36,6 +36,7 @@ import (
 // call with a Payload writes ai_call + ai_call_payload with the columns
 // round-tripping, and a call without a Payload writes ai_call only.
 func TestCallMeterWritesTraceAndOptInPayload(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	meter := ai.NewCallMeter(e.DB())
@@ -155,6 +156,7 @@ func TestCallMeterKeepsNoPayloadForANoPayloadTask(t *testing.T) {
 // Payload gets an ai_call_payload row — the others (superseded, non-
 // terminal rungs) get none even though they share the transaction.
 func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	meter := ai.NewCallMeter(e.DB())
@@ -232,6 +234,7 @@ func TestRecordWritesEveryAttemptOfOneLogicalCallInOneTransaction(t *testing.T) 
 // dimension row plants once (ON CONFLICT DO NOTHING), and an ai_call row
 // naming that hash satisfies the FK.
 func TestEnsureConfigIsIdempotentAndFKsFromAICall(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	meter := ai.NewCallMeter(e.DB())
@@ -274,6 +277,7 @@ func seedEmbedCall(t *testing.T, e *Env, daysBack int) ids.UUID {
 // The nightly pass removes an embedding trace past its fixed 90 days and
 // keeps a younger one.
 func TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	overAge := seedEmbedCall(t, e, 91)
 	underAge := seedEmbedCall(t, e, 10)
@@ -318,6 +322,7 @@ func seedAgedPayload(t *testing.T, e *Env, daysBack int, requestJSON string) ids
 // retention engine over an over-age payload: the special-category-adjacent
 // content row is deleted, the ai_call metadata row survives.
 func TestAICallPayloadRetentionAgesOutContentKeepingMetadata(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	callID := seedAgedPayload(t, e, 380, `{"messages":[{"role":"user","content":"old chatter"}]}`)
 
@@ -341,6 +346,7 @@ func TestAICallPayloadRetentionAgesOutContentKeepingMetadata(t *testing.T) {
 // TestAICallPayloadErasureCascadePurgesSubjectMentions proves the Art. 17
 // cascade reaches captured payloads whose text mentions the erased subject.
 func TestAICallPayloadErasureCascadePurgesSubjectMentions(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e) // plants the subject with subjectEmail
 
@@ -390,6 +396,7 @@ func seedCitedPayload(t *testing.T, e *Env, subjectType string, subjectID ids.UU
 // somebody else and says nothing about this one — which is what keeps the
 // first two from proving only that the purge deletes everything.
 func TestAICallPayloadErasureReachesACallThatNamedTheRecord(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	activityID := ids.MustParse(e.WsScalar(t,

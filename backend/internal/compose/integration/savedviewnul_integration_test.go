@@ -16,6 +16,7 @@ import (
 // store. It is the caller's text, so it must read as an invalid value and not
 // as a server fault.
 func TestASavedViewQueryHoldingANULIsTheCallersInvalidValue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep := e.As(e.Rep1, nil, collectionsPerms())

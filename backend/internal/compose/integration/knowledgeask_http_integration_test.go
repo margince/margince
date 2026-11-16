@@ -67,6 +67,7 @@ func createCorpusOverHTTP(t *testing.T, e *apptest.AppEnv) string {
 // that composed no retrieval at all cannot search, and pretending to would be
 // worse than saying so.
 func TestAskingACorpusWithoutTheEngineWiredIsNotImplemented(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	corpusID := createCorpusOverHTTP(t, e)
@@ -80,6 +81,7 @@ func TestAskingACorpusWithoutTheEngineWiredIsNotImplemented(t *testing.T) {
 // With the engine wired but no embed lane, the ask ANSWERS: 200, and the
 // outcome says nothing was searched.
 func TestAskingWithNoEmbedLaneAnswersRetrievalUnavailableRatherThan501(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithCorpusAsk(unaskableEmbedder{}, nil, apptest.QuietAskLog()))
 	e.BootstrapWorkspace(t)
@@ -107,6 +109,7 @@ func TestAskingWithNoEmbedLaneAnswersRetrievalUnavailableRatherThan501(t *testin
 // A corpus holding nothing is not_ready — about the CORPUS — and never
 // not_covered, which would blame a question nothing was searched for.
 func TestAskingAnEmptyCorpusOverHTTPIsNotReady(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t,
 		compose.WithCorpusAsk(apptest.AskableEmbedder{}, nil, apptest.QuietAskLog()))
 	e.BootstrapWorkspace(t)

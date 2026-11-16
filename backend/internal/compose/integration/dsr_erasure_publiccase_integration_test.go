@@ -80,6 +80,7 @@ func seedSubmissionBackedErasureCase(t *testing.T, e *Env, contactID ids.UUID) i
 // fail, it WAITS — the fulfilment blocks on a row it holds itself — so without
 // a bound this test would hang the suite instead of reporting anything.
 func TestFulfillingAnErasureCaseTheSubjectOpenedCompletes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := e.SeedContact(t, "Self-Requesting Subject", nil)
 	caseID := seedSubmissionBackedErasureCase(t, e, contactID)

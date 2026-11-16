@@ -157,6 +157,7 @@ func renderOneLineOfferOn(ctx context.Context, t *testing.T, store *deals.Store,
 }
 
 func TestOfferRenderPrepareRender_DraftNoBuyerCompany_DefaultsLocaleAndOmitsBuyerBlock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render fixture deal", pipeline, open, &e.Rep1)
@@ -187,6 +188,7 @@ func TestOfferRenderPrepareRender_DraftNoBuyerCompany_DefaultsLocaleAndOmitsBuye
 }
 
 func TestOfferRenderPrepareRender_DraftWithBuyerCompany_UsesLiveCompanyNotAFrozenSnapshot(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render live-company deal", pipeline, open, &e.Rep1)
@@ -225,6 +227,7 @@ func TestOfferRenderPrepareRender_DraftWithBuyerCompany_UsesLiveCompanyNotAFroze
 }
 
 func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render sent deal", pipeline, open, &e.Rep1)
@@ -269,6 +272,7 @@ func TestOfferRenderPrepareRender_Sent_UsesFrozenBuyerAndIssuerSnapshot(t *testi
 }
 
 func TestOfferRenderPrepareRender_TemplateLocaleAndLayoutResolveFromOfferTemplate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render locale deal", pipeline, open, &e.Rep1)
@@ -313,6 +317,7 @@ func TestOfferRenderPrepareRender_TemplateLocaleAndLayoutResolveFromOfferTemplat
 // rows through PrepareRender into the renderer. The template's saved header
 // and footer reach the document, and so do the offer's intro and terms.
 func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render text deal", pipeline, open, &e.Rep1)
@@ -411,6 +416,7 @@ func TestOfferRenderNoTemplateNoDefaultUsesTheOffersLanguage(t *testing.T) {
 }
 
 func TestOfferRenderSetPdfAssetRef_PersistsAndAuditsExactlyOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render asset-ref deal", pipeline, open, &e.Rep1)
@@ -471,6 +477,7 @@ func TestOfferRenderSetPdfAssetRef_PersistsAndAuditsExactlyOnce(t *testing.T) {
 // pdf_asset_ref at a PDF that no longer matches the offer's current
 // lines — and the rejected write must leave pdf_asset_ref untouched.
 func TestOfferRenderSetPdfAssetRef_StalePreparedVersionRejectsWithVersionSkew(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render fence deal", pipeline, open, &e.Rep1)
@@ -518,6 +525,7 @@ func TestOfferRenderSetPdfAssetRef_StalePreparedVersionRejectsWithVersionSkew(t 
 // at all, so the render handler never reaches RenderOfferPDF or the blob
 // store for such a caller.
 func TestOfferRenderPrepareRender_ReadOnlyOfferGrantDenied(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render read-only deal", pipeline, open, &e.Rep1)
@@ -538,6 +546,7 @@ func TestOfferRenderPrepareRender_ReadOnlyOfferGrantDenied(t *testing.T) {
 // the PDF is rendered and BEFORE anything reaches the blob store — a
 // read-only role must never cause an orphan blob write just to be told no.
 func TestOfferRenderHandler_ReadOnlyOfferGrantDeniedBeforeAnyBlobWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Render read-only handler deal", pipeline, open, &e.Rep1)
@@ -590,6 +599,7 @@ func ownedOfferOnAnotherTeamsDeal(t *testing.T, e *Env) (owner, other context.Co
 // admits everyone (the GetOffer control below proves this seat really can see
 // the row it is refused a render of).
 func TestOfferRenderPrepareRender_AnotherSeatsDealDenied(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner, other, created := ownedOfferOnAnotherTeamsDeal(t, e)
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
@@ -635,6 +645,7 @@ func TestOfferRenderPrepareRender_AnotherSeatsDealDenied(t *testing.T) {
 // deletion of the document the owner's customer was sent. Asserting only the
 // 403 would pass against a handler that refused after doing both.
 func TestOfferRenderHandler_AnotherSeatsDealDeniedBeforeAnyBlobWrite(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner, other, created := ownedOfferOnAnotherTeamsDeal(t, e)
 	offerID := ids.From[ids.OfferKind](ids.UUID(created.Id))
@@ -717,6 +728,7 @@ func seedAnchorLegalName(t *testing.T, e *Env, legalName string, confirmed bool)
 // The pair is the point: the same installation, the same anchor legal name, and
 // the only thing that moves is whether it was confirmed by a human.
 func TestOfferRenderIssuerPrefersAConfirmedLegalName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedAnchorLegalName(t, e, "Anchor Holding GmbH", true)
 	pipeline, open, _ := DealFixture(t, e)
@@ -735,6 +747,7 @@ func TestOfferRenderIssuerPrefersAConfirmedLegalName(t *testing.T) {
 }
 
 func TestOfferRenderIssuerIgnoresAnUnconfirmedLegalName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// The same name, proposed by a site read and confirmed by no one. Printing
 	// it would let a public web page re-brand the next quote this installation

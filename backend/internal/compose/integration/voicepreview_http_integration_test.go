@@ -49,6 +49,7 @@ const previewMeetingTranscript = "00:00:00 Lars Jankowfsky\n" +
 	"And a second turn of mine."
 
 func TestVoiceCorpusPreviewAndIngestStatsHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)

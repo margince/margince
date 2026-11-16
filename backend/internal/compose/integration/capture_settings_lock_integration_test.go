@@ -27,6 +27,7 @@ func settingRows(t *testing.T, e *apptest.AppEnv, key string) int {
 
 // Capture settings the api's environment sets read as that value, refuse a
 // change, and let a form that resends them save its other fields.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestCaptureSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{
 		"MARGINCE_CAPTURE_AUTO_ENRICH=false",

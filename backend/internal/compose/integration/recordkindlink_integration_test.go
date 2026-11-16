@@ -53,6 +53,7 @@ func probe(ctx context.Context, e *Env, id ids.UUID, f func(context.Context, pgx
 }
 
 func TestALinkToAnExtensionRecordNeedsALiveRowAndTheKindsReadRight(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	live, archived := kindFixture(t)
 	reader := e.As(e.Rep1, nil, principal.Permissions{
@@ -105,6 +106,7 @@ func kindWorker(e *Env, kindGrant principal.ObjectGrant) context.Context {
 }
 
 func TestAnExtensionRecordTakesATagAndJoinsAShortlistUnderTheKindsRights(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	live, archived := kindFixture(t)
 	store := collections.NewStore(e.DB())
@@ -148,6 +150,7 @@ func TestAnExtensionRecordTakesATagAndJoinsAShortlistUnderTheKindsRights(t *test
 }
 
 func TestAnExtensionKindWithoutTheUpdateRightCannotBeTagged(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	live, _ := kindFixture(t)
 	store := collections.NewStore(e.DB())
@@ -164,6 +167,7 @@ func TestAnExtensionKindWithoutTheUpdateRightCannotBeTagged(t *testing.T) {
 // The audit door takes an extension kind's name as it takes a core one. The rule
 // it records names the kind, so a reader can tell what the change was on.
 func TestAnAuditRowNamesAnExtensionKindAndTheRuleThatAdmittedIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	live, _ := kindFixture(t)
 	worker := kindWorker(e, principal.ObjectGrant{Read: true, Update: true})
@@ -190,6 +194,7 @@ func TestAnAuditRowNamesAnExtensionKindAndTheRuleThatAdmittedIt(t *testing.T) {
 }
 
 func TestALinkToAnUndeclaredExtensionKindIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	kindFixture(t)
 	admin := e.Admin()

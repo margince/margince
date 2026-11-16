@@ -30,6 +30,7 @@ import (
 )
 
 func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -85,6 +86,7 @@ func TestAnArchiveAskedOnlyForAnUntouchedRecordRefusesATouchedOne(t *testing.T) 
 // behave exactly as they did. A guard that refused either would have stopped
 // every other caller of these three verbs.
 func TestAnArchiveWithNoPreconditionOrAnUnbrokenOneStillLands(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 

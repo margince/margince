@@ -70,6 +70,7 @@ func assertIDOrder(t *testing.T, got, want []ids.UUID, label string) {
 // directions, equal keys tie-broken by the house (created_at DESC, id
 // DESC) tuple.
 func TestCustomFieldVocab_SortByCustomColumn(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
@@ -94,6 +95,7 @@ func TestCustomFieldVocab_SortByCustomColumn(t *testing.T) {
 // tail (the cursor carries the sort key, so no row repeats or vanishes
 // at a page boundary).
 func TestCustomFieldVocab_SortPaginatesStably(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
@@ -127,6 +129,7 @@ func TestCustomFieldVocab_SortPaginatesStably(t *testing.T) {
 // equality matches — text, number, and boolean — and compose with each
 // other AND-wise.
 func TestCustomFieldVocab_FilterEqualityPerType(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	tier := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
@@ -157,6 +160,7 @@ func TestCustomFieldVocab_FilterEqualityPerType(t *testing.T) {
 // ActiveColumns — and therefore the vocabulary — so sorting or filtering
 // by it answers the same typed 422 codes an unknown cf_ field gets.
 func TestCustomFieldVocab_RetiredAndUnknownRefused(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{Object: "contact", Label: "Legacy Tier", Type: customfields.TypeText, Source: "manual"})
 	if err != nil {
@@ -285,6 +289,7 @@ func assertFullNameAndDefaultSort(t *testing.T, f cfvFixture) {
 // Otherwise this test pins the old rule and the new one cannot land
 // without it looking like a regression.
 func TestCustomFieldVocab_CoreVocabulary(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	// The deal list shares f's Env (Setup rebuilds the schema, so one
 	// per test) — its store rides the same pool and field catalog.
@@ -322,6 +327,7 @@ func TestCustomFieldVocab_CoreVocabulary(t *testing.T) {
 // does not parse as the column's type is a typed 422, never a query
 // error.
 func TestCustomFieldVocab_MalformedFilterValueRefused(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 
@@ -337,6 +343,7 @@ func TestCustomFieldVocab_MalformedFilterValueRefused(t *testing.T) {
 // refused with the sort-mismatch type (the contract's
 // cursor_param_mismatch) instead of silently mis-paging.
 func TestCustomFieldVocab_SortedCursorRefusedUnderOtherSort(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
@@ -359,6 +366,7 @@ func TestCustomFieldVocab_SortedCursorRefusedUnderOtherSort(t *testing.T) {
 // refused as a malformed cursor at the store — it never reaches the
 // typed bind cast where Postgres would fail the query (22P02 → 500).
 func TestCustomFieldVocab_CraftedCursorKeyIsClientFault(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "manual"})
 	f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})

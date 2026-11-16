@@ -112,6 +112,7 @@ func raisedAbout(t *testing.T, e *Env, contact ids.UUID) int {
 
 // One sweep reads past its first page.
 func TestOneSweepRaisesMoreOwedReceiptsThanAPageHolds(t *testing.T) {
+	t.Parallel()
 	e := owedReceiptEnv(t)
 	contact, marker := owedReceipt(t, e, "Paula Page")
 	copyOwed(t, e, marker, 200)
@@ -126,6 +127,7 @@ func TestOneSweepRaisesMoreOwedReceiptsThanAPageHolds(t *testing.T) {
 // Receipts owed about an erased subject never settle, and must never hold back
 // a receipt owed after them.
 func TestReceiptsOwedAboutAnErasedSubjectDoNotHoldBackALaterOne(t *testing.T) {
+	t.Parallel()
 	e := owedReceiptEnv(t)
 	erased, marker := owedReceipt(t, e, "Erik Erased")
 	copyOwed(t, e, marker, 2000)
@@ -142,6 +144,7 @@ func TestReceiptsOwedAboutAnErasedSubjectDoNotHoldBackALaterOne(t *testing.T) {
 // An erasure that has changed the subject but not yet taken back its notices
 // makes the sweep wait. The sweep then raises nothing about the subject.
 func TestTheSweepWaitsForAnErasureInFlightAndRaisesNothing(t *testing.T) {
+	t.Parallel()
 	e := owedReceiptEnv(t)
 	contact, _ := owedReceipt(t, e, "Hanna Held")
 	ctx := context.Background()

@@ -99,6 +99,7 @@ func setupReceiptLane(t *testing.T) *receiptLaneEnv {
 // time and the stop's time in Vietnam time, and names no Margince. The ledger
 // refuses a second receipt for the same refusal.
 func TestARelayedRefusalIsReceiptedOnceWithBothTimes(t *testing.T) {
+	t.Parallel()
 	l := setupReceiptLane(t)
 	called := clocktest.Now(t).Add(-3 * time.Hour).Truncate(time.Minute)
 
@@ -176,6 +177,7 @@ func TestARelayedRefusalIsReceiptedOnceWithBothTimes(t *testing.T) {
 // refusal, a stop and their receipts by 364 days. The contact's export still
 // holds every one of them (Art. 11.7 keeps them a year).
 func TestRefusalsAndReceiptsAYearOldAreStillExported(t *testing.T) {
+	t.Parallel()
 	l := setupReceiptLane(t)
 	contact := ids.From[ids.ContactKind](l.contact)
 	l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ('newsletter', 'Newsletter', 'marketing')
@@ -233,6 +235,7 @@ func TestRefusalsAndReceiptsAYearOldAreStillExported(t *testing.T) {
 // a contact the receipt rules cover, on an app with no mail relay. The receipt
 // cannot be staged, and System health reports it under the receipts source.
 func TestAMissedReceiptShowsInSystemHealth(t *testing.T) {
+	t.Parallel()
 	owingReceipts()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -287,6 +290,7 @@ func (l *receiptLaneEnv) refusingContact(t *testing.T, name string) ids.UUID {
 // A refusal and receipt inside the pack's year stay whole and exported; one
 // past it is anonymized like any other contact.
 func TestRetentionKeepsAYearsRefusalsAndReleasesOlderOnes(t *testing.T) {
+	t.Parallel()
 	l := setupReceiptLane(t)
 	young := l.refusingContact(t, "Young Refusal")
 	old := l.refusingContact(t, "Old Refusal")
@@ -347,6 +351,7 @@ func TestRetentionKeepsAYearsRefusalsAndReleasesOlderOnes(t *testing.T) {
 // to another contact. The export finds a receipt by the refusal it answers, so
 // it stays with the contact who refused and does not reach the other one.
 func TestARelinkedReceiptStaysInItsRefusersExport(t *testing.T) {
+	t.Parallel()
 	l := setupReceiptLane(t)
 	refuser := l.refusingContact(t, "Refusing Subject")
 	other := l.e.SeedContact(t, "Other Subject", &l.e.Rep1)
@@ -370,6 +375,7 @@ func TestARelinkedReceiptStaysInItsRefusersExport(t *testing.T) {
 // withdrew and stopped into another. The survivor's export holds both receipts,
 // found through the stop its copy came from and the merged record's withdrawals.
 func TestAMergedAwayRefusersReceiptsReachTheSurvivorsExport(t *testing.T) {
+	t.Parallel()
 	l := setupReceiptLane(t)
 	retired := ids.From[ids.ContactKind](l.contact)
 	l.e.WsExec(t, `INSERT INTO consent_purpose (key, label, class) VALUES ('newsletter', 'Newsletter', 'marketing')

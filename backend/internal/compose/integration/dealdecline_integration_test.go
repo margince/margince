@@ -16,6 +16,7 @@ import (
 // each mark one of two equal activities not about the deal, and answer alike.
 // The link stays, carrying the mark. A second decline writes nothing.
 func TestADealDeclineAnswersAsItsRouteThroughTheTool(t *testing.T) {
+	t.Parallel()
 	d, deal, first, second := newMarkedDoors(t, "deal-decline-doors")
 	body := AnyMap{"deal_id": deal}
 	type answer struct {
@@ -44,6 +45,7 @@ func TestADealDeclineAnswersAsItsRouteThroughTheTool(t *testing.T) {
 
 // The mark is one engine behind two doors too, and "relevant" is its undo.
 func TestADealMarkAnswersAsItsRouteThroughTheTool(t *testing.T) {
+	t.Parallel()
 	d, deal, first, second := newMarkedDoors(t, "deal-relevance-doors")
 	type answer struct {
 		DealRelevance   string `json:"deal_relevance"`

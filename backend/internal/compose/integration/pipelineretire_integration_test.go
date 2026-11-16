@@ -33,6 +33,7 @@ func pipelineIDOf(id ids.UUID) ids.PipelineID { return ids.From[ids.PipelineKind
 // guard would be a trap rather than a door, and the message would be naming a
 // way forward nobody can walk.
 func TestTheDefaultPipelineCannotBeRetiredUntilAnotherTakesOver(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	standby, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Standby"})
@@ -81,6 +82,7 @@ func TestTheDefaultPipelineCannotBeRetiredUntilAnotherTakesOver(t *testing.T) {
 // first would turn retiring a pipeline into a bulk migration, and an operation
 // nobody dares run retires nothing.
 func TestRetiringAPipelineLeavesItsDealsWhereTheyAre(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	retiring, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Old process"})
@@ -130,6 +132,7 @@ func TestRetiringAPipelineLeavesItsDealsWhereTheyAre(t *testing.T) {
 // caller cannot tell whether the first call landed, and both answers have to
 // read the same.
 func TestARetiredPipelineCanBePutBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	p, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Seasonal"})
@@ -167,6 +170,7 @@ func TestARetiredPipelineCanBePutBack(t *testing.T) {
 // the one direction that can collide — and the caller has to be told which pipeline
 // holds it, because only they can decide which of the two gets renamed.
 func TestARetiredPipelineCannotComeBackOntoATakenName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	retired, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Seasonal"})
@@ -214,6 +218,7 @@ func TestARetiredPipelineCannotComeBackOntoATakenName(t *testing.T) {
 // Built from two transactions, because the window between the check and the update
 // is not reachable by calling the store twice and hoping.
 func TestARestoreRefusedByTheIndexReadsAsAConflict(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	retired, err := e.Deals.CreatePipeline(ctx, deals.CreatePipelineInput{Name: "Seasonal"})
