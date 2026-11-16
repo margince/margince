@@ -3796,6 +3796,19 @@ test.describe("Authorize access on the sign-in surface", () => {
     );
   });
 
+  test("a laptop keeps the pane at the top, beside the wordmark", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    await expect(
+      page.getByRole("radio", { name: de["workArea.mode.all"] }),
+    ).toBeVisible();
+    const mark = await page.locator(".auth-wordmark").boundingBox();
+    const pane = await page.locator(".oauthconsent-pane").boundingBox();
+    expect(pane?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(mark?.y ?? 0);
+  });
+
   for (const error of ["invalid_request", "method_off", "stale_consent"]) {
     test(`the ${error} refusal meets AA on the same surface`, async ({
       page,
