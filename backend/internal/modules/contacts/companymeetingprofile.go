@@ -35,9 +35,10 @@ const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at
 // RetractStaleMeetingProfilesTx removes up to limit company fields whose
 // transcript may no longer fill them: narrowed, restricted, archived or redacted
 // since. One statement tests and deletes, so a transcript that qualifies again
-// meanwhile keeps its fields. It returns how many it removed.
+// meanwhile keeps its fields. It returns how many it removed. It sweeps every
+// company and so is the system's alone: no caller's write right covers that.
 func RetractStaleMeetingProfilesTx(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
-	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
 	rows, err := tx.Query(ctx, `WITH picked AS MATERIALIZED (
