@@ -20,7 +20,7 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDayFull, formatTimeRange } from "../../format/meetingtime";
 import { useLocale, useT } from "../../i18n";
-import { backStaysInApp } from "../../lib/historydepth";
+import { depthBackOutOf, traverseTo } from "../../lib/historydepth";
 import {
   meetingInvitationKey,
   useMeetingInvitation,
@@ -40,8 +40,10 @@ type Change = components["schemas"]["MeetingInvitationChange"];
 // calendar, so "back" is wherever they were; a page opened cold has no screen
 // of ours behind it, whatever else the tab visited, and lands on home instead.
 function leaveMeeting() {
-  if (backStaysInApp()) globalThis.history.back();
-  else navigate({ screen: "home" });
+  const here = globalThis.location.hash;
+  const before = depthBackOutOf((hash) => hash === here);
+  if (before === undefined) navigate({ screen: "home" });
+  else traverseTo(before);
 }
 
 export function BookingMeetingScreen({

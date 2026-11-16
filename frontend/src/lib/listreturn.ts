@@ -1,4 +1,4 @@
-import { stepsBackOutOf } from "./historydepth";
+import { depthBackOutOf, traverseTo } from "./historydepth";
 import {
   navigateReplacing,
   parseHash,
@@ -55,17 +55,24 @@ export function listAddress(screen: Screen): string {
  * earlier screen of ours in history, history is the truest answer, because it
  * also brings back the list's filter and scroll offset. A record with none of
  * ours behind it goes to its list instead of out of the app.
+ *
+ * A press that finds the reader already off the record, or a traversal still
+ * under way, is a second press for the same leave and does nothing.
  */
 export function leaveRecord(record: Route): void {
-  const steps = stepsBackOutOf((hash) => {
+  const onRecord = (hash: string) => {
     const route = parseHash(hash);
     return route.screen === record.screen && route.id === record.id;
-  });
-  if (steps > 0) {
-    globalThis.history.go(-steps);
+  };
+  if (!onRecord(globalThis.location.hash)) {
     return;
   }
-  globalThis.location.hash = listAddress(record.screen);
+  const before = depthBackOutOf(onRecord);
+  if (before === undefined) {
+    globalThis.location.hash = listAddress(record.screen);
+    return;
+  }
+  traverseTo(before);
 }
 
 /** Close a list's create form onto the list, replacing the form's address so

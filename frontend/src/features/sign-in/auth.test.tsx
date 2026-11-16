@@ -4,7 +4,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetTheme } from "../../app/theme-reset";
 import { LOCALES, localeNameKey, translate } from "../../i18n";
+import { depthBackOutOf, entryDepth } from "../../lib/historydepth";
 import { keepReturnRoute, restoreReturnRoute } from "../../lib/returnroute";
+import { watchAddress } from "../../lib/router";
 import { STORAGE_KEYS } from "../../lib/storage";
 import { AuthScreen, AvailabilityScreen } from "./auth";
 import { ok, render, stubApi, t } from "./auth.testkit";
@@ -381,6 +383,27 @@ describe("OIDC failure notice", () => {
     expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
     expect(window.location.pathname).toBe("/consent");
     expect(window.location.hash).toBe(request);
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  // The consent path holds no other screen, so the sign-in screen is reloaded
+  // at the root. The notice must reach the reader there.
+  it("carries the notice to the root when no consent request was kept", async () => {
+    const reload = vi
+      .spyOn(globalThis.location, "replace")
+      .mockImplementation(() => undefined);
+    globalThis.history.replaceState(
+      null,
+      "",
+      "/consent#/oauth-consent?oidc=failed",
+    );
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    await waitFor(() =>
+      expect(reload).toHaveBeenCalledWith("/#/login?oidc=failed"),
+    );
     globalThis.history.replaceState(null, "", "/");
   });
 
@@ -821,6 +844,62 @@ describe("AuthScreen reset deep link", () => {
     // The sign-in form, not the reset form.
     expect(await screen.findByLabelText("Email")).toBeTruthy();
     expect(screen.queryByLabelText("New password")).toBeNull();
+  });
+});
+
+// The sign-in screen rewrites the address of the entry it is on. The entry keeps
+// its place in the app's history, so a later Back still knows what is behind it.
+describe("AuthScreen rewriting its own entry", () => {
+  let unwatch: () => void = () => undefined;
+
+  afterEach(() => unwatch());
+
+  // Each move delivered and counted before the next one starts.
+  async function arrive(hash: string) {
+    const moved = new Promise((resolve) =>
+      globalThis.addEventListener("hashchange", resolve, { once: true }),
+    );
+    globalThis.location.hash = hash;
+    await moved;
+  }
+
+  async function startCounting() {
+    globalThis.history.replaceState(null, "", "#/home");
+    unwatch = watchAddress(() => undefined);
+    await arrive("#/deals");
+  }
+
+  it("keeps the depth of the entry it clears the failure marker from", async () => {
+    await startCounting();
+    await arrive("#/login?oidc=failed");
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    await waitFor(() => expect(window.location.hash).toBe(""));
+
+    await arrive("#/deals");
+    expect(entryDepth()).toBe(3);
+    globalThis.history.back();
+    expect(entryDepth()).toBe(2);
+    expect(depthBackOutOf(() => false)).toBe(1);
+  });
+
+  it("keeps the depth of the entry it clears the reset route from", async () => {
+    await startCounting();
+    await arrive("#/reset-password?token=good-token");
+    stubApi({ password: true, password_reset: true }, () => ok(204));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    await userEvent.type(
+      await screen.findByLabelText("New password"),
+      "an entirely new password{enter}",
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("auth.backToLogin") }),
+    );
+    expect(window.location.hash).toBe("");
+
+    expect(entryDepth()).toBe(2);
+    expect(depthBackOutOf(() => false)).toBe(1);
   });
 });
 
