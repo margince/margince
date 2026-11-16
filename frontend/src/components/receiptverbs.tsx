@@ -14,11 +14,20 @@ import { ReceiptUndo } from "./receiptundo";
 export function ReceiptVerbs({
   receipt,
   onDone,
-}: Readonly<{ receipt: Receipt; onDone?: () => void }>) {
+  undoable,
+}: Readonly<{
+  receipt: Receipt;
+  onDone?: () => void;
+  // False where the page knows the reader may not write the changed record.
+  undoable?: boolean;
+}>) {
   const t = useT();
   const review = receipt.review;
-  if (!review) return <ReceiptUndo receipt={receipt} onDone={onDone} />;
+  if (!review)
+    return (
+      <ReceiptUndo receipt={receipt} onDone={onDone} undoable={undoable} />
+    );
   if (review.reversed) return <span>{t("brief.changes.undone")}</span>;
   if (!isOpenReceipt(receipt)) return <p>{t("brief.changes.superseded")}</p>;
-  return <ReceiptUndo receipt={receipt} onDone={onDone} />;
+  return <ReceiptUndo receipt={receipt} onDone={onDone} undoable={undoable} />;
 }

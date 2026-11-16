@@ -138,6 +138,7 @@ function draw(
     >
       <LocaleProvider initial="en">
         <DealCommitteeCard
+          canWrite
           dealId={DEAL}
           ownerId={OWNER}
           coverage={view}

@@ -6340,7 +6340,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.archivedReadOnly":
     "Deal này đang trong kho lưu trữ nên không thể thay đổi.",
   "deal.notYoursToChange":
-    "Bạn không có quyền thay đổi deal này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
+    "Bạn có thể ghi nhận hoạt động và thêm việc cần làm. Để thay đổi deal này, người chịu trách nhiệm cần chia sẻ deal với bạn.",
   "deal.closedTakesNoStage":
     "Deal này đã đóng. Mở lại deal để chuyển sang giai đoạn khác.",
   "deal.reopen": "Mở lại",
