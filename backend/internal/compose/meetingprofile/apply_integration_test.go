@@ -8,6 +8,7 @@ package meetingprofile_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"maps"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -291,5 +293,18 @@ func TestAMeetingValueGoesOnceItsTranscriptIsNarrowedOrRedacted(t *testing.T) {
 		if got, ok := m.field(t, company, "sales_motion"); ok {
 			t.Errorf("after %q the field still says %q for a transcript its readers lost", change, got.Value)
 		}
+	}
+}
+
+// The sweep reaches every company in the workspace, so an administrator who
+// may edit companies is still refused it.
+func TestOnlyTheSystemRunsTheMeetingProfileSweep(t *testing.T) {
+	m := newMeeting(t, "workspace")
+	err := database.WithWorkspaceTx(m.e.Admin(), m.e.Pool, func(tx pgx.Tx) error {
+		_, err := contacts.RetractStaleMeetingProfilesTx(m.e.Admin(), tx, 10)
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("an administrator ran the meeting-profile sweep: err = %v, want a permission refusal", err)
 	}
 }
