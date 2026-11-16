@@ -60,6 +60,7 @@ func setupRecoveryRecipients(t *testing.T, recipients recoveryRecipients) (recov
 }
 
 func TestExactProviderEvidenceWinsOverTheFirstToAddress(t *testing.T) {
+	t.Parallel()
 	r, _ := setupRecoveryRecipients(t, recoveryRecipients{selfFirst: true})
 	r.captureOwnEcho(r.ownMailbox(t), t, echoAlreadyCaptured("Re: Inbound question", gmailStamped))
 	gmail := r.sendRefusingReadBack(t, http.StatusServiceUnavailable, "backendError")
@@ -70,6 +71,7 @@ func TestExactProviderEvidenceWinsOverTheFirstToAddress(t *testing.T) {
 }
 
 func TestTheSendAbsorbsTheColleaguesCopyWhenItsOwnEchoArrives(t *testing.T) {
+	t.Parallel()
 	r, colleague := setupRecoveryRecipients(t, recoveryRecipients{copyColleague: true})
 	gmail := r.sendRefusingReadBack(t, http.StatusServiceUnavailable, "backendError")
 	stored := gmail.transmitted(t)
@@ -82,6 +84,7 @@ func TestTheSendAbsorbsTheColleaguesCopyWhenItsOwnEchoArrives(t *testing.T) {
 }
 
 func TestAReceiptAndCaptureWaitingOnTheSameProviderKeyConverge(t *testing.T) {
+	t.Parallel()
 	r, _ := setupRecoveryRecipients(t, recoveryRecipients{selfFirst: true})
 	observer := OwnerConn(t)
 	holder, err := pgx.ConnectConfig(context.Background(), observer.Config().Copy())
@@ -159,6 +162,7 @@ func (r recoveryEnv) captureColleagueCopy(t *testing.T, colleague string, stored
 }
 
 func TestAPartialProviderCopyCannotAbsorbTheColleaguesInboundCopy(t *testing.T) {
+	t.Parallel()
 	r, colleague := setupRecoveryRecipients(t, recoveryRecipients{copyColleague: true})
 	gmail := r.sendRefusingReadBack(t, http.StatusServiceUnavailable, "backendError")
 	stored := gmail.transmitted(t)

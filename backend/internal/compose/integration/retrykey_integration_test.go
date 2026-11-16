@@ -51,6 +51,7 @@ func createContactWithKey(ctx context.Context, t *testing.T, registry *agents.Re
 }
 
 func TestATooledCreateRetriedUnderOneKeyCreatesOneRecord(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -94,6 +95,7 @@ func TestATooledCreateRetriedUnderOneKeyCreatesOneRecord(t *testing.T) {
 // promise is easiest to lose: the answer already exists, so nothing about
 // handing it back looks like a read.
 func TestAReplayIsRefusedOnceTheCallerCanNoLongerReadWhatItCarries(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
@@ -144,6 +146,7 @@ func TestAReplayIsRefusedOnceTheCallerCanNoLongerReadWhatItCarries(t *testing.T)
 // receipt and reopen a worse hole — Art. 17 erasure anonymizes in place and
 // stamps archived_at, so the same relaxation replays pre-erasure PII.
 func TestAnArchivesReceiptIsRefusedAndItsEffectStillHappensOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)

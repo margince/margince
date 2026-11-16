@@ -52,6 +52,7 @@ func finishHealthFixtures(t *testing.T, e *apptest.AppEnv, state string) {
 }
 
 func TestSystemHealthFindsRunnableWorkWithoutARecentFailure(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 3)
@@ -74,6 +75,7 @@ func TestSystemHealthFindsRunnableWorkWithoutARecentFailure(t *testing.T) {
 }
 
 func TestJobHistoryPagesCompleteGroupsAndDisclosesRetentionChanges(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 65)
@@ -141,6 +143,7 @@ func TestJobHistoryPagesCompleteGroupsAndDisclosesRetentionChanges(t *testing.T)
 }
 
 func TestHistoryCursorCannotChangeItsFilters(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 51)
@@ -156,6 +159,7 @@ func TestHistoryCursorCannotChangeItsFilters(t *testing.T) {
 }
 
 func TestHealthQueueAssessmentAndDetailUseTheSameOwner(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 1)
@@ -176,6 +180,7 @@ func TestHealthQueueAssessmentAndDetailUseTheSameOwner(t *testing.T) {
 }
 
 func TestSystemHealthReadsKeepDomainEvidenceUnchanged(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 3)
@@ -210,6 +215,7 @@ func TestSystemHealthReadsKeepDomainEvidenceUnchanged(t *testing.T) {
 }
 
 func TestSystemHealthProjectsRevokedSourcesAndKeepsSearchReadable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var role roleWire
@@ -251,6 +257,7 @@ func TestSystemHealthProjectsRevokedSourcesAndKeepsSearchReadable(t *testing.T) 
 }
 
 func TestSystemHealthDoesNotTreatAMatchingSearchModelAsCompleteIndexEvidence(t *testing.T) {
+	t.Parallel()
 	router := apptest.EmbedReindexRouter(t, "health-marker-model")
 	e := setupEmbedReindex(t, router)
 	var report crmcontracts.SystemHealth
@@ -269,6 +276,7 @@ func TestSystemHealthDoesNotTreatAMatchingSearchModelAsCompleteIndexEvidence(t *
 }
 
 func TestHistoryKeepsCurrentRetriesBeyondTheFinishedRunWindow(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 2)
@@ -287,6 +295,7 @@ func TestHistoryKeepsCurrentRetriesBeyondTheFinishedRunWindow(t *testing.T) {
 }
 
 func TestMissingRestoreEvidenceLeavesHealthIncomplete(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var report crmcontracts.SystemHealth
@@ -304,6 +313,7 @@ func TestMissingRestoreEvidenceLeavesHealthIncomplete(t *testing.T) {
 }
 
 func TestHistoryExcludesAnotherWorkspacesRetainedRuns(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 1)
@@ -319,6 +329,7 @@ func TestHistoryExcludesAnotherWorkspacesRetainedRuns(t *testing.T) {
 }
 
 func TestExpectedQueueWorkAndCancellationDoNotBecomeProblems(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	inserter := apptest.InsertOnlyRunner(t)
@@ -361,6 +372,7 @@ func TestExpectedQueueWorkAndCancellationDoNotBecomeProblems(t *testing.T) {
 }
 
 func TestHistoryContinuationExcludesRunsFinishedAfterItsCutoff(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	enqueueHealthFixtures(t, e, 51)

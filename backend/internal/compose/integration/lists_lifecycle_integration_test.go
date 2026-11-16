@@ -23,6 +23,7 @@ type listSettingsWire struct {
 }
 
 func TestAListsSettingsChangeOnlyWhereTheyCanHold(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	var list listSettingsWire
 	mustCall(t, e, "POST", "/v1/lists", AnyMap{"name": "Keepers", "entity_type": "contact"}, http.StatusCreated, &list)
@@ -71,6 +72,7 @@ func TestAListsSettingsChangeOnlyWhereTheyCanHold(t *testing.T) {
 }
 
 func TestALiveListExplainsEachBranchAndKeepsEachFilterInItsHistory(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	var named struct {
 		ID string `json:"id"`
@@ -118,6 +120,7 @@ func TestALiveListExplainsEachBranchAndKeepsEachFilterInItsHistory(t *testing.T)
 }
 
 func TestAListsHistoryNamesTheRecordAndWhatEachRevisionChanged(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	var chosen AnyMap
 	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "History Gamma"}, http.StatusCreated, &chosen)

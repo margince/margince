@@ -47,6 +47,7 @@ func seededMarketingPurposeID(t *testing.T, e *apptest.AppEnv) string {
 	return id
 }
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -99,6 +100,7 @@ func TestAPublicBookingMarketingTickMailsALinkAndGrantsNothing(t *testing.T) {
 // contact is ensured — the same before-any-write rule the operational half
 // follows, and for the same reason: this door is anonymous, so a refusal after
 // the ensure would grow the contact table one rejected request at a time.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAPublicBookingRefusesAnInadmissibleMarketingTickBeforeAnyWrite(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -226,6 +228,7 @@ func bookingCounts(t *testing.T, e *apptest.AppEnv) counts {
 // A booking with no tick is exactly the booking it was before this feature: the
 // operational grant lands and nothing else moves. Without this the suite could
 // not tell "the tick works" from "every booking now mails a link".
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAPublicBookingWithoutAMarketingTickMailsNothing(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -325,6 +328,7 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeI
 // about a booking that does not exist. The response reports `not_asked`, which
 // is what the contract already declares for a question this installation could
 // not put.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -432,6 +436,7 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 // granted, which is the whole of what the guard protects; the booking form
 // simply stops being the place where that is paid for by somebody who came to
 // book a slot. The response says `not_asked`, and the withdrawal stands.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)

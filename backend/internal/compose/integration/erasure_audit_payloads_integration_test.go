@@ -19,6 +19,7 @@ import (
 )
 
 func TestErasureDestroysTheAuditAndOutboxCopiesWrittenByContactCreation(t *testing.T) {
+	t.Parallel()
 	for _, held := range []bool{false, true} {
 		t.Run(map[bool]string{false: "erased", true: "legal hold"}[held], func(t *testing.T) {
 			e := Setup(t)

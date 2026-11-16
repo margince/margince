@@ -13,6 +13,7 @@ import (
 )
 
 func TestAssertRuntimeRoleAcceptsTheRuntimePool(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 
 	// Also the absent-ext-schema case: the ext schema lands with the
@@ -24,6 +25,7 @@ func TestAssertRuntimeRoleAcceptsTheRuntimePool(t *testing.T) {
 }
 
 func TestAssertRuntimeRoleRefusesTheOwnerPool(t *testing.T) {
+	t.Parallel()
 	Setup(t)
 	owner := SchemaPool(t)
 	ctx := context.Background()
@@ -48,6 +50,7 @@ func TestAssertRuntimeRoleRefusesTheOwnerPool(t *testing.T) {
 }
 
 func TestAssertRuntimeRoleRefusesARoleOwningExtObjects(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 
@@ -83,6 +86,7 @@ func TestAssertRuntimeRoleRefusesARoleOwningExtObjects(t *testing.T) {
 }
 
 func TestAssertRuntimeRoleRefusesARoleOwningTheExtSchema(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 

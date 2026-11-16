@@ -225,6 +225,7 @@ func (e *voiceSendEnv) readSignal(t *testing.T, signal ids.UUID) voiceSignal {
 // outcome mean something — without it the case would pass on a send that
 // derived no footer to be confused by.
 func TestAComposedSendRecordsTheVoiceOutcomeOnTheApprovedBody(t *testing.T) {
+	t.Parallel()
 	e := setupVoiceSend(t)
 	ref, signal := e.openVoiceDraft(t, voiceDraftOptions{})
 
@@ -252,6 +253,7 @@ func TestAComposedSendRecordsTheVoiceOutcomeOnTheApprovedBody(t *testing.T) {
 // an erasure already removed. The mail still goes out — a learning concern
 // never costs a message.
 func TestAComposedSendNeverRematerialisesAnErasedSignal(t *testing.T) {
+	t.Parallel()
 	e := setupVoiceSend(t)
 	ref, signal := e.openVoiceDraft(t, voiceDraftOptions{erased: true})
 
@@ -274,6 +276,7 @@ func TestAComposedSendNeverRematerialisesAnErasedSignal(t *testing.T) {
 // over another human's drafts — "absent" and "someone else's" must be the same
 // answer to the sender.
 func TestAComposedSendRecordsNothingForAForeignOwnersSignal(t *testing.T) {
+	t.Parallel()
 	e := setupVoiceSend(t)
 	ref, signal := e.openVoiceDraft(t, voiceDraftOptions{foreignOwner: true})
 

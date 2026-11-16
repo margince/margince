@@ -155,6 +155,7 @@ func wantStanding(t *testing.T, got crmcontracts.ReplyRecipient, on bool, owner 
 }
 
 func TestAReplierNamedOnTheThreadIsOnTheConversation(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	ctx := s.replier(true)
 	rep1 := s.Rep1
@@ -206,6 +207,7 @@ func TestAReplierNamedOnTheThreadIsOnTheConversation(t *testing.T) {
 }
 
 func TestADealTeamMemberIsOnTheConversation(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	ctx := s.replier(true)
 
@@ -236,6 +238,7 @@ func TestADealTeamMemberIsOnTheConversation(t *testing.T) {
 }
 
 func TestAReplierOnNeitherIsToldWhoOwnsTheDeal(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	anchor := s.clientToColleague(t, "thread-1")
 	deal := s.dealOwnedBy(t, s.Rep3, anchor)
@@ -244,6 +247,7 @@ func TestAReplierOnNeitherIsToldWhoOwnsTheDeal(t *testing.T) {
 }
 
 func TestTheOwnerNamedIsOfTheOpenDealThenTheLatestFiling(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	ctx := s.replier(true)
 	anchor := s.clientToColleague(t, "thread-1")
@@ -258,6 +262,7 @@ func TestTheOwnerNamedIsOfTheOpenDealThenTheLatestFiling(t *testing.T) {
 // Every seat with the deal grant reads every live deal, so the grant is what
 // hides one. A hidden deal answers as no deal, even to its own team.
 func TestADealTheReplierCannotReadNamesNoOwnerAndNoTeam(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	anchor := s.clientToColleague(t, "thread-1")
 	deal := s.dealOwnedBy(t, s.Rep3, anchor)
@@ -266,6 +271,7 @@ func TestADealTheReplierCannotReadNamesNoOwnerAndNoTeam(t *testing.T) {
 }
 
 func TestAThreadUnderNoDealNamesNoOwner(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	anchor := s.clientToColleague(t, "thread-1")
 	wantStanding(t, s.standing(s.replier(true), t, anchor), false, nil)
@@ -311,6 +317,7 @@ func (s *standingEnv) offered(t *testing.T, row ids.UUID) string {
 }
 
 func TestAWrittenAboutRowOffersItsOneLinkedContact(t *testing.T) {
+	t.Parallel()
 	s := setupStanding(t)
 	deal := activities.ActivityLinkInput{EntityType: "deal", EntityID: s.dealOwnedBy(t, s.Rep3)}
 	cases := []struct {

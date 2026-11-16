@@ -37,6 +37,7 @@ import (
 // A role with NO contact grant gets no contact hits — search must not
 // out-see the entity lists (object RBAC before row scope).
 func TestSearchHonorsObjectRBAC(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Rostock Contact', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Rostock Werft', 'manual', 'human:x')`)
@@ -79,6 +80,7 @@ func TestSearchHonorsObjectRBAC(t *testing.T) {
 }
 
 func TestSearchRanksAcrossObjectTypes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Heike Hamburg', 'manual', 'human:x')`)
 	e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Hamburg Logistics GmbH', 'manual', 'human:x')`)
@@ -116,6 +118,7 @@ func TestSearchRanksAcrossObjectTypes(t *testing.T) {
 // word, so ranked across types three notes fill a page of three and the
 // account is not on it. Grouped, every type that matched is.
 func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	account := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Lubeck Shipping', 'manual', 'human:x')`)
 	// Each note repeats the name once more than the last, so the four rank apart.
@@ -165,6 +168,7 @@ func TestAGroupedSearchShowsTheAccountThatNotesNamingItOutrank(t *testing.T) {
 // Philipp too. The one contact named Philip is seeded last, so his id sorts
 // last and a tie broken by id alone would leave him off a page of three.
 func TestAnExactNameOutranksLongerNamesSharingItsPrefix(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	var seeded []ids.UUID
 	for _, name := range []string{"Philipp Adler", "Philipp Brandt", "Jan Philipp Claes", "Philip Dorn"} {
@@ -197,6 +201,7 @@ func TestAnExactNameOutranksLongerNamesSharingItsPrefix(t *testing.T) {
 // one carries the word itself, and it leads although the other repeats its own
 // in the subject as well as the body, which ranks it higher.
 func TestAWholeWordOutranksAWordSharingOnlyItsStem(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	literal := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
 		VALUES ($1, 'note', 'Kickoff', 'We agreed on a pilot study.', 'en', 'manual', 'human:x')`)
@@ -216,6 +221,7 @@ func TestAWholeWordOutranksAWordSharingOnlyItsStem(t *testing.T) {
 }
 
 func TestSearchHitsCarryTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	// A contact is readable by every seat with the grant; a capture-private
 	// one is readable by its owner alone, and a search hit IS a read.
@@ -242,6 +248,7 @@ func TestSearchHitsCarryTheCallersRowScope(t *testing.T) {
 }
 
 func TestSearchExcludesArchivedRows(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by, archived_at) VALUES ($1, 'Archived Kiel', 'manual', 'human:x', now())`)
 	page, err := e.Store.Search(e.Admin(), search.Input{Query: "kiel"})
@@ -257,6 +264,7 @@ func TestSearchExcludesArchivedRows(t *testing.T) {
 // one to find (ADR-0082/A127). It stays an ordinary row, readable by id — what
 // narrows is discovery.
 func TestSearchExcludesTheOwnCompany(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO company (id, display_name, is_anchor, source, captured_by) VALUES ($1, 'Rostock Consulting GmbH', true, 'manual', 'human:x')`)
 	customer := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Rostock Freight AG', 'manual', 'human:x')`)
@@ -275,6 +283,7 @@ func TestSearchExcludesTheOwnCompany(t *testing.T) {
 // existence. Retired counts as none: a programme that has been wound up is not
 // one to badge an account with.
 func TestACompanyHitSaysWhetherTheAccountIsAPartner(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	partner, none, retired := seedWismarAccounts(t, e)
 
@@ -312,6 +321,7 @@ func TestACompanyHitSaysWhetherTheAccountIsAPartner(t *testing.T) {
 // A seat that may not read partner programmes keeps its company hits and gets
 // no marker on them — null, never a false it was refused the basis for.
 func TestThePartnerMarkerIsWithheldWithoutTheObjectGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	partner, _, _ := seedWismarAccounts(t, e)
 
@@ -340,6 +350,7 @@ func TestThePartnerMarkerIsWithheldWithoutTheObjectGrant(t *testing.T) {
 // from a marker that it is a partner — not through search, and not by calling
 // the reader directly with its id, which is what "exported" makes possible.
 func TestThePartnerMarkerNeverOutseesTheCompanyRowScope(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	// Captured privately by a rep on the other team, so rep1 may not read it.
 	hidden := e.SeedID(t, `INSERT INTO company (id, display_name, owner_id, visibility, source, captured_by)
@@ -437,6 +448,7 @@ func searchSeat(e *SearchEnv, teams []ids.UUID, scope principal.RowScope, grants
 // A word still being typed reaches records by prefix, and mail only once it is
 // whole. "contr" finds the contact and no mail; "contract" finds the mail.
 func TestAFragmentFindsRecordsByPrefixAndMailOnlyAsAWholeWord(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	contact := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Contreras Vega', 'manual', 'human:x')`)
 	mail := e.SeedID(t, `INSERT INTO activity (id, kind, subject, body, language, source, captured_by)
@@ -463,6 +475,7 @@ func TestAFragmentFindsRecordsByPrefixAndMailOnlyAsAWholeWord(t *testing.T) {
 }
 
 func TestSearchRankedCursorWalksAllHitsOnce(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	want := map[string]bool{}
 	for i := range 5 {
@@ -494,6 +507,7 @@ func TestSearchRankedCursorWalksAllHitsOnce(t *testing.T) {
 }
 
 func TestSearchEmptyQueryIsAValidationError(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	_, err := e.Store.Search(e.Admin(), search.Input{Query: "   "})
 	var bad *search.BadQueryError
@@ -508,6 +522,7 @@ func TestSearchEmptyQueryIsAValidationError(t *testing.T) {
 // scale past a sequential scan. (Which plan the optimizer picks at a
 // given cardinality is its business; the index existing is ours.)
 func TestSearchEveryBranchHasAGinIndex(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	// Derived from the branch table, never restated: a hand-kept copy of this
 	// list had already fallen behind by two branches, and a census that reads a
@@ -537,6 +552,7 @@ func TestSearchEveryBranchHasAGinIndex(t *testing.T) {
 // reads all of them — which makes the OBJECT grant the whole of the gate, and
 // the one thing worth proving twice.
 func TestSearchFindsTheCatalogByNameAndSku(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO product (id, name, sku, description, unit_price_minor, currency, source, captured_by)
 	             VALUES ($1, 'Kärcher floor scrubber', 'KAR-9910', 'Industrial wet cleaning unit', 129900, 'EUR', 'manual', 'human:x')`)
@@ -571,6 +587,7 @@ func TestSearchFindsTheCatalogByNameAndSku(t *testing.T) {
 // A lead found by its company's name shows that company beside its name.
 // Without it the reader meets a name with no reason it answered the search.
 func TestALeadHitShowsTheCompanyItNames(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	named := e.SeedID(t, `INSERT INTO lead (id, full_name, company_name, email, source, captured_by)
 	                      VALUES ($1, 'Jonas Becker', 'Lübeck Shipyards', 'jonas@shipyards.test', 'manual', 'human:x')`)
@@ -601,6 +618,7 @@ func TestALeadHitShowsTheCompanyItNames(t *testing.T) {
 // the text that ranked a lead found by name would quote words the query never
 // touched.
 func TestALeadsCompanyIsNotRetrievalEvidence(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	lead := e.SeedID(t, `INSERT INTO lead (id, full_name, company_name, email, source, captured_by)
 	                     VALUES ($1, 'Jonas Becker', 'Lübeck Shipyards', 'jonas@shipyards.test', 'manual', 'human:x')`)
@@ -622,6 +640,7 @@ func TestALeadsCompanyIsNotRetrievalEvidence(t *testing.T) {
 // and a rep looking one up is usually holding one of them — so `active` is not
 // a discovery narrowing, while archived_at (which every branch carries) is.
 func TestSearchFindsAnInactiveProductButNotAnArchivedOne(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO product (id, name, active, unit_price_minor, currency, source, captured_by)
 	             VALUES ($1, 'Zwickau retired mount', false, 4900, 'EUR', 'manual', 'human:x')`)
@@ -644,6 +663,7 @@ func TestSearchFindsAnInactiveProductButNotAnArchivedOne(t *testing.T) {
 // name is an empty page rather than a 403 — the same existence-hiding posture
 // every other branch takes.
 func TestCatalogHitsAreWithheldWithoutTheObjectGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO product (id, name, unit_price_minor, currency, source, captured_by)
 	             VALUES ($1, 'Ilmenau bracket', 2500, 'EUR', 'manual', 'human:x')`)
@@ -691,6 +711,7 @@ func hasType(hits []search.Hit, want string) bool {
 // refused ordinary work would satisfy every assertion about the fault and break
 // the product.
 func TestTheSearchCeilingStillServesAnOrdinarySearch(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Rostock Contact', 'manual', 'human:x')`)
 
@@ -739,6 +760,7 @@ func searchAs(e *SearchEnv) context.Context {
 // company moves that out of date. A hit showing the old name sends the reader
 // looking for an account nobody calls that any more.
 func TestALinkedLeadsExcerptFollowsTheCompanysName(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.Admin()
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)
@@ -775,6 +797,7 @@ func TestALinkedLeadsExcerptFollowsTheCompanysName(t *testing.T) {
 // the linked company leaves behind. Its excerpt then carries the company's own
 // name. Until a rename it adds nothing, since the title already says it.
 func TestACompanyOnlyLeadsExcerptNamesARenamedCompany(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.Admin()
 	company := e.SeedID(t, `INSERT INTO company (id, display_name, source, captured_by)

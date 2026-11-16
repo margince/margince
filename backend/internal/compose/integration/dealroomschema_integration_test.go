@@ -52,6 +52,7 @@ func openRoomOnANewDeal(t *testing.T, e *apptest.AppEnv, title string) (dealID, 
 // The archive moves the state and the stamp TOGETHER, and the database is what
 // makes that mandatory rather than merely intended.
 func TestArchivingARoomMovesItsStateAndItsStampTogether(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Room Schema", "ada@rooms.test", "Ada Admin")
 	dealID, roomID, version := openRoomOnANewDeal(t, e, "Archive agreement")
@@ -97,6 +98,7 @@ func TestArchivingARoomMovesItsStateAndItsStampTogether(t *testing.T) {
 // that, and archiving the first frees the deal — which is the sentence the
 // refusal tells the caller to act on.
 func TestASecondRoomOnALiveDealIsRefusedAsAlreadyOpen(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Room Conflict", "ada@rooms.test", "Ada Admin")
 	dealID, roomID, version := openRoomOnANewDeal(t, e, "The first room")
@@ -135,6 +137,7 @@ func TestASecondRoomOnALiveDealIsRefusedAsAlreadyOpen(t *testing.T) {
 // that name fires, so the name is what binds. Asked of the catalog rather than
 // the migration text, because what binds is what the database has.
 func TestTheOneOpenRoomRuleIsTheExclusionTheStoreNames(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Room Indexes", "ada@rooms.test", "Ada Admin")
 
@@ -168,6 +171,7 @@ func TestTheOneOpenRoomRuleIsTheExclusionTheStoreNames(t *testing.T) {
 // worth its own arm — the fix is in shared code, so one passing and the other
 // not would say the mapping is per-error rather than per-sentinel.
 func TestARefusalAboutTheRoomsStateAnswersConflictToo(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Room State", "ada@rooms.test", "Ada Admin")
 	_, roomID, version := openRoomOnANewDeal(t, e, "Closed to invitations")

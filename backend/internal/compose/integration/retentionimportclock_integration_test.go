@@ -41,6 +41,7 @@ func runRetentionPass(t *testing.T, e *Env) {
 // them, with a direct UPDATE of created_at after the insert — are left alone by
 // every policy.
 func TestAnImportedRecordIsNotSweptOnArrival(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	lead, contact, activity := ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -105,6 +106,7 @@ func TestAnImportedRecordIsNotSweptOnArrival(t *testing.T) {
 // A fresh installation's unconverted-lead policy archives: the lead leaves
 // every list and keeps its name, so a rep who meets them again can restore it.
 func TestTheDefaultPolicyArchivesAnUnconvertedLeadAndKeepsIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	lead := ids.NewV7()
 	ctx := context.Background()
@@ -148,6 +150,7 @@ func TestTheDefaultPolicyArchivesAnUnconvertedLeadAndKeepsIt(t *testing.T) {
 // holds the lead's name and address, and a selector that skipped archived rows would
 // keep them forever.
 func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	lead := ids.NewV7()
 	ctx := context.Background()
@@ -187,6 +190,7 @@ func TestAnAnonymizePolicyReachesALeadTheArchiveAlreadyTook(t *testing.T) {
 // The activity archive row reaches a transcript only at 1095 days. Bootstrap,
 // the contact and the transcript all go through the real writers.
 func TestTheDefaultPoliciesKeepAnOldContactAndAnOldTranscript(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	ctx := context.Background()

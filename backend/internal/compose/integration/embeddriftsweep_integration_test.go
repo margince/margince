@@ -30,6 +30,7 @@ import (
 // one: one model call, pending drops to 0, and the binding marker is not
 // touched (the sweep is not a reindex and must never stamp the marker).
 func TestSweepWorkspaceEmbeddingDriftHealsIdentityMatchedGaps(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -94,6 +95,7 @@ func TestSweepWorkspaceEmbeddingDriftHealsIdentityMatchedGaps(t *testing.T) {
 // that state is the operator's preview→confirm rebuild to trigger, never
 // the sweep's (ADR-0069 §3a keeps the consent gate exactly there).
 func TestSweepWorkspaceEmbeddingDriftRefusesTheBindingChangeCase(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -132,6 +134,7 @@ func TestSweepWorkspaceEmbeddingDriftRefusesTheBindingChangeCase(t *testing.T) {
 // the store for that window, and the sweep re-running underneath it would
 // double-walk the same pending set for nothing.
 func TestSweepWorkspaceEmbeddingDriftWaitsOutARunningReindex(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -173,6 +176,7 @@ func TestSweepWorkspaceEmbeddingDriftWaitsOutARunningReindex(t *testing.T) {
 // message is not embeddable. The sweep must not embed it or count it, and a
 // second pass must make no model call.
 func TestSweepWorkspaceEmbeddingDriftNeverEnumeratesHeldMail(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()

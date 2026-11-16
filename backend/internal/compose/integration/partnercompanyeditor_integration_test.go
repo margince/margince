@@ -31,6 +31,7 @@ func companyEditorPerms() principal.Permissions {
 }
 
 func TestACompanyEditorSetsUpAPartnerProgramWithoutATier(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Harbour Hosting", &e.Rep1))
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, companyEditorPerms())
@@ -64,6 +65,7 @@ func TestACompanyEditorSetsUpAPartnerProgramWithoutATier(t *testing.T) {
 }
 
 func TestACompanyEditorCannotSetOrClearTheMarginTier(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := e.As(e.Rep1, []ids.UUID{e.Team1}, companyEditorPerms())
 	tier := "tier2_20"
@@ -96,6 +98,7 @@ func TestACompanyEditorCannotSetOrClearTheMarginTier(t *testing.T) {
 }
 
 func TestThePartnerGrantSetsTheTier(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Harbour Hosting", &e.Rep1))
 	tier := "tier3_25"
@@ -112,6 +115,7 @@ func TestThePartnerGrantSetsTheTier(t *testing.T) {
 }
 
 func TestThePartnerGrantAloneCannotSetUpAProgram(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Harbour Hosting", &e.Rep1))
 	partnerOnly := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{

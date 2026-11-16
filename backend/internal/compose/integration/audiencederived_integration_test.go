@@ -38,6 +38,7 @@ const (
 )
 
 func TestAHeldActivityIsNeverEmbeddedAndLosesItsVectorWhenNarrowed(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	gen := search.NewEmbedGen(e.Store, fakeEmbedder(t, fake))
@@ -124,6 +125,7 @@ func TestAHeldActivityIsNeverEmbeddedAndLosesItsVectorWhenNarrowed(t *testing.T)
 // which is also what makes a later release meaningful — the subject can see
 // there is something to ask about.
 func TestASubjectAccessExportListsAHeldActivityWithoutItsText(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()
@@ -195,6 +197,7 @@ func TestASubjectAccessExportListsAHeldActivityWithoutItsText(t *testing.T) {
 // original" reads every one of those as permission. This asserts the other
 // direction: no open activity vouching for it, no payload.
 func TestASubjectAccessExportWithholdsARawOriginalNothingVouchesFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()
@@ -277,6 +280,7 @@ func TestASubjectAccessExportWithholdsARawOriginalNothingVouchesFor(t *testing.T
 // write lands anyway — and nothing clears it afterwards, because the narrowing
 // already ran. Both re-test the row as it is at write time.
 func TestAWriteThatRacesANarrowingLosesToIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	gen := search.NewEmbedGen(e.Store, fakeEmbedder(t, fake))
@@ -340,6 +344,7 @@ func TestAWriteThatRacesANarrowingLosesToIt(t *testing.T) {
 // because the widening's own event was handled first and found the row already
 // indexed.
 func TestTheRescopeConsumerFollowsTheRowNotTheStaleEvent(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	gen := search.NewEmbedGen(e.Store, fakeEmbedder(t, fake))
@@ -395,6 +400,7 @@ func TestTheRescopeConsumerFollowsTheRowNotTheStaleEvent(t *testing.T) {
 }
 
 func TestNarrowingRetractsWhatAMessagesSignatureWroteOnAContact(t *testing.T) {
+	t.Parallel()
 	// A title lifted from a signature block is the message's content, restated
 	// on a record everybody can see. Narrowing the message and leaving the field
 	// behind limits the mail and publishes what it said.
@@ -415,6 +421,7 @@ func TestNarrowingRetractsWhatAMessagesSignatureWroteOnAContact(t *testing.T) {
 }
 
 func TestNarrowingLeavesAFieldAContactConfirmed(t *testing.T) {
+	t.Parallel()
 	// The human-edit conflict, settled on the write side rather than here: a
 	// contact accepting a value writes their own source_ref over the enrichment's,
 	// so a field somebody confirmed no longer names the message at all.
@@ -448,6 +455,7 @@ func TestNarrowingLeavesAFieldAContactConfirmed(t *testing.T) {
 }
 
 func TestNarrowingLeavesAnotherMessagesSignatureFields(t *testing.T) {
+	t.Parallel()
 	// Scoped to the message that was narrowed. A second message from the same
 	// correspondent is still open, and what its signature said is still readable.
 	e := SetupSearch(t)
@@ -474,6 +482,7 @@ func TestNarrowingLeavesAnotherMessagesSignatureFields(t *testing.T) {
 }
 
 func TestNarrowingLeavesAFieldAContactRestored(t *testing.T) {
+	t.Parallel()
 	// The case that made the first version of this destroy somebody's work.
 	//
 	// RestoreProfileField INHERITS source_ref from the row it undoes, so a value
@@ -529,6 +538,7 @@ func TestNarrowingLeavesAFieldAContactRestored(t *testing.T) {
 }
 
 func TestNarrowingLeavesAFieldAContactCorrected(t *testing.T) {
+	t.Parallel()
 	// The case the source predicate does NOT cover, and the reason there are
 	// three. A human correcting a field records it in ai_feedback and touches
 	// neither the column nor the profile-field row — so a corrected field is

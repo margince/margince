@@ -21,6 +21,7 @@ import (
 // A cursor travels in a URL, so it must stay small however long the last row's
 // sort value is, and the walk must still reach every row once.
 func TestASortedListPagesPastARowWithAVeryLongSortValue(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
 	apptest.BootstrapWorkspaceSession(t, e, "Long Sort", "admin@longsort.test", "Admin")
 	stamp := "zzlongsort"

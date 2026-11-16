@@ -25,6 +25,7 @@ import (
 )
 
 func TestAnAgentOnAColleaguesPassportOverwritesAHumanTypedField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -53,6 +54,7 @@ func TestAnAgentOnAColleaguesPassportOverwritesAHumanTypedField(t *testing.T) {
 // is no cf_ key. The patch answers 422 and the stored value stands. Lead is
 // exercised here because it was the last object to take custom fields.
 func TestEndToEnd_caseVariantKeyIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -122,7 +124,7 @@ func stageContactAndAgent(t *testing.T, e *apptest.AppEnv, fullName, label strin
 // passport per call, exactly as the stdio/hosted transports do.
 func mcpAgentInvoker(t *testing.T, agentToken string) func(tool, args string) (json.RawMessage, error) {
 	t.Helper()
-	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,6 +169,7 @@ func contactNameAndTitle(t *testing.T, invoke func(tool, args string) (json.RawM
 // Automatic work with no passport applies the whole patch, including a field a
 // human typed. Nothing is staged for it.
 func TestAutomaticWorkOverwritesAHumanTypedFieldWithoutApproval(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -214,7 +217,7 @@ func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 // registry, called in-process by an agent with no passport.
 func automaticInvoker(t *testing.T, e *apptest.AppEnv) func(tool, args string) (json.RawMessage, error) {
 	t.Helper()
-	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
+	pool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

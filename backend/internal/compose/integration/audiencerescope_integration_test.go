@@ -29,6 +29,7 @@ import (
 )
 
 func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()
@@ -86,6 +87,7 @@ func TestALimitedMessageLeavesTheInteractionGraph(t *testing.T) {
 }
 
 func TestAnAudienceChangeNarrowsTheDerivedSignalAndMakesTheThreadDue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()
@@ -166,6 +168,7 @@ func TestAnAudienceChangeNarrowsTheDerivedSignalAndMakesTheThreadDue(t *testing.
 // that cites a newly limited message archives too — its summary now mixes
 // correspondence two different contacts limited, and no one reader admits both.
 func TestOwnerlessAndCrossOwnerCitationsArchiveTheSignal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	ctx := context.Background()

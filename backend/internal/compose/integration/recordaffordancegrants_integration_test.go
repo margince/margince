@@ -65,6 +65,7 @@ func seedSharedRecords(t *testing.T, e *Env, pipeline ids.PipelineID, open ids.S
 // owner. So the update grant alone offers no archive, and the delete grant
 // offers it. Each flag must match what the mutation then does.
 func TestRecordAffordancesOnASharedRecordFollowTheObjectGrants(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	e.Contacts.SetClock(func() time.Time { return now })
@@ -131,6 +132,7 @@ func requireSharedArchiveRefused(ctx context.Context, t *testing.T, e *Env, shar
 // refuses each such mutation it tries. The same records on a full seat offer
 // both, so the flags and the refusals come from the seat.
 func TestARecordOnAReadSeatOffersNoActionAndRefusesEachMutation(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Seat Actions", "seat-actions@fable.test", "Admin")
 	e.DescribeCompany(t)
@@ -194,6 +196,7 @@ func TestARecordOnAReadSeatOffersNoActionAndRefusesEachMutation(t *testing.T) {
 // An archived lead or project is nobody's to edit, while the owner keeps the
 // update authority field masks read.
 func TestArchivedLeadsAndProjectsOfferNoEdit(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Archive company", &e.Rep1)
 	lead := seedLead(t, e, "Archived lead", "archived-lead@prospect.test", &e.Rep1)
@@ -240,6 +243,7 @@ func TestArchivedLeadsAndProjectsOfferNoEdit(t *testing.T) {
 // a shared one. Reading row authority twice, or reading the owner rule where
 // the delete grant already answers, changes them.
 func TestRecordAffordanceStampsReadAuthorityOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	shared := seedSharedRecords(t, e, pipeline, open)

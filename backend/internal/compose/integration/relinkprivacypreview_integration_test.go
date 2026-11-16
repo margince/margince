@@ -20,6 +20,7 @@ import (
 )
 
 func TestRelinkPreviewKeepsBlindRecipientsWithTheSender(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	sender := e.As(e.Rep1, nil, AdminPerms)
 	reviewer := e.As(e.Rep2, nil, AdminPerms)

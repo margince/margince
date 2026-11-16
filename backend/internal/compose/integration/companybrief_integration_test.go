@@ -103,6 +103,7 @@ var briefReaderPerms = principal.Permissions{
 }
 
 func TestCompanyBriefCachesUntilTheAccountChanges(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, won := DealFixture(t, e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -155,6 +156,7 @@ func TestCompanyBriefCachesUntilTheAccountChanges(t *testing.T) {
 
 // The explicit refresh ignores a cache that still matches — the reader asked.
 func TestCompanyBriefRefreshIgnoresAMatchingCache(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
@@ -176,6 +178,7 @@ func TestCompanyBriefRefreshIgnoresAMatchingCache(t *testing.T) {
 // one reader's row scope is not true for another's, so sharing the row would
 // either leak or understate.
 func TestCompanyBriefIsCachedPerReader(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	lane := &countingLane{reply: `{"sections":[{"kind":"snapshot","sentences":[{"text":"An account.","nature":"fact","evidence":[{"entity_type":"company","entity_id":"` + company.String() + `"}]}]}]}`, names: map[string]string{company.String(): "Acme"}}
@@ -206,6 +209,7 @@ func TestCompanyBriefIsCachedPerReader(t *testing.T) {
 // holding the deal grant, so the specimen is a capture-private contact: the
 // one record a contact row scope still hides from everybody but its owner.
 func TestCompanyBriefDescribesOnlyWhatItsReaderCanSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", nil))
 	// Captured privately by Rep3: only Rep3 reads this contact, whatever
@@ -290,6 +294,7 @@ func briefText(sentences []crmcontracts.CompanyBriefSentence) string {
 // Re-pointing the model lane rewrites cached briefs rather than leaving text
 // attributed to a model that no longer writes it.
 func TestCompanyBriefRewritesWhenTheLaneIsRepointed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
@@ -311,6 +316,7 @@ func TestCompanyBriefRewritesWhenTheLaneIsRepointed(t *testing.T) {
 // No lane at all is a deployment running no model, not a failure: the reader
 // gets the deterministic floor, and generated_by says so.
 func TestCompanyBriefServesTheFloorWithoutALane(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
@@ -342,6 +348,7 @@ func TestCompanyBriefServesTheFloorWithoutALane(t *testing.T) {
 // An account the caller cannot read has no brief, and the refusal is the same
 // existence-hiding answer the record read gives.
 func TestCompanyBriefHidesAnAccountOutOfRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	account := e.SeedCompany(t, "Private Account", &e.Rep3)
 	// Capture privacy is what takes an account out of a row scope now.
@@ -361,6 +368,7 @@ func TestCompanyBriefHidesAnAccountOutOfRowScope(t *testing.T) {
 
 // Passportless work acts for nobody, so it has no reader to write a brief for.
 func TestCompanyBriefRefusesAnAgent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 
@@ -381,6 +389,7 @@ func TestCompanyBriefRefusesAnAgent(t *testing.T) {
 // the POST forces a rewrite, and a refusal from the service has to reach the
 // wire as a refusal rather than an empty 200.
 func TestCompanyBriefTransportServesAndForces(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	reader := e.As(e.Rep1, nil, briefReaderPerms)
@@ -436,6 +445,7 @@ func TestCompanyBriefTransportServesAndForces(t *testing.T) {
 // A refusal must reach the wire AS a refusal: an out-of-scope account is a
 // 404, not a 200 carrying an empty brief.
 func TestCompanyBriefTransportRefusesOutOfScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	account := e.SeedCompany(t, "Private Account", &e.Rep3)
 	e.MakeCapturePrivate(t, "company", account, e.Rep3)
@@ -474,6 +484,7 @@ func (l *subjectLane) Complete(ctx context.Context, _ model.Request) (model.Resp
 // the name the product shows for it — read from the same assembled input the
 // text is written from, never from the model's reply.
 func TestCompanyBriefNamesTheAccountToTheRail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Acme", &e.Rep1))
 	reader := e.As(e.Rep1, nil, briefReaderPerms)

@@ -30,6 +30,7 @@ import (
 )
 
 func TestABodyTooLargeToIndexIsRefusedRatherThanAnsweredAsAServerFault(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 

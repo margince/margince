@@ -58,6 +58,7 @@ func dealWithHiddenCompany(t *testing.T, e *Env) (collections.CreateListInput, i
 }
 
 func TestAWhyNeverNamesARecordItsReaderCannotOpen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	input, deal, company := dealWithHiddenCompany(t, e)
@@ -81,6 +82,7 @@ func TestAWhyNeverNamesARecordItsReaderCannotOpen(t *testing.T) {
 }
 
 func TestAMaskedFieldStillExplainsForAScopedWriter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	input, deal, _ := dealWithHiddenCompany(t, e)
@@ -100,6 +102,7 @@ func TestAMaskedFieldStillExplainsForAScopedWriter(t *testing.T) {
 }
 
 func TestAReaderRefusedTheRecordTypeReadsAnEmptyHistory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Listed Contact", &e.Rep1)
@@ -124,6 +127,7 @@ func TestAReaderRefusedTheRecordTypeReadsAnEmptyHistory(t *testing.T) {
 }
 
 func TestAddingToAShortlistNeedsTheRecordsReadGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Unreadable To The Curator", &e.Rep1)
@@ -144,6 +148,7 @@ func TestAddingToAShortlistNeedsTheRecordsReadGrant(t *testing.T) {
 }
 
 func TestErasureTakesEveryAnonymizedLeadOffItsShortlists(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	const address = "listed-lead@erasure.example"

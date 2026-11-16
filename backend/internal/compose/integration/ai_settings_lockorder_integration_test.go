@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnInvalidChangeOfALockedBindingIsRefusedAsLocked(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{envBinding("env-model")})
 	e.BootstrapWorkspace(t)
@@ -43,6 +44,7 @@ func TestAnInvalidChangeOfALockedBindingIsRefusedAsLocked(t *testing.T) {
 
 // A resend is held to the revision the GET's ETag names. So the editor's
 // If-Match save of the locked binding it read is a no-op.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnIfMatchResendOfALockedBindingIsANoOp(t *testing.T) {
 	env := envBinding("env-model")
 	e := apptest.SetupAppWithEnv(t, []string{env})
@@ -63,6 +65,7 @@ func TestAnIfMatchResendOfALockedBindingIsANoOp(t *testing.T) {
 
 // A stale If-Match is answered as stale before the lock is, as the budget and
 // the overrides answer it. So the editor reloads rather than reads a lock.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAStaleIfMatchUnderALockedBindingIsVersionSkew(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{envBinding("env-model")})
 	e.BootstrapWorkspace(t)
@@ -80,6 +83,7 @@ func TestAStaleIfMatchUnderALockedBindingIsVersionSkew(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnInvalidChangeOfLockedOverridesIsRefusedAsLocked(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{`MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"}}`})
 	e.BootstrapWorkspace(t)
@@ -94,6 +98,7 @@ func TestAnInvalidChangeOfLockedOverridesIsRefusedAsLocked(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnInvalidChangeOfALockedAllowanceIsRefusedAsLocked(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{`MARGINCE_AI_BUDGET={"tokens_per_full_user":5000,"company_monthly_tokens":777}`})
 	e.BootstrapWorkspace(t)
@@ -116,6 +121,7 @@ func TestAnInvalidChangeOfALockedAllowanceIsRefusedAsLocked(t *testing.T) {
 // change as locked, not as a value the screen could correct. A value outside
 // the contract's bounds is refused at decode, before any lock is read. The
 // country is the registered test pack zk.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAnInvalidChangeOfALockedInstallationSettingIsRefusedAsLocked(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{
 		"MARGINCE_INSTALLATION_NAME=Env Name Co", "MARGINCE_INSTALLATION_COUNTRY=zk", "MARGINCE_INSTALLATION_SEND_RATE_LIMIT=7",
@@ -138,6 +144,7 @@ func TestAnInvalidChangeOfALockedInstallationSettingIsRefusedAsLocked(t *testing
 
 // The status reads the binding, the overrides and the allowance the
 // environment sets, though no save ever wrote them.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheStatusReadsTheBootValues(t *testing.T) {
 	env := envBinding("env-model")
 	e := apptest.SetupAppWithEnv(t, []string{
@@ -177,6 +184,7 @@ func TestTheStatusReadsTheBootValues(t *testing.T) {
 
 // Whether a Vertex key may be checked follows the boot binding's profile: a
 // sovereign one forbids reaching Google, though no saved binding says so.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheKeyCheckFollowsTheBootBindingsProfile(t *testing.T) {
 	lane := `{"provider":"ollama","model":"local"}`
 	root := make([]byte, 32)

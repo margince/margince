@@ -97,6 +97,7 @@ func readStamp(t *testing.T, e *Env, activity ids.UUID) stampRow {
 // deal that qualified it — in the same transaction, so there is no window in
 // which an erasure sees the record unclassified.
 func TestWinningADealStampsItsCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedStampFixture(t, e)
 
@@ -130,6 +131,7 @@ func TestWinningADealStampsItsCorrespondence(t *testing.T) {
 // product and the classification deliberately is not: over-retention is an
 // argument to have with a supervisory authority, destruction is irreversible.
 func TestReopeningAWonDealLeavesTheStampStanding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedStampFixture(t, e)
 

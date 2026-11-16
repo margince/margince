@@ -128,6 +128,7 @@ func newProbeRunner(t *testing.T, workers *river.Workers) (*jobs.Runner, func())
 }
 
 func TestTheDeclaredTimeoutIsTheDeadlineRiverApplies(t *testing.T) {
+	t.Parallel()
 	const declared = 100 * time.Millisecond
 
 	probe := &timeoutProbeWorker{deadline: make(chan deadlineRead, 1)}
@@ -174,6 +175,7 @@ func TestTheDeclaredTimeoutIsTheDeadlineRiverApplies(t *testing.T) {
 // without any other test noticing, because every OTHER kind in the fleet
 // carries a real deadline and would not catch the coercion.
 func TestADeclaredAbsenceLeavesTheJobWithNoDeadline(t *testing.T) {
+	t.Parallel()
 	// release is required here: this job's context is NEVER cancelled (that
 	// is the property under test), and jobs.Runner.Stop performs River's
 	// GRACEFUL stop -- it waits for in-flight work rather than cancelling

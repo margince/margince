@@ -67,6 +67,7 @@ func wonDeal(t *testing.T, e *apptest.AppEnv, amount int64) string {
 const progressSummaryReply = `{"paragraphs":[[{"text":"You've closed {{progress:closed}} of the {{progress:goal}} goal.","kind":"observation","cells":["progress:closed","progress:goal"]}]],"action_ids":[],"next_decision":null,"confidence":"medium"}`
 
 func TestProgressIsSummedUpFromItsOwnFiguresAndKeptPerReader(t *testing.T) {
+	t.Parallel()
 	lane := &scriptedLane{reply: progressSummaryReply}
 	e := apptest.SetupAppWithOptions(t, compose.WithSalesAssessment(lane, "test-routing"))
 	e.BootstrapWorkspace(t)
@@ -114,6 +115,7 @@ func TestProgressIsSummedUpFromItsOwnFiguresAndKeptPerReader(t *testing.T) {
 }
 
 func TestProgressWithNoModelAnswersItsFiguresAndNoSentences(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	wonDeal(t, e, 300_000)
@@ -125,6 +127,7 @@ func TestProgressWithNoModelAnswersItsFiguresAndNoSentences(t *testing.T) {
 }
 
 func TestASellerIsSummedUpOnlyWithinTheirOwnProgress(t *testing.T) {
+	t.Parallel()
 	lane := &scriptedLane{reply: progressSummaryReply}
 	e := apptest.SetupAppWithOptions(t, compose.WithSalesAssessment(lane, "test-routing"))
 	e.BootstrapWorkspace(t)
@@ -150,6 +153,7 @@ func TestASellerIsSummedUpOnlyWithinTheirOwnProgress(t *testing.T) {
 const proposedMonthsReply = `{"months":[100,100,100,100,100,100,100,100,300,300,100,100],"reason":"Autumn carries the year."}`
 
 func TestAManagerIsProposedASellersMonthsFromTheirClosedRevenue(t *testing.T) {
+	t.Parallel()
 	lane := &scriptedLane{reply: proposedMonthsReply}
 	e := apptest.SetupAppWithOptions(t, compose.WithReportSetup(lane))
 	e.BootstrapWorkspace(t)
@@ -215,6 +219,7 @@ func TestAManagerIsProposedASellersMonthsFromTheirClosedRevenue(t *testing.T) {
 // The months are shaped by what the seller won. While individual performance
 // is off a colleague's plan is out of reach, so no model is asked.
 func TestAColleaguesMonthsAreNotProposedWhileIndividualPerformanceIsOff(t *testing.T) {
+	t.Parallel()
 	lane := &scriptedLane{reply: proposedMonthsReply}
 	e := apptest.SetupAppWithOptions(t, compose.WithReportSetup(lane))
 	e.BootstrapWorkspace(t)
@@ -248,6 +253,7 @@ func monthsSum(months []int64) int64 {
 }
 
 func TestOnlyWhoMaySetASellersGoalsIsProposedThem(t *testing.T) {
+	t.Parallel()
 	lane := &scriptedLane{reply: proposedMonthsReply}
 	e := apptest.SetupAppWithOptions(t, compose.WithReportSetup(lane))
 	e.BootstrapWorkspace(t)

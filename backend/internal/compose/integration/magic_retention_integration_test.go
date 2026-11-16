@@ -27,6 +27,7 @@ import (
 )
 
 func TestRetentionIsOnTheReceiptAsACountWithoutNamingTheRecords(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)

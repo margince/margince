@@ -41,6 +41,7 @@ func (o *objectionDuringPacing) Wait(context.Context, comms.Delivery) time.Durat
 }
 
 func TestAnObjectionCommittedBeforeTheWireStopsTheMessage(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.grantMarketingConsent(t)

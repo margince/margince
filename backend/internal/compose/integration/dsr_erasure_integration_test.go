@@ -17,6 +17,7 @@ import (
 )
 
 func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	rows, err := e.Owner.Query(context.Background(), `
@@ -63,6 +64,7 @@ func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
 }
 
 func TestFulfillingAnErasureDSRExecutesTheErasure(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	var dsr struct {

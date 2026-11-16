@@ -64,6 +64,7 @@ func bootWith(t *testing.T, e *Env, vault keyvault.Vault, cfg *config.Config, lo
 }
 
 func TestADeclaredRemovalDeletesTheSealedPasswordAndTheMailerSendsWithoutOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	sealedBefore(t, e, vault, identity.SMTPPasswordRef, "a-leaked-password")
@@ -111,6 +112,7 @@ func TestADeclaredRemovalDeletesTheSealedPasswordAndTheMailerSendsWithoutOne(t *
 // Leaving the key out is not a removal: the sealed copy keeps answering, and
 // the mailer keeps the username it authenticates with.
 func TestAnAbsentPasswordKeyStillAuthenticatesWithTheSealedCopy(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
@@ -130,6 +132,7 @@ func TestAnAbsentPasswordKeyStillAuthenticatesWithTheSealedCopy(t *testing.T) {
 // A removal is a revocation, so it holds while outbound mail is switched off.
 // The sealed password must not wait for the day mail is switched back on.
 func TestADeclaredRemovalHoldsWhileMailIsSwitchedOff(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)
@@ -147,6 +150,7 @@ func TestADeclaredRemovalHoldsWhileMailIsSwitchedOff(t *testing.T) {
 // remove. The seal's transaction holds the lock until the removal waits on it,
 // which fixes the order of the two.
 func TestARemovalLeavesARefSealedWhileItWasDeciding(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	vault := realVault(t, e)
 	log := slog.New(slog.DiscardHandler)

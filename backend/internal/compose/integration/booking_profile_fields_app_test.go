@@ -15,6 +15,7 @@ import (
 
 // Saving the meeting settings refuses each mistake on the field it is about:
 // the response names that field instead of one generic sentence.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestMeetingSettingsRefuseEachMistakeOnItsOwnField(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)

@@ -16,6 +16,7 @@ import (
 // "Which rooms is this contact still in" is answered by address: a live seat
 // counts, a revoked one does not, and a stranger's address finds nothing.
 func TestRoomsAreListedByTheAddressThatHoldsASeat(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

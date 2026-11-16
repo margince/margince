@@ -37,6 +37,7 @@ func idByQuery(t *testing.T, e *apptest.AppEnv, query string) string {
 }
 
 func TestEveryRecordKindAnImportWritesReadsAsImportedOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _ := seededStageNames(t, e)
 	parts := append(bundleParts(), dealImportParts("ref,name,pipeline,stage,company_ref")...)
@@ -69,6 +70,7 @@ func TestEveryRecordKindAnImportWritesReadsAsImportedOnTheWire(t *testing.T) {
 }
 
 func TestAnImportedLeadReadsAsImportedOnTheWire(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	importAndApprove(t, e, "lead", "Email,Name\norigin@lead-wire.example,Lead Origin\n",
 		map[string]string{"Email": "email", "Name": "full_name"})

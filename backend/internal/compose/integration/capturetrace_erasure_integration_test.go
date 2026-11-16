@@ -21,6 +21,7 @@ import (
 )
 
 func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 
@@ -58,6 +59,7 @@ func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {
 // leaves behind was never written. Turning that default on is what made a
 // dormant gap a live one, which is why the test arrives with the flip.
 func TestErasureReachesAChannelCounterpartysTracePayloads(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 

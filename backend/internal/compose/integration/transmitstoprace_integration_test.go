@@ -30,22 +30,27 @@ import (
 )
 
 func TestAStopWaitsForTheProviderHandoffAlreadyUnderway(t *testing.T) {
+	t.Parallel()
 	assertPermissionWriteWaitsForHandoff(t, stopDuringSend)
 }
 
 func TestAConsentWithdrawalWaitsForTheProviderHandoffAlreadyUnderway(t *testing.T) {
+	t.Parallel()
 	assertPermissionWriteWaitsForHandoff(t, withdrawalDuringSend)
 }
 
 func TestALeadCredentialStopOrdersWithAContactsSharedAddress(t *testing.T) {
+	t.Parallel()
 	assertPermissionWriteWaitsForHandoff(t, leadToDuringSend)
 }
 
 func TestABlindCopySharesItsAddressStopsHandoffFence(t *testing.T) {
+	t.Parallel()
 	assertPermissionWriteWaitsForHandoff(t, blindCopyBounceDuringSend)
 }
 
 func TestAConfirmationWaitsBeforeTakingTheSendingContactsRow(t *testing.T) {
+	t.Parallel()
 	assertPermissionWriteWaitsForHandoff(t, confirmationDuringSend)
 }
 
@@ -195,6 +200,7 @@ func assertPermissionWriteWaitsForHandoff(t *testing.T, scenario permissionWrite
 }
 
 func TestAStopCommittedBeforeDispatchReachesNoProvider(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -210,6 +216,7 @@ func TestAStopCommittedBeforeDispatchReachesNoProvider(t *testing.T) {
 }
 
 func TestAProviderFailureReleasesTheRecipientsStopFence(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -242,10 +249,12 @@ func TestAProviderFailureReleasesTheRecipientsStopFence(t *testing.T) {
 }
 
 func TestAConflictingPermissionWriterPostponesProviderHandoff(t *testing.T) {
+	t.Parallel()
 	assertPermissionWriteWaitsForHandoff(t, secondSendDuringStop)
 }
 
 func TestSessionCapacityPostponesWithoutCallingTheProvider(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -261,6 +270,7 @@ func TestSessionCapacityPostponesWithoutCallingTheProvider(t *testing.T) {
 }
 
 func TestReceiptReadBackDoesNotDelayARecordedStop(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)

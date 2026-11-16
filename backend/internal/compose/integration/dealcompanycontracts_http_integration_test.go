@@ -46,6 +46,7 @@ func dealCompanyOverREST(t *testing.T, e *apptest.AppEnv, deal string) string {
 }
 
 func TestTheRESTDealUpdateRefusesACompanyMoveWithAFieldError(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	deal, acme, contoso := acmeDealWithContract(t, e)
 
@@ -72,6 +73,7 @@ func TestTheRESTDealUpdateRefusesACompanyMoveWithAFieldError(t *testing.T) {
 // A file that re-points a deal at another company meets the same refusal: the
 // row is skipped and the deal keeps its company.
 func TestACSVReimportDoesNotMoveADealAwayFromItsContracts(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	acme := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Acme", "source": "manual"})

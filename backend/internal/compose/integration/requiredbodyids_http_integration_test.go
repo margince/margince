@@ -231,6 +231,7 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 }
 
 func TestAnOmittedRequiredIDIsNamedAndASuppliedOneStaysHidden(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Required IDs", "ids@fable.test", "Admin")
 
@@ -313,6 +314,7 @@ func seedDealForRequiredIDs(t *testing.T, e *apptest.AppEnv) string {
 // it. One rule must read the same on both, or the asymmetry has simply moved from
 // one transport to one credential type.
 func TestAPassportReadsTheSameRefusalAsASessionForAnOmittedStage(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Required IDs Agent", "agent-ids@fable.test", "Admin")
 	deal := seedDealForRequiredIDs(t, e)

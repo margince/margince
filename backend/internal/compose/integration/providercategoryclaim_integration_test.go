@@ -68,6 +68,7 @@ func claimedBy(t *testing.T, e *Env, contactID ids.UUID) map[string]string {
 // survivor keeps its claim on the shared category. The merged-away run keeps
 // its claim on what only it was buying.
 func TestMergeKeepsBothLiveRunsAndDropsOnlyTheCollidingClaim(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	survivor := seedMergeSubject(t, e, "Dora Survivor")
 	source := seedMergeSubject(t, e, "Dora Source")
@@ -104,6 +105,7 @@ func TestMergeKeepsBothLiveRunsAndDropsOnlyTheCollidingClaim(t *testing.T) {
 // queued is already buying. It never reached the provider, so the merge skips
 // it and the run further along keeps the claim.
 func TestMergeSkipsAQueuedRunBuyingWhatTheOtherSideIsBuying(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	survivor := seedMergeSubject(t, e, "Erik Survivor")
 	source := seedMergeSubject(t, e, "Erik Source")
@@ -151,6 +153,7 @@ func TestMergeSkipsAQueuedRunBuyingWhatTheOtherSideIsBuying(t *testing.T) {
 // Erasure detaches a run that may still be live. Its claims go with the
 // subject, instead of the scrub failing on a claim that would name nobody.
 func TestErasureReleasesALiveRunsCategoryClaims(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	runID := seedRun(t, e, contactID, "in_progress", "fp-live-erasure", false)

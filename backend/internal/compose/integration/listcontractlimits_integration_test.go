@@ -15,6 +15,7 @@ import (
 )
 
 func TestAListWriteHoldsTheContractsLimits(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	var list listDTO
 	if status := e.Call(t, "POST", "/v1/lists", AnyMap{"name": "Limits", "entity_type": "contact"}, nil, &list); status != http.StatusCreated {

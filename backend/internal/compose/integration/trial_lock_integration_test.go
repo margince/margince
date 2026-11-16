@@ -39,6 +39,7 @@ func workspaceCreated(t *testing.T, pool *pgxpool.Pool) time.Time {
 // Only a production installation with no license runs on a trial: a license,
 // valid or refused, and a development or test installation never lock.
 func TestATrialAppliesOnlyToAnUnlicensedProductionInstallation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	late := workspaceCreated(t, e.Pool).Add(365 * 24 * time.Hour)
@@ -65,6 +66,7 @@ func TestATrialAppliesOnlyToAnUnlicensedProductionInstallation(t *testing.T) {
 // From the instant the trial ends it refuses every change and tells every seat
 // on /me, and reads still answer.
 func TestAnUnlicensedInstallationLocksWhenItsTrialEnds(t *testing.T) {
+	t.Parallel()
 	var now time.Time
 	unlicensed := postureOf(licensecheck.StateAbsent)
 	e := apptest.SetupAppWithOptions(t,

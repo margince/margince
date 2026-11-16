@@ -17,6 +17,7 @@ import (
 )
 
 func TestListRulesExcludeImportedChangesBeforeCountingAndLimiting(t *testing.T) {
+	t.Parallel()
 	f := newLiveListFixture(t)
 	f.clock = time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
 	f.check(t)
@@ -53,6 +54,7 @@ func TestListRulesExcludeImportedChangesBeforeCountingAndLimiting(t *testing.T) 
 }
 
 func TestNewListRulesSkipImportsWithoutChangingLegacyRows(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	id := f.rule(t, "list_membership_notify", map[string]any{})
 	rule := f.ruleState(t, id)
@@ -68,6 +70,7 @@ func TestNewListRulesSkipImportsWithoutChangingLegacyRows(t *testing.T) {
 }
 
 func TestReviewedEventRulesLeaveQueuedHistoryAlone(t *testing.T) {
+	t.Parallel()
 	f := newListRuleFixture(t)
 	f.clock = time.Date(2026, 12, 20, 10, 0, 0, 0, time.UTC)
 	f.check(t)

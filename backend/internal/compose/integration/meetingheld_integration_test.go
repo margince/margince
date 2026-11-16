@@ -7,10 +7,11 @@ package integration
 
 import (
 	"encoding/json"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // meetingOutcomeRead is the part of a meeting its outcome is judged by.
@@ -23,6 +24,7 @@ type meetingOutcomeRead struct {
 // agent's, and no longer asks for its outcome. One logged with no status asks
 // on both doors: its past start alone is not attendance.
 func TestAReportedMeetingIsHeldOverBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "meeting-held-doors", "read", "write")
 	contact := anIDIn(t, d.restStatus(t, "POST", "/v1/contacts",
 		AnyMap{"full_name": "Lunch Lior", "source": "manual"}, http.StatusCreated))

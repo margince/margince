@@ -9,7 +9,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -61,13 +60,9 @@ func SeedRouterBinding(t *testing.T, e *AppEnv, router *ai.Router) {
 // nothing, on a pool of its own reaching the same Postgres.
 func InsertOnlyRunner(t *testing.T) *jobs.Runner {
 	t.Helper()
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if appDSN == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	// Not the pool SetupAppWithOptions opens: jobs.NewInserter needs only
 	// some pool reaching the same Postgres.
-	wirePool, err := testdb.OwnPool(context.Background(), appDSN)
+	wirePool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening the insert-only wiring pool: %v", err)
 	}

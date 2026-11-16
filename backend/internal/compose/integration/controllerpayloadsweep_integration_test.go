@@ -92,6 +92,7 @@ func payloadRef(t *testing.T, p *preflightEnv, id ids.UUID) string {
 
 // TestTheSweepDestroysMaterialAndThenForgetsIt is the whole pass.
 func TestTheSweepDestroysMaterialAndThenForgetsIt(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	now := time.Now().UTC()
 	id := plantExpiredPayload(t, p, "vault-ref-expired", now.Add(-time.Hour))
@@ -117,6 +118,7 @@ func TestTheSweepDestroysMaterialAndThenForgetsIt(t *testing.T) {
 // leave live material in the vault with nothing left pointing at it, which no
 // later pass — and no erasure — can find by reference again.
 func TestAVaultRefusalLeavesTheReferenceStanding(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	now := time.Now().UTC()
 	stubborn := plantExpiredPayload(t, p, "vault-ref-refused", now.Add(-2*time.Hour))
@@ -142,6 +144,7 @@ func TestAVaultRefusalLeavesTheReferenceStanding(t *testing.T) {
 // A failed read of the missed-receipt retries does not stop the pass. The
 // retry and its count are best effort, and expired material must still go.
 func TestAFailedMissedReceiptReadStillDestroysExpiredMaterial(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	now := clocktest.Now(t).UTC()
 	id := plantExpiredPayload(t, p, "vault-ref-expired", now.Add(-time.Hour))

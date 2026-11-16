@@ -67,6 +67,7 @@ func participantRow(t *testing.T, activity ids.ActivityID, address string) (user
 // become that colleague's user_id, because the interaction graph is keyed on
 // exactly that.
 func TestAnUntrustedHeaderNeverBindsAColleaguesUserID(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedInteraction(t, e)
@@ -92,6 +93,7 @@ func TestAnUntrustedHeaderNeverBindsAColleaguesUserID(t *testing.T) {
 // The same header on a message the provider attests OUR owner sent is ours to
 // trust: the Cc line is what our user typed.
 func TestAnAttestedHeaderBindsTheColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedInteraction(t, e)
@@ -117,6 +119,7 @@ func TestAnAttestedHeaderBindsTheColleague(t *testing.T) {
 // A known contact resolves on either arm: their identity comes from
 // contact_email, not from who wrote the header.
 func TestAKnownContactResolvesFromAnUntrustedHeaderToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	activity := seedInteraction(t, e)
@@ -139,6 +142,7 @@ func TestAKnownContactResolvesFromAnUntrustedHeaderToo(t *testing.T) {
 // Capture's sync loop is at-least-once, so a replayed message must add
 // nothing. The uniqueness index is the correctness layer, not the dedupe.
 func TestStampingTheSamePartiesTwiceAddsNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := seedInteraction(t, e)
 	parties := []connector.MessageParticipant{
@@ -162,6 +166,7 @@ func TestStampingTheSamePartiesTwiceAddsNothing(t *testing.T) {
 // header names — a note and a task are not conversations, and the edge fold
 // must not see them.
 func TestANonInteractionKindStampsNoParties(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	note := ids.From[ids.ActivityKind](SeedIDRow(t, OwnerConn(t), `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'note', 'thinking', '2026-08-01T09:00:00Z', 'manual', 'human:x')`))

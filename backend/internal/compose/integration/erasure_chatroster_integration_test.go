@@ -89,6 +89,7 @@ func participantRowExists(t *testing.T, e *Env, row ids.UUID) bool {
 // The erasure reaches a party named only by their channel account, and stops at
 // the transport boundary.
 func TestErasingASubjectRemovesTheRosterRowsNamingTheirAccount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contactID := seedSubject(t, e)
 	mine, decoy := seedRosterRowsFor(t, e, contactID)

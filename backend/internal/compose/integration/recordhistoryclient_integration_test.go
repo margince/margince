@@ -29,6 +29,7 @@ import (
 )
 
 func TestRecordHistoryNamesTheClientADelegatedChangeCameThrough(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "History Subject", nil)
 	human := seedWorkspaceUser(t, e, "Ada Authority")
@@ -59,6 +60,7 @@ func TestRecordHistoryNamesTheClientADelegatedChangeCameThrough(t *testing.T) {
 // A passport minted by hand has no OAuth grant behind it, so there is no
 // registered client to name and the generic qualifier is the honest answer.
 func TestAHandMintedPassportKeepsTheGenericQualifier(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "History Subject", nil)
 	human := seedWorkspaceUser(t, e, "Ada Authority")

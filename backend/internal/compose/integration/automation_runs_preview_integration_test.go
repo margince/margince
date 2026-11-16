@@ -90,6 +90,7 @@ func requireStr(t *testing.T, field string, got *string, want string) {
 }
 
 func TestAutomationRunHistoryAndPreviewOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	autoID := createRouteLeadAutomation(t, e)

@@ -121,6 +121,7 @@ func captureWithTakeOver(
 // create-and-read for ingestion must not gain the ability to rewrite existing
 // content because a Message-ID happened to match.
 func TestAConnectorWithoutUpdateCannotTakeOverItsOwnImport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const messageID = "no-update-grant@counterparty.example"
@@ -189,6 +190,7 @@ func TestAConnectorWithoutUpdateCannotTakeOverItsOwnImport(t *testing.T) {
 // immediately before delegating to the production function. That reproduces the
 // exact interleaving through the real seam rather than asserting a stub.
 func TestAnErasureRacingTheTakeOverSkipsInsteadOfStalling(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const messageID = "erasure-race@counterparty.example"
@@ -256,6 +258,7 @@ func TestAnErasureRacingTheTakeOverSkipsInsteadOfStalling(t *testing.T) {
 // collision falls through to replayClaimIsProvenTx, which is the right question
 // for two mailboxes holding one message.
 func TestASentMessageIsNotRewrittenByAColleaguesMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sender, colleague := e.Rep1, e.Rep2
 	const messageID = "sent-then-colleague@ws.example"
@@ -333,6 +336,7 @@ func TestASentMessageIsNotRewrittenByAColleaguesMailbox(t *testing.T) {
 // mean one seat's mailbox rewriting another seat's record on the strength of a
 // header the message's sender typed.
 func TestAColleaguesImportIsNotTakenOverByAnotherSeatsMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "cross-seat@counterparty.example"
 
@@ -416,6 +420,7 @@ func assertErasedStaysErased(t *testing.T, e *integration.Env, erased ids.UUID, 
 // Erasure archives the row, destroys its content and retires its identity, so
 // the mailbox resolves nothing and files its own row.
 func TestAnErasedImportIsNotResurrectedByALaterSync(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const messageID = "erased@counterparty.example"
@@ -443,6 +448,7 @@ func TestAnErasedImportIsNotResurrectedByALaterSync(t *testing.T) {
 // identities. Either way the consequence is the same and severe: the take-over
 // would write the message back over content retention destroyed.
 func TestAnIdentityOutlivingItsErasedActivityIsNotBoundTo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const messageID = "orphan-identity@counterparty.example"
@@ -514,6 +520,7 @@ func seatCtx(t *testing.T, e *integration.Env, seat ids.UUID) context.Context {
 // mailbox. One activity, and the mailbox's reading of the message is the one
 // that survives.
 func TestImportThenMailboxLandsOneActivityWithTheReadCopy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const messageID = "import-then-mailbox@counterparty.example"
@@ -540,6 +547,7 @@ func TestImportThenMailboxLandsOneActivityWithTheReadCopy(t *testing.T) {
 // here the incumbent is the connector's own reading, and the import has
 // nothing better to say about it.
 func TestMailboxThenImportLandsOneActivityAndKeepsTheReadCopy(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const messageID = "mailbox-then-import@counterparty.example"
@@ -563,6 +571,7 @@ func TestMailboxThenImportLandsOneActivityAndKeepsTheReadCopy(t *testing.T) {
 // identity must not cost the field that says where the row came from —
 // "which import brought this in" is a question the source column answers.
 func TestAnImportKeepsItsOwnBookkeepingUnderTheSharedIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "bookkeeping@counterparty.example"
 
@@ -621,6 +630,7 @@ func columnOfMessage[T any](t *testing.T, e *integration.Env, column, messageID 
 // the planter keeps the row they filed, and the forgery buys a duplicate that a
 // human can see and delete rather than access to anybody's mail.
 func TestAPlantedMessageIDNeitherSuppressesNorTakesOverTheRealMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const messageID = "planted@counterparty.example"

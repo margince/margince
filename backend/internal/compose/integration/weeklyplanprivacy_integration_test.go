@@ -71,6 +71,7 @@ func boundedRep(e *planEnv) context.Context {
 // about a contact, the help they asked for, the answer their lead gave, and the
 // link that says which contact it was.
 func TestErasureRedactsACommitmentNamingTheSubject(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	subject := e.SeedContact(t, "Anna Weber", &e.Rep1)
 
@@ -129,6 +130,7 @@ func TestErasureRedactsACommitmentNamingTheSubject(t *testing.T) {
 // A rep's plan is full of promises about deals and contacts who never asked for
 // anything. One subject's erasure must leave every one of them untouched.
 func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	subject := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	bystander := e.SeedContact(t, "Tomas Ricci", &e.Rep1)
@@ -192,6 +194,7 @@ func TestErasureLeavesTheCommitmentsThatNameSomebodyElse(t *testing.T) {
 // cannot read. A rep pastes the id, the commitment stores it, and their plan
 // hands back a row from a colleague's unpromoted inbox.
 func TestACommitmentCannotLinkAnUnpromotedContact(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	// The state a connector leaves a contact in: rep3's alone until promoted.
 	private := e.SeedContact(t, "A stranger's contact", &e.Rep3)
@@ -225,6 +228,7 @@ func TestACommitmentCannotLinkAnUnpromotedContact(t *testing.T) {
 // property under test: both are contacts, both are seeded the same way, and only
 // visibility separates them.
 func TestACommitmentLinksARecordTheRepCanSee(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	mine := e.SeedContact(t, "My own contact", &e.Rep1)
 
@@ -245,6 +249,7 @@ func TestACommitmentLinksARecordTheRepCanSee(t *testing.T) {
 // stop — and a 500 would say the installation broke rather than that the
 // request was wrong.
 func TestAnUnknownLinkTypeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 
 	_, err := e.store.AddCommitment(e.rep1Ctx, planClock, weeklyplan.NewCommitment{
@@ -272,6 +277,7 @@ func TestAnUnknownLinkTypeIsRefused(t *testing.T) {
 // contact/no_consent_no_deal policy, not by calling the action directly.
 // That proves the path an installation with that policy runs.
 func TestTheAnonymizeSweepRedactsACommitmentNamingTheSubject(t *testing.T) {
+	t.Parallel()
 	e := setupPlan(t)
 	integration.SeedRetentionPolicies(t, e.Env)
 

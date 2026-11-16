@@ -22,6 +22,7 @@ import (
 )
 
 func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "manual"})
 
@@ -69,6 +70,7 @@ func TestCustomFieldValues_LeadRoundTrip(t *testing.T) {
 // Source-key replay returns the existing row carrying its custom fields, and
 // the replay's own cf values are ignored (the original write is authoritative).
 func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Tier", Type: customfields.TypeText, Source: "manual"})
 	system, id := "crm", "ext-42"
@@ -99,6 +101,7 @@ func TestCustomFieldValues_LeadSourceReplayCarriesCustomFields(t *testing.T) {
 // Disqualify (the DELETE path) returns the archived lead with its custom
 // fields intact — a retire is a status flip, never a value drop.
 func TestCustomFieldValues_LeadDisqualifyPreservesCustomFields(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	col := f.defineField(t, customfields.FieldSpec{Object: "lead", Label: "Is Cool", Type: customfields.TypeBoolean, Source: "manual"})
 

@@ -26,6 +26,7 @@ import (
 )
 
 func TestMyAiActivityServesTheRealHandlerToAHuman(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -60,6 +61,7 @@ func TestMyAiActivityServesTheRealHandlerToAHuman(t *testing.T) {
 }
 
 func TestAnAgentReadsItsUsersAiActivity(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -87,6 +89,7 @@ func TestAnAgentReadsItsUsersAiActivity(t *testing.T) {
 // workspace has no AI activity, so narrowing is proved against seeded
 // occurrences in TestTheBoundFallsInsideTheKindsTheCallerAskedFor.
 func TestTheKindsQueryIsRefusedOrAcceptedAsTheBinderDeliversIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

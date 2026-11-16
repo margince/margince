@@ -44,6 +44,7 @@ func partnerReader() principal.Permissions {
 // The admit case first: without it, a refusal test proves only that the
 // authority refuses everyone.
 func TestPartnerReadsThroughTheSeamByItsCompanyID(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier2_20"
@@ -65,6 +66,7 @@ func TestPartnerReadsThroughTheSeamByItsCompanyID(t *testing.T) {
 // The seam is not a weaker copy of the HTTP path: a seat with no partner
 // grant is refused here too.
 func TestPartnerSeamRefusesASeatWithoutThePartnerGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier1_15"
@@ -80,6 +82,7 @@ func TestPartnerSeamRefusesASeatWithoutThePartnerGrant(t *testing.T) {
 // A company that never joined the programme has no partner row, and the
 // seam says not-found rather than answering an empty record.
 func TestPartnerSeamIsNotFoundForAPlainCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	company := e.SeedCompany(t, "Just A Customer GmbH", nil)
@@ -95,6 +98,7 @@ func TestPartnerSeamIsNotFoundForAPlainCompany(t *testing.T) {
 // because a dropped term answers an UNFILTERED page that reads as "these all
 // matched".
 func TestPartnerSeamRefusesATextQuery(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier3_25"
@@ -110,6 +114,7 @@ func TestPartnerSeamRefusesATextQuery(t *testing.T) {
 
 // The role and certification dials are the whole vocabulary, and they narrow.
 func TestPartnerSeamNarrowsByRole(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	tier := "tier2_20"
@@ -144,6 +149,7 @@ func TestPartnerSeamNarrowsByRole(t *testing.T) {
 // A filter this type cannot answer is refused, so a caller never reads an
 // unfiltered page as a filtered one.
 func TestPartnerSeamRefusesAnUnknownFilter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := partnerSeamProvider(e)
 	ctx := e.As(e.AdminUser, nil, partnerReader())

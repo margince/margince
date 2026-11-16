@@ -25,6 +25,7 @@ import (
 )
 
 func TestTheMeetingBriefServesItsPlanOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Brief E2E", "brief@fable.test", "Admin")
 

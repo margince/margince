@@ -59,6 +59,7 @@ func mergeEntryOf(reader context.Context, t *testing.T, e *Env, record ids.UUID)
 }
 
 func TestTheSurvivorsHistoryTellsWhatItTookAndHonoursTheFieldMask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	survivor, source := mergedPair(t, e)
 
@@ -88,6 +89,7 @@ func TestTheSurvivorsHistoryTellsWhatItTookAndHonoursTheFieldMask(t *testing.T) 
 }
 
 func TestAMergeEmitsOneMergedEventWhateverRowsItAudits(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, source := mergedPair(t, e)
 

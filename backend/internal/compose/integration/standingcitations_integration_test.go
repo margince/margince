@@ -65,6 +65,7 @@ func standing(reader context.Context, t *testing.T, e *Env, cited ...ids.UUID) m
 // An archived record stops standing, and its live neighbours do not. This is
 // the defect: the advice quoting the archived one must go, and the rest stays.
 func TestAnArchivedRecordStopsStandingAndItsNeighboursDoNot(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
@@ -96,6 +97,7 @@ func TestAnArchivedRecordStopsStandingAndItsNeighboursDoNot(t *testing.T) {
 // Keying retraction on that reader would delete every finding about a call or
 // a meeting the moment it was replayed.
 func TestALiveMeetingStandsAlthoughItCarriesNoEmailSummary(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Frédéric Buyer", &e.Rep1)
@@ -123,6 +125,7 @@ func TestALiveMeetingStandsAlthoughItCarriesNoEmailSummary(t *testing.T) {
 // different question: advice that a thread has gone unanswered is written from
 // the row, not from what it said, and the colleague is entitled to it.
 func TestAMailOutsideAColleaguesAudienceStillStandsForThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)

@@ -45,6 +45,7 @@ func (c closeRecorder) Close() error {
 
 // A download whose bookkeeping is refused closes the reader it opened.
 func TestARefusedDownloadClosesTheDocumentItOpened(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	buyer := seedBuyerInARoom(t, e, "download.revoked@acme.test")
 	doc := roomDocument(t, e, buyer)

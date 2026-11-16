@@ -58,6 +58,7 @@ func seedAFiledPair(t *testing.T, invoke func(tool, args string) (string, error)
 }
 
 func TestACreateNamesThePairAndTheRecordAlreadyThereForTheCard(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "card reader", "read", "write"))
 	first, second := seedAFiledPair(t, invoke, "+4930900000841")
@@ -72,6 +73,7 @@ func TestACreateNamesThePairAndTheRecordAlreadyThereForTheCard(t *testing.T) {
 }
 
 func TestACardsMergeFoldsTheCreatedRecordIntoTheOneAlreadyThere(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "card merger", "read", "write"))
 	first, second := seedAFiledPair(t, invoke, "+4930900000842")
@@ -88,6 +90,7 @@ func TestACardsMergeFoldsTheCreatedRecordIntoTheOneAlreadyThere(t *testing.T) {
 }
 
 func TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "card dismisser", "read", "write"))
 	_, second := seedAFiledPair(t, invoke, "+4930900000843")
@@ -122,6 +125,7 @@ func TestACardsNotTheSameDismissesThePairAndItsUndoReopensIt(t *testing.T) {
 }
 
 func TestACreateOffersAWordOnlyAsItExistsAndNeverAppliesIt(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "tag offerer", "read", "write"))
 

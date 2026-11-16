@@ -55,6 +55,7 @@ func (q *recordingQueue) queue() knowledge.QueueIngest {
 }
 
 func TestTheFirstBootFilesEveryPageThisBuildCarries(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := handbookBootCtx(e.WS)
@@ -89,6 +90,7 @@ func TestTheFirstBootFilesEveryPageThisBuildCarries(t *testing.T) {
 }
 
 func TestASecondBootOfTheSameBuildChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := handbookBootCtx(e.WS)
@@ -122,6 +124,7 @@ func TestASecondBootOfTheSameBuildChangesNothing(t *testing.T) {
 }
 
 func TestARewordedPageKeepsItsRowAndIsReadAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := handbookBootCtx(e.WS)
@@ -175,6 +178,7 @@ func TestARewordedPageKeepsItsRowAndIsReadAgain(t *testing.T) {
 }
 
 func TestAWithdrawnPageStopsBeingCitable(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := handbookBootCtx(e.WS)
@@ -211,6 +215,7 @@ func TestAWithdrawnPageStopsBeingCitable(t *testing.T) {
 // statement it runs is keyed on managed_source, and this is the test that says
 // so — without it the waiver's rationale is a claim nothing holds.
 func TestTheReconciliationLeavesAWorkspacesOwnCorpusAlone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 
@@ -255,6 +260,7 @@ func TestTheReconciliationLeavesAWorkspacesOwnCorpusAlone(t *testing.T) {
 // corpus has made a decision; a restart is not a decision, and re-asserting the
 // flag every boot would undo their choice at a moment nothing connects to it.
 func TestARestartDoesNotTakeBackTheDefault(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	ctx := handbookBootCtx(e.WS)

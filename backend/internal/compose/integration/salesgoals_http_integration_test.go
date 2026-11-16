@@ -57,6 +57,7 @@ func planWrite(t *testing.T, e *apptest.AppEnv, method, path string, version int
 }
 
 func TestASalesGoalPlanIsDraftedPublishedAndWithdrawnOverTheWire(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := signedInUser(t, e)
@@ -172,6 +173,7 @@ func liveMonthTargets(t *testing.T, e *apptest.AppEnv, owner string) int {
 }
 
 func TestProgressSplitsWonValueByProductKindAndListsTheOpenWork(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	owner := signedInUser(t, e)
@@ -280,6 +282,7 @@ func dealWorkOf(page crmcontracts.SalesProgressDealPage, deal string) *crmcontra
 }
 
 func TestASellerReadsTheirOwnPublishedGoalsButCannotChangeThem(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

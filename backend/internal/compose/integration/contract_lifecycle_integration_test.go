@@ -37,6 +37,7 @@ func daysFromToday(days int) time.Time {
 }
 
 func TestContractCreateReadsBackWhatWasWritten(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 
@@ -69,6 +70,7 @@ func TestContractCreateReadsBackWhatWasWritten(t *testing.T) {
 // June term cancelled effective May ends in MAY. The effective end is the
 // EARLIER of the two dates, and a cancellation never revives a lapsed term.
 func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	admin := e.Admin()
@@ -115,6 +117,7 @@ func TestUnderContractTakesTheEarlierOfTermEndAndCancellation(t *testing.T) {
 // it ends. The term state tells the two apart, so a screen never shows an
 // agreement that starts next month as one that has run out.
 func TestTermStateTellsANotYetStartedAgreementFromAnEndedOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	cases := []struct {
@@ -179,6 +182,7 @@ func anActiveContract(t *testing.T, e *Env, company ids.UUID) ids.ContractID {
 // transaction, so an agreement that has run for years reads as a chain rather
 // than a row somebody overwrote.
 func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	admin := e.Admin()
@@ -213,6 +217,7 @@ func TestRenewalChainsRatherThanOverwrites(t *testing.T) {
 // A terminal status is terminal. Reviving an expired agreement would make the
 // record a description of somebody's second thoughts.
 func TestATerminalContractDoesNotReopen(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	admin := e.Admin()
@@ -241,6 +246,7 @@ func TestATerminalContractDoesNotReopen(t *testing.T) {
 // The database's own constraints, reached through the writer rather than
 // hand-inserted — a row the real path cannot produce proves nothing about it.
 func TestTheDatabaseRefusesContradictoryTerms(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	value := int64(100)
@@ -278,6 +284,7 @@ func TestTheDatabaseRefusesContradictoryTerms(t *testing.T) {
 // the hidden anchor is an account capture-private to Rep1: an
 // company-anchored contract on it is invisible to Rep3.
 func TestAnInvisibleContractIsAbsentRatherThanRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	e.MakeCapturePrivate(t, "company", company, e.Rep1)
@@ -329,6 +336,7 @@ func TestAnInvisibleContractIsAbsentRatherThanRefused(t *testing.T) {
 // by its own opportunity: inheriting would attribute the new term to the deal
 // that won the old one.
 func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Acme", nil)
@@ -368,6 +376,7 @@ func TestARenewalSuccessorKeepsTheDealItNames(t *testing.T) {
 // from the predecessor, so the deal it names is checked against that — the same
 // check a create makes, reached now that a renewal can name one at all.
 func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	ours, theirs := e.SeedCompany(t, "Acme", nil), e.SeedCompany(t, "Globex", nil)
@@ -414,6 +423,7 @@ func TestARenewalCannotNameAnotherCompanysDeal(t *testing.T) {
 // refused as a transition out of `superseded`, and the predecessor points at
 // one successor.
 func TestTwoConcurrentRenewalsLeaveOneSuccessor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", nil)
 	predecessorID := anActiveContract(t, e, company)
@@ -481,6 +491,7 @@ func TestTwoConcurrentRenewalsLeaveOneSuccessor(t *testing.T) {
 // The rule itself still has to hold, so this asserts both halves: the absent
 // company is admitted, and a company that DISAGREES is still refused by field.
 func TestAContractAttachesToADealThatNamesNoCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)

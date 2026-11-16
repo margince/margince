@@ -41,6 +41,7 @@ func activityEventsOf(t *testing.T, e *apptest.AppEnv, id string) map[string]eve
 }
 
 func TestAnImportedActivityStartsNoAutomation(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run, _ := importActivities(t, e, map[string]string{
 		"contacts.csv":   "ref,email,name\nP-1,jo@act-marked.example,Jo\n",
@@ -79,6 +80,7 @@ func TestAnImportedActivityStartsNoAutomation(t *testing.T) {
 }
 
 func TestAnImportedActivityEventCarriesTheRunId(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run, _ := importActivities(t, e, map[string]string{
 		"contacts.csv":   "ref,email,name\nP-1,jo@act-runid.example,Jo\n",
@@ -103,6 +105,7 @@ func TestAnImportedActivityEventCarriesTheRunId(t *testing.T) {
 }
 
 func TestUndoArchivesActivitiesFirst(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _, _ := seededStages(t, e)
 	run, _ := importActivities(t, e, map[string]string{
@@ -121,6 +124,7 @@ func TestUndoArchivesActivitiesFirst(t *testing.T) {
 }
 
 func TestUndoKeepsAnActivityEditedSinceTheImport(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run, _ := importActivities(t, e, map[string]string{
 		"contacts.csv": "ref,email,name\nP-1,jo@undo-kept.example,Jo\n",
@@ -146,6 +150,7 @@ func TestUndoKeepsAnActivityEditedSinceTheImport(t *testing.T) {
 }
 
 func TestTheActivityArchiveReAsksUntouchedInsideItsTransaction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	subject := "Imported note"
@@ -179,6 +184,7 @@ func TestTheActivityArchiveReAsksUntouchedInsideItsTransaction(t *testing.T) {
 // A re-import rewrites an activity under the approving user's own name.
 // That write is the import's, so undoing the first run still archives the row.
 func TestUndoArchivesAnActivityALaterImportRewrote(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	files := func(subject string) map[string]string {
 		return map[string]string{

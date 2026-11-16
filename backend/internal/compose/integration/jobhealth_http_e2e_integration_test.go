@@ -158,6 +158,7 @@ func kindOf(report jobHealthDTO, kind string) (int, bool) {
 // because river_job has no RLS to impose it, so a second workspace has to
 // be present or the test proves nothing.
 func TestJobHealthReportsThisWorkspacesDeadWorkAndNotAnotherWorkspacesAnything(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
@@ -235,6 +236,7 @@ func TestJobHealthReportsThisWorkspacesDeadWorkAndNotAnotherWorkspacesAnything(t
 // provider cause must not travel, and the panic stack River stores beside
 // it must not either.
 func TestJobHealthReportsAVettedSentenceForAFaultedWorkerAndSubstitutesForARawOne(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
@@ -298,6 +300,7 @@ func TestJobHealthReportsAVettedSentenceForAFaultedWorkerAndSubstitutesForARawOn
 // attempt error while the contract still requires failed_at and reason.
 // Scanning a null into either turns the endpoint into a 500.
 func TestJobHealthCountsACancelledRowThatCarriesNoAttemptErrorAtAll(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
@@ -339,6 +342,7 @@ func TestJobHealthCountsACancelledRowThatCarriesNoAttemptErrorAtAll(t *testing.T
 
 // An admin's agent reads the page over the wire on the admin's own grant.
 func TestAnAdminsAgentReadsJobHealthOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -362,6 +366,7 @@ func TestAnAdminsAgentReadsJobHealthOverHTTP(t *testing.T) {
 // case. An installation with nothing queued is a real state, and a client
 // must be able to tell it from a failure.
 func TestJobHealthOnAnIdleFleetIsAnEmptyReportNotAnError(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -385,6 +390,7 @@ func TestJobHealthOnAnIdleFleetIsAnEmptyReportNotAnError(t *testing.T) {
 // table through different scopes, and a tagged row must reach the admin
 // read exactly as an untagged one does.
 func TestJobHealthIgnoresTheSweepTagWhenScopingRows(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
@@ -448,6 +454,7 @@ func containsIgnoringCase(haystack, needle string) bool {
 // "recent" in the field name is a lie, and the 50 an operator sees would
 // be an arbitrary 50 rather than the newest.
 func TestJobHealthCapsTheFailureListAndOrdersItNewestFirst(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
@@ -517,6 +524,7 @@ func parseFailedAt(t *testing.T, raw string) time.Time {
 // 401 for a call with no session, and that answer comes from the session
 // middleware rather than from the handler, so only the real wire proves it.
 func TestJobHealthRefusesAnUnauthenticatedCallOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	// Bootstrapped, so the installation EXISTS — an unbootstrapped one
 	// answers 503 for every route and would prove nothing about this
@@ -558,6 +566,7 @@ func failureOf(t *testing.T, report jobHealthDTO, kind string) int {
 // attempt counter says which rung of the ladder the job is on, never how long it
 // has been on it.
 func TestJobHealthNamesTheRowItIsTalkingAboutAndWhenItFirstFailed(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
@@ -611,6 +620,7 @@ func TestJobHealthNamesTheRowItIsTalkingAboutAndWhenItFirstFailed(t *testing.T) 
 // class is what an alert matches; the remedy is the half a failure list is
 // useless without.
 func TestJobHealthCarriesTheClassAndRemedyForAClassifiedFailure(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)
@@ -665,6 +675,7 @@ func TestJobHealthCarriesTheClassAndRemedyForAClassifiedFailure(t *testing.T) {
 // its "failing since", never cost the whole read its answer. An operator whose
 // page 500s learns nothing about what died.
 func TestJobHealthStillReportsARowWhoseFirstAttemptTimestampIsUnreadable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	mine := callerWorkspace(t, e)

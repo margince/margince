@@ -34,6 +34,7 @@ func readActivityForPatch(t *testing.T, e *apptest.AppEnv, id string) activityPa
 }
 
 func TestAnActivityPatchClearsANullableFieldItIsSentAsNull(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Clear fields", "clear@fable.test", "Admin")
 	var me struct {
@@ -70,6 +71,7 @@ func TestAnActivityPatchClearsANullableFieldItIsSentAsNull(t *testing.T) {
 }
 
 func TestAnActivityPatchThatChangesNothingKeepsTheVersion(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Empty patch", "empty@fable.test", "Admin")
 	_, taskID := seedTaskAndTarget(t, e)
@@ -87,6 +89,7 @@ func TestAnActivityPatchThatChangesNothingKeepsTheVersion(t *testing.T) {
 }
 
 func TestANudgeDismissalOutsideTheRangeIsA422NamingDays(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Nudge range", "nudge@fable.test", "Admin")
 	contactID, _ := seedTaskAndTarget(t, e)
@@ -111,6 +114,7 @@ func TestANudgeDismissalOutsideTheRangeIsA422NamingDays(t *testing.T) {
 }
 
 func TestAnEmptyDealRoomCredentialIs422OnBothPublicDoors(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Empty credential", "cred@fable.test", "Admin")
 
@@ -124,6 +128,7 @@ func TestAnEmptyDealRoomCredentialIs422OnBothPublicDoors(t *testing.T) {
 }
 
 func TestAPassportLifetimeFaultNamesTheLifetimeField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Passport ttl", "ttl@fable.test", "Admin")
 

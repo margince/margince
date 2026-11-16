@@ -36,6 +36,7 @@ func reindexingNow(t *testing.T, e *Env, corpusID ids.UUID) bool {
 
 // A binding swap must not brick a corpus.
 func TestASwappedBindingIsRepairedByTheDriftSweep(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -63,6 +64,7 @@ func TestASwappedBindingIsRepairedByTheDriftSweep(t *testing.T) {
 // stopped being repaired look like one still being repaired, and nothing would
 // ever lower it.
 func TestTheDriftSweepLeavesNoCorpusMarkedReindexing(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -78,6 +80,7 @@ func TestTheDriftSweepLeavesNoCorpusMarkedReindexing(t *testing.T) {
 
 // Even when the sweep FAILS. A crashed repair must not leave the flag raised.
 func TestAFailedDriftSweepStillLowersTheFlag(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -98,6 +101,7 @@ func TestAFailedDriftSweepStillLowersTheFlag(t *testing.T) {
 // Running it twice costs nothing the second time: the sweep is resumable for
 // free, which is what makes it safe to run on a period.
 func TestASecondDriftSweepCostsNoModelCalls(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -124,6 +128,7 @@ func TestASecondDriftSweepCostsNoModelCalls(t *testing.T) {
 // pass. An installation that gained an embed lane after its documents landed
 // would otherwise stay unanswerable in a second, separate way.
 func TestPassagesIngestedWithNoLaneAreEmbeddedByTheSweep(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	doc := ie.upload(t, "operating.md", "text/markdown", prose(2))
 	ie.ingest(t, doc) // no embed lane involved: the passages land vectorless
@@ -145,6 +150,7 @@ func TestPassagesIngestedWithNoLaneAreEmbeddedByTheSweep(t *testing.T) {
 // With no lane bound the sweep is a no-op, not a repair into nothing: there is
 // no live space to have drifted from.
 func TestTheDriftSweepWithNoLaneBoundDoesNothing(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	ee.embedder.identity = ""
 
@@ -160,6 +166,7 @@ func TestTheDriftSweepWithNoLaneBoundDoesNothing(t *testing.T) {
 // An archived corpus is not repaired. Spending model budget re-embedding what
 // nobody can ask is the sweep paying for its own irrelevance.
 func TestTheDriftSweepSkipsAnArchivedCorpus(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -183,6 +190,7 @@ func TestTheDriftSweepSkipsAnArchivedCorpus(t *testing.T) {
 // A document whose ingest failed is not swept: it has no live passages, and a
 // document still running gets its vectors from the attempt itself.
 func TestTheDriftSweepSkipsADocumentThatFailedIngest(t *testing.T) {
+	t.Parallel()
 	ee := newEmbedEnv(t)
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("first embed: %v", err)
@@ -211,6 +219,7 @@ func TestTheDriftSweepSkipsADocumentThatFailedIngest(t *testing.T) {
 // superseded binding forever, unaskable, with nothing in the corpus to explain
 // it. The pass now continues and reports what failed.
 func TestOneUnrepairableDocumentDoesNotBlockTheRest(t *testing.T) {
+	t.Parallel()
 	ie := newIngestEnv(t)
 	e := newCountingEmbedder()
 

@@ -86,6 +86,7 @@ func (s stubEmbedder) Embed(context.Context, model.EmbedRequest) (model.Embeddin
 func (s stubEmbedder) EmbedIdentity() (string, int) { return s.identity, s.dims }
 
 func TestEmbeddingUpsertReusesUnchangedText(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	embedder := fakeEmbedder(t, fake)
@@ -109,6 +110,7 @@ func TestEmbeddingUpsertReusesUnchangedText(t *testing.T) {
 }
 
 func TestSimilarityRankingAndRowScope(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	embedder := fakeEmbedder(t, fake)
@@ -159,6 +161,7 @@ func TestSimilarityRankingAndRowScope(t *testing.T) {
 }
 
 func TestHybridRRFAgreementWins(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	embedder := fakeEmbedder(t, fake)
@@ -203,6 +206,7 @@ func TestHybridRRFAgreementWins(t *testing.T) {
 }
 
 func TestEmbedGenMaintainsRowsFromEvents(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	gen := search.NewEmbedGen(e.Store, fakeEmbedder(t, fake))
@@ -260,6 +264,7 @@ func (e *SearchEnv) storedEmbeddingModel(t *testing.T, entityID ids.UUID) string
 // on hash-only would leave every existing row stamped with a model that
 // no longer serves the workspace, indistinguishable from a live one.
 func TestUpsertReembedsOnIdentityChange(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	embedderA := fakeEmbedderNamed(t, fake, "model-a")
@@ -293,6 +298,7 @@ func TestUpsertReembedsOnIdentityChange(t *testing.T) {
 // counterpart to the re-embed test above, so a same-binding no-op stays
 // free even after this task adds the identity comparison.
 func TestUpsertSkipsUnchangedUnderSameIdentity(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	fake := ai.NewFakeClient()
 	embedder := fakeEmbedderNamed(t, fake, "model-c")
@@ -316,6 +322,7 @@ func TestUpsertSkipsUnchangedUnderSameIdentity(t *testing.T) {
 // EmbedIdentity dims — fails loudly instead of writing an unrankable
 // vector into a column other rows expect at a fixed width.
 func TestUpsertRejectsWidthMismatch(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Width Mismatch', 'manual', 'human:x')`)
 	// dims (999) deliberately differs from resDims (1024): the declared
@@ -341,6 +348,7 @@ func TestUpsertRejectsWidthMismatch(t *testing.T) {
 // sorts FIRST, silently outranking every real match — is rejected before
 // it ever reaches storage.
 func TestUpsertRejectsZeroVector(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Zero Vector', 'manual', 'human:x')`)
 	// Width matches (1024/1024) so only the zero-vector guard can be what
@@ -370,6 +378,7 @@ func TestUpsertRejectsZeroVector(t *testing.T) {
 // the predicate were ever removed — must itself error with a dimension
 // mismatch, proving the filter is load-bearing, not decoration.
 func TestSimilarEntitiesFiltersIdentityAndDoesNotCrossDimCrash(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 
@@ -452,6 +461,7 @@ func (embedIdentityNeverCalled) EmbedIdentity() (string, int) { return "", 0 }
 // EVERY embedding write and keep search.EmbedGen.HandleEvent from ever
 // acking (platform/events' at-least-once bus then redelivers forever).
 func TestUpsertEmbeddingNoOpsAndWritesNoRowOnUnboundLane(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Unbound Contact', 'manual', 'human:x')`)
 
@@ -480,6 +490,7 @@ func TestUpsertEmbeddingNoOpsAndWritesNoRowOnUnboundLane(t *testing.T) {
 // gets — rather than calling Embed/SimilarEntities against a lane with
 // no live width or model.
 func TestHybridSearchDegradesToLexicalOnUnboundLane(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Lexical Only Grid', 'manual', 'human:x')`)
 
@@ -527,6 +538,7 @@ func (embedCallFails) EmbedIdentity() (string, int) { return "fake/embed@8", 8 }
 // lexical. So the hits still come back and `semantic` is false, exactly as for
 // a lane that was never bound, because both are one fact to the caller.
 func TestHybridSearchDegradesToLexicalWhenTheEmbedCallFails(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Provider Down Grid', 'manual', 'human:x')`)
 

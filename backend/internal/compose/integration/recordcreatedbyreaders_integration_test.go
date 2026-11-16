@@ -23,6 +23,7 @@ import (
 )
 
 func TestAnAgentReadingRecordsGetsNoCreator(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, recordCreatorPerms)
 	contact, company, deal := createEachRecord(human, t, e)
@@ -56,6 +57,7 @@ func TestAnAgentReadingRecordsGetsNoCreator(t *testing.T) {
 
 // A write's echo is a read, and names the creator the GET names.
 func TestAWriteEchoNamesTheCreatorAsTheGetDoes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, recordCreatorPerms)
 	contact, company, deal := createEachRecord(human, t, e)
@@ -101,6 +103,7 @@ func TestAWriteEchoNamesTheCreatorAsTheGetDoes(t *testing.T) {
 
 // The name is the creator's row as it is now, never a copy the audit log kept.
 func TestACreatorsNameIsTheirRowAsItIsNow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET display_name = $2 WHERE id = $1`, e.Rep1, creatorColleague)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, recordCreatorPerms)
@@ -120,6 +123,7 @@ func TestACreatorsNameIsTheirRowAsItIsNow(t *testing.T) {
 // A field mask withholds money and references, never who wrote the row. The
 // row's captured_by and owner stay on the wire, so its creator does too.
 func TestAFieldMaskedDealStillNamesItsCreator(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, recordCreatorPerms)
 	_, _, deal := createEachRecord(human, t, e)

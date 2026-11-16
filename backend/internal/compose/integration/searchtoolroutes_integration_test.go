@@ -20,6 +20,7 @@ import (
 // GET /context-search answers search_context's ranked records, and
 // POST /workspace-queries answers query_workspace's rows, for one input.
 func TestSearchAndQueryRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "search-routes", "read")
 	turbine := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Annegret Turbinenbau"})
 	createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bernd Unrelated"})
@@ -56,6 +57,7 @@ func TestSearchAndQueryRoutesAnswerAsTheirTools(t *testing.T) {
 // POST /entity-resolutions resolves the same payload to the same record as
 // resolve_entities, and echoes the caller's label.
 func TestEntityResolutionRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "resolve-routes", "read")
 	anna := createdRecord(t, d.e, "/v1/contacts", AnyMap{
 		"source": "manual", "full_name": "Anna Acme", "emails": []AnyMap{{"email": "anna@acme.example", "is_primary": true}},
@@ -90,6 +92,7 @@ func TestEntityResolutionRouteAnswersAsTheTool(t *testing.T) {
 // as search_report_evidence does. The path names the run, and a run_id in the
 // body cannot point the search at another one.
 func TestReportEvidenceRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "evidence-routes", "read")
 	for i := range 6 {
 		body := "Walked through the onboarding plan"

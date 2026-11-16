@@ -42,6 +42,7 @@ func (s sectionEmbedder) Embed(_ context.Context, req model.EmbedRequest) (model
 }
 
 func TestTheShippedHandbookAnswersATimeZoneQuestionWithItsSettingsPage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := knowledge.NewStore(e.DB())
 	var q recordingQueue

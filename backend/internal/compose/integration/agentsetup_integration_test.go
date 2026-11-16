@@ -38,6 +38,7 @@ func actorOfLastAudit(t *testing.T, d *twoDoors, entityType, entityID string) st
 // the agent. Which stage closes a deal stays with a user: relabelling a stage
 // would lift the approval automatic work needs to move a deal to won.
 func TestAnAgentSetsUpAPipelineButNeverWhatClosesADeal(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-pipeline", "read", "write")
 	for name, call := range map[string]map[string]any{
 		"a pipeline with a won stage": {"action": "create_pipeline", "request_body": AnyMap{"name": "Closes itself", "stages": []AnyMap{
@@ -113,6 +114,7 @@ func TestAnAgentSetsUpAPipelineButNeverWhatClosesADeal(t *testing.T) {
 // A partner's terms open to an agent, and the margin tier stays a user's: it
 // decides commission on every later deal. Clearing it is the same act.
 func TestAnAgentSetsAPartnersTermsButNeverItsMarginTier(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-partner", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Channel Co"})
 	refusal := d.toolRefused(t, "change_settings", map[string]any{"action": "upsert_partner", "id": company, "request_body": AnyMap{"partner_kinds": []string{"referral"}}})
@@ -160,6 +162,7 @@ func TestAnAgentSetsAPartnersTermsButNeverItsMarginTier(t *testing.T) {
 // A web form's secret is a way in, so an agent neither sets nor clears it, and
 // the refusal comes before anything judges the secret. The rest is open.
 func TestAnAgentChangesAWebFormButNeverItsSecret(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-webform", "read", "write")
 	var form struct {
 		ID      string `json:"id"`
@@ -191,6 +194,7 @@ func TestAnAgentChangesAWebFormButNeverItsSecret(t *testing.T) {
 // A former colleague is recorded for imported history. An agent never names the
 // admin role on one, and its audit row names it.
 func TestAnAgentRecordsAFormerColleagueButNeverAnAdmin(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-former", "read", "write")
 	if status := d.e.Call(t, "PUT", "/v1/company", wellFormedCompany(), nil, nil); status != http.StatusOK {
 		t.Fatalf("describing the company → %d", status)
@@ -217,6 +221,7 @@ func TestAnAgentRecordsAFormerColleagueButNeverAnAdmin(t *testing.T) {
 // A custom field an agent adds is a column the user's own door reads, and its
 // retirement keeps the values. A colleague's agent holds no such grant.
 func TestAnAgentAddsACustomFieldOnlyWithTheUsersGrant(t *testing.T) {
+	t.Parallel()
 	const adminEmail = "agent-field@fable.test"
 	d := newTwoDoorsWith(t, "agent-field", []compose.Option{compose.WithSchemaPool(SchemaPool(t))}, "read", "write", "send")
 	created := settingsAct(t, d, "create_custom_field", map[string]any{"request_body": AnyMap{
@@ -250,6 +255,7 @@ func withIfMatch(headers map[string]string, version int64) map[string]string {
 
 // An occupied position names itself and what to do, on both doors.
 func TestATakenStagePositionSaysWhichAndWhatToDo(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "stage-position-taken", "read", "write")
 	pipeline := answerID(t, settingsAct(t, d, "create_pipeline", map[string]any{"request_body": AnyMap{
 		"name": "Crowded", "stages": []AnyMap{{"name": "First", "position": 1, "semantic": "open"}, {"name": "Second", "position": 2, "semantic": "open"}},

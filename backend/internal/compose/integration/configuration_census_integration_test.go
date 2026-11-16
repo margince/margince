@@ -223,6 +223,7 @@ func templateMatch(template, requested string) (params int, ok bool) {
 //
 // The contract is held to writes on a response's own path and to each refusal
 // seen here. Which other handler reaches a lock is a call graph nothing lists.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestEverySettingsResponseReportsItsLocks(t *testing.T) {
 	doc := loadContract(t)
 	surfaces := lockedSurfaces()

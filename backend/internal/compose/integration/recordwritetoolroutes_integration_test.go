@@ -69,6 +69,7 @@ func anIDIn(t *testing.T, raw json.RawMessage) string {
 // stored fields are the same, and so are the audit and outbox rows naming the
 // agent.
 func TestContactWritesLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "record-write-doors", "read", "write")
 
 	restMade := d.restStatus(t, "POST", "/v1/contacts", AnyMap{"full_name": "Rest Rowan", "title": "Buyer", "source": "manual"}, http.StatusCreated)
@@ -113,6 +114,7 @@ type sharedActivity struct {
 // have the same kind and text, link to the same kind of record, and leave the
 // same rows.
 func TestLogActivityAndCreateTaskLeaveTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "activity-write-doors", "read", "write")
 	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Linked Lena", "source": "manual"})
 	link := []map[string]any{{"entity_type": "contact", "entity_id": contact}}

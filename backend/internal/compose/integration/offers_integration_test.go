@@ -151,6 +151,7 @@ func assertOfferTotalsAreDerived(t *testing.T, e *apptest.AppEnv, dealID string)
 }
 
 func TestOfferProductSnapshotAndDerivedTotals(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offers E2E", "offers@fable.test", "Admin")
 	dealID := offerFixture(t, e)
@@ -251,6 +252,7 @@ func exerciseDraftLineWrites(t *testing.T, e *apptest.AppEnv, offer offerBody) {
 }
 
 func TestOfferLifecycleSendAcceptRegenerate(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Life", "life@fable.test", "Admin")
 	dealID := offerFixture(t, e)
@@ -416,6 +418,7 @@ func assertOfferEventTrail(t *testing.T, e *apptest.AppEnv) {
 // An agent drafts and sends an offer as its user, and records the buyer's
 // decision. Each runs at once, as the app's own button does.
 func TestAnAgentSendsAndAcceptsAnOfferItDrafted(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Agent", "agent@fable.test", "Admin")
 	dealID := offerFixture(t, e)
@@ -453,6 +456,7 @@ func TestAnAgentSendsAndAcceptsAnOfferItDrafted(t *testing.T) {
 // Every draft edit announces itself once, header and lines alike, naming what
 // it changed. A subscriber hears each change the audit trail records.
 func TestEachDraftEditStagesOneOfferUpdated(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Edits", "edits@fable.test", "Admin")
 	dealID := offerFixture(t, e)

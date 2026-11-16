@@ -37,6 +37,7 @@ import (
 // the same identity must cost zero additional embed calls — the
 // resumability property Task 6's skip-compare exists to provide.
 func TestReembedReembedsAllLiveEntitiesAndIsResumable(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -154,6 +155,7 @@ func failEmbeddingWrites(t *testing.T, owner *pgx.Conn) {
 // the identity stamped, and an index that was never rebuilt — the same silence
 // under a different shape.
 func TestReembedReportsAWriteItCouldNotLand(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -185,6 +187,7 @@ func TestReembedReportsAWriteItCouldNotLand(t *testing.T) {
 // The refusing embedder fails exactly one contact by its text, so the assertion
 // is not "some rows survived" but "the row AFTER the failing one is current".
 func TestReembedEmbedsEveryEntityPastOneItCannot(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -232,6 +235,7 @@ func TestReembedEmbedsEveryEntityPastOneItCannot(t *testing.T) {
 // waiting out its own timeout, and the run's attempt is spent regardless — so
 // the corpus buys nothing for the hours it spends failing.
 func TestReembedStopsCallingAProviderThatAnswersNothing(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -290,6 +294,7 @@ func (r *refusingEmbedder) EmbedIdentity() (string, int) { return r.inner.EmbedI
 // job cancels cleanly instead of burning its ladder against an identity
 // nothing serves anymore.
 func TestReembedIdentityDriftCancelsWithoutTouchingRows(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()
@@ -340,6 +345,7 @@ func TestReembedIdentityDriftCancelsWithoutTouchingRows(t *testing.T) {
 // so what is left is asserted directly: held while the run is in flight, back
 // when it ends, and idempotent so a retried job is harmless.
 func TestReembedRunMarkerIsHeldUntilTheRunEnds(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const populated = "fake/populated@1024"
@@ -400,6 +406,7 @@ func TestReembedRunMarkerIsHeldUntilTheRunEnds(t *testing.T) {
 // are owed work forever: nothing will ever embed them, and the backlog an
 // operator watches cannot reach zero on any installation that holds mail.
 func TestAReindexDoesNotEmbedHeldMailOrOweItForever(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	fake := ai.NewFakeClient()

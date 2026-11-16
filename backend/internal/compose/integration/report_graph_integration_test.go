@@ -46,6 +46,7 @@ func (e *SearchEnv) seedDealFixtures(t *testing.T, n int, owner *ids.UUID) {
 // for a count that must not out-see the lists is a capture-private contact:
 // the row a contact row scope still hides from everyone but its captor.
 func TestAdHocReportPlanCountsUnderRowScope(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	for i := range 3 {
 		e.SeedID(t, fmt.Sprintf(`INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by)
@@ -78,6 +79,7 @@ func TestAdHocReportPlanCountsUnderRowScope(t *testing.T) {
 }
 
 func TestSchemaIntrospectionServesDescriptors(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	provider := compose.NewProvider(e.Pool)
 	objects, err := provider.ListObjects(context.Background())
@@ -112,6 +114,7 @@ func TestSchemaIntrospectionServesDescriptors(t *testing.T) {
 }
 
 func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Reports E2E", "rep@fable.test", "Admin")
 
@@ -184,6 +187,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 }
 
 func TestRunReportToolThroughGovernedRegistry(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedDealFixtures(t, 2, nil)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -197,6 +201,7 @@ func TestRunReportToolThroughGovernedRegistry(t *testing.T) {
 }
 
 func TestAssembleContextFixedDepthWalk(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	e.seedDealFixtures(t, 1, nil)
 	var dealID ids.UUID
@@ -266,6 +271,7 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 // caller got an opaque 500 whose advice was to retry a plan that fails the same
 // way forever. Nothing about a client typo is a server fault.
 func TestAWrongTypedFilterIsTheCallersMistakeNotAServerFault(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	provider := compose.NewProvider(e.Pool)
 

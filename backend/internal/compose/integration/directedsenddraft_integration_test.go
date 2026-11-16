@@ -15,6 +15,7 @@ import (
 )
 
 func TestAnExceptionSendDiscardsItsSavedDraftWithoutDiscardingNewerLegacyWork(t *testing.T) {
+	t.Parallel()
 	for _, scenario := range []struct {
 		name   string
 		legacy bool

@@ -35,6 +35,7 @@ func employmentPurchase(t *testing.T, e *Env, subject ids.UUID, claims []provide
 }
 
 func TestEmploymentImportPreservesDistinctRolesAndReplays(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Employment history")
@@ -111,6 +112,7 @@ func TestEmploymentImportPreservesDistinctRolesAndReplays(t *testing.T) {
 }
 
 func TestEmploymentImportCreatesTrustedCompanyAndKeepsAmbiguity(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "New employer")
@@ -129,6 +131,7 @@ func TestEmploymentImportCreatesTrustedCompanyAndKeepsAmbiguity(t *testing.T) {
 }
 
 func TestContactPhoneCanBeAddedChangedAndCleared(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Phone editor")
@@ -166,6 +169,7 @@ func TestContactPhoneCanBeAddedChangedAndCleared(t *testing.T) {
 }
 
 func TestEmploymentImportHumanCorrectionSurvivesReplayAndRevert(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Human correction")
@@ -203,6 +207,7 @@ func TestEmploymentImportHumanCorrectionSurvivesReplayAndRevert(t *testing.T) {
 }
 
 func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := e.Contacts
 	source := seedMergeSubject(t, e, "Merge source")
@@ -273,6 +278,7 @@ func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 }
 
 func TestEmploymentImportConcurrentContactsShareOneCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subjects := []ids.UUID{seedMergeSubject(t, e, "Concurrent A"), seedMergeSubject(t, e, "Concurrent B")}
@@ -306,6 +312,7 @@ func TestEmploymentImportConcurrentContactsShareOneCompany(t *testing.T) {
 }
 
 func TestEmploymentImportMonthEndAcceptsExactStartInTheSameMonth(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Month bounds")
@@ -331,6 +338,7 @@ func TestEmploymentImportMonthEndAcceptsExactStartInTheSameMonth(t *testing.T) {
 }
 
 func TestEmploymentImportRetractionWaitsForTheFinalProvider(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Shared evidence")
@@ -378,6 +386,7 @@ func TestEmploymentImportRetractionWaitsForTheFinalProvider(t *testing.T) {
 // A newer, dated current role at a company ends the older undated one there.
 // The contact holds one current role, and the older one reads as former.
 func TestEmploymentImportEndsTheOlderUndatedRoleAtTheSameCompany(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := contacts.NewStore(e.DB())
 	subject := seedMergeSubject(t, e, "Role change")

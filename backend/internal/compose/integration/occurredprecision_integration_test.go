@@ -54,6 +54,7 @@ func isDayOn(read dayRead, date string) bool {
 // A date-only entry is a day on the web form's door and on the agent's. A later
 // read says so, rather than offering the anchor as a time.
 func TestADayEntryIsADayOverBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "day-entry-doors", "read", "write")
 	for _, door := range []string{"http", "tool"} {
 		t.Run(door, func(t *testing.T) {
@@ -79,6 +80,7 @@ func TestADayEntryIsADayOverBothDoors(t *testing.T) {
 // The web client sends a picked date at noon UTC. The server stores that date
 // at noon UTC whatever the installation zone, east and west of UTC.
 func TestAWebDayIsStoredAtNoonUTCInAnyZone(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "day-entry-zones", "read", "write")
 	for _, zone := range []string{"Pacific/Auckland", "Pacific/Pago_Pago"} {
 		t.Run(zone, func(t *testing.T) {
@@ -97,6 +99,7 @@ func TestAWebDayIsStoredAtNoonUTCInAnyZone(t *testing.T) {
 
 // A day with no date to anchor it is refused on the wire, naming the field.
 func TestADayWithoutADateIsRefusedOnTheWire(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "day-entry-refused", "read", "write")
 	body := d.restStatus(t, "POST", "/v1/activities", map[string]any{
 		"kind": "note", "subject": "Met at the fair", "source": "manual", "occurred_precision": "day",
@@ -115,6 +118,7 @@ func TestADayWithoutADateIsRefusedOnTheWire(t *testing.T) {
 
 // A day cell is a day's activity, and a cell with a time keeps its time.
 func TestAnImportedDayCellIsADay(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	setInstallationZone(t, e, "America/New_York")
 	_, report := importActivities(t, e, map[string]string{
@@ -150,6 +154,7 @@ func storedDay(t *testing.T, e *apptest.AppEnv, subject string) dayRead {
 // a new date moves it, and a timed cell makes it an instant. The same date
 // again leaves a day the web made alone.
 func TestAReImportedDayCellComparesByDate(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	setInstallationZone(t, e, "America/New_York")
 	parts := contactAndActivityParts()
@@ -190,6 +195,7 @@ func TestAReImportedDayCellComparesByDate(t *testing.T) {
 // A day becomes an instant only with the time it happened. A PATCH naming the
 // precision alone is refused, naming occurred_at, and the day stays as it was.
 func TestADayMadeAnInstantWithoutATimeIsRefusedOnTheWire(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "day-entry-instant", "read", "write")
 	made := d.restStatus(t, "POST", "/v1/activities", map[string]any{
 		"kind": "note", "subject": "Met at the fair", "source": "manual",
@@ -216,6 +222,7 @@ func TestADayMadeAnInstantWithoutATimeIsRefusedOnTheWire(t *testing.T) {
 // date is read in its own offset, so any other offset could name another date.
 // The pool scans in UTC whatever the process zone (database's utctimes_test.go).
 func TestADayEntryRendersAtNoonUTCOnEveryDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "day-entry-utc", "read", "write")
 	const noon = "2026-10-22T12:00:00Z"
 	occurredAt := func(door string, raw json.RawMessage) {

@@ -68,6 +68,7 @@ func workspaceKeysOnTheWire(ctx context.Context, t *testing.T, e *Env, highWater
 }
 
 func TestRiverEncodesTheWorkspaceArgAsWorkspaceIDAndOmitsItOnADispatcher(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ApplyRiverSchema(t)
 	inserter, err := jobs.NewInserter(e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))

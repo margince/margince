@@ -16,6 +16,7 @@ import (
 // doors answer the same records: archived ones on request, one list's members,
 // and the order a sort names.
 func TestListRecordsTakesTheControlsTheRoutesTake(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "list-controls-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
 	kept := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Ada Kept"})
 	gone := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bea Gone"})

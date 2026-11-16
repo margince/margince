@@ -19,6 +19,7 @@ import (
 )
 
 func TestTheWriteAPIRefusesAnUnknownEmploymentStatus(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	var edge struct {
 		ID string `json:"id"`
@@ -101,6 +102,7 @@ func employmentReaderIDs(t *testing.T, e *relEnv, path string) []string {
 }
 
 func TestASecondaryCurrentJobAgreesAcrossCompanyReaders(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	var other struct {
 		ID string `json:"id"`
@@ -164,6 +166,7 @@ func TestASecondaryCurrentJobAgreesAcrossCompanyReaders(t *testing.T) {
 }
 
 func TestTheToolSurfaceRefusesAnUnknownEmploymentStatus(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.GrantRole(t, e.Rep1, "admin")
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})

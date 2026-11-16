@@ -199,6 +199,7 @@ func (c *channelSendEnv) assertNoOutboundEffect(t *testing.T, refusal string) {
 // A write-only passport may not reach an outbound verb at all: the scope cap
 // the granting human set is checked before the tier question is asked.
 func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 
 	status, code, _ := c.sendReplyAs(t, []string{"read", "write"}, "transactional")
@@ -218,6 +219,7 @@ func TestSendMessageRefusesAWriteOnlyPassport(t *testing.T) {
 // caller is the CAP — a passport never granted `send` cannot reach this at all,
 // which TestOutboundVerbsRequireAnOutboundCap holds.
 func TestSendMessageAcceptsASendScopedPassportWithoutAToken(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 
 	status, code, detail := c.sendReplyAs(t, []string{"read", "send"}, "transactional")
@@ -234,6 +236,7 @@ func TestSendMessageAcceptsASendScopedPassportWithoutAToken(t *testing.T) {
 // boundary that matters: the tier decides whether a contact is asked twice, the
 // scope decides whether the act was delegable at all.
 func TestSendMessageRefusesAPassportWithoutTheSendCap(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 
 	status, code, _ := c.sendReplyAs(t, []string{"read"}, "transactional")
@@ -249,6 +252,7 @@ func TestSendMessageRefusesAPassportWithoutTheSendCap(t *testing.T) {
 // live pre-flight, which is the half that would silently refuse every channel
 // reply if it asked about the wrong credential.
 func TestSendMessageAcceptsAHumanCallerWithoutAToken(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 
 	status, code, detail := c.sendReply(t, "transactional", "Yes — shipping Monday.", nil)
@@ -288,6 +292,7 @@ func TestSendMessageAcceptsAHumanCallerWithoutAToken(t *testing.T) {
 // sentence naming who fixes it — instead of a 202 and a delivery that can only
 // park where the rep never looks.
 func TestSendMessageRefusesWhenNoBotIsBoundForTheChannel(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE channel_connection SET status = 'disconnected'`)
@@ -316,6 +321,7 @@ func TestSendMessageRefusesWhenNoBotIsBoundForTheChannel(t *testing.T) {
 // documentation — httperr.Decode performs no schema validation — so the refusal
 // has to be a Go guard, and it has to land before anything is written.
 func TestSendMessageRefusesAnEmptyBody(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 
 	for _, body := range []string{"", "   \n\t "} {
@@ -339,6 +345,7 @@ func TestSendMessageRefusesAnEmptyBody(t *testing.T) {
 // same 409 the mail path answers — the shape the composer relies on to keep the
 // rep's drafted text on screen.
 func TestSendMessageRefusesWithoutConsentForThePurpose(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	// Without the customer's own authorship the thread arm cannot answer for
 	// this claim (resolveCategory runs it unconditionally, before any purpose
@@ -373,6 +380,7 @@ func TestSendMessageRefusesWithoutConsentForThePurpose(t *testing.T) {
 // the identity (D9) — so the conversation is still there, still readable, and the
 // reply must be refused on reachability rather than accepted and parked.
 func TestSendMessageRefusesAnUnreachableContact(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
@@ -398,6 +406,7 @@ func TestSendMessageRefusesAnUnreachableContact(t *testing.T) {
 // feature, not bookkeeping: same conversation, same contact, the text that was
 // sent.
 func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSend(t)
 	var sent struct {
 		ID        string `json:"id"`

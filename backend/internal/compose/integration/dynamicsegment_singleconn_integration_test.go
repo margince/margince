@@ -61,6 +61,7 @@ var savedViewSingleConnPerms = principal.Permissions{
 // times out rather than completing. A timeout here would be exactly the
 // deadlock shape the fixed sequencing exists to remove.
 func TestListMembersEvaluatesADynamicSegmentOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pool := singleConnPool(t)
 	svc := customfields.NewService(pool, SchemaPool(t))
@@ -121,6 +122,7 @@ func TestListMembersEvaluatesADynamicSegmentOnTheCallersOnlyConnection(t *testin
 // vocabulary (another) and then writing (a third). Three sequential
 // acquisitions on one connection pass; any nesting among them does not.
 func TestSavedViewValidatesItsFilterOnTheCallersOnlyConnection(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pool := singleConnPool(t)
 	svc := customfields.NewService(pool, SchemaPool(t))

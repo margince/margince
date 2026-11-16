@@ -15,6 +15,7 @@ import (
 )
 
 func TestADealsFileIsAPartThatStagesAndTestRuns(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, _ := seededStageNames(t, e)
 	profile := uploadZip(t, e, "crm.zip", zipBytes(t, map[string]string{
@@ -38,6 +39,7 @@ func TestADealsFileIsAPartThatStagesAndTestRuns(t *testing.T) {
 }
 
 func TestADealsFileWithoutARefColumnIsRefusedAtStaging(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile := uploadZip(t, e, "crm.zip", zipBytes(t, map[string]string{"deals.csv": "name\nPumps\n"}))
 	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
@@ -77,6 +79,7 @@ func seededStageNames(t *testing.T, e *apptest.AppEnv) (pipeline, open, won stri
 }
 
 func TestADealsTestRunReportsAStageOutsideItsPipelineAndAnOpenDealClosingInThePast(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	pipeline, open, won := seededStageNames(t, e)
 	deals := "ref,name,pipeline,stage,amount,currency,close_date\n" +

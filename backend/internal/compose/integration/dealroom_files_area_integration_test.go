@@ -82,6 +82,7 @@ func captureContext(t *testing.T, e *apptest.AppEnv) context.Context {
 }
 
 func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
@@ -143,6 +144,7 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 }
 
 func TestARepCannotShareATeammatesLimitedAudienceMailAttachment(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
@@ -175,6 +177,7 @@ func TestARepCannotShareATeammatesLimitedAudienceMailAttachment(t *testing.T) {
 // A file kept from private mail by name only has no bytes for a buyer to
 // download, so it is not in the deal's Files area and the room refuses it.
 func TestAWithheldMailFileCannotBePutInADealRoom(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
@@ -228,6 +231,7 @@ func TestAWithheldMailFileCannotBePutInADealRoom(t *testing.T) {
 // The seller's list keeps an entry whose file was deleted on the deal, so the
 // seller can remove it. It also says the buyer no longer gets that file.
 func TestTheSellersListSaysWhichEntriesStillReachTheBuyer(t *testing.T) {
+	t.Parallel()
 	blob := blobstore.NewMemory()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)

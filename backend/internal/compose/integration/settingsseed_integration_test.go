@@ -29,6 +29,7 @@ import (
 // passes against code that reports nothing, and "a discard was reported" passes
 // against code that also overwrote. Only the pair says what happened.
 func TestASecondSeedKeepsTheStoredValueAndSaysItDiscardedTheNewOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 

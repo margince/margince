@@ -30,6 +30,7 @@ import (
 )
 
 func TestBothPagesAgreeTheNextStepIsAMeeting(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -116,6 +117,7 @@ func TestBothPagesAgreeTheNextStepIsAMeeting(t *testing.T) {
 }
 
 func TestAPageOfRemindersDoesNotBuryTheNextStep(t *testing.T) {
+	t.Parallel()
 	// The under-recognition case: a contact with more system reminders than one
 	// page holds, and one human promise among them. A rung that filtered the
 	// page it was handed would report a missing next step, because the promise

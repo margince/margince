@@ -133,6 +133,7 @@ func (f *runnerFixture) feed(t *testing.T) (live, settled []aiactivity.Item) {
 // A scheduled run reaches the rail through the projection, attributed to the
 // human its passport acts for — not to whoever happened to run the scheduler.
 func TestAScheduledRunReachesTheFeedAsItsOwnContactsWork(t *testing.T) {
+	t.Parallel()
 	f := newRunnerFixture(t)
 	ctx := f.env.AgentCtxWithPassport(f.passport.UUID)
 
@@ -153,6 +154,7 @@ func TestAScheduledRunReachesTheFeedAsItsOwnContactsWork(t *testing.T) {
 // The queued job and the run that claims it are ONE line, because they are one
 // occurrence and the key says so.
 func TestAJobAndTheRunThatClaimsItAreOneOccurrence(t *testing.T) {
+	t.Parallel()
 	f := newRunnerFixture(t)
 	ctx := f.env.AgentCtxWithPassport(f.passport.UUID)
 
@@ -175,6 +177,7 @@ func TestAJobAndTheRunThatClaimsItAreOneOccurrence(t *testing.T) {
 
 // A run that finishes settles in the same line, and lands in what settled today.
 func TestAFinishedRunSettlesInTheFeed(t *testing.T) {
+	t.Parallel()
 	f := newRunnerFixture(t)
 	ctx := f.env.AgentCtxWithPassport(f.passport.UUID)
 
@@ -204,6 +207,7 @@ func TestAFinishedRunSettlesInTheFeed(t *testing.T) {
 // under a settled run; an announcement that dropped it would be a silent
 // user-visible regression, invisible to every test that only checks state.
 func TestAFinishedRunCarriesItsSummaryToTheFeed(t *testing.T) {
+	t.Parallel()
 	f := newRunnerFixture(t)
 	ctx := f.env.AgentCtxWithPassport(f.passport.UUID)
 
@@ -236,6 +240,7 @@ func TestAFinishedRunCarriesItsSummaryToTheFeed(t *testing.T) {
 // number that rises with the correction the projection keeps whichever landed
 // first and the rail reports failed for a run that completed.
 func TestALateFinishCorrectsARunTheSweepHadGivenUpOn(t *testing.T) {
+	t.Parallel()
 	f := newRunnerFixture(t)
 	ctx := f.env.AgentCtxWithPassport(f.passport.UUID)
 

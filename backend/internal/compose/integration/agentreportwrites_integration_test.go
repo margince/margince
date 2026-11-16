@@ -37,6 +37,7 @@ func firstReportMetric(t *testing.T, d *twoDoors) string {
 // A saved report, created, changed and archived through the agent. An open draft
 // stays the work of whoever is writing it.
 func TestAnAgentWorksASavedReport(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-report", "read", "write")
 	selection := AnyMap{"period": "this_month", "target_basis": "month", "close_window": "all_open", "metrics": []string{firstReportMetric(t, d)}}
 	created := reportAct(t, d, "create_report", map[string]any{"request_body": AnyMap{
@@ -71,6 +72,7 @@ func TestAnAgentWorksASavedReport(t *testing.T) {
 
 // An initiative goes from draft to live through the agent.
 func TestAnAgentDefinesAnInitiative(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-initiative", "read", "write")
 	id := answerID(t, []byte(reportAct(t, d, "create_initiative", map[string]any{"request_body": AnyMap{
 		"name": "Win back the fair", "objective_metric": firstReportMetric(t, d),
@@ -84,6 +86,7 @@ func TestAnAgentDefinesAnInitiative(t *testing.T) {
 
 // What the forecast page writes: a call, and a link for a colleague.
 func TestAnAgentCallsTheForecastAndSharesIt(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-forecast-writes", "read", "write")
 	reportAct(t, d, "record_forecast_call", map[string]any{"request_body": AnyMap{"amount_minor": 1200000, "currency": "EUR"}})
 	share := answerID(t, []byte(reportAct(t, d, "create_forecast_share", map[string]any{"request_body": AnyMap{
@@ -94,12 +97,14 @@ func TestAnAgentCallsTheForecastAndSharesIt(t *testing.T) {
 
 // The coverage read answers the agent as it answers its user.
 func TestAnAgentReadsCompanyCoverage(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-coverage", "read")
 	d.tool(t, "read_reports", map[string]any{"kind": "company_coverage"})
 }
 
 // A project's health reading says an agent recorded it.
 func TestAnAgentsProjectHealthReadingNamesTheAgent(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-project-health", "read", "write")
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Health Works"})
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Rollout", "company_id": company, "source": "manual"})
@@ -120,6 +125,7 @@ func TestAnAgentsProjectHealthReadingNamesTheAgent(t *testing.T) {
 // A saved view and a list's visit mark are the user's own, so the agent's writes
 // land on the user's rows.
 func TestAnAgentKeepsTheUsersViewsAndVisitMark(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "agent-views", []compose.Option{compose.WithListsEnabled(true)}, "read", "write")
 	view := answerID(t, d.tool(t, "change_settings", map[string]any{"action": "create_saved_view", "request_body": AnyMap{
 		"resource": "contacts", "name": "My contacts", "query": AnyMap{"columns": []any{"full_name"}},

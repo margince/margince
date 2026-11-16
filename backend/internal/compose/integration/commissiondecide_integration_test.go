@@ -24,6 +24,7 @@ import (
 )
 
 func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)
@@ -117,6 +118,7 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 // An agent approves, pays and voids a real entry on its user's grants. The audit
 // names the agent, and the reversal row does too.
 func TestAnAgentDecidesARealCommissionAndEachRowNamesIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	fx := seedAccrualFixture(t, e, "tier2_20")
 	admin := e.As(e.AdminUser, nil, commissionAdminPerms)

@@ -56,6 +56,7 @@ func holdAndReadSummary(ctx context.Context, t *testing.T, e *Env) string {
 }
 
 func TestAHeldSendCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 
@@ -125,6 +126,7 @@ func stageLinkedInAndReadSummary(ctx context.Context, t *testing.T, e *Env, cont
 // lookalikes, so the English staging writes a new card rather than joining the
 // German one.
 func TestALinkedInMatchCardIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 	var company ids.UUID

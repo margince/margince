@@ -43,6 +43,7 @@ import (
 )
 
 func TestTimeScannerFiresOnceAndAnOpenReminderHoldsTheRecordUntilItIsAnswered(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Gone Quiet Deal", pipeline, open, nil)

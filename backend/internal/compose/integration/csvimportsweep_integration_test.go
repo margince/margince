@@ -35,6 +35,7 @@ func sweepImportRuns(t *testing.T, e *apptest.AppEnv) {
 }
 
 func TestALegacyRunningRunIsNeverRequeued(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()
 	runID := approvedButUnworked(t, e)
@@ -73,6 +74,7 @@ func TestALegacyRunningRunIsNeverRequeued(t *testing.T) {
 }
 
 func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
@@ -89,6 +91,7 @@ func TestTheSweepLeavesAnUndoingRunResumable(t *testing.T) {
 }
 
 func TestALostTestRunJobIsQueuedAgainAndTheRunCompletes(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)
@@ -121,6 +124,7 @@ func TestALostTestRunJobIsQueuedAgainAndTheRunCompletes(t *testing.T) {
 }
 
 func TestALegacyCompleteRunReleasesItsSource(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "lead", prospectCSV)
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "lead", profile.SourceRef, profile.SuggestedMapping)

@@ -30,6 +30,7 @@ import (
 // still succeeds. Whether a read owes the same liveness a write does is a
 // separate question and is not settled here.
 func TestUploadingOntoAnArchivedParentIsRefused(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	store, _ := attachmentStore(e)

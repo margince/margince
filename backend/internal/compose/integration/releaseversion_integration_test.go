@@ -26,6 +26,7 @@ import (
 // upgrade and a rollback have to get through; and an unstamped binary has to do
 // neither, in either direction.
 func TestReleaseGuardStopsATornSetAndLetsAnUpgradeThrough(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -119,21 +120,21 @@ func TestReleaseGuardStopsATornSetAndLetsAnUpgradeThrough(t *testing.T) {
 // while if the read treated an absent record as a VALUE the worker would refuse
 // over a release nobody ever recorded. Both failures look like the guard working.
 func TestReleaseGuardIsInertOnAnUnbootstrappedInstallation(t *testing.T) {
-	env := Setup(t)
+	t.Parallel()
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-
-	// Empty the database the harness just seeded, workspace included: this is the
-	// genuine pre-bootstrap state, reached through the reset the harness itself
-	// uses rather than by deleting rows by hand.
-	if err := testdb.Reset(ctx, OwnerConn(t)); err != nil {
-		t.Fatalf("resetting to the pre-bootstrap state: %v", err)
+	// A copy of the migrated template with no fixture seeded: the genuine
+	// pre-bootstrap state, workspace included.
+	pool, err := testdb.Pool(ctx, testdb.New(t).AppDSN)
+	if err != nil {
+		t.Fatal(err)
 	}
+	testdb.AssertPoolsQuiesced(t)
 
-	if err := compose.RecordInstallationRelease(ctx, env.Pool, logger, "1970.42"); err != nil {
+	if err := compose.RecordInstallationRelease(ctx, pool, logger, "1970.42"); err != nil {
 		t.Fatalf("recording a release before bootstrap is an error, and must not be: %v", err)
 	}
-	if err := compose.AssertInstallationRelease(ctx, env.Pool, logger, "1970.42"); err != nil {
+	if err := compose.AssertInstallationRelease(ctx, pool, logger, "1970.42"); err != nil {
 		t.Fatalf("a role refused to start on an unbootstrapped installation: %v", err)
 	}
 	// And nothing was written against no workspace. Counted on the OWNER
@@ -160,6 +161,7 @@ func TestReleaseGuardIsInertOnAnUnbootstrappedInstallation(t *testing.T) {
 // and before the marker the guard read one of them as this installation's — a
 // worker would refuse to start against a release nobody here is running.
 func TestReleaseGuardIgnoresAPredecessorsRelease(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
@@ -215,6 +217,7 @@ func TestReleaseGuardIgnoresAPredecessorsRelease(t *testing.T) {
 // here is the read: the assertion goes through AssertInstallationRelease, which
 // is what every non-api role boots on.
 func TestTheRecordedReleaseIsTheOneCommittedLast(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))

@@ -24,6 +24,7 @@ import (
 )
 
 func TestListRecordsNarrowsRatherThanAnsweringEveryRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -61,6 +62,7 @@ func TestListRecordsNarrowsRatherThanAnsweringEveryRow(t *testing.T) {
 // list. `owner_id` is the filter every record type carries, so a break in the
 // reference binding would widen four enumerations at once.
 func TestListRecordsNarrowsByOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)

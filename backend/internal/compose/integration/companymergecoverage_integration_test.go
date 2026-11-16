@@ -27,7 +27,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
-	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/pkg/extension/reach"
 )
@@ -129,6 +128,7 @@ var concatenatedColumn = regexp.MustCompile(`SET\s+` + "`" + `\s*\+\s*[a-z]`)
 // enrichment sidecars, the money rows and the per-reader rows were all real
 // columns in the schema that no statement in the merge had ever named.
 func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
+	t.Parallel()
 	defer companyFKsTheMergeLeaves.AssertAllMatched(t)
 
 	written := tablesTheMergeWrites(t)
@@ -142,9 +142,6 @@ func TestEveryCompanyForeignKeyJoinsTheMerge(t *testing.T) {
 
 	ctx := context.Background()
 	owner := OwnerConn(t)
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	rows, err := owner.Query(ctx, `
 		SELECT c.conrelid::regclass::text AS src_table, a.attname AS src_col,

@@ -138,6 +138,7 @@ func (c *consentEnv) send(t *testing.T, purpose string) (int, string) {
 }
 
 func TestConsentDefaultDenySuppressesSends(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	// Drafting is 🟢 and consent-free — it sends nothing.
@@ -194,6 +195,7 @@ func TestConsentDefaultDenySuppressesSends(t *testing.T) {
 // and needs no consent object at all — while transactional mail, whose basis is
 // the contract itself, needs neither.
 func TestCorrespondenceAndTransactionalAreNotConsentGated(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	// A live deal — real evidence, now that a bare purpose claim no longer
 	// carries itself. setupConsent's own anchor is hand-logged rather than
@@ -219,6 +221,7 @@ func TestCorrespondenceAndTransactionalAreNotConsentGated(t *testing.T) {
 // showing a lawful basis, and a computation this build happened to make is not
 // something anybody can look up afterwards.
 func TestASendOnADerivedBasisRecordsWhatAuthorizedIt(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	logConsentInbound(t, c.AppEnv, c.contactID)
 	ctx := context.Background()
@@ -270,6 +273,7 @@ func TestASendOnADerivedBasisRecordsWhatAuthorizedIt(t *testing.T) {
 // Writing a legal fact because somebody opened a composer would put a lawful
 // basis on the record for a message that was never sent.
 func TestTheGuardPreviewRecordsNothing(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	logConsentInbound(t, c.AppEnv, c.contactID)
 	ctx := context.Background()
@@ -310,6 +314,7 @@ func TestTheGuardPreviewRecordsNothing(t *testing.T) {
 // string may be live on somebody else. Resolving through it would answer about
 // the wrong human.
 func TestAnArchivedAddressDoesNotAuthorizeItsFormerHolder(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	ctx := context.Background()
 
@@ -333,6 +338,7 @@ func TestAnArchivedAddressDoesNotAuthorizeItsFormerHolder(t *testing.T) {
 // otherwise allow it. There is no override toggle, and there must be no path
 // through the class model that reaches past a suppression.
 func TestAnObjectionOverridesAQualifyingEvent(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	logConsentInbound(t, c.AppEnv, c.contactID)
 
@@ -352,6 +358,7 @@ func TestAnObjectionOverridesAQualifyingEvent(t *testing.T) {
 // The consent gate must never be an oracle: a caller who cannot see
 // the anchor gets the anchor's own refusal (404), not a consent answer.
 func TestConsentGateIsNotAnOracleForUnauthorizedCallers(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	var problem struct {
 		Code string `json:"code"`
@@ -366,6 +373,7 @@ func TestConsentGateIsNotAnOracleForUnauthorizedCallers(t *testing.T) {
 }
 
 func TestConsentDoubleOptInNorm(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	// marketing_email requires DOI: a bare grant is refused outright.
@@ -449,6 +457,7 @@ func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 }
 
 func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	grant := func() int {
 		return c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent", AnyMap{
@@ -522,6 +531,7 @@ func TestConsentProofLogIsAppendOnlyAndIdempotent(t *testing.T) {
 // Mutation: put consent_purpose back on the schema's `required` list and this
 // fails with 422 validation_error.
 func TestASendWithNoPurposeKeyReachesTheEngine(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var problem struct {
@@ -556,6 +566,7 @@ func TestASendWithNoPurposeKeyReachesTheEngine(t *testing.T) {
 // Mutation: make resolveFromClaimAndPurpose treat an empty key as supported
 // and this fails with a 202.
 func TestOmittingThePurposeKeyIsNotAWayPastTheGate(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var problem struct {
@@ -582,6 +593,7 @@ func TestOmittingThePurposeKeyIsNotAWayPastTheGate(t *testing.T) {
 // Mutation: point the preview at a different resolver and the two answers
 // diverge on the second case.
 func TestThePreviewAgreesWithTheSendItPreviews(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	logConsentInbound(t, c.AppEnv, c.contactID)
 
@@ -642,6 +654,7 @@ func TestThePreviewAgreesWithTheSendItPreviews(t *testing.T) {
 // Mutation: move origin.resolve after the previewer call in PreviewSend and
 // this returns 200 with an answer about a record the caller cannot see.
 func TestThePreviewRefusesARecordTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var problem problemBody
@@ -667,6 +680,7 @@ func TestThePreviewRefusesARecordTheCallerCannotRead(t *testing.T) {
 // Mutation: return nil instead of errPreviewComplete from Preview's
 // transaction, so it commits, and the qualifying-event count goes up.
 func TestThePreviewRecordsNothing(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	logConsentInbound(t, c.AppEnv, c.contactID)
 	ctx := context.Background()
@@ -741,6 +755,7 @@ func TestThePreviewRecordsNothing(t *testing.T) {
 // one reply, not because of anything this slice built. A test that cannot tell
 // its own subject from an unrelated rule proves nothing about either.
 func TestADeadAddressRefusesTheNextSend(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	// Correspondence goes, which is what makes the refusal below meaningful:
@@ -843,6 +858,7 @@ func (c *consentEnv) sendFrom(t *testing.T, activityID, purpose string) (int, st
 // it is wired. gates/messagingruleapplied_test.go recorded that gap by name,
 // and this is what lets the register line close.
 func TestASentMessageCarriesTheDisclosuresItOwes(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	owner := OwnerConn(t)
 
@@ -888,6 +904,7 @@ func TestASentMessageCarriesTheDisclosuresItOwes(t *testing.T) {
 // A mail logged by hand starts a thread of its own, and that thread is not the
 // subject writing in. So a marketing send that answers it still needs a grant.
 func TestAMarketingSendAnsweringAHandLoggedMailStillNeedsAGrant(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.activityID = logConsentInbound(t, c.AppEnv, c.contactID)
 	if status, code := c.send(t, "marketing_email"); status != http.StatusConflict {

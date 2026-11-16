@@ -15,6 +15,7 @@ import (
 // slice and run. A row naming another company under it is refused with a reason,
 // and the contact links to the first company, so the file never splits.
 func TestARefMappedToAnotherCompanyIsNotRebound(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Other Works"})
 	first := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,,Created Works,\n")
@@ -34,6 +35,7 @@ func TestARefMappedToAnotherCompanyIsNotRebound(t *testing.T) {
 // Undo frees a bound ref whatever its company is. The company was never the
 // run's, so a live one must not keep answering for the ref.
 func TestAnUndoneRunsBoundRefIsFreeToImportAgain(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
 	first := namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Named Works,\n")

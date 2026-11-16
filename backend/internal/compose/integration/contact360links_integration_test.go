@@ -18,6 +18,7 @@ import (
 )
 
 func TestANoteOnTwoContactsCarriesBothLinksOnTheContactPageAndTheList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	mine := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	champion := e.SeedContact(t, "Ben Kraus", &e.Rep1)

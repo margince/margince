@@ -16,6 +16,7 @@ import (
 
 // The automatic-lookup posture the api's environment sets reads as that value
 // and refuses a change; resending it is accepted.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAutomaticLookupSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP=false"})
 	e.BootstrapWorkspace(t)
@@ -42,6 +43,7 @@ func TestAutomaticLookupSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // Admission reads the posture inside the write that queues a run, and a boot
 // value of off wins there over a saved row of on. Not parallel: the binding is
 // the process's own.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetLookupOffWinsOverTheSavedRowAndBuysNothing(t *testing.T) {
 	apptest.BindEnv(t, []string{"MARGINCE_INTEGRATIONS_AUTOMATIC_LOOKUP=false"})
 	c := setupProviderConsumer(t, true)

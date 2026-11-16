@@ -47,6 +47,7 @@ func declaredKind(table string, key ...string) recordkinds.Declared {
 }
 
 func TestADeclaredKindMustHaveItsTableColumnsAndAUniqueNaturalKey(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 	const good = `id uuid PRIMARY KEY, archived_at timestamptz, code text NOT NULL, site text, UNIQUE (code)`

@@ -55,6 +55,7 @@ func seedQuietOwnedDeal(t *testing.T, e *Env, owner *ids.UUID) ids.UUID {
 }
 
 func TestAQuietDealIsDrawnOnlyWhileItsOwnersMailIsVisible(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name     string
 		provider string
@@ -101,6 +102,7 @@ func TestAQuietDealIsDrawnOnlyWhileItsOwnersMailIsVisible(t *testing.T) {
 // One finished mailbox does not vouch for a second one still importing: the
 // importing one is missing exactly the mail that could answer the reminder.
 func TestAnyMailboxStillImportingHoldsTheOwnersRecordsBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seat := e.Rep1
 	deal := seedQuietOwnedDeal(t, e, &seat)
@@ -117,6 +119,7 @@ func TestAnyMailboxStillImportingHoldsTheOwnersRecordsBack(t *testing.T) {
 // An unowned record keeps the old behaviour: its reminder goes to the
 // unassigned queue, and no one seat's mailbox could prove it wrong.
 func TestAQuietUnownedDealIsStillDrawn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal := seedQuietOwnedDeal(t, e, nil)
 	e.WsExec(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, deal)
@@ -132,6 +135,7 @@ func TestAQuietUnownedDealIsStillDrawn(t *testing.T) {
 // back because its owner's mail is not visible must not take its deal's
 // reminder down with it when the deal's owner can be seen.
 func TestAnAccountHeldBackForItsOwnersMailboxDoesNotAbsorbItsDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	conn := OwnerConn(t)
 	dealOwner, accountOwner := e.Rep1, e.Rep2

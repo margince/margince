@@ -51,6 +51,7 @@ func rowFor(page []crmcontracts.Activity, id ids.UUID) *crmcontracts.EmailSummar
 // A readable email reports what came with it, and a message with nothing
 // attached reports zero rather than nothing at all.
 func TestAListRowCarriesItsRealAttachmentCount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -104,6 +105,7 @@ func TestAListRowCarriesItsRealAttachmentCount(t *testing.T) {
 // files exist is the same fact in smaller print: a colleague who sees "2 files"
 // beside a message they may not open has learned that a contract was exchanged.
 func TestAWithheldRowReportsNoAttachments(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	colleague := e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms)
@@ -173,6 +175,7 @@ func TestAWithheldRowReportsNoAttachments(t *testing.T) {
 // disagree about what came with a message is the drift this arc exists to
 // remove — a reader opening a record from two directions must see one answer.
 func TestTheSingleReadAgreesWithTheListAboutAttachments(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)

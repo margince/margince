@@ -28,6 +28,7 @@ import (
 )
 
 func TestLeadScoreOverrideIsSticky(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	engine := compose.NewWorkflowEngine(e.DB())
 	ctx := e.AsFullUser()
@@ -119,6 +120,7 @@ func logInboundReply(t *testing.T, ctx context.Context, activityStore *activitie
 // contract: a human PATCH setting score with no reason answers 422 with
 // the validation-error field shape.
 func TestLeadScoreOverrideRejectsMissingReasonOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

@@ -161,6 +161,7 @@ func reassignContacts(owner string, items []bulkItemDTO) AnyMap {
 	return AnyMap{"record_type": "contact", "verb": "reassign_owner", "owner_id": owner, "items": items}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsChangeASmallSelectionDirectlyUnderOneBatch(t *testing.T) {
 	e, _, doors := bulkDoorsApp(t, "bulk-small", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
@@ -199,6 +200,7 @@ func assertTheAuditLogFindsTheBatch(t *testing.T, e *apptest.AppEnv, batchID str
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsNeedTheirPreviewsTokenAboveTenAndSpendItOnce(t *testing.T) {
 	e, _, doors := bulkDoorsApp(t, "bulk-token", agentvolume.Limits{})
 	colleague, other := seedColleague(t, e), seedColleague(t, e)
@@ -227,6 +229,7 @@ func TestBothDoorsNeedTheirPreviewsTokenAboveTenAndSpendItOnce(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsSkipARecordEditedAfterThePreview(t *testing.T) {
 	e, _, doors := bulkDoorsApp(t, "bulk-stale", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
@@ -249,6 +252,7 @@ func TestBothDoorsSkipARecordEditedAfterThePreview(t *testing.T) {
 // A retried execution is never a second change. The REST door hands back the
 // first answer; the tool door refuses to replay an answer that names no record
 // it can re-check, which the tool surface does for every such answer.
+//testdb:serial flushes and reads the package's one Redis database
 func TestARetriedExecutionIsNotASecondChange(t *testing.T) {
 	e, _, doors := bulkDoorsApp(t, "bulk-retry", agentvolume.Limits{})
 	colleague := seedColleague(t, e)
@@ -270,6 +274,7 @@ func TestARetriedExecutionIsNotASecondChange(t *testing.T) {
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestBothDoorsReassignAndArchiveDeals(t *testing.T) {
 	e, _, doors := bulkDoorsApp(t, "bulk-deals", agentvolume.Limits{})
 	colleague := seedColleague(t, e)

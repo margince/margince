@@ -19,7 +19,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
@@ -35,13 +34,9 @@ import (
 // tests exercise the door without a model lane anywhere.
 func transcriptDoorApp(t *testing.T, slug, name, email string) *apptest.AppEnv {
 	t.Helper()
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if appDSN == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	// A separate pool from the one SetupAppWithOptions opens: the inserter
 	// needs SOME pool reaching the same Postgres, not the same object.
-	wirePool, err := testdb.OwnPool(context.Background(), appDSN)
+	wirePool, err := testdb.OwnPool(context.Background(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening the insert-only wiring pool: %v", err)
 	}
@@ -97,6 +92,7 @@ func logTranscript(t *testing.T, e *apptest.AppEnv, body string) string {
 }
 
 func TestTheTranscriptReadingDoorQueuesAndThenReportsOnItself(t *testing.T) {
+	t.Parallel()
 	e := transcriptDoorApp(t, "transcript-door", "Transcript Door", "ada@transcript.test")
 	activityID := logTranscript(t, e, transcriptText)
 
@@ -154,6 +150,7 @@ func TestTheTranscriptReadingDoorQueuesAndThenReportsOnItself(t *testing.T) {
 // property is still worth holding — it is about what `latest` says when there
 // is nothing to report, and a note is now the way to get there.
 func TestAnActivityNobodyHasReadIsNotFoundRatherThanEmpty(t *testing.T) {
+	t.Parallel()
 	e := transcriptDoorApp(t, "transcript-unread", "Transcript Unread", "ada@unread.test")
 
 	var activity struct {
@@ -180,6 +177,7 @@ func TestAnActivityNobodyHasReadIsNotFoundRatherThanEmpty(t *testing.T) {
 // silently never read — the same silence the feature exists to end, on the door
 // a rep's integration actually posts to.
 func TestATranscriptPostedOverRESTIsReadWithoutBeingAsked(t *testing.T) {
+	t.Parallel()
 	e := transcriptDoorApp(t, "transcript-rest", "Transcript REST", "ada@rest.test")
 	activityID := logTranscript(t, e, transcriptText)
 
@@ -196,6 +194,7 @@ func TestATranscriptPostedOverRESTIsReadWithoutBeingAsked(t *testing.T) {
 }
 
 func TestTheDoorRefusesWhatHasNoLinesToCite(t *testing.T) {
+	t.Parallel()
 	e := transcriptDoorApp(t, "transcript-refusals", "Transcript Refusals", "ada@refuse.test")
 
 	var note struct {
@@ -232,6 +231,7 @@ func TestTheDoorRefusesWhatHasNoLinesToCite(t *testing.T) {
 }
 
 func TestAReadingOfATranscriptThatDoesNotExistIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := transcriptDoorApp(t, "transcript-missing", "Transcript Missing", "ada@missing.test")
 
 	missing := "00000000-0000-7000-8000-000000000000"

@@ -34,6 +34,7 @@ import (
 // readable by every seat unless its capture is private, so the record a
 // share opens here is a capture-private contact of rep3's.
 func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	foreign := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, visibility, source, captured_by) VALUES ($1, 'Shared Secret', $2, 'owner', 'manual', 'human:x')`, e.Rep3)
 
@@ -104,6 +105,7 @@ func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
 // it. The probe behind it is what decides, and it now asks the same question
 // whatever access is being asserted: can this caller change the row themselves.
 func TestAShareIsPassedOnOnlyByACallerWhoCouldChangeTheRow(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	// Owned by rep3 in team2, so rep1 in team1 has no path to it but a share.
 	foreign := e.SeedID(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Out Of Scope', $2, 'manual', 'human:x')`, e.Rep3)
@@ -188,6 +190,7 @@ func grantingPrincipal(e *SearchEnv, user ids.UUID, scope principal.RowScope, te
 }
 
 func TestRecordGrantHTTPLifecycle(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	var grant struct {
@@ -241,6 +244,7 @@ func TestRecordGrantHTTPLifecycle(t *testing.T) {
 // second one or refuse — asserting the status alone would pass against an
 // insert that quietly duplicated the grant.
 func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	subject := meUserID(t, e)
 
@@ -308,6 +312,7 @@ func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
 // A before-image of nil on an update reads as a first-ever share, which is
 // the one thing the record timeline must not say about a downgrade.
 func TestReAssertingAGrantAuditsWhatItDisplaced(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	subject := meUserID(t, e)
 	share := func(access string) {
@@ -380,6 +385,7 @@ func meUserID(t *testing.T, e *relEnv) string {
 // closes nothing. Write authority is owner- or grant-scoped even there, which
 // is why that is the question asked.
 func TestARecordsTermsAreRestatedOnlyByACallerWhoCouldChangeIt(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	svc := identity.NewService(e.Pool)
 	colleague := e.SeedID(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'termcolleague@search.test', 'Term Colleague')`)
@@ -500,6 +506,7 @@ func TestARecordsTermsAreRestatedOnlyByACallerWhoCouldChangeIt(t *testing.T) {
 // every table. The distinction is the whole rule: a caller can always reach the
 // door, and is turned away at it.
 func TestAStrangerToTheRecordCannotRestateItsGrants(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	svc := identity.NewService(e.Pool)
 

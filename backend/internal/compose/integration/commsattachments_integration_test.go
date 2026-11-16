@@ -63,6 +63,7 @@ func grantOwnScopeRepRole(t *testing.T, e *Env, user ids.UUID) {
 // A file its sender can still read transmits. Without this case the refusals
 // below would pass against an authority that refuses everything.
 func TestEnsureTransmittableAdmitsAFileTheSenderCanStillRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, blob := attachmentStore(e)
 	grantOwnScopeRepRole(t, e, e.Rep1)
@@ -93,6 +94,7 @@ func TestEnsureTransmittableAdmitsAFileTheSenderCanStillRead(t *testing.T) {
 // untouched; the authority is not — and the message must park rather than
 // carry a document its sender may no longer read.
 func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, blob := attachmentStore(e)
 	// Rep3 holds the SAME role as the sender in the admitting case above, so
@@ -156,6 +158,7 @@ func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
 // tell "the document still exists" from "no such document" by reading the
 // park reason off their own delivery.
 func TestEnsureTransmittableRefusesAnUnknownFileIndistinguishablyFromAnInvisibleOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store, blob := attachmentStore(e)
 	grantOwnScopeRepRole(t, e, e.Rep3)
@@ -200,6 +203,7 @@ func TestEnsureTransmittableRefusesAnUnknownFileIndistinguishablyFromAnInvisible
 // defect, and parking every message in the batch over it would destroy
 // legitimate sends that a fixed deployment would have delivered.
 func TestEnsureTransmittableFaultsRatherThanRefusingWithoutAWorkspace(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	_, blob := attachmentStore(e)
 

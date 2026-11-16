@@ -59,6 +59,7 @@ func listedContact(ctx context.Context, t *testing.T, e *Env, contact ids.UUID) 
 // surfaces share one attach, so a reader asking "who is this and where do they
 // work" gets the same answer wherever they ask.
 func TestAContactNamesTheEmployerTheyHoldToday(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", nil)
 	former := e.SeedCompany(t, "Former Employer", nil)
@@ -93,6 +94,7 @@ func TestAContactNamesTheEmployerTheyHoldToday(t *testing.T) {
 // with the end date, so a leaver's old company does not go on standing as where
 // they work.
 func TestAContactWhoseOnlyEmploymentEndedNamesNoEmployer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	former := e.SeedCompany(t, "Former Employer", nil)
 	contact := e.SeedContact(t, "Left Last Year", nil)
@@ -111,6 +113,7 @@ func TestAContactWhoseOnlyEmploymentEndedNamesNoEmployer(t *testing.T) {
 // absent employer never means "works nowhere", which is what stops the omission
 // being read as an answer.
 func TestTheEmployerNeedsBothTheEdgeAndTheCompanyGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	acme := e.SeedCompany(t, "Acme", nil)
 	contact := e.SeedContact(t, "Anna Weber", nil)
@@ -135,6 +138,7 @@ func TestTheEmployerNeedsBothTheEdgeAndTheCompanyGrant(t *testing.T) {
 // face on its own row and beside every contact who works there. A company with
 // no logo sends none, and the client draws its monogram.
 func TestTheEmployerCarriesTheCompanyRecordsLogo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	acme := e.SeedCompany(t, "Acme", nil)

@@ -69,6 +69,7 @@ func record(ctx context.Context, e *Env, country, category, rate string, from ti
 }
 
 func TestTheFirstRateOfACategoryClassifiesTheRateCard(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"de"'::jsonb, now())`)
 	desk := e.As(e.AdminUser, nil, taxDeskPerms)
@@ -108,6 +109,7 @@ func TestTheFirstRateOfACategoryClassifiesTheRateCard(t *testing.T) {
 }
 
 func TestTheSheetOnlyGrows(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	desk := e.As(e.AdminUser, nil, taxDeskPerms)
 	day := func(text string) time.Time {
@@ -153,6 +155,7 @@ func TestTheSheetOnlyGrows(t *testing.T) {
 }
 
 func TestARepReadsNoTaxRateAndRecordsNone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, taxRepPerms)
 	if _, err := e.Deals.ListTaxRates(rep, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {

@@ -44,6 +44,7 @@ var frozenClockFixture = regexp.MustCompile(`(?i)fixedNow|func\(\) time\.Time \{
 const gateOwnFile = "fixtureclock_integration_test.go"
 
 func TestAFrozenClockFixtureDoesNotSeedAgainstTheDatabaseClock(t *testing.T) {
+	t.Parallel()
 	entries, err := filepath.Glob("*_test.go")
 	if err != nil {
 		t.Fatalf("listing the suite: %v", err)

@@ -50,6 +50,7 @@ func draftOfferWithLine(t *testing.T, e *Env) (ids.OfferID, string, context.Cont
 
 // The refusal, and it names what to do instead.
 func TestADraftsCurrencyIsRefusedOverPricedLinesNobodyRestated(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, was, desk := draftOfferWithLine(t, e)
 
@@ -82,6 +83,7 @@ func TestADraftsCurrencyIsRefusedOverPricedLinesNobodyRestated(t *testing.T) {
 // Re-sending the currency the offer already holds asks for nothing, so a PATCH
 // that carries the whole header is not refused for mentioning the currency.
 func TestResendingTheCurrencyADraftAlreadyHoldsIsNotAChange(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	offer, was, desk := draftOfferWithLine(t, e)
 
@@ -96,6 +98,7 @@ func TestResendingTheCurrencyADraftAlreadyHoldsIsNotAChange(t *testing.T) {
 // nothing to re-mean, and refusing here would make the currency unchangeable
 // for the whole life of a draft somebody started in the wrong one.
 func TestAnUnpricedDraftChangesCurrencyFreely(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Unpriced probe", pipeline, open, &e.Rep1)
@@ -126,6 +129,7 @@ func TestAnUnpricedDraftChangesCurrencyFreely(t *testing.T) {
 // sentinel to be exactly 0). Counting either would refuse the move on a draft
 // that names no price at all, which is the case the refusal exists to leave be.
 func TestADraftWhoseOnlyPriceIsZeroChangesCurrencyFreely(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Zero probe", pipeline, open, &e.Rep1)

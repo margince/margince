@@ -47,6 +47,7 @@ func runWinLossByOwner(t *testing.T, e *apptest.AppEnv) (int, string) {
 // applies it to the next request. A breakdown by owner is refused with a code
 // the screen explains, and answers again once the switch is back on.
 func TestIndividualPerformanceIsAnAuditedSwitchTheNextRequestObeys(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

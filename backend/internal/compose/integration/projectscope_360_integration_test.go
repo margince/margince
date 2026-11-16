@@ -100,6 +100,7 @@ func assertScopedNeighbours(t *testing.T, f scopeFixture, tasks map[string]bool,
 func activityIDOf(id openapi_types.UUID) *string { s := id.String(); return &s }
 
 func TestContact360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	svc := contactRoomService(e)
@@ -140,6 +141,7 @@ func TestContact360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 }
 
 func TestCompany360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	svc := company360.NewService(e.Pool, e.Contacts, e.Deals, e.Projects, approvals.NewService(e.DB()),
@@ -195,6 +197,7 @@ func TestCompany360ScopedToOneProjectDropsTheOtherEngagement(t *testing.T) {
 // project the caller cannot see — or that does not exist — answers the same
 // existence-hiding 404 a direct read gives.
 func TestAProjectScopeIsGatedLikeAReadOfTheProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, withoutGrant(roomPerms, "project"))
@@ -232,6 +235,7 @@ func TestAProjectScopeIsGatedLikeAReadOfTheProject(t *testing.T) {
 // The same gate on the wire: the handler maps the refusal to the status a
 // client acts on rather than answering an unfiltered page.
 func TestAProjectScopeOnTheActivityListAnswers403And404OnTheWire(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	h := activities.NewHandlers(e.DB())
@@ -261,6 +265,7 @@ func TestAProjectScopeOnTheActivityListAnswers403And404OnTheWire(t *testing.T) {
 // reader can catch disagreeing with the page: a score citing an activity the
 // scope dropped is a number the reader cannot check.
 func TestContact360ScopedToOneProjectScoresFromOneEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedTwoEngagementAccount(t, e)
 	svc := contactRoomService(e)

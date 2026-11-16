@@ -43,6 +43,7 @@ func linkedLabels(linked *[]crmcontracts.ListLinkedValue) []string {
 }
 
 func TestATagClauseNamesTheTagsTheRecordCarries(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	wanted, err := store.CreateTag(e.Admin(), "Wanted Tag", nil, nil)
@@ -100,6 +101,7 @@ func TestATagClauseNamesTheTagsTheRecordCarries(t *testing.T) {
 }
 
 func TestATagReadingPastTheCapSaysMoreExist(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	contact := e.SeedContact(t, "Carries Many", &e.Rep1)

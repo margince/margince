@@ -76,6 +76,7 @@ func watchedVersion(t *testing.T, e *Env) string {
 }
 
 func TestProviderSettings_ABoundHostChangeIsAuditedAndRebindsServingRoles(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := providerSettingsAdmin(e)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
@@ -110,6 +111,7 @@ func TestProviderSettings_ABoundHostChangeIsAuditedAndRebindsServingRoles(t *tes
 }
 
 func TestProviderSettings_ClearingABoundHostIsRefusedAndStoresNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := providerSettingsAdmin(e)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
@@ -138,6 +140,7 @@ func TestProviderSettings_ClearingABoundHostIsRefusedAndStoresNothing(t *testing
 // routing (the product default) and `{}` (none) stay distinct, and the pin
 // lives on the provider rather than on any lane.
 func TestProviderSettings_TheStoredRowIsCanonical(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := providerSettingsAdmin(e)
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
@@ -167,6 +170,7 @@ func TestProviderSettings_TheStoredRowIsCanonical(t *testing.T) {
 
 // A row written before providers held hosts reads back lifted.
 func TestProviderSettings_GetLiftsAStoredOldShapeRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := providerSettingsAdmin(e)
 	settingsStore := compose.NewSettingsStore(e.Pool)

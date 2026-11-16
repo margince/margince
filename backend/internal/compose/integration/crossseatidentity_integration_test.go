@@ -101,6 +101,7 @@ func proveDomain(t *testing.T, e *integration.Env, seat ids.UUID, value string) 
 //
 // The colleague's own sync is the control: it must still land their copy.
 func TestAnImportUnderAColleaguesAddressGainsTheImporterNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "colleague-address@counterparty.example"
 
@@ -168,6 +169,7 @@ func TestAnImportUnderAColleaguesAddressGainsTheImporterNothing(t *testing.T) {
 // from the arriving seat's own connection evidence, which the importer cannot
 // write.
 func TestAnAdminsImportBindsToTheRepWhoseProvenAddressItNames(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "admin-import@counterparty.example"
 
@@ -228,6 +230,7 @@ func TestAnAdminsImportBindsToTheRepWhoseProvenAddressItNames(t *testing.T) {
 // bind to, with the liveness filter that currently covers holds relaxed to
 // match.
 func TestAMessageUnderAStatutoryHoldIsNotTakenOver(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "held-import@counterparty.example"
 	const heldSubject = "Angebot fuer 10 Plaetze"
@@ -308,6 +311,7 @@ func TestAMessageUnderAStatutoryHoldIsNotTakenOver(t *testing.T) {
 // connected a mailbox once, then revoked it — or had it revoked for them —
 // would go on attributing a colleague's imports forever.
 func TestAWithdrawnConnectionDoesNotAttribute(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "withdrawn@counterparty.example"
 
@@ -339,6 +343,7 @@ func TestAWithdrawnConnectionDoesNotAttribute(t *testing.T) {
 // attribute both have somebody other than the seat behind them: the provider at
 // grant, and the receiving server's own Delivered-To.
 func TestADeclaredAddressAloneDoesNotAttribute(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "declared-only@counterparty.example"
 
@@ -380,6 +385,7 @@ func TestADeclaredAddressAloneDoesNotAttribute(t *testing.T) {
 // evidence that a domain rule is enforced. If you are about to rely on it while
 // changing how addresses are compared, verify by hand first.
 func TestADomainClaimDoesNotAttribute(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "domain-claim@counterparty.example"
 
@@ -407,6 +413,7 @@ func TestADomainClaimDoesNotAttribute(t *testing.T) {
 // cannot be wrong: it costs a dedupe it could have made, and never binds the
 // wrong seat's mail.
 func TestAnAddressTwoSeatsProvedAttributesNobody(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "two-seats@counterparty.example"
 
@@ -440,6 +447,7 @@ func TestAnAddressTwoSeatsProvedAttributesNobody(t *testing.T) {
 // restriction is `captured_by LIKE 'human:%'` in attributableTo, and this test
 // is what fails if it goes.
 func TestAConnectorCapturedRowIsNotAttributableToAnotherSeat(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "observed-not-attributable@counterparty.example"
 
@@ -477,6 +485,7 @@ func TestAConnectorCapturedRowIsNotAttributableToAnotherSeat(t *testing.T) {
 // could bind to the colleague's imported row and have TakeOverAssertedActivityTx
 // rewrite its subject, its body and its captured_by stamp.
 func TestATypedAccountLabelCannotTakeOverAColleaguesImport(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "typed-label@counterparty.example"
 

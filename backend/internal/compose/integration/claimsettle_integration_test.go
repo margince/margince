@@ -31,6 +31,7 @@ import (
 )
 
 func TestSettlingAClaimReachesTheContactRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
 	contact := e.SeedContact(t, "Herr Vogt", &e.Rep1)
@@ -60,6 +61,7 @@ func TestSettlingAClaimReachesTheContactRead(t *testing.T) {
 }
 
 func TestSettlingTwiceTheSameWayIsOneSettlement(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
 	contact := e.SeedContact(t, "Frau Adler", &e.Rep1)
@@ -83,6 +85,7 @@ func TestSettlingTwiceTheSameWayIsOneSettlement(t *testing.T) {
 }
 
 func TestSettlingAPromiseTheOtherWayIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
 	contact := e.SeedContact(t, "Herr Baum", &e.Rep1)
@@ -102,6 +105,7 @@ func TestSettlingAPromiseTheOtherWayIsRefused(t *testing.T) {
 }
 
 func TestSettlingWritesTheWholeShape(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
 	contact := e.SeedContact(t, "Frau Kern", &e.Rep1)
@@ -132,6 +136,7 @@ func TestSettlingWritesTheWholeShape(t *testing.T) {
 }
 
 func TestAReaderWhoMayNotWriteTheContactCannotSettleTheirPromise(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
 	// Rep2's contact, settled by Rep3. A contact outside the caller's scope reads
@@ -161,6 +166,7 @@ func TestAReaderWhoMayNotWriteTheContactCannotSettleTheirPromise(t *testing.T) {
 // promises read out of it, and the 204-vs-409 answer would report the claim's
 // current status to them either way.
 func TestAPromiseWhoseEvidenceIsGoneCannotBeSettled(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	due := laneClock.Add(2 * time.Hour)
 	contact := e.SeedContact(t, "Frau Winter", &e.Rep1)

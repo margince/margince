@@ -20,6 +20,7 @@ import (
 )
 
 func TestRecordAffordancesShareAuthorityOnStoreReads(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Date(2026, 6, 15, 12, 0, 0, 0, time.UTC)
 	e.Contacts.SetClock(func() time.Time { return now })

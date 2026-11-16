@@ -25,6 +25,7 @@ import (
 )
 
 func TestARelinkIsRefusedWhenTheActivityMovedUnderIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Relink pin", "pin@fable.test", "Admin")
 	contactID, taskID := seedTaskAndTarget(t, e)
@@ -71,6 +72,7 @@ func TestARelinkIsRefusedWhenTheActivityMovedUnderIt(t *testing.T) {
 // happened to match, which reads as a partial move nobody asked for — so the
 // batch doors say so rather than dropping it silently.
 func TestABatchRelinkRefusesAVersionPinRatherThanIgnoringIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Batch pin", "batch@fable.test", "Admin")
 	contactID, taskID := seedTaskAndTarget(t, e)

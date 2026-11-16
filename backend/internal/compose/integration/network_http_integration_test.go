@@ -56,6 +56,7 @@ type dealCoverageDTO struct {
 }
 
 func TestContactNetworkAnswersHonestlyWhenNobodyKnowsThem(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -87,6 +88,7 @@ func TestContactNetworkAnswersHonestlyWhenNobodyKnowsThem(t *testing.T) {
 // An invited colleague Cc'd on the contact's mail appears in capture_gaps with
 // invited=true and never as a row of colleagues.
 func TestContactNetworkNoticesAnInvitedSeatWithoutListingItAsAColleague(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -130,6 +132,7 @@ func TestContactNetworkNoticesAnInvitedSeatWithoutListingItAsAColleague(t *testi
 }
 
 func TestContactNetworkHidesAContactTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -144,6 +147,7 @@ func TestContactNetworkHidesAContactTheCallerCannotRead(t *testing.T) {
 }
 
 func TestDealCoverageFlagsAThreadlessDealAndExplainsWhy(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -201,6 +205,7 @@ func TestDealCoverageFlagsAThreadlessDealAndExplainsWhy(t *testing.T) {
 }
 
 func TestDealCoverageHidesADealTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -214,6 +219,7 @@ func TestDealCoverageHidesADealTheCallerCannotRead(t *testing.T) {
 }
 
 func TestDealCoverageDistinguishesADepartedChampionFromADepartedStakeholder(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company, deal := dealAtAnAccount(t, e, "Bär Pharma", "Renewal")
@@ -257,6 +263,7 @@ func TestDealCoverageDistinguishesADepartedChampionFromADepartedStakeholder(t *t
 }
 
 func TestDealCoverageDoesNotCallARehiredStakeholderDeparted(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company, deal := dealAtAnAccount(t, e, "Voss Systems", "Expansion")
@@ -276,6 +283,7 @@ func TestDealCoverageDoesNotCallARehiredStakeholderDeparted(t *testing.T) {
 }
 
 func TestGoingColdFiresOnTheReportingWindowAndCarriesTheDayCount(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	_, deal := dealAtAnAccount(t, e, "Kessler GmbH", "Silent")
@@ -321,6 +329,7 @@ func TestGoingColdFiresOnTheReportingWindowAndCarriesTheDayCount(t *testing.T) {
 }
 
 func TestAWonDealIsNotGoingCold(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	_, deal := dealAtAnAccount(t, e, "Brandt Automotive", "Delivered")

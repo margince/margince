@@ -41,6 +41,7 @@ func formatColumn(f crmcontracts.ImportFormat, file, name string) *crmcontracts.
 }
 
 func TestTheFormatListsACustomFieldByItsKeyWithItsLabel(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"A", "B"}, "source": "manual"})
 	german := formatColumn(readImportFormat(t, e, "?lang=de"), "companies.csv", column)
@@ -60,6 +61,7 @@ func TestTheFormatListsACustomFieldByItsKeyWithItsLabel(t *testing.T) {
 }
 
 func TestTheTemplateHeadersAreTheFormatsColumns(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	apptest.CreateCustomField(t, e, AnyMap{"object": "contact", "label": "Segment, internal", "type": "text", "source": "manual"})
 	status, header, archive := getRaw(t, e, "/v1/imports/template", nil)
@@ -94,6 +96,7 @@ func TestTheTemplateHeadersAreTheFormatsColumns(t *testing.T) {
 }
 
 func TestProblemsCSVListsTheReportsIssues(t *testing.T) {
+	t.Parallel()
 	e := setupCustomFieldImportApp(t)
 	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Tier", "type": "picklist", "options": []string{"Gold"}, "source": "manual"})
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tier\nGood GmbH,Gold\nBad GmbH,Bronze\n")

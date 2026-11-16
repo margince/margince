@@ -35,6 +35,7 @@ func leadGrant(ctx context.Context, t *testing.T, e *apptest.AppEnv, role string
 // narrowed, because the key rule never read the document. Every seat it did
 // not let lead gets the zero grant, and a role an operator made is left alone.
 func TestTheTeamLeadBackfillKeepsExactlyWhoLedBefore(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 	bootstrapInstallation(t, e)
@@ -68,6 +69,7 @@ func TestTheTeamLeadBackfillKeepsExactlyWhoLedBefore(t *testing.T) {
 // A rollback keeps an operator's denial. Removing the key on the way down would
 // let the next upgrade read its absence as "never decided" and grant it again.
 func TestTheTeamLeadRollbackKeepsAnOperatorsDenial(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 	bootstrapInstallation(t, e)

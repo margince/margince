@@ -29,6 +29,7 @@ func namesAmountNegative(problem problemBody) bool {
 }
 
 func TestNoDoorLetsADealBeNegative(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -81,6 +82,7 @@ func TestNoDoorLetsADealBeNegative(t *testing.T) {
 // The sign rule judges the amount a write SETS. A deal that already holds a
 // negative amount stays editable on every other field.
 func TestADealAlreadyBelowZeroStaysEditableOnOtherFields(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	id := e.SeedDeal(t, "Older deal", pipeline, open, nil)

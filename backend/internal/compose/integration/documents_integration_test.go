@@ -49,6 +49,7 @@ func seedDocument(
 // library; the parent the caller cannot read is a capture-private contact of
 // the other team's rep, and the file on it is neither listed nor counted.
 func TestCompanyDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	pipeline, stage, _ := DealFixture(t, e)
@@ -88,6 +89,7 @@ func TestCompanyDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 }
 
 func TestCompanyDocumentsPutPinnedFirstAndFilterByCategory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -119,6 +121,7 @@ func TestCompanyDocumentsPutPinnedFirstAndFilterByCategory(t *testing.T) {
 // A cycle here is not cosmetic: every reader walking "what replaced this" would
 // loop forever on it.
 func TestAttachmentMetadataRefusesASupersedesCycle(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -160,6 +163,7 @@ var docWritePerms = principal.Permissions{
 // is exactly how a file uploaded through the UI can be invisible to the account
 // view while every gate stays green.
 func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())
 	pipeline, stage, _ := DealFixture(t, e)
@@ -216,6 +220,7 @@ var docUploadPerms = principal.Permissions{
 // confirm the target exists and build a relationship across a visibility
 // boundary, which is exactly what the parent gate exists to stop.
 func TestAttachmentMetadataRefusesASupersedesTargetTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -245,6 +250,7 @@ func TestAttachmentMetadataRefusesASupersedesTargetTheCallerCannotSee(t *testing
 // inside the pinned group then excludes every newer unpinned document from
 // every later page — the documents are not late, they are unreachable.
 func TestTheAccountLibraryPagesPastThePinnedGroup(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -300,6 +306,7 @@ func TestTheAccountLibraryPagesPastThePinnedGroup(t *testing.T) {
 // file appears for a reader who can open the activity, and does not for one who
 // cannot.
 func TestAnActivityBorneFileReachesTheLibraryAndStaysGated(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := activities.NewStore(e.DB())
 	pipeline, stage, _ := DealFixture(t, e)
@@ -369,6 +376,7 @@ func seedActivityWithDeal(t *testing.T, e *Env, deal ids.UUID) ids.UUID {
 // under a record that no longer exists, and to a user the contract has simply
 // vanished.
 func TestACompanyMergeCarriesTheDocumentsAcross(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	files := activities.NewStore(e.DB())
 	companies := contacts.NewStore(e.DB())

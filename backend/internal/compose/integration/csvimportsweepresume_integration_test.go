@@ -106,6 +106,7 @@ func approvedButUnworked(t *testing.T, e *apptest.AppEnv) string {
 }
 
 func TestAQueuedRunIsNotSwept(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()
 	runID := approvedButUnworked(t, e)
@@ -135,6 +136,7 @@ func TestAQueuedRunIsNotSwept(t *testing.T) {
 }
 
 func TestAStaleClaimedRunIsRequeuedAsANewAttempt(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()
 	runID := approvedButUnworked(t, e)
@@ -166,6 +168,7 @@ func TestAStaleClaimedRunIsRequeuedAsANewAttempt(t *testing.T) {
 // A run whose slice snoozed waits its turn behind other runs. However old its
 // heartbeat, the stale rule never resumes it, and its own job finishes it.
 func TestASnoozedRunIsNeverStaleHoweverOldItsHeartbeat(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()
 	run := testedLeadRun(t, e, leadFile(501))
@@ -190,6 +193,7 @@ func TestASnoozedRunIsNeverStaleHoweverOldItsHeartbeat(t *testing.T) {
 }
 
 func TestADeadRiverRowDoesNotBlockTheRequeue(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()
 	runID := approvedButUnworked(t, e)
@@ -207,6 +211,7 @@ func TestADeadRiverRowDoesNotBlockTheRequeue(t *testing.T) {
 }
 
 func TestAJobLostBeforeItsClaimIsReinsertedOnce(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()
 	runID := approvedButUnworked(t, e)
@@ -239,6 +244,7 @@ func TestAJobLostBeforeItsClaimIsReinsertedOnce(t *testing.T) {
 // A queued run whose job is alive is asked about once a window. The insert that
 // found the job dates the run, so the next pass leaves it.
 func TestALiveJobsRequeueWaitsAWholeWindow(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit := compose.ImportCommitArgs{}.Kind()
 	runID := approvedButUnworked(t, e)
@@ -260,6 +266,7 @@ func TestALiveJobsRequeueWaitsAWholeWindow(t *testing.T) {
 }
 
 func TestPastTheResumeLimitTheRunFails(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	commit, undo := compose.ImportCommitArgs{}.Kind(), compose.ImportUndoArgs{}.Kind()
 

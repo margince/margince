@@ -115,6 +115,7 @@ func acquisitionKinds(t *testing.T, e *apptest.AppEnv, contactID string) map[str
 
 // The case opened first, their mail arrived second: the mail settles it.
 func TestTheirLaterMailSettlesTheNoticeCase(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Late Writer")
@@ -145,6 +146,7 @@ func TestTheirLaterMailSettlesTheNoticeCase(t *testing.T) {
 
 // Their mail arrived before the case would open: no case opens.
 func TestTheirEarlierMailOpensNoCase(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Early Writer")
@@ -160,6 +162,7 @@ func TestTheirEarlierMailOpensNoCase(t *testing.T) {
 
 // Bulk delivery still supplies the sender address directly.
 func TestABulkMailSettlesTheCaptureUnknownDuty(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "List Sender")
@@ -176,6 +179,7 @@ func TestABulkMailSettlesTheCaptureUnknownDuty(t *testing.T) {
 // A duty opened because the address came from somebody else is not answered by
 // the contact writing later: the address still came from a referral.
 func TestAReferralStaysOwedAfterTheyWrite(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Referred", "referral")
@@ -193,6 +197,7 @@ func TestAReferralStaysOwedAfterTheyWrite(t *testing.T) {
 // not close a legal duty: only a mail a connector took out of a real mailbox
 // counts.
 func TestAHandLoggedMailSettlesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Typed Sender")
@@ -208,6 +213,7 @@ func TestAHandLoggedMailSettlesNothing(t *testing.T) {
 
 // Captured mail resolves capture's own uncertainty; a manually recorded source still needs review.
 func TestAnUnknownASeatStatedStillNeedsSourceReview(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := contactAcquiredAs(t, e, "Seat Unknown", "unknown_legacy")
@@ -224,6 +230,7 @@ func TestAnUnknownASeatStatedStillNeedsSourceReview(t *testing.T) {
 // The counterparty verdict mints contacts from captured mail after the fact,
 // and its unknown is capture's own as much as a connector's is.
 func TestTheirMailSettlesTheCaseOfAContactTheVerdictMade(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknownBy(t, e, "Verdict Made", "agent:capture_counterparty_verdict")
@@ -240,6 +247,7 @@ func TestTheirMailSettlesTheCaseOfAContactTheVerdictMade(t *testing.T) {
 // Their mail was captured before the verdict made the contact: no duty opens,
 // for a verdict-made contact as for a connector-made one.
 func TestTheirEarlierMailOpensNoCaseForAContactTheVerdictMade(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknownBy(t, e, "Verdict Early", "agent:capture_counterparty_verdict")
@@ -256,6 +264,7 @@ func TestTheirEarlierMailOpensNoCaseForAContactTheVerdictMade(t *testing.T) {
 // A contact withdrawn before its contact.created was handled had its duties
 // ended; the late event must not open a fresh one.
 func TestALateContactCreatedOpensNoCaseForAWithdrawnContact(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Withdrawn Early")
@@ -273,6 +282,7 @@ func TestALateContactCreatedOpensNoCaseForAWithdrawnContact(t *testing.T) {
 }
 
 func TestUnverifiedBulkCannotSettleACaptureDuty(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := capturedUnknown(t, e, "Unverified Sender")

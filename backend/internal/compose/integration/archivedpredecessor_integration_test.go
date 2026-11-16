@@ -25,6 +25,7 @@ import (
 )
 
 func TestBootSaysNothingWhenNoCompanyWasArchived(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	var out bytes.Buffer
 
@@ -38,6 +39,7 @@ func TestBootSaysNothingWhenNoCompanyWasArchived(t *testing.T) {
 }
 
 func TestBootNamesWhatAnArchivedCompanyLeftBehind(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	ctx := context.Background()
 

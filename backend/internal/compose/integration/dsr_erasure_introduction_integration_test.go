@@ -37,6 +37,7 @@ var introErasureAdmin = principal.Permissions{
 // reached the row and four free-text columns went on describing a contact whose name
 // had been wiped.
 func TestErasingASubjectClearsWhatAnIntroductionSaidAboutThem(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, introErasureAdmin)
 	subject := e.SeedContact(t, "Rita Reviewer", &e.Rep1)
@@ -112,6 +113,7 @@ func introRowsNaming(t *testing.T, e *Env, words string) int {
 // fact. Writing the ask tombstone into it would break the table's rule that a
 // recorded row has no reason.
 func TestErasingASubjectLeavesARecordedIntroductionIntroduced(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, introErasureAdmin)
 	subject := e.SeedContact(t, "Rita Reviewer", &e.Rep1)

@@ -28,6 +28,7 @@ import (
 )
 
 func TestFieldHistoryNamesTheClientOfARotatedPassport(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Rotation Subject", nil)
 	human := seedWorkspaceUser(t, e, "Ada Authority")

@@ -135,6 +135,7 @@ func scalar[T any](t *testing.T, e *integration.Env, query string, args ...any) 
 // inserts and the other takes the replay path — so testing gmail-then-imap
 // alone would leave the reverse unproven.
 func TestOneMessageIsOneActivityWhicheverConnectorReadsItFirst(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const ownerAddr = "rep@ws.example"
@@ -192,6 +193,7 @@ func TestOneMessageIsOneActivityWhicheverConnectorReadsItFirst(t *testing.T) {
 // occurred_at to sync time would silently re-order everybody's timeline the
 // first time a second mailbox was connected.
 func TestASecondConnectorDoesNotMoveTheMessageInTime(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	const ownerAddr = "rep@ws.example"
@@ -213,6 +215,7 @@ func TestASecondConnectorDoesNotMoveTheMessageInTime(t *testing.T) {
 // recorded. The dedupe must not cost the second seat their claim on the mail —
 // that row is what carries their own posture and verdict.
 func TestBothMailboxesThatDeliveredOneMessageAreRecorded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "dedupe-two-seats@acme.test"
 	const firstAddr, secondAddr = "rep1@ws.example", "rep2@ws.example"
@@ -253,6 +256,7 @@ func TestBothMailboxesThatDeliveredOneMessageAreRecorded(t *testing.T) {
 // The check that keeps the rule true as the tree grows: a mail record keyed on
 // an adapter's name is refused at the sink door, before anything is written.
 func TestTheSinkRefusesMailKeyedOnAConnectorName(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "dedupe-refused@acme.test"
 
@@ -294,6 +298,7 @@ func claimOwnAddress(t *testing.T, e *integration.Env, seat ids.UUID, address st
 // carried an RFC822 identity to share. Both must be admitted — a check that
 // refused the demo would break `make seed-dev` for everyone.
 func TestTheOfflineDemoLandsBothItsKindsThroughTheSameDoor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	sink := capture.NewSink(e.DB())
 

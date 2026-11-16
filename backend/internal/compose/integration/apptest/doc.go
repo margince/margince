@@ -25,7 +25,7 @@
 // not a method on it.
 //
 // It also holds the fixtures more than one suite package needs, such as
-// InWorkspace, EarlyPool, PassportBearer, AppDSN and the seeded-pipeline
+// InWorkspace, EarlyPool, PassportBearer and the seeded-pipeline
 // scenario in pipeline.go. They are here for a structural reason and not because
 // the package is a dumping ground. There are two such reasons:
 //

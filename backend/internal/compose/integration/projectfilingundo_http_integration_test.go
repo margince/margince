@@ -32,6 +32,7 @@ type projectFilingDTO struct {
 }
 
 func TestAMemberUndoesAProjectFilingOverHTTPAndAnAgentCannot(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Filing Account"})

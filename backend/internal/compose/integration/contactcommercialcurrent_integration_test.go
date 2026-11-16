@@ -14,6 +14,7 @@ import (
 )
 
 func TestContactCommercialContextExcludesEndedStakeholderSeats(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.Admin()
 	pipeline, open, _ := DealFixture(t, e)

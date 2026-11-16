@@ -58,6 +58,7 @@ func seedGrantFixture(t *testing.T, e *apptest.AppEnv) (contact, subject string)
 // contract's own vocabulary. It is never a server error or a sentence about
 // agent scopes.
 func TestARecordGrantRefusesEachBadFieldByItsOwnName(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Grant Input", "admin@grantinput.test", "Admin")
 	contact, subject := seedGrantFixture(t, e)
@@ -107,6 +108,7 @@ func TestARecordGrantRefusesEachBadFieldByItsOwnName(t *testing.T) {
 // A grant carries its version, a re-assert moves it, and a revoke behind a
 // stale If-Match changes nothing.
 func TestARecordGrantRevokeHonoursIfMatch(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Grant Version", "admin@grantversion.test", "Admin")
 	contact, subject := seedGrantFixture(t, e)

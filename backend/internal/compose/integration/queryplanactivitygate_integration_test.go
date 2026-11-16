@@ -19,6 +19,7 @@ import (
 // A note, not a task: a task's own gate already inherits its source's audience.
 // Rep3 holds the meeting, so its absence for Rep1 is the audience's doing.
 func TestAPlanReadsAnActivityThroughAnotherOnlyWhenItMayReadBoth(t *testing.T) {
+	t.Parallel()
 	q := setupQuery(t)
 	q.seedFixture(t)
 	meeting := func(audience string, source *ids.UUID) ids.UUID {

@@ -18,6 +18,7 @@ import (
 // A whole word already matched through search_tsv; a fragment needs the
 // substring arm to read the company as well as the name.
 func TestTheLeadListFindsALeadByAFragmentOfItsCompany(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	northwind := createQuickFindLead(t, e, "Anna Example", "Northwind Traders")

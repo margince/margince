@@ -35,6 +35,7 @@ type rejectResponse struct {
 }
 
 func TestRejectingACompanyOverHTTPAnswersBothHalves(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Rejection", "admin@reject.test", "Admin")
 
@@ -95,6 +96,7 @@ func TestRejectingACompanyOverHTTPAnswersBothHalves(t *testing.T) {
 
 // The transport's own refusals, over the wire, where a client reads them.
 func TestRejectingACompanyOverHTTPRefusesAReasonItCannotStore(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Rejection", "admin@reject.test", "Admin")
 

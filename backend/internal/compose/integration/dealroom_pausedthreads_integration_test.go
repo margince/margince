@@ -22,6 +22,7 @@ import (
 )
 
 func TestAPausedRoomServesNoThreads(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -63,6 +64,7 @@ func TestAPausedRoomServesNoThreads(t *testing.T) {
 // And a live room with nothing in it still serves its conversation: the rule is
 // the room's own state, never "the document list came back empty".
 func TestALiveRoomWithNoDocumentsStillServesItsThreads(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

@@ -53,6 +53,7 @@ func seedBillingEdge(t *testing.T, contactID, companyID ids.UUID, role string) {
 }
 
 func TestBillingContactsHideAContactTheReaderMayNotSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	company := e.SeedCompany(t, "Shared Account", &e.Rep1)
@@ -86,6 +87,7 @@ func TestBillingContactsHideAContactTheReaderMayNotSee(t *testing.T) {
 }
 
 func TestBillingRolesHideACompanyTheReaderMayNotSee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	contact := e.SeedContact(t, "External Accountant", &e.Rep1)

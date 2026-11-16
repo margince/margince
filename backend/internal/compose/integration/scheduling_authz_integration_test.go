@@ -55,6 +55,7 @@ func inviteeContact(t *testing.T, e *Env, name string, owner ids.UUID) ids.UUID 
 }
 
 func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	slotStart := apptest.NextBookableMorning(t)
 	store := bookableStore(t, e, e.Rep1, e.Rep2)
@@ -101,6 +102,7 @@ func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {
 }
 
 func TestAvailabilityBusyReadHonorsRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	slotStart := apptest.NextBookableMorning(t)
 	store := bookableStore(t, e, e.Rep1)

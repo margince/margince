@@ -30,6 +30,7 @@ import (
 // Mutation: drop in.SendingEntity from the preview's PreviewMailSignOff call
 // and the preview signs as the default entity.
 func TestAHeldMessagePreviewsTheSignatureOfItsFrozenEntity(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	branch := ids.NewV7()

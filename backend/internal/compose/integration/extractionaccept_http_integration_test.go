@@ -148,6 +148,7 @@ func assertAcceptHTTPValidation422(
 }
 
 func TestAcceptAttachmentExtractionHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

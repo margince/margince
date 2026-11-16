@@ -105,6 +105,7 @@ func restore(t *testing.T, e *apptest.AppEnv, entityType, id, auditID string, ve
 // The round trip: a field changed, put back, and the record equals what it held
 // before — with the reversal recorded as a `restore` naming the row it reversed.
 func TestEndToEnd_anAuditedChangeGoesBack(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -149,6 +150,7 @@ func TestEndToEnd_anAuditedChangeGoesBack(t *testing.T) {
 // second press must not silently write the same values again and mint another
 // reversal nobody asked for.
 func TestEndToEnd_anEntryAlreadyPutBackRefusesBySayingSo(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -181,6 +183,7 @@ func TestEndToEnd_anEntryAlreadyPutBackRefusesBySayingSo(t *testing.T) {
 // it. Where another contact edited in between the result is ambiguous, and
 // saying so IS the behaviour.
 func TestEndToEnd_aFieldWrittenAgainRefusesTheRestore(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -217,6 +220,7 @@ func TestEndToEnd_aFieldWrittenAgainRefusesTheRestore(t *testing.T) {
 // update path writes due_at as coalesce($n, due_at), so restoring the image's
 // NULL would answer 200 and change nothing. It must refuse instead.
 func TestEndToEnd_restoringNullIntoAColumnTheModuleCannotClearRefuses(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -253,6 +257,7 @@ func TestEndToEnd_restoringNullIntoAColumnTheModuleCannotClearRefuses(t *testing
 // entry. Without this the trail is a one-way ratchet and an entry put back by
 // mistake is stuck already_undone forever.
 func TestEndToEnd_undoingAnUndoReopensTheOriginalEntry(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -290,6 +295,7 @@ func TestEndToEnd_undoingAnUndoReopensTheOriginalEntry(t *testing.T) {
 // change that could alter its answer bumps the record's version, so a decision
 // taken on a stale reading cannot commit.
 func TestEndToEnd_aStaleVersionRefusesTheRestoreAndWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -324,6 +330,7 @@ func TestEndToEnd_aStaleVersionRefusesTheRestoreAndWritesNothing(t *testing.T) {
 // An audit row belonging to a DIFFERENT record is 404, never 403. Telling a
 // caller a row exists but is not theirs discloses the row.
 func TestEndToEnd_anEntryFromAnotherRecordIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -379,6 +386,7 @@ func theEntryByID(t *testing.T, page historyPage, id string) historyEntry {
 // An archived record's update path refuses on its own terms. Naming it here
 // makes the refusal legible instead of a surprise the reader reads as a bug.
 func TestEndToEnd_anArchivedRecordSaysSoRatherThanFailingLater(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -405,6 +413,7 @@ func TestEndToEnd_anArchivedRecordSaysSoRatherThanFailingLater(t *testing.T) {
 // cannot be written back. Without this refusal the module's own "unknown field
 // cf_budget" is what a reader reads, and that is not an answer to pressing Undo.
 func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
+	t.Parallel()
 	// The schema pool is what lets a custom field actually add its column;
 	// without it the catalog route answers 501 and the case cannot be built.
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
@@ -459,6 +468,7 @@ func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
 // error, not carried into the seam. The path parameter is a bare string the
 // generator does not validate, so this handler is its enforcement point.
 func TestEndToEnd_anUnservedRecordTypeIsRefusedAtTheRoute(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -471,6 +481,7 @@ func TestEndToEnd_anUnservedRecordTypeIsRefusedAtTheRoute(t *testing.T) {
 // screen the contact has been reading, so a missing or unparseable precondition
 // is a refusal rather than a last-write-wins default.
 func TestEndToEnd_aRestoreWithoutAUsableIfMatchIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -505,6 +516,7 @@ func TestEndToEnd_aRestoreWithoutAUsableIfMatchIsRefused(t *testing.T) {
 // This test holds that, and the assertion on the version is what stops it
 // becoming vacuous if a retire ever starts touching the record.
 func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
@@ -559,6 +571,7 @@ func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.
 // CLEARED rather than send the null: an optional pointer decodes a null as "not
 // supplied", and the write would report success having changed nothing.
 func TestEndToEnd_aFieldFilledInGoesBackToEmpty(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -604,6 +617,7 @@ func TestEndToEnd_aFieldFilledInGoesBackToEmpty(t *testing.T) {
 // column as coalesce($n, col), so the placeholder's NULL selects the current
 // value and no argument can clear one.
 func TestEndToEnd_anActivityFieldFilledInRefusesBecauseItCannotBeCleared(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -637,6 +651,7 @@ func TestEndToEnd_anActivityFieldFilledInRefusesBecauseItCannotBeCleared(t *test
 // the fold every key reads as unspellable and an edit that touched an address
 // would be permanently un-undoable.
 func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -687,6 +702,7 @@ func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
 // that row as a later write of the same field and refuse the B entry, so the
 // walk could never get past its first step.
 func TestEndToEnd_severalChangesGoBackOneAtATime(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -756,6 +772,7 @@ func undoabilityOf(page historyPage) string {
 // absent field, which is why it used to be dropped — a 200 the caller could not
 // trust, on the public API and nothing to do with undo.
 func TestEndToEnd_anExplicitNullClearsTheFieldRatherThanBeingIgnored(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -791,6 +808,7 @@ func TestEndToEnd_anExplicitNullClearsTheFieldRatherThanBeingIgnored(t *testing.
 
 // A null on a field this record cannot clear is REFUSED by name, not dropped.
 func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -818,6 +836,7 @@ func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
 // entry as "somebody changed these fields since" when nobody had. The newest
 // entry on a record refused, which is the one a contact is most likely to want.
 func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -852,6 +871,7 @@ func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T
 // back, over the wire a screen reads: a link replaced in between is still
 // archived, and a bare 200 would read as a whole record.
 func TestEndToEnd_anArchiveRestoreNamesTheLinkItCouldNotBringBack(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -932,6 +952,7 @@ func readLeadPhone(t *testing.T, e *apptest.AppEnv, id string) leadPhoneRecord {
 // A lead's number comes off both ways a contact reaches for: a null on the
 // update, and putting back the change that filled it in.
 func TestEndToEnd_aLeadsPhoneClearsByNullAndByRestore(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

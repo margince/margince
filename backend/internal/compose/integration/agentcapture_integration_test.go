@@ -32,6 +32,7 @@ func answerID(t *testing.T, raw json.RawMessage) string {
 // A rule or hold the user made stays theirs, so their agent lifts only what an agent
 // added. The user adding it again makes the decision theirs.
 func TestAnAgentLiftsNoCaptureRuleOrHoldTheUserDecided(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-capture-decided", "read", "write")
 	for _, list := range []struct {
 		path, add, lift string
@@ -68,6 +69,7 @@ func TestAnAgentLiftsNoCaptureRuleOrHoldTheUserDecided(t *testing.T) {
 
 // The user's own capture lists, written and read back through the agent.
 func TestAnAgentKeepsTheUsersCaptureLists(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-capture-lists", "read", "write")
 	rule := answerID(t, captureAct(t, d, "add_exclusion", map[string]any{"request_body": AnyMap{
 		"scope": "user", "kind": "domain", "value": "newsletter.test",
@@ -101,6 +103,7 @@ func TestAnAgentKeepsTheUsersCaptureLists(t *testing.T) {
 // An agent may say a sender is business. keep_out destroys mail for good, so it
 // stays with the user, who may still do it in the app.
 func TestAnAgentDecidesASenderButNeverDestroysItsMail(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-capture-sender", "read", "write")
 	captureAct(t, d, "set_sender_decision", map[string]any{
 		"address": "buyer@customer.test", "request_body": AnyMap{"decision": "business"},
@@ -122,6 +125,7 @@ func TestAnAgentDecidesASenderButNeverDestroysItsMail(t *testing.T) {
 // An agent's decision about a domain says so. A user's decision stands over it,
 // and a machine verdict stands under it.
 func TestAnAgentsDomainDecisionNamesItAndNeverReplacesAUsers(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-capture-domain", "read", "write")
 	block := func(domain string) map[string]any {
 		return map[string]any{"request_body": AnyMap{"domain": domain, "admission": "suppressed", "reason": "A competitor's newsletter."}}
@@ -163,6 +167,7 @@ func TestAnAgentsDomainDecisionNamesItAndNeverReplacesAUsers(t *testing.T) {
 
 // Corpora are defined and archived through the agent. Asking one needs enrich.
 func TestAnAgentDefinesACorpusAndAskingOneSpendsEnrich(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-corpus", "read", "write")
 	corpus := answerID(t, captureAct(t, d, "create_corpus", map[string]any{"request_body": AnyMap{
 		"name": "Field notes", "topic_statement": "What the field team learned.",
@@ -188,6 +193,7 @@ func senderStamp(t *testing.T, d *twoDoors, address string) (decision string, ca
 // A decision the user made about a sender stays theirs. Their agent can neither
 // replace nor withdraw it, and may do both to its own.
 func TestAnAgentNeverReplacesOrWithdrawsAUsersSenderDecision(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-sender-typed", "read", "write")
 	const mine, theirs = "buyer@agent.test", "family@user.test"
 
@@ -223,6 +229,7 @@ func TestAnAgentNeverReplacesOrWithdrawsAUsersSenderDecision(t *testing.T) {
 
 // The workspace's domain lists, and what a hold already caught.
 func TestAnAgentKeepsTheWorkspaceDomainListsOnRealRows(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-domain-lists", "read", "write")
 	consumer := answerID(t, captureAct(t, d, "add_consumer_mail_domain", map[string]any{"request_body": AnyMap{"domain": "post.agent.test", "kind": "extra"}}))
 	captureAct(t, d, "remove_consumer_mail_domain", map[string]any{"id": consumer})
@@ -235,6 +242,7 @@ func TestAnAgentKeepsTheWorkspaceDomainListsOnRealRows(t *testing.T) {
 // An agent agreeing with a user's domain decision has what it asked for. Going
 // against one is refused, and either way the user's decision stands.
 func TestAnAgentAgreesWithAUsersDomainDecisionButCannotReverseIt(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-domain-sticky", "read", "write")
 	const domain = "stickyagent.test"
 	if status := d.e.Call(t, "PUT", "/v1/capture/blocked-domains", AnyMap{
@@ -263,6 +271,7 @@ func TestAnAgentAgreesWithAUsersDomainDecisionButCannotReverseIt(t *testing.T) {
 
 // Reading a colleague's work and handing a project on, as the owner does.
 func TestAnAgentCorrectsAHealthReadingAndHandsOnAProject(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-project-work", "read", "write")
 	d.e.DescribeCompany(t)
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Project Works"})

@@ -23,6 +23,7 @@ import (
 // A stale product edit is refused in a sentence a reader can act on. The store
 // wraps the skew as "apply product patch", which names code, not the record.
 func TestAStaleProductEditIsRefusedInAReadersSentence(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	editor := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"deal_desk"},

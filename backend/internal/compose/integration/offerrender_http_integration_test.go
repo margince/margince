@@ -45,6 +45,7 @@ type renderedOffer struct {
 }
 
 func TestOfferRenderHTTP_PostRenderReturns200WithPdfAssetRefAndTheBlobExists(t *testing.T) {
+	t.Parallel()
 	e, blob := setupWithBlobstore(t)
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
@@ -167,6 +168,7 @@ func (r *raceLineAdder) Put(ctx context.Context, key string, body io.Reader, siz
 // pdf_asset_ref against stale lines, AND the PDF bytes already written
 // must be reclaimed — no orphan object survives a rejected render.
 func TestOfferRenderHTTP_ConcurrentLineEditBetweenPrepareAndSetRejectsWithVersionSkewAndReclaimsTheBlob(t *testing.T) {
+	t.Parallel()
 	race := &raceLineAdder{Store: blobstore.NewMemory()}
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(race))
 	race.t, race.e = t, e
@@ -258,6 +260,7 @@ func (r *raceOfferArchiver) Put(ctx context.Context, key string, body io.Reader,
 // that leaves its object behind bills the installation for storage nothing
 // references and nothing will ever collect.
 func TestOfferRenderHTTP_OfferArchivedBetweenPrepareAndSetReclaimsTheBlob(t *testing.T) {
+	t.Parallel()
 	race := &raceOfferArchiver{Store: blobstore.NewMemory()}
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(race))
 	race.t, race.e = t, e
@@ -349,6 +352,7 @@ func (r *raceDoubleRenderer) Put(ctx context.Context, key string, body io.Reader
 // a fresh id minted per render call) mean the loser only ever reclaims the
 // blob it itself wrote, so the winner's committed blob must survive.
 func TestOfferRenderHTTP_ConcurrentDoubleRenderLoserReclaimsOnlyItsOwnBlob(t *testing.T) {
+	t.Parallel()
 	race := &raceDoubleRenderer{Store: blobstore.NewMemory()}
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(race))
 	race.t, race.e = t, e

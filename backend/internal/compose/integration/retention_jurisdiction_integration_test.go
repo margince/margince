@@ -36,6 +36,7 @@ func init() {
 }
 
 func TestStatutoryFloorShieldsCorrespondenceFromDestruction(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	email, note, janEmail, message := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	// unlinkedEmail is the case A165/ADR-0114 NARROWED the floor to exclude: a

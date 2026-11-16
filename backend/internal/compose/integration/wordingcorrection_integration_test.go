@@ -99,6 +99,7 @@ func spellingCorrection(current crmcontracts.WordingCorrectionContext) AnyMap {
 }
 
 func TestTheOriginalApprovalKeepsAnAttestedSpellingCorrection(t *testing.T) {
+	t.Parallel()
 	c, review, original := approvedHeldWording(t)
 	path := "/v1/communication-reviews/" + review + "/correct-wording"
 	var result crmcontracts.WordingCorrectionResult
@@ -144,6 +145,7 @@ func TestTheOriginalApprovalKeepsAnAttestedSpellingCorrection(t *testing.T) {
 }
 
 func TestAChangedEnvelopeCannotRetainItsWordingApproval(t *testing.T) {
+	t.Parallel()
 	for _, field := range []string{"recipients", "cc", "bcc", "sending_entity", "context", "marketing_purpose", "attachment_ids", "future_scope_field"} {
 		t.Run(field, func(t *testing.T) {
 			c, review, original := approvedHeldWording(t)
@@ -174,6 +176,7 @@ func TestAChangedEnvelopeCannotRetainItsWordingApproval(t *testing.T) {
 }
 
 func TestACorrectionNeedsAnExplicitMeaningUnchangedAttestation(t *testing.T) {
+	t.Parallel()
 	c, review, original := approvedHeldWording(t)
 	request := spellingCorrection(original)
 	request["meaning_unchanged"] = false
@@ -183,6 +186,7 @@ func TestACorrectionNeedsAnExplicitMeaningUnchangedAttestation(t *testing.T) {
 }
 
 func TestAnotherApproverCannotCorrectSomebodyElsesDecision(t *testing.T) {
+	t.Parallel()
 	c, review, original := approvedHeldWording(t)
 	c.DescribeCompany(t)
 	var invited struct {
@@ -207,6 +211,7 @@ func TestAnotherApproverCannotCorrectSomebodyElsesDecision(t *testing.T) {
 }
 
 func TestAReadSeatCanReadItsReviewButCannotRetainACorrection(t *testing.T) {
+	t.Parallel()
 	c, review, original := approvedHeldWording(t)
 	c.SetWorkspaceSeat(t, "read")
 	t.Cleanup(func() { c.SetWorkspaceSeat(t, "full") })
@@ -220,6 +225,7 @@ func TestAReadSeatCanReadItsReviewButCannotRetainACorrection(t *testing.T) {
 }
 
 func TestUnapprovedWordingChangesStillNeedANewDecision(t *testing.T) {
+	t.Parallel()
 	c, review, original := approvedHeldWording(t)
 	if _, err := c.Owner.Exec(t.Context(), `UPDATE scheduled_send
 		SET payload=jsonb_set(payload,'{body}','"The fee has increased."'::jsonb)
@@ -248,6 +254,7 @@ func TestUnapprovedWordingChangesStillNeedANewDecision(t *testing.T) {
 }
 
 func TestACorrectedApprovalCannotSendPastANewStop(t *testing.T) {
+	t.Parallel()
 	c, review, original := approvedHeldWording(t)
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/correct-wording", spellingCorrection(original), nil, nil); status != http.StatusOK {
 		t.Fatalf("correcting wording=%d", status)
@@ -270,6 +277,7 @@ func TestACorrectedApprovalCannotSendPastANewStop(t *testing.T) {
 }
 
 func TestAnApproverCannotRewriteAnotherSendersHeldMessage(t *testing.T) {
+	t.Parallel()
 	c, review, observed := approvedHeldWordingFor(t, true)
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/correct-wording", spellingCorrection(observed), nil, nil); status != http.StatusNotFound {
 		t.Fatalf("non-owner correction=%d", status)
@@ -284,6 +292,7 @@ func TestAnApproverCannotRewriteAnotherSendersHeldMessage(t *testing.T) {
 }
 
 func TestAPayloadSchemaChangeInvalidatesAnExistingWordingApproval(t *testing.T) {
+	t.Parallel()
 	c, review, observed := approvedHeldWording(t)
 	if _, err := c.Owner.Exec(t.Context(), `UPDATE scheduled_send SET payload_version=payload_version+1 WHERE id=(SELECT delivery_intent_id FROM communication_review WHERE id=@review)`, pgx.StrictNamedArgs{"review": review}); err != nil {
 		t.Fatal(err)
@@ -301,6 +310,7 @@ func TestAPayloadSchemaChangeInvalidatesAnExistingWordingApproval(t *testing.T) 
 }
 
 func TestACorrectionSanitizesItsHTMLAndRecordsBothOwnedWrites(t *testing.T) {
+	t.Parallel()
 	c, review, observed := approvedHeldWording(t)
 	request := spellingCorrection(observed)
 	request["html_body"] = "<p>The requested information.</p><script>alert(1)</script>"
@@ -331,6 +341,7 @@ func TestACorrectionSanitizesItsHTMLAndRecordsBothOwnedWrites(t *testing.T) {
 }
 
 func TestEachCorrectionKeepsTheOriginalDecisionAndNeedsTheLatestSnapshot(t *testing.T) {
+	t.Parallel()
 	c, review, original := approvedHeldWording(t)
 	path := "/v1/communication-reviews/" + review + "/correct-wording"
 	if status := c.Call(t, "POST", path, spellingCorrection(original), nil, nil); status != http.StatusOK {

@@ -16,6 +16,7 @@ import (
 )
 
 func TestContactMomentLanguageDoesNotReopenDismissedWork(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := contactRoomService(e)
 	ctx := e.Admin()

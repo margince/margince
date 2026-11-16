@@ -40,6 +40,7 @@ func storedAssignee(t *testing.T, id string) *ids.UUID {
 // the case that lets "mine" be exact: the queue stopped folding in every
 // ownerless row, so the row a rep wrote has to arrive owned.
 func TestASelfWrittenTaskIsStoredAgainstItsAuthor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "A Contact", &e.Rep1)
@@ -65,6 +66,7 @@ func TestASelfWrittenTaskIsStoredAgainstItsAuthor(t *testing.T) {
 // for the rep. The task lands on the rep's own Worklist, which reads assigned
 // work only.
 func TestATaskAnAgentFilesForARepReachesThatRepsWorklist(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-task-owner", "read", "write")
 	var me struct {
 		User struct {
@@ -130,6 +132,7 @@ func onWorklist(t *testing.T, e *apptest.AppEnv, scope, id string) bool {
 // CHECK keeps assignee_id NULL on every other kind, so stamping one would fail
 // the write rather than merely look wrong.
 func TestANoteIsStoredWithNoAssignee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "A Contact", &e.Rep1)

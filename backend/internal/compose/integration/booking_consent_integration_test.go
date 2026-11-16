@@ -37,6 +37,7 @@ func bookingAt(start time.Time, contactID string, extra AnyMap) AnyMap {
 }
 
 func TestBookingConsentPassthrough(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	purposeID := seededTransactionalPurposeID(t, e)
 
@@ -188,6 +189,7 @@ func assertConsentedBookingLandsGrantWithProof(t *testing.T, e *apptest.AppEnv, 
 // hold are the ones the database can state: the meeting landed, no confirmation
 // token was minted, and the withdrawal is exactly where it was.
 func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupBookingApp(t)
 	transactional := seededTransactionalPurposeID(t, e)
 	marketing := seededMarketingPurposeID(t, e)

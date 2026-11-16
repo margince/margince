@@ -27,6 +27,7 @@ func robinSeat(t *testing.T, e *Env) {
 }
 
 func TestAReplyNamingTheSenderForAnAbsentColleaguesWorkFilesNoTask(t *testing.T) {
+	t.Parallel()
 	for name, sentence := range map[string]string{
 		"first name":                    "Product demo on the 5th at 10:00, online with Robin.",
 		"full name":                     "Robin Weber runs the product demo on the 5th at 10:00.",
@@ -60,6 +61,7 @@ func TestAReplyNamingTheSenderForAnAbsentColleaguesWorkFilesNoTask(t *testing.T)
 }
 
 func TestTheSendersOwnPromiseStillFilesTheirTask(t *testing.T) {
+	t.Parallel()
 	for name, sentence := range map[string]string{
 		"the writer as the subject beside the colleague": "I'll run the product demo with Robin on the 5th at 10:00.",
 		"German writer as the subject":                   "Ich schicke Ihnen die Unterlagen mit Robin bis Freitag.",
@@ -100,6 +102,7 @@ func restatedReply(t *testing.T, original, renewed ids.UUID, promiser, quote, re
 }
 
 func TestARestatementInAnAbsentColleaguesWordsRenewsNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	robinSeat(t, e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -124,6 +127,7 @@ func TestARestatementInAnAbsentColleaguesWordsRenewsNothing(t *testing.T) {
 }
 
 func TestAnAbsentColleaguesPromiseWithARestatementIsStillRecorded(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	robinSeat(t, e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)

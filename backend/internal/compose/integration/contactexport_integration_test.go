@@ -20,6 +20,7 @@ import (
 // The whole-workspace bundle carries the same two columns in contact.csv and is
 // a valid archive.
 func TestExportBundleContactsCarryTheReachableEmail(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, http.MethodPost, "/v1/auth/login", AnyMap{
@@ -86,6 +87,7 @@ func readBundleCSV(t *testing.T, archive *zip.Reader, name string) [][]string {
 // A contact export carries the address and number a mail merge needs. They are
 // the primary ones, and empty for a contact that has none.
 func TestContactExportCarriesTheReachableEmailAndPhone(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, http.MethodPost, "/v1/auth/login", AnyMap{

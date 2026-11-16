@@ -51,6 +51,7 @@ func aiHealthWrite(t *testing.T, e *Env, id ids.ProjectID, now time.Time) (proje
 }
 
 func TestAProjectClosedSinceTheListingGetsNoReading(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -67,6 +68,7 @@ func TestAProjectClosedSinceTheListingGetsNoReading(t *testing.T) {
 }
 
 func TestAProjectTouchedSinceTheListingIsJudgedAsActive(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -82,6 +84,7 @@ func TestAProjectTouchedSinceTheListingIsJudgedAsActive(t *testing.T) {
 
 // An owner handed the project while the job waits on its lock is the one told.
 func TestAnOwnerChangedWhileTheJobWaitsIsTheOneTold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -141,6 +144,7 @@ func TestAnOwnerChangedWhileTheJobWaitsIsTheOneTold(t *testing.T) {
 }
 
 func TestADeactivatedOwnerIsNotTold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)
@@ -156,6 +160,7 @@ func TestADeactivatedOwnerIsNotTold(t *testing.T) {
 // Only the reading in front of the owner can be undone: an older AI reading
 // under a newer one is refused.
 func TestUndoRefusesAnAIReadingThatNoLongerStands(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := wallNow()
 	erp := quietDeliveringProject(t, e, "ERP replacement", &e.Rep1, now)

@@ -29,6 +29,7 @@ type configuredStage struct {
 }
 
 func TestStageRemovalRefusesWhileDealsSitOnIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Stage RM", "stage-rm@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)
@@ -98,6 +99,7 @@ func TestStageRemovalRefusesWhileDealsSitOnIt(t *testing.T) {
 }
 
 func TestStageRemovalTakesTheVersionGuard(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Stage RM Ver", "stage-rm-ver@fable.test", "Admin")
 	seeded := apptest.DiscoverSeededPipeline(t, e)
@@ -122,6 +124,7 @@ func TestStageRemovalTakesTheVersionGuard(t *testing.T) {
 // removal renumbered, and a removal that moves nothing must not publish a
 // reorder that did not happen.
 func TestStageRemovalRenumbersWhateverLayoutItFinds(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Stage RM Gap", "stage-rm-gap@fable.test", "Admin")
 

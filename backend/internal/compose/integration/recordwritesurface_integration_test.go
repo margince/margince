@@ -17,6 +17,7 @@ import (
 )
 
 func TestTheRemainingRecordRoutesRefuseAMisspeltKey(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
@@ -68,6 +69,7 @@ func TestTheRemainingRecordRoutesRefuseAMisspeltKey(t *testing.T) {
 // created_at) on a PATCH names a field the route does not take. The web client
 // sends only the fields the user changed.
 func TestAPatchEchoingReadFieldsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Echo"})
@@ -84,6 +86,7 @@ func TestAPatchEchoingReadFieldsIsRefused(t *testing.T) {
 // A missing record answers 404 and a stale version 409 before a refused custom
 // field answers 422, so a caller learns the larger fault first.
 func TestAStaleOrMissingRecordIsAnsweredBeforeARefusedCustomField(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

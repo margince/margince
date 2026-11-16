@@ -41,6 +41,7 @@ import (
 )
 
 func TestTheReceiptCarriesTheSameReachTheRecordItselfDoes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	// Another team's deal, moved by a machine.
@@ -83,6 +84,7 @@ func TestTheReceiptCarriesTheSameReachTheRecordItselfDoes(t *testing.T) {
 // audit rows served on their own — audit_log carries no workspace_id, so an
 // unjoined read is scoped by nothing whatsoever.
 func TestASeatThatCannotReadDealsSeesNoMachineActionOnOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	mine := seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
@@ -107,6 +109,7 @@ func TestASeatThatCannotReadDealsSeesNoMachineActionOnOne(t *testing.T) {
 // action on the reader's OWN deal does reach them. A scoping bug that returned
 // nothing at all would pass the test above and take the feature with it.
 func TestARepSeesTheMachineActionsOnTheirOwnRecords(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	mine := seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
@@ -133,6 +136,7 @@ func TestARepSeesTheMachineActionsOnTheirOwnRecords(t *testing.T) {
 // what ran WITHOUT being asked, and handing a rep their own edit back under that
 // heading is a lie about who did it.
 func TestAHumansOwnChangeIsNotOnTheReceipt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedMachineAction(t, e, e.Rep1, "human", "human:someone", "advance_stage")
@@ -152,6 +156,7 @@ func TestAHumansOwnChangeIsNotOnTheReceipt(t *testing.T) {
 // is a machine write, and showing it would turn housekeeping into apparent
 // value.
 func TestAMachineHousekeepingWriteIsNotOnTheReceipt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedMachineAction(t, e, e.Rep1, "system", "system:export", "export")
@@ -216,6 +221,7 @@ func seedMachineAction(
 // privacy.UnscrubbedImageSQL rather than a predicate of its own, because that
 // helper's own doc comment asks every reader of the boundary to call it.
 func TestAnErasedRecordsImagesAreNotRepublishedByTheReceipt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)
@@ -260,6 +266,7 @@ func TestAnErasedRecordsImagesAreNotRepublishedByTheReceipt(t *testing.T) {
 // The other half: a record that was NOT erased still reports. Without this the
 // fix above could be "serve nothing" and the test beside it would pass.
 func TestAnUnerasedRecordsMachineActionStillReports(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	since := time.Now().Add(-time.Hour)
@@ -303,6 +310,7 @@ func TestAnUnerasedRecordsMachineActionStillReports(t *testing.T) {
 // into an arbitrary historical audit read, which is what makes the erasure gap
 // above reachable at all rather than a same-day race.
 func TestTheWindowRefusesToReachBackToInstallation(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := context.Background()
 	ancient := time.Date(1970, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -382,6 +390,7 @@ func (j *judgeStub) JudgeUndoPage(
 // receipt that says "the machine changed your deal" while greying out the only
 // control answering that is worse than one that never mentioned the change.
 func TestTheReceiptAsksWhetherEachChangeCanBeTakenBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
@@ -430,6 +439,7 @@ func TestTheReceiptAsksWhetherEachChangeCanBeTakenBack(t *testing.T) {
 // "this cannot be undone" — the product did not look, which is a different
 // thing and must not be presented as the same.
 func TestAnUnwiredUndoJudgeSaysItDidNotLook(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
@@ -504,6 +514,7 @@ func stagedRow(kind string) crmcontracts.Approval {
 // Every lane here carries something, and that is the point of the fixture: four
 // zeroes would agree with any arithmetic at all.
 func TestTheTotalsCountEveryLaneDrawn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedMachineAction(t, e, e.Rep1, "agent", "agent:auto-apply", "advance_stage")
@@ -551,6 +562,7 @@ func TestTheTotalsCountEveryLaneDrawn(t *testing.T) {
 // test could make about emptiness and still marshals to null, so the claim is
 // only proved by marshalling — which is why this case does.
 func TestEveryLaneSerialisesAsAListRatherThanNull(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 
@@ -597,6 +609,7 @@ func TestEveryLaneSerialisesAsAListRatherThanNull(t *testing.T) {
 // read the empty watching lane as "every source is healthy" on the day they lost
 // the grant to check, which is the exact conflation each lane refuses on its own.
 func TestEveryRefusedSourceIsNamedOnOnePage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 
@@ -637,6 +650,7 @@ func TestEveryRefusedSourceIsNamedOnOnePage(t *testing.T) {
 // in beside them is a plausible simplification that would silently drop exactly
 // the standing conditions nobody has cleared.
 func TestAStandingConditionIsReportedHoweverOldItIs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	// Older than the window asked for AND older than the floor any window can

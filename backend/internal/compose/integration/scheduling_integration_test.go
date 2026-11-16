@@ -38,6 +38,7 @@ func setupBooking(t *testing.T) *relEnv {
 }
 
 func TestAvailabilityAndBooking(t *testing.T) {
+	t.Parallel()
 	e := setupBooking(t)
 
 	from := apptest.NextBookableMorning(t).Add(-2 * time.Hour)
@@ -122,6 +123,7 @@ func TestAvailabilityAndBooking(t *testing.T) {
 // happened: logging claims nothing on anyone's calendar, so the guard does not
 // read those rows at all.
 func TestOnlyABookingClaimsTheHostsHour(t *testing.T) {
+	t.Parallel()
 	e := setupBooking(t)
 	at := time.Date(2026, 7, 7, 10, 0, 0, 0, time.UTC)
 	link := []AnyMap{{"entity_type": "contact", "entity_id": e.contactID}}
@@ -180,6 +182,7 @@ func claimsHostSlot(t *testing.T, e *relEnv, activityID string) bool {
 // The booking door hands every attendee to the invitation it queues: one
 // calendar event with the contact first, and nothing left behind on the request.
 func TestABookingQueuesItsInvitationWithEveryAttendee(t *testing.T) {
+	t.Parallel()
 	e := setupBooking(t)
 	slot := apptest.NextBookableMorning(t)
 	var booked struct {

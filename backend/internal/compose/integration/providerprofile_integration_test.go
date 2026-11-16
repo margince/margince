@@ -150,6 +150,7 @@ func contact360Service(e *Env) *contact360.Service {
 // Everything the offline provider returns reaches the page. Each assertion
 // names a claim key whose decode struct could silently stop matching.
 func TestTheProviderSectionRendersWhatTheAdapterActuallyReturned(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	connectProvider(t, e)
 	contactID := seedSubject(t, e)
@@ -229,6 +230,7 @@ func TestTheProviderSectionRendersWhatTheAdapterActuallyReturned(t *testing.T) {
 // page must not claim the platform knows nothing while showing purchased
 // data.
 func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	connectProvider(t, e)
 	contactID := seedSubject(t, e)
@@ -264,6 +266,7 @@ func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T)
 // were printed directly above it. The page contradicted itself, and the reader
 // who believed the line would buy something they already owned.
 func TestASecondPurchaseDoesNotDenyWhatAnEarlierRunAskedFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	connectProvider(t, e)
 	contactID := seedSubject(t, e)
@@ -313,6 +316,7 @@ func seedNarrowRun(t *testing.T, e *Env, contactID ids.UUID, category string) {
 // claims with no run at all. Deciding "never asked for" from the run history
 // alone printed that sentence directly above the mobile number it was denying.
 func TestACategoryOnThePageIsNeverCalledUnrequested(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	connectProvider(t, e)
 	contactID := seedSubject(t, e)
@@ -371,6 +375,7 @@ func seedOrphanClaim(t *testing.T, e *Env, contactID ids.UUID, key, value string
 // A run that sent nothing says why on both doors that serve it. The contact
 // page and the run endpoint map the same stored run through one function.
 func TestASkippedRunShowsItsReasonOnTheContactPageAndTheRunEndpoint(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	connectProvider(t, e)
 	contactID := seedSubject(t, e)

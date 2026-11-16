@@ -45,6 +45,7 @@ type capRefusal struct {
 }
 
 func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Enrich Scope", "enrich@fable.test", "Admin")
 
@@ -107,6 +108,7 @@ func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 // Sending an offer is a route-backed action with the send scope. It runs at once
 // as the app's Send does, and the action tells the agent to ask its user first.
 func TestAnAgentSendsAnOfferAsItsUser(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Send Scope", "send@fable.test", "Admin")
 	dealID := offerFixture(t, e)

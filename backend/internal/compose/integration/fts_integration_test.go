@@ -23,6 +23,7 @@ import (
 )
 
 func TestSearchFoldsAccentsAndStemsByLanguage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -74,6 +75,7 @@ func TestSearchFoldsAccentsAndStemsByLanguage(t *testing.T) {
 }
 
 func TestSearchFoldsApostrophesInNames(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -128,6 +130,7 @@ func hasHit(page search.Page, id ids.UUID) bool {
 // two accounts' "Phase 2" apart without opening each. A project with no key
 // shows the company alone rather than a dangling separator.
 func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	company := e.SeedCompany(t, "Acme Tooling", &e.Rep1)
@@ -173,6 +176,7 @@ func TestProjectSearchHitsCarryTheKeyAndTheCompanyAsTheSnippet(t *testing.T) {
 // rep owns — is shown the key alone, and a searcher with no company grant
 // at all likewise; the project hit itself still answers.
 func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme Tooling", &e.Rep1)
 	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
@@ -218,6 +222,7 @@ func TestProjectSearchSnippetNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing
 // company. The rest get the name typed on the lead, the lead's own field, and
 // never the company's display name.
 func TestALeadsSearchExcerptNamesTheCompanyOnlyToACallerWhoMayReadIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Nordwind Holding SE", &e.Rep3)
 	lead := ids.NewV7()

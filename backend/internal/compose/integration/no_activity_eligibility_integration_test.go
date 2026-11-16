@@ -50,6 +50,7 @@ var quietSince = eligibilityScanNow.AddDate(0, 0, -30)
 var longEstablished = eligibilityScanNow.AddDate(0, 0, -60)
 
 func TestQuietCompanyWithNoOpenDealIsNotRemindedAbout(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -69,6 +70,7 @@ func TestQuietCompanyWithNoOpenDealIsNotRemindedAbout(t *testing.T) {
 }
 
 func TestQuietCompanyWithAnOpenDealFiresOnceAndStaysClaimed(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -101,6 +103,7 @@ func TestQuietCompanyWithAnOpenDealFiresOnceAndStaysClaimed(t *testing.T) {
 // could hide real engagement from this scan, or plant an old-dated row to
 // drag a worked account into the reminder draw forever.
 func TestAPlantedSystemSourceRowStillCountsAsEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -134,6 +137,7 @@ func TestAPlantedSystemSourceRowStillCountsAsEngagement(t *testing.T) {
 // pair are the system's, and a reminder task must not reset the very clock
 // it fires off.
 func TestTheEnginesOwnRowStillDoesNotCountAsEngagement(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -167,6 +171,7 @@ func TestTheEnginesOwnRowStillDoesNotCountAsEngagement(t *testing.T) {
 }
 
 func TestTwoRecordsSharingOneLastTouchInstantEachGetTheirOwnReminder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -205,6 +210,7 @@ func TestTwoRecordsSharingOneLastTouchInstantEachGetTheirOwnReminder(t *testing.
 }
 
 func TestARecordYoungerThanTheCutoffIsNotStale(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -227,6 +233,7 @@ func TestARecordYoungerThanTheCutoffIsNotStale(t *testing.T) {
 }
 
 func TestOnlyAStakeholderSeatMakesAContactACandidate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -262,6 +269,7 @@ func TestOnlyAStakeholderSeatMakesAContactACandidate(t *testing.T) {
 }
 
 func TestOnlyALeadStillInPlayIsACandidate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -471,6 +479,7 @@ func seedTouchAt(t *testing.T, owner *pgx.Conn, at time.Time) ids.UUID {
 // since the old direct mail and earns a reminder about a relationship a rep
 // worked yesterday.
 func TestAnAccountWorkedThroughItsContactIsNotRemindedAbout(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -505,6 +514,7 @@ func TestAnAccountWorkedThroughItsContactIsNotRemindedAbout(t *testing.T) {
 // touch at all, so it never entered the draw and could never be reminded about
 // however long it went quiet.
 func TestAnAccountWhoseOnlyMailIsItsContactsIsStillDrawnWhenItGoesQuiet(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -539,6 +549,7 @@ func TestAnAccountWhoseOnlyMailIsItsContactsIsStillDrawnWhenItGoesQuiet(t *testi
 // their touches into its anchor: the account's reminder names the same date
 // their own would have.
 func TestOneQuietAccountAsksForOneCheckIn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -581,6 +592,7 @@ func TestOneQuietAccountAsksForOneCheckIn(t *testing.T) {
 // its own reminder: collapsing it would silence the only question anyone asks
 // about that deal.
 func TestADealWithNoAccountKeepsItsOwnCheckIn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -601,6 +613,7 @@ func TestADealWithNoAccountKeepsItsOwnCheckIn(t *testing.T) {
 // deal they sit on: that account's anchor never sees their mail, because the
 // fold runs through employment. Collapsing on the seat would silence them.
 func TestAStakeholderEmployedElsewhereKeepsTheirOwnCheckIn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -636,6 +649,7 @@ func TestAStakeholderEmployedElsewhereKeepsTheirOwnCheckIn(t *testing.T) {
 // too, one real silence is reported by nobody — the collapse would have turned
 // five reminders into none, which is the worse bug.
 func TestAQuietStakeholderAtABusyAccountIsStillAskedAbout(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -679,6 +693,7 @@ func TestAQuietStakeholderAtABusyAccountIsStillAskedAbout(t *testing.T) {
 // first question, so the rep now holds two open tasks about one silence —
 // exactly the duplication this change exists to end.
 func TestAnOpenChildReminderIsNotJoinedByAnAccountReminder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)

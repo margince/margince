@@ -13,8 +13,6 @@ package testdb
 // two meet only at the `pools` map.
 
 import (
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -22,93 +20,32 @@ import (
 )
 
 // AssertPoolsQuiesced fails the test if it ends while still holding a pooled
-// connection. CALL IT where the pool is handed out; it registers its own
-// cleanup.
+// connection to its own database. Call it where the pool is handed out; it
+// registers its own cleanup, which runs after every cleanup the test adds later
+// and before the database is dropped.
 //
-// Closing the pool per test used to do this job by accident: a goroutine the test
-// left running — a River client whose Stop timed out, a relay that outlived its
-// context — started failing the moment its pool went away. A shared pool has no
-// such moment, so that goroutine would go on claiming jobs and writing rows into
-// the database the NEXT test just reset, and the wrong suite would report it.
-//
-// Register it in the fixture that hands out the pool, immediately, so it runs
-// last: t.Cleanup is LIFO, and every cleanup a test adds later — the ones that
-// stop the runners — must have already run before this can honestly claim the
-// package is quiet.
-//
-// It waits on the POOL rather than sampling it, and that is the difference
-// between a gate and a flake. A connection still checked out the instant cleanup
-// runs is a race, not necessarily a leak: a goroutine that was asked to stop can
-// be one round trip from releasing. Reading AcquiredConns() once failed real runs
-// for exactly that, twice, on a loaded machine — different suites each time, which
-// is the signature of a timing assumption rather than a defect. Taking every
-// connection instead answers the question that matters — can anything else still
-// be holding one — and gives a straggler that is finishing the time to finish,
-// without asserting anything about the clock.
-//
-// PARALLEL SIBLINGS are why it counts holders rather than asserting on the spot.
-// A t.Parallel() test's cleanup runs while its siblings are still running and
-// legitimately holding connections from the same pool, so asserting there made
-// the first test to finish report the rest as a leak — naming whichever test
-// happened to end first, only on a loaded runner. The last holder out is the
-// first moment the question "is anything still holding one" has an answer, so
-// that is where it is asked.
-//
-// The cost is attribution, and it is the pool's rather than this gate's: with one
-// pool and several tests running at once, nothing on the pgx side records which
-// of them acquired what. So the failure names the group that shared it. A serial
-// package is unaffected — one holder at a time, and the group is one name.
+// A goroutine the test left running would otherwise lose its database mid-query
+// and fail in whichever test runs then. Only the test's own database is asked,
+// because its parallel siblings hold connections to theirs.
 func AssertPoolsQuiesced(t *testing.T) {
 	t.Helper()
-	holdPool(t.Name())
+	db, ok := lookup(t.Name())
+	if !ok {
+		t.Fatal("testdb: AssertPoolsQuiesced needs the test's database; call testdb.New or testdb.For first")
+	}
 	t.Cleanup(func() {
-		group, last := releasePool()
-		// A sibling is still running, and a connection it holds is its work
-		// rather than this test's leak. Whoever finishes last asks for both.
-		if !last {
-			return
-		}
 		poolsMu.Lock()
-		defer poolsMu.Unlock()
+		own := map[string]*pgxpool.Pool{}
 		for dsn, pool := range pools {
-			assertPoolQuiesced(t, dsn, pool, group)
+			if on, err := databaseName(dsn); err == nil && on == db.Name {
+				own[dsn] = pool
+			}
+		}
+		poolsMu.Unlock()
+		for dsn, pool := range own {
+			assertPoolQuiesced(t, dsn, pool)
 		}
 	})
-}
-
-// sharing is every test that has taken the shared pool since the last time it
-// went quiet, and finished is how many of them have ended. Guarded together
-// because the gate reads them as one answer: the last holder out is the one
-// that asserts, and it reports the group it was part of.
-var (
-	holdersMu sync.Mutex
-	sharing   []string
-	finished  int
-)
-
-// holdPool records that a test has taken the shared pool.
-func holdPool(name string) {
-	holdersMu.Lock()
-	defer holdersMu.Unlock()
-	sharing = append(sharing, name)
-}
-
-// releasePool records that a holder has finished, and reports the group it
-// shared the pool with and whether it was the last of them out.
-//
-// The group RESETS once it empties, so a package's serial tests each report a
-// group of one and a parallel batch reports itself. Without that, the first
-// leak found would name every test the package had ever run.
-func releasePool() ([]string, bool) {
-	holdersMu.Lock()
-	defer holdersMu.Unlock()
-	finished++
-	group := sharing
-	if finished < len(sharing) {
-		return group, false
-	}
-	sharing, finished = nil, 0
-	return group, true
 }
 
 // quiesceGrace bounds how long a finishing goroutine has to hand its connection
@@ -166,18 +103,12 @@ func poolQuiesced(pool *pgxpool.Pool, grace, poll time.Duration) int32 {
 	}
 }
 
-func assertPoolQuiesced(t *testing.T, dsn string, pool *pgxpool.Pool, group []string) {
+func assertPoolQuiesced(t *testing.T, dsn string, pool *pgxpool.Pool) {
 	t.Helper()
 	outstanding := poolQuiesced(pool, quiesceGrace, quiescePoll)
 	if outstanding == 0 {
 		return
 	}
-	// The group, not "this test": these may have run in parallel over one pool,
-	// and the last one out is simply where the question could first be asked.
-	blame := "this test"
-	if len(group) > 1 {
-		blame = "one of " + strings.Join(group, ", ")
-	}
-	t.Errorf("the shared pool for %s still had %d connection(s) checked out %s after %s ended. A goroutine it started is still running, and the next test resets the database under it: stop it in the test's own cleanup, which runs BEFORE this gate by design.",
-		redactDSN(dsn), outstanding, quiesceGrace, blame)
+	t.Errorf("the pool for %s still had %d connection(s) checked out %s after the test ended. A goroutine it started is still running, and its database is dropped next: stop it in the test's own cleanup, which runs before this check.",
+		redactDSN(dsn), outstanding, quiesceGrace)
 }

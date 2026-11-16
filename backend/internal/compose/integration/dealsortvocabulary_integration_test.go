@@ -36,6 +36,7 @@ import (
 // TestTheDealsListSortsByTheNameColumnItDraws: alphabetical, which a list of
 // deals had no way to offer at all.
 func TestTheDealsListSortsByTheNameColumnItDraws(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	// Seeded out of order, so a pass cannot come from insertion order — which
 	// is what the default `-created_at` sort would give.
@@ -61,6 +62,7 @@ func TestTheDealsListSortsByTheNameColumnItDraws(t *testing.T) {
 // that wanted the lifecycle order would be asking for a second copy of the
 // vocabulary on the sorting side.
 func TestTheDealsListSortsByTheStatusColumnItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, openStage, wonStage := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
@@ -95,6 +97,7 @@ func TestTheDealsListSortsByTheStatusColumnItDraws(t *testing.T) {
 // what the column prints. The seats are named against their id order, so an
 // id sort cannot pass.
 func TestTheDealsListSortsByTheOwnerColumnItDraws(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
@@ -124,6 +127,7 @@ func TestTheDealsListSortsByTheOwnerColumnItDraws(t *testing.T) {
 // order by a column the list does not publish, and the refusal is what keeps
 // the vocabulary a vocabulary.
 func TestTheDealsListStillRefusesAFieldItDoesNotPublish(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	f.seedScoredDeal(t, "Only deal", nil)
 
@@ -156,6 +160,7 @@ func dealsIn(ctx context.Context, t *testing.T, e *Env, spec string) []ids.UUID 
 // sort that fell back to the name would put them the other way round — which is
 // how the assertion tells the two apart.
 func TestTheDealsListSortsStagesByPipelineOrderAndNotByName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, _, _ := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
@@ -208,6 +213,7 @@ func TestTheDealsListSortsStagesByPipelineOrderAndNotByName(t *testing.T) {
 // clicking the column is asking for — the id it is named after orders nothing
 // anybody can see.
 func TestTheDealsListSortsItsCompanyColumnsByTheCompanyName(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
@@ -234,6 +240,7 @@ func TestTheDealsListSortsItsCompanyColumnsByTheCompanyName(t *testing.T) {
 // deal whose company the reader cannot see lands together, and which says the
 // same thing the row itself says: nothing.
 func TestAnUnreadableCompanyOrdersTheDealsListByNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)
@@ -275,6 +282,7 @@ func TestAnUnreadableCompanyOrdersTheDealsListByNothing(t *testing.T) {
 // company.read would otherwise have its page arranged by names it is
 // refused on every other surface.
 func TestAReaderWithoutTheCompanyGrantOrdersTheDealsListByNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 
@@ -325,6 +333,7 @@ func seedDealForCompany(
 // boundary repeats rows or skips them. One row at a time is the setting that
 // makes every boundary a boundary.
 func TestAReferenceSortPagesWithoutRepeatingOrSkipping(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, dealCFVPerms)

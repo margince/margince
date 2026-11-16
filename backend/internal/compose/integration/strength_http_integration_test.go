@@ -67,6 +67,7 @@ func seedStrengthContactWithActivities(t *testing.T, e *apptest.AppEnv) string {
 // 0..100, and factors whose product (rounded) equals the score — the
 // same §4 formula the domain computes, just surfaced over the wire.
 func TestContactStrengthHTTPReconciles(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Strength E2E", "admin@strength.test", "Admin")
 	contactID := seedStrengthContactWithActivities(t, e)
@@ -106,6 +107,7 @@ func TestContactStrengthHTTPReconciles(t *testing.T) {
 // rather than disclosing anything about it — existence-hiding, matching
 // every other row-scoped read.
 func TestContactStrengthHTTPMissingIs404(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Strength 404", "admin@strength404.test", "Admin")
 
@@ -118,6 +120,7 @@ func TestContactStrengthHTTPMissingIs404(t *testing.T) {
 // current employees' strength) surfaces the same employee's score it
 // computed for the contact-level endpoint above.
 func TestCompanyStrengthHTTPReconciles(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Company Strength E2E", "admin@orgstrength.test", "Admin")
 
@@ -148,6 +151,7 @@ func TestCompanyStrengthHTTPReconciles(t *testing.T) {
 // TestCompanyStrengthHTTPMissingIs404 mirrors the contact-level 404:
 // a nonexistent company id discloses nothing about it either.
 func TestCompanyStrengthHTTPMissingIs404(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Company Strength 404", "admin@orgstrength404.test", "Admin")
 

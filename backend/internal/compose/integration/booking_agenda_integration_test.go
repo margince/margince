@@ -29,6 +29,7 @@ type bookedInvitation struct {
 // The agenda a booker types is written for the host, and the meeting record keeps
 // it. The invitation the host's calendar sends never carries it, on creation or on
 // a reschedule: its recipient is only an address the booker typed.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestABookersAgendaStaysOnTheRecordAndOffTheInvitation(t *testing.T) {
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
@@ -91,6 +92,7 @@ func TestABookersAgendaStaysOnTheRecordAndOffTheInvitation(t *testing.T) {
 
 // The rule follows who wrote the words, not which door accepted the meeting. A
 // proposal's description is its host's, so accepting it anonymously still sends it.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAnAcceptedProposalStillSendsTheDescriptionItsHostWrote(t *testing.T) {
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)

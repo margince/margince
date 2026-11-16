@@ -88,6 +88,7 @@ func storedRef(ctx context.Context, t *testing.T, e *SearchEnv, provider string)
 }
 
 func TestASealedKeyIsWhatTheRoutingLaneResolves(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
@@ -104,6 +105,7 @@ func TestASealedKeyIsWhatTheRoutingLaneResolves(t *testing.T) {
 }
 
 func TestTheStoredSettingHoldsARefAndNeverTheKey(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
@@ -128,6 +130,7 @@ func TestTheStoredSettingHoldsARefAndNeverTheKey(t *testing.T) {
 }
 
 func TestRotatingAKeyServesTheNewOneAndRetiresTheOld(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
@@ -161,6 +164,7 @@ func TestRotatingAKeyServesTheNewOneAndRetiresTheOld(t *testing.T) {
 // is parked on it, then records another key and commits. Another vendor's key,
 // written in the same transaction, stays.
 func TestAConcurrentKeyWriteRetiresTheKeyItReplaced(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
@@ -270,6 +274,7 @@ func waitForLockWaiter(ctx context.Context, t *testing.T, e *SearchEnv, key stri
 // what is being proved is that the resolved CLIENTS changed — not that a digest
 // moved.
 func TestARotatedKeyReachesARunningRouterAndARemovedOneStopsBeingUsed(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	keys := providerKeyStore(t, e)
@@ -387,6 +392,7 @@ func TestARotatedKeyReachesARunningRouterAndARemovedOneStopsBeingUsed(t *testing
 // what matters is the bytes that land in the sink; a redaction that stops being
 // applied leaves the declaration looking correct.
 func TestTheAuditTrailOfAKeyChangeCarriesNoRef(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
@@ -450,6 +456,7 @@ func sealKey(ctx context.Context, t *testing.T, e *SearchEnv, key string) string
 }
 
 func TestRemovingAKeyLeavesTheProviderUnconfigured(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
@@ -470,6 +477,7 @@ func TestRemovingAKeyLeavesTheProviderUnconfigured(t *testing.T) {
 }
 
 func TestListNamesEveryServableProviderNotOnlyTheConfiguredOnes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := providerKeyStore(t, e)
@@ -503,6 +511,7 @@ func TestListNamesEveryServableProviderNotOnlyTheConfiguredOnes(t *testing.T) {
 }
 
 func TestAProviderThisBuildCannotServeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := providerKeyStore(t, e)
 	// A key sealed against a name nothing routes is a credential nobody can use
@@ -517,6 +526,7 @@ func TestAProviderThisBuildCannotServeIsRefused(t *testing.T) {
 // sent to Google. A key file that is not a service account's is refused by
 // the field at fault, and nothing of what was sent comes back.
 func TestACredentialOfTheWrongKindIsRefusedBeforeItIsSealed(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := providerKeyStore(t, e)
 	const notAKeyFile = `{"type":"authorized_user","client_secret":"GOCSPX-must-not-echo"}`
@@ -556,6 +566,7 @@ func TestACredentialOfTheWrongKindIsRefusedBeforeItIsSealed(t *testing.T) {
 // A screen asks List which field to offer, so the kind is stated for every
 // vendor, keyed or not.
 func TestListSaysWhichCredentialEachVendorTakes(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	got, err := providerKeyStore(t, e).List(e.adminRoutingCtx())
 	if err != nil {
@@ -573,6 +584,7 @@ func TestListSaysWhichCredentialEachVendorTakes(t *testing.T) {
 }
 
 func TestTheKeySurfaceIsAdminOnly(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := providerKeyStore(t, e)
 	// A FULLY FORMED principal that simply lacks the grant — workspace bound,
@@ -627,6 +639,7 @@ func (e *SearchEnv) repNoRoutingCtx() context.Context {
 // no ref names, written by someone not allowed to write. So the assertion is
 // the blob count, not the error.
 func TestAReadOnlySeatCannotSealAKey(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := providerKeyStore(t, e)
 	reader := e.routingReaderCtx()

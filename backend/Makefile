@@ -581,7 +581,7 @@ BENCH_RENDER       ?= 1
 bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mid-market unless BENCH_PERF_TIER=smb (needs db-up; seeds 250k contacts)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_TIER) MARGINCE_BENCH_RECORD=1 \
-	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_TIMEOUT) ./internal/compose/integration'
 	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
@@ -619,7 +619,7 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mi
 bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record written (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_BENCH_TIER=smb MARGINCE_BENCH_RECORD= \
-	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout 20m ./internal/compose/integration'
 
 # The `bench` lane: measurements run BY HAND, never by a merge gate.
@@ -646,13 +646,13 @@ bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record writte
 # and the default DSN is the template every integration clone is copied from.
 bench-record: composition ## PERF-1/PERF-4 record open + save budgets, measured over HTTP (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run TestRecordOpenAndSaveBudgets -count=1 -v -timeout 15m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
 
 bench-ai: composition ## PERF-5 AI baseline action: a contact draft with an offline model, 1.5s p95 (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run "^TestAIDraftBudget$$" -count=1 -v -timeout 15m ./internal/compose/integration'
 	@$(MAKE) --no-print-directory perfdoc
 
@@ -661,12 +661,14 @@ bench-ai: composition ## PERF-5 AI baseline action: a contact draft with an offl
 bench-coldstart: composition ## PERF-6 cold start: the built API binary to /readyz 200, 2s p95 (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && resolve_test_redis && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_OWNER_DSN="$$BENCH_OWNER_DSN" $(GO) run ./cmd/migrate up >/dev/null \
-	  && MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	  && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
 	     $(GO) test -tags "integration bench" -run "^TestColdStartBudget$$" -count=1 -v -timeout 15m ./cmd/api'
 	@$(MAKE) --no-print-directory perfdoc
 
 bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (needs db-up)
-	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestCaptureToTimelineLatencyBudget -count=1 -v -timeout 15m ./internal/compose/integration/capture
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run TestCaptureToTimelineLatencyBudget -count=1 -v -timeout 15m ./internal/compose/integration/capture'
 	@$(MAKE) --no-print-directory perfdoc
 
 # AC-W2, and the newest arrival in this lane. It gated the standing integration
@@ -680,13 +682,15 @@ bench-capture: composition ## CAP-PARAM-1 capture-to-timeline latency, 60s p95 (
 # published budget row, and a target that renders nothing new should not claim a
 # measurement the page never shows.
 bench-dispatch: composition ## AC-W2 workflow trigger->dispatch p95, 200ms over the seeded dataset (needs db-up)
-	$(GOWORK_COMPOSED) $(GO) test -tags 'integration bench' -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration
+	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && $(BENCH_DSNS) parse_test_dsn && bench_db $(BENCH_DB_NAME) \
+	  && cd backend && MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
+	     $(GO) test -tags "integration bench" -run TestWorkflowTriggerToDispatchP95HoldsOnTheSeededDataset -count=1 -v -timeout 15m ./internal/compose/integration'
 
 # The test DSNs for a database bench_db made, as variable assignments that go in
 # front of `go test`. cache_statement is pgx's default, which the API and test
 # pools both keep; named because without it no generic plan can appear.
 BENCH_DSN_ENV = sep="?"; case "$$BENCH_APP_DSN" in *\?*) sep="&";; esac; \
-  MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement"
+  MARGINCE_TEST_IN_PLACE=1 MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$${BENCH_APP_DSN}$${sep}default_query_exec_mode=cache_statement"
 
 # Leaves its database behind: the corpus and its plans are what you debug a slow
 # row with, and bench-daily-clean is the only thing that drops it. A failed run

@@ -133,6 +133,7 @@ func statusOf(t *testing.T, approvalID ids.ApprovalID) (string, bool) {
 // is what lets the day's "Done for you" lane report it honestly rather than
 // putting a rep's name on a click they never made.
 func TestAProposalAppliesByDefault(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -158,6 +159,7 @@ func TestAProposalAppliesByDefault(t *testing.T) {
 
 // A saved off choice keeps proposals waiting even though the default is on.
 func TestAProposalWaitsWhenItsOwnerSwitchedItOff(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -185,6 +187,7 @@ func TestAProposalWaitsWhenItsOwnerSwitchedItOff(t *testing.T) {
 // under an authority nobody currently holds, which is the one thing the owner
 // resolution exists to prevent.
 func TestAProposalOnAnUnownedRecordDoesNotApply(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	svc := approvals.NewService(e.DB())
@@ -208,6 +211,7 @@ func TestAProposalOnAnUnownedRecordDoesNotApply(t *testing.T) {
 // — it is their old answer — so the refusal has to come from resolving their
 // authority at APPLY time, not from the absence of a preference.
 func TestAProposalWhoseOwnerHasLeftDoesNotApply(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -240,6 +244,7 @@ func TestAProposalWhoseOwnerHasLeftDoesNotApply(t *testing.T) {
 // The set is the product's promise that an automatic change can be put back, so
 // a row naming a kind outside it is inert rather than honoured.
 func TestAnIneligibleKindNeverApplies(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 	svc := approvals.NewService(e.DB())
@@ -260,6 +265,7 @@ func TestAnIneligibleKindNeverApplies(t *testing.T) {
 // same record-history restore a contact's Undo button uses, which is the point
 // of computing reversibility rather than storing a flag beside the approval.
 func TestAnAutomaticChangeCanBePutBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	svc := approvals.NewService(e.DB())
@@ -394,6 +400,7 @@ func grantCompanyRepRole(t *testing.T, e *Env, user ids.UUID) {
 // effect then fails, exactly as it does when a colleague clicks approve on a stale
 // pin. What this holds is that the failure stays with its own row.
 func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -444,6 +451,7 @@ func TestOneUnapplyableProposalDoesNotParkTheRest(t *testing.T) {
 }
 
 func TestADefaultCloseDateChangeCanBePutBack(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Undo the automatic date", pipeline, open, &e.Rep1)
@@ -479,6 +487,7 @@ func TestADefaultCloseDateChangeCanBePutBack(t *testing.T) {
 }
 
 func TestAVetoPolicyKeepsAProposalPending(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Show the owner first", pipeline, open, &e.Rep1)

@@ -93,6 +93,7 @@ func forecastDeals(t *testing.T, e *Env, at time.Time) []forecasting.Deal {
 var midQuarter = time.Date(2026, 2, 16, 12, 0, 0, 0, time.UTC)
 
 func TestTheForecastsDealsCarryTheirMoneyInTheBaseCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	at := midQuarter
@@ -142,6 +143,7 @@ func TestTheForecastsDealsCarryTheirMoneyInTheBaseCurrency(t *testing.T) {
 // number sums into a headline and nothing downstream can tell it from money
 // somebody actually expects.
 func TestADealWithNoRateArrivesWithNoBaseAmountRatherThanAGuess(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	at := midQuarter

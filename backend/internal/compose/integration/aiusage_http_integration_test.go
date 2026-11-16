@@ -74,6 +74,7 @@ type aiUsageDTO struct {
 }
 
 func TestAiUsageOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -161,6 +162,7 @@ func seedAiModelRate(t *testing.T, e *apptest.AppEnv, wsID string, day time.Time
 // summing cost_est_minor across a task's tier rows. A day/task with no
 // matching rate omits cost_est_minor instead of reporting a fabricated 0.
 func TestAiUsageCostOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	seedAiUsage(t, e)

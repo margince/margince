@@ -17,6 +17,7 @@ import (
 // A passport lent by a read-seat member runs no write tool and no write route.
 // The same passport writes once the member holds a full seat again.
 func TestAPassportLentByAReadSeatRunsNoWrite(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "seat-tools", "read", "write")
 	e := d.e
 	e.DescribeCompany(t)

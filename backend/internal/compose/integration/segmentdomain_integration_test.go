@@ -43,6 +43,7 @@ func seedDomain(t *testing.T, owner *pgx.Conn, company ids.UUID, domain string, 
 }
 
 func TestASegmentSelectsAccountsByTheirDomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	store := collections.NewStore(e.DB())

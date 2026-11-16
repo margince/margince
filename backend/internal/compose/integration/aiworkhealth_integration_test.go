@@ -19,6 +19,7 @@ import (
 )
 
 func TestTroubledCarriesFailedAndStalledRunsAndOnlyTheCallers(t *testing.T) {
+	t.Parallel()
 	a := newAIActivityEnv(t)
 	// One failed run for Rep1.
 	a.apply(t, change{attempt: 1, state: "running"})

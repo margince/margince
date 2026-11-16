@@ -52,6 +52,7 @@ const (
 )
 
 func TestGoogleAppOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 
 	// An installation that has not set one up has not failed at anything.
@@ -98,6 +99,7 @@ func TestGoogleAppOverHTTP(t *testing.T) {
 // The refusals, each for a value that would otherwise read as configured while
 // authenticating nothing.
 func TestGoogleAppOverHTTPRefusesAnUnusableApp(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 	secret := httpSecret
 	blank := ""
@@ -133,6 +135,7 @@ func TestGoogleAppOverHTTPRefusesAnUnusableApp(t *testing.T) {
 // that only checked the 403s would pass just as happily if the read had been
 // locked down by mistake, and would call that a success.
 func TestGoogleAppOverHTTPLetsAReadSeatLookAndNotTouch(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 	secret := httpSecret
 	// Stored while the seat can still write, so the read below has something to
@@ -196,6 +199,7 @@ func setupStep(t *testing.T, e *apptest.AppEnv, which crmcontracts.InstallationS
 // The setup report is what onboarding reads, so it has to move when the
 // installation does rather than reporting a constant.
 func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 
 	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepOauthApp); step.Configured {
@@ -222,6 +226,7 @@ func TestInstallationSetupOverHTTPTracksTheGoogleApp(t *testing.T) {
 // BUILD does not implement the operation and send an integrator looking for a
 // newer version that cannot help.
 func TestGoogleAppOverHTTPWithoutAVaultIsUnavailableNotUnimplemented(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t) // no compose.WithKeyvault
 	e.BootstrapWorkspace(t)
 	secret := httpSecret
@@ -282,6 +287,7 @@ func storedAppCtx(t *testing.T, e *apptest.AppEnv) context.Context {
 // build their consent pair in two functions. So the rule could reach one and
 // not the other.
 func TestAConnectorAppFromEnvBeatsTheStoredOne(t *testing.T) {
+	t.Parallel()
 	e, vault := setupGoogleAppWithEnvApp(t)
 	stored := capture.NewConnectorAppStore(compose.NewSettingsStore(e.Pool), vault, nil)
 	if err := stored.Set(storedAppCtx(t, e), capture.AppProviderGoogle, httpClientID, httpSecret, ""); err != nil {
@@ -339,6 +345,7 @@ func TestAConnectorAppFromEnvBeatsTheStoredOne(t *testing.T) {
 
 // The Microsoft app takes the same lock from its own environment pair.
 func TestAMicrosoftAppFromEnvLocksTheStoredOne(t *testing.T) {
+	t.Parallel()
 	e, _ := setupGoogleAppWithEnvApp(t, compose.WithGraphCapture(compose.GraphConfig{
 		ClientID: "00000000-0000-0000-0000-00000000e0e0", ClientSecret: "from-the-environment",
 	}))
@@ -402,6 +409,7 @@ func storeCloudProviderKey(t *testing.T, e *apptest.AppEnv) {
 // `complete` would be reasoning from the server's own arithmetic — which is
 // exactly what readSetup exists to avoid.
 func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 
 	fresh := readSetup(t, e)
@@ -440,6 +448,7 @@ func TestOnlyTheModelBindingBlocksFirstRun(t *testing.T) {
 // real call, and reporting it ready would send an admin through onboarding into
 // a cold start that cannot run.
 func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 
 	if step := setupStep(t, e, crmcontracts.InstallationSetupStepStepAiModels); step.Configured {
@@ -474,6 +483,7 @@ func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
 // looks like from here, and it exercises the real unseal failing for the real
 // reason.
 func TestAStoredAppWhoseSecretWillNotOpenIsNotReportedAsUnconfigured(t *testing.T) {
+	t.Parallel()
 	e, _ := apptest.SetupGoogleConnect(t, "", "")
 	secret := httpSecret
 	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",
@@ -517,6 +527,7 @@ func TestAStoredAppWhoseSecretWillNotOpenIsNotReportedAsUnconfigured(t *testing.
 // step is the one they can leave until later. Swapping the two would walk them
 // into configuring a mailbox for a product that cannot yet think.
 func TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 	var setup crmcontracts.InstallationSetup
 	if status := e.Call(t, "GET", "/v1/installation/setup", nil, nil, &setup); status != http.StatusOK {
@@ -540,6 +551,7 @@ func TestTheSetupReportListsTheStepsInTheOrderOnboardingWalksThem(t *testing.T) 
 // by vendor: a second copy of the store and the screen would have drifted on
 // exactly the field only one vendor has.
 func TestMicrosoftAppOverHTTPIsItsOwnAppAndCarriesADirectory(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 	const entraID = "11111111-2222-3333-4444-555555555555"
 	secret, directory := "entra-over-the-wire", "99999999-8888-7777-6666-555555555555"
@@ -576,6 +588,7 @@ func TestMicrosoftAppOverHTTPIsItsOwnAppAndCarriesADirectory(t *testing.T) {
 // The refusals only Microsoft has. Each is a value that would read as configured
 // while authorizing a population nobody vetted, or nothing at all.
 func TestMicrosoftAppOverHTTPRefusesAnAliasAndAForeignClientID(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 	secret := "entra-over-the-wire"
 	alias := "common"
@@ -632,6 +645,7 @@ func TestMicrosoftAppOverHTTPRefusesAnAliasAndAForeignClientID(t *testing.T) {
 // would seal somebody's Entra secret under the Google key, where the Google
 // connector would present it and the Microsoft one would never find it.
 func TestAnUnknownVendorIsNotFoundRatherThanDefaulted(t *testing.T) {
+	t.Parallel()
 	e := setupConnectorAppHTTP(t)
 	secret := "never-sealed"
 	for _, verb := range []string{"GET", "DELETE"} {
@@ -662,6 +676,7 @@ func TestAnUnknownVendorIsNotFoundRatherThanDefaulted(t *testing.T) {
 // A client id the environment sets without its secret composes no app. So it
 // locks nothing, and the stored app stays the admin's to write and remove.
 func TestAnEnvClientIDWithoutItsSecretLeavesTheStoredAppWritable(t *testing.T) {
+	t.Parallel()
 	e, _ := apptest.SetupGoogleConnect(t, "env-only.apps.googleusercontent.com", "")
 	secret := httpSecret
 	if status := e.Call(t, "PUT", "/v1/installation/oauth-apps/google",

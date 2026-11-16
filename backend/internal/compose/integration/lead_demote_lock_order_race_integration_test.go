@@ -55,6 +55,7 @@ const (
 )
 
 func TestTheDemoteTakesTheContactBeforeTheLead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	t.Run("parked on the contact, it is not holding the lead", func(t *testing.T) {

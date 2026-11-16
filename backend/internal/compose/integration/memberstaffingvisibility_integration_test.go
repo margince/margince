@@ -22,6 +22,7 @@ import (
 )
 
 func TestMemberAdministrationCountsDoNotDiscloseUnreadableStaffing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Hidden account", &e.Rep2)
 	pipeline, stage, _ := integration.DealFixture(t, e)
@@ -78,6 +79,7 @@ func TestMemberAdministrationCountsDoNotDiscloseUnreadableStaffing(t *testing.T)
 }
 
 func TestStaffingMetadataRequiresMemberAdministration(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	for _, scenario := range []struct {
 		name string

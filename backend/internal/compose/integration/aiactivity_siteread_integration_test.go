@@ -165,6 +165,7 @@ func (f *websiteReadFixture) projection(t *testing.T) projectedRead {
 // rep's live work from the moment it is queued, named for the company, with a
 // lease so a queue nobody drains cannot render as live forever.
 func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	f.drain(t)
 
@@ -195,6 +196,7 @@ func TestAQueuedWebsiteReadIsProjectedAsTheRepsOwnLiveWork(t *testing.T) {
 // for the whole crawl — and the crawl's outcome settles it. A finished read
 // stops carrying a lease: nothing about a closed occurrence can go stale.
 func TestAWebsiteReadRunsAndSettlesInTheProjection(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -239,6 +241,7 @@ func TestAWebsiteReadRunsAndSettlesInTheProjection(t *testing.T) {
 // says where it stopped — the reason is the record, the state is the
 // interruption.
 func TestAWebsiteReadThatFilledItsPageBudgetSettlesDoneWithItsStopReason(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -267,6 +270,7 @@ func TestAWebsiteReadThatFilledItsPageBudgetSettlesDoneWithItsStopReason(t *test
 // extraction lane, which is the shape stopped_reason alone cannot see, since
 // the row spells it with the cap's own reason.
 func TestAWebsiteReadThatAlsoLostALaneStaysDegraded(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -292,6 +296,7 @@ func TestAWebsiteReadThatAlsoLostALaneStaysDegraded(t *testing.T) {
 // read up again reopens it under a NEW attempt, which is the reopening the
 // projection's guard admits and a state-only guard would refuse.
 func TestADeferredWebsiteReadSettlesAndReopensOnTheNextClaim(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	if _, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease); err != nil {
 		t.Fatalf("BeginSiteRead: %v", err)
@@ -333,6 +338,7 @@ func TestADeferredWebsiteReadSettlesAndReopensOnTheNextClaim(t *testing.T) {
 // failure it recovered from — no finish time, no reason — because a running row
 // that still says when it ended reads as settled to anything that asks.
 func TestARetryableFailureReclaimedIsALiveSecondAttempt(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	claim, err := f.env.Contacts.BeginSiteRead(f.worker, f.readID, siteReadLease)
 	if err != nil {
@@ -376,6 +382,7 @@ func TestARetryableFailureReclaimedIsALiveSecondAttempt(t *testing.T) {
 // and one per pass, at a grain nobody asked about. The passes are still TRACED;
 // what they no longer do is claim to be work of their own.
 func TestOneWebsiteReadIsOneOccurrenceWhateverItRunsInside(t *testing.T) {
+	t.Parallel()
 	f := newWebsiteReadFixture(t)
 	f.drain(t)
 

@@ -36,6 +36,7 @@ import (
 // worker's send path that refusal is what a marketing or correspondence message
 // meets at fire time, in production, having been accepted at schedule time.
 func TestAScheduledMessageCarryingAnUnsubscribeLinkStillFires(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	// Without the send grant the schedule refuses at the pre-flight, and this
 	// case would fail before it reached the origin it is about.

@@ -20,6 +20,7 @@ import (
 // Expected close dates are whole days, so a window that ends partway through
 // a day still counts the deals closing on it.
 func TestACustomCloseWindowCountsEveryDayItTouches(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

@@ -18,6 +18,7 @@ import (
 )
 
 func TestPipelineStageConfigLifecycle(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Cfg E2E", "cfg@fable.test", "Admin")
 
@@ -95,6 +96,7 @@ func TestPipelineStageConfigLifecycle(t *testing.T) {
 }
 
 func TestDealStakeholdersView(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	var pipelines struct {
 		Data []struct {
@@ -146,6 +148,7 @@ func TestDealStakeholdersView(t *testing.T) {
 // won stage sent without odds takes 100 as createStage fills it, rather than
 // tripping the terminal-odds CHECK.
 func TestANewPipelinesClosingPairTakesItsPinnedOddsAndToleratesAPipelineID(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Pipeline Close", "pipeline-close@fable.test", "Admin")
 	var created struct {

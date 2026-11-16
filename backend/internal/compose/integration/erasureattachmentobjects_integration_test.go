@@ -44,6 +44,7 @@ func uploadSubjectFile(t *testing.T, e *Env, blob blobstore.Store, contact ids.U
 // with the row delete. The row comes back with its bytes, and nothing is
 // queued for the reap to delete.
 func TestAFailedErasureKeepsTheAttachmentObjectItsRowNames(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	contact := e.SeedContact(t, "Failed erasure", &e.Rep1)

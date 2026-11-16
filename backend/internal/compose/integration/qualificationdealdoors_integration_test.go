@@ -15,6 +15,7 @@ import (
 )
 
 func TestQualificationAddsStakeholdersToTheSameExistingDealOnBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "qualification-existing-deal", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Renewal buyer", "source": "manual"})
@@ -59,6 +60,7 @@ func TestQualificationAddsStakeholdersToTheSameExistingDealOnBothDoors(t *testin
 }
 
 func TestQualificationRejectsConflictingDealChoicesOnBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "qualification-conflicting-deal", "read", "write")
 	id := createdID(t, d.e, "/v1/leads", AnyMap{"full_name": "Buyer", "email": "buyer@choices.test", "source": "manual"})
 	deal := "00000000-0000-4000-8000-000000000001"
@@ -84,6 +86,7 @@ func TestQualificationRejectsConflictingDealChoicesOnBothDoors(t *testing.T) {
 }
 
 func TestQualificationCanOpenADealAtTheChosenEmployerOnBothDoors(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "qualification-new-employer-deal", "read", "write")
 	for _, door := range []string{"rest", "tool"} {
 		t.Run(door, func(t *testing.T) {

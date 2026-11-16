@@ -22,6 +22,7 @@ import (
 )
 
 func TestListActivitiesCarriesItsLinks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	admin := e.Admin()
@@ -75,6 +76,7 @@ func TestListActivitiesCarriesItsLinks(t *testing.T) {
 // by every seat, so the hidden target here is a capture-private contact: only
 // its owner may read it.
 func TestListActivitiesDropsLinksToRecordsOutOfRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 
@@ -123,6 +125,7 @@ var activityLinkRepPerms = principal.Permissions{
 }
 
 func TestListActivitiesAppliesTheDeclaredQueryFilter(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 	admin := e.Admin()

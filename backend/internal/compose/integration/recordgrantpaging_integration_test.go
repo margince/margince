@@ -28,6 +28,7 @@ import (
 // walk is asserted by what it SEES across pages, and the pages are sized
 // smaller than the fixture so a boundary is actually crossed.
 func TestTheRecordGrantListServesThePageItWasAskedFor(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, AdminPerms)
 	shares := identity.NewServiceFor(e.DB())
@@ -93,6 +94,7 @@ func TestTheRecordGrantListServesThePageItWasAskedFor(t *testing.T) {
 // limit is, including no limit at all, and a hard-coded 50 stops testing the
 // bound the day the contract moves it.
 func TestTheRecordGrantListIsBoundedWithoutADial(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, AdminPerms)
 	shares := identity.NewServiceFor(e.DB())

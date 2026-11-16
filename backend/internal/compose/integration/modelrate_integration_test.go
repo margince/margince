@@ -31,6 +31,7 @@ func modelRateOf(rows []ai.ModelRateRow, provider, model string) (ai.ModelRateRo
 }
 
 func TestModelRateAppendForwardAndConversion(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB())
 	ctx := e.Admin()
@@ -84,6 +85,7 @@ func TestModelRateAppendForwardAndConversion(t *testing.T) {
 }
 
 func TestModelRateRejects(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB())
 	ctx := e.Admin()
@@ -109,6 +111,7 @@ func TestModelRateRejects(t *testing.T) {
 }
 
 func TestModelRateWriteDeniedForNonAdmin(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB())
 	repCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -119,6 +122,7 @@ func TestModelRateWriteDeniedForNonAdmin(t *testing.T) {
 }
 
 func TestModelRateReadDeniedForNonAdmin(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB())
 	roCtx := e.As(e.Rep1, []ids.UUID{e.Team1}, ReadOnlyPerms)
@@ -128,6 +132,7 @@ func TestModelRateReadDeniedForNonAdmin(t *testing.T) {
 }
 
 func TestModelRateWritesAuditRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := ai.NewRateStore(e.DB())
 	if _, err := store.SetModelRate(e.Admin(), ai.SetModelRateInput{Provider: "anthropic", ModelID: "m", InputUsd: "1", OutputUsd: "1", CacheReadUsd: "0", CacheWriteUsd: "0", EffectiveDate: time.Now().UTC()}); err != nil {
@@ -155,6 +160,7 @@ func modelRatePerms(g principal.ObjectGrant) principal.Permissions {
 // 403 sentinel, and a refused write leaves the sheet untouched. The fx_rate
 // sheet carries the identical pair.
 func TestModelRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Pinned, not sampled: the store validates the effective day against its
 	// OWN clock inside the transaction, so a real clock crossing UTC midnight
@@ -211,6 +217,7 @@ func TestModelRateCreateAndUpdateGrantsGateSeparately(t *testing.T) {
 // audit_log.authorization_rule attributes the update grant rather than the
 // create grant the insert used.
 func TestModelRateOverwriteAuditsAsUpdate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	// Pinned so both writes land on the SAME day: a real clock crossing UTC
 	// midnight between them would create two rows and audit two creates.
@@ -274,6 +281,7 @@ func modelRateEntry(ctx context.Context, t *testing.T, store *ai.RateStore, mode
 // removed something. The lane names the entry as the sheet files it (its head
 // row), so the wrong lane is a miss rather than a removal of somebody else's.
 func TestModelRateDeleteRemovesTheWholeEntryAndNothingElse(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })
@@ -317,6 +325,7 @@ func TestModelRateDeleteRemovesTheWholeEntryAndNothingElse(t *testing.T) {
 // The removal is a correction: the update grant alone carries it through the
 // transaction, and create alone is refused at the door.
 func TestModelRateDeleteTakesTheUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	today := pinnedRateDay()
 	store := ai.NewRateStore(e.DB()).SetClock(func() time.Time { return today })

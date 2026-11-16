@@ -209,6 +209,7 @@ func assertRefuses(t *testing.T, refused []string, want ...string) {
 // A role that masks the amount on every deal is refused the value dials, and
 // /me says so before the reader picks one.
 func TestMeNamesTheValueFiltersARoleMaskRefuses(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 	narrowSignedInRole(t, e, "reach_amount_mask", `{}`)
 	maskDealField(t, e, "reach_amount_mask", "amount_minor", "always")
@@ -221,6 +222,7 @@ func TestMeNamesTheValueFiltersARoleMaskRefuses(t *testing.T) {
 // A mask that lifts on the deals the reader may change still withholds the
 // rest. So the value dials are refused, even on a page of the reader's own deals.
 func TestMeNamesTheValueFiltersAWriteConditionedMaskRefuses(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 	pipelineID, stageID, _ := companyRollupOpenStage(t, e)
 	createSearchableDeal(t, e, pipelineID, stageID, "The reader's own deal", "")
@@ -235,6 +237,7 @@ func TestMeNamesTheValueFiltersAWriteConditionedMaskRefuses(t *testing.T) {
 // A deal whose company is private to its captor masks company_id on that row
 // alone. The role withholds nothing, so the country dial stays offered.
 func TestAPrivateCompanyOnOneDealRefusesNoFilter(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 	pipelineID, stageID, _ := companyRollupOpenStage(t, e)
 	var company struct {
@@ -290,6 +293,7 @@ func TestAPrivateCompanyOnOneDealRefusesNoFilter(t *testing.T) {
 // The country is the company's, so a seat that may not read companies is
 // refused it. The company_id filter stays the list's to answer.
 func TestMeNamesTheCountryFilterForASeatWithoutCompanyRead(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 	narrowSignedInRole(t, e, "reach_no_company_read", `{"company": {"create": false, "read": false, "update": false, "delete": false}}`)
 
@@ -301,6 +305,7 @@ func TestMeNamesTheCountryFilterForASeatWithoutCompanyRead(t *testing.T) {
 // A seat that may not read lists is refused list_id where the list is resolved,
 // before any deal clause runs. /me names it all the same.
 func TestMeNamesTheListFilterForASeatWithoutListRead(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 	narrowSignedInRole(t, e, "reach_no_list_read", `{"list": {"create": false, "read": false, "update": false, "delete": false}}`)
 
@@ -311,6 +316,7 @@ func TestMeNamesTheListFilterForASeatWithoutListRead(t *testing.T) {
 
 // The signed-in admin, unnarrowed, is refused nothing, and the list agrees.
 func TestMeRefusesNoDealFilterToTheAdmin(t *testing.T) {
+	t.Parallel()
 	e := reachApp(t)
 
 	refused := refusedDealFilters(t, e)

@@ -59,6 +59,7 @@ func probeUnit(t *testing.T, version extension.Version, personal ...string) exte
 }
 
 func TestBootRefusesAChangedDeclarationWithoutANewVersion(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	verify := func(e extension.Extension) error {
 		return compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{e})
@@ -79,6 +80,7 @@ func TestBootRefusesAChangedDeclarationWithoutANewVersion(t *testing.T) {
 }
 
 func TestBootAcceptsAKeylessTableThatHoldsNoPersonalColumn(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	unit := probeUnit(t, "1.0.0", "body")
 	owner := OwnerConn(t)
@@ -107,6 +109,7 @@ func TestBootAcceptsAKeylessTableThatHoldsNoPersonalColumn(t *testing.T) {
 }
 
 func TestBootRefusesATableTheDeclarationLeavesOut(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	unit := probeUnit(t, "1.0.0", "body")
 	unit.Privacy = nil
@@ -117,6 +120,7 @@ func TestBootRefusesATableTheDeclarationLeavesOut(t *testing.T) {
 }
 
 func TestBootRefusesADeclaredColumnTheTableLacks(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 
 	if err := compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{probeUnit(t, "1.0.0", "no_such_column")}); err == nil {
@@ -125,6 +129,7 @@ func TestBootRefusesADeclaredColumnTheTableLacks(t *testing.T) {
 }
 
 func TestBootRefusesARequiredPersonalColumnTheCoreCannotBlank(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	unit := probeUnit(t, "1.0.0")
 	if _, err := OwnerConn(t).Exec(t.Context(),
@@ -139,6 +144,7 @@ func TestBootRefusesARequiredPersonalColumnTheCoreCannotBlank(t *testing.T) {
 }
 
 func TestMergeIsRefusedWhileExtensionRecordsDependOnTheSource(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	probeUnit(t, "1.0.0")
@@ -174,6 +180,7 @@ func TestMergeIsRefusedWhileExtensionRecordsDependOnTheSource(t *testing.T) {
 }
 
 func TestBootRefusesAnEarlierVersionThatComesBackWithAnotherDeclaration(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	verify := func(e extension.Extension) error {
 		return compose.VerifyExtensionPrivacy(t.Context(), env.Pool, []extension.Extension{e})
@@ -204,6 +211,7 @@ func probeExec(t *testing.T, stmts ...string) {
 }
 
 func TestBootRefusesALinkColumnThatIsNotAUUID(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	unit := probeUnit(t, "1.0.0")
 	probeExec(t, `ALTER TABLE ext.ext_probe_note ADD COLUMN contact_ref text`)
@@ -215,6 +223,7 @@ func TestBootRefusesALinkColumnThatIsNotAUUID(t *testing.T) {
 }
 
 func TestBootRefusesARequiredPersonalColumnABlankValueWouldBreak(t *testing.T) {
+	t.Parallel()
 	const nick = `ALTER TABLE ext.ext_probe_note ADD COLUMN nick text NOT NULL DEFAULT 'x'`
 	for name, statements := range map[string][]string{
 		"check":             {nick + ` CHECK (length(nick) > 0)`},
@@ -245,6 +254,7 @@ func TestBootRefusesARequiredPersonalColumnABlankValueWouldBreak(t *testing.T) {
 }
 
 func TestBootLeavesAUnitTheTablesOfALongerNamedUnit(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	probe := probeUnit(t, "1.0.0", "body")
 	probeExec(t,
@@ -267,6 +277,7 @@ func TestBootLeavesAUnitTheTablesOfALongerNamedUnit(t *testing.T) {
 }
 
 func TestBootRefusesAPersonalTableWhoseRowsTheCoreCannotAuditByID(t *testing.T) {
+	t.Parallel()
 	for name, table := range map[string]string{
 		"no id column":  `CREATE TABLE ext.ext_probe_log (contact_id uuid, body text)`,
 		"id not uuid":   `CREATE TABLE ext.ext_probe_log (id bigint PRIMARY KEY, contact_id uuid, body text)`,
@@ -301,6 +312,7 @@ func TestBootRefusesAPersonalTableWhoseRowsTheCoreCannotAuditByID(t *testing.T) 
 }
 
 func TestBootRefusesALinkColumnTheTableLacks(t *testing.T) {
+	t.Parallel()
 	env := Setup(t)
 	unit := probeUnit(t, "1.0.0")
 	unit.Privacy[0].Links = []privacy.Link{{Column: "deal_ref", Record: privacy.Contact}}
@@ -312,6 +324,7 @@ func TestBootRefusesALinkColumnTheTableLacks(t *testing.T) {
 }
 
 func TestBootRefusesAnAgeColumnARetentionWindowCannotCountFrom(t *testing.T) {
+	t.Parallel()
 	for name, column := range map[string]struct{ name, add string }{
 		"missing":             {name: "kept_at"},
 		"not a point in time": {name: "body"},
@@ -335,6 +348,7 @@ func TestBootRefusesAnAgeColumnARetentionWindowCannotCountFrom(t *testing.T) {
 }
 
 func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
+	t.Parallel()
 	for name, column := range map[string]string{"timestamptz": "noted_at", "date": "noted_on"} {
 		t.Run(name, func(t *testing.T) {
 			env := Setup(t)
@@ -350,6 +364,7 @@ func TestBootAcceptsADeclaredAgeColumn(t *testing.T) {
 }
 
 func TestBootFollowsACascadeToTheReferenceThatWouldStopIt(t *testing.T) {
+	t.Parallel()
 	for clause, refused := range map[string]bool{"ON DELETE RESTRICT": true, "ON DELETE CASCADE": false} {
 		t.Run(clause, func(t *testing.T) {
 			env := Setup(t)
@@ -380,6 +395,7 @@ func TestBootFollowsACascadeToTheReferenceThatWouldStopIt(t *testing.T) {
 }
 
 func TestBootLetsOnlyACascadeReferenceASweptTable(t *testing.T) {
+	t.Parallel()
 	for clause, refused := range map[string]bool{
 		"": true, "ON DELETE RESTRICT": true, "ON DELETE SET NULL": true, "ON DELETE SET DEFAULT": true,
 		"ON DELETE CASCADE": false,
@@ -412,6 +428,7 @@ func TestBootLetsOnlyACascadeReferenceASweptTable(t *testing.T) {
 // A table a merge moves rows of needs a row id: the merge audits each moved row
 // by it. That holds even for a table privacy admits without one.
 func TestBootRefusesAReachedTableWithoutARowID(t *testing.T) {
+	t.Parallel()
 	for name, table := range map[string]string{
 		"no id column":  `CREATE TABLE ext.ext_probe_marker (company_id uuid PRIMARY KEY)`,
 		"id not uuid":   `CREATE TABLE ext.ext_probe_marker (id bigint PRIMARY KEY, company_id uuid)`,

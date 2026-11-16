@@ -44,6 +44,7 @@ type scaleCase struct {
 }
 
 func TestAConversionAppliesBothMinorUnitScales(t *testing.T) {
+	t.Parallel()
 	cases := []scaleCase{
 		{
 			currency: "VND", amountMinor: 2_400_000_000, rate: "0.000035",
@@ -107,6 +108,7 @@ func TestAConversionAppliesBothMinorUnitScales(t *testing.T) {
 // minor-unit parity test, and the closed-deal case below, which converts
 // through deals.ConvertToBase in the writer.
 func TestTheForecastReadsTheSharedExpression(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	st := seedForecastFXPipeline(t, e)
 	seedForecastFXDeal(t, e, st, 2_400_000_000, "VND", midQuarter)
@@ -153,6 +155,7 @@ func TestTheForecastReadsTheSharedExpression(t *testing.T) {
 // column: a test that supplies its own version of production proves nothing
 // about production.
 func TestClosingADealFreezesTheScaledAmount(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()

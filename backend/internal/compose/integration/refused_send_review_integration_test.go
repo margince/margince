@@ -117,6 +117,7 @@ func heldSends(t *testing.T, e *apptest.AppEnv) []heldRow {
 // Now the exact bytes are frozen into a held scheduled_send before the review
 // is opened, and the review binds to that row.
 func TestARefusedSendHoldsItsMessageAndTheReviewBindsToIt(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if held := heldSends(t, c.AppEnv); len(held) != 0 {
@@ -167,6 +168,7 @@ func TestARefusedSendHoldsItsMessageAndTheReviewBindsToIt(t *testing.T) {
 // moment; this is the opposite — a message that must not go anywhere until a
 // human decides something. A timer would fire it.
 func TestAHeldRefusalIsNotWaitingToBeSent(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -216,6 +218,7 @@ func TestAHeldRefusalIsNotWaitingToBeSent(t *testing.T) {
 // what has to be true is that a held row this seat does not own is not a row
 // this seat's refusal reuses.
 func TestOneRepsHeldMessageIsNotReusedForAnother(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	// The other seat's row is planted FIRST, and it is the only held row in the
@@ -302,6 +305,7 @@ func TestOneRepsHeldMessageIsNotReusedForAnother(t *testing.T) {
 // A REFUSED SEND LEAVES A REVIEW. This is the slice: the message stopped, and
 // there is now something to look at rather than a code in a response body.
 func TestARefusedSendLeavesAReviewBehind(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if reviews := openReviews(t, c.AppEnv); len(reviews) != 0 {
@@ -332,6 +336,7 @@ func TestARefusedSendLeavesAReviewBehind(t *testing.T) {
 // table, not a piece of work — the rep has no queue to search and no id to
 // quote, so the reference has to travel with the answer they already get.
 func TestTheRefusalNamesTheReviewItOpened(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var problem struct {
@@ -369,6 +374,7 @@ func TestTheRefusalNamesTheReviewItOpened(t *testing.T) {
 // row. Now the second press finds the standing held row, reuses it, and the
 // unique index on the live intent updates the review in place.
 func TestPressingSendTwiceHoldsOneMessageAndOneReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	for range 2 {
@@ -395,6 +401,7 @@ func TestPressingSendTwiceHoldsOneMessageAndOneReview(t *testing.T) {
 // recipient — and a rep who fixed their message would find the review still
 // showing the one they had replaced.
 func TestAChangedMessageIsItsOwnHeldSendAndReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	for _, subject := range []string{"First attempt", "Second, reworded"} {
@@ -431,6 +438,7 @@ func TestAChangedMessageIsItsOwnHeldSendAndReview(t *testing.T) {
 // fire an emptied message at an emptied address list. The row stays readable
 // and stops being answerable.
 func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -496,6 +504,7 @@ func TestErasingASubjectClearsThemFromARefusedSendReview(t *testing.T) {
 // erasure, which is a subject's request failing on the very message they asked
 // to be rid of.
 func TestErasingASubjectEmptiesAndCancelsTheirHeldMessage(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -556,6 +565,7 @@ func TestErasingASubjectEmptiesAndCancelsTheirHeldMessage(t *testing.T) {
 // contact_email, which the sweep deletes, so no later erasure of the same contact
 // would find the row either.
 func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
@@ -626,6 +636,7 @@ func TestErasingASubjectReachesAMessageAddressedInAnotherCase(t *testing.T) {
 // which is true; what they do not get is a message to resume, which is right,
 // because there is nobody left to send it to.
 func TestARefusalWhoseRecipientWasErasedHoldsNothing(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	// erasure_suppression is what an erasure leaves behind so that re-capture
@@ -653,6 +664,7 @@ func TestARefusalWhoseRecipientWasErasedHoldsNothing(t *testing.T) {
 // open it: the row was written, the rep was handed the id, and there was no
 // door.
 func TestTheRepCanOpenTheReviewTheirRefusalNamed(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -705,6 +717,7 @@ func TestTheRepCanOpenTheReviewTheirRefusalNamed(t *testing.T) {
 // refusal is the reviewer path and has its own test — what must not happen is a
 // seat holding neither door seeing anything at all.
 func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
@@ -758,6 +771,7 @@ func TestAnotherSeatsReviewIsNotFound(t *testing.T) {
 // from 409 to 422 across every client and test that already recognised it. The
 // reference is orthogonal to classification and must stay that way.
 func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var problem struct {
@@ -811,6 +825,7 @@ func TestARefusedSendNamesItsReviewWhereAMachineCanReadIt(t *testing.T) {
 // grant, and nothing to a seat without it. No standing per-contact override is
 // offered to either.
 func TestARefusalOffersTheDirectedSendAndNeverAStandingOverride(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	send := func(t *testing.T) (actions []string, details map[string]json.RawMessage) {
@@ -867,6 +882,7 @@ func TestARefusalOffersTheDirectedSendAndNeverAStandingOverride(t *testing.T) {
 // owes is that an agent naming the CANONICAL field is not also made to name the
 // legacy one.
 func TestNamingTheKindIsEnoughWithoutTheLegacyKey(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 	c.activityID = logConsentInbound(t, c.AppEnv, c.contactID)
 
@@ -894,6 +910,7 @@ func TestNamingTheKindIsEnoughWithoutTheLegacyKey(t *testing.T) {
 // will not guess a category, which is right; what it owes is a review rather
 // than a dead end.
 func TestASendNamingNoKindAtAllIsRefusedWithAReview(t *testing.T) {
+	t.Parallel()
 	c := setupConsent(t)
 
 	var problem struct {

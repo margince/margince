@@ -248,6 +248,7 @@ func (w *accessWorld) opensAndChanges(ctx context.Context, t *testing.T, table s
 // The agreement is asked of the administrator's answer, the one that judges
 // every member with their teams: a rep's answer leaves teams out on purpose.
 func TestWhoCanSeeARecordAgreesWithItsReadAndEditPaths(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	for _, rec := range []struct {
 		name  string
@@ -287,6 +288,7 @@ func TestWhoCanSeeARecordAgreesWithItsReadAndEditPaths(t *testing.T) {
 }
 
 func TestAWorkspaceContactListsEveryReaderAndOnlyThem(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	e := w.e
 	listed := w.everyone(t, e.AdminUser, "contact", w.workspaceContact)
@@ -314,6 +316,7 @@ func TestAWorkspaceContactListsEveryReaderAndOnlyThem(t *testing.T) {
 // arm reads that membership: the lead can still change the contact, and the
 // answer says why.
 func TestADeactivatedOwnersTeamLeadStillHasAReason(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	lead := w.everyone(t, w.e.AdminUser, "contact", w.goneContact)[w.e.Rep2]
 	if !lead.CanChange || !hasCode(lead.ChangeReasons, crmcontracts.RecordAccessReasonCodeSameTeamAsOwner) {
@@ -322,6 +325,7 @@ func TestADeactivatedOwnersTeamLeadStillHasAReason(t *testing.T) {
 }
 
 func TestARecordAReadSeatOwnsOpensForItButDoesNotChange(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	owner, ok := w.everyone(t, w.e.Rep1, "contact", w.readerContact)[w.reader]
 	if !ok || owner.Group != crmcontracts.RecordAccessMemberGroupOwner {
@@ -340,6 +344,7 @@ func TestARecordAReadSeatOwnsOpensForItButDoesNotChange(t *testing.T) {
 }
 
 func TestAPrivateContactListsItsOwnerAndLiveSharesOnly(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	e := w.e
 	answer, listed := w.answer(t, e.AdminUser, "contact", w.privateContact)
@@ -367,6 +372,7 @@ func TestAPrivateContactListsItsOwnerAndLiveSharesOnly(t *testing.T) {
 }
 
 func TestACompanyNobodyOwnsHasNoOwnerReasons(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	for member, got := range w.everyone(t, w.e.AdminUser, "company", w.ownerlessCompany) {
 		for _, reason := range slices.Concat(got.ReadReasons, got.ChangeReasons) {
@@ -381,6 +387,7 @@ func TestACompanyNobodyOwnsHasNoOwnerReasons(t *testing.T) {
 // in which team. Their answer must not either: moving a member between teams
 // leaves every row they are shown exactly as it was.
 func TestAColleagueOutsideMemberAdministrationCannotTellWhoIsInATeam(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	e := w.e
 	if _, err := w.directory.CreateRecordGrant(w.as(t, e.Rep1), identity.CreateGrantInput{
@@ -414,6 +421,7 @@ func TestAColleagueOutsideMemberAdministrationCannotTellWhoIsInATeam(t *testing.
 }
 
 func TestOnlyAMemberAdministratorSeesRolesAndTeams(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	e := w.e
 	for member, got := range w.everyone(t, e.Rep3, "contact", w.privateContact) {
@@ -433,6 +441,7 @@ func TestOnlyAMemberAdministratorSeesRolesAndTeams(t *testing.T) {
 }
 
 func TestACallerWhoCannotOpenTheRecordLearnsNothing(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	e := w.e
 	private := string(crmcontracts.ContactVisibilityOwner)
@@ -448,6 +457,7 @@ func TestACallerWhoCannotOpenTheRecordLearnsNothing(t *testing.T) {
 }
 
 func TestTheAnswerPagesWithAnExactTotal(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	limit := 2
 	first, err := w.reads.Read(w.as(t, w.e.AdminUser), "contact", w.workspaceContact, nil, &limit)
@@ -468,6 +478,7 @@ func TestTheAnswerPagesWithAnExactTotal(t *testing.T) {
 // verdict across the statement boundary, and the newest member, who owns the
 // contact, is on a later page and still in the owner group.
 func TestEveryMemberKeepsTheirOwnVerdictPastOneStatement(t *testing.T) {
+	t.Parallel()
 	w := setupAccessWorld(t)
 	e := w.e
 	e.WsExec(t, `INSERT INTO app_user (id, email, display_name, seat_type, created_at)

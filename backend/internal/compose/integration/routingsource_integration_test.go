@@ -73,6 +73,7 @@ func discard() *slog.Logger { return slog.New(slog.DiscardHandler) }
 // The case is worth a database because "ignored" has to mean ignored even where
 // the old arm was most tempting: nothing stored AND a perfectly valid file.
 func TestAValidRoutingFileDoesNotBindAnInstallation(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	path := writeRouting(t, offlineRouting)
 
@@ -90,6 +91,7 @@ func TestAValidRoutingFileDoesNotBindAnInstallation(t *testing.T) {
 // stale mount or a deleted file to break. Failing the boot would be the right
 // answer only while the file is load-bearing, and it no longer is.
 func TestAnUnreadableRoutingPathIsIgnored(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 
 	cfg, err := compose.ResolveRouting(context.Background(), e.Pool,
@@ -107,6 +109,7 @@ func TestAnUnreadableRoutingPathIsIgnored(t *testing.T) {
 // an old --ai-routing on the command line: the flag cannot quietly re-point
 // which vendor sees the installation's text.
 func TestAStoredBindingWinsOverAnyRoutingPath(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 
@@ -139,6 +142,7 @@ embeddings: {provider: fake, model: fake-embed, dimensions: 8}
 // An installation that names no routing file and has nothing stored is not a
 // boot error: its AI lanes are simply absent, exactly as before the move.
 func TestAnInstallationThatBindsNothingResolvesUnconfigured(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 
 	cfg, err := compose.ResolveRouting(context.Background(), e.Pool, "", config.Static(nil), discard())
@@ -154,6 +158,7 @@ func TestAnInstallationThatBindsNothingResolvesUnconfigured(t *testing.T) {
 // that reaches the row some other way cannot land something the boot would have
 // refused. ai.FromStored is where that bar is applied on the way out.
 func TestAStoredBindingIsValidatedOnTheWayOut(t *testing.T) {
+	t.Parallel()
 	if _, err := ai.FromStored(ai.RoutingConfig{Profile: ai.ProfileEUHosted}, config.Static(nil)); err == nil {
 		t.Error("a binding with no tiers finalized without error")
 	}
@@ -166,6 +171,7 @@ func TestAStoredBindingIsValidatedOnTheWayOut(t *testing.T) {
 // confirm a change the process kept ignoring, which is a disagreement nobody
 // can see. So the write and the adoption are proved in one test rather than two.
 func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 
@@ -216,6 +222,7 @@ func TestAReplacedBindingReachesARunningRouterWithoutARestart(t *testing.T) {
 // the one the routing file was always held to, applied on the way in rather
 // than discovered at the first model call.
 func TestTheStoreRefusesABindingTheFileLoaderWouldHaveRefused(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.adminRoutingCtx()
 	store := ai.NewRoutingStore(compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
@@ -276,6 +283,7 @@ embeddings: {provider: fake, model: ` + model + `-embed, dimensions: 8}
 // The wording has to name the actual situation as well: "no stored binding"
 // would be misleading when there is no installation to hold one.
 func TestAnUnprovisionedBootStillAnnouncesTheIgnoredRoutingPath(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	// Archiving every workspace is what "unprovisioned" IS to this code path:
 	// singletonWorkspace enumerates the LIVE ones, so none left means the claim
@@ -311,6 +319,7 @@ func TestAnUnprovisionedBootStillAnnouncesTheIgnoredRoutingPath(t *testing.T) {
 // the flag used to be what supplied the binding, leaves the operator to discover
 // from a dead feature that their AI lanes are gone.
 func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	path := writeRouting(t, offlineRouting)
@@ -353,6 +362,7 @@ func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
 // Whoever binds first has to see that the credential for it has arrived.
 // /ai/provider-keys reports `configured` on the screen an admin opens to bind a
 // tier. A key a boot source sets is held whether or not a binding exists.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAKeyInTheEnvironmentReadsAsConfiguredOnAnInstallationThatHasBoundNothing(t *testing.T) {
 	e := SetupSearch(t)
 	apptest.BindEnv(t, []string{"GEMINI_API_KEY=a-gemini-key"})
@@ -393,6 +403,7 @@ func TestAKeyInTheEnvironmentReadsAsConfiguredOnAnInstallationThatHasBoundNothin
 // Insert-only, so the two halves of the claim are one test: it plants a binding
 // where there is none, and it does not touch one that exists.
 func TestADeclaredBindingReachesAnInstallationCreatedWithoutOne(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 
@@ -426,6 +437,7 @@ func TestADeclaredBindingReachesAnInstallationCreatedWithoutOne(t *testing.T) {
 // admin who re-points a lane in Settings -> AI would find the deployment's
 // value back on the next restart, with nothing saying why.
 func TestPlantingNeverOverwritesABindingTheInstallationAlreadyHas(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 
@@ -451,6 +463,7 @@ func TestPlantingNeverOverwritesABindingTheInstallationAlreadyHas(t *testing.T) 
 // installations declare no seed at all, and every one of them boots through
 // this call.
 func TestPlantingIsANoOpWhenTheDeploymentDeclaresNoBinding(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 
@@ -488,6 +501,7 @@ func routingSeedNode(t *testing.T, body string) yaml.Node {
 // inside its own transaction — so planting here would either fail or write a
 // row the bootstrap is about to write properly.
 func TestPlantingLeavesAnUnprovisionedInstallationAlone(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	// Archiving every workspace is what "unprovisioned" IS to this path:
@@ -514,6 +528,7 @@ func TestPlantingLeavesAnUnprovisionedInstallationAlone(t *testing.T) {
 // would turn one actionable failure into a recurring one nobody can act on
 // differently. So this plants nothing and lets the boot continue.
 func TestPlantingIsSilentOnASeedTheBootstrapAlreadyRefuses(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 

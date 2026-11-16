@@ -16,6 +16,7 @@ import (
 )
 
 func TestChangingDealCardLanguagePreservesTheReadersDismissal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	deal := ids.From[ids.DealKind](e.SeedDeal(t, "Original deal name", pipeline, stage, &e.Rep1))

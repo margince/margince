@@ -76,6 +76,7 @@ func seedDealActions(t *testing.T, e *Env, owner ids.UUID, n int, action, before
 }
 
 func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedEnrichedDeals(t, e, e.Rep1, 3)
@@ -135,6 +136,7 @@ func TestAGroupedLineOpensToEveryRecordWithItsChangeAndItsOwnUndo(t *testing.T) 
 // The arms read a row's images only for an update's sentence. A line about any
 // other action still shows its images, and so does its record.
 func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedDealActions(t, e, e.Rep1, 1, "advance_stage", `{"description": "Qualify"}`, `{"description": "Propose"}`)
 	// Both instants from the database's clock, which dated the entry.
@@ -176,6 +178,7 @@ func TestAStageMoveShowsItsImagesOnTheLineAndItsRecord(t *testing.T) {
 // A record the reader cannot see is not in the opened line either: the regroup
 // runs over the same row scope the page does.
 func TestAnOpenedLineHoldsOnlyRecordsTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedEnrichedDeals(t, e, e.Rep1, 2)
@@ -196,6 +199,7 @@ func TestAnOpenedLineHoldsOnlyRecordsTheReaderMaySee(t *testing.T) {
 // A field the reader's role withholds on the deal page is withheld in the opened
 // line too, with the money fields that travel with it.
 func TestAnOpenedLineWithholdsWhatTheReadersRoleMasks(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	since := time.Now().Add(-time.Hour)
 	seedDealUpdates(t, e, e.Rep1, 1,
@@ -225,6 +229,7 @@ func TestAnOpenedLineWithholdsWhatTheReadersRoleMasks(t *testing.T) {
 // The app's clock and the database's are two clocks. A line opened by an app
 // a little behind the database still opens to every record it counted.
 func TestALineOpensWhenTheAppClockTrailsTheDatabase(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	seedEnrichedDeals(t, e, e.Rep1, 3)
 	// Both instants come from the database's clock, which dated the entries.

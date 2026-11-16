@@ -70,6 +70,7 @@ func openTaskCountOn(t *testing.T, e *Env, entityType string, entity ids.UUID) i
 }
 
 func TestMailToAnAccountsContactClosesTheAccountsQuietReminder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	conn := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -121,6 +122,7 @@ func TestMailToAnAccountsContactClosesTheAccountsQuietReminder(t *testing.T) {
 // A touch closes the reminders on the records it reaches and no others: mail
 // to a deal's stakeholder answers the stakeholder's reminder, not the deal's.
 func TestATouchClosesOnlyTheRemindersOnTheRecordsItReaches(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	conn := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -164,6 +166,7 @@ func TestATouchClosesOnlyTheRemindersOnTheRecordsItReaches(t *testing.T) {
 // Only a genuine touch ends a silence. A note the product wrote itself would
 // not move the scan's anchor, so it does not close the reminder either.
 func TestTheEnginesOwnRowDoesNotCloseAQuietReminder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	conn := OwnerConn(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -234,6 +237,7 @@ func seedRemindedQuietDeal(t *testing.T, e *Env) ids.UUID {
 // reminder is about, and the anchor has not moved, so closing it would leave
 // the silence reported by nobody.
 func TestMailDatedBeforeTheAnchorLeavesTheQuietReminderOpen(t *testing.T) {
+	t.Parallel()
 	for name, at := range map[string]time.Time{
 		"older":         quietSince.AddDate(0, 0, -3),
 		"at the anchor": quietSince,
@@ -260,6 +264,7 @@ func TestMailDatedBeforeTheAnchorLeavesTheQuietReminderOpen(t *testing.T) {
 // The deal is still quiet since that mail, so the next scan asks once more,
 // naming the later date.
 func TestDelayedMailNewerThanTheAnchorClosesTheQuietReminder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	deal := seedRemindedQuietDeal(t, e)
 	sent := quietSince.AddDate(0, 0, 5)

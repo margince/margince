@@ -12,6 +12,7 @@ import (
 )
 
 func TestCapturedSharedPromiseKeepsOnlyItsNamedRecipients(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
 	ines := employeeOf(t, e, company, "Ines Buyer")

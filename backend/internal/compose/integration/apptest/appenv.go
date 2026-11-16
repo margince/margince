@@ -92,24 +92,11 @@ func SetupAppWithOptions(t *testing.T, opts ...compose.Option) *AppEnv {
 // composed, so the origin is known without booting twice.
 func SetupAppWithOriginOptions(t *testing.T, opts func(origin string) []compose.Option) *AppEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner := connectOwner(t, ownerDSN)
+	owner := connectOwner(t, db.OwnerDSN)
 
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatalf("migrating schema: %v", err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting database: %v", err)
-	}
-
-	// Shared across the package's tests, and deliberately not closed here — see
-	// testdb.Pool for why the connections, not the pool object, are the cost.
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}
@@ -141,7 +128,7 @@ func (e *AppEnv) Reboot(t *testing.T) *AppEnv {
 // that meters the rebooted app's connections.
 func (e *AppEnv) RebootWith(t *testing.T, tune func(*pgxpool.Config)) *AppEnv {
 	t.Helper()
-	pool, err := testdb.OwnPoolWith(context.Background(), AppDSN(t), tune)
+	pool, err := testdb.OwnPoolWith(context.Background(), testdb.For(t).AppDSN, tune)
 	if err != nil {
 		t.Fatalf("opening the rebooted app pool: %v", err)
 	}
@@ -151,7 +138,7 @@ func (e *AppEnv) RebootWith(t *testing.T, tune func(*pgxpool.Config)) *AppEnv {
 }
 
 // Close stops requests and drains their refreshes before releasing an owned pool.
-// SetupApp shares its pool across environments.
+// SetupApp shares its pool across the test's environments.
 func (e *AppEnv) Close() {
 	e.TS.Close()
 	e.settleHomeRefreshes()
@@ -415,12 +402,8 @@ func CloseBody(t *testing.T, resp *http.Response) {
 // would then reach compose through it.
 func applyRiverSchema(t *testing.T) {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	ctx := context.Background()
-	ownerPool, err := testdb.Pool(ctx, ownerDSN)
+	ownerPool, err := testdb.Pool(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}

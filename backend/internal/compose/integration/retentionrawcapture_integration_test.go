@@ -39,6 +39,7 @@ import (
 )
 
 func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	activity := ids.NewV7()
 	const sourceSystem, sourceID = "gmail", "msg-aged-out"
@@ -142,6 +143,7 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 // comment is written to avoid. So the aged-out activity must still be intact
 // after the refusal, which is only true while the check precedes the work.
 func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()

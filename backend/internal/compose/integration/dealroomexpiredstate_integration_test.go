@@ -89,6 +89,7 @@ func assertRefused(t *testing.T, e *apptest.AppEnv, method, path string, body An
 }
 
 func TestAnExpiredRoomReadsExpiredToStaffAndBuyerAlike(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -106,6 +107,7 @@ func TestAnExpiredRoomReadsExpiredToStaffAndBuyerAlike(t *testing.T) {
 }
 
 func TestAnExpiredRoomRefusesEditInvitePauseAndClose(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -130,6 +132,7 @@ func TestAnExpiredRoomRefusesEditInvitePauseAndClose(t *testing.T) {
 // A paused room past its end is expired too, so resuming or closing it cannot
 // serve its content again.
 func TestAPausedRoomPastItsEndReadsExpired(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -154,6 +157,7 @@ func TestAPausedRoomPastItsEndReadsExpired(t *testing.T) {
 // A closed room past its end is expired too: the buyer stops reading the
 // record, and a later end makes it read closed again.
 func TestAClosedRoomPastItsEndReadsExpired(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -179,6 +183,7 @@ func TestAClosedRoomPastItsEndReadsExpired(t *testing.T) {
 // Every buyer route reads the same standing: an expired room hands out no
 // document, no file and no thread, and takes no new thread.
 func TestAnExpiredRoomServesNoDocumentFileOrThread(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -212,6 +217,7 @@ func TestAnExpiredRoomServesNoDocumentFileOrThread(t *testing.T) {
 }
 
 func TestALaterEndMakesAnExpiredRoomLiveAgain(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
@@ -231,6 +237,7 @@ func TestALaterEndMakesAnExpiredRoomLiveAgain(t *testing.T) {
 }
 
 func TestANewRoomOpensOnADealWhoseRoomHasExpired(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	dealID, firstID, _ := openRoomOnANewDeal(t, e, "The first room")
@@ -258,6 +265,7 @@ func TestANewRoomOpensOnADealWhoseRoomHasExpired(t *testing.T) {
 }
 
 func TestAStewardOfAnExpiredRoomDoesNotBlockRetirement(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

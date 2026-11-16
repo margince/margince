@@ -61,6 +61,7 @@ func bundleOutcomes(t *testing.T, raw json.RawMessage) []bundleMember {
 // One act's proposals approved or rejected together are decided alike over
 // either door: the same outcome and status for every member.
 func TestDecideApprovalBundleLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "bundle-write-doors", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Bundle Doors", "source": "manual"})
 	approveREST, approveTool := apptest.StageBundleRows(t, d.e, company, stagedPerBundle), apptest.StageBundleRows(t, d.e, company, stagedPerBundle)

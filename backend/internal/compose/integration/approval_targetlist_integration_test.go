@@ -20,6 +20,7 @@ import (
 )
 
 func TestApprovalListFilteredToSeveralTargetsAnswersExactlyThose(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	first := e.SeedCompany(t, "First Account", &e.Rep1)
@@ -48,6 +49,7 @@ func TestApprovalListFilteredToSeveralTargetsAnswersExactlyThose(t *testing.T) {
 // A named record the caller cannot see adds nothing. One hidden record must not
 // empty or refuse the whole read.
 func TestApprovalListFilteredToSeveralTargetsHidesAnOutOfScopeOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	svc := approvals.NewService(e.DB())
 	mine := e.SeedCompany(t, "Mine", &e.Rep1)
@@ -75,6 +77,7 @@ func TestApprovalListFilteredToSeveralTargetsHidesAnOutOfScopeOne(t *testing.T) 
 // The tool door reaches the same filter. A record with nothing staged answers
 // an empty list.
 func TestListApprovalsWithTargetsAnswersOnlyTheNamedRecords(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "finishing agent", "read", "write", "enrich"))
 	touched, onTouched := q.stageAConfirmFirstCall(t, invoke, "Touched Account")

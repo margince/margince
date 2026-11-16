@@ -40,6 +40,7 @@ func (f *readingFixture) deleteProjection(t *testing.T) {
 // A live reading the projection missed entirely comes back, in the state the
 // SOURCE says it is in — not the state it was in when the event was lost.
 func TestTheReconcilerRestoresAReadingTheProjectionNeverHeardAbout(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	f.drain(t)
 	claim, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease)
@@ -71,6 +72,7 @@ func TestTheReconcilerRestoresAReadingTheProjectionNeverHeardAbout(t *testing.T)
 // that matters most: a reading whose CLOSING event was lost renders forever as
 // running, which is the display the whole design exists to prevent.
 func TestTheReconcilerRestoresASettledReadingInsideItsWindow(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	claim, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease)
 	if err != nil {
@@ -99,6 +101,7 @@ func TestTheReconcilerRestoresASettledReadingInsideItsWindow(t *testing.T) {
 // window the projection has aged the row out on purpose, and re-publishing it
 // would resurrect an occurrence the retention pass deliberately dropped.
 func TestTheReconcilerLeavesAReadingPastItsWindowAlone(t *testing.T) {
+	t.Parallel()
 	f := newReadingFixture(t)
 	claim, err := f.store.BeginExtractionRead(f.ctx, f.readID, activities.ExtractionReadLease)
 	if err != nil {

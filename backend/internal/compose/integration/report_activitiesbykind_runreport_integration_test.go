@@ -48,6 +48,7 @@ func (e *Env) teamReaderWith(objects ...string) context.Context {
 }
 
 func TestActivitiesByKindDoesNotCrashForATeamScopedReader(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	fileActivity(admin, t, e, "meeting", time.Now().UTC().Add(-time.Hour), nil)
@@ -66,6 +67,7 @@ func TestActivitiesByKindDoesNotCrashForATeamScopedReader(t *testing.T) {
 // population leaves it out. A filter that names it is refused, because a zero
 // would read like a measurement.
 func TestActivitiesByKindCountsMeetingsAndTasksAndRefusesEmail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	when := clocktest.Now(t).Add(-time.Hour)

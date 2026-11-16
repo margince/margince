@@ -48,6 +48,7 @@ func listAdminCtx(ws, user ids.UUID, grant principal.ObjectGrant) context.Contex
 }
 
 func TestWorkspaceConsumerMailListCorrectsTheBaselineBothWays(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := listAdminCtx(e.WS, e.Rep1, adminGrant)
 	store := capture.NewFreemailDomains(e.DB())
@@ -126,6 +127,7 @@ func TestWorkspaceConsumerMailListCorrectsTheBaselineBothWays(t *testing.T) {
 // update. Each refusal arm exercises the in-transaction demand, so reverting
 // that gate turns this test red.
 func TestConsumerMailCreateGrantAddsButNeverRewrites(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	repCtx := listAdminCtx(e.WS, e.Rep1, principal.ObjectGrant{Create: true, Read: true})
 	store := capture.NewFreemailDomains(e.DB())
@@ -160,6 +162,7 @@ func TestConsumerMailCreateGrantAddsButNeverRewrites(t *testing.T) {
 }
 
 func TestConsumerMailListRefusesWhatTheMatcherCouldNeverRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := listAdminCtx(e.WS, e.Rep1, adminGrant)
 	store := capture.NewFreemailDomains(e.DB())
@@ -173,6 +176,7 @@ func TestConsumerMailListRefusesWhatTheMatcherCouldNeverRead(t *testing.T) {
 }
 
 func TestCarveOutOfASubdomainBaselineEntryRemovesOnlyThatEntry(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := listAdminCtx(e.WS, e.Rep1, adminGrant)
 	store := capture.NewFreemailDomains(e.DB())

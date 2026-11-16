@@ -49,6 +49,7 @@ func companyTags(t *testing.T, e *apptest.AppEnv, displayName string) []string {
 }
 
 func TestOwnersAndTagsLandAndTheTestRunNamesNewTagsAndUnknownOwners(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	csv := "Name,Owner,Tags\nTagged GmbH," + importAdminEmail + ",Partner; DACH\nOrphan AG,mai@old-crm.example,DACH\n"
 	tagsBefore := tagCount(t, e)
@@ -75,6 +76,7 @@ func TestOwnersAndTagsLandAndTheTestRunNamesNewTagsAndUnknownOwners(t *testing.T
 }
 
 func TestAReimportAddsTagsButNeverRemovesOne(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	first, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nKeep GmbH,Partner\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", first.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})
@@ -89,6 +91,7 @@ func TestAReimportAddsTagsButNeverRemovesOne(t *testing.T) {
 }
 
 func TestARefusedApprovalCreatesNoTag(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	profile, _ := importjobtest.UploadCSV(t, e, "company", "Name,Tags\nBusy GmbH,Fresh\n")
 	run, _ := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Tags": "tags"})

@@ -40,6 +40,7 @@ func automaticKindOf(t *testing.T, e *integration.Env, seat ids.UUID, messageID 
 // That covers the importer's create door and a mailbox taking over an import.
 // A delivery report is not a case here: the importer's door refuses it.
 func TestEveryMailWriterMarksASendingSystemsMessage(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := e.Rep1
 	for _, tc := range []struct {

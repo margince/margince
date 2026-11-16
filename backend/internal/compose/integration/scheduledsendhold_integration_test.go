@@ -82,6 +82,7 @@ func (p *preflightEnv) scheduleClaimingAt(t *testing.T, claim AnyMap, path strin
 // message stays scheduled; build the consumer's store without the send
 // assembly, and no card is raised.
 func TestAStopHoldsQueuedMarketingAtOnce(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	marketing := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing"})
@@ -149,6 +150,7 @@ func (p *preflightEnv) cardsFor(t *testing.T, id ids.UUID) int {
 // A withdrawal reaches only the marketing it withdrew, and a lead's
 // consent.changed is not about any contact's queue.
 func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	newsletter := p.scheduleClaiming(t, AnyMap{"communication_context": "marketing", "marketing_purpose": "newsletter"})
@@ -200,6 +202,7 @@ func TestAWithdrawalHoldsOnlyTheMarketingItCovers(t *testing.T) {
 // Mutation: drop `ce.archived_at IS NULL` from PendingMarketingToContact, and
 // the first stop holds the message.
 func TestAStopDoesNotReachAnAddressTheContactNoLongerHolds(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {

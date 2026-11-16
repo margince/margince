@@ -38,6 +38,7 @@ import (
 )
 
 func TestTheProviderOriginalAgesOutOnItsOwnClock(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	aged, recent, shielded := ids.NewV7(), ids.NewV7(), ids.NewV7()
 

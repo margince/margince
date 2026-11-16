@@ -16,6 +16,7 @@ import (
 
 // Auto-sync is on until somebody turns it off, and the switch is audited.
 func TestThePriceSyncSwitchDefaultsOnAndIsAudited(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var state struct {
@@ -43,6 +44,7 @@ func TestThePriceSyncSwitchDefaultsOnAndIsAudited(t *testing.T) {
 
 // Refresh now is a run like the daily one: the card reads what it did.
 func TestRefreshNowIsRecordedAsTheLastRun(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithPriceCatalogues(
 		staticCatalogue(`{"data":[{"id":"a/listed","pricing":{"prompt":"0.000001","completion":"0.000002"}}]}`),
 		staticCatalogue(`{"google":{"id":"google","models":{}}}`)))

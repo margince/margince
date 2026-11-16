@@ -82,6 +82,7 @@ const (
 // A day meeting has taken place once its date is over. In Los Angeles its
 // stored noon passes at dawn, and it is still not "when we last spoke".
 func TestABriefTakesNoDayMeetingDatedTodayAsWhenWeLastSpoke(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
 	room := newBriefRoom(t, "America/Los_Angeles", now, now.Add(48*time.Hour))
 	los, err := time.LoadLocation("America/Los_Angeles")
@@ -116,6 +117,7 @@ func TestABriefTakesNoDayMeetingDatedTodayAsWhenWeLastSpoke(t *testing.T) {
 // A call logged for today's date has happened from the start of that date. In
 // Kiritimati its stored noon is a day ahead, and both reads count it already.
 func TestABriefCountsADayCallDatedTodayBeforeItsStoredNoon(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
 	room := newBriefRoom(t, "Pacific/Kiritimati", now, now.Add(72*time.Hour))
 	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
@@ -159,6 +161,7 @@ func (r briefRoom) attendeeLine(t *testing.T) string {
 // the week and a day call dated ahead both come before the room. Neither has
 // taken place, so the reader still meets the contact for the first time.
 func TestABriefTakesNoTouchStillAheadAsAnAttendeesLastTouch(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
 	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
 	room.log(t, "meeting", now.Add(48*time.Hour), activities.PrecisionInstant)
@@ -176,6 +179,7 @@ func TestABriefTakesNoTouchStillAheadAsAnAttendeesLastTouch(t *testing.T) {
 // A call that reached nobody is no conversation: a voicemail is not the
 // attendee's last touch, and a reached call is.
 func TestABriefTakesNoUnreachedCallAsAnAttendeesLastTouch(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
 	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
 	voicemail := room.log(t, "call", now.Add(-time.Hour), activities.PrecisionInstant)
@@ -197,6 +201,7 @@ func TestABriefTakesNoUnreachedCallAsAnAttendeesLastTouch(t *testing.T) {
 // A past meeting nobody reported held is still a meeting we had, so the reader
 // is not meeting the attendee for the first time. A canceled one is no touch.
 func TestABriefTakesAnUnreportedPastMeetingAsAnAttendeesLastTouch(t *testing.T) {
+	t.Parallel()
 	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
 	room := newBriefRoom(t, "UTC", now, now.Add(7*24*time.Hour))
 	met := room.log(t, "meeting", now.Add(-3*time.Hour), activities.PrecisionInstant)

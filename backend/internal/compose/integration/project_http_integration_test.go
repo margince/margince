@@ -119,6 +119,7 @@ func anchorContact(t *testing.T, e *apptest.AppEnv, full string) string {
 // appears in the list, takes a PATCH, moves phase only through /advance, and
 // archives.
 func TestProjectLifecycleOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Northwind")
@@ -202,6 +203,7 @@ func TestProjectLifecycleOverHTTP(t *testing.T) {
 // Two projects whose names give the same stem and send no key still get
 // different keys. The server takes the next number instead of refusing.
 func TestTwoProjectsWithOneStemGetDifferentMintedKeys(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Contoso")
@@ -233,6 +235,7 @@ func TestTwoProjectsWithOneStemGetDifferentMintedKeys(t *testing.T) {
 // Closing is the one phase move that must say why: a closed project with no
 // reason is a record nobody can interpret later.
 func TestClosingAProjectOverHTTPRequiresAReason(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Initech")
@@ -264,6 +267,7 @@ func TestClosingAProjectOverHTTPRequiresAReason(t *testing.T) {
 // The contract requires a name and an anchor company; neither is something the
 // server can invent, so both are refused at the edge rather than defaulted.
 func TestCreateProjectRefusesAnIncompleteBodyOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Umbrella")
@@ -318,6 +322,7 @@ func TestCreateProjectRefusesAnIncompleteBodyOverHTTP(t *testing.T) {
 // role correction, never a second edge. That is the whole contract of a PUT
 // here, and it is the property a uniqueness race must not break.
 func TestProjectStakeholderRosterOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Stark Industries")
@@ -381,6 +386,7 @@ func TestProjectStakeholderRosterOverHTTP(t *testing.T) {
 // A read seat may look at a project and may not change one. The ceiling is the
 // seat, not the role, so it applies to every write on this surface.
 func TestAReadSeatCannotWriteAProjectOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Cyberdyne")
@@ -431,6 +437,7 @@ func TestAReadSeatCannotWriteAProjectOverHTTP(t *testing.T) {
 // caller whose existing link is invisible to them, so it must name neither
 // the project nor its id — only what happened and what to do instead.
 func TestASecondProjectLinkIsRefusedWithoutNamingTheFirst(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Wayne Enterprises")
@@ -494,6 +501,7 @@ func TestASecondProjectLinkIsRefusedWithoutNamingTheFirst(t *testing.T) {
 // untyped 500, or under the wrong code, is a promise broken — so each arm is
 // provoked here through the real schema rule that raises it.
 func TestEachProjectRefusalAnswersItsOwnCode(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Refusal GmbH")
@@ -585,6 +593,7 @@ func TestEachProjectRefusalAnswersItsOwnCode(t *testing.T) {
 // must not silently win: the write is refused so the client re-reads rather
 // than overwriting someone else's change.
 func TestAStaleVersionCannotOverwriteAProject(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	company := anchorCompany(t, e, "Skew GmbH")
@@ -642,6 +651,7 @@ func callDescription(t *testing.T, e *apptest.AppEnv, id string) string {
 // invited seat is refused here for the same reason a deactivated one is: work
 // assigned to somebody who signs in nowhere is work assigned to nobody.
 func TestProjectOwnershipTransferOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)

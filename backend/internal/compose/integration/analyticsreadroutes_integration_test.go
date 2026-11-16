@@ -22,6 +22,7 @@ import (
 // The forecast, its snapshots, its movement and its input checks read the same
 // on their routes and on the tools.
 func TestForecastRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "forecast-read-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	openDeal(t, d.e, stages, "Forecast door deal")
@@ -61,6 +62,7 @@ func TestForecastRoutesAnswerAsTheirTools(t *testing.T) {
 // A bare not-found reads as a check the caller may not see, which is a
 // different and false claim about the sources.
 func TestNoInputCheckYetIsSaidAlikeOnEveryDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "no-input-check-doors", "read")
 	for _, c := range []struct{ path, tool string }{
 		{"/v1/forecast/assurance", "forecast_input_checks"},
@@ -94,6 +96,7 @@ type sharedInputCheck struct {
 // There, midnight UTC on a quarter's first day is still the quarter before.
 // A door that skipped the midday anchor would answer the wrong quarter.
 func TestForecastRouteAndToolReadTheSameDayInAWesternZone(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "forecast-zone-doors", "read")
 	if status := d.e.Call(t, "PATCH", "/v1/installation/settings",
 		AnyMap{"timezone": "America/Los_Angeles"}, nil, nil); status != 200 {
@@ -128,6 +131,7 @@ type sharedForecast struct {
 // An analytics query and a report run read the same on POST /analytics/query
 // and run_analytics_query, and on POST /reports/{report} and run_report.
 func TestAnalyticsAndReportRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "analytics-read-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	for i := range 6 {
@@ -183,6 +187,7 @@ type sharedReport struct {
 // Sales reporting reads the same on its routes and on read_reporting, whichever
 // mode names the question.
 func TestReportingRoutesAnswerAsReadReporting(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "reporting-read-doors", "read")
 
 	catalog := d.rest(t, "GET", "/v1/analytics/metrics", nil)
@@ -248,6 +253,7 @@ type sharedEvaluation struct {
 // The calendar's free time reads the same on GET /availability and
 // check_availability.
 func TestAvailabilityRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoorsWith(t, "availability-read-doors", []compose.Option{(&apptest.BookingCalendar{}).Option()}, "read")
 	apptest.EnableBooking(t, d.e)
 	booked := apptest.NextBookableMorning(t)

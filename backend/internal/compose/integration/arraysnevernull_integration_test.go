@@ -24,6 +24,7 @@ import (
 // The corpus is every read in crm.yaml that a fresh workspace can answer. A new
 // route is covered without anyone listing it.
 func TestNoReadWritesNullWhereTheContractDeclaresAnArray(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Array Shapes", "admin@arrayshapes.test", "Admin")
 	owners := seedOneOfEachParent(t, e)
@@ -197,6 +198,7 @@ func nullArrays(schema *openapi3.Schema, value any, at string) []string {
 // The walk names a null under an array declaration, in a nested object and
 // through allOf, and leaves a nullable array alone.
 func TestTheArrayWalkNamesANullOnlyWhereAnArrayIsDeclared(t *testing.T) {
+	t.Parallel()
 	array := openapi3.NewArraySchema()
 	nullable := &openapi3.Schema{Type: &openapi3.Types{"array", "null"}}
 	inner := openapi3.NewObjectSchema().WithProperty("tags", array)

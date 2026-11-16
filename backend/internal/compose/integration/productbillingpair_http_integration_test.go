@@ -25,6 +25,7 @@ import (
 // so the save lands; a null on one half with no model beside it is still
 // refused by name.
 func TestAProductEditRestatesItsBillingPairWithANullInterval(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	editor := e.As(e.Rep1, []ids.UUID{e.Team1}, principal.Permissions{
 		RoleKeys: []string{"deal_desk"},

@@ -48,6 +48,7 @@ func listNames(reader context.Context, t *testing.T, store *collections.Store) m
 }
 
 func TestAListIsFoundByItsSharing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
@@ -81,6 +82,7 @@ func TestAListIsFoundByItsSharing(t *testing.T) {
 }
 
 func TestTheLibraryNarrowsToTheSharingAsked(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
@@ -116,6 +118,7 @@ func TestTheLibraryNarrowsToTheSharingAsked(t *testing.T) {
 }
 
 func TestAListOnlyItsStewardOrAListAdminMayChange(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
@@ -137,6 +140,7 @@ func TestAListOnlyItsStewardOrAListAdminMayChange(t *testing.T) {
 }
 
 func TestASharedListShowsEachReaderOnlyTheMembersTheyMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
@@ -194,6 +198,7 @@ func TestASharedListShowsEachReaderOnlyTheMembersTheyMaySee(t *testing.T) {
 }
 
 func TestALiveListExportHoldsOnlyTheRowsItsReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := compose.NewCollectionsStore(e.Pool)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())
@@ -240,6 +245,7 @@ func TestALiveListExportHoldsOnlyTheRowsItsReaderMaySee(t *testing.T) {
 // Sharing is not row scope: a seat that reads every row of every table still
 // finds no colleague's private list, nor its members or history.
 func TestAnAllRowsSeatDoesNotFindAColleaguesPrivateList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	store := collections.NewStore(e.DB())
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, listPerms())

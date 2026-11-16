@@ -78,6 +78,7 @@ func freezeScopeIn(
 }
 
 func TestForecastReadingsListsTheSnapshotsForecastMovementTakes(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	admin := e.Admin()
@@ -133,6 +134,7 @@ func TestForecastReadingsListsTheSnapshotsForecastMovementTakes(t *testing.T) {
 // find nothing, and listing the workspace's would hand a rep ids they cannot
 // open.
 func TestForecastReadingsListsTheResolvedScopesSnapshotsAndRefusesAWiderOne(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	admin := e.Admin()

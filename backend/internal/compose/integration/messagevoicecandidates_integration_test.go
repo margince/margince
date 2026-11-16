@@ -48,6 +48,7 @@ func namedContact(author *crmcontracts.ActivityAuthor) ids.UUID {
 // A sender stated only as an address is named by the live contact that holds
 // it now. An address a contact gave up names nobody.
 func TestABareAddressIsNamedOnlyByTheContactThatHoldsItNow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	filedUnder := e.SeedContact(t, "Cleo Filed", &e.Rep1)
 	holder := e.SeedContact(t, "Hana Holder", &e.Rep1)
@@ -70,6 +71,7 @@ func TestABareAddressIsNamedOnlyByTheContactThatHoldsItNow(t *testing.T) {
 // visible contact then takes over the address. The stated contact stays the
 // only candidate, so the reader sees the address and never the new holder.
 func TestAStatedSenderOutOfSightIsNotReplacedByTheAddressesNewHolder(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	stated := e.SeedContact(t, "Sven Stated", &e.Rep1)
 	mail := captureCommitmentMessage(t, e, stated, "stated-sender@buyer.example", "Offer",

@@ -36,6 +36,7 @@ import (
 )
 
 func TestAnAdmittedMoveRefusesAStageThatClosedAfterTheGateReadIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, target := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Stage race", pipeline, open, &e.Rep1)
@@ -70,6 +71,7 @@ func TestAnAdmittedMoveRefusesAStageThatClosedAfterTheGateReadIt(t *testing.T) {
 // A stage archived in the window is refused too: nothing established what that
 // stage was, so the admitted premise cannot be re-derived.
 func TestAnAdmittedMoveRefusesAStageArchivedAfterTheGateReadIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, target := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Stage archive race", pipeline, open, &e.Rep1)
@@ -96,6 +98,7 @@ func assertSkewReads(t *testing.T, err error, want string) {
 // The same call with the stage config unchanged still lands: the re-check is a
 // guard on a premise that moved, not a second approval gate.
 func TestAnAdmittedMoveStillLandsWhenNoStageChanged(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, target := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Stage race control", pipeline, open, &e.Rep1)
@@ -118,6 +121,7 @@ func TestAnAdmittedMoveStillLandsWhenNoStageChanged(t *testing.T) {
 // is no admitted premise to re-check and a stage change is simply the config
 // they are moving under.
 func TestAHumansMoveIsNotHeldToTheGatesPremise(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, target := DealFixture(t, e)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)

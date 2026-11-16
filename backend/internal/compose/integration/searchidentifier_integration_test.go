@@ -21,6 +21,7 @@ import (
 )
 
 func TestSearchFindsAContactByItsEmailAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := seedContactWithEmail(e.Admin(), t, e, "Anna Schmidt", "anna@example.com", nil)
 	store := search.NewStore(e.DB())
@@ -50,6 +51,7 @@ func TestSearchFindsAContactByItsEmailAddress(t *testing.T) {
 // A classification judges what the search finds, so the address that finds a
 // contact also matches it there.
 func TestAClassificationMatchesAContactByItsAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := seedContactWithEmail(e.Admin(), t, e, "Anna Schmidt", "anna@example.com", nil)
 	other := seedContactWithEmail(e.Admin(), t, e, "Bruno Becker", "bruno@example.com", nil)
@@ -68,6 +70,7 @@ func TestAClassificationMatchesAContactByItsAddress(t *testing.T) {
 // A name search ranks as it did. A hit found by its name alone gets no
 // identifier lift, so a prefix match stays below the whole word.
 func TestANameSearchKeepsItsRanking(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	philip := seedContactWithEmail(e.Admin(), t, e, "Philip Dorn", "pd@dorn.example", nil)
 	philipp := seedContactWithEmail(e.Admin(), t, e, "Philipp Adler", "philipp@adler.example", nil)
@@ -85,6 +88,7 @@ func TestANameSearchKeepsItsRanking(t *testing.T) {
 }
 
 func TestSearchFindsACompanyByItsDomain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: "Quedlinburg Werke",
@@ -113,6 +117,7 @@ func TestSearchFindsACompanyByItsDomain(t *testing.T) {
 // An address is a read of its contact. A contact the reader may not see stays
 // hidden even when its whole address is typed.
 func TestAnAddressFindsNoContactOutsideTheReadersScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := e.As(e.Rep3, []ids.UUID{e.Team2}, RepPerms)
 	private := seedContactWithEmail(e.Admin(), t, e, "Hanna Hidden", "hanna@hidden.example", &e.Rep3)
@@ -142,6 +147,7 @@ func TestAnAddressFindsNoContactOutsideTheReadersScope(t *testing.T) {
 
 // An address the contact no longer carries finds nothing; the live one does.
 func TestAnArchivedAddressFindsNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	moved := seedContactWithEmail(e.Admin(), t, e, "Max Moved", "max@old.example", nil)
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](moved), contacts.UpdateContactInput{
@@ -184,6 +190,7 @@ func seedContactWithEmail(ctx context.Context, t *testing.T, e *Env, name, email
 // A contact both the contact branch and the employer arm could return is the
 // contact branch's: one hit, carrying no employer.
 func TestAContactFoundByAddressIsNotRepeatedThroughItsEmployer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := seedContactWithEmail(e.Admin(), t, e, "Anna Schmidt", "anna@example.com", nil)
 	employer := e.SeedCompany(t, "anna@example.com Holdings", nil)
@@ -207,6 +214,7 @@ func TestAContactFoundByAddressIsNotRepeatedThroughItsEmployer(t *testing.T) {
 // A pasted domain seeds the employer arm like the company's name does, so the
 // palette lists the contacts who work there.
 func TestADomainFindsTheCompanysEmployees(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: "Quedlinburg Werke",
@@ -236,6 +244,7 @@ func TestADomainFindsTheCompanysEmployees(t *testing.T) {
 // A contact whose name holds no searchable word is still judged when its
 // address matches, because the search returns it.
 func TestAClassificationJudgesAContactFoundOnlyByItsAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	nameless := seedContactWithEmail(e.Admin(), t, e, "🙂", "smile@example.com", nil)
 
@@ -255,6 +264,7 @@ func TestAClassificationJudgesAContactFoundOnlyByItsAddress(t *testing.T) {
 // A fragment hit stays below the whole-word tier a whole address earns. So a
 // pasted address still ranks its own record above a partial match.
 func TestSearchFindsARecordByAFragmentOfItsAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
 		DisplayName: "Weber Maschinenbau",

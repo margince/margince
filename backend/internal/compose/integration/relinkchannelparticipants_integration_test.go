@@ -23,6 +23,7 @@ import (
 )
 
 func TestRelinkPreservesDistinctChatAccountsInTheSameRole(t *testing.T) {
+	t.Parallel()
 	e, ctx, contactIDs, accounts, id := setupChannelParticipantRelink(t)
 	in := activities.RelinkActivityInput{EntityType: "contact", EntityID: contactIDs[1], ReplaceExistingOfType: true}
 	preview, err := e.Activities.PreviewRelink(ctx, []ids.UUID{id.UUID}, in)
@@ -115,6 +116,7 @@ func setupChannelParticipantRelink(t *testing.T) (*Env, context.Context, []ids.U
 }
 
 func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T) {
+	t.Parallel()
 	e, ctx, contactIDs, accounts, id := setupChannelParticipantRelink(t)
 	shared, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: activities.KindMessage, ChannelProvider: rosterProvider, Subject: new("Shared conversation"), Direction: new("inbound"), Source: "manual",
@@ -206,6 +208,7 @@ func TestContactMergeParticipantPreviewMatchesDistinctChatAccounts(t *testing.T)
 }
 
 func TestContactMergeParticipantPreviewRefusesAnUnreadableRoster(t *testing.T) {
+	t.Parallel()
 	e, _, contactIDs, _, id := setupChannelParticipantRelink(t)
 	perms := AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
@@ -218,6 +221,7 @@ func TestContactMergeParticipantPreviewRefusesAnUnreadableRoster(t *testing.T) {
 }
 
 func TestContactMergeParticipantPreviewRefusesATruncatedRoster(t *testing.T) {
+	t.Parallel()
 	e, ctx, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	logConversation := func(i int) ids.ActivityID {
 		activity, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
@@ -245,6 +249,7 @@ func TestContactMergeParticipantPreviewRefusesATruncatedRoster(t *testing.T) {
 }
 
 func TestContactMergeParticipantPreviewRefusesAnUnwiredReader(t *testing.T) {
+	t.Parallel()
 	e, ctx, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	e.Contacts.WithParticipantRosterReader(nil)
 	if _, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", contactIDs[0], contactIDs[1], nil, nil); !errors.Is(err, apperrors.ErrInvalidArgument) {
@@ -253,6 +258,7 @@ func TestContactMergeParticipantPreviewRefusesAnUnwiredReader(t *testing.T) {
 }
 
 func TestContactMergeParticipantReadGrantDoesNotDependOnRosterPresence(t *testing.T) {
+	t.Parallel()
 	e, ctx, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	empty, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "No conversations", Source: "manual"})
 	if err != nil {
@@ -271,6 +277,7 @@ func TestContactMergeParticipantReadGrantDoesNotDependOnRosterPresence(t *testin
 }
 
 func TestContactMergePreviewRefusesMaskedChannelBindings(t *testing.T) {
+	t.Parallel()
 	e, _, contactIDs, _, _ := setupChannelParticipantRelink(t)
 	perms := AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)

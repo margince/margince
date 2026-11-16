@@ -52,6 +52,7 @@ func (f *routerFixture) startCall(task ai.Task) ai.Call {
 // only checked the settled row would pass against a router that never announced
 // a start at all — which is exactly the behaviour this replaces.
 func TestACallSaysItIsRunningBeforeItSaysWhatItDid(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	f.start(t, 5*time.Minute)
@@ -94,6 +95,7 @@ func TestACallSaysItIsRunningBeforeItSaysWhatItDid(t *testing.T) {
 // key that disagreed between them would put a permanently-running row beside
 // the finished one — the rail claiming a piece of work is both.
 func TestTheStartAndTheSettleAreOneOccurrence(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	f.start(t, 5*time.Minute)
@@ -117,6 +119,7 @@ func TestTheStartAndTheSettleAreOneOccurrence(t *testing.T) {
 // read derives stalled for live states, which is exactly the kind of guarantee
 // that stops being true when somebody widens the arm.
 func TestASettledOccurrenceKeepsNoLease(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	f.start(t, 5*time.Minute)
@@ -137,6 +140,7 @@ func TestASettledOccurrenceKeepsNoLease(t *testing.T) {
 // emitter's lease and substituted a default of its own would be caught rather
 // than accidentally matched.
 func TestTheProjectionStoresTheLeaseTheRouterDerived(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 	const lease = 97 * time.Second
 
@@ -159,6 +163,7 @@ func TestTheProjectionStoresTheLeaseTheRouterDerived(t *testing.T) {
 // start instant, a later lease — and the settle that follows still closes the
 // attempt the start opened.
 func TestARenewalExtendsTheLeaseAndKeepsTheClaim(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	claim := f.start(t, 5*time.Minute)
@@ -197,6 +202,7 @@ func TestARenewalExtendsTheLeaseAndKeepsTheClaim(t *testing.T) {
 // last rung's renewal, delivered late — must not put a finished piece of work
 // back on the rail as running.
 func TestARenewalCannotReopenASettledOccurrence(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	claim := f.start(t, 5*time.Minute)
@@ -221,6 +227,7 @@ func TestARenewalCannotReopenASettledOccurrence(t *testing.T) {
 // silence — the flush that would close it is refused too, so the row would
 // claim to be working until its lease ran out.
 func TestAStartOutsideACorrelationScopeIsNotAnnounced(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	if _, announced := f.meter.AnnounceRailStart(f.ctx, ai.Call{
@@ -247,6 +254,7 @@ func TestAStartOutsideACorrelationScopeIsNotAnnounced(t *testing.T) {
 // one is the row that claims to be working forever, which is the single failure
 // the lease exists to prevent.
 func TestASubSecondLeaseIsStillALease(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	f.start(t, 500*time.Millisecond)
@@ -266,6 +274,7 @@ func TestASubSecondLeaseIsStillALease(t *testing.T) {
 // the one a new emitter gets wrong — announcing a start for work whose carrier
 // will announce its own puts two writers on one line.
 func TestTheRouterAnnouncesNoStartForACarrierOwnedTask(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	if _, announced := f.meter.AnnounceRailStart(f.ctx, f.startCall(ai.TaskAgentLoop), 5*time.Minute); announced {
@@ -319,6 +328,7 @@ func (f *routerFixture) sweep(t *testing.T, cutoff time.Time) int64 {
 // stalled once its lease expires — and nothing else would ever reach it, because
 // the live feed has no time bound and the settled purge only sees settled rows.
 func TestAStartNothingSettledIsClosedByTheSweep(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	// A one-second lease and a cutoff past it, rather than a backdated row: the
@@ -353,6 +363,7 @@ func TestAStartNothingSettledIsClosedByTheSweep(t *testing.T) {
 // predicate is the lease, and a sweep that ignored it would settle live work
 // under a rep's eyes — the opposite failure, and the more visible one.
 func TestTheSweepLeavesAnOccurrenceInsideItsLease(t *testing.T) {
+	t.Parallel()
 	f := newRouterFixture(t)
 
 	f.start(t, time.Hour)
@@ -373,6 +384,7 @@ func TestTheSweepLeavesAnOccurrenceInsideItsLease(t *testing.T) {
 // is a claim it still owns. The router holds no such claim, which is the whole
 // argument for sweeping its rows and only its rows.
 func TestTheSweepDoesNotCloseACarriersLiveOccurrence(t *testing.T) {
+	t.Parallel()
 	f := newRunnerFixture(t)
 	ctx := f.env.AgentCtxWithPassport(f.passport.UUID)
 	if err := f.runs.EnqueueJob(ctx, f.spec.Name, f.trigger, &f.passport, f.dbNow(t)); err != nil {

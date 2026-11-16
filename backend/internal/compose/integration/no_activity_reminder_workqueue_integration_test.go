@@ -74,6 +74,7 @@ import (
 )
 
 func TestNoActivityReminderReachesTheOwnersTasksScreenThroughTheRealRiverJob(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	sam := e.Rep1 // owns the quiet deal below; shares Team1 with Rep2

@@ -17,6 +17,7 @@ import (
 )
 
 func TestUnknownAcquisitionIsReviewedBeforeItCanBecomeANoticeDuty(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var contact struct {
@@ -69,6 +70,7 @@ func TestUnknownAcquisitionIsReviewedBeforeItCanBecomeANoticeDuty(t *testing.T) 
 
 // An agent assesses a source as its user does, and the audit row names the agent.
 func TestAnAgentAssessesASourceAndTheTrailNamesIt(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var contact struct {
@@ -103,6 +105,7 @@ func TestAnAgentAssessesASourceAndTheTrailNamesIt(t *testing.T) {
 }
 
 func TestDirectSourceAssessmentEndsReviewWithoutInventingADisclosure(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var contact struct {

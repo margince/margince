@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestBookingPageUsesTheCurrentAccountName(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)

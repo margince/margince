@@ -50,6 +50,7 @@ func mustCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, wa
 }
 
 func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	var a, b, company AnyMap
 	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Alpha"}, http.StatusCreated, &a)
@@ -187,6 +188,7 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 }
 
 func TestACompanysShortlistsAndTheOtherRecordListsNarrowByList(t *testing.T) {
+	t.Parallel()
 	e, _ := listsApp(t, true)
 	var company, lead AnyMap
 	mustCall(t, e, "POST", "/v1/companies", AnyMap{"display_name": "Listed Account", "source": "manual"}, http.StatusCreated, &company)
@@ -218,6 +220,7 @@ func TestACompanysShortlistsAndTheOtherRecordListsNarrowByList(t *testing.T) {
 }
 
 func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
+	t.Parallel()
 	e, agent := listsApp(t, true)
 	var contact AnyMap
 	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Agent Pick"}, http.StatusCreated, &contact)
@@ -271,6 +274,7 @@ func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
 // An agent pages a filter preview with the cursor each page answers, and the
 // pages hold every match once. A cursor read under another filter is refused.
 func TestAnAgentPagesAFilterPreview(t *testing.T) {
+	t.Parallel()
 	e, agent := listsApp(t, true)
 	for i := range 3 {
 		mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": fmt.Sprintf("Preview Page %d", i)}, http.StatusCreated, nil)

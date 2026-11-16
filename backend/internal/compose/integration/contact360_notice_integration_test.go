@@ -17,6 +17,7 @@ import (
 )
 
 func TestContactPrivacyWorkUsesTheSameVisibleAgendaAsHome(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Referred Contact", &e.Rep1)
 	other := e.SeedContact(t, "Other Contact", &e.Rep1)
@@ -63,6 +64,7 @@ func TestContactPrivacyWorkUsesTheSameVisibleAgendaAsHome(t *testing.T) {
 }
 
 func TestContactSourceReviewRequiresPrivacyAndContactVisibility(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Unconfirmed Source Example", &e.Rep1)
 	if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {

@@ -92,6 +92,7 @@ func (f dealCFVFixture) defineDealField(t *testing.T, spec customfields.FieldSpe
 }
 
 func TestCustomFieldValues_DealRoundTrip(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	col := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Segment", Type: customfields.TypeText, Source: "manual"})
 
@@ -143,6 +144,7 @@ func TestCustomFieldValues_DealRoundTrip(t *testing.T) {
 // the read-back is what proves the value reached its own column rather than a
 // bind that happened to accept it.
 func TestCustomFieldValues_ProjectRoundTrip(t *testing.T) {
+	t.Parallel()
 	f := setupDealCFV(t)
 	col := f.defineDealField(t, customfields.FieldSpec{Object: "project", Label: "Engagement Model", Type: customfields.TypeText, Source: "manual"})
 	company := f.e.SeedCompany(t, "Northwind", nil)

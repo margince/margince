@@ -120,6 +120,7 @@ func bornRecords(t *testing.T, e *Env) []bornRecord {
 // be handed a contact, and a contact could be created owned by them — which is
 // the same record in the same state, reached by the other door.
 func TestANewRecordCannotBeBornToAnIneligibleOwner(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET status = 'suspended' WHERE id = $1`, e.Rep3)
 	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
@@ -144,6 +145,7 @@ func TestANewRecordCannotBeBornToAnIneligibleOwner(t *testing.T) {
 // have ever signed in, and refusing that would leave the rows on whoever ran
 // the import.
 func TestANewRecordMayBeBornToAnInvitedColleague(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	e.WsExec(t, `UPDATE app_user SET status = 'invited' WHERE id = $1`, e.Rep3)
 	defer e.WsExec(t, `UPDATE app_user SET status = 'active' WHERE id = $1`, e.Rep3)
@@ -169,6 +171,7 @@ func TestANewRecordMayBeBornToAnInvitedColleague(t *testing.T) {
 // deal they owned refuses the ordinary save that would have moved it on,
 // because the form sends owner_id back whether or not the user touched it.
 func TestAnEditThatRestatesTheOwnerHandsNothingOn(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := ids.From[ids.UserKind](e.Rep3)
 	born := map[string]ids.UUID{}

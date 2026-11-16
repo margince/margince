@@ -30,6 +30,7 @@ type leadScoreWire struct {
 }
 
 func TestANullScoreEndsTheOverrideOverHTTP(t *testing.T) {
+	t.Parallel()
 	for _, field := range []string{"score", "score_override_reason"} {
 		t.Run(field, func(t *testing.T) {
 			e := apptest.SetupApp(t)
@@ -57,6 +58,7 @@ func TestANullScoreEndsTheOverrideOverHTTP(t *testing.T) {
 // A clear with nothing to clear writes nothing. A stale If-Match still answers
 // 409, because the caller decided on a version the row no longer has.
 func TestANoOpScoreClearStillChecksTheVersion(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	var lead leadScoreWire

@@ -55,6 +55,7 @@ func basicTemplateInput(name string) deals.CreateOfferTemplateInput {
 }
 
 func TestOfferTemplateCreate_DefaultsAndRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, nil, offerTemplateAdminPerms)
 
@@ -102,6 +103,7 @@ func TestOfferTemplateCreate_DefaultsAndRoundTrip(t *testing.T) {
 }
 
 func TestOfferTemplateCreate_DuplicateNameConflict(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, nil, offerTemplateAdminPerms)
 
@@ -159,6 +161,7 @@ func TestOfferTemplateCreate_DuplicateNameConflict(t *testing.T) {
 }
 
 func TestOfferTemplateCreate_DefaultConflictRejectedNotAutoDemoted(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, nil, offerTemplateAdminPerms)
 
@@ -207,6 +210,7 @@ func TestOfferTemplateCreate_DefaultConflictRejectedNotAutoDemoted(t *testing.T)
 }
 
 func TestOfferTemplateUpdate_HappyVersionSkewAndDefaultConflict(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, nil, offerTemplateAdminPerms)
 
@@ -279,6 +283,7 @@ func TestOfferTemplateUpdate_HappyVersionSkewAndDefaultConflict(t *testing.T) {
 }
 
 func TestOfferTemplateArchive_IdempotentAndAuditedOnce(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, nil, offerTemplateAdminPerms)
 
@@ -313,6 +318,7 @@ func TestOfferTemplateArchive_IdempotentAndAuditedOnce(t *testing.T) {
 }
 
 func TestOfferTemplateList_KeysetLocaleAndArchived(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.Rep1, nil, offerTemplateAdminPerms)
 
@@ -376,6 +382,7 @@ func TestOfferTemplateList_KeysetLocaleAndArchived(t *testing.T) {
 }
 
 func TestOfferTemplateRBAC_RepCreatesReadOnlyCannot(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, offerTemplateAdminPerms)
 	rep := e.As(e.Rep2, []ids.UUID{e.Team1}, offerTemplateRepPerms)

@@ -93,6 +93,7 @@ func authorContact(a crmcontracts.Activity) *openapi_types.UUID {
 // On the page of a contact who was only copied, the mail names its real
 // author. It marks the contact as in Cc and owes nobody a reply.
 func TestACopiedContactsPageNamesTheTrueAuthor(t *testing.T) {
+	t.Parallel()
 	f := captureVoiceFixture(t)
 	view, row := f.row(t, f.q, f.readerSeat)
 	if got := authorContact(row); got == nil || ids.UUID(*got) != f.p {
@@ -115,6 +116,7 @@ func TestACopiedContactsPageNamesTheTrueAuthor(t *testing.T) {
 
 // The positive case: the sender's own page says they wrote it and keeps the move.
 func TestTheSendersOwnPageSaysTheyWroteIt(t *testing.T) {
+	t.Parallel()
 	f := captureVoiceFixture(t)
 	view, row := f.row(t, f.p, f.readerSeat)
 	if got := voiceRole(row); got != crmcontracts.ActivityVoiceContactRoleAuthor {
@@ -131,6 +133,7 @@ func TestTheSendersOwnPageSaysTheyWroteIt(t *testing.T) {
 
 // A direct addressee is a party the move is owed to, and is not the author.
 func TestAToRecipientIsAnAddressee(t *testing.T) {
+	t.Parallel()
 	f := captureVoiceFixture(t)
 	_, sender := f.row(t, f.p, f.readerSeat)
 	_, row := f.row(t, f.to, f.readerSeat)
@@ -148,6 +151,7 @@ func TestAToRecipientIsAnAddressee(t *testing.T) {
 // Mail the reader sent is "you"; the same mail read by another seat names the
 // colleague who sent it.
 func TestAColleaguesMailIsTheColleaguesNotTheReaders(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	p := e.SeedContact(t, "Pia Sender", &e.Rep1)
 	mail := captureCommitmentMessage(t, e, p, "voice-out@buyer.example", "Your quote",
@@ -175,6 +179,7 @@ func TestAColleaguesMailIsTheColleaguesNotTheReaders(t *testing.T) {
 // A note a colleague logged is the colleague's on the reader's brief, never
 // the reader's own words.
 func TestAColleaguesNoteSpeaksAsTheColleagueOnTheReadersBrief(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Xenia New", &e.Rep1)
 	colleague := e.As(e.Rep2, []ids.UUID{e.Team1}, AccountRepPerms)
@@ -203,6 +208,7 @@ func TestAColleaguesNoteSpeaksAsTheColleagueOnTheReadersBrief(t *testing.T) {
 // Every surface reads one projection: the activity list (which the company 360
 // and the deal page read), the contact 360 and both brief inputs agree.
 func TestEverySurfaceNamesTheSameAuthor(t *testing.T) {
+	t.Parallel()
 	f := captureVoiceFixture(t)
 	_, onPage := f.row(t, f.q, f.readerSeat)
 
@@ -251,6 +257,7 @@ func TestEverySurfaceNamesTheSameAuthor(t *testing.T) {
 // the page too. The deterministic brief names who wrote the newest message from
 // that message, never from Q's older one.
 func TestTheBriefFloorNeverCreditsACopiedMailToTheContact(t *testing.T) {
+	t.Parallel()
 	f := captureVoiceFixture(t)
 	captureCommitmentMessage(t, f.e, f.q, "voice-older@buyer.example", "Older note from Q",
 		"Thanks for the call last month.", "inbound", time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC))
@@ -268,6 +275,7 @@ func TestTheBriefFloorNeverCreditsACopiedMailToTheContact(t *testing.T) {
 // A reader who may read the mail but not contacts sees the party the header
 // states, and nothing the contact record holds.
 func TestAPartyIsNamedOnlyAsFarAsTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	f := captureVoiceFixture(t)
 	perms := AccountRepPerms
 	objects := map[string]principal.ObjectGrant{}
@@ -344,6 +352,7 @@ func briefSpeakerOf(t *testing.T, in contactbrief.Input, id openapi_types.UUID) 
 // address it states now belongs to a contact the reader does see, and that
 // namesake is never shown as the author.
 func TestAHiddenSenderIsNeverNamedAsAVisibleNamesake(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	hidden := e.SeedContact(t, "Ada Hidden", &e.Rep1)

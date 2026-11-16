@@ -41,6 +41,7 @@ func seedContextFixture(t *testing.T, e *queryEnv) contextFixture {
 // The positive control: a ranked hit comes back as a RECORD, with the excerpt
 // that ranked it, and the envelope names it.
 func TestSearchContextAnswersRankedRecordsWithTheirExcerpts(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	f := seedContextFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -71,6 +72,7 @@ func TestSearchContextAnswersRankedRecordsWithTheirExcerpts(t *testing.T) {
 // The two-principal property, at the hydration step. A rep sees strictly what
 // their row scope admits, and the answer never says how much it left out.
 func TestSearchContextNarrowsToTheCallersRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	f := seedContextFixture(t, e)
 	// Ownership alone leaves a contact readable by every seat with the grant;
@@ -113,6 +115,7 @@ func TestSearchContextNarrowsToTheCallersRowScope(t *testing.T) {
 // posture — and the answer has to SAY it ranked lexically. A page that looks
 // identical to a semantic one is the failure this marker exists to prevent.
 func TestSearchContextReportsAnUnboundEmbedLane(t *testing.T) {
+	t.Parallel()
 	e := setupQuery(t)
 	seedContextFixture(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})

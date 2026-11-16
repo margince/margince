@@ -77,6 +77,7 @@ Andreas,Müller,https://x,,Acme GmbH,Head of IT,02 Feb 2023
 `
 
 func TestUploadingAnExportImportsItAndReportsWhatItDid(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -110,6 +111,7 @@ func TestUploadingAnExportImportsItAndReportsWhatItDid(t *testing.T) {
 }
 
 func TestAnExactAddressMatchConfirmsOverHTTP(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -140,6 +142,7 @@ func TestAnExactAddressMatchConfirmsOverHTTP(t *testing.T) {
 }
 
 func TestAFileThatIsNotAnExportIsRefusedWithAReadableReason(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 

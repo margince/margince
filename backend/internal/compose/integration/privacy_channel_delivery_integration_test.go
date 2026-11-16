@@ -137,6 +137,7 @@ func readChannelDelivery(t *testing.T, e *Env, id ids.UUID) channelDeliveryRow {
 }
 
 func TestErasureRedactsAChannelDeliveryWithoutBreakingItsShape(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := seedChannelSubject(t, e)
 	sent := seedChannelDelivery(t, e, "9 years", "the agreed price was 4200 EUR", "sent", contact)

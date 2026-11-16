@@ -24,6 +24,7 @@ import (
 )
 
 func TestConcurrentPromotesMintExactlyOneContact(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	leadID := seedLead(t, e, "Racy Prospect", "racy@prospect.test", nil)
 
@@ -69,6 +70,7 @@ func TestConcurrentPromotesMintExactlyOneContact(t *testing.T) {
 }
 
 func TestConcurrentMergesNeverStrandChildrenOnADeadRecord(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 
@@ -126,6 +128,7 @@ func TestConcurrentMergesNeverStrandChildrenOnADeadRecord(t *testing.T) {
 }
 
 func TestMergeWithdrawalCarriesAConsentProofEvent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 

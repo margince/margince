@@ -35,6 +35,7 @@ func baseCurrencyOnUSD(t *testing.T, e *Env) {
 // close computes when the deal's currency EQUALS the base, so a rate of 1 here
 // means the close read a base of EUR — the seeded value, not the one set.
 func TestClosingADealFreezesAgainstTheSettingsBaseCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, won := DealFixture(t, e)
 	admin := e.Admin()
@@ -66,6 +67,7 @@ func TestClosingADealFreezesAgainstTheSettingsBaseCurrency(t *testing.T) {
 
 // The fx sheet is listed against the base the installation names.
 func TestTheFxSheetListsRatesIntoTheSettingsBaseCurrency(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	baseCurrencyOnUSD(t, e)
@@ -84,6 +86,7 @@ func TestTheFxSheetListsRatesIntoTheSettingsBaseCurrency(t *testing.T) {
 // The snapshot is frozen at send, so an issuer read from anywhere but the
 // setting is recorded permanently on a document that goes to a buyer.
 func TestAnOfferSnapshotNamesTheInstallationFromTheSetting(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	// The desk fixture, because sending an offer needs the offer grants and
@@ -119,6 +122,7 @@ func TestAnOfferSnapshotNamesTheInstallationFromTheSetting(t *testing.T) {
 // guarding the real write path. Only a reader that actually consults the
 // setting fails, and the failure names the zone it tried.
 func TestTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	ctx := e.Admin()
@@ -143,6 +147,7 @@ func TestTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
 // installation_settings gate is not in the way (the admin here does hold it, but
 // the seam reads ungated so a contract writer holding only `contract` also can).
 func TestAContractsTodayIsComputedInTheZoneTheSettingNames(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	e.WsExec(t, `UPDATE setting SET value = '"Margince/Nowhere"'::jsonb WHERE key = 'installation.timezone'`)

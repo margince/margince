@@ -38,6 +38,7 @@ func newAccountScene(t *testing.T, e *apptest.AppEnv) accountScene {
 // GET /catch-up and GET /meeting-prep take the anchor the tools take, by id or
 // by name, and answer the tools' documents byte for byte.
 func TestCatchUpAndMeetingPrepRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "anchor-routes", "read")
 	scene := newAccountScene(t, d.e)
 	for _, anchor := range []map[string]any{
@@ -97,6 +98,7 @@ type sharedAtRisk struct {
 // as intro_path_to does. GET /deals/at-risk flags the deal untouched for two
 // months, as at_risk_relationships does.
 func TestNetworkRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "network-routes", "read")
 	scene := newAccountScene(t, d.e)
 	ageLastTouch(t, d.e, scene.deal, 61)
@@ -145,6 +147,7 @@ type sharedHandoff struct {
 // and prepare_handoff answer. Both stamp the instant they read, so the stamp is
 // left out of the comparison.
 func TestCommitmentAndHandoffRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "commitment-routes", "read")
 	scene := newAccountScene(t, d.e)
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{

@@ -24,6 +24,7 @@ import (
 // race. The edit reads its row before the lock, so a steward moved in between
 // would survive, and the caller would be told otherwise.
 func TestARoomEditWritesTheStewardItWasSent(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	ctx := e.As(e.AdminUser, nil, roomStewardAdmin)
 	store := dealrooms.NewStore(e.DB())

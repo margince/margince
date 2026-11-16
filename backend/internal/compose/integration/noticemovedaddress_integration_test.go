@@ -48,6 +48,7 @@ func formerHoldersMail(t *testing.T, e *apptest.AppEnv, former string) ids.UUID 
 }
 
 func TestAMovedAddressSettlesOnlyTheFormerHoldersNotice(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	former, holder := movedAddressPair(t, e)
@@ -68,6 +69,7 @@ func TestAMovedAddressSettlesOnlyTheFormerHoldersNotice(t *testing.T) {
 }
 
 func TestAMovedAddressStillOwesTheNewHolderANotice(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	former, holder := movedAddressPair(t, e)
@@ -83,6 +85,7 @@ func TestAMovedAddressStillOwesTheNewHolderANotice(t *testing.T) {
 // A sender row that carries only the moved address proves nobody, so it
 // settles no one's duty.
 func TestABareMovedAddressSettlesNoNotice(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	former, holder := movedAddressPair(t, e)

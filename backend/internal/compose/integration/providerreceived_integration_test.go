@@ -19,6 +19,7 @@ import (
 // before the seat connected it (contacts.receivedBeforeConnectedTx). It has to
 // land on THIS seat's import row, and never be taken from the Date header.
 func TestTheSinkRecordsWhenTheProviderSaysTheMessageArrived(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const messageID = "arrival@counterparty.test"
 	const addr = "rep1@ws.example"
@@ -70,6 +71,7 @@ func TestTheSinkRecordsWhenTheProviderSaysTheMessageArrived(t *testing.T) {
 // that stated none. Stored as sent, either one fails every later read that
 // encodes it in a zone east of UTC.
 func TestTheSinkDropsATimestampNoZoneCanRender(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const addr = "rep1@ws.example"
 	raw := []byte(strings.Join([]string{

@@ -15,6 +15,7 @@ import (
 )
 
 func TestTheSameOutsideIDCannotNameTwoProjects(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	companyID := ids.From[ids.CompanyKind](e.SeedCompany(t, "Rollout Partner GmbH", nil))
 	open := func(name string) error {

@@ -89,6 +89,7 @@ func seedOverAgeRecords(t *testing.T, e *Env) (staleLead, heldLead, staleDeal, t
 }
 
 func TestRetentionActsOnOverAgeRecordsAndHonorsLegalHold(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	staleLead, heldLead, staleDeal, transcript := seedOverAgeRecords(t, e)
@@ -159,6 +160,7 @@ func TestRetentionActsOnOverAgeRecordsAndHonorsLegalHold(t *testing.T) {
 // module stamps at capture; the nightly sweep must erase over-age text in
 // place while the counters row — and a still-in-window row — survive intact.
 func TestRetentionErasesOverAgeVoiceSignalPlaintext(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	profileID := ids.NewV7()
 	overAge := ids.NewV7()

@@ -20,6 +20,7 @@ import (
 // The colleague behind a credential may overwrite a value someone typed, so the
 // credential does it at once. Nothing is staged for anyone to release.
 func TestACredentialOverwritesATypedValueAtOnceAndStagesNothing(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	contactID := createdID(t, q.AppEnv, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Selma Human"})
 	invoke := q.invoker(t, q.mintPassport(t, "overwriting agent", "read", "write"))
@@ -55,6 +56,7 @@ func TestACredentialOverwritesATypedValueAtOnceAndStagesNothing(t *testing.T) {
 // outside the workspace stays the human's to release in the CRM. enrich is
 // the one such confirm-first verb this composition stages without a mailbox.
 func TestACredentialDoesNotReleaseTheOutboundCallItProposed(t *testing.T) {
+	t.Parallel()
 	q := setupQueue(t)
 	invoke := q.invoker(t, q.mintPassport(t, "outbound agent", "read", "write", "enrich"))
 	_, approvalID := q.stageAConfirmFirstCall(t, invoke, "Outbound Subject")

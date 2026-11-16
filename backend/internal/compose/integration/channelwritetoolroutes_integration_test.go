@@ -23,6 +23,7 @@ import (
 // A passport's reply to a channel conversation is accepted the same way on
 // either door. It leaves one delivery of the same shape.
 func TestSendMessageLeavesTheSameOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
 		t.Fatalf("generating a test root key: %v", err)

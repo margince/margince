@@ -148,6 +148,7 @@ func readSeededDefaults(t *testing.T) map[string]roleDocument {
 // was a one-ended pin. A migration that touches `role`, or a seed that stops
 // running, makes the code and the database disagree with nothing to report it.
 func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
+	t.Parallel()
 	seeded := readSeededDefaults(t)
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
@@ -181,6 +182,7 @@ func TestTheRealBootstrapSeedsTheDocumentedMatrix(t *testing.T) {
 //     TOGETHER land on the matrix, which catches a write that fires
 //     unconditionally and one whose predicate never matches.
 func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
+	t.Parallel()
 	seeded := readSeededDefaults(t)
 	writes := rolePermissionMigrations(t)
 
@@ -255,6 +257,7 @@ func TestEveryRBACBackfillConvergesOnTheSeededMatrix(t *testing.T) {
 // from dbmigrate.Load rather than re-deriving it, so the sequence replayed here
 // is the sequence a real upgrade runs.
 func TestTheBackfillsComposeFromTheOldestUpgradableInstallation(t *testing.T) {
+	t.Parallel()
 	seeded := readSeededDefaults(t)
 	baselineEra := readBaselineEraDefaults(t)
 	writes := rolePermissionMigrations(t)
@@ -658,9 +661,8 @@ func rewindToBaselineEra(ctx context.Context, t *testing.T, e *apptest.AppEnv, d
 
 // bootstrapInstallation provisions the installation these tests read.
 //
-// apptest.SetupApp resets the database and provisions nothing — `role`,
-// `role_assignment` and `workspace` are all emptied by testdb.Reset — so this is
-// the only thing that puts a seeded matrix in front of the assertions.
+// apptest.SetupApp copies the migrated template and provisions nothing, so this
+// is the only thing that puts a seeded matrix in front of the assertions.
 func bootstrapInstallation(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	ctx := context.Background()
@@ -763,6 +765,7 @@ func sortedKeys[V any](m map[string]V) []string {
 // deliberate setting is silently overwritten on upgrade. So the case is asserted
 // here rather than inferred from the SQL.
 func TestABackfillLeavesAnOperatorsOwnGrantAlone(t *testing.T) {
+	t.Parallel()
 	writes := rolePermissionMigrations(t)
 	if len(writes) == 0 {
 		t.Fatal("no migration writes role.permissions — the detection has gone blind")

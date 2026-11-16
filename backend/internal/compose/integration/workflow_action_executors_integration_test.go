@@ -66,6 +66,7 @@ func (notifyNoTransportProbe) IdempotencyKey(ev workflow.Event) string {
 }
 
 func TestNotifyFiringWithNoTransportLandsAVisibleSkippedRun(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Notify Probe Deal", pipeline, open, nil)
@@ -184,6 +185,7 @@ func (draftEmailProbe) IdempotencyKey(ev workflow.Event) string {
 }
 
 func TestDraftEmailFiringLandsTheComposedDraftOnTheRunRecord(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	dealID := e.SeedDeal(t, "Draft Email Probe Deal", pipeline, open, nil)

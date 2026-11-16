@@ -31,6 +31,7 @@ const aiDraftReply = `{"subject":"Next steps","body":"Hello,\n\nShall we pick th
 // stream, so its answer is its first token. The time is the product's own
 // share of the budget, without the model's latency.
 func TestAIDraftBudget(t *testing.T) {
+	t.Parallel()
 	spec := recordBenchSpec
 	model := ai.NewFakeClient().Script(slices.Repeat([]string{aiDraftReply}, spec.warmups+spec.sample)...)
 	e := apptest.SetupAppWithOptions(t, compose.WithContactDraft(model))

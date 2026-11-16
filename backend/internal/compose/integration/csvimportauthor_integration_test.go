@@ -63,6 +63,7 @@ func importAndApprove(t *testing.T, e *apptest.AppEnv, object, csv string, mappi
 }
 
 func TestCSVImportNamesTheAuthorOfEachContact(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Author": "author"}
 	importAndApprove(t, e, "contact", authoredContactsCSV, mapping)
@@ -97,6 +98,7 @@ func TestCSVImportNamesTheAuthorOfEachContact(t *testing.T) {
 }
 
 func TestCSVImportNamesTheAuthorOfEachCompany(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	importAndApprove(t, e, "company", "Name,Author\nAuthored Company GmbH,Anna Müller\n",
 		map[string]string{"Name": "display_name", "Author": "author"})
@@ -115,6 +117,7 @@ func TestCSVImportNamesTheAuthorOfEachCompany(t *testing.T) {
 // The author is part of the create, so it writes no second audit row that
 // would mark the record as touched by a human and hold it back from undo.
 func TestAnAuthoredImportStillUndoes(t *testing.T) {
+	t.Parallel()
 	e := setupImportApp(t)
 	run := importAndApprove(t, e, "lead", "Email,Full Name,Author\nlead@authored.example,Lead Authored,Anna Müller\n",
 		map[string]string{"Email": "email", "Full Name": "full_name", "Author": "author"})

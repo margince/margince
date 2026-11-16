@@ -63,6 +63,7 @@ func isAgentStamp(stamp string) bool { return strings.HasPrefix(stamp, "agent:")
 // A consent an agent records names the agent on the proof row. Its source says
 // so too, whatever source the call claims.
 func TestAnAgentsConsentProofNamesTheAgent(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-consent-proof")
 	c.act(t, "record_consent", map[string]any{"id": c.contact, "request_body": AnyMap{
 		"purpose_id": c.purpose, "new_state": "granted", "lawful_basis": "consent",
@@ -83,6 +84,7 @@ func TestAnAgentsConsentProofNamesTheAgent(t *testing.T) {
 
 // A user's own consent keeps saying what the app has always said it was.
 func TestAUsersOwnConsentProofIsNotAnAgents(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "user-consent-proof")
 	if status := c.e.Call(t, "POST", "/v1/contacts/"+c.contact+"/consent", AnyMap{
 		"purpose_id": c.purpose, "new_state": "granted", "lawful_basis": "consent",
@@ -104,6 +106,7 @@ func TestAUsersOwnConsentProofIsNotAnAgents(t *testing.T) {
 // The stop and the standing exception run on a real contact. The stop names the
 // agent, and each can be taken back through its own action.
 func TestAnAgentTakesBackAStopItRecordedAndAStandingException(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-stops")
 	c.act(t, "suppress_contact", map[string]any{"id": c.contact, "request_body": AnyMap{
 		"kind": "subject_request", "reason": "Asked on the phone.",
@@ -180,6 +183,7 @@ func TestAnAgentTakesBackAStopItRecordedAndAStandingException(t *testing.T) {
 
 // A hand-recorded exchange is legal evidence, so its row says an agent wrote it.
 func TestAnAgentsQualifyingEventNamesTheAgent(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-qualifying")
 	event := answerID(t, c.act(t, "record_qualifying_event", map[string]any{"id": c.contact, "request_body": AnyMap{
 		"kind": "in_person", "note": "Met at the Hannover fair.",
@@ -211,6 +215,7 @@ func TestAnAgentsQualifyingEventNamesTheAgent(t *testing.T) {
 // relay and its purpose takes no double opt-in. So each call passes every check on
 // the agent and ends on the precondition named here.
 func TestAnAgentMailsTheComplianceMessages(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-compliance-mail")
 	const noRelay = "cannot send its own mail yet"
 	for _, call := range []struct {
@@ -235,6 +240,7 @@ func TestAnAgentMailsTheComplianceMessages(t *testing.T) {
 
 // An agent checks a contact before it records, and reads what the user reads.
 func TestAnAgentReadsAContactsConsentAsTheUserDoes(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-consent-read")
 	read := func(action string) string {
 		t.Helper()
@@ -279,6 +285,7 @@ func TestAnAgentReadsAContactsConsentAsTheUserDoes(t *testing.T) {
 
 // The subject-request queue and its deadline, read and worked as the user does.
 func TestAnAgentWorksTheSubjectRequestQueue(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-dsr")
 	var opened struct {
 		ID string `json:"id"`
@@ -327,6 +334,7 @@ func TestAnAgentWorksTheSubjectRequestQueue(t *testing.T) {
 
 // An erase cannot be taken back, so an agent works the request and a human closes it.
 func TestAnAgentDoesNotCloseAnErasure(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-no-erase")
 	var before struct {
 		FullName string `json:"full_name"`
@@ -373,6 +381,7 @@ func TestAnAgentDoesNotCloseAnErasure(t *testing.T) {
 // A passport agent's stamp is what the app reads to name its user, so this runs on a
 // real passport through the agent's own door.
 func TestAnObjectionARealPassportRecordedNamesItsUser(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-objection")
 	c.act(t, "suppress_contact", map[string]any{"id": c.contact, "request_body": AnyMap{"kind": "marketing_objection", "reason": "they said stop"}})
 	var stops struct {
@@ -396,6 +405,7 @@ func TestAnObjectionARealPassportRecordedNamesItsUser(t *testing.T) {
 // retry after a lost answer files no second one. Free text names nobody for certain,
 // so two such requests stay two cases.
 func TestAnAgentRepeatingAnOpenRequestReachesTheOneCase(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-one-case")
 	open := func() string {
 		t.Helper()
@@ -434,6 +444,7 @@ func TestAnAgentRepeatingAnOpenRequestReachesTheOneCase(t *testing.T) {
 
 // The compliance reads answer the agent what they answer its user.
 func TestAnAgentReadsTheComplianceQueues(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-compliance-reads")
 	for _, read := range []struct {
 		route string
@@ -474,6 +485,7 @@ func TestAnAgentReadsTheComplianceQueues(t *testing.T) {
 // Placing a hold is open and lifting it is not. Pinning is open, its evidence
 // names the agent, and the release that erases stays with the user.
 func TestAnAgentPlacesAHoldAndPinsARecordButNeverLiftsOrReleases(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-holds")
 	reason := AnyMap{"reason": "Litigation on this account."}
 	c.act(t, "place_legal_hold", map[string]any{"entityType": "contact", "recordId": c.contact, "request_body": reason})
@@ -514,6 +526,7 @@ func TestAnAgentPlacesAHoldAndPinsARecordButNeverLiftsOrReleases(t *testing.T) {
 // The acts security keeps with the user are refused on the route and have no
 // action on any router.
 func TestAnAgentIsRefusedTheComplianceActsSecurityKeeps(t *testing.T) {
+	t.Parallel()
 	c := newComplianceDoors(t, "agent-compliance-closed")
 	for _, closed := range []struct{ method, route string }{
 		{"PATCH", "/v1/retention/settings"},

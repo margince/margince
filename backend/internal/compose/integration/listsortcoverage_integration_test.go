@@ -54,6 +54,7 @@ const (
 )
 
 func TestProductListSortsByEveryOfferedColumn(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := asCatalogueReader(e.WS, "product")
 
@@ -94,6 +95,7 @@ func TestProductListSortsByEveryOfferedColumn(t *testing.T) {
 }
 
 func TestOfferTemplateListSortsByEveryOfferedColumn(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := asCatalogueReader(e.WS, "offer_template")
 

@@ -16,6 +16,7 @@ import (
 // each take the deal off one of two equal activities, and answer alike. A
 // second decline of the same deal writes nothing.
 func TestADealDeclineAnswersAsItsRouteThroughTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "deal-decline-doors", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Decline Works", "source": "manual"})
 	stages := apptest.DiscoverSeededPipeline(t, d.e)

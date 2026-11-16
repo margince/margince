@@ -69,6 +69,7 @@ func oversees(ctx context.Context, t *testing.T, e *apptest.AppEnv, role string)
 // its own teams' weeks before the upgrade, so it gets no oversight; one left as
 // seeded read every team's week, and keeps doing so through the grant.
 func TestTheOversightBackfillNeverWidensANarrowedRole(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name     string
 		narrowed bool
@@ -105,6 +106,7 @@ func TestTheOversightBackfillNeverWidensANarrowedRole(t *testing.T) {
 // A rollback keeps an operator's denial. Removing the key on the way down would
 // let the next upgrade read its absence as "never decided" and grant it again.
 func TestTheOversightRollbackKeepsAnOperatorsDenial(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	ctx := context.Background()
 	bootstrapInstallation(t, e)

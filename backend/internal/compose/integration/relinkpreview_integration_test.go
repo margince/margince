@@ -18,6 +18,7 @@ import (
 )
 
 func TestRelinkPreviewMatchesReplacementAndAssociation(t *testing.T) {
+	t.Parallel()
 	for _, replace := range []bool{false, true} {
 		t.Run(map[bool]string{false: "associate", true: "replace"}[replace], func(t *testing.T) {
 			e := Setup(t)

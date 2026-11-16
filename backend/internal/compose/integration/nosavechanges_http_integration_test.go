@@ -63,6 +63,7 @@ func assertSaveChangesNothing(
 }
 
 func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	var contact versionedWire
@@ -160,6 +161,7 @@ func TestASaveOfTheStoredValuesChangesNothing(t *testing.T) {
 }
 
 func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
+	t.Parallel()
 	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))
 	if err != nil {
 		t.Fatalf("cipher: %v", err)
@@ -189,6 +191,7 @@ func TestAWebhookSubscriptionSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 // The settings drawer sends every field it shows, cleared ones as null. Saved
 // unchanged, that body must not move the version or write history.
 func TestAWebsiteFormSavedAsItAlreadyIsChangesNothing(t *testing.T) {
+	t.Parallel()
 	const site = "https://www.example.com"
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -207,6 +210,7 @@ func TestAWebsiteFormSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 // Clearing the headers a subscription sends is a change. The tokens they carry
 // must stop being sent, so an empty list is not "nothing to do".
 func TestClearingAWebhooksCustomHeadersIsAChange(t *testing.T) {
+	t.Parallel()
 	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))
 	if err != nil {
 		t.Fatalf("cipher: %v", err)
@@ -244,6 +248,7 @@ func TestClearingAWebhooksCustomHeadersIsAChange(t *testing.T) {
 }
 
 func TestADealRoomExpirySetToItsStoredValueChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Room Expiry", "ada@expiry.test", "Ada Admin")
 	_, roomID, version := openRoomOnANewDeal(t, e, "Expiry agreement")
@@ -295,6 +300,7 @@ var noOpProbedRoutes = map[string]string{
 // Every probed route is a PATCH or a PUT. The contract-side check lives in the
 // gates package, which reads this table from source.
 func TestTheProbeTableListsOnlySaveRoutes(t *testing.T) {
+	t.Parallel()
 	for route, probe := range noOpProbedRoutes {
 		if !strings.HasPrefix(route, "PATCH /") && !strings.HasPrefix(route, "PUT /") {
 			t.Errorf("%q is not a PATCH or PUT route", route)
@@ -306,6 +312,7 @@ func TestTheProbeTableListsOnlySaveRoutes(t *testing.T) {
 }
 
 func TestACatalogRowSavedAsItAlreadyIsChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 	for _, route := range []string{"/v1/loss-reasons", "/v1/acquisition-sources"} {
 		t.Run(route, func(t *testing.T) {
@@ -324,6 +331,7 @@ func TestACatalogRowSavedAsItAlreadyIsChangesNothing(t *testing.T) {
 }
 
 func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	t.Run("offer template", func(t *testing.T) {
@@ -419,6 +427,7 @@ func TestOtherRecordsSavedAsTheyAlreadyAreChangeNothing(t *testing.T) {
 // The forms send every field and every replace-set on every save, so a save of
 // an untouched record carries the lot.
 func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	var contact versionedWire
@@ -476,6 +485,7 @@ func TestTheFullFormPayloadOfAnUntouchedRecordChangesNothing(t *testing.T) {
 }
 
 func TestAReviewedInquiryPolicySavedUnchangedWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()), compose.WithSchemaPool(SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	var form versionedWire

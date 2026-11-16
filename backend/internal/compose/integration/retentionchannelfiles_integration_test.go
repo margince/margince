@@ -62,6 +62,7 @@ func seedAgedCorrespondence(t *testing.T, e *Env) (mail, channel ids.UUID) {
 // query starting to distinguish them — and a query that acts on neither would
 // pass two separate tests written the obvious way.
 func TestRetentionTreatsAChannelMessageLikeMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	SeedRetentionPolicies(t, e)
 	mail, channel := seedAgedCorrespondence(t, e)

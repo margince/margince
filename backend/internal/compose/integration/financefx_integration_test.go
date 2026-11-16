@@ -103,6 +103,7 @@ func amountOf(minor *int64) string {
 // two, so a conversion that skipped either scale is off by a factor of 100.
 // The rate dated after the issue day is in the sheet too, and must not be used.
 func TestAForeignInvoiceConvertsAtTheRateInForceOnItsIssueDate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source := testBooksSource{currency: "JPY", netMinor: 1_000_000}
 	store, admin, company := linkedForeignLedger(t, e, source)
@@ -125,6 +126,7 @@ func TestAForeignInvoiceConvertsAtTheRateInForceOnItsIssueDate(t *testing.T) {
 // refuses the total. Once a rate is entered for that day, the next pass
 // converts it, and the pass after that writes nothing.
 func TestAForeignInvoiceConvertsOnceItsDayHasARate(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	source := testBooksSource{currency: "CHF", netMinor: 10_000}
 	store, admin, company := linkedForeignLedger(t, e, source)

@@ -49,6 +49,7 @@ func withoutCompanyRead(e *Env, user ids.UUID, objects ...string) context.Contex
 // withheld from a seat that may not read companies — rather than the project
 // being refused, which would take a record away over one band of it.
 func TestAProjectsCompanySectionIsWithheldWithoutTheCompanyGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	customer := e.SeedCompany(t, "Acme Werke", nil)
@@ -81,6 +82,7 @@ func TestAProjectsCompanySectionIsWithheldWithoutTheCompanyGrant(t *testing.T) {
 // what stops the guard above from being satisfied by an empty list for every
 // caller.
 func TestAProjectsCompanySectionIsServedWithTheCompanyGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	admin := e.Admin()
 	customer := e.SeedCompany(t, "Acme Werke", nil)
@@ -109,6 +111,7 @@ func TestAProjectsCompanySectionIsServedWithTheCompanyGrant(t *testing.T) {
 // Y"), so a path with the account removed is not a smaller answer but a wrong
 // one.
 func TestAnIntroPathIsRefusedWithoutTheCompanyGrant(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := signalStore(e)
 	admin := e.adminSignals()

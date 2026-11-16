@@ -57,6 +57,7 @@ func captureMailLink(t *testing.T, e *Env, mail ids.UUID, system, address, text 
 }
 
 func TestADocumentLinkIsListedWhereTheMailsFilesAre(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -90,6 +91,7 @@ func TestADocumentLinkIsListedWhereTheMailsFilesAre(t *testing.T) {
 }
 
 func TestADocumentLinkIsNotAFileOfItsMail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada", &e.Rep1)
 	mail := seedActivityWithContact(t, e, contact)
@@ -117,6 +119,7 @@ func TestADocumentLinkIsNotAFileOfItsMail(t *testing.T) {
 }
 
 func TestADocumentLinkAuditHoldsTheHostNotTheAddress(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada", &e.Rep1)
 	mail := seedActivityWithContact(t, e, contact)
@@ -133,6 +136,7 @@ func TestADocumentLinkAuditHoldsTheHostNotTheAddress(t *testing.T) {
 }
 
 func TestADocumentLinkFollowsItsMailsAudience(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, stage, _ := DealFixture(t, e)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -156,6 +160,7 @@ func TestADocumentLinkFollowsItsMailsAudience(t *testing.T) {
 }
 
 func TestAnArchivedDocumentLinkStaysArchivedWhenTheMailIsPulledAgain(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada", &e.Rep1)
 	company := e.SeedCompany(t, "Acme", &e.Rep1)
@@ -177,6 +182,7 @@ func TestAnArchivedDocumentLinkStaysArchivedWhenTheMailIsPulledAgain(t *testing.
 }
 
 func TestADocumentLinkRowCannotHoldBytesOrChangeCategory(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Ada", &e.Rep1)
 	mail := seedActivityWithContact(t, e, contact)

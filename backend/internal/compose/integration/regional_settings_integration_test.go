@@ -16,6 +16,7 @@ import (
 )
 
 func TestRegionalFormatsPersistAndRequireSettingsAuthority(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})

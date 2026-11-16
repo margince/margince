@@ -111,6 +111,7 @@ type sharedNetwork struct {
 // GET /deals/{id}/coverage and company_coverage, and from
 // GET /contacts/{id}/network and who_knows.
 func TestCoverageAndNetworkRoutesAnswerAsTheirTools(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "coverage-doors", "read")
 	company, deal := dealAtAnAccount(t, d.e, "Hollow Ridge", "Ridge renewal")
 	champion := contactAt(t, d.e, company, "Ines Champion", "")
@@ -174,6 +175,7 @@ type sharedPipelines struct {
 // GET /pipelines carries its list under `data`, the tool under `pipelines`;
 // the pipelines and their stages are the same.
 func TestPipelinesRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "pipeline-doors", "read")
 	var page struct {
 		Data json.RawMessage `json:"data"`
@@ -191,6 +193,7 @@ func TestPipelinesRouteAnswersAsTheTool(t *testing.T) {
 // GET /query-vocabulary runs describe_query_vocabulary itself, so the two bodies
 // are one JSON document. A human session reads it too.
 func TestQueryVocabularyRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "vocabulary-doors", "read")
 	rest := d.rest(t, "GET", "/v1/query-vocabulary", nil)
 	if compacted(t, rest) != compacted(t, d.tool(t, "describe_query_vocabulary", map[string]any{})) {
@@ -207,6 +210,7 @@ func TestQueryVocabularyRouteAnswersAsTheTool(t *testing.T) {
 // A report citing a saved run renders the same figures on
 // POST /analytics/reports/render and compose_analytics_report.
 func TestReportRenderRouteAnswersAsTheTool(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "report-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	for i := range 6 {

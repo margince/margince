@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestPublicBookingRefusesArchivedRecipientBeforeConsent(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -53,6 +54,7 @@ func TestPublicBookingRefusesArchivedRecipientBeforeConsent(t *testing.T) {
 // The assertion is written against what the CONFIRM TOKEN table says, so it
 // stays honest whichever way this installation is wired: a staged mail leaves a
 // delivery behind, and the outcome must agree with it.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -110,6 +112,7 @@ func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 // necessary rather than tidy: an inquiry leaves no inbound MESSAGE on the
 // timeline, so the send path's derivation has nothing to read. A rep answering
 // somebody who booked a meeting with them was refused as writing to a stranger.
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAPublicBookingRecordsTheInquiryThatAuthorisesAnsweringIt(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)

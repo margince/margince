@@ -25,6 +25,7 @@ import (
 // The PDF beside it is the control, because a rule that refused every upload
 // would satisfy the SVG case on its own.
 func TestAnUploadOfAnUnacceptedKindStoresNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	blob := blobstore.NewMemory()
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blob)

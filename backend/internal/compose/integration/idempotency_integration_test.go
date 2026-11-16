@@ -25,6 +25,7 @@ import (
 )
 
 func TestIdempotencyKeyReplay(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Probe", "admin@idem.test", "Admin")
@@ -82,6 +83,7 @@ func TestIdempotencyKeyReplay(t *testing.T) {
 // middleware hands back the pre-erasure snapshot every live read path now
 // refuses. The replay probe is live-only for exactly that reason.
 func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Erase", "admin@idemerase.test", "Admin")
@@ -134,6 +136,7 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 // worse failure than the disclosure it was meant to close. What a companion
 // discloses is an id, so what it is checked against is row SCOPE.
 func TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Promote", "admin@idempromote.test", "Admin")
 
@@ -184,6 +187,7 @@ func TestAPromoteReplayStillWorksThoughItArchivedItsOwnLead(t *testing.T) {
 // saw the answer to gets told the record it made, rather than told that
 // somebody else already made one.
 func TestIdempotencyKeyReplay_createOfferTemplate(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -233,6 +237,7 @@ func TestIdempotencyKeyReplay_createOfferTemplate(t *testing.T) {
 }
 
 func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Activity", "admin@idem-act.test", "Admin")
@@ -282,6 +287,7 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 // scheduled_at is what tells them apart. Probing the activity table for a
 // scheduled send would look up an id that is not there and refuse every retry.
 func TestAScheduledSendReplayProbesTheScheduleNotTheActivity(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 
@@ -321,6 +327,7 @@ func TestAScheduledSendReplayProbesTheScheduleNotTheActivity(t *testing.T) {
 // transport key is scoped per principal, so nothing in the API can hand one
 // caller another's key today, and this is the guard for the day something can.
 func TestAScheduledSendReplayRefusesAMessageThatIsNoLongerTheCallersOwn(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 

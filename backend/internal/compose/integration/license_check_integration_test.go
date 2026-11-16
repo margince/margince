@@ -63,6 +63,7 @@ func licenseCheckApp(t *testing.T, source licensecheck.TokenSource) *apptest.App
 // honors no token this repository can mint. So the swap goes from no token to
 // one the module refuses, and only a fresh read moves absent to rejected.
 func TestCheckNowAppliesASwappedToken(t *testing.T) {
+	t.Parallel()
 	source := &swappableToken{}
 	e := licenseCheckApp(t, source.source)
 
@@ -100,6 +101,7 @@ func TestCheckNowAppliesASwappedToken(t *testing.T) {
 // A token that cannot be read is no verdict. The answer is 503, and the
 // posture the process held stands.
 func TestCheckNowReportsATokenItCouldNotRead(t *testing.T) {
+	t.Parallel()
 	source := &swappableToken{}
 	e := licenseCheckApp(t, source.source)
 
@@ -119,6 +121,7 @@ func TestCheckNowReportsATokenItCouldNotRead(t *testing.T) {
 // A seat without installation_settings update is refused, and the api does not
 // re-read its token on that seat's behalf.
 func TestCheckNowRefusesANonAdmin(t *testing.T) {
+	t.Parallel()
 	source := &swappableToken{}
 	e := licenseCheckApp(t, source.source)
 	e.DescribeCompany(t)
@@ -150,6 +153,7 @@ func TestCheckNowRefusesANonAdmin(t *testing.T) {
 // answered as unlicensed: no token this repository can mint boots, and the
 // watcher refuses a rejected one at boot.
 func TestCheckNowReadsATokenReplacedInTheDeclaredFile(t *testing.T) {
+	t.Parallel()
 	for name, declare := range map[string]func(path string) string{
 		"license.token as a file reference": func(path string) string {
 			return "license:\n  token: ${file:" + path + "}\n"

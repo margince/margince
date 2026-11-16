@@ -73,6 +73,7 @@ func oneTeamHorizon() []weekly.Outlook {
 // THE TEAM OUTLOOK IS READ OVER THE TEAM'S BOOK, and the seam is asked for the
 // team being snapshotted rather than for whoever happened to be assembling it.
 func TestTheTeamOutlookFreezesTheTeamScopeSnapshot(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	spy := &teamScopeSpy{outlooks: oneTeamHorizon()}
 	engine := weekly.NewEngine(e.Pool, identity.NewService(e.Pool)).WithForecast(spy)
@@ -103,6 +104,7 @@ func TestTheTeamOutlookFreezesTheTeamScopeSnapshot(t *testing.T) {
 // FROZEN, and readable after the snapshots it was read from are gone. The whole
 // reason the figures are copied rather than pointed at.
 func TestTheTeamOutlookSurvivesItsSnapshots(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	spy := &teamScopeSpy{outlooks: oneTeamHorizon()}
 	engine := weekly.NewEngine(e.Pool, identity.NewService(e.Pool)).WithForecast(spy)
@@ -130,6 +132,7 @@ func TestTheTeamOutlookSurvivesItsSnapshots(t *testing.T) {
 // AN ABSENT SEAM LEAVES THE SNAPSHOT WITHOUT AN OUTLOOK, and that is not a
 // failure: an installation that composed no forecast still gets its team week.
 func TestAnAbsentForecastSeamStillWritesTheTeamWeek(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	// setupTeamWeekly builds the engine WITHOUT a forecast, which is the state
 	// under test.
@@ -174,6 +177,7 @@ func (r *refusingForecast) CloseTeamWeek(
 //
 // The rep-level review had exactly this bug once. This is the team-level one.
 func TestARefusedTeamOutlookStillLeavesTheWeekWritten(t *testing.T) {
+	t.Parallel()
 	e := setupTeamWeekly(t)
 	refusing := &refusingForecast{}
 	engine := weekly.NewEngine(e.Pool, identity.NewService(e.Pool)).WithForecast(refusing)

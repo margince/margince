@@ -49,6 +49,7 @@ import (
 )
 
 func TestImportedHistoryRanksBelowWhatColleaguesWroteHere(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name    string
 		columns string
@@ -175,6 +176,7 @@ func TestImportedHistoryRanksBelowWhatColleaguesWroteHere(t *testing.T) {
 // the agent note carries a newer timestamp: at equal trust recency puts it
 // first, and only the sent message keeping T0 can hold it back.
 func TestAMessageThisInstallationSentStillRanksAsFirstParty(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 
 	contact := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by)

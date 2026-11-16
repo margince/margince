@@ -23,6 +23,7 @@ import (
 // The retain-only posture the environment sets is the one the nightly pass
 // and the policy list apply, with no row saying so. Not parallel: the binding
 // is the process's own.
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetRetainOnlyPostureSuppressesDestruction(t *testing.T) {
 	apptest.BindEnv(t, []string{"MARGINCE_PRIVACY_RETAIN_ONLY=true"})
 	e := Setup(t)

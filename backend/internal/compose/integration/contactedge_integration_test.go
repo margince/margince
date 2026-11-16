@@ -77,6 +77,7 @@ func contactEdgeCount(t *testing.T, a, b ids.UUID) int {
 // stored once in canonical order; a limited-audience thread contributes
 // nothing, because who talked to whom on it is content.
 func TestASharedThreadFoldsToOneContactEdgeAndALimitedOneToNone(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
@@ -95,6 +96,7 @@ func TestASharedThreadFoldsToOneContactEdgeAndALimitedOneToNone(t *testing.T) {
 // The erasure drop reaches BOTH endpoint columns: whichever side of the pair
 // the subject stands on, the row is gone.
 func TestDroppingAContactRemovesTheirContactEdgesOnEitherEnd(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anna := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	birgit := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
@@ -121,6 +123,7 @@ func TestDroppingAContactRemovesTheirContactEdgesOnEitherEnd(t *testing.T) {
 // caller's own peer is present — the refusal alone cannot prove the read
 // works, so the admission rides the same call.
 func TestContactPeersCarryOnlyContactsInsideRowScope(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	visible := e.SeedContact(t, "Birgit Sommer", &e.Rep1)
@@ -154,6 +157,7 @@ func TestContactPeersCarryOnlyContactsInsideRowScope(t *testing.T) {
 // arrives as a `peer` node with an anchor↔peer edge, and one human stays one
 // node when the peer is already drawn by another arm.
 func TestContactGraphDrawsThePeerArm(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	anchor := e.SeedContact(t, "Anna Weber", &e.Rep1)
 	peer := e.SeedContact(t, "Birgit Sommer", &e.Rep1)

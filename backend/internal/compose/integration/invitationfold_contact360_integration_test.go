@@ -21,6 +21,7 @@ import (
 // The contact page's recent activity folds a meeting's invitation mail onto
 // the meeting, as History does, and keeps a written reply.
 func TestTheContactPageFoldsAMeetingsInvitationMailOntoIt(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	contact := e.SeedContact(t, "Jana Novak", &e.Rep1)
 	meeting, invitation, written := ids.NewV7(), ids.NewV7(), ids.NewV7()

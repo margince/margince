@@ -16,6 +16,7 @@ import (
 // The create forms send one Idempotency-Key per attempt. A press the page did
 // not hold back then reaches the server as a repeat of the first request.
 func TestAFormPressedTwiceMakesOneRecord(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

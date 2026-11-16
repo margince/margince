@@ -95,6 +95,7 @@ func exerciseActivityIdempotentCapture(t *testing.T, e *apptest.AppEnv, dealID s
 }
 
 func TestEndToEnd_coreSalesFlow(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -172,6 +173,7 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 }
 
 func TestEndToEnd_authAndSurfaceBoundaries(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
@@ -220,6 +222,7 @@ func TestEndToEnd_authAndSurfaceBoundaries(t *testing.T) {
 // regression surfaced as a webhooks payload suite reporting
 // "lost without reason = 200" — a failure nobody would read as being about deals.
 func TestAdvancingToLostWithoutAReasonIsRefused(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)

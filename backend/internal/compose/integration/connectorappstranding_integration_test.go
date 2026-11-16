@@ -35,6 +35,7 @@ import (
 // The SECRET stays rotatable against the same id, which is the whole point of
 // being able to rotate one.
 func TestReplacingTheClientIDIsRefusedWhileConnectionsHoldTokensFromTheOldOne(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)
@@ -107,6 +108,7 @@ func TestReplacingTheClientIDIsRefusedWhileConnectionsHoldTokensFromTheOldOne(t 
 // whose mailboxes have started failing — and leave them chasing the same
 // misleading error afterwards, now with no way back.
 func TestAnErroredConnectionStillRefusesAChangedClientID(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := e.captureAdmin()
 	store := googleAppStore(t, e)

@@ -23,6 +23,7 @@ import (
 )
 
 func TestSeedBindingOnEmptyStoreHasNoFirstBootWart(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/seed@1024"
@@ -52,6 +53,7 @@ func TestSeedBindingOnEmptyStoreHasNoFirstBootWart(t *testing.T) {
 }
 
 func TestReindexNeededAfterStaleIdentityRow(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/current@1024"
@@ -89,6 +91,7 @@ func TestReindexNeededAfterStaleIdentityRow(t *testing.T) {
 }
 
 func TestSeedBindingIsIdempotentAndConcurrentSafe(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const first = "fake/first@1024"
@@ -135,6 +138,7 @@ func TestSeedBindingIsIdempotentAndConcurrentSafe(t *testing.T) {
 // second claim, and it is refused by name (ErrReembeddingInFlight) rather than
 // by a bare zero row count that could equally mean an unseeded marker.
 func TestClaimAndEnqueueReembeddingIsSingleFlightOnTheRun(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/claim@1024"
@@ -184,6 +188,7 @@ func TestClaimAndEnqueueReembeddingIsSingleFlightOnTheRun(t *testing.T) {
 // about, and would hold only for as long as it stayed the last assertion in the
 // function.
 func TestClaimAndEnqueueReembeddingNamesAnUnseededMarker(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	err := e.Store.ClaimAndEnqueueReembedding(context.Background(),
 		claimOf("fake/unseeded@1024"), func(pgx.Tx) error { return nil })
@@ -193,6 +198,7 @@ func TestClaimAndEnqueueReembeddingNamesAnUnseededMarker(t *testing.T) {
 }
 
 func TestClaimAndEnqueueReembeddingRollsBackCASOnEnqueueError(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/rollback@1024"
@@ -231,6 +237,7 @@ func TestClaimAndEnqueueReembeddingRollsBackCASOnEnqueueError(t *testing.T) {
 // so populated_identity means "last released under" (search's
 // releaseReembeddingTx).
 func TestReleaseReembeddingOnlyEverActsOnItsOwnRun(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const original = "fake/orig@1024"
@@ -283,6 +290,7 @@ func TestReleaseReembeddingOnlyEverActsOnItsOwnRun(t *testing.T) {
 }
 
 func TestReindexNeededOnDimsOnlyDifference(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	// Same provider/model, different width — a real operator scenario
@@ -303,6 +311,7 @@ func TestReindexNeededOnDimsOnlyDifference(t *testing.T) {
 }
 
 func TestPendingAndTokenSumAggregateAcrossWorkspaces(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
 	ctx := context.Background()
 	const identity = "fake/agg@1024"

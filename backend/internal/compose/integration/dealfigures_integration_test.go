@@ -53,6 +53,7 @@ func seedFiguresDealClosing(t *testing.T, owner ids.UUID, amount int64, closes t
 
 // A deal the reader may see comes back with the figures a card states.
 func TestDealFiguresAnswerADealTheReaderMaySee(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	const amount = int64(160_100_00)
 	dealID := seedFiguresDeal(t, e.Rep1, amount)
@@ -84,6 +85,7 @@ func TestDealFiguresAnswerADealTheReaderMaySee(t *testing.T) {
 // An archived deal is not answered. A card naming a deal nobody works any more
 // would send a rep at a closed conversation.
 func TestDealFiguresWithholdAnArchivedDeal(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	dealID := seedFiguresDeal(t, e.Rep1, 50_000_00)
 	if _, err := OwnerConn(t).Exec(context.Background(),
@@ -105,6 +107,7 @@ func TestDealFiguresWithholdAnArchivedDeal(t *testing.T) {
 // Asking about nothing answers nothing. A page whose rows all carry their own
 // figures must not pay for a read.
 func TestDealFiguresAnswerNothingForNoIDs(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 
 	figures, err := e.Deals.Figures(e.Admin(), nil)
@@ -123,6 +126,7 @@ func TestDealFiguresAnswerNothingForNoIDs(t *testing.T) {
 // not read it off the Worklist, which is the one surface that used to get its
 // figures from a door with no mask on it.
 func TestDealFiguresApplyTheRolesFieldMask(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
 	mine := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
@@ -178,6 +182,7 @@ func TestDealFiguresApplyTheRolesFieldMask(t *testing.T) {
 // lane over the identical deal, so the Worklist's two rows for one deal state
 // one verdict about whether it is late.
 func TestDealFiguresFlagsAPastCloseDateAsOverdue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	yesterday := time.Now().UTC().AddDate(0, 0, -1)
 	dealID := seedFiguresDealClosing(t, e.Rep1, 50_000_00, yesterday)
@@ -200,6 +205,7 @@ func TestDealFiguresFlagsAPastCloseDateAsOverdue(t *testing.T) {
 // A won or lost deal's close date is when it closed, so a past date is no
 // lateness. Only an open deal can be overdue.
 func TestDealFiguresDoesNotFlagAClosedDealAsOverdue(t *testing.T) {
+	t.Parallel()
 	for semantic, probability := range map[string]int{"won": 100, "lost": 0} {
 		t.Run(semantic, func(t *testing.T) {
 			e := Setup(t)
@@ -232,6 +238,7 @@ func TestDealFiguresDoesNotFlagAClosedDealAsOverdue(t *testing.T) {
 // date read as YESTERDAY and fail this test on a defect it does not have. One
 // pinned instant closes that gap.
 func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	now := time.Now().UTC()
 	e.Deals.SetClock(func() time.Time { return now })
@@ -260,6 +267,7 @@ func TestDealFiguresDoesNotFlagATodayOrFutureCloseDateAsOverdue(t *testing.T) {
 // and the only thing that proves the join reaches it is a real one — a wrong
 // table name compiles perfectly and fails on the first query.
 func TestDealFiguresCarryTheStagesWinProbability(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	dealID := seedFiguresDeal(t, e.Rep1, 160_100_00)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
@@ -294,6 +302,7 @@ func TestDealFiguresCarryTheStagesWinProbability(t *testing.T) {
 // stage nobody rates highly from a fact nobody stated. Collapsing them would
 // tell a reader "unscored" about a deal the pipeline scores at 0.
 func TestADealOnAStageScoredZeroCarriesZeroRatherThanNothing(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	dealID := seedFiguresDeal(t, e.Rep1, 50_000_00)
 	if _, err := OwnerConn(t).Exec(context.Background(),

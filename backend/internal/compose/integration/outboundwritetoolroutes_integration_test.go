@@ -19,6 +19,7 @@ import (
 // compared: an approved run reads the company's website, and the harness has no
 // stand-in for the web.
 func TestEnrichStagesTheSameApprovalOnEitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "enrich-write-doors", "read", "write", "enrich")
 	company := func(name, domain string) string {
 		return createdID(t, d.e, "/v1/companies", AnyMap{"display_name": name, "domains": []AnyMap{{"domain": domain, "is_primary": true}}, "source": "manual"})
@@ -40,6 +41,7 @@ func TestEnrichStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 // it goes to the calendar step at once. The harness has no calendar provider, so
 // only the absence of a staging is compared.
 func TestInviteMeetingOnAColleaguesPassportIsStagedOnNeitherDoor(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "invite-write-doors", "read", "write", "send")
 	contact := func(name string) string {
 		return createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})

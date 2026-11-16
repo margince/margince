@@ -119,6 +119,7 @@ func countStoredCustomValues(t *testing.T, e *Env, table string, rowID ids.UUID,
 }
 
 func TestErasureScrubsCustomFieldColumns(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	contactCols := defineContactFieldPerType(t, f)
 	leadCol := f.defineField(t, customfields.FieldSpec{
@@ -220,6 +221,7 @@ func assertEraseTombstoneShape(t *testing.T, e *Env, contactID ids.UUID) {
 }
 
 func TestSARExportsCustomFieldValues(t *testing.T) {
+	t.Parallel()
 	f := setupCFV(t)
 	segmentCol := f.defineField(t, customfields.FieldSpec{
 		Object: "contact", Label: "Segment", Type: customfields.TypeText, Source: "manual",

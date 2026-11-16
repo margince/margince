@@ -81,6 +81,7 @@ func setupChannelSendNoGmail(t *testing.T) *channelSendEnv {
 // Gmail-configured suite gets — not accepted and left to park at transmission
 // where only an operator would notice.
 func TestSendMessageRefusesWithNoGoogleAppConfiguredAndNoBotBound(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSendNoGmail(t)
 	// No connectBot call: this workspace has bound no bot for telegram.
 
@@ -102,6 +103,7 @@ func TestSendMessageRefusesWithNoGoogleAppConfiguredAndNoBotBound(t *testing.T) 
 // prove nothing — it could just as well be the whole send path failing with no
 // Google app configured, not the pre-flight correctly answering "no bot".
 func TestSendMessageAcceptsWithNoGoogleAppConfiguredButABotBound(t *testing.T) {
+	t.Parallel()
 	c := setupChannelSendNoGmail(t)
 	c.ConnectBot(t)
 

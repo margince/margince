@@ -33,6 +33,7 @@ import (
 )
 
 func TestContact360NamesABouncedAddressAndWithholdsWithoutTheGrant(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	owner := OwnerConn(t)
 

@@ -49,6 +49,7 @@ func setupRelationships(t *testing.T) *relEnv {
 }
 
 func TestRelationshipLifecycle(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	var first struct {
@@ -138,6 +139,7 @@ func TestRelationshipLifecycle(t *testing.T) {
 // Under a tier floor, automatic work with no passport is refused the archive
 // instead: TestAFlooredEdgeArchiveIsRefusedToAutomaticWork below.
 func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	var edge struct {
@@ -184,6 +186,7 @@ func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 // Under a tier floor, automatic work with no passport may not stage the archive
 // the floor asks for. It is refused and the edge stays live.
 func TestAFlooredEdgeArchiveIsRefusedToAutomaticWork(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	var edge struct {
@@ -256,6 +259,7 @@ func flooredArchiveInvoker(t *testing.T, e *apptest.AppEnv, agentToken string) f
 }
 
 func TestPartnerPromotionLifecycle(t *testing.T) {
+	t.Parallel()
 	e := setupRelationships(t)
 
 	if status := e.Call(t, "GET", "/v1/companies/"+e.companyID+"/partner", nil, nil, nil); status != http.StatusNotFound {

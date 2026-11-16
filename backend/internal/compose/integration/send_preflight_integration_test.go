@@ -248,6 +248,7 @@ func (p *preflightEnv) connect(t *testing.T, providerScopes ...string) {
 
 // A human with no mailbox at all is told so before anything is staged.
 func TestSendRefusesWhenNoMailboxIsConnected(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 
 	status, code, detail := p.send(t)
@@ -268,6 +269,7 @@ func TestSendRefusesWhenNoMailboxIsConnected(t *testing.T) {
 // accepting the send would hand the user a 202 and a delivery that can only
 // park where they cannot see it.
 func TestSendRefusesAConnectedMailboxWithoutTheSendGrant(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope)
 
@@ -288,6 +290,7 @@ func TestSendRefusesAConnectedMailboxWithoutTheSendGrant(t *testing.T) {
 // what proves the two refusals above are about the GRANT and not merely about
 // the send path being broken.
 func TestSendProceedsOnceTheMailboxHoldsTheSendGrant(t *testing.T) {
+	t.Parallel()
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	p.stakeADeal(t)
@@ -313,6 +316,7 @@ func TestSendProceedsOnceTheMailboxHoldsTheSendGrant(t *testing.T) {
 // transmit, so an installation whose worker sends perfectly well has no api-side
 // gmail connector, and refusing on that would refuse every Gmail send there.
 func TestAGrantedGmailScopeWithNoConfiguredAppRefusesAtRequestTime(t *testing.T) {
+	t.Parallel()
 	p := setupPreflightWithoutGoogleApp(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 

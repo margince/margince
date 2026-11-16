@@ -112,6 +112,7 @@ func (s senderEnv) roleOf(t *testing.T, activity, contact ids.UUID) string {
 }
 
 func TestAGroupChatWithNoNamedSenderIsNobodysRequest(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	chat, err := s.logInbound(t, nil, s.alex, s.bea, s.company)
 	if err != nil {
@@ -130,6 +131,7 @@ func TestAGroupChatWithNoNamedSenderIsNobodysRequest(t *testing.T) {
 }
 
 func TestTheNamedSenderAloneAskedForTheFollowUp(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	chat, err := s.logInbound(t, map[string]any{"sender_contact_id": s.alex.String()}, s.alex, s.bea)
 	if err != nil {
@@ -148,6 +150,7 @@ func TestTheNamedSenderAloneAskedForTheFollowUp(t *testing.T) {
 
 // A chat linked to one contact keeps naming that contact as its sender.
 func TestASingleLinkedContactStillWroteTheMessage(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	if _, err := s.logInbound(t, nil, s.alex); err != nil {
 		t.Fatalf("logging the chat: %v", err)
@@ -158,6 +161,7 @@ func TestASingleLinkedContactStillWroteTheMessage(t *testing.T) {
 }
 
 func TestANamedSenderMustBeLinked(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	cara := seedRecipient(t, s.e, "Cara Okafor", "cara.okafor@lumenfield.example", nil)
 	cases := map[string]struct {
@@ -188,6 +192,7 @@ func TestANamedSenderMustBeLinked(t *testing.T) {
 // A mail logged under the company names its sender only by address. Linking a
 // contact later makes them the sender only when that address is theirs.
 func TestALaterLinkNamesOnlyTheProvenSender(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	mail, err := s.logInbound(t, map[string]any{
 		"kind": "email", "channel_provider": nil, "subject": "Lens pricing",
@@ -227,6 +232,7 @@ func TestALaterLinkNamesOnlyTheProvenSender(t *testing.T) {
 // Replacing a message's contact never carries its author to the new contact.
 // The new contact becomes the sender only when the stated address is theirs.
 func TestAReplacingLinkKeepsTheAuthorOnProof(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	logged := func(fields map[string]any) func() ids.UUID {
 		return func() ids.UUID {
@@ -303,6 +309,7 @@ func (s senderEnv) olderInbound(t *testing.T, counterparty string, links ...ids.
 }
 
 func TestTheSenderRepairStampsOnlyAProvenSender(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	ctx := principal.SystemActing(s.e.Admin(), "system:datatask-test")
 	proven := s.olderInbound(t, alexAddress, s.alex)
@@ -362,6 +369,7 @@ func provenSendersPreview(ctx context.Context, t *testing.T, e *Env) int64 {
 // address moves to Bo. A draft written to Bo reads none of that mail. The
 // participant backfill writes this row shape for older mail.
 func TestMailFromAReassignedAddressStaysWithItsAuthor(t *testing.T) {
+	t.Parallel()
 	s := setupSenderEnv(t)
 	shared := "desk@lumenfield.example"
 	ada := seedRecipient(t, s.e, "Ada Brennan", shared, nil)

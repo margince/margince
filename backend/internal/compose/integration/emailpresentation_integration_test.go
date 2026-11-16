@@ -65,6 +65,7 @@ func onFullSeat(ctx context.Context) context.Context {
 // reading a colleague's limited mail is the disclosure the limit exists to
 // prevent.
 func TestEmailPresentationAccessMatrix(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
 	participant := onFullSeat(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms))
@@ -161,6 +162,7 @@ func TestEmailPresentationAccessMatrix(t *testing.T) {
 // only read, or a read seat whatever its role grants, is offered no reply,
 // forward, relink or audience change.
 func TestEmailPresentationOffersReplyOnlyToASeatThatMaySend(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
 	readRole := principal.Permissions{
@@ -212,6 +214,7 @@ func TestEmailPresentationOffersReplyOnlyToASeatThatMaySend(t *testing.T) {
 // TestAnImporterIsOfferedTheThreadDecisionOnlyWhereItMayDecide holds the
 // captured arm of access.can_change to the grant the thread decision asks.
 func TestAnImporterIsOfferedTheThreadDecisionOnlyWhereItMayDecide(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
 	sendOnly := principal.Permissions{
@@ -260,6 +263,7 @@ func TestAnImporterIsOfferedTheThreadDecisionOnlyWhereItMayDecide(t *testing.T) 
 // fills. It proves the positive arm: a caller who may change the set reads it,
 // and one who may only read the message does not.
 func TestSelectedAudienceReadsBackItsMembers(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms))
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -364,6 +368,7 @@ func assertWithholdsEverything(t *testing.T, who string, got crmcontracts.EmailP
 // activity is not a synonym for an email: a call, a note and a task are
 // activities too, and none of them has an email's shape.
 func TestEmailPresentationRefusesWhatIsNotAnEmail(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -392,6 +397,7 @@ func TestEmailPresentationRefusesWhatIsNotAnEmail(t *testing.T) {
 // Present exactly when kind=email, so a reader branches on the field rather
 // than on the kind word.
 func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -442,6 +448,7 @@ func TestEmailSummaryRidesEveryActivityRow(t *testing.T) {
 // nil slice and an empty one both have length zero and read identically. Only
 // the encoded bytes tell them apart, so this test encodes.
 func TestEveryRequiredListReachesTheWireAsAList(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -550,6 +557,7 @@ func requiredListFields(t *testing.T, schema string) []string {
 // usually the very contact it stood for: a rep could not tell why the message
 // had reached them.
 func TestAColleaguesSeatIsNamedOnTheHeader(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -583,6 +591,7 @@ func TestAColleaguesSeatIsNamedOnTheHeader(t *testing.T) {
 // August is a fact about August, and dropping their name because they resigned
 // leaves exactly the gap this join was added to close.
 func TestADepartedColleagueStaysNamedOnAnOldMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -623,6 +632,7 @@ func deactivateSeat(t *testing.T, e *Env, user ids.UUID) {
 // display_name for a party that resolves to no record of ours, and printing a
 // bare address at a reader when we were told a name is a worse answer.
 func TestAnUnknownSenderIsNamedAsTheyWroteThemselves(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
@@ -713,6 +723,7 @@ func headerParticipant(t *testing.T, e *Env, activityID ids.UUID, role, address,
 // differ are how a reader gets one answer on the timeline and another when they
 // open it.
 func TestTheBadgeSaysEveryoneOnlyWhenAStrangerCanReachTheMessage(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	author := e.As(e.Rep1, []ids.UUID{e.Team1}, activityLifecyclePerms)
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)

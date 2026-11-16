@@ -16,6 +16,7 @@ import (
 // refused through the route-backed action an agent calls. The same act on an
 // ordinary colleague goes through, so the refusal is the limit, not a gate.
 func TestAnAgentIsRefusedTheMemberActsThatWidenRights(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-member-limits", "read", "write", "send")
 	d.e.DescribeCompany(t)
 	self := memberID(t, d, "agent-member-limits@fable.test")
@@ -63,6 +64,7 @@ func TestAnAgentIsRefusedTheMemberActsThatWidenRights(t *testing.T) {
 // switches it on, so each counts as acting on every member. An agent is refused
 // when its own user or an administrator is on the team, and a rename stays free.
 func TestAnAgentIsRefusedArchivingOrRestoringATeamHoldingALimitedMember(t *testing.T) {
+	t.Parallel()
 	d := newTwoDoors(t, "agent-team-limits", "read", "write")
 	d.e.DescribeCompany(t)
 	self := memberID(t, d, "agent-team-limits@fable.test")

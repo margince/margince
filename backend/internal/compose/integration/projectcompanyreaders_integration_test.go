@@ -65,6 +65,7 @@ func seedMovedProject(t *testing.T, e *Env) movedProject {
 }
 
 func TestAProjectReportFiltersByAnyLiveCompanyOnTheProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	reader := e.readerWith("project", "company", "relationship")
@@ -90,6 +91,7 @@ func TestAProjectReportFiltersByAnyLiveCompanyOnTheProject(t *testing.T) {
 // capture-private to someone else. The customer column's mask governs what the
 // report displays, never which rows the filter keeps.
 func TestAProjectReportFilterIsNotNarrowedByAnUnreadableFirstCustomer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	e.MakeCapturePrivate(t, "company", f.current.UUID, e.Rep3)
@@ -103,6 +105,7 @@ func TestAProjectReportFilterIsNotNarrowedByAnUnreadableFirstCustomer(t *testing
 // A seat that may read edges but not companies is refused the company, so it
 // is never handed a company id.
 func TestAProjectReportRefusesTheCompanyToASeatWithoutCompanyRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	reader := e.readerWith("project", "relationship")
@@ -117,6 +120,7 @@ func TestAProjectReportRefusesTheCompanyToASeatWithoutCompanyRead(t *testing.T) 
 }
 
 func TestAProjectReportRefusesTheCompanyToASeatWithoutRelationshipRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	reader := e.readerWith("project", "company")
@@ -131,6 +135,7 @@ func TestAProjectReportRefusesTheCompanyToASeatWithoutRelationshipRead(t *testin
 }
 
 func TestAnExportedProjectNamesItsReadableFirstCustomer(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	exported := func(ctx context.Context) any {
@@ -152,6 +157,7 @@ func TestAnExportedProjectNamesItsReadableFirstCustomer(t *testing.T) {
 }
 
 func TestDeliveryContinuityCountsOnlyTheCompaniesOnAProject(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	admin := e.Admin()
@@ -184,6 +190,7 @@ func TestDeliveryContinuityCountsOnlyTheCompaniesOnAProject(t *testing.T) {
 // Read over the whole published vocabulary, so a new report or column cannot
 // skip it.
 func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	everything := []string{"deal", "lead", "activity", "contact", "project", "partner", "relationship", "company"}
 	with := compose.AnalyticsSchemaFor(e.readerWith(everything...))
@@ -237,6 +244,7 @@ func TestNoReportOffersACompanyToASeatWithoutCompanyRead(t *testing.T) {
 // decision commits. Neither taking a company off a project nor putting it on
 // another can change the fact under it.
 func TestALockedDeliveryReadHoldsTheAccountsEdges(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	f := seedMovedProject(t, e)
 	admin := e.Admin()

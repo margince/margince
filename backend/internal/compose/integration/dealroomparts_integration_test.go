@@ -23,6 +23,7 @@ import (
 // carries them. An archive staged on one can then name what it archives. An id
 // no room holds is absent.
 func TestADealRoomsPartsReadBackOnTheSeam(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)

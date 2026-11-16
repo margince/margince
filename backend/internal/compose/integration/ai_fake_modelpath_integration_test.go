@@ -23,6 +23,7 @@ import (
 )
 
 func TestAIFakeModelPathRidesRouterAndTraces(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	modelPath, err := compose.NewModelPath(context.Background(), ai.FakeRoutingConfig(), e.Pool, false, nil)
 	if err != nil {
@@ -56,6 +57,7 @@ func TestAIFakeModelPathRidesRouterAndTraces(t *testing.T) {
 // under --ai-fake, not just whichever tier a partially-bound config left
 // reachable.
 func TestAIFakeModelPathBindsEveryLane(t *testing.T) {
+	t.Parallel()
 	e := Setup(t)
 	modelPath, err := compose.NewModelPath(context.Background(), ai.FakeRoutingConfig(), e.Pool, false, nil)
 	if err != nil {
