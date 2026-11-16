@@ -21118,6 +21118,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Integrierter Testanbieter",

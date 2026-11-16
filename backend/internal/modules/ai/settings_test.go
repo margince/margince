@@ -27,7 +27,9 @@ func TestEveryProviderKeyIsADeclaredSecret(t *testing.T) {
 		}
 		got = append(got, s.Env())
 	}
+	// Two adapters sending one vendor's key read one variable.
 	slices.Sort(want)
+	want = slices.Compact(want)
 	slices.Sort(got)
 	if !slices.Equal(want, got) {
 		t.Fatalf("declared keys %v, providers read %v", got, want)

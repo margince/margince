@@ -20571,6 +20571,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.geminiVertex": "Gemini trên Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Tương thích Jev",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Nhà cung cấp thử nghiệm tích hợp",

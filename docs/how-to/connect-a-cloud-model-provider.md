@@ -256,6 +256,29 @@ names the binding it could not check: when Google is down, you can still edit th
 own services whatever the profile says. The certification judge (`make e2e-ai` `JUDGE=`) is not checked
 against the profile, because its corpus is not real data.
 
+## 6. The Gemini Decisions API on the decisions lane
+
+`gemini_decision` binds the decisions lane to the Decisions API of Google, which picks one answer from
+a closed set and writes no text. It sends the key of `gemini` (`GEMINI_API_KEY`, or the `gemini` row
+under Providers) and has no row of its own. Its endpoint is fixed, so it takes no `base_url`. Pick it
+on the decision model row under **Model tiers**, or take the `#` off its block in
+[`config/presets/gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml):
+
+```yaml
+decisions: { provider: gemini_decision, model: gemini-decision-1 }
+```
+
+The price sheet holds `gemini-decision-1` at $0.10 per 1,000,000 input tokens, and output is free. An
+upgrade adds that row to a sheet set up before it. The price refresh reads it from models.dev once
+models.dev lists the model, and until then keeps the sheet price.
+
+What it does not cover:
+
+- It is a `v1beta` API of the Gemini Developer API alone. Vertex AI does not serve it.
+- Google runs it in no EU region, so do not bind it under `eu_hosted`. `sovereign` refuses it.
+- No decision site is certified on it yet, so every site keeps to its ladder. See
+  [certify-a-decision-site.md](certify-a-decision-site.md).
+
 ## The sovereign profile refuses every cloud provider
 
 Under `profile: sovereign`, by design, no data may leave. A cloud provider on any tier, or on the

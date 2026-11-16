@@ -2,7 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { type AvailableModels, useAvailableModels } from "../../lib/ai-models";
+import {
+  type AvailableModels,
+  keyRowFor,
+  useAvailableModels,
+} from "../../lib/ai-models";
 import { boundProviders, type RoutingRead } from "../../lib/ai-routing-query";
 
 // Which providers a binding editor may offer, and which of them still lack the
@@ -26,7 +30,6 @@ export function reachableProviders(
   routing?: RoutingRead["routing"],
 ): readonly string[] {
   if (!keys) return all;
-  const status = new Map(keys.map((k) => [k.provider, k]));
   return all.filter((provider) => {
     if (provider === current) return true;
     if (provider === "fake") {
@@ -38,7 +41,7 @@ export function reachableProviders(
       const answer = probes.get(provider);
       return answer !== undefined && !answer.unavailable;
     }
-    const entry = status.get(provider);
+    const entry = keyRowFor(provider, keys);
     return !entry || entry.configured || entry.optional;
   });
 }
@@ -54,7 +57,7 @@ const NO_PROBES: KeylessProbes = new Map();
 
 // What each keyless chat adapter answers when asked, for the lane being edited.
 // Two queries that fire only while the editor is mounted, and not at all for
-// the decision lane, whose adapters both take a key.
+// the decision lane, whose adapters each take a key.
 export function useKeylessProbes(
   lane: string,
   enabled: boolean,
@@ -73,6 +76,6 @@ export function missingKey(
   provider: string,
   keys: readonly KeyStatus[] | undefined,
 ): boolean {
-  const entry = keys?.find((k) => k.provider === provider);
+  const entry = keyRowFor(provider, keys);
   return entry !== undefined && !entry.configured && !entry.optional;
 }

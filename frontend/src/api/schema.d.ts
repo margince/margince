@@ -16602,6 +16602,9 @@ export interface paths {
          *     - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
          *       model list, and `model_count` is its length.
          *     - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+         *     - `gemini_decision` is asked Google's model list, `/v1beta/models` on its endpoint's host:
+         *       Google answers a bad key with 400, so the decision request cannot tell it from a bad
+         *       body. It passes with no `model_count`.
          *     - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
          *       public, so listing it would pass any key. It passes with no `model_count`.
          *     - Any other decision endpoint is sent the decision request with an empty body. 401 or
@@ -28462,6 +28465,8 @@ export interface components {
             credential_kind: "api_key" | "service_account";
             /** @description The provider whose prices this one's calls take for a model its own price sheet does not list: `gemini` for `gemini_vertex`, which serves the same models. A price written for this provider overrides it. Absent for a provider whose unpriced models stay unpriced. */
             priced_by?: string;
+            /** @description The other providers whose calls send this same key, such as `gemini_decision` on `gemini`. They have no row of their own, so each needs this key held. Absent when no other provider sends it. */
+            sent_by?: string[];
         };
         /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
         AiProviderKeyTestResult: {
@@ -28745,9 +28750,9 @@ export interface components {
          *     reaches no further than the task's own bindings.
          */
         AiDecisionsBinding: {
-            /** @description jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required). */
+            /** @description jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required) | gemini_decision (Google's Decisions API on the Gemini Developer API, keyed by the gemini provider's GEMINI_API_KEY; no EU hosting). */
             provider: string;
-            /** @description The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter. */
+            /** @description The decision model id, e.g. jev-1.13.0 on jev, typesafe/jev-1.13 on OpenRouter, or gemini-decision-1 on gemini_decision. */
             model: string;
             /**
              * @deprecated

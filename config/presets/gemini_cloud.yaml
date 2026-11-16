@@ -58,3 +58,9 @@ seeds:
     # decisions:
     #   provider: jev
     #   model: jev-1.13.0
+    # Or Google's Decisions API, on the GEMINI_API_KEY this preset already
+    # needs. It is certified for no site yet, so until it is, every site keeps
+    # to its ladder:
+    # decisions:
+    #   provider: gemini_decision
+    #   model: gemini-decision-1
