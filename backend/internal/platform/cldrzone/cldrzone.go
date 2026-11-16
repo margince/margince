@@ -22,8 +22,8 @@ var TimezoneXML []byte
 // Zone is one CLDR zone entry: the IANA names it answers to, the preferred one
 // first.
 type Zone struct {
-	// Country is the zone's ISO 3166-1 alpha-2 code in lower case, empty for a
-	// zone that lies in no country (UTC, the fixed offsets, the unknown zone).
+	// Country is the zone's ISO 3166-1 alpha-2 code in lower case. It is empty
+	// for a zone in no country: UTC, the fixed offsets, the unknown zone.
 	Country string
 	Names   []string
 }

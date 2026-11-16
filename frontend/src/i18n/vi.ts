@@ -7092,6 +7092,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.firstName": "Tên",
   "create.lastName": "Họ",
   "create.contactTitle": "Chức danh",
+  "create.acquisitionSource": "Nguồn của liên hệ",
+  "create.acquisitionSourceHint":
+    "Thông tin này hiển thị trên trang thông tin bảo vệ dữ liệu cá nhân của liên hệ.",
+  "create.acquisitionNote": "Chi tiết về nguồn",
+  "create.source.metInPerson": "Gặp trực tiếp",
+  "create.source.businessCard": "Danh thiếp",
+  "create.source.referral": "Được giới thiệu",
+  "create.source.website": "Trang web",
+  "create.source.other": "Khác",
   "create.email": "Email",
   "create.phone": "Điện thoại",
   "create.linkedin": "LinkedIn",
@@ -10579,6 +10588,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeKey": "Khóa",
   "privacy.purposeLabel": "Nhãn",
   "privacy.purposeDoi": "Cần xác nhận kép",
+  "privacy.purposeFrequency": "Tần suất",
+  "privacy.purposeFrequency.weekly": "Khoảng mỗi tuần một lần",
+  "privacy.purposeFrequency.monthly": "Khoảng mỗi tháng một lần",
+  "privacy.purposeFrequency.quarterly": "Khoảng mỗi quý một lần",
   "privacy.purposeCreate": "Tạo mục đích",
   "privacy.purposeAppendOnly":
     "Không thể đổi tên hay gỡ mục đích sau khi tạo; danh mục chỉ cho phép thêm mới. Chọn khóa cẩn thận.",
@@ -10768,7 +10781,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
   "privacynotice.title": "Thông tin đang lưu về quý khách",
   "privacynotice.intro":
-    "Pháp luật yêu cầu gửi thông báo này. Quý khách không cần trả lời hay làm gì.",
+    "Thông báo này cho quý khách biết về việc xử lý dữ liệu cá nhân của quý khách. Quý khách không cần trả lời hay làm gì.",
   "privacynotice.source.title": "Nguồn thông tin",
   "privacynotice.source.when": "Thu thập ngày {date}",
   "privacynotice.source.subjectInitiated":
@@ -10792,28 +10805,39 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.source.purchasedOrImported":
     "Thông tin của quý khách đến từ một danh sách đã được mua hoặc nhập vào.",
   "privacynotice.source.unknown":
-    "Không thể cho biết thông tin của quý khách đã đến bằng cách nào.",
+    "Chúng tôi không xác định được nguồn thu thập thông tin của quý khách.",
+  "privacynotice.source.stated.metInPerson":
+    "Chúng tôi đã gặp trực tiếp quý khách.",
+  "privacynotice.source.stated.businessCard":
+    "Quý khách đã đưa danh thiếp cho chúng tôi.",
+  "privacynotice.source.stated.referral":
+    "Quý khách được giới thiệu với chúng tôi.",
+  "privacynotice.source.stated.website":
+    "Chúng tôi tìm thấy thông tin của quý khách trên một trang web.",
+  "privacynotice.source.stated.other": "Nguồn khác, được mô tả dưới đây.",
+  "privacynotice.source.statedNote": "Ghi chú của chúng tôi: {note}",
   "privacynotice.purposes.title": "Mục đích sử dụng thông tin",
   "privacynotice.rights.title": "Quyền của quý khách đối với thông tin này",
   "privacynotice.rights.how":
-    "Để sử dụng bất kỳ quyền nào, vui lòng trả lời tin nhắn đã đưa quý khách đến đây, hoặc liên hệ qua địa chỉ trên trang web của chúng tôi.",
+    "Để sử dụng bất kỳ quyền nào, vui lòng trả lời tin nhắn đã đưa quý khách đến đây, hoặc liên hệ qua địa chỉ trên trang web của chúng tôi. Chúng tôi phản hồi trong 02 ngày làm việc kể từ khi nhận được yêu cầu.",
   "privacynotice.rights.howContact":
-    "Để sử dụng bất kỳ quyền nào, vui lòng liên hệ: {contact}",
+    "Để sử dụng bất kỳ quyền nào, vui lòng liên hệ: {contact}. Chúng tôi phản hồi trong 02 ngày làm việc kể từ khi nhận được yêu cầu.",
   "privacynotice.right.access":
     "Yêu cầu bản sao thông tin đang lưu về quý khách.",
   "privacynotice.right.rectification": "Yêu cầu sửa những thông tin chưa đúng.",
   "privacynotice.right.erasure": "Yêu cầu xóa thông tin.",
   "privacynotice.right.restriction":
-    "Yêu cầu ngừng sử dụng thông tin trong khi có nội dung đang tranh chấp.",
-  "privacynotice.right.objection": "Phản đối cách sử dụng thông tin.",
+    "Yêu cầu hạn chế xử lý thông tin khi quý khách có nghi ngờ về phạm vi, mục đích xử lý hoặc tính chính xác của thông tin.",
+  "privacynotice.right.objection": "Phản đối việc xử lý thông tin.",
   "privacynotice.right.portability":
     "Yêu cầu nhận dữ liệu quý khách đã cung cấp ở định dạng phổ biến, máy đọc được, hoặc chuyển dữ liệu đó cho bên khác.",
   "privacynotice.right.withdrawConsent":
     "Rút lại sự đồng ý đã cho bất cứ lúc nào. Việc này không thay đổi những gì chúng tôi đã làm trước đó.",
   "privacynotice.right.complain":
-    "Khiếu nại với cơ quan có thẩm quyền về bảo vệ dữ liệu cá nhân, ví dụ tại quốc gia nơi quý khách sống hoặc làm việc.",
-  "privacynotice.controller.title": "Đơn vị chịu trách nhiệm",
-  "privacynotice.controller.contact": "Câu hỏi về dữ liệu: {contact}",
+    "Khiếu nại, tố cáo, khởi kiện và yêu cầu bồi thường thiệt hại theo quy định của pháp luật. Tại Việt Nam, cơ quan có thẩm quyền về bảo vệ dữ liệu cá nhân là cơ quan chuyên trách bảo vệ dữ liệu cá nhân thuộc Bộ Công an.\nYêu cầu cơ quan có thẩm quyền hoặc tổ chức, cá nhân liên quan áp dụng biện pháp bảo vệ dữ liệu cá nhân của quý khách.",
+  "privacynotice.controller.title": "Bên kiểm soát dữ liệu cá nhân",
+  "privacynotice.controller.contact":
+    "Liên hệ về bảo vệ dữ liệu cá nhân: {contact}",
   "privacynotice.categories.title": "Thông tin đang lưu",
   "privacynotice.category.name": "Họ tên",
   "privacynotice.category.jobTitle": "Chức danh",
@@ -10860,7 +10884,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.afterDays_other": "{count} ngày",
   "privacynotice.retention.title": "Thời gian lưu",
   "privacynotice.retention.archive":
-    "{scope}: ngừng dùng hằng ngày sau {days}.",
+    "{scope}: lưu trong {days} kể từ khi ghi nhận, sau đó được chuyển sang lưu trữ hạn chế truy cập và chỉ bị xóa khi quý khách yêu cầu hoặc khi hồ sơ của quý khách bị xóa.",
   "privacynotice.retention.anonymize": "{scope}: ẩn danh sau {days}.",
   "privacynotice.retention.erase": "{scope}: xóa sau {days}.",
   "privacynotice.retention.rest":
@@ -13110,9 +13134,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Việc đăng ký nhận tin là tùy chọn. Quý khách có thể sửa thông tin liên hệ mà không cần đăng ký.",
   "confirm.marketing.title": "Thỉnh thoảng nhận tin tức?",
   "confirm.marketing.ask":
-    "Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.",
+    "{controller} sẽ dùng họ tên và địa chỉ email của quý khách để gửi email tin tức về sản phẩm và dịch vụ của mình, khoảng mỗi tháng một lần. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào bằng liên kết hủy đăng ký trong mỗi email.",
   "confirm.marketing.yes": "Đăng ký nhận tin",
   "confirm.marketing.no": "Không gửi tin cho tôi",
+  "confirm.controllerFallback": "bên gửi",
+  "confirm.frequency.weekly": "mỗi tuần một lần",
+  "confirm.frequency.monthly": "mỗi tháng một lần",
+  "confirm.frequency.quarterly": "mỗi quý một lần",
   "confirm.provenance.title": "Nguồn thông tin của quý khách",
   "confirm.provenance.empty": "Chưa ghi nhận nguồn cho các thông tin này.",
   "confirm.provenance.line": "{field}: từ {source}, ghi nhận ngày {date}",
@@ -13120,7 +13148,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "confirm.erasure.staged": "Đã yêu cầu xóa. Xác nhận bên dưới để gửi yêu cầu.",
   "confirm.submit": "Xác nhận",
   "confirm.subscription.title": "Xác nhận đăng ký",
-  "confirm.subscription.ask": "Xác nhận quý khách muốn nhận {purpose}.",
+  "confirm.subscription.ask":
+    "Xác nhận quý khách đồng ý để {controller} dùng họ tên và địa chỉ email của quý khách để gửi email {purpose}, khoảng {frequency}. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào bằng liên kết hủy đăng ký trong mỗi email. Thông tin về quyền của quý khách: {privacy_page}.",
   "confirm.subscription.confirm": "Xác nhận đăng ký",
   "confirm.subscription.alreadyTitle": "Quý khách đã đăng ký",
   "confirm.subscription.alreadyBody":

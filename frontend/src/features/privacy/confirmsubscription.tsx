@@ -25,6 +25,8 @@ import { Button, Card } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
 import { labelOf } from "../../lib/preferences.logic";
 import { ProblemError, problemCode, throwProblem } from "../../lib/problem";
 import {
@@ -121,6 +123,15 @@ function purposeName(t: ReturnType<typeof useT>, card: SubscriptionPage) {
   return labelOf(t, { key: card.purpose_key, label: card.purpose_label });
 }
 
+// How often the purpose's mail goes out, as the published question words it.
+const FREQUENCY_LABEL: Readonly<
+  Record<NonNullable<SubscriptionPage["frequency"]>, MessageKey>
+> = {
+  weekly: "confirm.frequency.weekly",
+  monthly: "confirm.frequency.monthly",
+  quarterly: "confirm.frequency.quarterly",
+};
+
 // The question the server served for this link: the sentence, the button, and
 // the whole text it records. A link that pinned none falls back to this build's
 // own sentence, naming the purpose as the heading and the mail do.
@@ -135,7 +146,19 @@ function subscriptionQuestion(
       text: card.question.text,
     };
   }
-  const ask = t("confirm.subscription.ask", { purpose: purposeName(t, card) });
+  const controller = card.controller;
+  const ask = t("confirm.subscription.ask", {
+    purpose: purposeName(t, card),
+    controller: controller?.legal_name ?? t("confirm.controllerFallback"),
+    frequency: t(
+      valueFor(
+        FREQUENCY_LABEL,
+        card.frequency ?? "monthly",
+        "confirm.frequency.monthly",
+      ),
+    ),
+    privacy_page: controller?.privacy_page ?? controller?.privacy_contact ?? "",
+  });
   return { ask, confirm: t("confirm.subscription.confirm"), text: ask };
 }
 

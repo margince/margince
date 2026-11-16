@@ -105,7 +105,7 @@ type ConfirmRef struct {
 	QuestionLocale  string
 	QuestionVersion int
 	// AsksNews is false on a details check whose recipient may not be asked
-	// about news there: its page shows no news question and its submit takes
+	// about news there. Its page then shows no news question. Its submit takes
 	// no answer to one.
 	AsksNews bool
 	// SubjectRequest is the contact's own request a consent link answers,

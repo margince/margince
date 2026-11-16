@@ -21,7 +21,9 @@ import { Heading } from "../../design-system/heading";
 import { CellStrip } from "../../design-system/listtable";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
+import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
@@ -29,15 +31,34 @@ import "./privacy.css";
 
 type ConsentPurpose = components["schemas"]["ConsentPurpose"];
 
+type Frequency = NonNullable<ConsentPurpose["frequency"]>;
+
 type PurposeDraft = Readonly<{
   key: string;
   label: string;
   requiresDoi: boolean;
+  frequency: Frequency;
 }>;
 
-const EMPTY_DRAFT: PurposeDraft = { key: "", label: "", requiresDoi: false };
+const EMPTY_DRAFT: PurposeDraft = {
+  key: "",
+  label: "",
+  requiresDoi: false,
+  frequency: "monthly",
+};
 
-// Three inputs committed together. A stale create error must not outlive the
+// How often a purpose's mail goes out; the subscription question states it.
+const FREQUENCY_LABEL: Readonly<Record<Frequency, MessageKey>> = {
+  weekly: "privacy.purposeFrequency.weekly",
+  monthly: "privacy.purposeFrequency.monthly",
+  quarterly: "privacy.purposeFrequency.quarterly",
+};
+
+function isFrequency(value: string): value is Frequency {
+  return Object.hasOwn(FREQUENCY_LABEL, value);
+}
+
+// Four inputs committed together. A stale create error must not outlive the
 // edit that could fix it, so every change clears it first.
 function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
   const t = useT();
@@ -53,6 +74,7 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
             key: purpose.key.trim(),
             label: purpose.label.trim(),
             requires_double_opt_in: purpose.requiresDoi,
+            frequency: purpose.frequency,
           },
         }),
       );
@@ -98,6 +120,23 @@ function PurposeCreateForm({ onDone }: Readonly<{ onDone: () => void }>) {
               {...control}
               value={draft.label}
               onChange={(event) => edit({ label: event.target.value })}
+            />
+          )}
+        </Field>
+        <Field label={t("privacy.purposeFrequency")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={Object.entries(FREQUENCY_LABEL).map(
+                ([value, label]) => ({
+                  value,
+                  label: t(label),
+                }),
+              )}
+              value={draft.frequency}
+              onChange={(value) => {
+                if (isFrequency(value)) edit({ frequency: value });
+              }}
             />
           )}
         </Field>

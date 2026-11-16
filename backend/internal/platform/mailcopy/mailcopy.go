@@ -332,7 +332,8 @@ type Copy struct {
 	FrequencyMonthly   string
 	FrequencyQuarterly string
 	// ControllerFallback names the sender in a question when the installation
-	// has stated no legal name.
+	// has stated no legal name. The confirm screen's confirm.controllerFallback
+	// holds the same words.
 	ControllerFallback string
 	// ConfirmPersonal says the link is the reader's alone. ConfirmExpiry is
 	// APPENDED to it when the link has a date, with the date as %s.

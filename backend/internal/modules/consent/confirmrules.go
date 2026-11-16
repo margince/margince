@@ -3,9 +3,9 @@
 
 package consent
 
-// What the recipient's country asks of a confirm link before it is minted: a
-// details check with or without the news question, and the subject's own
-// request behind a consent-confirmation mail.
+// What the recipient's country asks of a confirm link before it is minted. A
+// details check may have to leave out the news question. A consent mail may
+// have to answer the subject's own request.
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 )
 
 // subscriptionRequestKinds are the records that show the contact asking to
-// hear from us: a request a rep logged, a form they posted, a mail they wrote.
+// hear from us. They are a logged request, a posted form and a written mail.
 var subscriptionRequestKinds = []string{KindRequestedBySubject, KindInquiry, "inbound_message"}
 
 // confirmRules is what the recipient's rules decide about one link.

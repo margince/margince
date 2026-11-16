@@ -25,8 +25,7 @@
   padding: var(--space-2) 0;
 }
 
-/* Yes is the filled primary and no is a quiet link. Unequal weight is legal
-   and deliberate; a pre-selected default is not, so neither carries one. */
+/* Yes and no are buttons of one size, and neither is pre-selected. */
 .confirm-choices {
   display: flex;
   align-items: center;
@@ -35,7 +34,6 @@
   flex-wrap: wrap;
 }
 
-.confirm-decline,
 .confirm-erasure {
   background: none;
   border: none;
@@ -44,7 +42,6 @@
   cursor: pointer;
 }
 
-.confirm-decline[aria-pressed="true"],
 .confirm-erasure[aria-pressed="true"] {
   color: var(--textPrimary);
 }

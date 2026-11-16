@@ -47,6 +47,17 @@ const SOURCE_LABEL: Readonly<Record<AcquisitionKind, MessageKey>> = {
   unknown_legacy: "privacynotice.source.unknown",
 };
 
+// Where the user who created a contact by hand said it came from.
+const STATED_SOURCE_LABEL: Readonly<
+  Record<NonNullable<PrivacyInformationPage["stated_source"]>, MessageKey>
+> = {
+  met_in_person: "privacynotice.source.stated.metInPerson",
+  business_card: "privacynotice.source.stated.businessCard",
+  referral: "privacynotice.source.stated.referral",
+  website: "privacynotice.source.stated.website",
+  other: "privacynotice.source.stated.other",
+};
+
 // The rights a subject holds, each named in the reader's own language.
 const RIGHT_LABEL: Record<string, MessageKey> = {
   access: "privacynotice.right.access",
@@ -78,6 +89,9 @@ export function PrivacyNotice({
   const sourceKey = isAcquisitionKind(card.acquired_as)
     ? SOURCE_LABEL[card.acquired_as]
     : "privacynotice.source.unknown";
+  // A stated source stands in for "unknown"; a known kind keeps its sentence.
+  const stated = card.stated_source;
+  const showKind = !stated || sourceKey !== "privacynotice.source.unknown";
   const keys = card.purpose_keys ?? [];
   const purposes = (card.purposes ?? []).map((label, i) => ({
     name: labelOf(t, { key: keys[i] ?? "", label }),
@@ -100,7 +114,17 @@ export function PrivacyNotice({
         <Heading size="large" className="t-h3">
           {t("privacynotice.source.title")}
         </Heading>
-        <p className="t-body">{t(sourceKey)}</p>
+        {showKind ? <p className="t-body">{t(sourceKey)}</p> : null}
+        {stated ? (
+          <p className="t-body">{t(labelFor(STATED_SOURCE_LABEL, stated))}</p>
+        ) : null}
+        {card.stated_source_note ? (
+          <p className="t-body">
+            {t("privacynotice.source.statedNote", {
+              note: card.stated_source_note,
+            })}
+          </p>
+        ) : null}
         {card.acquired_at ? (
           <p className="t-caption">
             {t("privacynotice.source.when", {
@@ -138,11 +162,17 @@ export function PrivacyNotice({
           {t("privacynotice.rights.title")}
         </Heading>
         <ul className="confirm-fields">
-          {rights.map((right) => (
-            <li key={right} className="t-body">
-              {t(RIGHT_LABEL[right] ?? "privacynotice.right.access")}
-            </li>
-          ))}
+          {/* A language whose law names two rights in one place writes them
+              as two lines of one value; each line is its own item. */}
+          {rights.flatMap((right) =>
+            t(RIGHT_LABEL[right] ?? "privacynotice.right.access")
+              .split("\n")
+              .map((line) => (
+                <li key={`${right}-${line}`} className="t-body">
+                  {line}
+                </li>
+              )),
+          )}
         </ul>
         <p>
           {contact

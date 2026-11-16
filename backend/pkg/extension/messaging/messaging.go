@@ -140,7 +140,7 @@ type Rules struct {
 	RecordConfirmationWithoutNews bool
 
 	// ConsentConfirmationNeedsRequest says a consent-confirmation mail may be
-	// sent only when the recipient's own request to subscribe is on record; a
+	// sent only when the recipient's own request to subscribe is on record. A
 	// mail asking for consent nobody requested is itself unsolicited.
 	ConsentConfirmationNeedsRequest bool
 }

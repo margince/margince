@@ -40,8 +40,8 @@ type PrivacyInformation struct {
 	// Capture time orders unknown history but does not stand in for acquisition.
 	AcquiredAt *time.Time
 	// StatedSource is where the user who created the contact by hand said it
-	// came from, and StatedSourceNote their own words; both empty when nothing
-	// was given. The page prints them, so "source unknown" means truly unknown.
+	// came from. StatedSourceNote holds their own words. Both are empty when
+	// nothing was given, so "source unknown" on the page means unknown.
 	StatedSource     string
 	StatedSourceNote string
 	// Purposes are what the installation uses this contact's data for, by

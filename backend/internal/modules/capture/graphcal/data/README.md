@@ -1,9 +1,9 @@
 <!-- prose:plain -->
 # The copied Windows zone mapping
 
-`windowsZones.xml` is a byte-for-byte copy of `common/supplemental/windowsZones.xml`, and
-`timezone.xml` (kept in `backend/internal/platform/cldrzone/data/`, where the mail copy also reads
-it) of `common/bcp47/timezone.xml`, from [Unicode CLDR](https://github.com/unicode-org/cldr)
+`windowsZones.xml` is a byte-for-byte copy of `common/supplemental/windowsZones.xml`. Its partner
+`timezone.xml` now lives in `backend/internal/platform/cldrzone/data/`, where the mail copy reads it
+too. That file is a byte-for-byte copy of `common/bcp47/timezone.xml`. Both come from [Unicode CLDR](https://github.com/unicode-org/cldr)
 at the tag `release-48`. Both are under the Unicode License version 3 (© Unicode, Inc.). The license text is
 copied in `LICENSE-cldr.txt`, and it must ship with every copy of this software that we give out.
 

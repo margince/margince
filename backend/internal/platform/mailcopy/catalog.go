@@ -305,7 +305,7 @@ func confirmAskLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.FrequencyWeekly }, "once a week", "einmal pro Woche", "mỗi tuần một lần")
 	line(func(c *Copy) *string { return &c.FrequencyMonthly }, "once a month", "einmal im Monat", "mỗi tháng một lần")
 	line(func(c *Copy) *string { return &c.FrequencyQuarterly }, "once a quarter", "einmal im Quartal", "mỗi quý một lần")
-	line(func(c *Copy) *string { return &c.ControllerFallback }, "we", "wir", "chúng tôi")
+	line(func(c *Copy) *string { return &c.ControllerFallback }, "the sender", "das Unternehmen", "bên gửi")
 }
 
 // recordNoticeLines is the copy for the messages the installation sends about a

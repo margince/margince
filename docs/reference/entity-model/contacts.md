@@ -717,7 +717,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_acquisition_evidence
 
-14 columns · primary key `(id)` · referenced by 1 foreign key
+15 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -734,6 +734,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `request_retracted_by` | `text` |  |  |
 | `source_entity_id` | `uuid` |  |  |
 | `source_entity_type` | `text` |  |  |
+| `stated_source` | `text` |  | One of `met_in_person`, `business_card`, `referral`, `website`, `other`. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 
 **Points at**
@@ -747,6 +748,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_acquisition_evidence_kind`: `CHECK ((kind = ANY (ARRAY['subject_initiated', 'customer_contract', 'requested_quote_or_meeting', 'in_person_permission', 'referral', 'event_or_form', 'public_or_business_source', 'purchased_or_imported', 'unknown_legacy', 'crm_migration', 'mailbox_history'])))`
 - `contact_acquisition_evidence_source_shape`: `CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))`
+- `contact_acquisition_evidence_stated_source_check`: `CHECK ((stated_source = ANY (ARRAY['met_in_person', 'business_card', 'referral', 'website', 'other'])))`
 
 **Indexes**
 
@@ -755,8 +757,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "note": 2000, "captured_by": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "note": 2000, "captured_by": 20000, "stated_source": 20000, "purpose_claimed": 20000, "source_entity_type": 20000, "request_retracted_by": 20000, "recorded_for_addresses": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"kind":20000,"note":2000,"purpose_claimed":20000,"recorded_for_addresses":20000,"request_retracted_by":20000,"source_entity_type":20000,"stated_source":20000}')`
 
 ## contact_address_country
 

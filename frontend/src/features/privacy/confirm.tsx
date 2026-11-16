@@ -61,8 +61,14 @@ export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
 function marketingQuestion(
   t: ReturnType<typeof useT>,
   served: components["schemas"]["ConfirmQuestion"] | undefined,
+  controllerName: string | undefined,
 ) {
-  const ask = served?.ask ?? t("confirm.marketing.ask");
+  const ask =
+    served?.ask ??
+    t("confirm.marketing.ask", {
+      controller:
+        controllerName ?? sentenceStart(t("confirm.controllerFallback")),
+    });
   return {
     ask,
     yes: served?.answers[0] ?? t("confirm.marketing.yes"),
@@ -121,7 +127,11 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   // now that the union is honest, which is how this one was found — it ran on
   // both bodies before, silently.
   const record = card?.kind === "record_confirmation" ? card : undefined;
-  const question = marketingQuestion(t, record?.question);
+  const question = marketingQuestion(
+    t,
+    record?.question,
+    record?.controller?.legal_name,
+  );
 
   const corrections = useMemo(() => {
     if (!record) {
@@ -270,30 +280,15 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
         </ul>
       </Card>
 
-      <Card>
-        <Heading size="large" className="t-h3">
-          {t("confirm.marketing.title")}
-        </Heading>
-        <p className="t-body">{t("confirm.marketing.optional")}</p>
-        <p className="t-body">{question.ask}</p>
-        <div className="confirm-choices">
-          <Button
-            variant={marketing === "granted" ? "primary" : "ghost"}
-            aria-pressed={marketing === "granted"}
-            onClick={() => setMarketing("granted")}
-          >
-            {question.yes}
-          </Button>
-          <button
-            type="button"
-            className="confirm-decline"
-            aria-pressed={marketing === "withdrawn"}
-            onClick={() => setMarketing("withdrawn")}
-          >
-            {question.no}
-          </button>
-        </div>
-      </Card>
+      {/* A link whose recipient may not be asked about news here pins no
+          question, and the server refuses an answer to one. */}
+      {card.asks_news === false ? null : (
+        <NewsQuestion
+          question={question}
+          marketing={marketing}
+          onChoose={setMarketing}
+        />
+      )}
 
       <details className="confirm-provenance">
         <summary>{t("confirm.provenance.title")}</summary>
@@ -348,4 +343,48 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </div>
     </PublicPage>
   );
+}
+
+// The news question: its sentence and two buttons of one size, so consent and
+// refusal weigh the same. Neither answer is pre-selected.
+function NewsQuestion({
+  question,
+  marketing,
+  onChoose,
+}: Readonly<{
+  question: ReturnType<typeof marketingQuestion>;
+  marketing: "granted" | "withdrawn" | null;
+  onChoose: (choice: "granted" | "withdrawn") => void;
+}>) {
+  const t = useT();
+  return (
+    <Card>
+      <Heading size="large" className="t-h3">
+        {t("confirm.marketing.title")}
+      </Heading>
+      <p className="t-body">{t("confirm.marketing.optional")}</p>
+      <p className="t-body">{question.ask}</p>
+      <div className="confirm-choices">
+        <Button
+          variant={marketing === "granted" ? "primary" : "ghost"}
+          aria-pressed={marketing === "granted"}
+          onClick={() => onChoose("granted")}
+        >
+          {question.yes}
+        </Button>
+        <Button
+          variant={marketing === "withdrawn" ? "primary" : "ghost"}
+          aria-pressed={marketing === "withdrawn"}
+          onClick={() => onChoose("withdrawn")}
+        >
+          {question.no}
+        </Button>
+      </div>
+    </Card>
+  );
+}
+
+/** A sentence that opens with a filled-in word starts with a capital. */
+export function sentenceStart(word: string): string {
+  return word.charAt(0).toLocaleUpperCase() + word.slice(1);
 }

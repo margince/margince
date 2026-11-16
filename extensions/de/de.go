@@ -113,8 +113,8 @@ func messagingRules() messaging.Rules {
 	return messaging.Rules{
 		Jurisdiction: "de",
 		Version:      2,
-		// § 7(2) no. 2 UWG: whether a details check that also asks for news is
-		// advertising is unsettled, so the check asks no news question.
+		// German law has not settled whether a details check that also asks
+		// for news is advertising, so the check asks no news question.
 		RecordConfirmationWithoutNews: true,
 		// Twelve and six months as calendar-ish durations. Hours because the
 		// type is a time.Duration and a month is not one; the engine compares

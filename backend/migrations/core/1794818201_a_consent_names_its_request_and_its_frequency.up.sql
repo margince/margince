@@ -18,10 +18,12 @@ ALTER TABLE confirm_token ADD COLUMN asks_news boolean NOT NULL DEFAULT true;
 
 -- The subject's own request a consent-confirmation mail answers, kept with the
 -- link and then with the grant it leads to.
-ALTER TABLE confirm_token ADD COLUMN subject_request_id uuid
-    REFERENCES consent_qualifying_event (id) ON DELETE SET NULL;
-ALTER TABLE consent_event ADD COLUMN subject_request_id uuid
-    REFERENCES consent_qualifying_event (id) ON DELETE SET NULL;
+ALTER TABLE confirm_token ADD COLUMN subject_request_id uuid;
+ALTER TABLE confirm_token ADD CONSTRAINT confirm_token_subject_request_id_fkey
+    FOREIGN KEY (subject_request_id) REFERENCES consent_qualifying_event (id) ON DELETE SET NULL NOT VALID;
+ALTER TABLE consent_event ADD COLUMN subject_request_id uuid;
+ALTER TABLE consent_event ADD CONSTRAINT consent_event_subject_request_id_fkey
+    FOREIGN KEY (subject_request_id) REFERENCES consent_qualifying_event (id) ON DELETE SET NULL NOT VALID;
 
 CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."consent_purpose" FOR EACH ROW
 WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"class":20000,"frequency":20000,"key":20000,"label":120}')) EXECUTE FUNCTION public.refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}');

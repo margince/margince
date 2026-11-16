@@ -108,6 +108,13 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
+Some laws change what the mails to a contact about their own data may ask:
+
+- Under German law, the mail that asks a contact to check their details asks nothing about news.
+- Under Vietnamese law, Margince sends the mail that asks a contact to confirm a subscription only when the contact asked for it first. Log the request on the contact first: their call, the form they sent, or their mail.
+
+When you create a contact by hand, say where it came from. The contact's privacy page shows your answer. It says the source is unknown only when you leave the answer empty.
+
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
 
 How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.

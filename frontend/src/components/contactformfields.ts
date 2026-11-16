@@ -6,6 +6,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import { listedSocial } from "../lib/socialplatforms";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
@@ -154,8 +155,24 @@ export function mapContactBody(
     emails: emails.length > 0 ? emails : undefined,
     phones: phones.length > 0 ? phones : undefined,
     ...companyChoice(values),
+    ...statedSource(values),
     source: "manual",
   };
+}
+
+// The stated source and its note, sent only when the user gave one.
+function statedSource(values: Record<string, string>) {
+  const source = values.acquisition_source ?? "";
+  const note = values.acquisition_note?.trim() || undefined;
+  return isStatedSource(source)
+    ? { acquisition_source: source, acquisition_note: note }
+    : { acquisition_note: note };
+}
+
+function isStatedSource(
+  value: string,
+): value is keyof typeof STATED_SOURCE_LABEL {
+  return Object.hasOwn(STATED_SOURCE_LABEL, value);
 }
 
 function stringField(value: unknown): string {
@@ -291,8 +308,37 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       typeKey: "phone_type",
       typeDefault: "work", // matches asPhoneType's own fallback
     },
+    {
+      key: "acquisition_source",
+      label: "create.acquisitionSource",
+      type: "select",
+      options: Object.entries(STATED_SOURCE_LABEL).map(([value, label]) => ({
+        value,
+        label: t(label),
+      })),
+      hint: t("create.acquisitionSourceHint"),
+    },
+    {
+      key: "acquisition_note",
+      label: "create.acquisitionNote",
+      type: "textarea",
+      maxLength: 500,
+      requiredWhen: (values) => values.acquisition_source === "other",
+    },
   ];
 }
+
+// Where a contact typed in by hand came from. The contact's privacy page
+// prints the answer, so "source unknown" is left for when none was given.
+const STATED_SOURCE_LABEL: Readonly<
+  Record<NonNullable<CreateContactRequest["acquisition_source"]>, MessageKey>
+> = {
+  met_in_person: "create.source.metInPerson",
+  business_card: "create.source.businessCard",
+  referral: "create.source.referral",
+  website: "create.source.website",
+  other: "create.source.other",
+};
 
 // The split name parts are taken once, for a mail merge's greeting. The
 // employer is an edge, edited on the Company card.
@@ -300,6 +346,8 @@ const CREATE_ONLY = new Set([
   "first_name",
   "last_name",
   contactCompanyField.key,
+  "acquisition_source",
+  "acquisition_note",
 ]);
 
 export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {

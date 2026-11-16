@@ -43,10 +43,10 @@ func TestTheSubscriptionQuestionIsServedWithEveryFieldFilled(t *testing.T) {
 	}
 }
 
-// TestTheRecordQuestionNamesTheSenderOrSaysWe. With no legal name stated the
-// sentence still opens with a capital.
-func TestTheRecordQuestionNamesTheSenderOrSaysWe(t *testing.T) {
-	for controller, opening := range map[string]string{"Example Trading GmbH": "Example Trading GmbH will use", "": "We will use"} {
+// TestTheRecordQuestionNamesTheSender. With no legal name stated it names "the
+// sender", and the sentence still opens with a capital.
+func TestTheRecordQuestionNamesTheSender(t *testing.T) {
+	for controller, opening := range map[string]string{"Example Trading GmbH": "Example Trading GmbH will use", "": "The sender will use"} {
 		served := fillQuestion(RenderQuestion(TemplateMarketingQuestion, "en"),
 			questionFields{controller: controller, words: mailcopy.For("en")})
 		if ask, _ := (ServedQuestion{Text: served}).Parts(); !strings.HasPrefix(ask, opening) {
