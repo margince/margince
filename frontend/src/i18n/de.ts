@@ -9219,25 +9219,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "workArea.hint.admin_settings":
     "Einstellungen, die mehr Rechte brauchen, als der Vertrieb hat",
   "workArea.hint.own_account": "Dein Profil und deine Präferenzen",
-  "workArea.legend": "Wo er arbeiten darf",
+  "workArea.legend": "Wo gearbeitet werden darf",
   "workArea.mode.all": "Alle Bereiche",
   "workArea.mode.allNote":
     "Alles, was deine Rolle erreicht, auch später hinzugefügte Bereiche",
   "workArea.mode.custom": "Bereiche auswählen",
   "workArea.mode.customNote":
     "Nur die ausgewählten Bereiche. Ein neuer Bereich ist zunächst deaktiviert",
-  "workArea.pickLegend": "Bereiche, in denen er arbeiten darf",
+  "workArea.pickLegend": "Bereiche, in denen gearbeitet werden darf",
   "workArea.pickOne": "Wähle mindestens einen Bereich aus.",
   "passportAreas.open": "Bereiche ändern",
   "passportAreas.openNamed": "Bereiche für {name} ändern",
-  "passportAreas.for":
-    "Für {name}. Seine Berechtigungen bleiben, wie sie sind.",
-  "passportAreas.gains": "Er arbeitet dann auch in: {areas}.",
+  "passportAreas.for": "Für {name}. Die Berechtigungen bleiben, wie sie sind.",
+  "passportAreas.gains": "Dann auch erlaubt: {areas}.",
   "passportAreas.loses":
-    "Er arbeitet dann nicht mehr in: {areas}. Sein nächster Aufruf dort wird abgelehnt.",
+    "Dann nicht mehr erlaubt: {areas}. Der nächste Aufruf dort wird abgelehnt.",
   "passportAreas.unchanged": "Ändere zuerst einen Bereich.",
   "passportAreas.closesLater":
-    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben für ihn deaktiviert.",
+    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben hier deaktiviert.",
   "passportAreas.refusalTitle":
     "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
   "passportAreas.refusal":
@@ -18133,13 +18132,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.redirectsTo": "Margince sendet die Autorisierung zurück an {host}.",
   "consent.redirectsToLoopback":
     "Das ist eine Adresse auf diesem Computer, und diese Verbindung kann nicht belegen, welches Programm dort lauscht.",
-  "consent.scopeNote.read": "sieht, was du sehen kannst",
-  "consent.scopeNote.draft": "bereitet Nachrichten zu deiner Prüfung vor",
+  "consent.scopeNote.read": "Sieht, was du sehen kannst",
+  "consent.scopeNote.draft": "Bereitet Nachrichten zu deiner Prüfung vor",
   "consent.scopeNote.write":
-    "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
+    "Erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
-    "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
-  "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
+    "Sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+  "consent.scopeNote.enrich": "Führt KI-Arbeit aus und kauft Kontaktdaten",
+  "consent.scopesLegend": "Was das Tool tun darf",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",
   "consent.preset.label": "Assistentenrechte",

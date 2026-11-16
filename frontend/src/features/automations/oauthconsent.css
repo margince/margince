@@ -1,16 +1,55 @@
-.oauthconsent-scopes {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin: var(--space-3) 0;
+.oauthconsent-body {
+  margin-top: var(--space-2);
+}
+.oauthconsent-body > p {
+  text-wrap: balance;
 }
 
-.oauthconsent-verbs {
+.oauthconsent-form {
   display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  align-items: center;
+  flex-direction: column;
+  gap: var(--space-6);
+  margin-top: var(--space-6);
+  text-align: start;
+}
+
+.oauthconsent-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* The gap spaces these lines; the prose rule between paragraphs would add to it. */
+.oauthconsent-section p {
+  margin-block-start: 0;
+}
+
+.oauthconsent-actions {
+  display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+.oauthconsent-hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  text-align: end;
+}
+.oauthconsent-hints:empty {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .oauthconsent-actions {
+    flex-direction: column-reverse;
+  }
+  .oauthconsent-actions .btn {
+    width: 100%;
+  }
+  .oauthconsent-hints {
+    text-align: start;
+  }
 }
 
 .oauthconsent-facts {

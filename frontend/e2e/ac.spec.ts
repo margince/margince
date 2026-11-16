@@ -3696,3 +3696,91 @@ test.describe("calling a contact", () => {
     });
   });
 });
+
+// Authorize access is reached from an AI tool's redirect, never from the rail,
+// so neither route list above sweeps it.
+test.describe("Authorize access on the sign-in surface", () => {
+  const consentAddress = (extra: Record<string, string>) =>
+    `/#/oauth-consent?${new URLSearchParams({
+      response_type: "code",
+      client_id: "https://claude.ai/oauth/mcp-oauth-client-metadata",
+      redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+      scope: "read",
+      code_challenge: "x",
+      code_challenge_method: "S256",
+      state: "s",
+      ...extra,
+    }).toString()}`;
+
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/v1/oauth/consent-request**", (route) =>
+      route.fulfill({
+        json: {
+          client_name: "Claude",
+          offline: true,
+          scopes: ["read", "draft", "write", "send", "enrich"],
+          areas: ["business", "compliance", "own_account"],
+        },
+      }),
+    );
+  });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const width of [390, 1440]) {
+      test(`the prompt meets AA at ${width}px in ${colorScheme}`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme });
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(consentAddress({ consent: "nonce" }));
+        await expect(
+          page.getByRole("heading", { level: 1, name: de["consent.title"] }),
+        ).toBeVisible();
+        await expect(page.locator(".auth-wordmark")).toBeVisible();
+        await settleAnimations(page);
+        await expectNoAaViolations(page, `oauth-consent (${colorScheme})`);
+        expect(await pageOverflow(page)).toEqual([]);
+      });
+    }
+  }
+
+  test("Deny sits before Authorize on the end edge, and a phone stacks Authorize on top", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    const deny = page.getByRole("button", { name: de["consent.deny"] });
+    const authorize = page.getByRole("button", {
+      name: de["consent.approve"],
+      exact: true,
+    });
+    const wide = {
+      deny: await deny.boundingBox(),
+      authorize: await authorize.boundingBox(),
+    };
+    expect(wide.deny?.x).toBeLessThan(wide.authorize?.x ?? 0);
+    expect(wide.deny?.y).toBe(wide.authorize?.y);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const phone = {
+      deny: await deny.boundingBox(),
+      authorize: await authorize.boundingBox(),
+    };
+    expect(phone.authorize?.y).toBeLessThan(phone.deny?.y ?? 0);
+    expect(phone.authorize?.width).toBe(phone.deny?.width);
+  });
+
+  for (const error of ["invalid_request", "method_off", "stale_consent"]) {
+    test(`the ${error} refusal meets AA on the same surface`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(consentAddress({ error }));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.locator(".auth-surface .auth-wordmark")).toBeVisible();
+      await settleAnimations(page);
+      await expectNoAaViolations(page, `oauth-consent ${error}`);
+      expect(await pageOverflow(page)).toEqual([]);
+    });
+  }
+});

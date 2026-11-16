@@ -401,6 +401,17 @@ describe("OAuthConsent", () => {
     expect(posted.body.get("consent")).toBe(NONCE);
   });
 
+  it("reads Deny before Authorize, each in a form of its own", async () => {
+    renderConsent({ scopes: ["read"] });
+    const deny = await screen.findByRole("button", { name: /deny access/i });
+    const authorize = screen.getByRole("button", { name: /authorize/i });
+    expect(
+      deny.compareDocumentPosition(authorize) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(deny.closest("form")).not.toBe(authorize.closest("form"));
+  });
+
   it("discloses a self-renewing connection", async () => {
     renderConsent({ offline: true, scopes: ["read"] });
     expect(

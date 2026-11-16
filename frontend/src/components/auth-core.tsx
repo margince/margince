@@ -98,12 +98,16 @@ export function AuthExperience({
   children,
   phase,
   notice = false,
+  wide = false,
 }: Readonly<{
   children: ReactNode;
   phase: AuthPhase;
   // A notice the signed-in reader is held at, not a sign-in. The system does
   // not introduce itself to someone already inside, and access is not the point.
   notice?: boolean;
+  // A form with sections of its own, which the sign-in measure would wrap
+  // line by line.
+  wide?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
   // animation below — the staggered rows, the typed statement — is gated on it,
@@ -111,7 +115,7 @@ export function AuthExperience({
   const intro = useDocumentIntro();
   return (
     <div
-      className="auth-surface"
+      className={wide ? "auth-surface auth-surface-wide" : "auth-surface"}
       data-auth-phase={phase}
       data-auth-intro={intro ? "play" : "done"}
     >

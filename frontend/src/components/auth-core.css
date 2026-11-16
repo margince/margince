@@ -32,6 +32,7 @@
      rungs the tablet was already using. */
   --authPadBlock: calc(var(--space-6) * 1.5);
   --authPadInline: calc(var(--space-6) + var(--space-1));
+  --authMeasure: 400px;
   min-height: 100vh;
   /* A COLUMN, not a grid. A grid sizes its tracks against a definite height,
      and stacked that gave the greeting a track shorter than the greeting: it
@@ -81,6 +82,14 @@
       transparent 68%
     ),
     var(--bgElevated);
+}
+.auth-surface-wide {
+  --authMeasure: 560px;
+}
+/* A wide form outgrows the window and scrolls the surface itself, and a ground
+   sized to the surface's box would scroll away from under it. */
+.auth-surface-wide > .ambient-waves {
+  position: fixed;
 }
 @supports (min-height: 100dvh) {
   .auth-surface {
@@ -145,14 +154,14 @@
      than a panel of its own: no inset, no ground. An opaque region would stop
      the ribbons dead at its edge. */
   width: 100%;
-  max-width: 400px;
+  max-width: var(--authMeasure);
   flex: 0 0 auto;
 }
 .auth-task-in {
   /* §6.2: 380 minimum, 400 preferred, 440 maximum. */
   width: 100%;
   min-width: 0;
-  max-width: 400px;
+  max-width: var(--authMeasure);
   display: flex;
   flex-direction: column;
   /* Centred, and the whole column with it: the heading, the sentence under it,
@@ -420,7 +429,7 @@
   text-align: center;
   gap: var(--space-2);
   width: 100%;
-  max-width: 400px;
+  max-width: var(--authMeasure);
   padding-top: calc(var(--space-6) * 1.5);
 }
 .auth-legal > p {
@@ -629,6 +638,11 @@
   }
   .auth-wordmark img {
     width: 112px;
+  }
+  /* A wide form is taller than a phone, so nothing centres the Core down past
+     the name in the corner. */
+  .auth-surface-wide {
+    padding-top: calc(var(--authPadBlock) * 2);
   }
 }
 
