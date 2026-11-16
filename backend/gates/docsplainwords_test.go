@@ -249,7 +249,7 @@ var plainCaps = map[string]int{
 	"docs/explanation/plain-words.txt": 1639,
 	"docs/handbook/plain-words.txt":    1386,
 	"docs/reference/plain-words.txt":   1714,
-	plainProjectFile:                   1777,
+	plainProjectFile:                   1776,
 }
 
 // glossaryLegacyMax is how many names may still lack a meaning: the names pages

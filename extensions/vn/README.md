@@ -80,7 +80,7 @@ refusal reached the sender and when sending stopped (Art. 20.4(a)), and holds no
 (Art. 20.4(b)).
 
 The consent module queues the receipt from the `optout_acknowledgement` controller template, in the
-same transaction as the refusal, and the send job runs as soon as that transaction commits. It goes
+same transaction as the refusal. The send job runs once that transaction commits. It goes
 out through the controller lane. That is the one lane that may write to someone who has just
 suppressed themselves, because the message serves the subject and not the sender.
 
@@ -97,15 +97,16 @@ party's product as advertising. The other controller mails keep it.
 One refusal has one receipt: its message id comes from the refusal, and the delivery ledger refuses a
 second row with the same id.
 
-The pack sets the receipt's alert time to one hour. A receipt still unsent after that raises a
+The pack sets the receipt's alert time to one hour. A receipt not sent by then raises a
 notice to the privacy operators, and **Settings → System health** counts it under **Opt-out
 receipts** for 30 days.
 
-## Records kept for an inspection (Art. 11)
+## Records kept (Art. 11)
 
-Registrations, refusals and receipts stay at least one year (Art. 11.7): nothing in the product
-deletes them for age. An erasure request still removes the subject's details. **Download opt-out
-records** on a contact's consent panel exports all three for an inspector (Art. 11.3).
+Consents given, refusals and receipts stay at least one year (Art. 11.7): nothing in the product
+deletes them because they are old. A request to delete the subject still removes their details.
+**Download opt-out records** on a contact's consent panel exports all three when the state asks to
+see them (Art. 11.3).
 
 ## Windows
 
