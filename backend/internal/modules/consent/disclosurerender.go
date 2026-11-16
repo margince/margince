@@ -161,7 +161,7 @@ func (s *Store) DisclosuresFor(
 // appendOwed adds the declared disclosures of one selector's pack: the
 // data-protection kinds from the sender's, the rest from a recipient's. A kind
 // already owed is not owed twice; a MarketingOnly copy yields to one that binds
-// every message, and the means either copy asks for are both asked.
+// every message. The owed kind asks for the means of both copies.
 func appendOwed(owed, declared []messagingrules.Disclosure, dataProtection bool) []messagingrules.Disclosure {
 	for _, d := range declared {
 		if dataProtectionDisclosure(d.Kind) != dataProtection {
