@@ -18,12 +18,13 @@ import (
 // eraseRequestReminders erases the reminder filed for a customer's request.
 // It copies the mail's subject and quotes the sender's ask, so it is text of
 // the message and goes with it. A held reminder keeps what its hold keeps.
+// The erased mark is the system text, which no mail can carry as its subject.
 func (e *Eraser) eraseRequestReminders(ctx context.Context, tx pgx.Tx, source ids.UUID, act erasureAct) error {
 	rows, err := tx.Query(ctx, `SELECT a.id FROM activity a
- WHERE a.source_system = @system AND a.source_activity_id = @source AND a.subject IS DISTINCT FROM @erased
+ WHERE a.source_system = @system AND a.source_activity_id = @source AND a.system_text IS DISTINCT FROM @erased
  AND a.restricted_at IS NULL AND NOT `+retentionscope.HeldThroughAnyLink("a.id")+`
  ORDER BY a.id FOR UPDATE`,
-		pgx.NamedArgs{"system": provenance.EmailRequestSource, "source": source, "erased": erasedActivitySubject})
+		pgx.NamedArgs{"system": provenance.EmailRequestSource, "source": source, "erased": erasedActivityText()})
 	if err != nil {
 		return err
 	}

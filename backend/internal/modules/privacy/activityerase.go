@@ -42,11 +42,16 @@ func clearActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx, `UPDATE activity SET body = NULL, owed_ask = NULL, system_text = @system_text, raw = NULL, agenda_fingerprint = NULL, calendar_event = NULL, subject = @subject,
  internal_mail_authorization = `+erasedInternalMailAuthorizationSQL+`,
  language = NULL, source_author_name = NULL, reply_verdict = NULL, reply_verdict_at = NULL,
- reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id, "system_text": systemtext.BoundLiteral("core.erased", erasedActivitySubject)})
+ reply_verdict_by = NULL, archived_at = coalesce(archived_at, now()) WHERE id = @id`, pgx.StrictNamedArgs{"subject": erasedActivitySubject, "id": id, "system_text": erasedActivityText()})
 	if err != nil {
 		return err
 	}
 	return clearActivityCustomValues(ctx, tx, []ids.UUID{id})
+}
+
+// erasedActivityText marks an erased activity; only erasure writes it.
+func erasedActivityText() *systemtext.Message {
+	return systemtext.BoundLiteral("core.erased", erasedActivitySubject)
 }
 
 // A tombstone keeps replay restricted after source identifiers and folder names are erased.
