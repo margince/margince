@@ -18895,6 +18895,10 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/ControllerMailRefused'}
         '422':
+          description: |-
+            Also when
+            the contact's country asks that a consent mail answer their own request, the purpose is
+            in a marketing class, and no such request is on record.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -41993,12 +41997,15 @@ components:
       properties:
         requirement:
           type: string
-          enum: [claim_without_proof, advertising_language_first]
+          enum: [claim_without_proof, advertising_language_first, foreign_advertiser]
           description: |-
             `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
             proof (the document's name, number and date), and states none.
             `advertising_language_first`: the draft does not open in the pack's disclosure
             language, which advertising leads with.
+            `foreign_advertiser`: the sending legal entity is not established in the recipient's
+            country, whose pack asks an advertiser from elsewhere to advertise there through a
+            local advertising service business. The customer answers for it.
         detail:
           type: string
           description: What was found, for the composer to read.
@@ -42009,6 +42016,9 @@ components:
         language:
           type: string
           description: The language the draft must lead with, for `advertising_language_first`.
+        country:
+          type: string
+          description: The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
     CommunicationEvidenceSubject:
       type: object
       description: An existing recipient record the caller can read.
@@ -42031,6 +42041,16 @@ components:
             their consent nor an agreement with them. A privacy notice they were sent is neither.
             Not a refusal: a surface shows a warning and records the sender's confirmation through
             `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        consent_purpose_id:
+          type: string
+          format: uuid
+          description: |-
+            For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+            about for this use, the oldest live double-opt-in purpose whose class covers it and that
+            the contact has not withdrawn. `POST /contacts/{id}/consent/double-opt-in` with it mails
+            the request. A request for consent to a purpose outside the marketing classes needs no
+            request of the contact's own on record. Absent when no such purpose exists, or when the
+            recipient is a lead.
         evidence_subject:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidenceSubject'}]
           description: |-

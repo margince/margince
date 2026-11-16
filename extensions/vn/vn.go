@@ -125,9 +125,20 @@ func refusalMeans() []messaging.ContactMeans {
 
 // superlatives are the claims Law on Advertising Art. 8.11 and Circular
 // 12/2026/TT-BVHTTDL Art. 3 allow only with a listed proof shown in the mail.
-// "nhất" alone also catches the forms built on it ("lớn nhất", "rẻ nhất").
+// Art. 3.1 reaches a claim of a leading, unique or absolute position in any
+// language, so the English forms are listed too. "nhất" alone also catches the
+// forms built on it ("lớn nhất", "rẻ nhất"). "the only" and not "only": a bare
+// "only" limits ("only three days left") far more often than it ranks.
 func superlatives() []string {
-	return []string{"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu"}
+	return []string{
+		"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu",
+		"best", "no. 1", "number one", "leading", "the only", "unique",
+	}
+}
+
+// notClaims are the closing greetings that hold "best" and rank nothing.
+func notClaims() []string {
+	return []string{"best regards", "best wishes", "all the best"}
 }
 
 // messagingRules is what Vietnamese law requires of an outbound message, stated
@@ -196,7 +207,10 @@ func messagingRules() messaging.Rules {
 		},
 		RefusalSectionLast: true,
 		ClaimsNeedProof:    superlatives(),
-		SubjectPrefix:      advertisingLabel,
+		NotClaims:          notClaims(),
+		// Law on Advertising Art. 39.2. The customer is the advertiser.
+		ForeignAdvertiserNeedsLocalAgency: true,
+		SubjectPrefix:                     advertisingLabel,
 		FrequencyCap: &messaging.FrequencyCap{
 			Messages: vnAdvertisingMessagesPerDay,
 			Window:   vnAdvertisingWindow,

@@ -86,7 +86,7 @@ func (s *Store) previewControllerMailTx(ctx context.Context, tx pgx.Tx, contactI
 	if !s.canSendConfirm() {
 		return ControllerMailPreview{}, ErrNoMailLane
 	}
-	rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, to, false)
+	rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, ids.PurposeID{}, to, false)
 	if err != nil {
 		return ControllerMailPreview{}, err
 	}

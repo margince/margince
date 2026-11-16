@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/draftcontent.go frontend/src/components/lawfulbasiswarning.tsx backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -127,7 +127,8 @@ Vietnamese data-protection law also follows the recipient. When a contact's or l
 - when they object to the use of their data or take back their consent, Margince makes a task due in 15 days;
 - a request to stop using their data, or to take back consent to anything other than marketing, also gets an email at once. It says when the request arrived and when it will be done;
 - the reason recorded for using their data is their consent to that use, with its date. Your own business need is never enough;
-- without that consent, the send screen and the approval card show a warning. You can still send once you confirm it. The audit log records your confirmation, and one confirmation covers one send. A send nobody confirmed is held for a colleague to decide.
+- without that consent, the send screen and the approval card show the warning **No valid basis recorded**. You can still send once you confirm it with **Send anyway**. The audit log records your confirmation, and one confirmation covers one send. A send nobody confirmed is held for a colleague to decide;
+- **Ask for consent** in that warning sends the contact the mail that asks for their consent, and does not send your message. It shows when a purpose that asks for consent by mail covers this kind of mail. Sales mail is different: it never goes out without the contact's consent, and there is no warning to confirm.
 
 Margince learns where a contact is only from the addresses above. A Vietnamese contact whose address is not a Vietnamese one is not found. The Vietnamese rules do not apply to that contact.
 
@@ -138,6 +139,14 @@ The **Company details in mail** card on the same page holds what your mail says 
 Where a law in use asks for its own language, the card shows the same fields in that language. Mail and pages in that language show this text where you fill it in.
 
 Under Vietnamese law, **How to refuse advertising** must name a web page or social network link, an email address and a phone number. Saving without one of them shows which part is missing. Sales mail to a recipient under Vietnamese law goes out only once **How to refuse advertising** and **Advertiser contact** are filled in, in Vietnamese.
+
+While you write sales mail to a recipient under Vietnamese law, notes above the send button say what the mail does not meet. None of them stops the send:
+
+- The mail does not start in Vietnamese.
+- The mail claims to be the best, the first, the leading or the only one, in Vietnamese or in English, and names no proof. Name the proving document with its number and date in the mail.
+- Your company is not set up in Vietnam. A foreign company that does not operate in Vietnam must advertise there through a Vietnamese advertising business. Your company is responsible for this.
+
+Vietnamese law does not ask for sales mail to go out from a server in Vietnam. Where your mail server is your own, ask whoever runs Margince to send sales mail to Vietnam through a mail server located in Vietnam where one is available.
 
 How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.
 

@@ -337,14 +337,23 @@ func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
 }
 
 // A fold keeps every advertising content rule either side declares: the
-// refusal layout and every restricted claim.
+// refusal layout, the foreign-advertiser notice and every restricted claim.
 func TestAdvertisingContentRulesSurviveTheFold(t *testing.T) {
-	a := Rules{Jurisdiction: "aa", Version: 1, ClaimsNeedProof: []string{"best"}}
-	b := Rules{Jurisdiction: "bb", Version: 1, RefusalSectionLast: true, ClaimsNeedProof: []string{"best", "tốt nhất"}}
+	a := Rules{Jurisdiction: "aa", Version: 1, ClaimsNeedProof: []string{"best"}, NotClaims: []string{"best regards"}}
+	b := Rules{
+		Jurisdiction: "bb", Version: 1, RefusalSectionLast: true, ForeignAdvertiserNeedsLocalAgency: true,
+		ClaimsNeedProof: []string{"best", "tốt nhất"},
+	}
 
 	got := stricter(a, b)
 	if !got.RefusalSectionLast {
 		t.Error("the fold dropped the refusal layout")
+	}
+	if !got.ForeignAdvertiserNeedsLocalAgency {
+		t.Error("the fold dropped the foreign-advertiser notice")
+	}
+	if !slices.Equal(got.NotClaims, []string{"best regards"}) {
+		t.Errorf("phrases that claim nothing %v, want the one side's phrase kept", got.NotClaims)
 	}
 	if !slices.Equal(got.ClaimsNeedProof, []string{"best", "tốt nhất"}) {
 		t.Errorf("claims %v, want each restricted word once", got.ClaimsNeedProof)

@@ -28,7 +28,7 @@ func (a Adapter) CheckAdvertisingDraft(
 	out := make([]activities.DraftContentFinding, 0, len(found))
 	for _, f := range found {
 		out = append(out, activities.DraftContentFinding{
-			Requirement: f.Requirement, Detail: f.Detail, Words: f.Words, Language: f.Language,
+			Requirement: f.Requirement, Detail: f.Detail, Words: f.Words, Language: f.Language, Country: f.Country,
 		})
 	}
 	return out, nil

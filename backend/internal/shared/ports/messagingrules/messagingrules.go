@@ -105,6 +105,7 @@ func clone(r Rules) Rules {
 	}
 	out.Instruments = slices.Clone(r.Instruments)
 	out.ClaimsNeedProof = slices.Clone(r.ClaimsNeedProof)
+	out.NotClaims = slices.Clone(r.NotClaims)
 
 	if r.FrequencyCap != nil {
 		copied := *r.FrequencyCap
@@ -235,16 +236,24 @@ func stricter(a, b Rules) Rules {
 }
 
 // foldAdvertisingContent adds b's advertising content rules to out. A claim
-// either side restricts stays restricted.
+// either side restricts stays restricted. A phrase either side says claims
+// nothing stays excused, since it spells out the whole phrase it excuses.
 func foldAdvertisingContent(out *Rules, b Rules) {
 	out.RefusalSectionLast = out.RefusalSectionLast || b.RefusalSectionLast
-	claims := slices.Clone(out.ClaimsNeedProof)
-	for _, word := range b.ClaimsNeedProof {
-		if !slices.Contains(claims, word) {
-			claims = append(claims, word)
+	out.ForeignAdvertiserNeedsLocalAgency = out.ForeignAdvertiserNeedsLocalAgency || b.ForeignAdvertiserNeedsLocalAgency
+	out.ClaimsNeedProof = unionOf(out.ClaimsNeedProof, b.ClaimsNeedProof)
+	out.NotClaims = unionOf(out.NotClaims, b.NotClaims)
+}
+
+// unionOf is every word of a, then each word of b that a lacks, in a new slice.
+func unionOf(a, b []string) []string {
+	out := slices.Clone(a)
+	for _, word := range b {
+		if !slices.Contains(out, word) {
+			out = append(out, word)
 		}
 	}
-	out.ClaimsNeedProof = claims
+	return out
 }
 
 // shorterWindow picks the tighter of two windows, treating zero as "this

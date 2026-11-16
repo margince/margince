@@ -131,6 +131,7 @@ func allowOn(d commsauthz.Decision, res resolution) commsauthz.Decision {
 	d.ReasonCode = commsauthz.ReasonAllowed
 	d.Basis = res.Basis
 	d.LawfulBasisMissing = res.BasisMissing
+	d.ConsentPurpose = res.ConsentPurpose
 	return d
 }
 

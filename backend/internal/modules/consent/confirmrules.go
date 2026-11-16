@@ -10,12 +10,14 @@ package consent
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // confirmRules is what the recipient's rules decide about one link.
@@ -26,10 +28,11 @@ type confirmRules struct {
 	subjectRequest ids.UUID
 }
 
-// confirmRulesTx decides both for a contact's link. A consent link minted by
-// an operator under rules that need a request is refused without one.
+// confirmRulesTx decides both for a contact's link. A consent link to an
+// advertising purpose, minted by an operator under rules that need a request,
+// is refused without one.
 func (s *Store) confirmRulesTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind, address string, operatorAsks bool,
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, kind string, purposeID ids.PurposeID, address string, operatorAsks bool,
 ) (confirmRules, error) {
 	out := confirmRules{asksNews: true}
 	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
@@ -49,10 +52,28 @@ func (s *Store) confirmRulesTx(
 	if err != nil {
 		return out, err
 	}
-	if found && rules.ConsentConfirmationNeedsRequest && !asked {
+	if !found || !rules.ConsentConfirmationNeedsRequest || asked {
+		return out, nil
+	}
+	advertising, err := purposeAdvertisesTx(ctx, tx, purposeID)
+	if err != nil {
+		return out, err
+	}
+	if advertising {
 		return out, &NoSubjectRequestError{}
 	}
 	return out, nil
+}
+
+// purposeAdvertisesTx reports whether a purpose is one of the marketing
+// classes. The request rule governs a request for consent to advertising; a
+// request for consent to correspondence is not advertising.
+func purposeAdvertisesTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (bool, error) {
+	var class string
+	if err := tx.QueryRow(ctx, `SELECT class FROM consent_purpose WHERE id = $1`, purposeID).Scan(&class); err != nil {
+		return false, fmt.Errorf("consent: reading the purpose's class: %w", err)
+	}
+	return slices.Contains(commsauthz.MarketingPurposeClasses(), class), nil
 }
 
 // NoSubjectRequestError refuses a consent-confirmation mail a user asked for

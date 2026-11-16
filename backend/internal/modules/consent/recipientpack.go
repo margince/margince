@@ -14,10 +14,12 @@ package consent
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -112,7 +114,34 @@ func settlePackBasisTx(ctx context.Context, tx pgx.Tx, subject subjectRef, res r
 		return res, nil
 	}
 	res.Basis, res.BasisMissing = "", true
-	return res, nil
+	if subject.Kind == entityContact {
+		res.ConsentPurpose, err = askablePurposeTx(ctx, tx, subject.ID, res.Category)
+	}
+	return res, err
+}
+
+// askablePurposeTx is the purpose a consent request to this contact would ask
+// about for this use. It is the oldest live double-opt-in purpose whose class
+// covers the use and that the contact has not withdrawn. Zero when none is.
+func askablePurposeTx(ctx context.Context, tx pgx.Tx, contactID string, category commsauthz.Category) (ids.UUID, error) {
+	classes := classesCovering(category)
+	if len(classes) == 0 {
+		return ids.UUID{}, nil
+	}
+	var purpose ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT cp.id FROM consent_purpose cp
+		 WHERE cp.archived_at IS NULL AND cp.requires_double_opt_in AND cp.class = ANY($2)
+		   AND NOT EXISTS (SELECT 1 FROM contact_consent cc
+		                    WHERE cc.contact_id = $1::uuid AND cc.purpose_id = cp.id AND cc.state = 'withdrawn')
+		 ORDER BY cp.created_at, cp.id LIMIT 1`, contactID, classes).Scan(&purpose)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, nil
+	}
+	if err != nil {
+		return ids.UUID{}, wrapEvidenceRead("the purpose a consent request would ask about", err)
+	}
+	return purpose, nil
 }
 
 // consentCoversTx answers whether the subject has granted consent to a

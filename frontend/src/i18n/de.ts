@@ -8066,10 +8066,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
-  "lawfulBasis.title": "Für diesen Kontakt ist keine Einwilligung erfasst",
+  "lawfulBasis.title": "Keine gültige Grundlage erfasst",
   "lawfulBasis.body":
-    "Nach vietnamesischem Recht darfst du diese Daten ohne Einwilligung nicht verarbeiten. Du sendest auf eigenes Risiko.",
+    "Für diesen Kontakt ist keine nach vietnamesischem Recht gültige Grundlage erfasst: weder seine Einwilligung noch ein Fall, in dem das Gesetz die Verarbeitung ohne sie erlaubt. Du sendest auf eigenes Risiko.",
   "lawfulBasis.confirm": "Trotzdem senden",
+  "lawfulBasis.askConsent": "Um Einwilligung bitten",
+  "lawfulBasis.askFailed":
+    "Die Bitte um Einwilligung wurde nicht gesendet. Versuche es erneut.",
+  "lawfulBasis.asked":
+    "Bitte um Einwilligung an {address} gesendet. Deine Nachricht wurde nicht gesendet.",
   "lawfulBasis.failed":
     "Deine Bestätigung wurde nicht gespeichert. Versuche es erneut.",
   "privacynotice.purposeLine": "{purpose}: {basis}",
@@ -23127,4 +23132,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{words}“ darfst du nur mit Nachweis behaupten. Ergänze Name, Nummer und Datum des Nachweises in der E-Mail.",
   "compose.contentFinding.language":
     "Schreibe diese E-Mail zuerst auf {language}. Text in einer anderen Sprache steht darunter und ist nicht größer als der Text auf {language}.",
+  "compose.contentFinding.foreignAdvertiser":
+    "Dein Unternehmen ist nicht in {country} niedergelassen. Ein ausländisches Unternehmen, das in {country} nicht tätig ist, darf dort nur über ein Werbeunternehmen aus {country} werben. Dafür ist dein Unternehmen verantwortlich.",
 };

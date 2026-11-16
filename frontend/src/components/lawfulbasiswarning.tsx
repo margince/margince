@@ -5,8 +5,10 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "../lib/problem";
 
@@ -14,6 +16,8 @@ import { problemMessageOf, throwProblem } from "../lib/problem";
 // legitimate-interest basis. It applies when the record holds neither their
 // consent nor an agreement with them. It does not block: the sender
 // confirms it, and the server records that confirmation under their name.
+// The sender may instead ask the contact for consent, which sends the consent
+// mail and not the message.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 
@@ -38,6 +42,33 @@ function confirmableSubjects(preview: Preview | undefined): Subject[] {
   );
 }
 
+type ConsentRequest = Readonly<{
+  contactId: string;
+  purposeId: string;
+  address: string;
+}>;
+
+/**
+ * The consent requests the warning can send: each marked contact for whom the
+ * preview names the purpose a request would ask about.
+ */
+function askableRequests(preview: Preview | undefined): ConsentRequest[] {
+  return (preview?.recipients ?? []).flatMap((recipient) => {
+    const subject = recipient.evidence_subject;
+    return recipient.lawful_basis_missing === true &&
+      recipient.consent_purpose_id &&
+      subject?.entity_type === "contact"
+      ? [
+          {
+            contactId: subject.entity_id,
+            purposeId: recipient.consent_purpose_id,
+            address: recipient.address,
+          },
+        ]
+      : [];
+  });
+}
+
 /** The standing warning, drawn wherever the preview is. */
 export function LawfulBasisCallout({
   preview,
@@ -60,16 +91,41 @@ export function LawfulBasisCallout({
   );
 }
 
+/** Mails each contact the consent request for its purpose. */
+function useAskForConsent(requests: readonly ConsentRequest[]) {
+  const t = useT();
+  return useMutation({
+    mutationFn: async () => {
+      for (const request of requests) {
+        const answered = await api.POST(
+          "/contacts/{id}/consent/double-opt-in",
+          {
+            params: { path: { id: request.contactId } },
+            body: { purpose_id: request.purposeId },
+          },
+        );
+        if (!answered.response.ok) {
+          throwProblem(answered.error ?? { title: t("lawfulBasis.askFailed") });
+        }
+      }
+    },
+  });
+}
+
 /**
  * Holds a send until the user confirms the warning for every recipient it
  * applies to. `gate(proceed)` runs `proceed` at once when nothing is missing,
- * else after the confirmation is recorded. `dialog` is drawn by the caller.
+ * else after the confirmation is recorded. Asking for consent instead closes
+ * the dialog without sending. `dialog` is drawn by the caller.
  */
 export function useLawfulBasisGate(preview: Preview | undefined) {
   const t = useT();
+  const toast = useToast();
   const missing = lawfulBasisMissing(preview);
   const subjects = confirmableSubjects(preview);
+  const requests = askableRequests(preview);
   const [pending, setPending] = useState<(() => void) | null>(null);
+  const ask = useAskForConsent(requests);
   const record = useMutation({
     mutationFn: async () => {
       const answered = await api.POST("/lawful-basis-confirmations", {
@@ -84,7 +140,9 @@ export function useLawfulBasisGate(preview: Preview | undefined) {
   const close = () => {
     setPending(null);
     record.reset();
+    ask.reset();
   };
+  const failure = record.error ?? ask.error;
   const gate = (proceed: () => void) => {
     if (missing.length === 0) {
       proceed();
@@ -100,7 +158,29 @@ export function useLawfulBasisGate(preview: Preview | undefined) {
       confirmLabel={t("lawfulBasis.confirm")}
       confirmVariant="danger"
       pending={record.isPending}
-      error={record.error ? problemMessageOf(record.error, t) : null}
+      confirmDisabled={ask.isPending}
+      error={failure ? problemMessageOf(failure, t) : null}
+      actionsLead={
+        requests.length > 0 ? (
+          <Button
+            pending={ask.isPending}
+            onClick={() => {
+              ask.mutate(undefined, {
+                onSuccess: () => {
+                  close();
+                  toast.show(
+                    t("lawfulBasis.asked", {
+                      address: requests.map((r) => r.address).join(", "),
+                    }),
+                  );
+                },
+              });
+            }}
+          >
+            {t("lawfulBasis.askConsent")}
+          </Button>
+        ) : undefined
+      }
       onConfirm={() => {
         record.mutate(undefined, {
           onSuccess: () => {

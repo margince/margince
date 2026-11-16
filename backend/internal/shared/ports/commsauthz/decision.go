@@ -216,6 +216,9 @@ type Decision struct {
 	// basis and the record holds neither their consent nor an agreement with
 	// them. Only a preview fills it, and it refuses nothing: the screen warns.
 	LawfulBasisMissing bool
+	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
+	// recipient would ask about, zero when none can be asked.
+	ConsentPurpose ids.UUID
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

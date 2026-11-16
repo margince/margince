@@ -20,6 +20,7 @@ const MARKED: Preview = {
       verdict: "allow",
       reason_code: "allowed",
       lawful_basis_missing: true,
+      consent_purpose_id: "018f3a1b-0000-7000-8000-0000000000c0",
       evidence_subject: {
         entity_type: "contact",
         entity_id: "018f3a1b-0000-7000-8000-000000000042",
@@ -98,6 +99,66 @@ describe("the no-lawful-basis warning", () => {
         },
       ],
     });
+  });
+
+  it("states that no valid basis is recorded and offers both ways on", async () => {
+    vi.spyOn(globalThis, "fetch");
+    draw(MARKED, vi.fn());
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    expect(
+      screen.getAllByText("No valid basis recorded").length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(
+        "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getByRole("button", { name: "Ask for consent" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Send anyway" }),
+    ).toBeInTheDocument();
+  });
+
+  it("asks the contact for consent and does not send the message", async () => {
+    const fetched = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          delivered_to: "lan@example.test",
+          expires_at: "2026-11-24T00:00:00Z",
+          queued: true,
+          sendable: true,
+        }),
+        { status: 201, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    const onSend = vi.fn();
+    draw(MARKED, onSend);
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: translate("en", "lawfulBasis.askConsent"),
+      }),
+    );
+
+    await waitFor(() => expect(fetched).toHaveBeenCalledTimes(1));
+    const request = fetched.mock.calls[0]?.[0];
+    expect(request).toBeInstanceOf(Request);
+    if (!(request instanceof Request)) return;
+    expect(request.url).toContain(
+      "/contacts/018f3a1b-0000-7000-8000-000000000042/consent/double-opt-in",
+    );
+    expect(await request.json()).toEqual({
+      purpose_id: "018f3a1b-0000-7000-8000-0000000000c0",
+    });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Send anyway" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(onSend).not.toHaveBeenCalled();
   });
 
   it("sends at once when no recipient is marked", async () => {

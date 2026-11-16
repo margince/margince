@@ -29,6 +29,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 	"time"
 
@@ -141,6 +142,17 @@ type Rules struct {
 	// sent; nothing is refused.
 	ClaimsNeedProof []string
 
+	// NotClaims are phrases that hold a claim word and claim nothing, such as
+	// a closing greeting. They are taken out of a draft before its claims are
+	// sought.
+	NotClaims []string
+
+	// ForeignAdvertiserNeedsLocalAgency says an advertiser not established in
+	// this jurisdiction must advertise here through a local advertising
+	// service business. An advertising draft to a recipient here, from a
+	// sending entity established elsewhere, gets a notice; nothing is refused.
+	ForeignAdvertiserNeedsLocalAgency bool
+
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
 	// message. False means none is owed, which is the default.
 	//
@@ -182,9 +194,10 @@ type Rules struct {
 	// then pins no question, its page shows none and its submit takes none.
 	RecordConfirmationWithoutNews bool
 
-	// ConsentConfirmationNeedsRequest says a consent-confirmation mail may be
-	// sent only when the recipient's own request to subscribe is on record. A
-	// mail asking for consent nobody requested is itself unsolicited.
+	// ConsentConfirmationNeedsRequest says a mail asking for consent to an
+	// advertising purpose may be sent only when the recipient's own request to
+	// subscribe is on record. Such a mail nobody requested is itself
+	// unsolicited advertising.
 	ConsentConfirmationNeedsRequest bool
 }
 
@@ -452,9 +465,10 @@ func (r Rules) Validate() error {
 	return r.validateDisclosureLanguage()
 }
 
-// validateClaims refuses a claim word that matches nothing or everything.
+// validateClaims refuses a claim word or a phrase that is not a claim when it
+// matches nothing or everything.
 func (r Rules) validateClaims() error {
-	for _, word := range r.ClaimsNeedProof {
+	for _, word := range append(slices.Clone(r.ClaimsNeedProof), r.NotClaims...) {
 		if strings.TrimSpace(word) == "" || strings.TrimSpace(word) != word {
 			return fmt.Errorf("claim word %q is empty or padded, so it would flag every draft or none", word)
 		}

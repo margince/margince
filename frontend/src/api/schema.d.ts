@@ -44522,15 +44522,20 @@ export interface components {
              *     proof (the document's name, number and date), and states none.
              *     `advertising_language_first`: the draft does not open in the pack's disclosure
              *     language, which advertising leads with.
+             *     `foreign_advertiser`: the sending legal entity is not established in the recipient's
+             *     country, whose pack asks an advertiser from elsewhere to advertise there through a
+             *     local advertising service business. The customer answers for it.
              * @enum {string}
              */
-            requirement: "claim_without_proof" | "advertising_language_first";
+            requirement: "claim_without_proof" | "advertising_language_first" | "foreign_advertiser";
             /** @description What was found, for the composer to read. */
             detail: string;
             /** @description The claim words found, for `claim_without_proof`. */
             words?: string[];
             /** @description The language the draft must lead with, for `advertising_language_first`. */
             language?: string;
+            /** @description The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`. */
+            country?: string;
         };
         /** @description An existing recipient record the caller can read. */
         CommunicationEvidenceSubject: {
@@ -44550,6 +44555,16 @@ export interface components {
              *     `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
              */
             lawful_basis_missing?: boolean;
+            /**
+             * Format: uuid
+             * @description For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+             *     about for this use, the oldest live double-opt-in purpose whose class covers it and that
+             *     the contact has not withdrawn. `POST /contacts/{id}/consent/double-opt-in` with it mails
+             *     the request. A request for consent to a purpose outside the marketing classes needs no
+             *     request of the contact's own on record. Absent when no such purpose exists, or when the
+             *     recipient is a lead.
+             */
+            consent_purpose_id?: string;
             /**
              * @description The existing contact or lead this recipient resolves to, only when the caller
              *     can read it. Absent for newly filed addresses and records unavailable to the
@@ -91638,7 +91653,9 @@ export interface operations {
             409: components["responses"]["ControllerMailRefused"];
             /**
              * @description The request named no purpose, named one no `consent_purpose` row holds, or the contact
-             *     carries no live email address — so there is no mailbox a link could reach.
+             *     carries no live email address — so there is no mailbox a link could reach. Also when
+             *     the contact's country asks that a consent mail answer their own request, the purpose is
+             *     in a marketing class, and no such request is on record.
              */
             422: {
                 headers: {
