@@ -215,3 +215,44 @@ func TestACarriedWithdrawalKeepsTheAddressesItWasBoundTo(t *testing.T) {
 		})
 	}
 }
+
+// A lead's withdrawal that flips the promoted contact's grant writes a proof row
+// on the contact. It keeps the withdrawal's retention floor, so retention cannot
+// reach the contact sooner than the lead whose subject refused.
+func TestACarriedWithdrawalKeepsItsRetentionFloor(t *testing.T) {
+	e := setupPromoteConsent(t)
+	ctx := context.Background()
+	lead := e.seedConsentSubject(t, consentSubjectLead)
+	contact := e.seedConsentSubject(t, consentSubjectContact)
+	e.seedCarriedConsent(t, consentSubjectContact, contact, e.newsletter)
+	kept := time.Now().UTC().Add(366 * 24 * time.Hour).Truncate(time.Microsecond)
+	if _, err := e.owner.Exec(ctx, `
+		WITH state AS (
+		  INSERT INTO contact_consent (lead_id, purpose_id, state, captured_at, source)
+		  VALUES ($1, $2, 'withdrawn', now(), 'unsubscribe_link'))
+		INSERT INTO consent_event (lead_id, purpose_id, new_state, source, captured_at, captured_by, kept_until)
+		VALUES ($1, $2, 'withdrawn', 'unsubscribe_link', now(), 'subject', $3)`,
+		lead, e.newsletter, kept); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			t.Errorf("rolling back the carry: %v", err)
+		}
+	}()
+	if err := carryConsent(ctx, tx, consentCarryLeadPromotion, lead, contact, "human:gate"); err != nil {
+		t.Fatalf("carrying consent: %v", err)
+	}
+	var carried *time.Time
+	if err := tx.QueryRow(ctx, `SELECT kept_until FROM consent_event
+		WHERE contact_id = $1 AND new_state = 'withdrawn'`, contact).Scan(&carried); err != nil {
+		t.Fatalf("reading the carried withdrawal: %v", err)
+	}
+	if carried == nil || !carried.Equal(kept) {
+		t.Errorf("the carried withdrawal is kept until %v, want the lead's %v", carried, kept)
+	}
+}

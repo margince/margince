@@ -45,6 +45,20 @@ func (s *Store) acknowledgeWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subj
 		RefusalTimes{ReceivedAt: withdrawnAt, StoppedAt: withdrawnAt})
 }
 
+// withdrawalFloorTx answers until when a withdrawal of advertising stays out of
+// retention's reach, nil where the rules set none. The proof row carries it, so
+// it holds when no stop or receipt is written beside the withdrawal.
+func (s *Store) withdrawalFloorTx(
+	ctx context.Context, tx pgx.Tx, sub subject, state ConsentState, purposeClass string, withdrawnAt time.Time,
+) (*time.Time, error) {
+	if state != StateWithdrawn || !slices.Contains(commsauthz.MarketingPurposeClasses(), purposeClass) {
+		return nil, nil //nolint:nilnil // a nil end is the absence of a retention floor, which the proof row stores as null
+	}
+	terms, _, err := s.keepUnderReceiptRulesTx(ctx, tx, sub, ids.UUID{},
+		RefusalTimes{ReceivedAt: withdrawnAt, StoppedAt: withdrawnAt})
+	return terms.keptUntil, err
+}
+
 // acknowledgedActsSetting is the transaction-local setting that lists the
 // receipts this transaction has staged. set_config(..., true) drops it at commit
 // or rollback, so it never reaches the next transaction on the connection.

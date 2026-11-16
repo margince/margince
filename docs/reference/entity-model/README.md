@@ -259,7 +259,7 @@ erDiagram
 | [`company_vat_check`](contacts.md#company_vat_check) | contacts | 11 | 0 |
 | [`confirm_token`](consent.md#confirm_token) | consent | 16 | 2 |
 | [`consent_doi_token`](consent.md#consent_doi_token) | consent | 7 | 0 |
-| [`consent_event`](consent.md#consent_event) | consent | 16 | 0 |
+| [`consent_event`](consent.md#consent_event) | consent | 17 | 0 |
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 8 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
