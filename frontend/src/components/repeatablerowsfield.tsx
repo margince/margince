@@ -4,6 +4,7 @@
 import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Radio } from "../design-system/atoms";
+import { ErrorLine } from "../design-system/errorline";
 import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
 import {
@@ -28,6 +29,7 @@ export function RepeatableRowsField({
   rows,
   setRows,
   labelHidden,
+  error,
 }: Readonly<{
   field: CreateField;
   formId: string;
@@ -35,6 +37,8 @@ export function RepeatableRowsField({
   setRows: (next: FormRow[]) => void;
   /** Where the surface around the group already names it: a dialog titled for it. */
   labelHidden?: boolean;
+  /** What the server refused in these rows, said under them. */
+  error?: string;
 }>) {
   const t = useT();
   const [valueField, ...detailFields] = field.rowFields ?? [];
@@ -224,6 +228,7 @@ export function RepeatableRowsField({
           ))}
         </div>
       )}
+      {error && <ErrorLine>{error}</ErrorLine>}
       <Button
         type="button"
         className="repeatablerowsfield-add"

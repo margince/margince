@@ -158,6 +158,7 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               labelHidden={titledByDialog}
+              error={fieldRefusals?.get(field.key)}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);
@@ -172,6 +173,7 @@ export function RecordFormBody({
               key={field.key}
               field={field}
               labelHidden={titledByDialog}
+              error={fieldRefusals?.get(field.key)}
               value={values[field.key] ?? ""}
               setValue={(next) =>
                 setVisibleValues({ ...values, [field.key]: next })

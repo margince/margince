@@ -110,3 +110,51 @@ describe("CreateAction field refusals", () => {
     );
   });
 });
+
+describe("CreateAction refusals of a row list or a set", () => {
+  const listFields: CreateField[] = [
+    { key: "name", label: "create.dealName", required: true },
+    {
+      key: "emails",
+      label: "create.email",
+      type: "repeatable",
+      addLabel: "field.addEmail",
+      rowFields: [{ key: "email", label: "create.email", type: "email" }],
+    },
+    {
+      key: "tags",
+      label: "nav.tags",
+      type: "multiselect",
+      options: [{ value: "a", label: "A" }],
+    },
+  ];
+
+  async function submitList(problem: unknown) {
+    render(
+      <CreateAction
+        label="New contact"
+        fields={listFields}
+        create={() => throwProblem(problem)}
+        invalidate="contacts"
+        screen="contacts"
+      />,
+    );
+    await userEvent.click(screen.getByText("New contact"));
+    await userEvent.type(screen.getByLabelText(/Deal.name/i), "Probe");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  }
+
+  it("shows a refused address under the email rows", async () => {
+    await submitList(refusal("emails", "email_names_no_one"));
+    await waitFor(() =>
+      expect(screen.getByText(/^emails refused\.$/i)).toBeTruthy(),
+    );
+  });
+
+  it("shows a refused set beside its picker", async () => {
+    await submitList(refusal("tags", "unknown_tag"));
+    await waitFor(() =>
+      expect(screen.getByText(/^tags refused\.$/i)).toBeTruthy(),
+    );
+  });
+});
