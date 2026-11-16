@@ -2987,7 +2987,27 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.searching": "Datensätze werden durchsucht…",
   "palette.searchFailedTitle": "Suche fehlgeschlagen",
   "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
-  "palette.askRow": "Margince fragen: „{query}“",
+  "palette.askDataRow": "CRM-Daten fragen: „{query}“",
+  "palette.openAnalytics": "In Analytics öffnen",
+  "palette.dataUnsupportedOnly":
+    "Diese Frage konnte nicht mit CRM-Daten beantwortet werden.",
+  "palette.dataUnsupported":
+    "Diese Frage konnte nicht aus den CRM-Daten beantwortet werden. Hier steht, was das Handbuch dazu sagt.",
+  "palette.dataSource": "Quelle: {source}",
+  "palette.dataPlan": "Verwendete Abfrage",
+  "create.contactChannelRequired":
+    "Ergänze mindestens eine E-Mail, Telefonnummer oder LinkedIn-URL.",
+  "import.reason.contact_channel_missing":
+    "Der Kontakt hat keine E-Mail, Telefonnummer oder LinkedIn-URL. Ergänze eine Kontaktmöglichkeit.",
+  "palette.recordsCoverage":
+    "Abdeckung: {coverage}. Bis zu {limit} Datensätze.",
+  "palette.noDataRecords": "Keine Datensätze passen zu dieser Frage.",
+  "palette.dataUnavailable": "CRM-Daten konnten nicht gelesen werden",
+  "palette.coverageExact": "Genaue Treffer",
+  "palette.coveragePartial": "Begrenzte Treffer",
+  "palette.crmRecords": "CRM-Datensätze",
+  "palette.recordName": "Datensatz",
+  "palette.askRow": "Handbuch fragen: „{query}“",
   "palette.asking": "Margince wird gefragt…",
   "palette.answerAria": "Antwort von Margince",
   "palette.answerFrom": "Aus {name}",
@@ -10451,6 +10471,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.problem.new_tag": "Neuer Tag",
   "import.problem.duplicate": "Duplikat",
   "import.problem.permission": "Keine Berechtigung",
+  "import.problem.incomplete_identity": "Kontaktmöglichkeit fehlt",
   "import.problem.unusable_row": "Unbrauchbare Zeile",
   "settings.dangerZone": "Gefahrenbereich",
   "settings.resetDataDesc":

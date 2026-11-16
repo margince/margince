@@ -38,7 +38,7 @@ func createContactWithKey(ctx context.Context, t *testing.T, registry *agents.Re
 	t.Helper()
 	args := map[string]any{
 		"record_type": "contact",
-		"fields":      map[string]any{"full_name": name},
+		"fields":      map[string]any{"full_name": name, "phones": []map[string]any{{"phone": "+49305550110", "phone_type": "work", "is_primary": true}}},
 	}
 	if key != "" {
 		args["idempotency_key"] = key

@@ -42,7 +42,7 @@ type wireGrant struct {
 
 func seedGrantFixture(t *testing.T, e *apptest.AppEnv) (contact, subject string) {
 	t.Helper()
-	contact = createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Shared Contact"})
+	contact = createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Shared Contact"})
 	var users struct {
 		Data []struct {
 			ID string `json:"id"`

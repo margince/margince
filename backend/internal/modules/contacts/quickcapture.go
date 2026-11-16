@@ -114,6 +114,9 @@ func (s *Store) quickCaptureInTx(
 	var out QuickCaptureResult
 	var attached EmployerAttached
 	contactInput := contactFromQuickCapture(in)
+	if err := RequireContactChannel(contactInput); err != nil {
+		return out, err
+	}
 	contactInput.Employer = EmployerChoice{CompanyID: in.CompanyID, CompanyName: in.CompanyName, Role: in.Role, Source: quickCaptureSource}
 	contactInput.EmployerResult = &attached
 	contact, err := s.CreateContactTx(ctx, tx, contactInput, CustomColumns{})

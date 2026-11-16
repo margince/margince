@@ -82,6 +82,10 @@ describe("Creating a contact from a company's Contacts tab", () => {
     expect(screen.queryByTestId("vcard-import")).toBeNull();
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
     expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -105,6 +109,10 @@ describe("Creating a contact from a company's Contacts tab", () => {
 
     await user.click(screen.getByRole("button", { name: "New contact" }));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
     expect(screen.queryByRole("combobox", { name: "Company" })).toBeNull();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -132,6 +140,10 @@ describe("Creating a contact from a company's Contacts tab", () => {
     const user = userEvent.setup();
     await user.click(screen.getByTestId("quick-capture"));
     await user.type(await screen.findByLabelText("Full name *"), "Dana Buyer");
+    await user.type(
+      screen.getByLabelText("LinkedIn"),
+      "https://www.linkedin.com/in/dana-buyer",
+    );
 
     rerender(
       providers(<CompanyContactsList companyId="co-other" mayCreate />, client),

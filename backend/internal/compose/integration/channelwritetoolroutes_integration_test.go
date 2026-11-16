@@ -42,7 +42,7 @@ func TestSendMessageLeavesTheSameOnEitherDoor(t *testing.T) {
 		compose.WithPublicBaseURL(channelSendBaseURL),
 	}, "read", "write", "send")
 	c := &channelSendEnv{ChannelConversation: &apptest.ChannelConversation{AppEnv: d.e}}
-	c.ContactID = createdID(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Telegram Buyer"})
+	c.ContactID = createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Telegram Buyer"})
 	c.User = apptest.SessionUserID(t, d.e)
 	c.BindIdentity(t)
 	c.SeedInboundMessage(t)

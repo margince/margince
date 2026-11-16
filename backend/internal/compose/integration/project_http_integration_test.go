@@ -108,7 +108,8 @@ func anchorContact(t *testing.T, e *apptest.AppEnv, full string) string {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": full, "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    full, "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("POST /contacts → %d, want 201", status)
 	}

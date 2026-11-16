@@ -19,7 +19,7 @@ func TestAContactCreatedWithACompanyReplaysItsFirstAnswer(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	headers := map[string]string{"Idempotency-Key": "contact-with-company"}
-	body := AnyMap{"source": "manual", "full_name": "Replay Hire", "company_name": "Replay Employer GmbH"}
+	body := AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Replay Hire", "company_name": "Replay Employer GmbH"}
 
 	var first, again AnyMap
 	if status := e.Call(t, http.MethodPost, "/v1/contacts", body, headers, &first); status != http.StatusCreated {

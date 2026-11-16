@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 280252,
+    "tool_catalog_bytes": 280460,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71468,
+    "approx_wire_tokens_total": 71520,
     "largest_tool_bytes": 17792,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 54713,
-      "input_schema_bytes": 160713,
+      "input_schema_bytes": 160921,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 215426
+      "description_plus_input_schema_bytes": 215634
     }
   },
   "tools": {
@@ -6104,6 +6104,10 @@
               },
               "type": "array"
             },
+            "request_body": {
+              "description": "ask only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "type": "object"
+            },
             "save": {
               "description": "query only: Persist the run; the answer then carries a citable run_id.",
               "type": "boolean"
@@ -6121,8 +6125,9 @@
               ]
             },
             "step": {
-              "description": "query: ask a question of the data; compose: build a report document from saved queries",
+              "description": "query: ask a typed question of the data; compose: build a report document from saved queries; ask: ask a plain-language data question",
               "enum": [
+                "ask",
                 "compose",
                 "query"
               ],
@@ -11201,6 +11206,7 @@
                 "change_state",
                 "change_tags",
                 "list_documents",
+                "read_analytics",
                 "read_details",
                 "read_reports",
                 "read_workspace",

@@ -3863,6 +3863,10 @@ func (stubs) Search(w nethttp.ResponseWriter, r *nethttp.Request, params crmcont
 	httperr.NotImplemented(w, r, "Search")
 }
 
+func (stubs) AskSearchData(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AskSearchData")
+}
+
 func (stubs) ListSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListSharedMailboxes")
 }

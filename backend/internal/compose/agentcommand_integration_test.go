@@ -145,7 +145,7 @@ func TestAnArchiveOfARowOutsideTheAgentsScopeStagesNothing(t *testing.T) {
 	elsewhere := e.As(e.Rep3, []ids.UUID{e.Team2}, integration.AdminPerms)
 	hidden, err := native.Create(elsewhere, datasource.CreateInput{
 		EntityType: datasource.EntityContact,
-		Fields:     json.RawMessage(`{"full_name":"Out Of Scope","owner_id":"` + e.Rep3.String() + `"}`),
+		Fields:     json.RawMessage(`{"linkedin_url":"` + integration.ContactProfile() + `","full_name":"Out Of Scope","owner_id":"` + e.Rep3.String() + `"}`),
 		Source:     "test",
 	})
 	if err != nil {

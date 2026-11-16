@@ -41,7 +41,11 @@ func TestMergeRechecksBothApprovedRecordsInsideTheNativeWrite(t *testing.T) {
 				}
 				create := func(name string) datasource.EntityRef {
 					t.Helper()
-					ref, err := native.Create(ctx, datasource.CreateInput{EntityType: kind, Fields: json.RawMessage(fmt.Sprintf(`{%q:%q}`, field, name)), Source: "manual"})
+					fields := fmt.Sprintf(`{%q:%q}`, field, name)
+					if kind == datasource.EntityContact {
+						fields = fmt.Sprintf(`{"full_name":%q,"linkedin_url":%q}`, name, integration.ContactProfile())
+					}
+					ref, err := native.Create(ctx, datasource.CreateInput{EntityType: kind, Fields: json.RawMessage(fields), Source: "manual"})
 					if err != nil {
 						t.Fatal(err)
 					}

@@ -61,7 +61,8 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 	var refused *provenance.ReservedError
 
 	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "Planted", Source: reserved,
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		FullName:    "Planted", Source: reserved,
 	}); !errors.As(err, &refused) {
 		t.Errorf("contact: err = %v, want the namespace refused", err)
 	}
@@ -85,7 +86,8 @@ func TestEveryProvenanceWireRefusesTheImporterNamespace(t *testing.T) {
 	// An ordinary provenance string stays writable — the guard is a
 	// prefix rule, not a ban on the field.
 	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "Real", Source: "legacy_crm:contact:p-1",
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		FullName:    "Real", Source: "legacy_crm:contact:p-1",
 	}); err != nil {
 		t.Errorf("an ordinary source must stay writable: %v", err)
 	}
@@ -101,7 +103,8 @@ func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
 
 	var contactRefused *provenance.ReservedError
 	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "Planted", Source: "legacy_crm", SourceSystem: &reserved,
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		FullName:    "Planted", Source: "legacy_crm", SourceSystem: &reserved,
 	}); !errors.As(err, &contactRefused) {
 		t.Fatalf("contact: err = %v, want the namespace refused", err)
 	} else if contactRefused.Field != "source_system" {
@@ -122,7 +125,8 @@ func TestTheRecordWiresRefuseTheImporterNamespaceOnSourceSystem(t *testing.T) {
 	// import rather than only the forged one.
 	ordinary := "legacy_crm"
 	contactIn, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "Real", Source: "legacy_crm", SourceSystem: &ordinary,
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"),
+		FullName:    "Real", Source: "legacy_crm", SourceSystem: &ordinary,
 	})
 	if err != nil {
 		t.Fatalf("contact: an ordinary source system must stay writable: %v", err)
@@ -199,7 +203,7 @@ func TestTheLeadImporterDoorAdmitsItsNamespaceAndNothingElse(t *testing.T) {
 // is unchanged.
 func TestTheRecordImporterDoorsAdmitTheirNamespaceAndNothingElse(t *testing.T) {
 	namespaced := "mirror:hubspot"
-	contactIn, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{Source: "manual", FullName: "Imported", SourceSystem: &namespaced})
+	contactIn, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"), Source: "manual", FullName: "Imported", SourceSystem: &namespaced})
 	if err != nil || contactIn.SourceSystem == nil || *contactIn.SourceSystem != namespaced {
 		t.Errorf("contact importer door = %v / %v, want the namespace carried", contactIn.SourceSystem, err)
 	}
@@ -209,14 +213,14 @@ func TestTheRecordImporterDoorsAdmitTheirNamespaceAndNothingElse(t *testing.T) {
 	}
 
 	planted := provenance.EmailRequestSource
-	if _, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{Source: "manual", FullName: "Planted", SourceSystem: &planted}); err == nil {
+	if _, err := contactCreateInputFromImporter(crmcontracts.CreateContactRequest{LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"), Source: "manual", FullName: "Planted", SourceSystem: &planted}); err == nil {
 		t.Error("the contact importer door admitted an engine identity")
 	}
 	if _, err := companyCreateInputFromImporter(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "Planted", SourceSystem: &planted}); err == nil {
 		t.Error("the company importer door admitted an engine identity")
 	}
 
-	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{Source: "manual", FullName: "Planted", SourceSystem: &namespaced}); err == nil {
+	if _, err := ContactCreationInput(crmcontracts.CreateContactRequest{LinkedinUrl: new("https://www.linkedin.com/in/fixture-contact"), Source: "manual", FullName: "Planted", SourceSystem: &namespaced}); err == nil {
 		t.Error("the contact client door admitted the importer namespace")
 	}
 	if _, err := CompanyCreationInput(crmcontracts.CreateCompanyRequest{Source: "manual", DisplayName: "Planted", SourceSystem: &namespaced}); err == nil {

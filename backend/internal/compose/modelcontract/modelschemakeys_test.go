@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package modelcontract_test
 
 // The keyed-object gate: no schema this build hands a model declares an object
 // without naming its keys.
@@ -29,8 +29,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
+	"github.com/margince/margince/backend/internal/compose/modelcontract"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -40,7 +42,7 @@ func TestNoRequestAModelIsSentCarriesAnObjectWithoutKeys(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the task census: %v", err)
 	}
-	scenarios, err := aicert.LoadCorpus("aicert/corpus", census)
+	scenarios, err := aicert.LoadCorpus("../aicert/corpus", census)
 	if err != nil {
 		t.Fatalf("loading the corpus: %v", err)
 	}
@@ -114,13 +116,17 @@ func issuedRequests(t *testing.T, census *aitasks.Registry, sc aicert.Scenario) 
 // read off the wire by TestTheAIPromptsPageIsCurrent, never written by hand.
 func publishedSchemalessSites(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := os.ReadFile(aiPromptsDoc)
-	if err != nil {
-		t.Fatalf("reading %s: %v", aiPromptsDoc, err)
+	const promptsPath = "../../../../docs/reference/ai-prompts.json"
+	if err := gatekit.DeclareInputs(os.Getenv, promptsPath); err != nil {
+		t.Fatal(err)
 	}
-	var doc promptDocument
+	raw, err := os.ReadFile(promptsPath)
+	if err != nil {
+		t.Fatalf("reading %s: %v", "../../../../docs/reference/ai-prompts.json", err)
+	}
+	var doc modelcontract.Document
 	if err := json.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("parsing %s: %v", aiPromptsDoc, err)
+		t.Fatalf("parsing %s: %v", "../../../../docs/reference/ai-prompts.json", err)
 	}
 	schemaless := map[string]bool{}
 	for _, site := range doc.Sites {

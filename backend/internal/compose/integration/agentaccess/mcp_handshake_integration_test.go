@@ -87,7 +87,7 @@ func TestAConnectorCompletesTheWholeHandshakeOnOneOrigin(t *testing.T) {
 	const created = "One Origin Contact"
 	call := e.rpc(t, token, negotiated,
 		`{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"create_record",`+
-			`"arguments":{"record_type":"contact","fields":{"full_name":"`+created+`"}}}}`)
+			`"arguments":{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-958f8476fa87aac8","full_name":"`+created+`"}}}}`)
 	if text := toolText(t, call); !strings.Contains(text, created) {
 		t.Fatalf("tools/call answered %q, which does not carry the record it was asked to create", text)
 	}

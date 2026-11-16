@@ -26,7 +26,7 @@ func TestHiddenContactsStillReceiveTheirAccessAndErasureRights(t *testing.T) {
 	var disabled []string
 	e := apptest.SetupAppWithOriginOptions(t, func(string) []compose.Option { return []compose.Option{compose.WithDisabledCoreFeatures(disabled)} })
 	e.BootstrapWorkspace(t)
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Rights subject", "source": "manual"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Rights subject", "source": "manual"})
 	due := clocktest.Now(t).Add(24 * time.Hour).UTC().Format(time.RFC3339)
 	access := createdRecord(t, e, "/v1/data-subject-requests", AnyMap{"kind": "access", "subject_ref": contact, "due_at": due})
 	erasure := createdRecord(t, e, "/v1/data-subject-requests", AnyMap{"kind": "erasure", "subject_ref": contact, "due_at": due})
@@ -53,7 +53,7 @@ func TestPublicCardsHideDisabledRecordsAndDependentCompanyNames(t *testing.T) {
 	e := apptest.SetupAppWithOriginOptions(t, func(string) []compose.Option { return []compose.Option{compose.WithDisabledCoreFeatures(disabled)} })
 	e.BootstrapWorkspace(t)
 	company := createdRecord(t, e, "/v1/companies", AnyMap{"display_name": "Hidden employer", "source": "manual"})
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"full_name": "Visible contact", "title": "Director", "company_id": company, "source": "manual"})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Visible contact", "title": "Director", "company_id": company, "source": "manual"})
 	disabled = []string{"companies"}
 	e.Close()
 	e = e.Reboot(t)

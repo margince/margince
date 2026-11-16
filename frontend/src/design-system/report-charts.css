@@ -309,7 +309,11 @@
   padding: var(--space-2);
   border-bottom: 1px solid var(--borderSubtle);
 }
-.report-chart-data td {
+.report-chart-data table:not(.table) th {
+  text-align: start;
+}
+.report-chart-data table:not(.table) thead th:not(:first-child),
+.report-chart-data table:not(.table) td {
   text-align: end;
   font-variant-numeric: tabular-nums;
 }

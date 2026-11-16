@@ -40,7 +40,7 @@ func TestMCPContactCreationResolvesAndReusesEmployer(t *testing.T) {
 func TestContactCreationApprovalShowsEmployerEvidenceAndEffects(t *testing.T) {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
-	payload := map[string]any{"record_type": "contact", "fields": map[string]any{"full_name": "Dana Buyer", "company_name": "Orion Research"}}
+	payload := map[string]any{"record_type": "contact", "fields": map[string]any{"linkedin_url": integration.ContactProfile(), "full_name": "Dana Buyer", "company_name": "Orion Research"}}
 	proposal := crmcontracts.Approval{Status: "pending", Kind: "create_record", ProposedBy: "agent:proposal", OnBehalfOf: new(crmcontracts.Id(e.Rep1)), TargetEntityType: new("contact"), ProposedChange: &payload}
 	preview, err := newApprovalPreviewReader(e.DB()).read(e.Admin(), proposal)
 	if err != nil {
@@ -73,7 +73,7 @@ func TestContactCreationApprovalBlocksAmbiguousEmployer(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	payload := map[string]any{"record_type": "contact", "fields": map[string]any{"full_name": "Dana Buyer", "company_name": "Ambiguous Works"}}
+	payload := map[string]any{"record_type": "contact", "fields": map[string]any{"linkedin_url": integration.ContactProfile(), "full_name": "Dana Buyer", "company_name": "Ambiguous Works"}}
 	proposal := crmcontracts.Approval{Status: "pending", Kind: "create_record", ProposedBy: "agent:proposal", OnBehalfOf: new(crmcontracts.Id(e.Rep1)), TargetEntityType: new("contact"), ProposedChange: &payload}
 	preview, err := newApprovalPreviewReader(e.DB()).read(e.Admin(), proposal)
 	if err != nil {
