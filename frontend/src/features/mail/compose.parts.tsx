@@ -262,6 +262,7 @@ export function ComposeFoot({
           {t(holdLine)}
         </p>
       )}
+      {send.lawfulBasisDialog}
     </div>
   );
 }
