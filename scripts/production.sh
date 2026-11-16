@@ -1,0 +1,102 @@
+#!/usr/bin/env bash
+# Run this checkout the way a customer runs a release: production mode, through
+# the Docker Compose folder a release ships, with the images built from here.
+#
+#   scripts/production.sh up            build the images, then start the stack
+#   scripts/production.sh stop [--drop] stop it; --drop also deletes its data
+#
+# It is not `make dev`. Production mode holds every check a real install holds
+# and starts the 14-day trial when no license token is set. The stack keeps its
+# data and settings under .tmp/production/ between runs. .env there is written
+# once, with new secrets; put MARGINCE_LICENSE in it to end the trial.
+#
+# PRODUCTION_PORT picks the port on this machine (8090 by default, apart from the
+# dev stack's 8080). The stack listens on 127.0.0.1 only and serves plain HTTP,
+# so it is for this machine alone.
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+state="$root/.tmp/production"
+stack="$state/stack"
+project="margince-production"
+port="${PRODUCTION_PORT:-8090}"
+
+compose() {
+	docker compose --project-directory "$stack" --project-name "$project" "$@"
+}
+
+# write_env: the stack's settings, made once so a second run keeps its data.
+write_env() {
+	if [[ -f "$state/.env" ]]; then
+		return
+	fi
+	umask 077
+	{
+		echo "POSTGRES_PASSWORD=$(openssl rand -hex 24)"
+		echo "MARGINCE_OWNER_PW=$(openssl rand -hex 24)"
+		echo "MARGINCE_APP_PW=$(openssl rand -hex 24)"
+		echo "MARGINCE_PUBLIC_BASE_URL=http://localhost:$port"
+		echo "MARGINCE_KEYVAULT_ROOT_KEY=$(openssl rand -base64 32)"
+		echo "MARGINCE_ADMIN_PASSWORD=$(openssl rand -hex 12)"
+		echo "MARGINCE_PORT=127.0.0.1:$port"
+		echo "MARGINCE_LICENSE="
+		echo "MARGINCE_ENV="
+	} >"$state/.env"
+}
+
+up() {
+	local tag
+	tag="local-$(git -C "$root" rev-parse --short HEAD)"
+	mkdir -p "$state"
+	echo "production: building the api, web and worker images ($tag)"
+	(cd "$root" && REPO=margince-local VERSION="$tag" \
+		MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" \
+		docker buildx bake api web worker --load)
+	bash "$root/scripts/release-compose.sh" --local "$tag" "$stack"
+	write_env
+	cp "$state/.env" "$stack/.env"
+	compose up -d
+	for _ in $(seq 120); do
+		if curl -fsS "http://localhost:$port/readyz" >/dev/null 2>&1; then
+			report
+			return
+		fi
+		sleep 2
+	done
+	echo "production: the stack did not answer on http://localhost:$port/readyz." >&2
+	compose logs --no-color --tail 60 api worker front >&2
+	exit 1
+}
+
+report() {
+	local password
+	password="$(grep -E '^MARGINCE_ADMIN_PASSWORD=' "$state/.env" | cut -d= -f2-)"
+	echo "production: Margince runs on http://localhost:$port in production mode."
+	echo "  Sign in as admin@demo.test with the password $password (on the first start only)."
+	echo "  With no MARGINCE_LICENSE in $state/.env it runs the 14-day trial."
+	echo "  Stop it with \`make production-stop\`; DROP=1 also deletes its data."
+}
+
+stop() {
+	if [[ ! -f "$stack/compose.yaml" ]]; then
+		echo "production: no stack under $stack, so nothing to stop."
+		return
+	fi
+	if [[ "${1:-}" == "--drop" ]]; then
+		compose down --volumes --remove-orphans
+		rm -rf "$state"
+		echo "production: stopped, and its data and settings are deleted."
+		return
+	fi
+	compose down --remove-orphans
+	echo "production: stopped. Its data stays for the next \`make production\`."
+}
+
+case "${1:-}" in
+up) up ;;
+stop) stop "${2:-}" ;;
+*)
+	echo "usage: scripts/production.sh up | stop [--drop]" >&2
+	exit 2
+	;;
+esac
