@@ -1,7 +1,3 @@
-import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
-
-export { ReplaceAddressConfirm } from "./meeting-link-actions";
-
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -35,7 +31,10 @@ import {
 import { useConnectors } from "../../lib/connectors";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { BookingAliasField } from "./booking-alias";
+import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
 import "./meeting-cards.css";
+
+export { ReplaceAddressConfirm } from "./meeting-link-actions";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
