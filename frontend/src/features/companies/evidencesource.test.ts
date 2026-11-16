@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it, vi } from "vitest";
-import type { SourceOpenerFor, SourceRef } from "../../lib/opensource";
+import type { SourceOpenerFor } from "../../lib/opensource";
 import { derivedSource } from "./evidencesource";
 
 const machine = "system:transcript-reader";
