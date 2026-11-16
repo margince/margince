@@ -174,8 +174,15 @@ func keepRefusalTx(
 		if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
 			return nil, err
 		}
-		if _, err := tx.Exec(ctx, `UPDATE communication_suppression SET kept_until = $2 WHERE id = $1 AND kept_until IS NULL`, stopID, kept); err != nil {
+		tag, err := tx.Exec(ctx, `UPDATE communication_suppression SET kept_until = $2 WHERE id = $1 AND kept_until IS NULL`, stopID, kept)
+		if err != nil {
 			return nil, fmt.Errorf("consent: keeping the refusal for its retention floor: %w", err)
+		}
+		// A stop recorded again keeps the floor it already has; the receipt carries that one.
+		if tag.RowsAffected() == 0 {
+			if err := tx.QueryRow(ctx, `SELECT kept_until FROM communication_suppression WHERE id = $1`, stopID).Scan(&kept); err != nil {
+				return nil, fmt.Errorf("consent: reading the refusal's retention floor: %w", err)
+			}
 		}
 	}
 	return &kept, nil
