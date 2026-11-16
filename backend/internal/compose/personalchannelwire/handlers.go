@@ -9,7 +9,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -25,7 +27,13 @@ func NewHandlers(pool *pgxpool.Pool, db *database.DB, sink *capture.Sink) person
 
 // NewStore is the module's store with pushed messages landing through sink.
 func NewStore(pool *pgxpool.Pool, db *database.DB, sink *capture.Sink) *personalchannels.Store {
-	return personalchannels.NewStore(db).WithLander(Lander{Sink: sink, DB: db, Authority: liveAuthority(pool)})
+	return personalchannels.NewStore(db).WithSettler(settlerOver(db)).
+		WithLander(Lander{Sink: sink, DB: db, Authority: liveAuthority(pool)})
+}
+
+// settlerOver settles replies on the comms deliveries db holds.
+func settlerOver(db *database.DB) Settler {
+	return Settler{Comms: comms.NewStore(db, nil, activities.NewStore(db))}
 }
 
 // liveAuthority binds the capture connector for member with the grants member

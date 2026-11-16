@@ -16,6 +16,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database"
+
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -237,6 +239,7 @@ var _ mailboxSenders = (*capture.Registry)(nil)
 type commsResolver struct {
 	registry mailboxSenders
 	channels channelSenders
+	personal *database.DB
 }
 
 var _ comms.ConnectionResolver = commsResolver{}
@@ -345,7 +348,7 @@ func newSendDispatcher(pool *pgxpool.Pool, registry *capture.Registry, pace send
 	}
 	return controllerLaneOn(comms.NewDispatcher(
 		NewMailDeliveryStore(pool, admitParties),
-		commsResolver{registry: registry, channels: registry},
+		commsResolver{registry: registry, channels: registry, personal: InstallationDB(pool)},
 		NewSendSeatAuthority(pool),
 		NewSendAttachmentAuthority(pool, blob),
 		consentGateFor(pool),

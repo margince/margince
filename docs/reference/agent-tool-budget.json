@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 49,
     "system_frame_tokens": 672,
-    "tokens": 51533,
+    "tokens": 51586,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1051
+    "mean_tool_tokens": 1052
   },
   "agents": [
     {
@@ -212,6 +212,10 @@
       "tokens": 474
     },
     {
+      "name": "personal_channels",
+      "tokens": 447
+    },
+    {
       "name": "decide_approvals",
       "tokens": 429
     },
@@ -226,10 +230,6 @@
     {
       "name": "enrich",
       "tokens": 395
-    },
-    {
-      "name": "personal_channels",
-      "tokens": 393
     },
     {
       "name": "read_attention",

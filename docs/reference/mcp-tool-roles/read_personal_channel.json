@@ -1,0 +1,15 @@
+{
+  "tool": "read_workspace",
+  "action": "personal_channel",
+  "verb": "read_personal_channel",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
+}

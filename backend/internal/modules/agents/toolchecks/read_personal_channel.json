@@ -1,0 +1,6 @@
+{
+  "verb": "read_personal_channel",
+  "checks": [
+    "personal_channel.read"
+  ]
+}

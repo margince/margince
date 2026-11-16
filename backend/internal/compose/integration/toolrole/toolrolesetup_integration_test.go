@@ -27,6 +27,15 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 		signal := p.take("signal")
 		return map[string]any{"id": signal, "if_version": versionOf(p, signal), "request_body": map[string]any{"status": "acknowledged"}}
 	},
+	"upload_personal_channel_file": fileOf("chat.txt", "text/plain", "A file a chat carried."),
+	"push_personal_channel_messages": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"messages": []any{map[string]any{
+			"message_id": "role-sweep-1", "network": "whatsapp", "body": "Role sweep", "from": map[string]any{"account": "8490", "name": "Sweep"},
+		}}}}
+	},
+	"pull_personal_channel_replies": func(*recordPool) map[string]any {
+		return map[string]any{"request_body": map[string]any{"max": 5}}
+	},
 	"import_vcards": fileOf("cards.vcf", "text/vcard", "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Role Sweep\r\nEMAIL:sweep@cards.test\r\nEND:VCARD\r\n"),
 	"import_linkedin_connections": fileOf("Connections.csv", "text/csv",
 		"First Name,Last Name,URL,Email Address,Company,Position,Connected On\nRole,Sweep,https://www.linkedin.com/in/role-sweep,,Sweep Co,Buyer,01 Jan 2026\n"),

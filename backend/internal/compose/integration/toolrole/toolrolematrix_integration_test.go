@@ -129,7 +129,7 @@ func passportClients(t *testing.T, e *apptest.AppEnv, role string, n int) []*app
 	t.Helper()
 	clients := make([]*apptest.MCPClient, n)
 	for i := range clients {
-		bearer, _ := apptest.PassportWithID(t, e, fmt.Sprintf("tool-role %s %d", role, i), "read", "write", "send", "draft", "enrich")
+		bearer, _ := apptest.PassportWithID(t, e, fmt.Sprintf("tool-role %s %d", role, i), "read", "write", "send", "draft", "enrich", "personal_channels")
 		clients[i] = apptest.NewMCPClient(e, strings.TrimPrefix(bearer["Authorization"], "Bearer "))
 	}
 	return clients

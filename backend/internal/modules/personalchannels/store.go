@@ -24,9 +24,10 @@ const connectionEntity = "personal_channel_connection"
 
 // Store reads and writes the caller's own connection, replies and uploads.
 type Store struct {
-	db     *database.DB
-	now    func() time.Time
-	lander Lander
+	db      *database.DB
+	now     func() time.Time
+	lander  Lander
+	settler Settler
 }
 
 // NewStore binds the store to the installation's database.

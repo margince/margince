@@ -60,6 +60,7 @@
     "acceptOffer": "business",
     "acceptPartnerLead": "business",
     "acceptTagSuggestion": "business",
+    "ackPersonalChannelReplies": "capture",
     "acknowledgeApprovalFailure": "agent_governance",
     "acknowledgeCompanyView": "business",
     "acknowledgeContactView": "business",
@@ -688,6 +689,7 @@
     "publishCapturedContact": "business",
     "publishReportingFramework": "business",
     "publishReportingReportDraft": "business",
+    "pullPersonalChannelReplies": "capture",
     "pushPersonalChannelMessages": "capture",
     "putAnchorCompany": "admin_settings",
     "putOnboardingState": "own_account",
@@ -932,6 +934,7 @@
     "acceptPartnerLead": "leads",
     "acceptPublicMeetingProposal": "booking_pages",
     "acceptTagSuggestion": "tags",
+    "ackPersonalChannelReplies": "connectors",
     "acknowledgeApprovalFailure": "agent_limits",
     "acknowledgeCompanyView": "companies",
     "acknowledgeContactView": "contacts",
@@ -1715,6 +1718,7 @@
     "publishReportingFramework": "reports",
     "publishReportingReportDraft": "reports",
     "publishSalesGoalPlan": "reports",
+    "pullPersonalChannelReplies": "connectors",
     "purgeCaptureExclusion": "capture_rules",
     "pushPersonalChannelMessages": "connectors",
     "putAnchorCompany": "company_profile",
@@ -2046,6 +2050,9 @@
     ],
     "accept_tag_suggestion": [
       "tags"
+    ],
+    "ack_personal_channel_replies": [
+      "connectors"
     ],
     "acknowledge_approval_failure": [
       "agent_limits"
@@ -3403,6 +3410,9 @@
     "publish_reporting_report_draft": [
       "reports"
     ],
+    "pull_personal_channel_replies": [
+      "connectors"
+    ],
     "push_personal_channel_messages": [
       "connectors"
     ],
@@ -4175,6 +4185,9 @@
     ],
     "accept_tag_suggestion": [
       "business"
+    ],
+    "ack_personal_channel_replies": [
+      "capture"
     ],
     "acknowledge_approval_failure": [
       "agent_governance"
@@ -5507,6 +5520,9 @@
     ],
     "publish_reporting_report_draft": [
       "business"
+    ],
+    "pull_personal_channel_replies": [
+      "capture"
     ],
     "push_personal_channel_messages": [
       "capture"

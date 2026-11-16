@@ -17318,6 +17318,63 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /personal-channels/replies/pull:
+    post:
+      tags: [Connectors]
+      operationId: pullPersonalChannelReplies
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: pull_personal_channel_replies, router: personal_channels, action: pull_replies, tier: auto_execute, scope: personal_channels, served_by: route }
+      summary: Pick up the replies you wrote in Margince, to send on your chat app.
+      description: |
+        Always the CALLER's own, oldest first. Each pulled reply is held for 5 minutes; one not
+        acked by then is offered again with `attempt` one higher. A reply nobody acks within 7
+        days expires and shows as not delivered. The answer also carries the connection's state.
+        Refused while the caller's personal channels are off.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PullPersonalChannelRepliesRequest' }
+      responses:
+        '200':
+          description: The replies handed out, and the connection's state.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PullPersonalChannelRepliesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /personal-channels/replies/ack:
+    post:
+      tags: [Connectors]
+      operationId: ackPersonalChannelReplies
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: ack_personal_channel_replies, router: personal_channels, action: ack_replies, tier: auto_execute, scope: personal_channels, served_by: route }
+      summary: Say whether each reply you pulled went out on your chat app.
+      description: |
+        Always the CALLER's own. `failed` shows the reply as not delivered on the timeline; it is
+        not retried, so the member sends it again. A delivery id that is not the caller's answers
+        `unknown_delivery`, the same as one that never existed.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AckPersonalChannelRepliesRequest' }
+      responses:
+        '200':
+          description: One result per ack, in the order sent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AckPersonalChannelRepliesResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /personal-channels/uploads:
     post:
       tags: [Connectors]
@@ -46095,6 +46152,68 @@ components:
         status: { type: string, enum: [landed, duplicate, skipped, refused, deferred], x-extensible-enum: true }
         activity_id: { type: [string, 'null'], format: uuid }
         reason: { type: [string, 'null'] }
+
+    PullPersonalChannelRepliesRequest:
+      type: object
+      additionalProperties: false
+      required: [max]
+      properties:
+        max: { type: integer, minimum: 1, maximum: 50 }
+
+    PersonalChannelReply:
+      type: object
+      required: [delivery_id, network, recipient, body, attempt]
+      properties:
+        delivery_id: { type: string, format: uuid }
+        network: { type: string }
+        recipient: { $ref: '#/components/schemas/PersonalChannelParty' }
+        group_id: { type: [string, 'null'] }
+        reply_to: { type: [string, 'null'], description: The chat message this answers. }
+        body: { type: string }
+        attempt: { type: integer, minimum: 1 }
+
+    PullPersonalChannelRepliesResponse:
+      type: object
+      required: [replies, connection]
+      properties:
+        replies:
+          type: array
+          items: { $ref: '#/components/schemas/PersonalChannelReply' }
+        connection: { $ref: '#/components/schemas/PersonalChannelConnection' }
+
+    AckPersonalChannelRepliesRequest:
+      type: object
+      additionalProperties: false
+      required: [acks]
+      properties:
+        acks:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items:
+            type: object
+            additionalProperties: false
+            required: [delivery_id, outcome]
+            properties:
+              delivery_id: { type: string, format: uuid }
+              outcome: { type: string, enum: [sent, failed] }
+              provider_message_id: { type: string, maxLength: 500 }
+              reason: { type: string, maxLength: 500 }
+
+    AckPersonalChannelRepliesResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items: { $ref: '#/components/schemas/PersonalChannelAckResult' }
+
+    PersonalChannelAckResult:
+      type: object
+      required: [delivery_id, result]
+      properties:
+        delivery_id: { type: string, format: uuid }
+        result: { type: string, enum: [recorded, unknown_delivery, already_settled], x-extensible-enum: true }
 
     PersonalChannelUpload:
       type: object

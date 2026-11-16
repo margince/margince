@@ -3231,6 +3231,14 @@ func (stubs) UpdatePersonalChannelConnection(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "UpdatePersonalChannelConnection")
 }
 
+func (stubs) AckPersonalChannelReplies(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.AckPersonalChannelRepliesParams) {
+	httperr.NotImplemented(w, r, "AckPersonalChannelReplies")
+}
+
+func (stubs) PullPersonalChannelReplies(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PullPersonalChannelReplies")
+}
+
 func (stubs) UploadPersonalChannelFile(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UploadPersonalChannelFile")
 }

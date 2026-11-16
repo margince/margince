@@ -8,6 +8,7 @@ package personalchannelwire_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 var channelRepPerms = principal.Permissions{
@@ -156,5 +158,27 @@ func TestAPushRunsOutOfTimeAndDefersTheRest(t *testing.T) {
 	res, err := e.store.Push(e.member, []personalchannels.PushMessage{whatsapp("late.1", "8494")}, e.now.Add(-time.Second))
 	if err != nil || res[0].Status != personalchannels.StatusDeferred {
 		t.Fatalf("results = %+v, %v; want deferred", res, err)
+	}
+}
+
+func TestOnlyTheMemberWhoseChannelBroughtTheChatInMayReply(t *testing.T) {
+	e := setupPersonalChannels(t)
+	landed := e.push(t, whatsapp("wamid.r1", "8495"))
+	activity := ids.From[ids.ActivityKind](*landed[0].ActivityID)
+	msg := connector.ChannelMessage{
+		ActivityID: activity, Body: "Yes, the 2nd works", IdempotencyKey: "delivery-1",
+		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: "whatsapp/8495"},
+	}
+	db := compose.InstallationDB(e.Pool)
+	other := personalchannelwire.ReplySender{DB: db, Member: e.Rep2}
+	if _, err := other.SendMessage(e.Admin(), connector.Auth{}, msg); !errors.Is(err, personalchannelwire.ErrNotTheirChannel) {
+		t.Fatalf("a colleague's reply = %v, want ErrNotTheirChannel", err)
+	}
+	owner := personalchannelwire.ReplySender{DB: db, Member: e.Rep1}
+	if _, err := owner.SendMessage(e.Admin(), connector.Auth{}, msg); err != nil {
+		t.Fatalf("the member's own reply: %v", err)
+	}
+	if n := e.count(t, `SELECT count(*) FROM personal_channel_reply WHERE delivery_key = 'delivery-1' AND network = 'whatsapp' AND recipient_account = '8495'`); n != 1 {
+		t.Fatal("the member's reply was not queued for their client")
 	}
 }

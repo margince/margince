@@ -431,6 +431,8 @@
     "personal_channels": {
       "field": "action",
       "actions": {
+        "ack_replies": "ack_personal_channel_replies",
+        "pull_replies": "pull_personal_channel_replies",
         "push_messages": "push_personal_channel_messages",
         "upload_file": "upload_personal_channel_file"
       }

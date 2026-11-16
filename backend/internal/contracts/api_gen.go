@@ -244,6 +244,24 @@ func (e AccountDraftReasonKind) Valid() bool {
 	}
 }
 
+// Defines values for AckPersonalChannelRepliesRequestAcksOutcome.
+const (
+	AckPersonalChannelRepliesRequestAcksOutcomeFailed AckPersonalChannelRepliesRequestAcksOutcome = "failed"
+	AckPersonalChannelRepliesRequestAcksOutcomeSent   AckPersonalChannelRepliesRequestAcksOutcome = "sent"
+)
+
+// Valid indicates whether the value is a known member of the AckPersonalChannelRepliesRequestAcksOutcome enum.
+func (e AckPersonalChannelRepliesRequestAcksOutcome) Valid() bool {
+	switch e {
+	case AckPersonalChannelRepliesRequestAcksOutcomeFailed:
+		return true
+	case AckPersonalChannelRepliesRequestAcksOutcomeSent:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityAutomaticKind.
 const (
 	ActivityAutomaticKindBulk          ActivityAutomaticKind = "bulk"
@@ -18847,6 +18865,27 @@ func (e PassportAreasMode) Valid() bool {
 	}
 }
 
+// Defines values for PersonalChannelAckResultResult.
+const (
+	PersonalChannelAckResultResultAlreadySettled  PersonalChannelAckResultResult = "already_settled"
+	PersonalChannelAckResultResultRecorded        PersonalChannelAckResultResult = "recorded"
+	PersonalChannelAckResultResultUnknownDelivery PersonalChannelAckResultResult = "unknown_delivery"
+)
+
+// Valid indicates whether the value is a known member of the PersonalChannelAckResultResult enum.
+func (e PersonalChannelAckResultResult) Valid() bool {
+	switch e {
+	case PersonalChannelAckResultResultAlreadySettled:
+		return true
+	case PersonalChannelAckResultResultRecorded:
+		return true
+	case PersonalChannelAckResultResultUnknownDelivery:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PersonalChannelMessageDirection.
 const (
 	PersonalChannelMessageDirectionInbound  PersonalChannelMessageDirection = "inbound"
@@ -32457,6 +32496,24 @@ type AccountDraftReason struct {
 // `commitment` — something one side said they would do. `conversation` — what was
 // recently said. `dossier` — what the company is, from its own recorded facts.
 type AccountDraftReasonKind string
+
+// AckPersonalChannelRepliesRequest defines model for AckPersonalChannelRepliesRequest.
+type AckPersonalChannelRepliesRequest struct {
+	Acks []struct {
+		DeliveryId        openapi_types.UUID                          `json:"delivery_id"`
+		Outcome           AckPersonalChannelRepliesRequestAcksOutcome `json:"outcome"`
+		ProviderMessageId *string                                     `json:"provider_message_id,omitempty"`
+		Reason            *string                                     `json:"reason,omitempty"`
+	} `json:"acks"`
+}
+
+// AckPersonalChannelRepliesRequestAcksOutcome defines model for AckPersonalChannelRepliesRequest.Acks.Outcome.
+type AckPersonalChannelRepliesRequestAcksOutcome string
+
+// AckPersonalChannelRepliesResponse defines model for AckPersonalChannelRepliesResponse.
+type AckPersonalChannelRepliesResponse struct {
+	Results []PersonalChannelAckResult `json:"results"`
+}
 
 // AcquisitionSource One administered business channel a deal can be attributed to.
 type AcquisitionSource struct {
@@ -58613,6 +58670,15 @@ type PassportSummary struct {
 	Usage *AgentUsage `json:"usage,omitempty"`
 }
 
+// PersonalChannelAckResult defines model for PersonalChannelAckResult.
+type PersonalChannelAckResult struct {
+	DeliveryId openapi_types.UUID             `json:"delivery_id"`
+	Result     PersonalChannelAckResultResult `json:"result"`
+}
+
+// PersonalChannelAckResultResult defines model for PersonalChannelAckResult.Result.
+type PersonalChannelAckResultResult string
+
 // PersonalChannelConnection A member's personal channels connection.
 type PersonalChannelConnection struct {
 	// Enabled Whether chats may come in and replies be pulled.
@@ -58672,6 +58738,19 @@ type PersonalChannelPushResult struct {
 
 // PersonalChannelPushResultStatus defines model for PersonalChannelPushResult.Status.
 type PersonalChannelPushResultStatus string
+
+// PersonalChannelReply defines model for PersonalChannelReply.
+type PersonalChannelReply struct {
+	Attempt    int                  `json:"attempt" minimum:"1"`
+	Body       string               `json:"body"`
+	DeliveryId openapi_types.UUID   `json:"delivery_id"`
+	GroupId    *string              `json:"group_id,omitempty"`
+	Network    string               `json:"network"`
+	Recipient  PersonalChannelParty `json:"recipient"`
+
+	// ReplyTo The chat message this answers.
+	ReplyTo *string `json:"reply_to,omitempty"`
+}
 
 // PersonalChannelUpload One staged file, named by its upload_id in the next message's files.
 type PersonalChannelUpload struct {
@@ -60168,6 +60247,18 @@ type PublicSchedulingProfile struct {
 
 // PublicSchedulingProfileVideoApp Present when new meetings get a video call link from the host's calendar.
 type PublicSchedulingProfileVideoApp string
+
+// PullPersonalChannelRepliesRequest defines model for PullPersonalChannelRepliesRequest.
+type PullPersonalChannelRepliesRequest struct {
+	Max int `json:"max" maximum:"50" minimum:"1"`
+}
+
+// PullPersonalChannelRepliesResponse defines model for PullPersonalChannelRepliesResponse.
+type PullPersonalChannelRepliesResponse struct {
+	// Connection A member's personal channels connection.
+	Connection PersonalChannelConnection `json:"connection"`
+	Replies    []PersonalChannelReply    `json:"replies"`
+}
 
 // PushPersonalChannelMessagesRequest defines model for PushPersonalChannelMessagesRequest.
 type PushPersonalChannelMessagesRequest struct {
@@ -78772,6 +78863,30 @@ type PushPersonalChannelMessagesParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// AckPersonalChannelRepliesParams defines parameters for AckPersonalChannelReplies.
+type AckPersonalChannelRepliesParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // UploadPersonalChannelFileMultipartBody defines parameters for UploadPersonalChannelFile.
 type UploadPersonalChannelFileMultipartBody struct {
 	// File The file as the chat had it.
@@ -82309,6 +82424,12 @@ type PushPersonalChannelMessagesJSONRequestBody = PushPersonalChannelMessagesReq
 
 // UpdatePersonalChannelConnectionJSONRequestBody defines body for UpdatePersonalChannelConnection for application/json ContentType.
 type UpdatePersonalChannelConnectionJSONRequestBody = UpdatePersonalChannelConnectionRequest
+
+// AckPersonalChannelRepliesJSONRequestBody defines body for AckPersonalChannelReplies for application/json ContentType.
+type AckPersonalChannelRepliesJSONRequestBody = AckPersonalChannelRepliesRequest
+
+// PullPersonalChannelRepliesJSONRequestBody defines body for PullPersonalChannelReplies for application/json ContentType.
+type PullPersonalChannelRepliesJSONRequestBody = PullPersonalChannelRepliesRequest
 
 // UploadPersonalChannelFileMultipartRequestBody defines body for UploadPersonalChannelFile for multipart/form-data ContentType.
 type UploadPersonalChannelFileMultipartRequestBody UploadPersonalChannelFileMultipartBody
@@ -98438,6 +98559,12 @@ type ServerInterface interface {
 	// Turn your personal channels on or off.
 	// (PATCH /personal-channels/connection)
 	UpdatePersonalChannelConnection(w http.ResponseWriter, r *http.Request)
+	// Say whether each reply you pulled went out on your chat app.
+	// (POST /personal-channels/replies/ack)
+	AckPersonalChannelReplies(w http.ResponseWriter, r *http.Request, params AckPersonalChannelRepliesParams)
+	// Pick up the replies you wrote in Margince, to send on your chat app.
+	// (POST /personal-channels/replies/pull)
+	PullPersonalChannelReplies(w http.ResponseWriter, r *http.Request)
 	// Stage one file for a chat message you send in next.
 	// (POST /personal-channels/uploads)
 	UploadPersonalChannelFile(w http.ResponseWriter, r *http.Request)
@@ -104168,6 +104295,18 @@ func (_ Unimplemented) GetPersonalChannelConnection(w http.ResponseWriter, r *ht
 // Turn your personal channels on or off.
 // (PATCH /personal-channels/connection)
 func (_ Unimplemented) UpdatePersonalChannelConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Say whether each reply you pulled went out on your chat app.
+// (POST /personal-channels/replies/ack)
+func (_ Unimplemented) AckPersonalChannelReplies(w http.ResponseWriter, r *http.Request, params AckPersonalChannelRepliesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Pick up the replies you wrote in Margince, to send on your chat app.
+// (POST /personal-channels/replies/pull)
+func (_ Unimplemented) PullPersonalChannelReplies(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -141179,6 +141318,77 @@ func (siw *ServerInterfaceWrapper) UpdatePersonalChannelConnection(w http.Respon
 	handler.ServeHTTP(w, r)
 }
 
+// AckPersonalChannelReplies operation middleware
+func (siw *ServerInterfaceWrapper) AckPersonalChannelReplies(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params AckPersonalChannelRepliesParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AckPersonalChannelReplies(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PullPersonalChannelReplies operation middleware
+func (siw *ServerInterfaceWrapper) PullPersonalChannelReplies(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PullPersonalChannelReplies(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UploadPersonalChannelFile operation middleware
 func (siw *ServerInterfaceWrapper) UploadPersonalChannelFile(w http.ResponseWriter, r *http.Request) {
 
@@ -157029,6 +157239,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/personal-channels/connection", wrapper.UpdatePersonalChannelConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/personal-channels/replies/ack", wrapper.AckPersonalChannelReplies)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/personal-channels/replies/pull", wrapper.PullPersonalChannelReplies)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/personal-channels/uploads", wrapper.UploadPersonalChannelFile)

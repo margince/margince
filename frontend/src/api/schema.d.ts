@@ -11171,6 +11171,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/personal-channels/replies/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pick up the replies you wrote in Margince, to send on your chat app.
+         * @description Always the CALLER's own, oldest first. Each pulled reply is held for 5 minutes; one not
+         *     acked by then is offered again with `attempt` one higher. A reply nobody acks within 7
+         *     days expires and shows as not delivered. The answer also carries the connection's state.
+         *     Refused while the caller's personal channels are off.
+         */
+        post: operations["pullPersonalChannelReplies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/personal-channels/replies/ack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Say whether each reply you pulled went out on your chat app.
+         * @description Always the CALLER's own. `failed` shows the reply as not delivered on the timeline; it is
+         *     not retried, so the member sends it again. A delivery id that is not the caller's answers
+         *     `unknown_delivery`, the same as one that never existed.
+         */
+        post: operations["ackPersonalChannelReplies"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/personal-channels/uploads": {
         parameters: {
             query?: never;
@@ -32266,6 +32311,43 @@ export interface components {
             /** Format: uuid */
             activity_id?: string | null;
             reason?: string | null;
+        };
+        PullPersonalChannelRepliesRequest: {
+            max: number;
+        };
+        PersonalChannelReply: {
+            /** Format: uuid */
+            delivery_id: string;
+            network: string;
+            recipient: components["schemas"]["PersonalChannelParty"];
+            group_id?: string | null;
+            /** @description The chat message this answers. */
+            reply_to?: string | null;
+            body: string;
+            attempt: number;
+        };
+        PullPersonalChannelRepliesResponse: {
+            replies: components["schemas"]["PersonalChannelReply"][];
+            connection: components["schemas"]["PersonalChannelConnection"];
+        };
+        AckPersonalChannelRepliesRequest: {
+            acks: {
+                /** Format: uuid */
+                delivery_id: string;
+                /** @enum {string} */
+                outcome: "sent" | "failed";
+                provider_message_id?: string;
+                reason?: string;
+            }[];
+        };
+        AckPersonalChannelRepliesResponse: {
+            results: components["schemas"]["PersonalChannelAckResult"][];
+        };
+        PersonalChannelAckResult: {
+            /** Format: uuid */
+            delivery_id: string;
+            /** @enum {string} */
+            result: "recorded" | "unknown_delivery" | "already_settled";
         };
         /** @description One staged file, named by its upload_id in the next message's files. */
         PersonalChannelUpload: {
@@ -81254,6 +81336,85 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PushPersonalChannelMessagesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    pullPersonalChannelReplies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PullPersonalChannelRepliesRequest"];
+            };
+        };
+        responses: {
+            /** @description The replies handed out, and the connection's state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PullPersonalChannelRepliesResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    ackPersonalChannelReplies: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AckPersonalChannelRepliesRequest"];
+            };
+        };
+        responses: {
+            /** @description One result per ack, in the order sent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AckPersonalChannelRepliesResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];

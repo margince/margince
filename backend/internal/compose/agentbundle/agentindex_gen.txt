@@ -628,6 +628,8 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /channel-connections` | listChannelConnections | List the workspace's messaging-channel connections. | Read records | at once |
 | `DELETE /channel-connections/{id}` | disconnectChannel | Disconnect a messaging channel (archives the binding and destroys the credential). | Change records | at once |
 | `POST /personal-channels/chats` | pushPersonalChannelMessages | Send your own chat messages in, each onto its contact's timeline. |  | at once |
+| `POST /personal-channels/replies/pull` | pullPersonalChannelReplies | Pick up the replies you wrote in Margince, to send on your chat app. |  | at once |
+| `POST /personal-channels/replies/ack` | ackPersonalChannelReplies | Say whether each reply you pulled went out on your chat app. |  | at once |
 | `POST /personal-channels/uploads` | uploadPersonalChannelFile | Stage one file for a chat message you send in next. |  | at once |
 | `GET /personal-channels/connection` | getPersonalChannelConnection | Your personal channels connection and the replies waiting on it. | Read records | at once |
 | `GET /channel-links/{record_type}/{id}` | getChannelLink | The chat channel a deal or project is linked to, if any. | Read records | at once |

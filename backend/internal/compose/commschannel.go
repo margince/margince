@@ -19,6 +19,9 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -62,6 +65,9 @@ var _ channelSenders = (*capture.Registry)(nil)
 func (r commsResolver) ResolveChannel(ctx context.Context, userID ids.UserID, provider string) (connector.MessageSender, connector.Auth, error) {
 	if transport, supplied := composedUnitTransport(provider); supplied {
 		return r.resolveUnitChannel(ctx, userID, transport)
+	}
+	if provider == personalchannels.Provider {
+		return personalchannelwire.ReplySender{DB: r.personal, Member: userID.UUID}, connector.Auth{}, nil
 	}
 	sender, auth, err := r.channels.ChannelSenderFor(ctx, provider)
 	switch {

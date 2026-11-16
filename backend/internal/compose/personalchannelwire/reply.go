@@ -1,0 +1,99 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package personalchannelwire
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+)
+
+// ErrNotTheirChannel refuses a reply from anyone but the member whose own chat
+// app carries the thread: it would go out as words they did not write.
+var ErrNotTheirChannel = fmt.Errorf("only the member whose personal channel brought this chat in can reply here, from their own chat app: %w", comms.ErrCannotSend)
+
+// ReplySender queues a reply for the client of the member who sends it.
+type ReplySender struct {
+	DB     *database.DB
+	Member ids.UUID
+}
+
+var _ connector.MessageSender = ReplySender{}
+
+// SendMessage queues msg on the connection that brought its thread in. The core
+// counts it sent once queued; the client's ack, or the 7-day expiry, may later
+// mark it not delivered.
+func (s ReplySender) SendMessage(ctx context.Context, _ connector.Auth, msg connector.ChannelMessage) (connector.SendReceipt, error) {
+	if len(msg.Files) > 0 {
+		return connector.SendReceipt{}, connector.ErrFilesNotCarried
+	}
+	network, account, ok := strings.Cut(msg.Recipient.ChannelUserID, "/")
+	if !ok {
+		return connector.SendReceipt{}, fmt.Errorf("personal channels: recipient %q names no network: %w", msg.Recipient.ChannelUserID, comms.ErrCannotSend)
+	}
+	err := s.DB.Tx(ctx, func(tx pgx.Tx) error {
+		connection, group, err := s.threadConnection(ctx, tx, msg.ActivityID.UUID)
+		if err != nil {
+			return err
+		}
+		return personalchannels.QueueReply(ctx, tx, personalchannels.ReplyInput{
+			Connection: connection, ActivityID: msg.ActivityID.UUID, DeliveryKey: msg.IdempotencyKey,
+			Network: network, Account: account, GroupID: group, ReplyTo: msg.ReplyTo, Body: msg.Body,
+		})
+	})
+	return connector.SendReceipt{}, err
+}
+
+// threadConnection is the connection whose thread the reply joins, read from the
+// reply's thread key (personal_channels:<connection>:<identity>[:<group>]), when
+// it belongs to the sender and is on.
+func (s ReplySender) threadConnection(ctx context.Context, tx pgx.Tx, activity ids.UUID) (ids.UUID, string, error) {
+	var threadKey string
+	if err := tx.QueryRow(ctx, `SELECT coalesce(thread_key, '') FROM activity WHERE id = $1`, activity).Scan(&threadKey); err != nil {
+		return ids.UUID{}, "", err
+	}
+	parts := strings.SplitN(threadKey, ":", 4)
+	if len(parts) < 3 || parts[0] != personalchannels.Provider {
+		return ids.UUID{}, "", fmt.Errorf("personal channels: the reply joins no personal channel thread: %w", comms.ErrCannotSend)
+	}
+	connection, err := ids.Parse(parts[1])
+	if err != nil {
+		return ids.UUID{}, "", fmt.Errorf("personal channels: the thread names no connection: %w", comms.ErrCannotSend)
+	}
+	var owner ids.UUID
+	var enabled bool
+	err = tx.QueryRow(ctx, `SELECT user_id, enabled FROM personal_channel_connection WHERE id = $1`, connection).Scan(&owner, &enabled)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows), err == nil && owner != s.Member:
+		return ids.UUID{}, "", ErrNotTheirChannel
+	case err != nil:
+		return ids.UUID{}, "", err
+	case !enabled:
+		return ids.UUID{}, "", fmt.Errorf("personal channels are off for this member: %w", comms.ErrNoMailbox)
+	}
+	group := ""
+	if len(parts) == 4 {
+		group = parts[3]
+	}
+	return connection, group, nil
+}
+
+// Settler marks a reply not delivered on its comms delivery.
+type Settler struct{ Comms *comms.Store }
+
+var _ personalchannels.Settler = Settler{}
+
+// NotDelivered settles the reply's delivery as not delivered.
+func (s Settler) NotDelivered(ctx context.Context, activity ids.UUID, reason string) error {
+	return s.Comms.RecordChannelNotDelivered(ctx, activity, reason)
+}

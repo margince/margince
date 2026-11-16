@@ -174,11 +174,12 @@ const (
 )
 
 var replayableOperations = map[string]replayTarget{
-	"POST /v1/personal-channels/chats": {object: "personal_channel", rowNote: "the response lists the caller's own message ids, statuses and activity ids; replay re-checks the personal_channel grant"},
-	"POST /v1/users/{id}/merge":        {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
-	"POST /v1/scheduling/invitations":  {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/scheduling/proposals":    {object: tableActivity, table: tableActivity, idPath: "id"},
-	"POST /v1/analytics/decisions":     {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/personal-channels/replies/ack": {object: "personal_channel", rowNote: "the response lists only the caller's own delivery ids and how each ack was recorded"},
+	"POST /v1/personal-channels/chats":       {object: "personal_channel", rowNote: "the response lists the caller's own message ids, statuses and activity ids; replay re-checks the personal_channel grant"},
+	"POST /v1/users/{id}/merge":              {object: replayMemberAdminObject, rowNote: "the response is only a boolean acknowledgment; it contains no member record or private content"},
+	"POST /v1/scheduling/invitations":        {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/scheduling/proposals":          {object: tableActivity, table: tableActivity, idPath: "id"},
+	"POST /v1/analytics/decisions":           {object: tableActivity, table: tableActivity, idPath: "id"},
 	"PUT /v1/analytics/sales-goals/{owner_id}/{year}/draft": {
 		object: replaySalesTargetObject, moduleProbe: probeSalesGoalPlan, pathParam: salesGoalPlanOwnerParam, rowNote: salesGoalPlanReplayNote,
 	},

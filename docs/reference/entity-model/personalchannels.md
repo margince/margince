@@ -85,7 +85,7 @@ The 4 tables owned by `personalchannels`, as the migrations build them. [Back to
 | `provider_message_id` | `text` |  |  |
 | `reason` | `text` |  |  |
 | `recipient_account` | `text` |  |  |
-| `reply_to` | `text` |  |  |
+| `reply_to` | `text` |  | The chat message this answers. |
 | `settled_at` | `timestamp with time zone` |  |  |
 | `state` | `text`, default `'waiting'::text` | yes | One of `waiting`, `pulled`, `sent`, `failed`, `expired`. |
 | `thread_id` | `text` | yes |  |

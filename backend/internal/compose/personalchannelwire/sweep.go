@@ -14,12 +14,14 @@ import (
 
 // Sweep runs one clean-up pass for the installation ctx is bound to.
 func Sweep(ctx context.Context, db *database.DB, now time.Time, log *slog.Logger) error {
-	swept, err := personalchannels.NewStore(db).SweepUploads(ctx, now)
+	store := personalchannels.NewStore(db).WithSettler(settlerOver(db))
+	swept, err := store.SweepUploads(ctx, now)
 	if err != nil {
 		return err
 	}
-	if swept > 0 {
-		log.InfoContext(ctx, "personal channels: unused staged files deleted", "count", swept)
+	expired, err := store.ExpireReplies(ctx, now)
+	if swept+expired > 0 {
+		log.InfoContext(ctx, "personal channels: swept", "files_deleted", swept, "replies_expired", expired)
 	}
-	return nil
+	return err
 }
