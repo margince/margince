@@ -18,7 +18,7 @@ import {
 import { ContactConsentPanel } from "./contactconsentpanel";
 
 // The consent panel hands an inspector the contact's opt-out records as one
-// file, exactly as the server answered them.
+// file, as the server answered them.
 
 const downloadBytes = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/download", () => ({ downloadBytes }));

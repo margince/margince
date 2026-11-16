@@ -51,6 +51,7 @@ func owingReceipts() {
 		messagingrules.Register(messagingrules.Rules{
 			Jurisdiction: receiptCountry, Version: 1, OptOutAcknowledgement: true,
 			OptOutAcknowledgementWithin: time.Hour, OptOutAcknowledgementUTCOffset: 7 * time.Hour,
+			OptOutRecordsKeep: 366 * 24 * time.Hour,
 		})
 	})
 }
@@ -263,4 +264,102 @@ func TestAMissedReceiptShowsInSystemHealth(t *testing.T) {
 		return
 	}
 	t.Error("System health has no receipts source")
+}
+
+// refusingContact seeds one more contact under the receipt rules and records
+// its refusal on the link the subject pressed.
+func (l *receiptLaneEnv) refusingContact(t *testing.T, name string) ids.UUID {
+	t.Helper()
+	contact := l.e.SeedContact(t, name, &l.e.Rep1)
+	l.e.WsExec(t, `INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
+		VALUES ($1, $2, true, 'manual', 'human:test')`, contact, contact.String()+"@example.test")
+	l.e.WsExec(t, `UPDATE contact SET address_country = upper($2) WHERE id = $1`, contact, string(receiptCountry))
+	if _, err := l.store.PublicStop(l.ctx, ids.From[ids.ContactKind](contact), consent.StopAllMarketing, ""); err != nil {
+		t.Fatalf("stopping %s: %v", name, err)
+	}
+	return contact
+}
+
+// TestRetentionKeepsAYearsRefusalsAndReleasesOlderOnes runs the real
+// retention pass with a one-day contact anonymize and activity erase policy.
+// A refusal and receipt inside the pack's year stay whole and exported; one
+// past it is anonymized like any other contact.
+func TestRetentionKeepsAYearsRefusalsAndReleasesOlderOnes(t *testing.T) {
+	l := setupReceiptLane(t)
+	young := l.refusingContact(t, "Young Refusal")
+	old := l.refusingContact(t, "Old Refusal")
+	owner := OwnerConn(t)
+	for _, aging := range []string{
+		`UPDATE contact SET created_at = now() - interval '3 days', entered_at = now() - interval '3 days'
+		  WHERE id = ANY($1)`,
+		`UPDATE activity SET created_at = now() - interval '3 days', occurred_at = now() - interval '3 days'
+		  WHERE id IN (SELECT activity_id FROM activity_link WHERE contact_id = ANY($1))`,
+	} {
+		if _, err := owner.Exec(l.ctx, aging, []ids.UUID{young, old}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// The old refusal's year has run out.
+	for _, aging := range []string{
+		`UPDATE communication_suppression SET kept_until = now() - interval '1 day' WHERE contact_id = $1`,
+		`UPDATE comms_outbound SET kept_until = now() - interval '1 day'
+		  WHERE activity_id IN (SELECT activity_id FROM activity_link WHERE contact_id = $1)`,
+	} {
+		if _, err := owner.Exec(l.ctx, aging, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	l.e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action)
+		VALUES ('contact', 'no_consent_no_deal', 1, 'anonymize'), ('activity', NULL, 1, 'erase')`)
+
+	svc := compose.NewRetentionServiceFor(l.e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err := svc.EvaluateInstallation(RetentionPassCtx(l.e.WS)); err != nil {
+		t.Fatalf("running retention: %v", err)
+	}
+
+	kept, err := l.store.OptOutRecords(l.ctx, ids.From[ids.ContactKind](young))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(kept.Stops) != 1 || len(kept.Receipts) != 1 || kept.Receipts[0].Body == nil {
+		t.Errorf("a refusal inside its year lost records to retention: %d stops, %d receipts %+v",
+			len(kept.Stops), len(kept.Receipts), kept.Receipts)
+	}
+	names := map[ids.UUID]string{}
+	for _, id := range []ids.UUID{young, old} {
+		var name string
+		if err := owner.QueryRow(l.ctx, `SELECT full_name FROM contact WHERE id = $1`, id).Scan(&name); err != nil {
+			t.Fatal(err)
+		}
+		names[id] = name
+	}
+	if names[young] != "Young Refusal" {
+		t.Errorf("the contact with a refusal inside its year was anonymized to %q", names[young])
+	}
+	if names[old] == "Old Refusal" {
+		t.Error("the contact whose refusal left its year was not anonymized: the floor never ends")
+	}
+}
+
+// TestARelinkedReceiptStaysInItsRefusersExport moves a receipt's timeline link
+// to another contact. The export finds a receipt by the refusal it answers, so
+// it stays with the contact who refused and does not reach the other one.
+func TestARelinkedReceiptStaysInItsRefusersExport(t *testing.T) {
+	l := setupReceiptLane(t)
+	refuser := l.refusingContact(t, "Refusing Subject")
+	other := l.e.SeedContact(t, "Other Subject", &l.e.Rep1)
+	if _, err := OwnerConn(t).Exec(l.ctx, `UPDATE activity_link SET contact_id = $2
+		WHERE contact_id = $1 AND activity_id IN (SELECT activity_id FROM comms_outbound WHERE template_key = 'optout_acknowledgement')`,
+		refuser, other); err != nil {
+		t.Fatal(err)
+	}
+	for id, want := range map[ids.UUID]int{refuser: 1, other: 0} {
+		records, err := l.store.OptOutRecords(l.ctx, ids.From[ids.ContactKind](id))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(records.Receipts) != want {
+			t.Errorf("contact %s exports %d receipts, want %d", id, len(records.Receipts), want)
+		}
+	}
 }

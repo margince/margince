@@ -22271,7 +22271,7 @@ export const en = {
   "health.effect.automatic":
     "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
   "health.effect.receipts":
-    "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, and Vietnamese law requires that at once.",
+    "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, which the rules of their country require at once.",
   "health.effect.readFailed":
     "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
   "health.reportCopyFailed": "Could not copy the technical report",

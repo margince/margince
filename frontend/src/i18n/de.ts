@@ -22570,7 +22570,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.effect.automatic":
     "Automatische Aufgaben erreichen möglicherweise die falschen Teammitglieder. Folgeaufgaben bleiben dann bis zur Korrektur falsch zugewiesen.",
   "health.effect.receipts":
-    "Die Widersprüche gelten, und Werbung an diese Kontakte bleibt gestoppt. Die Kontakte wurden nicht informiert, was das vietnamesische Recht sofort verlangt.",
+    "Die Widersprüche gelten, und Werbung an diese Kontakte bleibt gestoppt. Die Kontakte wurden nicht informiert, was die Regeln ihres Landes sofort verlangen.",
   "health.effect.readFailed":
     "Diese Prüfung kann den aktuellen Zustand nicht anzeigen. Eine fehlgeschlagene Prüfung belegt keinen Ausfall der eigentlichen Funktion.",
   "health.reportCopyFailed": "Technischer Bericht konnte nicht kopiert werden",

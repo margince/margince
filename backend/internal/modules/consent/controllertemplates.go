@@ -85,6 +85,8 @@ type ConfirmationSend struct {
 	LinkRef   string
 	ExpiresAt time.Time
 	DueAt     *time.Time
+	// KeptUntil keeps the receipt out of retention's reach until then.
+	KeptUntil *time.Time
 	MessageID string
 	Rendered  Rendered
 	// StagedAt, when set, is the delivery's created_at (comms.StageControllerInput.StagedAt).
@@ -246,12 +248,16 @@ func RenderOptOutAcknowledgement(language string, times RefusalTimes) (Rendered,
 	}
 	zone := time.FixedZone("", int(times.UTCOffset.Seconds()))
 	return renderLinkless(TemplateOptOutAcknowledgement, language,
-		times.ReceivedAt.In(zone).Format(refusalInstantLayout), times.StoppedAt.In(zone).Format(refusalInstantLayout))
+		times.ReceivedAt.In(zone).Format(refusalInstantLayout), times.StoppedAt.In(zone).Format(refusalInstantLayout),
+		"UTC"+times.StoppedAt.In(zone).Format("-07:00"))
 }
 
-// refusalInstantMarker stands for each time in the receipt's template wording,
-// which belongs to no one refusal.
-const refusalInstantMarker = "[HH:MM, DD/MM/YYYY]"
+// refusalInstantMarker and refusalOffsetMarker stand for each time and its
+// offset in the receipt's template wording, which belongs to no one refusal.
+const (
+	refusalInstantMarker = "[HH:MM, DD/MM/YYYY]"
+	refusalOffsetMarker  = "UTC[+HH:MM]"
+)
 
 // renderLinkless writes a template with nothing to click. Its intro takes args
 // when the wording has places for them.
@@ -277,7 +283,7 @@ func renderTemplateContext(key string, expiresAt time.Time, language, purpose st
 	if t.refusalTimes {
 		// The template's own wording, as published. A receipt that is sent
 		// prints one refusal's times through RenderOptOutAcknowledgement.
-		return renderLinkless(key, language, refusalInstantMarker, refusalInstantMarker)
+		return renderLinkless(key, language, refusalInstantMarker, refusalInstantMarker, refusalOffsetMarker)
 	}
 	if t.linkless {
 		// NOTHING TO CLICK and nothing about a link's life, so the personal-link

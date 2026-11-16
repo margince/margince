@@ -103,8 +103,10 @@ receipts** for 30 days.
 
 ## Records kept (Art. 11)
 
-Consents given, refusals and receipts stay at least one year (Art. 11.7): nothing in the product
-deletes them because they are old. A request to delete the subject still removes their details.
+Consents given, refusals and receipts stay at least one year (Art. 11.7). The pack declares the year as
+`OptOutRecordsKeep`. Consent stamps its end on each stop and receipt (`kept_until`), and no retention
+policy anonymizes, erases or archives a contact, lead or receipt while that end lies ahead. After it,
+the usual policies apply. A request to delete the subject still removes their details.
 **Download opt-out records** on a contact's consent panel exports all three when the state asks to
 see them (Art. 11.3).
 

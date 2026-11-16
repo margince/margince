@@ -21972,7 +21972,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "health.effect.automatic":
     "Công việc tự động có thể đến sai đồng nghiệp, khiến việc theo dõi bị giao sai người cho đến khi sửa cách phân công.",
   "health.effect.receipts":
-    "Yêu cầu từ chối vẫn có hiệu lực và việc gửi quảng cáo đến các liên hệ này vẫn dừng. Các liên hệ chưa được thông báo, trong khi luật Việt Nam yêu cầu thông báo ngay.",
+    "Yêu cầu từ chối vẫn có hiệu lực và việc gửi quảng cáo đến các liên hệ này vẫn dừng. Các liên hệ chưa được thông báo, trong khi quy định của quốc gia họ yêu cầu thông báo ngay.",
   "health.effect.readFailed":
     "Kiểm tra này không hiển thị được trạng thái hiện tại. Kiểm tra thất bại không có nghĩa tính năng bên dưới đã dừng.",
   "health.reportCopyFailed": "Không thể sao chép báo cáo kỹ thuật",

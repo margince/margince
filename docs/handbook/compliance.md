@@ -91,7 +91,7 @@ passing around inside the company; the German versions are the ones to sign.
 | What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
-| Can we show an authority a contact's opt-out history? | On the contact's **Research** tab, **Download opt-out records** in the consent panel: every consent given or withdrawn, every stop with when the refusal arrived and when sending stopped, and every opt-out receipt. None is deleted for age |
+| Can we show an authority a contact's opt-out history? | On the contact's **Research** tab, **Download opt-out records** in the consent panel: every consent given or withdrawn, every stop with when the refusal arrived and when sending stopped, and every opt-out receipt. Under Vietnamese law no retention rule removes them within a year |
 | Can a manager see each colleague's sales figures? | Not in reports and forecasts while **Show individual performance** is off. Each member sees their own figures. The compliance answer above lists what the switch does not cover |
 
 Margince cannot tell you whether your own way of working is within the law: the

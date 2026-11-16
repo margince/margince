@@ -189,5 +189,8 @@ func messagingRules() messaging.Rules {
 		OptOutAcknowledgementWithin: time.Hour,
 		// Art. 20.4(a): the receipt states both times, read here in Vietnam time.
 		OptOutAcknowledgementUTCOffset: 7 * time.Hour,
+		// Art. 11.7 keeps registrations, refusals and receipts at least one
+		// year; 366 days holds across a leap year.
+		OptOutRecordsKeep: 366 * 24 * time.Hour,
 	}
 }

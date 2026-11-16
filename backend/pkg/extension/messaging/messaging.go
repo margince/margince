@@ -138,6 +138,10 @@ type Rules struct {
 	// OptOutAcknowledgementUTCOffset is the offset from UTC at which the
 	// receipt prints when the refusal arrived and when sending stopped. Zero is UTC.
 	OptOutAcknowledgementUTCOffset time.Duration
+
+	// OptOutRecordsKeep is how long a refusal and its receipt are kept from the
+	// refusal, out of every retention policy's reach. Zero sets no floor.
+	OptOutRecordsKeep time.Duration
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -324,6 +328,9 @@ func (r Rules) Validate() error {
 	}
 	if r.OptOutAcknowledgementUTCOffset.Abs() > maxUTCOffset || (r.OptOutAcknowledgementUTCOffset != 0 && !r.OptOutAcknowledgement) {
 		return errors.New("messaging rules declare an invalid opt-out receipt time zone: a receipt must be owed, and the offset within 14 hours of UTC")
+	}
+	if r.OptOutRecordsKeep < 0 {
+		return fmt.Errorf("messaging rules for %q keep opt-out records for a negative time", string(r.Jurisdiction))
 	}
 	if r.ReplyWindow < 0 || r.DealFollowUpWindow < 0 {
 		return fmt.Errorf("messaging rules for %q carry a negative window — a window reaches back, never forward", string(r.Jurisdiction))

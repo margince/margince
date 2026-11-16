@@ -351,8 +351,9 @@ type Copy struct {
 
 	// The opt-out acknowledgement, which Decree 91/2020/ND-CP Art. 20 owes a
 	// Vietnamese recipient who refuses advertising email: a receipt sent at once.
-	// OptOutAckBody takes the time the refusal arrived (%[1]s) and the time
-	// sending stopped (%[2]s), both in Vietnam time.
+	// OptOutAckBody takes the time the refusal arrived (%[1]s), the time
+	// sending stopped (%[2]s) and their offset from UTC (%[3]s). The Vietnamese
+	// wording names Vietnam time instead, as the decree's receipt reads.
 	//
 	// IT CARRIES NO LINK and no advertising of its own. This is the one message
 	// the product sends to somebody who has just told it to stop, so anything

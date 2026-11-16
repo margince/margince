@@ -130,10 +130,10 @@ func (s *Store) CarryStopsTx(ctx context.Context, tx pgx.Tx, from, to commsauthz
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
 		  (contact_id, lead_id, address, kind, source, decided_by_level,
-		   captured_by, carried_from, purpose_id, recorded_through, recorded_for_addresses, recorded_at, received_at)
+		   captured_by, carried_from, purpose_id, recorded_through, recorded_for_addresses, recorded_at, received_at, kept_until)
 		SELECT @to_contact, @to_lead, address, kind,
 		       CASE WHEN starts_with(source, @carried_mark) THEN source ELSE @carried_mark || source END,
-		       decided_by_level, @by, id, purpose_id, recorded_through, recorded_for_addresses, @recorded_at, received_at
+		       decided_by_level, @by, id, purpose_id, recorded_through, recorded_for_addresses, @recorded_at, received_at, kept_until
 		  FROM (`+stopCarryCandidates+`) candidates
 		RETURNING kind, decided_by_level`, carriedStopArgs(from, to, by, recordedAt))
 	if err != nil {

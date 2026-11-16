@@ -41,7 +41,7 @@ func (s *Store) OptOutRecords(ctx context.Context, contactID ids.ContactID) (crm
 		if out.Stops, err = recordedStopsTx(ctx, tx, contactID); err != nil {
 			return err
 		}
-		out.Receipts, err = optOutReceiptsTx(ctx, tx, contactID)
+		out.Receipts, err = optOutReceiptsTx(ctx, tx, contactID, out.Stops)
 		return err
 	})
 	return out, err
@@ -68,16 +68,25 @@ func recordedStopsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([
 	})
 }
 
-// optOutReceiptsTx reads every opt-out receipt filed under the contact. An
-// erasure blanks the words and keeps the row, so a blank reads as null.
-func optOutReceiptsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]crmcontracts.OptOutReceiptRecord, error) {
+// optOutReceiptsTx reads every opt-out receipt of the contact's refusals. A
+// receipt is found by the message id its refusal derives, never by the
+// timeline link, which a relink can move to another record. An erasure blanks
+// the words and keeps the row, so a blank reads as null.
+func optOutReceiptsTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, stops []crmcontracts.OptOutRecordStop,
+) ([]crmcontracts.OptOutReceiptRecord, error) {
+	stopReceipts := make([]string, 0, len(stops))
+	for _, stop := range stops {
+		stopReceipts = append(stopReceipts, acknowledgementMessageID(ids.UUID(stop.Id)))
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT o.message_id, o.status, o.template_version, o.created_at, o.sent_at,
 		       nullif(o.subject, ''), nullif(o.body, '')
 		  FROM comms_outbound o
-		  JOIN activity_link al ON al.activity_id = o.activity_id AND al.contact_id = $1
-		 WHERE o.sender_kind = 'controller' AND o.template_key = $2
-		 ORDER BY o.created_at DESC, o.id DESC`, contactID, TemplateOptOutAcknowledgement)
+		 WHERE o.sender_kind = 'controller' AND o.template_key = $1
+		   AND (o.message_id = ANY($2) OR starts_with(o.message_id, $3))
+		 ORDER BY o.created_at DESC, o.id DESC`,
+		TemplateOptOutAcknowledgement, stopReceipts, withdrawalMessagePrefix(contactID.UUID))
 	if err != nil {
 		return nil, fmt.Errorf("consent: reading the contact's opt-out receipts: %w", err)
 	}

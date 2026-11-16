@@ -334,8 +334,8 @@ func recordNoticeLines(line writeLine) {
 		"Ihr Widerspruch gegen Werbe-E-Mails ist eingegangen",
 		"Xác nhận đã nhận yêu cầu từ chối nhận thư điện tử quảng cáo")
 	line(func(c *Copy) *string { return &c.OptOutAckBody },
-		"We received your request to stop advertising email at %[1]s (Vietnam time). We stopped sending advertising email for the advertising purposes you refused from %[2]s (Vietnam time). Messages sent before then may still reach your inbox.",
-		"Ihr Widerspruch gegen Werbe-E-Mails ist um %[1]s (vietnamesische Zeit) bei uns eingegangen. Seit %[2]s (vietnamesische Zeit) senden wir Ihnen für die Werbezwecke, denen Sie widersprochen haben, keine Werbe-E-Mails mehr. Zuvor versendete Nachrichten können Ihr Postfach noch erreichen.",
+		"We received your request to stop advertising email at %[1]s (%[3]s). We stopped sending advertising email for the advertising purposes you refused from %[2]s (%[3]s). Messages sent before then may still reach your inbox.",
+		"Ihr Widerspruch gegen Werbe-E-Mails ist um %[1]s (%[3]s) bei uns eingegangen. Seit %[2]s (%[3]s) senden wir Ihnen für die Werbezwecke, denen Sie widersprochen haben, keine Werbe-E-Mails mehr. Zuvor versendete Nachrichten können Ihr Postfach noch erreichen.",
 		"Chúng tôi đã nhận được yêu cầu từ chối nhận thư điện tử quảng cáo của quý khách lúc %[1]s (giờ Việt Nam). Chúng tôi đã ngừng gửi thư điện tử quảng cáo cho các mục đích quảng cáo quý khách đã từ chối kể từ %[2]s (giờ Việt Nam). Thư đã gửi trước thời điểm này vẫn có thể đến hộp thư của quý khách.")
 	line(func(c *Copy) *string { return &c.OptOutAckIgnore },
 		"No reply or further action is needed.",

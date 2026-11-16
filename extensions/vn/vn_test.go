@@ -80,6 +80,9 @@ func TestAnOptOutIsAcknowledged(t *testing.T) {
 	if within := messagingRules().OptOutAcknowledgementWithin; within != time.Hour {
 		t.Errorf("an unsent receipt raises its alarm after %s, want 1h: Art. 20.3 owes it at once", within)
 	}
+	if keep := messagingRules().OptOutRecordsKeep; keep < 366*24*time.Hour {
+		t.Errorf("opt-out records are kept %s, want at least a year in every year: Art. 11.7", keep)
+	}
 	if offset := messagingRules().OptOutAcknowledgementUTCOffset; offset != 7*time.Hour {
 		t.Errorf("the receipt prints its times at UTC%+v, want UTC+7: Art. 20.4(a) times are read in Vietnam", offset)
 	}

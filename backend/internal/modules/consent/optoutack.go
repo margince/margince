@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -129,7 +130,10 @@ func (s *Store) stageOwedReceiptTx(
 	ctx context.Context, tx pgx.Tx, sub subject, messageID string, stopID ids.UUID, times RefusalTimes,
 ) (bool, string, error) {
 	terms, owed, err := s.receiptOwedTx(ctx, tx, sub)
-	if err != nil || !owed {
+	if err != nil {
+		return false, "", err
+	}
+	if terms.keptUntil, err = keepRefusalTx(ctx, tx, sub, stopID, times, terms.keep); err != nil || !owed {
 		return false, "", err
 	}
 	times.UTCOffset = terms.utcOffset
@@ -143,14 +147,38 @@ func (s *Store) stageOwedReceiptTx(
 	if address == "" {
 		return true, MissedReceiptNoAddress, nil
 	}
-	return true, "", s.prepareAcknowledgementTx(ctx, tx, sub, terms.dueAt, address, messageID, times)
+	return true, "", s.prepareAcknowledgementTx(ctx, tx, sub, terms, address, messageID, times)
 }
 
-// receiptTerms are what the rules ask of one owed receipt. dueAt is when an
-// unsent one raises its alarm, nil for never. utcOffset is where its times print.
+// receiptTerms are what the rules ask of one refusal and its receipt. dueAt is
+// when an unsent receipt raises its alarm, nil for never. utcOffset is where its
+// times print. keep is how long the refusal and receipt stay out of retention's
+// reach, and keptUntil the instant that ends for this refusal.
 type receiptTerms struct {
 	dueAt     *time.Time
 	utcOffset time.Duration
+	keep      time.Duration
+	keptUntil *time.Time
+}
+
+// keepRefusalTx stamps the stop with the end of its retention floor, and
+// answers that end for the receipt. Nil when the rules set no floor.
+func keepRefusalTx(
+	ctx context.Context, tx pgx.Tx, sub subject, stopID ids.UUID, times RefusalTimes, keep time.Duration,
+) (*time.Time, error) {
+	if keep <= 0 {
+		return nil, nil
+	}
+	kept := times.StoppedAt.Add(keep)
+	if !stopID.IsZero() {
+		if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
+			return nil, err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE communication_suppression SET kept_until = $2 WHERE id = $1 AND kept_until IS NULL`, stopID, kept); err != nil {
+			return nil, fmt.Errorf("consent: keeping the refusal for its retention floor: %w", err)
+		}
+	}
+	return &kept, nil
 }
 
 // receiptOwedTx asks the stopping subject's own country's rules whether this
@@ -161,19 +189,19 @@ func (s *Store) receiptOwedTx(ctx context.Context, tx pgx.Tx, sub subject) (rece
 		return receiptTerms{}, false, err
 	}
 	rules, _, applicable := applicableRules(country.Code)
-	if !applicable || !rules.OptOutAcknowledgement {
+	if !applicable {
 		return receiptTerms{}, false, nil
 	}
-	terms := receiptTerms{utcOffset: rules.OptOutAcknowledgementUTCOffset}
+	terms := receiptTerms{utcOffset: rules.OptOutAcknowledgementUTCOffset, keep: rules.OptOutRecordsKeep}
 	if rules.OptOutAcknowledgementWithin > 0 {
 		due := s.now().Add(rules.OptOutAcknowledgementWithin)
 		terms.dueAt = &due
 	}
-	return terms, true, nil
+	return terms, rules.OptOutAcknowledgement, nil
 }
 
 func (s *Store) prepareAcknowledgementTx(
-	ctx context.Context, tx pgx.Tx, sub subject, dueAt *time.Time, address, messageID string, times RefusalTimes,
+	ctx context.Context, tx pgx.Tx, sub subject, terms receiptTerms, address, messageID string, times RefusalTimes,
 ) error {
 	rendered, category, err := RenderOptOutAcknowledgement(s.replyLanguage(ctx, tx, sub), times)
 	if err != nil {
@@ -183,7 +211,9 @@ func (s *Store) prepareAcknowledgementTx(
 	if err != nil {
 		return err
 	}
-	send := ConfirmationSend{Recipient: address, Category: category, MessageID: messageID, DueAt: dueAt, Rendered: rendered}
+	send := ConfirmationSend{
+		Recipient: address, Category: category, MessageID: messageID, DueAt: terms.dueAt, KeptUntil: terms.keptUntil, Rendered: rendered,
+	}
 	// Filed under the subject who refused, so the receipt's timeline row, the
 	// overdue sweep and an erasure all find it on that record.
 	if sub.entityType == entityLead {
@@ -280,7 +310,13 @@ func acknowledgementMessageID(stopID ids.UUID) string {
 // A second press of the same purposes on one day, after a re-grant, is a
 // second refusal. It owes its own receipt.
 func withdrawalMessageID(subjectID ids.UUID, act string) string {
-	return "optout-ack-" + strings.ReplaceAll(subjectID.String(), "-", "") + "-" + act + "@margince.invalid"
+	return withdrawalMessagePrefix(subjectID) + act + "@margince.invalid"
+}
+
+// withdrawalMessagePrefix opens the id of every withdrawal receipt of one
+// subject, so a reader finds them by the subject they answer.
+func withdrawalMessagePrefix(subjectID ids.UUID) string {
+	return "optout-ack-" + strings.ReplaceAll(subjectID.String(), "-", "") + "-"
 }
 
 // withdrawalActTx names the transaction recording this press: the database day

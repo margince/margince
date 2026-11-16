@@ -209,8 +209,8 @@ var pinnedWording = map[string]string{
 	"privacy_notice@4@de":         "afd5793238fb2ed046bafb2e7b39c42fedba0ef885f9e966e3609adf0b7e06f9",
 	"privacy_notice@4@en":         "57940dbb8dbf58affde9b4f1fcf8026951c2112f2a64fd9fbab5f326534b1eec",
 	"privacy_notice@4@vi":         "a5049a2fe4c29bb62dcc3a44f729d827dd3fd17318d25d3485d937ecd9b1062e",
-	"optout_acknowledgement@4@de": "cb7308c7283d83567b0f3991f42fb81a28888dc1b837e242368783b7ba0ac0fb",
-	"optout_acknowledgement@4@en": "2f5760fb0dcab412c24a11e2d0c31f0998d5ec4729511ff2de3524c312f12d0d",
+	"optout_acknowledgement@4@de": "18f7fde93aba9471ace152b00294ab4366e309ebe8648ea15b0ade9ab5db0a7d",
+	"optout_acknowledgement@4@en": "0e53dd1ec79223e43a8de554f0592f24e79970483a03adec516f9471404f7467",
 	"optout_acknowledgement@4@vi": "f923d73de53266ad7d29874c8ca4ec3eb1118778984e07a86c5fc2730d49a63f",
 	"restriction_lift@2@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
 	"restriction_lift@2@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
@@ -432,6 +432,27 @@ func TestOnlyTheReceiptDropsThePoweredByLine(t *testing.T) {
 			if key != TemplateOptOutAcknowledgement && !attributed {
 				t.Errorf("%s in %s lost its attribution line", key, language)
 			}
+		}
+	}
+}
+
+// TestOnlyTheVietnameseReceiptNamesVietnam. The shared wording prints the
+// offset the rules declare; the Vietnamese one carries the decree's own words.
+func TestOnlyTheVietnameseReceiptNamesVietnam(t *testing.T) {
+	for _, language := range mailcopy.Languages() {
+		rendered, _, err := RenderOptOutAcknowledgement(string(language), exampleRefusal)
+		if err != nil {
+			t.Fatal(err)
+		}
+		names := strings.Contains(strings.ToLower(rendered.Body), "vietnam") || strings.Contains(rendered.Body, "Việt Nam")
+		if language == "vi" {
+			if !strings.Contains(rendered.Body, "(giờ Việt Nam)") {
+				t.Errorf("the Vietnamese receipt lost the decree's words:\n%s", rendered.Body)
+			}
+			continue
+		}
+		if names || strings.Count(rendered.Body, "(UTC+07:00)") != 2 {
+			t.Errorf("the %s receipt names a country or misses the offset:\n%s", language, rendered.Body)
 		}
 	}
 }

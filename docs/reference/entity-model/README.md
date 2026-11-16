@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 367 |
-| Columns | 4510 |
+| Columns | 4512 |
 | Foreign keys | 625 |
 | Owning areas | 40 |
 
@@ -233,13 +233,13 @@ erDiagram
 | [`close_date_run`](deals.md#close_date_run) | deals | 15 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
-| [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
+| [`comms_outbound`](comms.md#comms_outbound) | comms | 45 | 4 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 30 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 21 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 12 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
-| [`communication_suppression`](consent.md#communication_suppression) | consent | 17 | 1 |
+| [`communication_suppression`](consent.md#communication_suppression) | consent | 18 | 1 |
 | [`company`](contacts.md#company) | contacts | 47 | 51 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
