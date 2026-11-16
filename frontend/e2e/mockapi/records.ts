@@ -443,8 +443,8 @@ export const advanceDeal: Handler = (
   }
   dealPatches[target.id] = {
     ...dealPatches[target.id],
-    stage_id: "s4",
-    status: "won",
+    stage_id: advance.to_stage_id,
+    status: advance.status ?? "open",
     won_without_contract_reason: advance.won_without_contract_reason ?? null,
     version: current + 1,
   };
