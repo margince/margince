@@ -11,8 +11,9 @@ import {
 } from "./design-system/atoms";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
-import { composedApps, findApp, mayOpenApp } from "./lib/extensionapps";
+import { findApp, mayOpenApp } from "./lib/extensionapps";
 import {
+  composedApps,
   composedScreens,
   EXTENSION_SCREEN,
   findExtension,

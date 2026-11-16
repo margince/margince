@@ -6,8 +6,6 @@ import {
   type ExtensionDescriptor,
   extensions,
 } from "@composition/extensions";
-import { extensionApps } from "@composition/screens";
-import type { ComponentType } from "react";
 import { type AccessSnapshot, grants } from "./accessgrants";
 import { isExtensionRbacObject } from "./extensions";
 import type { Route } from "./router";
@@ -36,17 +34,6 @@ export type ExtensionAppGroup = (typeof EXTENSION_APP_GROUPS)[number];
 
 /** An app with the unit that declared it, which is where it leads. */
 export type UnitApp = ExtensionAppDescriptor & { readonly unit: string };
-
-/**
- * The components the units' frontend packages export as their app, by unit.
- * Annotated here, at the registry's one import site, so a unit's export that
- * is not a component fails this assignment.
- */
-export type ExtensionAppRegistry = Readonly<
-  Record<string, ComponentType | undefined>
->;
-
-export const composedApps: ExtensionAppRegistry = extensionApps;
 
 /** Every composed unit's app, in registry order. */
 export function declaredApps(

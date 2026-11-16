@@ -3,7 +3,11 @@ import {
   type ExtensionVerbDescriptor,
   extensions,
 } from "@composition/extensions";
-import { extensionPanels, extensionScreens } from "@composition/screens";
+import {
+  extensionApps,
+  extensionPanels,
+  extensionScreens,
+} from "@composition/screens";
 import type { ComponentType } from "react";
 import { readableKey } from "../format/rbacobjects";
 import { type Locale, translate } from "../i18n";
@@ -218,3 +222,16 @@ export function extensionRbacObject(
 ): ExtensionRbacObject | null {
   return isExtensionRbacObject(verb.rbacObject) ? verb.rbacObject : null;
 }
+
+/**
+ * The components the units' frontend packages export as their app, by unit.
+ * Annotated here, at the registry's one import site, so a unit's export that
+ * is not a component fails this assignment. It sits in this module, not in
+ * extensionapps.ts: loading the screens loads each unit, and a unit imports
+ * the app surface, which reads this module while it is still loading.
+ */
+export type ExtensionAppRegistry = Readonly<
+  Record<string, ComponentType | undefined>
+>;
+
+export const composedApps: ExtensionAppRegistry = extensionApps;
