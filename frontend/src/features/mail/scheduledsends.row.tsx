@@ -204,7 +204,10 @@ function EditVerb({
 
 /** The first line of a message, for a row that says what the message is. */
 function previewOf(body: string | undefined): string | null {
-  const line = body?.trim().split(/\s*\n\s*/)[0];
+  const line = body
+    ?.trim()
+    .split("\n")
+    .map((part) => part.trim())[0];
   return line ? line : null;
 }
 

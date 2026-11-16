@@ -32,8 +32,8 @@ func (e *loadEnv) owedAt(t *testing.T, messages []ids.UUID, instants []time.Time
 	owed := map[ids.UUID][]bool{}
 	for _, at := range instants {
 		rows, err := e.owner.Query(context.Background(), `SELECT a.id, coalesce(`+
-			owedSQL("$1::timestamptz", neverRelaxed, neverRelaxed, neverRelaxed)+`, false)
-			FROM activity a WHERE a.id = ANY($2)`, at, messages)
+			owedSQL("$1::timestamptz", "$3", neverRelaxed, neverRelaxed, neverRelaxed)+`, false)
+			FROM activity a WHERE a.id = ANY($2)`, at, messages, []string{})
 		if err != nil {
 			t.Fatalf("asking what is owed: %v", err)
 		}

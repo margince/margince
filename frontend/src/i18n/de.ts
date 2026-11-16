@@ -6,6 +6,8 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.meeting_profile":
+    "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
   "homeRepair.reason.taskChanged":
@@ -3426,6 +3428,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
+  "select.filter": "Liste filtern",
   "picker.results_one": "{count} Treffer",
   "picker.results_other": "{count} Treffer",
 
@@ -4223,6 +4226,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Seite ist möglicherweise unvollständig, da einige Bereiche nicht geladen werden konnten.",
   "evidence.explain": "Herkunft von „{value}“",
   "evidence.explainBeside": "{label}: Herkunft von „{value}“",
+  "evidence.fromMeeting": "Aus einem Termin am {date}",
   "evidence.fullHistory": "Vollständiger Verlauf",
   "co.section.unavailable":
     "Dieser Bereich ist möglicherweise unvollständig, da einige Daten nicht geladen werden konnten.",
@@ -10526,6 +10530,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.meeting_profile_retract_sweep":
+    "Unternehmensfelder aus Besprechungen",
   "jobs.kind.initiative_enrolment_sweep":
     "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",

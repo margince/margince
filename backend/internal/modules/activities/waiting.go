@@ -371,21 +371,15 @@ func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) 
 	return domains, nil
 }
 
-// ownDomainSenderSQL is "this message came from one of our own domains" under
-// a caller's activity alias, with the placeholder holding Set's folded domains.
-// The waiting queue and the response reading share it so they agree on who is
-// waiting. It compares the sender's folded domain, never the address, so it
+// ownDomainSenderAtSQL is "this message came from one of our own domains" under
+// a caller's activity alias. domains names the placeholder that holds Set's
+// folded domains. The waiting queue, the response reading and
+// invitationNeverOwedSQL share it so they agree on who is a colleague. It compares the sender's folded domain, never the address, so it
 // agrees with the reply path's owndomain.Set.Covers. An unfolded row stays in
 // the queue as an outside sender.
 //
 // Held by: TestEveryOwnDomainComparisonInSQLReadsFoldedDomains
 // (backend/gates/owndomainpredicate_test.go)
-func ownDomainSenderSQL(alias string, domainArg int) string {
-	return ownDomainSenderAtSQL(alias, fmt.Sprintf("$%d", domainArg))
-}
-
-// ownDomainSenderAtSQL is ownDomainSenderSQL with the domain list under any
-// placeholder, such as a named argument.
 func ownDomainSenderAtSQL(alias, domains string) string {
 	return fmt.Sprintf(`EXISTS (
 	         SELECT 1 FROM activity_participant ours

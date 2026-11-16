@@ -122,8 +122,8 @@ var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)
 // otherwise become a standing obligation on the deal.
 // The machine arms read the mail's text, so they hold only where that text
 // may be judged. A request a human already took stays reviewable for them.
-func reviewableRequestSQL(asOf string) string {
-	return requestUnsettledSQL + ` AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL(asOf) + `)
+func reviewableRequestSQL(asOf, ownDomains string) string {
+	return requestUnsettledSQL + ` AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL(asOf, ownDomains) + `)
  AND (` + confirmedRequestSQL + `
  OR (` + storekit.OwedVerdictStandsClause("a") + ` AND a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
    OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
@@ -131,8 +131,8 @@ func reviewableRequestSQL(asOf string) string {
 }
 
 // Current work needs confirmed intent and a responsible seat. Review remains broader.
-func currentRequestSQL(asOf, days, identities string, arg func(any) int) string {
-	admitted := "(" + owedSQL(asOf, neverRelaxed, neverRelaxed, neverRelaxed) + ") AND (" + confirmedRequestSQL + ") AND " +
+func currentRequestSQL(asOf, ownDomains, days, identities string, arg func(any) int) string {
+	admitted := "(" + owedSQL(asOf, ownDomains, neverRelaxed, neverRelaxed, neverRelaxed) + ") AND (" + confirmedRequestSQL + ") AND " +
 		withinWaitingHorizonSQL(asOf, days) + " AND " + personalMailResponsibilitySQL(nil, identities, arg, asOf, days)
 	return "((" + admitted + ") OR (" + requestUnsettledSQL + " AND " + heldRequestSQL() + "))"
 }

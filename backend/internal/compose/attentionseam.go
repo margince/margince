@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/completedchanges"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -212,6 +213,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		tail:   quietDealTail(pool, deals.QuietThresholdDays),
 		among:  quietDealsAmong(pool, deals.QuietThresholdDays), pool: pool, now: now,
 	}
+	// Each suggestion lane and its scroll tail read one store.
+	dealSuggestions, tagSuggestions := suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())}, suggestionlanes.Tags{Store: collections.NewStore(db)}
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
@@ -266,8 +269,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		}).
 		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
 		WithBookingHealth(newAttentionBookingHealth(pool, db)).
-		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
-		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
+		WithDealSuggestions(dealSuggestions).WithDealSuggestionBacklog(dealSuggestions).
+		WithTagSuggestions(tagSuggestions).WithTagSuggestionBacklog(tagSuggestions).
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
 		WithContactTouch(attentionContactTouch{pool: pool}).
 		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).

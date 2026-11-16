@@ -102,7 +102,8 @@
      carries that exception with its reason. */
   padding: var(--controlGap);
 }
-.select-list {
+.select-list,
+.select-list > [role="listbox"] {
   display: flex;
   flex-direction: column;
 }
@@ -191,4 +192,27 @@
   transition:
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);
+}
+
+/* The box that narrows a long list. It stays at the top while the rows under
+   it scroll, on the popup's own fill so no row shows through it. */
+.select-filter {
+  flex-shrink: 0;
+  inline-size: 100%;
+  margin-block-end: var(--controlGap);
+}
+.select-empty {
+  padding: var(--controlGap) 9px;
+  color: var(--textSecondary);
+}
+
+.select-popup-filtered {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.select-popup-filtered .select-list {
+  position: relative;
+  overflow-y: auto;
+  min-block-size: 0;
 }

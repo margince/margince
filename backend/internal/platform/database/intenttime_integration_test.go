@@ -89,6 +89,42 @@ func TestTheIntentPairRefusesAMissingOrUnusableZone(t *testing.T) {
 	})
 }
 
+func TestANamedZoneIsExactlyOneTheZoneCatalogLists(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
+		if _, err := tx.Exec(ctx, `SET LOCAL TimeZone = 'Asia/Tokyo'`); err != nil {
+			t.Fatal(err)
+		}
+		rows, err := tx.Query(ctx, `
+WITH listed AS (SELECT name FROM pg_timezone_names),
+ spelled AS (
+  SELECT name FROM listed UNION SELECT lower(name) FROM listed UNION SELECT upper(name) FROM listed
+  UNION SELECT abbrev FROM pg_timezone_abbrevs
+  UNION SELECT unnest(ARRAY['', 'Foo', 'UTC+3', 'EST5', 'ABC/X5', '<+03>-3', '+01:00', 'Europe/Nowhere', 'Local',
+   'INTERVAL ''bogus''', 'interval ''@ hour''']))
+SELECT name, named FROM (SELECT name, public.named_time_zone(name) AS named FROM spelled) answered
+WHERE named IS DISTINCT FROM (name IN (SELECT name FROM listed))`)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for rows.Next() {
+			var name string
+			var named bool
+			if err := rows.Scan(&name, &named); err != nil {
+				t.Fatal(err)
+			}
+			t.Errorf("zone %q: named=%v, the zone catalog says otherwise", name, named)
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		var zone string
+		if err := tx.QueryRow(ctx, `SELECT current_setting('TimeZone')`).Scan(&zone); err != nil || zone != "Asia/Tokyo" {
+			t.Errorf("the session zone after the check is %q (%v), want Asia/Tokyo", zone, err)
+		}
+	})
+}
+
 func TestLegacyScheduleSavesKeepOnlyUnchangedLocalIntent(t *testing.T) {
 	ctx, pool := laneEnv(t)
 	cases := []struct{ NewWall, NewZone, NewInstant, Wall, Zone, Instant *string }{

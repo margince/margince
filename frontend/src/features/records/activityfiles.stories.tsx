@@ -63,10 +63,9 @@ const KICKOFF = {
   updated_at: "2026-07-06T09:00:00Z",
 } as Activity;
 
-function stub(
-  data: Attachment[],
-  allow: GrantSpec = { activity: ["read", "update"] },
-) {
+const DEFAULT_ALLOW: GrantSpec = { activity: ["read", "update"] };
+
+function stub(data: Attachment[], allow: GrantSpec = DEFAULT_ALLOW) {
   installFetchStub({
     "GET /me": meRoute(allow),
     "GET /attachments": () =>

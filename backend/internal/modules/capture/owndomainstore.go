@@ -343,6 +343,11 @@ func ValidOwnDomain(raw string) (string, error) {
 	return ascii, nil
 }
 
+// ColleagueDomainsTx on the store is ColleagueDomainsTx below.
+func (s *OwnDomainStore) ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
+	return ColleagueDomainsTx(ctx, tx)
+}
+
 // ColleagueDomainsTx is the vouched-for own-domain set, read inside a
 // transaction the caller already holds.
 //
@@ -361,7 +366,7 @@ func ValidOwnDomain(raw string) (string, error) {
 // Returns the normalized domains rather than the set, because the caller tests
 // them in SQL: a predicate cannot run before a scan cap, and a colleague rule
 // applied after one lets internal threads fill the scan.
-func (s *OwnDomainStore) ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
+func ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}

@@ -191,11 +191,14 @@ it("duplicates a shared report into a private definition", async () => {
     await screen.findByRole("button", { name: "Duplicate privately" }),
   );
   await waitFor(() =>
-    expect(duplicate).toHaveBeenCalledWith({
-      name: `Copy of ${reportingStoryReport.name}`,
-      audience: "private",
-      selection: reportingStoryReport.selection,
-    }),
+    expect(duplicate).toHaveBeenCalledWith(
+      {
+        name: `Copy of ${reportingStoryReport.name}`,
+        audience: "private",
+        selection: reportingStoryReport.selection,
+      },
+      expect.any(URL),
+    ),
   );
   await waitFor(() => expect(window.location.hash).toContain("copy"));
 });
@@ -277,6 +280,7 @@ it("saves edited layout order, metric selection and team audience", async () => 
         ],
       }),
     }),
+    expect.any(URL),
   );
 });
 

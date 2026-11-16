@@ -14,7 +14,8 @@ import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useViewerZone } from "../lib/viewerzone";
-import { useRoster, useRosterHint, useRosterPartial } from "./entityref";
+import { useAssignableUserOptions } from "./assigneepicker";
+import { useRosterHint, useRosterPartial } from "./entityref";
 
 type BulkTask = components["schemas"]["BulkTask"];
 
@@ -32,7 +33,7 @@ export function TaskVerb({
   const [due, setDue] = useState<ISODate | "">("");
   const [assigneeId, setAssigneeId] = useState("");
   const readerZone = useViewerZone();
-  const roster = useRoster("user", open);
+  const { options, roster } = useAssignableUserOptions(open);
   const rosterHint = useRosterHint(roster, useRosterPartial("user", open));
   const start = () => {
     setSubject("");
@@ -87,10 +88,7 @@ export function TaskVerb({
               value={assigneeId}
               placeholder={t("bulk.taskAssigneeMe")}
               onChange={setAssigneeId}
-              options={(roster.data ?? []).map((entry) => ({
-                value: entry.id,
-                label: "display_name" in entry ? entry.display_name : entry.id,
-              }))}
+              options={options}
             />
           )}
         </Field>
