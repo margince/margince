@@ -80,6 +80,7 @@ it("asks a question card over the report's scope, for this reader", async () => 
         scope_kind: reportingStoryEvaluation.selection.scope.kind,
         scope_id: reportingStoryEvaluation.selection.scope.id,
       }),
+      expect.any(URL),
     ),
   );
 });
@@ -200,6 +201,7 @@ it("binds a filtered saved question from its link, and sends none of its filters
         ],
       }),
     }),
+    expect.any(URL),
   );
 });
 
@@ -256,6 +258,7 @@ it("adds a saved question from its link, without its own scope", async () => {
         ],
       }),
     }),
+    expect.any(URL),
   );
 });
 
@@ -315,6 +318,7 @@ it("reads the reader's saved questions only once asked, and binds the one picked
         ],
       }),
     }),
+    expect.any(URL),
   );
 });
 

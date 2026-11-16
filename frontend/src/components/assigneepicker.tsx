@@ -17,8 +17,12 @@ import {
 } from "./recordassignments.queries";
 import { useEveryMember } from "./roster";
 
-/** A workspace user as a picker option. */
-export type UserOption = { value: string; label: string };
+/** A workspace user as a picker option; a long list's filter also reads the email. */
+export type UserOption = {
+  value: string;
+  label: string;
+  keywords?: readonly string[];
+};
 
 /**
  * Picker options with the roster read behind them, so a picker can say when
@@ -44,15 +48,28 @@ export function mayOwnRecords(entry: RosterEntry): boolean {
   return entry.can_own_records !== false;
 }
 
+export function userOption(entry: {
+  id: string;
+  display_name?: string;
+  email?: string;
+}): UserOption {
+  return entry.display_name !== undefined
+    ? {
+        value: entry.id,
+        label: entry.display_name,
+        keywords: entry.email ? [entry.email] : [],
+      }
+    : { value: entry.id, label: entry.id };
+}
+
 function ownerOptions(
   roster: ReturnType<typeof useRoster>,
   admits: (entry: RosterEntry) => boolean,
 ): UserOptions {
-  const options = (roster.data ?? []).filter(admits).map((entry) => ({
-    value: entry.id,
-    label: "display_name" in entry ? entry.display_name : entry.id,
-  }));
-  return { options, roster };
+  return {
+    options: (roster.data ?? []).filter(admits).map(userOption),
+    roster,
+  };
 }
 
 /**
@@ -102,7 +119,7 @@ export function useMemberFilterOptions(enabled: boolean) {
     const suffix = STATUS_SUFFIX[entry.status];
     return [
       {
-        value: entry.id,
+        ...userOption(entry),
         label: suffix
           ? t(suffix, { name: entry.display_name })
           : entry.display_name,
@@ -142,10 +159,7 @@ export function useAssignableUserOptions(
   const named = useNamedColleagues(enabled ? records : NO_RECORDS);
   const options = (roster.data ?? [])
     .filter((entry) => !("is_agent" in entry && entry.is_agent))
-    .map((entry) => ({
-      value: entry.id,
-      label: ("display_name" in entry ? entry.display_name : null) ?? entry.id,
-    }));
+    .map(userOption);
   return { options: namedColleaguesFirst(options, named), roster };
 }
 

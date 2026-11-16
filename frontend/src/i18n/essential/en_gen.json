@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.meeting_profile": "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
   "systemJob.task_completion": "Completing tasks after email",
   "worklist.relationships.optional": "Optional reconnections",
@@ -1755,6 +1756,7 @@
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
   "picker.noMatch": "No match",
+  "select.filter": "Filter the list",
   "app.errorTitle": "This view stopped working",
   "app.errorBody": "Retry. If it fails again, reload the page.",
   "app.errorRetry": "Retry",

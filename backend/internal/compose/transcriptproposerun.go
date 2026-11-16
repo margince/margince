@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/meetingprofile"
 	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -77,7 +78,7 @@ func (p *TranscriptProposer) readTranscript(ctx context.Context, store transcrip
 		}
 		return err
 	}
-	return p.stageAndFinish(ctx, store, readID, reply, reading, activityID)
+	return p.stageAndFinish(ctx, store, readID, reply, reading, activityID, parties)
 }
 
 // stageAndFinish commits the quotations, the summary and the run record as one fact, under
@@ -91,6 +92,7 @@ func (p *TranscriptProposer) stageAndFinish(
 	reply transcriptPayload,
 	reading activities.TranscriptReading,
 	activityID ids.ActivityID,
+	parties []commitmentParty,
 ) error {
 	return p.finishUnderLock(ctx, store, readID, activityID,
 		func(tx pgx.Tx) (activities.TranscriptReadOutcome, error) {
@@ -101,6 +103,9 @@ func (p *TranscriptProposer) stageAndFinish(
 			}
 			facts := staged.facts(len(kept))
 			transcriptsummary.Onto(ctx, p.log, facts, reply.Summary, len(reading.Lines))
+			if err := meetingprofile.Apply(ctx, tx, p.log, reply.CompanyProfile, len(reading.Lines), activityID, parties); err != nil {
+				return activities.TranscriptReadOutcome{}, err
+			}
 			return activities.TranscriptReadOutcome{
 				Status:      activities.TranscriptReadDone,
 				ProposalIDs: staged.approvalIDs(),

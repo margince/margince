@@ -51,22 +51,23 @@ func normalisedSubject(column string) string        { return storekit.Normalised
 // Each rule asks it, and every copy of that EXISTS was its own subplan. The
 // rules sit inside `OR` groups, which Postgres runs as subplans in any case.
 // `OFFSET 0` keeps the select from being folded back into each reference.
-func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
+func owedSQL(asOf, ownDomains, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
 	return `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
 	 AND EXISTS (SELECT 1 FROM (SELECT ` + acceptedRequestSQL + ` AS accepted OFFSET 0) req
-	 WHERE ` + owedRulesSQL(asOf, informsStillOwed, unjudgedResponseStillOwed, "req.accepted") + `))`
+	 WHERE ` + owedRulesSQL(asOf, ownDomains, informsStillOwed, unjudgedResponseStillOwed, "req.accepted") + `))`
 }
 
 // owedRulesSQL is the part of owedSQL that reads the verdict and the thread.
-// accepted is a boolean saying a human took the request.
-func owedRulesSQL(asOf, informsStillOwed, unjudgedResponseStillOwed, accepted string) string {
+// accepted is a boolean saying a human took the request. ownDomains is the
+// bound own-domain list invitationNeverOwedSQL reads.
+func owedRulesSQL(asOf, ownDomains, informsStillOwed, unjudgedResponseStillOwed, accepted string) string {
 	return `(` + capturedReplyAdmissionSQL(unjudgedResponseStillOwed, informsStillOwed, accepted) + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + accepted + `)
 	 AND ((` + confirmedRequestOf(accepted) + `) OR NOT ` + machineSenderSQL + `)
 	 AND (` + accepted + ` OR NOT a.bulk_mail_attested)
-	 AND (` + accepted + ` OR NOT ` + invitationNeverOwedSQL(asOf) + `)
+	 AND (` + accepted + ` OR NOT ` + invitationNeverOwedSQL(asOf, ownDomains) + `)
 	 AND ((` + confirmedRequestOf(accepted) + `) OR NOT ` + calendarCopySQL + `
 	   OR (` + unjudgedResponseStillOwed + ` AND a.owed_verdict IS NULL))
 	 AND ((` + requestIntentOf(accepted) + `)

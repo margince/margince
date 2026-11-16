@@ -2,10 +2,12 @@
   "verb": "explain_reporting_question_card",
   "checks": [
     "activity.read",
+    "company.read",
     "deal.read",
     "installation_settings.read",
     "lead.read",
     "project.read",
+    "relationship.read",
     "report_definition.read"
   ],
   "takes": [

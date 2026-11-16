@@ -64,7 +64,9 @@ export function SignOffPreview({
           {t("compose.signsOffAs", {
             closing: signOff.text
               .trim()
-              .split(/\s*\n\s*/)
+              .split("\n")
+              .map((line) => line.trim())
+              .filter(Boolean)
               .join(" "),
           })}{" "}
           {t("compose.signOffClosing")}

@@ -72,7 +72,16 @@ export function workEmailAddress(rows: FormRows): string | undefined {
     (a, b) => Number(b.is_primary === "true") - Number(a.is_primary === "true"),
   );
   const address = (first?.email ?? "").trim();
-  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(address) ? address : undefined;
+  const parts = address.split("@");
+  const domain = parts[1] ?? "";
+  const dot = domain.indexOf(".", 1);
+  return parts.length === 2 &&
+    parts[0] !== "" &&
+    dot > 0 &&
+    dot < domain.length - 1 &&
+    !/\s/.test(address)
+    ? address
+    : undefined;
 }
 
 async function companyForAddress(email: string): Promise<readonly NameOffer[]> {
