@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -168,5 +169,37 @@ func TestAnOptionalAnalyticsGrantNarrowsTheSchemaWithoutHidingTheTool(t *testing
 	wide := analyticsSchemaFrom(seatWith("project", "deal", "company", "relationship"), specs)
 	if _, named := wide.Entities["projects-by-phase"].Fields[fieldCompanyID]; !named {
 		t.Errorf("a role with both grants cannot name %s", fieldCompanyID)
+	}
+}
+
+// A population a role cannot read narrows the schema without hiding the tool.
+// One any-of check is recorded, so a role that reads no population at all is
+// still not offered it.
+func TestAnUnreadablePopulationNarrowsTheSchemaWithoutHidingTheTool(t *testing.T) {
+	ctx, recorded := auth.RecordChecksForTest(seatWith("deal"))
+	schema := AnalyticsSchemaFor(ctx)
+	if len(schema.Entities) == 0 {
+		t.Fatal("a role reading deals was handed no population")
+	}
+	anyOf := ""
+	for _, check := range recorded().Checks {
+		if strings.Contains(check, ",") {
+			anyOf = check
+			continue
+		}
+		if check == "activity.read" || check == "lead.read" || check == "project.read" {
+			t.Errorf("deriving the schema recorded %s alone, which would hide the tool from a role without it", check)
+		}
+	}
+	if !strings.Contains(anyOf, "deal.read") || !strings.Contains(anyOf, "activity.read") {
+		t.Errorf("the recorded population check is %q, want one any-of over every population", anyOf)
+	}
+
+	none, recordedNone := auth.RecordChecksForTest(seatWith())
+	if got := AnalyticsSchemaFor(none); len(got.Entities) != 0 {
+		t.Errorf("a role reading no population was handed %d", len(got.Entities))
+	}
+	if !slices.Contains(recordedNone().Refused, anyOf) {
+		t.Errorf("a role reading no population was not refused the any-of check: %v", recordedNone().Refused)
 	}
 }

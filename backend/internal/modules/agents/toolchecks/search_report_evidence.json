@@ -2,10 +2,8 @@
   "verb": "search_report_evidence",
   "checks": [
     "activity.read",
-    "deal.read",
+    "activity.read,deal.read,lead.read,project.read",
     "installation_settings.read",
-    "lead.read",
-    "project.read",
     "relationship.read"
   ],
   "takes": [
