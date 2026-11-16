@@ -111,7 +111,7 @@ services:
     # entire content of #1109.
     #
     # TestTheLaneFitsInsideTheClusterItRunsAgainst (backend/gates/laneconnbudget_test.go)
-    # reads INTEGRATION_JOBS from the workflow and this number from this file, and
+    # reads INTEGRATION_JOBS from the workflow and this number from postgres-test, and
     # asks the lane script's own declare_lane_budget for the sum rather than
     # re-implementing it. It fails `make check` when the two stop fitting. Raising INTEGRATION_JOBS without raising this is
     # therefore a red gate rather than a lane that fails somewhere else.
@@ -158,15 +158,6 @@ services:
       - max_locks_per_transaction=512
       - -c
       - max_connections=408
-      # PG_DURABLE=off is for a throwaway test cluster only: a crash can then
-      # corrupt the data. Together with PG_DATA_VOLUME=pgdata-ram it makes a
-      # template copy about ten times faster (docs/explanation/ci-pipeline.md).
-      - -c
-      - fsync=${PG_DURABLE:-on}
-      - -c
-      - synchronous_commit=${PG_DURABLE:-on}
-      - -c
-      - full_page_writes=${PG_DURABLE:-on}
     environment:
       POSTGRES_USER: margince_owner
       POSTGRES_PASSWORD: dev
@@ -174,7 +165,7 @@ services:
     ports:
       - "15432:5432"
     volumes:
-      - ${PG_DATA_VOLUME:-pgdata}:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       # Probe over TCP, never the unix socket: on first boot the entrypoint's
       # temporary bootstrap server (initdb + init scripts) serves ONLY the
@@ -182,6 +173,42 @@ services:
       # server is torn down before the real one starts — and a psql that
       # trusts compose's Healthy lands on a missing socket. The TCP listener
       # exists only on the final server.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U margince_owner -d margince"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # The integration lanes' server. Every test copies the migrated template into
+  # a database of its own and drops it at the end; in RAM without disk syncs a
+  # copy and a drop take ~50 ms, on a durable disk ~140 ms
+  # (docs/explanation/ci-pipeline.md). A crash can corrupt its data, and the
+  # data is gone when the container stops, so it holds nothing worth keeping.
+  # The lock, connection and shared-memory notes on `postgres` above hold here
+  # too; the lane's connection budget is checked against this service.
+  postgres-test:
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
+    shm_size: 1g
+    command:
+      - postgres
+      - -c
+      - max_locks_per_transaction=512
+      - -c
+      - max_connections=408
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+    environment:
+      POSTGRES_USER: margince_owner
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: margince
+    ports:
+      - "15433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
       test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U margince_owner -d margince"]
       interval: 2s
       timeout: 5s
@@ -251,9 +278,4 @@ services:
 
 volumes:
   pgdata: {}
-  # Held in RAM and lost when the container stops.
-  pgdata-ram:
-    driver_opts:
-      type: tmpfs
-      device: tmpfs
   minio-data: {}

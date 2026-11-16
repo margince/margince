@@ -116,14 +116,21 @@ func ciIntegrationJobs(t *testing.T, workflow string) int {
 	return n
 }
 
-// composeMaxConnections reads the server ceiling out of the postgres service's
+// laneService is the compose service the integration lanes connect to.
+const laneService = "postgres-test"
+
+// composeMaxConnections reads the server ceiling out of the lane service's
 // own command line. Read from the `-c name=value` argument rather than from any
 // mention of the word, so the comment that explains the number cannot answer for
 // the number.
 func composeMaxConnections(t *testing.T, compose string) int {
 	t.Helper()
+	service := regexp.MustCompile(`(?ms)^  ` + laneService + `:\n(.*?)(?:^  [a-z][a-z0-9-]*:\n|^[a-z])`).FindStringSubmatch(compose)
+	if service == nil {
+		t.Fatalf("%s has no %s service, which is the server the integration lanes use", composeDevYML, laneService)
+	}
 	re := regexp.MustCompile(`(?m)^\s*-\s*max_connections=(\d+)\s*$`)
-	m := re.FindStringSubmatch(compose)
+	m := re.FindStringSubmatch(service[1])
 	if m == nil {
 		t.Fatalf("%s passes no `-c max_connections=…` to postgres, so the lane runs against the stock 100 — which is the state #1109 reported", composeDevYML)
 	}
@@ -283,5 +290,20 @@ func TestTheLanePinsThePoolCeilingItBudgetsFor(t *testing.T) {
 	}
 	if !strings.Contains(pool, `params["pool_max_conns"]`) {
 		t.Fatal("backend/internal/platform/testdb/pool.go reads the ceiling but no longer applies it as pool_max_conns — a pool that ignores the lane's ceiling makes the budget fiction")
+	}
+}
+
+// The budget is checked against postgres-test, so the lanes must connect to it:
+// the Makefile's test port is the port that service publishes.
+func TestTheLanesUseTheServerTheBudgetIsCheckedAgainst(t *testing.T) {
+	t.Parallel()
+	compose := readRepoFile(t, composeDevYML)
+	service := regexp.MustCompile(`(?ms)^  ` + laneService + `:\n.*?^\s*-\s*"(\d+):5432"`).FindStringSubmatch(compose)
+	port := regexp.MustCompile(`(?m)^TEST_PG_PORT \?= (\d+)$`).FindStringSubmatch(readRepoFile(t, "../backend/Makefile"))
+	if service == nil || port == nil {
+		t.Fatalf("cannot read the %s host port from %s or TEST_PG_PORT from backend/Makefile", laneService, composeDevYML)
+	}
+	if service[1] != port[1] {
+		t.Fatalf("TEST_PG_PORT is %s but %s publishes %s, so the lanes run against a server the connection budget does not describe", port[1], laneService, service[1])
 	}
 }

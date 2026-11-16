@@ -17,7 +17,7 @@ The real Makefile is `backend/Makefile`. The root one adds the frontend lane and
 | `dev-sweep` | `make dev-sweep [DROP=1]`: clears every Margince dev stack on the machine (every api/worker/vite, recorded, orphaned, or from another worktree) and their claims. `DROP=1` also drops every per-slug `margince_dev_*` database |
 | `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]`: follows this worktree's `dev.log` (under `$XDG_STATE_HOME/margince/dev/<slug>/`, or `_base/` for the primary worktree), coloured by process and severity. See [Reading dev.log](#reading-devlog) |
 | `check-config` | `make check-config [CONFIG=<file>] [CONFIG_FILE=<file>] [ENV_FILE=<file>]`: builds the api and the worker and runs `--check-config` on both, so a setting only the worker reads is checked too. Reads the dev files by default (`config/margince.yaml`, `config/margince.dev.yaml`, `.env.local`), and passes a placeholder DSN when none is set. Opens no database. Fails when either program refuses the configuration |
-| `db-up` / `infra-up` | Start the dev Postgres 16 (pgvector, port 15432) and Redis 7 (port 16379) containers, create the app role (`infra-up` is the root's one alias) |
+| `db-up` / `infra-up` | Start the dev Postgres 16 (pgvector, port 15432), the test Postgres `postgres-test` (in RAM, port 15433) and Redis 7 (port 16379) containers, and create the app role on both servers (`infra-up` is the root's one alias) |
 | `db-init` | (Re)apply `scripts/db-init.sql` to the running Postgres |
 | `migrate` | Apply core + custom migrations with the owner DSN |
 | `infra-down` | Stop the dev containers but keep the data volumes |
@@ -391,7 +391,7 @@ Ports are claimed the same way, from 8081–8179 (api at +10000). A claim also s
 
 ## Variables
 
-`GO`, `PG_PORT` (15432), `REDIS_PORT` (16379), `DB_NAME` (`margince`), `OWNER_DSN`, `APP_DSN`: all overridable (`make migrate PG_PORT=5432`). The Makefile exports `MARGINCE_ENV=dev` and the `MARGINCE_TEST_*` variables so tests find the dev containers.
+`GO`, `PG_PORT` (15432), `TEST_PG_PORT` (15433), `REDIS_PORT` (16379), `DB_NAME` (`margince`), `OWNER_DSN`, `APP_DSN`: all overridable (`make migrate PG_PORT=5432`). The Makefile exports `MARGINCE_ENV=dev` and the `MARGINCE_TEST_*` variables. The integration lanes use the test server on `TEST_PG_PORT`; the `bench-*` targets use the dev server on `PG_PORT`.
 
 `make dev` resolves each DSN in the product's own order. First an explicit `OWNER_DSN`/`APP_DSN` argument, else `MARGINCE_OWNER_DSN`/`MARGINCE_DSN` (what the binaries themselves read), else the compose default. It passes the result as an explicit `--dsn`. The resolution happens in the script because `--dsn` outranks the environment, so a value set only in `.env.local` would be inert for the dev stack. The script reads `.env.local` without exporting it. It passes the file to the api and the worker as `--env-file`, so a value there shows `.env.local` as its source.
 
