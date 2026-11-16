@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -66,7 +67,7 @@ func validateEventEvidence(event extractedEvent, thread settledThread) string {
 			return msg
 		}
 		if event.PromiserRef != "" {
-			if _, found := referencedPromiser(event.PromiserRef, message.Parties); !found {
+			if _, found := commitmentparty.Referenced(event.PromiserRef, message.Parties); !found {
 				return "a commitment names a promiser outside its verified message participants"
 			}
 		}

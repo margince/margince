@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -21,10 +22,7 @@ import (
 
 const commitmentSenderRole = "from"
 
-type commitmentParty struct {
-	Ref, Role, Name, Address string
-	Seat, Contact            *ids.UUID
-}
+type commitmentParty = commitmentparty.Party
 
 func verifiedCommitmentParties(parties activities.MessageParties) []commitmentParty {
 	var out []commitmentParty
@@ -95,52 +93,6 @@ func partyKind(party commitmentParty) string {
 	return ""
 }
 
-// commitmentPartyRefs names each verified participant p1, p2, … in order; a
-// participant with no record has no ref to cite.
-func commitmentPartyRefs(parties []commitmentParty) *promptref.Refs {
-	refs := promptref.New("p")
-	for _, party := range parties {
-		if party.Ref != "" {
-			refs.For(party.Ref)
-		}
-	}
-	return refs
-}
-
-// partyKey is the participant key a reply's ref names. A string that is no ref
-// of this prompt stays as written, for the validator to refuse.
-func partyKey(refs *promptref.Refs, ref string) string {
-	if key, ok := refs.ID(ref); ok {
-		return key
-	}
-	return ref
-}
-
-// partyKeys reads each ref of a list back to its participant key. It keeps nil
-// as nil, because an omitted list and an empty one mean different things.
-func partyKeys(refs *promptref.Refs, cited []string) []string {
-	if cited == nil {
-		return nil
-	}
-	keys := make([]string, len(cited))
-	for i, ref := range cited {
-		keys[i] = partyKey(refs, ref)
-	}
-	return keys
-}
-
-func referencedPromiser(ref string, parties []commitmentParty) (commitmentParty, bool) {
-	if ref == "" {
-		return commitmentParty{}, false
-	}
-	for _, party := range parties {
-		if party.Ref == ref {
-			return party, true
-		}
-	}
-	return commitmentParty{}, false
-}
-
 func soleCommitmentCounterparty(parties []commitmentParty) (ids.UUID, bool) {
 	seen := map[ids.UUID]bool{}
 	var contacts []ids.UUID
@@ -187,7 +139,7 @@ func (p *TranscriptProposer) readCommitmentParties(ctx context.Context, activity
 
 func attributeCommitment(c *Commitment, ref string, parties []commitmentParty) (string, string) {
 	c.parties = parties
-	promiser, found := referencedPromiser(ref, parties)
+	promiser, found := commitmentparty.Referenced(ref, parties)
 	if found && ambiguousCommitmentPromiser(promiser, parties, c.Quote) {
 		c.Party, found = promiser.Name, false
 	}

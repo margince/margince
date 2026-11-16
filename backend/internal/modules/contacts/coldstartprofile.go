@@ -363,7 +363,7 @@ func applyEvidenceFieldsWithOverwrite(
 		value := textbounds.Fit("public.company_profile_field.value", f.Value)
 		snippet := textbounds.Fit("public.company_profile_field.evidence_snippet", f.EvidenceSnippet)
 		if _, err := tx.Exec(ctx, upsertCompanyProfileField,
-			companyID, f.Field, value, snippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field]); err != nil {
+			companyID, f.Field, value, snippet, f.SourceURL, f.Confidence, source, by, overwrite[f.Field], nil); err != nil {
 			return nil, fmt.Errorf("upsert profile field %s: %w", f.Field, err)
 		}
 	}

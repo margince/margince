@@ -22,6 +22,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
@@ -185,7 +186,7 @@ func (t settledThread) partyRefs() *promptref.Refs {
 	for _, message := range t.Messages {
 		parties = append(parties, message.Parties...)
 	}
-	return commitmentPartyRefs(parties)
+	return commitmentparty.Refs(parties)
 }
 
 func (t settledThread) eventCap() int {
