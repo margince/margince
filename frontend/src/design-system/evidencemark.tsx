@@ -35,6 +35,9 @@ export type EvidenceMarkSource = {
   provenance: Provenance;
   confidence?: ConfidenceLevel;
   snippet?: string | null;
+  // Where the claim was read when that is a record rather than a page, such as
+  // "From a meeting on 12 Nov 2026".
+  origin?: string | null;
   sourceUrl?: string | null;
   at?: string | null;
 };
@@ -214,6 +217,7 @@ export function EvidenceMark({
                 {source.snippet}
               </blockquote>
             )}
+            {source.origin && <p className="evmark-source">{source.origin}</p>}
             {source.sourceUrl && (
               <p className="evmark-source">{source.sourceUrl}</p>
             )}

@@ -136,9 +136,9 @@ func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO company_profile_field
 		  (company_id, field, value, evidence_snippet, source_url, confidence, source,
-		   captured_by, captured_at, retrieved_at, verified_at, verified_by)
+		   captured_by, captured_at, retrieved_at, verified_at, verified_by, source_activity_id)
 		SELECT $2, field, value, evidence_snippet, source_url, confidence, source,
-		       captured_by, captured_at, retrieved_at, verified_at, verified_by
+		       captured_by, captured_at, retrieved_at, verified_at, verified_by, source_activity_id
 		  FROM company_profile_field WHERE company_id = $1
 		ON CONFLICT (company_id, field) DO NOTHING`,
 		sourceID, targetID); err != nil {

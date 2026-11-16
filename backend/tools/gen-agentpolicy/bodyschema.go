@@ -188,30 +188,72 @@ const nullableMarker = "x-nullable"
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
 func answered(node any) any {
+	return answeredUnder(node, "")
+}
+
+// answeredUnder walks a schema under the currency an enclosing object passes
+// down, by the rule the surface's walk follows. Only a required own currency
+// stops the inheritance. An optional one may be absent from an answer, so
+// the schema admits every display the answer can carry.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func answeredUnder(node any, inherited string) any {
 	switch v := node.(type) {
 	case map[string]any:
 		props, _ := v["properties"].(map[string]any)
-		withDisplays(props)
+		withDisplays(props, inherited)
 		delete(v, nullableMarker)
 		delete(v, humanOnlyMarker)
-		for _, member := range v {
-			answered(member)
+		below := values.CurrencyBelow(declared(props, values.ConvertedCurrency), required(v, values.AmountCurrency), inherited)
+		for key, member := range v {
+			switch {
+			case key == "properties" && props != nil:
+				for _, property := range props {
+					answeredUnder(property, below)
+				}
+			case key == "additionalProperties":
+				answeredUnder(member, below)
+			default:
+				answeredUnder(member, inherited)
+			}
 		}
 	case []any:
 		for _, member := range v {
-			answered(member)
+			answeredUnder(member, inherited)
 		}
 	}
 	return node
 }
 
-// withDisplays declares the `<name>_display` member the tool surface writes
-// beside each `<name>_minor` of an object that names its currency. It reads the
-// rule the surface writes it by, so a closed answer admits it.
+// declared is member when props declares it, else empty.
 //
 //craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
-func withDisplays(props map[string]any) {
-	if !slices.ContainsFunc(values.AmountCurrencyMembers(), func(member string) bool { return props[member] != nil }) {
+func declared(props map[string]any, member string) string {
+	if props[member] == nil {
+		return ""
+	}
+	return member
+}
+
+// required is member when schema lists it as required, else empty.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func required(schema map[string]any, member string) string {
+	listed, _ := schema["required"].([]any)
+	if slices.Contains(listed, any(member)) {
+		return member
+	}
+	return ""
+}
+
+// withDisplays declares the `<name>_display` member the tool surface writes
+// beside each `<name>_minor` of an object that names its currency or sits
+// under an enclosing base_currency. It reads the rule the surface writes it
+// by, so a closed answer admits it.
+//
+//craft:ignore naked-any a JSON schema is walked as decoded YAML, whatever its shape
+func withDisplays(props map[string]any, inherited string) {
+	if inherited == "" && !slices.ContainsFunc(values.AmountCurrencyMembers(), func(member string) bool { return props[member] != nil }) {
 		return
 	}
 	for name := range props {

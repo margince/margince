@@ -23,6 +23,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
+	"github.com/margince/margince/backend/internal/compose/meetingprofile"
 	"github.com/margince/margince/backend/internal/compose/promiseband"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/transcriptsummary"
@@ -113,8 +115,9 @@ type proposedStep struct {
 // reply carrying no `proposals` key did not answer at all, and only the first
 // of those is an outcome to record.
 type transcriptPayload struct {
-	Proposals *[]proposedStep `json:"proposals"`
-	Summary   json.RawMessage `json:"meeting_summary"`
+	Proposals      *[]proposedStep `json:"proposals"`
+	Summary        json.RawMessage `json:"meeting_summary"`
+	CompanyProfile json.RawMessage `json:"company_profile"`
 }
 
 // asRead is a reply as the server reads it: each participant ref becomes the
@@ -123,11 +126,11 @@ func (p transcriptPayload) asRead(parties []commitmentParty) transcriptPayload {
 	if p.Proposals == nil {
 		return p
 	}
-	refs := commitmentPartyRefs(parties)
+	refs := commitmentparty.Refs(parties)
 	steps := slices.Clone(*p.Proposals)
 	for i := range steps {
-		steps[i].PromiserRef = partyKey(refs, steps[i].PromiserRef)
-		steps[i].RecipientRefs = partyKeys(refs, steps[i].RecipientRefs)
+		steps[i].PromiserRef = commitmentparty.Key(refs, steps[i].PromiserRef)
+		steps[i].RecipientRefs = commitmentparty.Keys(refs, steps[i].RecipientRefs)
 	}
 	p.Proposals = &steps
 	return p
@@ -155,14 +158,14 @@ var errRefusedTranscript = errors.New("compose: the reading could not be used")
 func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang string, parties []commitmentParty) model.Request {
 	fence := promptfence.New()
 	var prompt strings.Builder
-	prompt.WriteString(fence.Wrap(commitmentPartyHeader+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentPartyRefs(parties))) + "\n")
+	prompt.WriteString(fence.Wrap(commitmentPartyHeader+commitmentPartyPrompt(parties, strings.Join(lines, "\n"), commitmentparty.Refs(parties))) + "\n")
 	prompt.WriteString("One meeting transcript, in order (untrusted). Each line is numbered:\n")
 	for i, line := range lines {
 		prompt.WriteString(fence.WrapAttr("line", strconv.Itoa(i+1), line) + "\n")
 	}
 	fmt.Fprintf(&prompt,
 		`This meeting happened on %s.`+"\n"+
-			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", "commitment", "confidence" } ], "meeting_summary": { "key_points", "next_steps" } } — `+
+			`Return JSON: { "proposals": [ { "summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", "commitment", "confidence" } ], "meeting_summary": { "key_points", "next_steps" }, "company_profile": [ { "field", "value", "source_lines", "confidence" } ] } — `+
 			`at most %d proposals, and an empty list when the transcript states none. `+
 			`"summary" is one plain sentence naming the thing to be done. `+
 			commitmentRecipientsPrompt+
@@ -184,7 +187,7 @@ func transcriptRequest(meeting ids.UUID, lines []string, meetingDay string, lang
 			`"source_lines" are the line numbers it is stated on, between 1 and %d.`,
 		meetingDayLabel(meetingDay), maxTranscriptProposals, len(lines))
 
-	prompt.WriteString("\n" + commitmentMeaningInstruction + "\n" + transcriptsummary.Instruction())
+	prompt.WriteString("\n" + commitmentMeaningInstruction + "\n" + transcriptsummary.Instruction() + "\n" + meetingprofile.Instruction())
 	return model.Request{
 		System:         transcriptSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: prompt.String()}},
@@ -225,8 +228,9 @@ func transcriptSchema() json.RawMessage {
 				"summary", "owner", "promiser_ref", "recipient_refs", "due_date", "source_lines", extractionConfidenceKey, commitmentMeaningField,
 			)),
 			transcriptsummary.Key: transcriptsummary.Schema(),
+			meetingprofile.Key:    meetingprofile.Schema(),
 		},
-		"proposals", transcriptsummary.Key,
+		"proposals", transcriptsummary.Key, meetingprofile.Key,
 	))
 }
 
@@ -264,7 +268,7 @@ func validateTranscriptPayload(payload transcriptPayload, lines []string, partie
 			return msg
 		}
 		if step.PromiserRef != "" {
-			if _, found := referencedPromiser(step.PromiserRef, parties); !found {
+			if _, found := commitmentparty.Referenced(step.PromiserRef, parties); !found {
 				return "a proposal names a promiser outside the verified meeting participants"
 			}
 		}

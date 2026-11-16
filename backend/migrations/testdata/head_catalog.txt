@@ -3743,9 +3743,11 @@ public.company_profile_field.company_profile_field_company_fkey FOREIGN KEY (com
 public.company_profile_field.company_profile_field_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))
 public.company_profile_field.company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
 public.company_profile_field.company_profile_field_pkey PRIMARY KEY (id)
-public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
+public.company_profile_field.company_profile_field_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.company_profile_field.company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'meeting'::text])))
 public.company_profile_field.company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
 public.company_profile_field.company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.company_profile_field.company_profile_meeting_evidence CHECK (((source <> 'meeting'::text) OR ((source_activity_id IS NOT NULL) AND (confidence IS NOT NULL) AND (COALESCE(evidence_snippet, ''::text) = ''::text))))
 public.company_profile_field.company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
 public.company_profile_field.confidence numeric(4,3) gen=- def=-
 public.company_profile_field.evidence_snippet text gen=- def=-
@@ -3753,9 +3755,11 @@ public.company_profile_field.field text NOT NULL gen=- def=-
 public.company_profile_field.id uuid NOT NULL gen=- def=uuidv7()
 public.company_profile_field.retrieved_at timestamp with time zone gen=- def=-
 public.company_profile_field.source text NOT NULL gen=- def='site_read'::text
+public.company_profile_field.source_activity_id uuid gen=- def=-
 public.company_profile_field.source_url text gen=- def=-
 public.company_profile_field.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.company_profile_field FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')
 public.company_profile_field.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.company_profile_field FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')
+public.company_profile_field.trg_company_profile_field_citation CREATE TRIGGER trg_company_profile_field_citation BEFORE INSERT OR UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION company_profile_field_cites_only_a_meeting()
 public.company_profile_field.trg_company_profile_field_updated CREATE TRIGGER trg_company_profile_field_updated BEFORE UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.company_profile_field.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_profile_field.uq_company_profile_field UNIQUE (company_id, field)
@@ -3763,6 +3767,14 @@ public.company_profile_field.value text NOT NULL gen=- def=-
 public.company_profile_field.verified_at timestamp with time zone gen=- def=-
 public.company_profile_field.verified_by uuid gen=- def=-
 public.company_profile_field.version bigint NOT NULL gen=- def=1
+public.company_profile_field_cites_only_a_meeting() secdef=false cfg=- acl=- 
+BEGIN
+  IF NEW.source IS DISTINCT FROM 'meeting' THEN
+    NEW.source_activity_id := NULL;
+  END IF;
+  RETURN NEW;
+END
+
 public.company_profile_field_pkey CREATE UNIQUE INDEX company_profile_field_pkey ON public.company_profile_field USING btree (id)
 public.company_refuse_anchor_retirement() secdef=false cfg=- acl=- 
 BEGIN
@@ -6261,6 +6273,7 @@ public.idx_company_name_keyset_desc CREATE INDEX idx_company_name_keyset_desc ON
 public.idx_company_name_trgm CREATE INDEX idx_company_name_trgm ON public.company USING gin (f_fold_apostrophes(lower(display_name)) gin_trgm_ops)
 public.idx_company_owner CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_company_parent CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL)
+public.idx_company_profile_field_source_activity CREATE INDEX idx_company_profile_field_source_activity ON public.company_profile_field USING btree (source_activity_id) WHERE (source_activity_id IS NOT NULL)
 public.idx_company_rel_type_cascade CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id)
 public.idx_company_search CREATE INDEX idx_company_search ON public.company USING gin (search_tsv)
 public.idx_company_technical_state_due CREATE INDEX idx_company_technical_state_due ON public.company_technical_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
@@ -7669,6 +7682,23 @@ BEGIN
   UPDATE project SET last_activity_at = v WHERE id = pid AND last_activity_at IS DISTINCT FROM v;
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
+
+public.named_time_zone(zone_name text) secdef=false cfg=search_path=pg_catalog acl=- 
+DECLARE
+ canonical text;
+BEGIN
+ IF zone_name ~ '[0-9]' THEN
+  RETURN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name);
+ END IF;
+ BEGIN
+  PERFORM set_config('TimeZone', zone_name, true);
+  canonical := current_setting('TimeZone');
+  RAISE EXCEPTION USING ERRCODE = 'MZ001';
+ EXCEPTION
+  WHEN SQLSTATE 'MZ001' THEN RETURN canonical = zone_name;
+  WHEN invalid_parameter_value THEN RETURN false;
+ END;
+END
 
 public.notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.notice.body text NOT NULL gen=- def=''::text
@@ -10747,7 +10777,7 @@ public.valid_intent_time(wall_clock timestamp without time zone, zone_name text)
   WHEN wall_clock IS NOT NULL AND zone_name IS NOT NULL
    AND isfinite(wall_clock) AND extract(year FROM wall_clock) BETWEEN 1 AND 9999
    AND zone_name <> 'Local' AND btrim(zone_name) = zone_name
-   AND EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name)
+   AND public.named_time_zone(zone_name)
   THEN extract(year FROM public.resolve_intent_time(wall_clock, zone_name)) BETWEEN 1 AND 9999
   ELSE false
  END

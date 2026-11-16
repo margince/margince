@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -39,7 +40,7 @@ func opportunityBuyer(event extractedEvent, thread settledThread) (*ids.UUID, st
 			if _, quoted := evidenceSpan(textlang.CurrentMessage(message.Body), event.Quote); !quoted || event.Quote == "" {
 				return nil, commercialRoleUnknown
 			}
-			party, verified := referencedPromiser(event.BuyerRef, message.Parties)
+			party, verified := commitmentparty.Referenced(event.BuyerRef, message.Parties)
 			if verified && party.Contact != nil {
 				return party.Contact, commercialRoleBuyer
 			}

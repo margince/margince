@@ -32,6 +32,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
@@ -185,6 +186,9 @@ func (s *Service) readHistory(
 
 	candidates := fmt.Sprintf(historyCandidates,
 		roomPos, occurredday.WithinSQL("a", floor, opens), happened, attendeePos, scope, within)
+	// A held meeting's invitation mail is the meeting, as History reads it. Only
+	// behind a meeting every reader may open, so no readable mail hides behind one.
+	candidates += " AND " + activities.InvitationFoldSQL(candidates, auth.WorkspaceAudienceSQL("a")+" AND a.restricted_at IS NULL")
 	from := connector.MailCopyGroupFrom(ctx, "activity", "a", candidates, readable, arg)
 	rows, err := tx.Query(ctx, fmt.Sprintf(historyColumns, dealPos, otherDeal, from, historyCap), args...)
 	if err != nil {

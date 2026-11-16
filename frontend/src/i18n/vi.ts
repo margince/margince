@@ -4104,6 +4104,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.partial": "Không thể tải một số phần, nên trang này có thể chưa đầy đủ.",
   "evidence.explain": "Nguồn của “{value}”",
   "evidence.explainBeside": "{label}: nguồn của “{value}”",
+  "evidence.fromMeeting": "Từ cuộc họp ngày {date}",
   "evidence.fullHistory": "Lịch sử đầy đủ",
   "co.section.unavailable":
     "Không thể tải một số dữ liệu, nên phần này có thể chưa đầy đủ.",

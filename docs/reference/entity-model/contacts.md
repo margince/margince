@@ -447,7 +447,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company_profile_field
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+16 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -458,12 +458,13 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `evidence_snippet` | `text` |  |  |
 | `field` | `text` | yes | One of `display_name`, `offer_summary`, `icp`, `value_proposition`, `usp`, `customer_pains` and 13 more. |
 | `retrieved_at` | `timestamp with time zone` |  | When the source was last read. |
+| `source_activity_id` | `uuid` |  | With `source` `meeting`: the transcript or meeting notes the value was read from, when you may read them. |
 | `source_url` | `text` |  |  |
 | `value` | `text` | yes |  |
 | `verified_at` | `timestamp with time zone` |  | When a human last confirmed this claim. |
 | `verified_by` | `uuid` |  | The human who confirmed the claim. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
-| `source` | `text`, default `'site_read'::text` | yes | One of `human`, `agent`, `site_read`, `connector`, `migration`. |
+| `source` | `text`, default `'site_read'::text` | yes | One of `human`, `agent`, `site_read`, `connector`, `migration`, `meeting`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | The row's version, for the `If-Match` a correction sends. |
 
@@ -472,26 +473,30 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `company_id` | `company` | deleting the parent deletes this row |
+| `source_activity_id` | `activity` | deleting the parent deletes this row |
 
 **Rules**
 
 - `company_profile_field_confidence_check`: `CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision))))`
 - `company_profile_field_field_check`: `CHECK ((field = ANY (ARRAY['display_name', 'offer_summary', 'icp', 'value_proposition', 'usp', 'customer_pains', 'desired_outcomes', 'buying_center', 'buying_intents', 'common_objections', 'sales_motion', 'legal_name', 'registered_address', 'register_vat', 'industry', 'history', 'legal_form', 'register_court', 'register_number'])))`
-- `company_profile_field_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration'])))`
+- `company_profile_field_source_check`: `CHECK ((source = ANY (ARRAY['human', 'agent', 'site_read', 'connector', 'migration', 'meeting'])))`
 - `company_profile_field_verified_pair`: `CHECK (((verified_at IS NULL) = (verified_by IS NULL)))`
 - `company_profile_field_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
+- `company_profile_meeting_evidence`: `CHECK (((source <> 'meeting') OR ((source_activity_id IS NOT NULL) AND (confidence IS NOT NULL) AND (COALESCE(evidence_snippet, '') = ''))))`
 - `company_profile_site_evidence`: `CHECK (((source <> 'site_read') OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> '') AND (source_url IS NOT NULL) AND (source_url <> '') AND (confidence IS NOT NULL))))`
 - `uq_company_profile_field`: `UNIQUE (company_id, field)`
 
 **Indexes**
 
 - `company_profile_field_pkey`: `unique, btree (id)`
+- `idx_company_profile_field_source_activity`: `btree (source_activity_id) WHERE (source_activity_id IS NOT NULL)`
 - `uq_company_profile_field`: `unique, btree (company_id, field)`
 
 **Triggers**
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"field": 20000, "value": 20000, "source": 20000, "source_url": 20000, "captured_by": 20000, "evidence_snippet": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"evidence_snippet":20000,"field":20000,"source":20000,"source_url":20000,"value":20000}')`
+- `trg_company_profile_field_citation`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION company_profile_field_cites_only_a_meeting()`
 - `trg_company_profile_field_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## company_relationship_type
