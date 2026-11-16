@@ -253,7 +253,7 @@ function ConsentSelector({
           {data.offline && <p>{t("consent.offline")}</p>}
           <RedirectDisclosure redirectURI={params.get("redirect_uri") ?? ""} />
           {/* Deny first, as a dialog's footer reads, at every width. */}
-          <div className="oauthconsent-actions">
+          <div className="oauthconsent-actions auth-actions">
             <form method="post" action="/oauth/authorize">
               <HiddenAuthorizeFields params={params} consent={consent} />
               <input type="hidden" name="deny" value="1" />

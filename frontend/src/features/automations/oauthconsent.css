@@ -23,11 +23,27 @@
   margin-block-start: 0;
 }
 
-.oauthconsent-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--gapActions);
+/* The container also wears `auth-actions`, so at phone width the buttons are
+   the sign-in surface's own; from 701px they go back to a right-aligned row. */
+.oauthconsent-form .oauthconsent-actions {
+  margin-top: 0;
+}
+@media (min-width: 701px) {
+  .oauthconsent-form .oauthconsent-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .oauthconsent-form .oauthconsent-actions .btn {
+    width: auto;
+    min-height: var(--controlHeight);
+    white-space: nowrap;
+  }
+}
+@media (min-width: 701px) and (pointer: coarse) {
+  .oauthconsent-form .oauthconsent-actions .btn {
+    min-height: max(var(--controlHeight), 44px);
+  }
 }
 
 .oauthconsent-hints {
@@ -41,12 +57,6 @@
 }
 
 @media (max-width: 700px) {
-  .oauthconsent-actions {
-    flex-direction: column;
-  }
-  .oauthconsent-actions .btn {
-    width: 100%;
-  }
   .oauthconsent-hints {
     text-align: start;
   }
