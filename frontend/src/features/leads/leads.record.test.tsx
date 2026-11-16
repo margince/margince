@@ -710,7 +710,11 @@ describe("LeadScreen — History tab", () => {
       expect(screen.getByRole("button", { name: /history/i })).toBeTruthy(),
     );
     await userEvent.click(screen.getByRole("button", { name: /history/i }));
-    await userEvent.click(screen.getByRole("button", { name: "Changes" }));
+    await pickOption(
+      userEvent.setup(),
+      await screen.findByRole("combobox", { name: "Timeline filter" }),
+      "Changes",
+    );
 
     await screen.findByText(
       translate("en", "history.verb.update", { subject: "Demo Admin" }),
@@ -739,7 +743,9 @@ describe("LeadScreen — History tab", () => {
     // and nothing else under them, not the record's whole history a second
     // time beneath the ladder and the call.
     expect(document.querySelector(".record-timeline")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Changes" })).toBeNull();
+    expect(
+      screen.queryByRole("combobox", { name: "Timeline filter" }),
+    ).toBeNull();
   });
 });
 

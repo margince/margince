@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn } from "storybook/test";
+import { expect, fn, screen, userEvent } from "storybook/test";
 import { bookingConnection, bookingProfile } from "../../testing/book.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
@@ -33,7 +33,26 @@ export const GoogleCalendarDark: Story = {
   ...GoogleCalendar,
   globals: { theme: "dark" },
 };
-export const Phone: Story = { ...GoogleCalendar, tags: ["uat-phone"] };
+export const Phone: Story = {
+  ...GoogleCalendar,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+// The presets and Other, one list under the Length field.
+export const LengthChoices: Story = {
+  ...GoogleCalendar,
+  play: async () => {
+    const length = await screen.findByRole("combobox", { name: "Length" });
+    await userEvent.click(length);
+    await expect(await screen.findByRole("listbox")).toBeVisible();
+  },
+};
+export const LengthChoicesPhone: Story = {
+  ...LengthChoices,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 
 // The host's own room, with a length off the presets that opens on Other.
 export const OwnAddressOtherLength: Story = {
