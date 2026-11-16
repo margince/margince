@@ -7,8 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 	"time"
 
@@ -48,34 +46,6 @@ func emailRequestAssigneeSQL(identities string) string {
 // addressed requests remain in review; this pass neither assigns them silently
 // nor recreates reminders a human archived or completed.
 func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error {
-	return s.captureEmailRequests(ctx, asOf, nil)
-}
-
-// RequestAsks is what each judged message asks, in the sender's own words,
-// keyed by the message. A message absent from it files a reminder that says
-// nothing beyond its subject.
-type RequestAsks map[ids.UUID]string
-
-// Keep records what a message asks, once its verdict is written.
-func (a RequestAsks) Keep(message ids.UUID, written bool, ask string) {
-	if written && ask != "" {
-		a[message] = ask
-	}
-}
-
-// FileAskedRequests files the reminders of the messages just judged, each
-// quoting what its sender asked. It reads only those messages, so a judging
-// pass files every ask it kept, however much other mail waits.
-func (s *Store) FileAskedRequests(ctx context.Context, asOf time.Time, asks RequestAsks) error {
-	if len(asks) == 0 {
-		return nil
-	}
-	return s.captureEmailRequests(ctx, asOf, asks)
-}
-
-// captureEmailRequests tidies the filed reminders and files new ones, or with
-// asks files only the asked messages: the pass before it already tidied.
-func (s *Store) captureEmailRequests(ctx context.Context, asOf time.Time, asks RequestAsks) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalSystem {
 		return apperrors.ErrPermissionDenied
@@ -87,7 +57,7 @@ func (s *Store) captureEmailRequests(ctx context.Context, asOf time.Time, asks R
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		domains, err := s.tidyEmailRequests(ctx, tx, asOf, asks == nil)
+		domains, err := s.tidyEmailRequests(ctx, tx, asOf)
 		if err != nil {
 			return err
 		}
@@ -112,18 +82,18 @@ func (s *Store) captureEmailRequests(ctx context.Context, asOf time.Time, asks R
 		if err != nil {
 			return err
 		}
-		if asks != nil {
-			eligible += fmt.Sprintf(" AND a.id = ANY($%d)", arg(slices.Collect(maps.Keys(asks))))
-		}
-		rows, err := tx.Query(ctx, `SELECT a.id, (`+assigneeSQL+`) FROM activity a
+		rows, err := tx.Query(ctx, `SELECT a.id, (`+assigneeSQL+`), coalesce(a.owed_ask, '') FROM activity a
     WHERE `+eligible+` ORDER BY a.occurred_at DESC, a.id LIMIT 64 FOR UPDATE OF a SKIP LOCKED`, args...)
 		if err != nil {
 			return fmt.Errorf("activities: reading email requests: %w", err)
 		}
-		type assignment struct{ message, user ids.UUID }
+		type assignment struct {
+			message, user ids.UUID
+			ask           string
+		}
 		candidates, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (assignment, error) {
 			var value assignment
-			err := row.Scan(&value.message, &value.user)
+			err := row.Scan(&value.message, &value.user, &value.ask)
 			return value, err
 		})
 		if err != nil {
@@ -139,7 +109,7 @@ func (s *Store) captureEmailRequests(ctx context.Context, asOf time.Time, asks R
 				}
 				seats[candidate.user] = seat
 			}
-			if err := s.captureEmailRequest(ctx, tx, candidate.message, seat, asOf, asks[candidate.message]); err != nil {
+			if err := s.captureEmailRequest(ctx, tx, candidate.message, seat, asOf, candidate.ask); err != nil {
 				return err
 			}
 		}
@@ -147,17 +117,15 @@ func (s *Store) captureEmailRequests(ctx context.Context, asOf time.Time, asks R
 	})
 }
 
-// tidyEmailRequests retires and rehomes the reminders already filed, when
-// tidy, and answers the workspace's own mail domains either way.
-func (s *Store) tidyEmailRequests(ctx context.Context, tx pgx.Tx, asOf time.Time, tidy bool) ([]string, error) {
-	if tidy {
-		if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
-			return nil, err
-		}
+// tidyEmailRequests retires and rehomes the reminders already filed, and
+// answers the workspace's own mail domains.
+func (s *Store) tidyEmailRequests(ctx context.Context, tx pgx.Tx, asOf time.Time) ([]string, error) {
+	if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
+		return nil, err
 	}
 	domains, err := s.ownDomainList(ctx, tx)
-	if err != nil || !tidy {
-		return domains, err
+	if err != nil {
+		return nil, err
 	}
 	if err := s.retireNeverOwedReminders(ctx, tx, asOf, domains); err != nil {
 		return nil, err

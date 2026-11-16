@@ -211,14 +211,8 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 		if len(batch) == 0 {
 			return nil
 		}
-		// Each batch files its own reminders, so an ask it kept is never lost to
-		// a later batch's error.
-		asks := activities.RequestAsks{}
-		n, err := c.judgeBatch(ctx, batch, readAt, calls, asks)
+		n, err := c.judgeBatch(ctx, batch, readAt, calls)
 		judged += n
-		if fileErr := c.store.FileAskedRequests(ctx, c.now(), asks); fileErr != nil {
-			return errors.Join(err, fileErr)
-		}
 		if sweepPaused(err) {
 			c.log.InfoContext(ctx, "owed classify: stopping the pass",
 				"population", what, "judged", judged, "reason", err)
@@ -253,7 +247,7 @@ type owedPredictionSink struct {
 
 // judgeBatch sends the model only messages with words of their own. One that is
 // only a quote or a forward asks nothing of us: it is stamped declined, unjudged.
-func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time, calls *sweepCalls, asks activities.RequestAsks) (int, error) {
+func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time, calls *sweepCalls) (int, error) {
 	worded := make([]owedCandidate, 0, len(batch))
 	for _, msg := range batch {
 		if msg.Body != "" {
@@ -269,9 +263,8 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 	}
 	judged, err := c.predictBatch(ctx, worded, calls, owedPredictionSink{
 		accept: func(ctx context.Context, msg owedCandidate, result owedResult) (bool, error) {
-			applied, err := c.store.SetOwedVerdict(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt)
-			asks.Keep(msg.ID, applied, owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body))
-			return applied, err
+			ask := owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body)
+			return c.store.SetOwedVerdictAsked(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt, ask)
 		},
 		decline: func(ctx context.Context, msg owedCandidate, cause error) error {
 			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
