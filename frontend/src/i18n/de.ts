@@ -9236,7 +9236,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dann nicht mehr erlaubt: {areas}. Der nächste Aufruf dort wird abgelehnt.",
   "passportAreas.unchanged": "Ändere zuerst einen Bereich.",
   "passportAreas.closesLater":
-    "Später hinzugefügte Bereiche und Werkzeuge einer Erweiterung bleiben für diesen Zugang deaktiviert.",
+    "Später hinzugefügte Bereiche und neue Werkzeuge aus Erweiterungen bleiben dafür deaktiviert.",
   "passportAreas.refusalTitle":
     "Was ein Agent erfährt, wenn ein Bereich deaktiviert ist",
   "passportAreas.refusal":

@@ -28,8 +28,10 @@
 }
 
 /* PublicPage sets this while the centred column glides to where a height change put it. */
-.pref-center[data-gliding] {
-  transition: transform var(--dur-move) var(--ease-in-out);
+@media (prefers-reduced-motion: no-preference) {
+  .pref-center[data-gliding] {
+    transition: transform var(--dur-move) var(--ease-in-out);
+  }
 }
 
 .pref-header p {

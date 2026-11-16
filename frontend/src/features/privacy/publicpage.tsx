@@ -29,7 +29,8 @@ function useGlide(column: RefObject<HTMLElement | null>) {
   const reduced = usePrefersReducedMotion();
   useEffect(() => {
     const element = column.current;
-    if (element === null || reduced) {
+    const page = element?.parentElement;
+    if (!element || !page || reduced) {
       return;
     }
     // A page settling after its load is not something the reader did.
@@ -37,18 +38,32 @@ function useGlide(column: RefObject<HTMLElement | null>) {
     const arm = () => {
       armed = true;
     };
-    let top = element.offsetTop;
+    // offsetTop ignores transforms, so `top` is the layout position, not the glide's.
+    let top: number | null = element.offsetTop;
+    let pageWidth = page.offsetWidth;
     let frame = 0;
-    // offsetTop ignores transforms, so the glide never feeds back into the observer.
-    const observer = new ResizeObserver(() => {
-      const moved = top - element.offsetTop;
+    const stop = () => {
+      cancelAnimationFrame(frame);
+      element.removeAttribute(GLIDING);
+      element.style.transform = "";
+    };
+    const observer = new ResizeObserver((entries) => {
+      if (element.offsetParent === null) {
+        stop();
+        top = null;
+        return;
+      }
+      const moved = top === null ? 0 : top - element.offsetTop;
       top = element.offsetTop;
-      if (!armed || moved === 0) {
+      // A window that changed width reflows the column; that is no press to answer.
+      const reflowed = page.offsetWidth !== pageWidth;
+      pageWidth = page.offsetWidth;
+      const resized = entries.some((entry) => entry.target === element);
+      if (!armed || moved === 0 || !resized || reflowed) {
         return;
       }
       const from = moved + glideOffset(element);
-      cancelAnimationFrame(frame);
-      element.removeAttribute(GLIDING);
+      stop();
       element.style.transform = `translateY(${from}px)`;
       frame = requestAnimationFrame(() => {
         element.setAttribute(GLIDING, "");
@@ -61,19 +76,18 @@ function useGlide(column: RefObject<HTMLElement | null>) {
       }
     };
     observer.observe(element);
+    observer.observe(page);
     element.addEventListener("pointerdown", arm);
     element.addEventListener("keydown", arm);
     element.addEventListener("transitionend", settle);
     element.addEventListener("transitioncancel", settle);
     return () => {
       observer.disconnect();
-      cancelAnimationFrame(frame);
+      stop();
       element.removeEventListener("pointerdown", arm);
       element.removeEventListener("keydown", arm);
       element.removeEventListener("transitionend", settle);
       element.removeEventListener("transitioncancel", settle);
-      element.removeAttribute(GLIDING);
-      element.style.transform = "";
     };
   }, [column, reduced]);
 }
