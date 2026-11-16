@@ -5,8 +5,8 @@ package consent
 
 // The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email
 // to keep for a year and show an inspector. They are what the contact agreed
-// to, what they refused, and the receipt each refusal was sent. Nothing deletes
-// them for age, so this read reaches back as far as they go.
+// to, what they refused, and the receipt each refusal was sent. Retention keeps
+// them until their floor ends, so this read reaches back as far as they go.
 
 import (
 	"context"
@@ -41,7 +41,7 @@ func (s *Store) OptOutRecords(ctx context.Context, contactID ids.ContactID) (crm
 		if out.Stops, err = recordedStopsTx(ctx, tx, contactID); err != nil {
 			return err
 		}
-		out.Receipts, err = optOutReceiptsTx(ctx, tx, contactID, out.Stops)
+		out.Receipts, err = optOutReceiptsTx(ctx, tx, contactID)
 		return err
 	})
 	return out, err
@@ -70,23 +70,34 @@ func recordedStopsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([
 
 // optOutReceiptsTx reads every opt-out receipt of the contact's refusals. A
 // receipt is found by the message id its refusal derives, never by the
-// timeline link, which a relink can move to another record. An erasure blanks
-// the words and keeps the row, so a blank reads as null.
-func optOutReceiptsTx(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, stops []crmcontracts.OptOutRecordStop,
-) ([]crmcontracts.OptOutReceiptRecord, error) {
+// timeline link, which a relink can move. A merged record's receipts are found
+// by the stop each copy came from and by that record's withdrawal prefix.
+// An erasure blanks the words and keeps the row, so a blank reads as null.
+func optOutReceiptsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]crmcontracts.OptOutReceiptRecord, error) {
+	stops, err := refusedStopsTx(ctx, tx, contactID)
+	if err != nil {
+		return nil, err
+	}
 	stopReceipts := make([]string, 0, len(stops))
 	for _, stop := range stops {
-		stopReceipts = append(stopReceipts, acknowledgementMessageID(ids.UUID(stop.Id)))
+		stopReceipts = append(stopReceipts, acknowledgementMessageID(stop))
+	}
+	identities, err := idsTx(ctx, tx, `SELECT id FROM contact WHERE id = $1 OR merged_into_id = $1`, contactID.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("consent: reading the records merged into the contact: %w", err)
+	}
+	prefixes := make([]string, 0, len(identities))
+	for _, identity := range identities {
+		prefixes = append(prefixes, withdrawalMessagePrefix(identity))
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT o.message_id, o.status, o.template_version, o.created_at, o.sent_at,
 		       nullif(o.subject, ''), nullif(o.body, '')
 		  FROM comms_outbound o
 		 WHERE o.sender_kind = 'controller' AND o.template_key = $1
-		   AND (o.message_id = ANY($2) OR starts_with(o.message_id, $3))
+		   AND (o.message_id = ANY($2) OR EXISTS (SELECT 1 FROM unnest($3::text[]) p WHERE starts_with(o.message_id, p)))
 		 ORDER BY o.created_at DESC, o.id DESC`,
-		TemplateOptOutAcknowledgement, stopReceipts, withdrawalMessagePrefix(contactID.UUID))
+		TemplateOptOutAcknowledgement, stopReceipts, prefixes)
 	if err != nil {
 		return nil, fmt.Errorf("consent: reading the contact's opt-out receipts: %w", err)
 	}
@@ -96,4 +107,27 @@ func optOutReceiptsTx(
 			&receipt.SentAt, &receipt.Subject, &receipt.Body)
 		return receipt, err
 	})
+}
+
+// refusedStopsTx answers every stop on the contact and every stop it was
+// carried from, through each merge in turn.
+func refusedStopsTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]ids.UUID, error) {
+	stops, err := idsTx(ctx, tx, `
+		WITH RECURSIVE carried AS (
+		  SELECT id, carried_from FROM communication_suppression WHERE contact_id = $1
+		  UNION
+		  SELECT s.id, s.carried_from FROM communication_suppression s JOIN carried c ON s.id = c.carried_from)
+		SELECT id FROM carried`, contactID.UUID)
+	if err != nil {
+		return nil, fmt.Errorf("consent: reading the stops the contact's refusals came from: %w", err)
+	}
+	return stops, nil
+}
+
+func idsTx(ctx context.Context, tx pgx.Tx, query string, id ids.UUID) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, query, id)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }

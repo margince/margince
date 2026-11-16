@@ -81,16 +81,16 @@ func releaseCapLock(t *testing.T, holder *pgx.Conn, address string) {
 // window from reading as a variable any of these cases depends on.
 const capWindow = 24 * time.Hour
 
-// The ISO user-assigned QM–QZ and XA–XZ ranges keep these tests separate from sibling Z codes.
+// The ISO user-assigned QM–QZ and XA–XZ ranges, then the unassigned QB–QL,
+// keep these tests apart from real packs and from sibling Z codes.
 var capJurisdictions = struct {
 	mu   sync.Mutex
 	next int
 }{}
 
-const (
-	reservedQSlots        = int('z' - 'm' + 1)
-	testJurisdictionSlots = reservedQSlots + int('z'-'a'+1)
-)
+var testJurisdictionRanges = []struct{ prefix, first, last rune }{
+	{'q', 'm', 'z'}, {'x', 'a', 'z'}, {'q', 'b', 'l'},
+}
 
 // Jurisdictions are process-wide and cannot be registered twice.
 func testJurisdiction(t *testing.T) jurisdiction.Code {
@@ -98,15 +98,16 @@ func testJurisdiction(t *testing.T) jurisdiction.Code {
 	capJurisdictions.mu.Lock()
 	defer capJurisdictions.mu.Unlock()
 	index := capJurisdictions.next
-	if index >= testJurisdictionSlots {
-		t.Fatalf("this package exhausted its %d distinct test jurisdictions", testJurisdictionSlots)
+	for _, r := range testJurisdictionRanges {
+		if size := int(r.last - r.first + 1); index >= size {
+			index -= size
+			continue
+		}
+		capJurisdictions.next++
+		return jurisdiction.Code(string([]rune{r.prefix, r.first + rune(index)}))
 	}
-	prefix, suffix := 'q', rune('m'+index)
-	if index >= reservedQSlots {
-		prefix, suffix = 'x', rune('a'+index-reservedQSlots)
-	}
-	capJurisdictions.next++
-	return jurisdiction.Code(string([]rune{prefix, suffix}))
+	t.Fatalf("this package exhausted its %d distinct test jurisdictions", capJurisdictions.next)
+	return ""
 }
 
 // cappedGate registers a ceiling under a freshly minted jurisdiction, puts the

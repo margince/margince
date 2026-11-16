@@ -338,8 +338,10 @@ func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
 // A data-protection law that follows the recipient, and one with no
 // legitimate-interest basis, bind a send whichever side declares them.
 func TestARecipientBoundLawSurvivesTheFold(t *testing.T) {
-	bound := Rules{Jurisdiction: "aa", Version: 1, DataProtectionFollowsRecipient: true,
-		NoLegitimateInterests: true, DisclosureLanguage: "vi"}
+	bound := Rules{
+		Jurisdiction: "aa", Version: 1, DataProtectionFollowsRecipient: true,
+		NoLegitimateInterests: true, DisclosureLanguage: "vi",
+	}
 	plain := Rules{Jurisdiction: "bb", Version: 1}
 	for _, folded := range []Rules{stricter(plain, bound), stricter(bound, plain)} {
 		if !folded.DataProtectionFollowsRecipient || !folded.NoLegitimateInterests || folded.DisclosureLanguage != "vi" {
