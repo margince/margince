@@ -54,7 +54,7 @@ func (s *Store) Connection(ctx context.Context) (Connection, error) {
 	}
 	var out Connection
 	err := s.tx(ctx, func(tx pgx.Tx, user ids.UUID) error {
-		if _, err := ensureConnection(ctx, tx, user); err != nil {
+		if err := ensureConnection(ctx, tx, user); err != nil {
 			return err
 		}
 		var err error
@@ -71,7 +71,7 @@ func (s *Store) SetEnabled(ctx context.Context, enabled bool) (Connection, error
 	}
 	var out Connection
 	err := s.tx(ctx, func(tx pgx.Tx, user ids.UUID) error {
-		if _, err := ensureConnection(ctx, tx, user); err != nil {
+		if err := ensureConnection(ctx, tx, user); err != nil {
 			return err
 		}
 		before, err := readConnection(ctx, tx, user)

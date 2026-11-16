@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
-
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -18,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AppCaller is one caller an installed chat app vouches for on one call. It

@@ -211,7 +211,7 @@ Each case asserts a string the gate's own output must contain. So a gate that ex
 
 The golangci analysis cache is machine-wide, shared by every worktree, and keyed by file content. An unchanged file has one entry across all worktrees, carrying the path of whichever worktree filled it. A run that gets that entry can read neither the `//nolint:` directives in the file nor the path-anchored exclusions in `.golangci.yml`. Waived findings then come back against a foreign path, under module names that do exist here ([#1378](https://github.com/margince/margince/issues/1378)).
 
-The wrapper both lint lanes run through resolves every reported path and quarantines the run (exit 40) instead. `test-golangci-guard` asserts both directions. A guard that flagged every run would look the same as a working one from the passing side, and `extensions/openchannel` legitimately reports as `../extensions/openchannel/…`.
+The wrapper both lint lanes run through resolves every reported path and quarantines the run (exit 40) instead. `test-golangci-guard` asserts both directions. A guard that flagged every run would look the same as a working one from the passing side. A unit under `extensions/` legitimately reports as `../extensions/<name>/…`.
 
 ### `test-e2e-llm-check`
 

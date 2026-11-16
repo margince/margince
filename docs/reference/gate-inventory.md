@@ -135,7 +135,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `humanonlyenforcement_test.go` | H1 | The declaration reaches the thing that enforces it. |
 | `idempotencymap_test.go` | H3 | The contract decides which operations promise Idempotency-Key retry safety, and internal/compose's hand-maintained replayableOperations map must list the same operations. |
 | `identifierfields_test.go` | H3 | A provider's match rules are checked against IdentifierFields(), so that list has to name every field a contact actually carries. |
-| `inboundsigningrecipe_test.go` | H3 | The signing scope is one invariant spelled on both sides of a wire. |
 | `issuelabels_test.go` | H3 | The label taxonomy is written down once and read from there. |
 | `jsonbpathkeys_test.go` | H1 | A SQL path into a jsonb column names a key the Go struct actually writes. |
 | `jsonsafeinteger_test.go` | H1 | A bigint that reaches a JSON client is bounded to what the client can hold. |
@@ -165,8 +164,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `offertemplatelayout_test.go` | H2 | The offer-template form and the PDF renderer must spell a layout key the same way, or what an administrator types is stored and never printed. |
 | `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
 | `onesendauthority_test.go` | H2 | The composer's preview and the send's door are one authority. |
-| `openchannelinboundschema_test.go` | H3 | The published OpenAPI body schema and the `arrival` struct it documents are one invariant spelled on both sides of a wire. |
-| `openchannellocaleparity_test.go` | H3 | The openchannel connector's failure vocabulary and its locale copy must name the same set of classes, or a member sees a raw translation key in place of a sentence for whichever class was renamed on one side and not the other. |
 | `openintrostatuses_test.go` | H3 | TestTheErasureClosesExactlyTheOpenIntroductions fails in both directions when the erasure's idea of an open ask stops matching the lifecycle's. |
 | `outboundfilesnapshot_test.go` | H2 | What a message carried is written by one module and read back by another, so the two spellings of the snapshot must stay one spelling. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
@@ -335,11 +332,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `eventtypeownership_test.go` | H3 | One module owns an event type. |
 | `exactseatmatch_test.go` | H2 | TestEveryExactSeatMatchFoldsTheDomain holds every SQL comparison of a seat's login to storekit.SeatLoginIsSQL. |
 | `extensioncapabilitycensus_test.go` | H2 | Every capability the extension tier publishes must have a live unit declaring it. |
-| `extensioninboundverifiesgate_test.go` | H2 | Every inbound endpoint a unit declares must check the signature. |
 | `extensionprivacycensus_test.go` | H2 | Every table an extension's migrations create must carry a privacy declaration, and every declaration must name a table the migrations create. |
 | `extensionregistrywiring_test.go` | H2 | Every place that erases, exports or merges is handed the extension registry. |
 | `extensionsignored_test.go` | H3 | The enabled set must be a set git actually has. |
-| `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
 | `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |

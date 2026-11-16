@@ -6,7 +6,8 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
-  "systemJob.personal_channel_sweep": "Dateien und Antworten persönlicher Kanäle bereinigen",
+  "systemJob.personal_channel_sweep":
+    "Dateien und Antworten persönlicher Kanäle bereinigen",
   "systemJob.meeting_profile":
     "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
@@ -11854,23 +11855,30 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.title": "Mail und Kalender",
   "personalChannels.title": "Persönliche Kanäle",
   "personalChannels.apiTitle": "API für persönliche Kanäle",
-  "personalChannels.apiIntro": "Übermitteln Sie Chats und Dateien und holen Sie Antworten ab, aus Chat Bridge oder Ihrem eigenen Code. Erstellen Sie einen Pass mit Persönliche Kanäle und folgen Sie der Anleitung. Der Skill-Download enthält dieselbe Anleitung.",
+  "personalChannels.apiIntro":
+    "Übermitteln Sie Chats und Dateien und holen Sie Antworten ab, aus Chat Bridge oder Ihrem eigenen Code. Erstellen Sie einen Pass mit Persönliche Kanäle und folgen Sie der Anleitung. Der Skill-Download enthält dieselbe Anleitung.",
   "personalChannels.readGuide": "Anleitung lesen",
   "personalChannels.mintForBridge": "Neuer Pass für Chat Bridge",
   "personalChannels.turnOn": "Einschalten",
   "personalChannels.turnOff": "Ausschalten",
   "personalChannels.loading": "Persönliche Kanäle werden geladen…",
-  "personalChannels.intro": "Bringen Sie Ihre eigenen WhatsApp-, Zalo- oder anderen Chats in Margince. Sie wählen, was gesendet wird; jede Nachricht landet in der Chronik des Kontakts, und Sie können aus Margince antworten.",
-  "personalChannels.ownClient": "Sie bauen Ihren eigenen Client, etwa Chat Bridge?",
+  "personalChannels.intro":
+    "Bringen Sie Ihre eigenen WhatsApp-, Zalo- oder anderen Chats in Margince. Sie wählen, was gesendet wird; jede Nachricht landet in der Chronik des Kontakts, und Sie können aus Margince antworten.",
+  "personalChannels.ownClient":
+    "Sie bauen Ihren eigenen Client, etwa Chat Bridge?",
   "personalChannels.developers": "Siehe Für Entwickler unter KI-Assistenten.",
   "personalChannels.assistant": "Über Ihren KI-Assistenten",
   "personalChannels.connected": "Verbunden",
   "personalChannels.notConnected": "Nicht verbunden",
-  "personalChannels.assistantFacts": "Claude, ChatGPT, Gemini, Copilot oder ein anderer MCP-Client übermittelt Chats und Dateien für Sie.",
+  "personalChannels.assistantFacts":
+    "Claude, ChatGPT, Gemini, Copilot oder ein anderer MCP-Client übermittelt Chats und Dateien für Sie.",
   "personalChannels.setUp": "Einrichten",
-  "personalChannels.step1": "Öffnen Sie KI-Tool verbinden unter Einstellungen → KI-Assistenten.",
-  "personalChannels.step2": "Haken Sie bei Zugriff erlauben Persönliche Kanäle an.",
-  "personalChannels.step3": "Bitten Sie Ihren Assistenten: „Übermittle diesen Chat mit An an Margince.“",
+  "personalChannels.step1":
+    "Öffnen Sie KI-Tool verbinden unter Einstellungen → KI-Assistenten.",
+  "personalChannels.step2":
+    "Haken Sie bei Zugriff erlauben Persönliche Kanäle an.",
+  "personalChannels.step3":
+    "Bitten Sie Ihren Assistenten: „Übermittle diesen Chat mit An an Margince.“",
   "personalChannels.replies": "Antworten",
   "personalChannels.waiting_one": "{count} wartend",
   "personalChannels.waiting_other": "{count} wartend",

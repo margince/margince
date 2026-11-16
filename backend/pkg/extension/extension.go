@@ -374,38 +374,12 @@ type Extension struct {
 	// before this field existed.
 	Ingress []IngressSource
 
-	// Inbound are the session-less HTTP edges this unit asks the core to mount:
-	// a signed POST from a party that holds no session and no seat.
-	//
-	// PRESENCE IS THE RESOLUTION. Declaring one mounts nothing an operator has
-	// not enabled by including the unit at all — the same trust the composed
-	// tool set rides (see buildExtensionTools's TRUST MODEL note): an
-	// installation adds a unit deliberately, and the vanilla tree ships only
-	// first-party ones. What is NOT true, stated plainly because a unit
-	// author's DECLARATION here is the wrong place for the CORE to claim it: the
-	// bounds a unit asks for — MaxBody, Rate, Skew — are not clamped against an
-	// installation ceiling; the core mounts exactly what is declared, and the
-	// manifest publishes exactly that, asked and granted being the same number
-	// today. A per-capability operator resolution that could narrow a unit's
-	// own request is a later governance step, not a property this field
-	// grants.
-	//
-	// It is declared HERE rather than in a contract fragment because a fragment
-	// adds capabilities and never the shape of the document: the merge layer
-	// refuses a top-level block of contract structure by argument, which is what
-	// an inbound edge is. Ingress and Channels are declared the same way and for
-	// the same reason.
-	//
-	// Presence is the enablement. A unit declaring none has no anonymous edge,
-	// which is the state every unit was in before this field existed.
-	Inbound []InboundEndpoint
-
 	// OAuthApps are the vendors whose consent flow the core runs for this unit
 	// (see OAuthApp). The core keeps the client credentials and the tokens: a
 	// refresh needs the client secret, and only the core holds it. The unit asks
 	// for a live access token through Runtime.OAuthAccessToken.
 	//
-	// Declared here rather than in a contract fragment for Inbound's reason: the
+	// Declared here rather than in a contract fragment: the
 	// connect and callback routes are core routes, not the unit's own.
 	OAuthApps []OAuthApp
 

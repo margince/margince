@@ -50,8 +50,10 @@ func setupChannels(t *testing.T) *channelEnv {
 	if err := testdb.Reset(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
-	e := &channelEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7(),
-		now: time.Date(2026, 11, 16, 9, 0, 0, 0, time.UTC)}
+	e := &channelEnv{
+		owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7(),
+		now: time.Date(2026, 11, 16, 9, 0, 0, 0, time.UTC),
+	}
 	e.exec(t, `INSERT INTO workspace (id) VALUES ($1)`, e.ws)
 	for _, u := range []ids.UUID{e.rep, e.other} {
 		e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Rep')`, u, "rep-"+u.String()+"@channels.test")
@@ -86,8 +88,10 @@ func (e *channelEnv) as(user ids.UUID, grant principal.ObjectGrant) context.Cont
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user,
-		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
-			Objects: map[string]principal.ObjectGrant{rbacObject: grant}},
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"}, RowScope: principal.RowScopeOwn,
+			Objects: map[string]principal.ObjectGrant{rbacObject: grant},
+		},
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }

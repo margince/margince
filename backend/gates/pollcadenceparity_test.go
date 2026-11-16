@@ -123,9 +123,13 @@ func TestEveryPostponingConnectorPostponesByItsOwnDeclaredCadence(t *testing.T) 
 // by directory order: the delay is reconciled against one constant, and which file
 // that constant lives in stops being obvious the moment there are two candidates.
 func postponingUnits() (map[string]string, error) {
-	sources, err := filepath.Glob("../extensions/*/*.go")
-	if err != nil {
-		return nil, err
+	var sources []string
+	for _, tree := range []string{"../extensions", "../fixtures/extensions"} {
+		found, err := filepath.Glob(tree + "/*/*.go")
+		if err != nil {
+			return nil, err
+		}
+		sources = append(sources, found...)
 	}
 	found := make(map[string]string, len(sources))
 	for _, source := range sources {

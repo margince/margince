@@ -568,9 +568,9 @@ jobs:
         if: ${{ success() && matrix.part != 'gates' && needs.changes.outputs.full_lane == 'true' }}
         working-directory: .
         run: make test-input-census-judge TESTLOG_DIR="$RUNNER_TEMP/testlogs" TESTLOG_MINIMUM="${{ matrix.census-minimum }}"
-      # crm-hello declares capabilities no shipped unit does, so this is the one
-      # walk of them; TestEveryPublishedCapabilityHasALiveDeclaringUnit reads the
-      # require below. It runs after the merge gate, which must see only the committed
+      # crm-hello and crm-relay declare capabilities no shipped unit does, so this is the one
+      # walk of them in a production build; TestEveryPublishedCapabilityHasALiveDeclaringUnit
+      # reads the require below and crm-relay's development-only one in instance/go.mod. It runs after the merge gate, which must see only the committed
       # units. Only cmd/ imports the composition (TestCompositionWiredOnlyFromCmd),
       # so ./cmd/... is every package the fixture can change.
       - name: Stage the reference fixture and walk the composed path
@@ -578,6 +578,7 @@ jobs:
         working-directory: .
         run: |
           printf 'require example.margince.dev/ext/crm-hello v0.0.0\nreplace example.margince.dev/ext/crm-hello => ../fixtures/extensions/crm-hello\n' >> instance/go.mod
+          sed -i '/ext\/crm-relay v0.0.0/ s| // margince:development-only||' instance/go.mod
           make -C backend build check-composition
           (cd backend && GOWORK="$PWD/../build/composition/go.work" go test ./cmd/...)
           make -C backend test-extensions EXT_COVER_OUT="$PWD/backend/coverage-extensions.out"

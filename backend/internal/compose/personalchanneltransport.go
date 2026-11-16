@@ -11,8 +11,10 @@ import (
 // corePerMemberTransports are core transports whose credential is one member's
 // own. Nothing polls them (a member's client calls in), and each carries text only.
 func corePerMemberTransports() []channelProviderFacts {
-	return []channelProviderFacts{{provider: personalchannels.Provider, transport: transportCore,
-		label: providerLabel(personalchannels.Provider), credentialModel: string(extension.CredentialPerMember), suppliesTransport: true}}
+	return []channelProviderFacts{{
+		provider: personalchannels.Provider, transport: transportCore,
+		label: providerLabel(personalchannels.Provider), credentialModel: string(extension.CredentialPerMember), suppliesTransport: true,
+	}}
 }
 
 // corePerMemberProviders names those transports, for the sets built from names.

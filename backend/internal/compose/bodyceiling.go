@@ -7,12 +7,11 @@ import (
 	"mime"
 	"net/http"
 
-	"github.com/margince/margince/backend/internal/modules/personalchannels"
-
 	"github.com/go-chi/chi/v5"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"

@@ -192,7 +192,7 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 		return IssuedPassport{}, err
 	}
 	var interval *string
-	if lifetime != nil {
+	if lifetime > 0 {
 		spelled := lifetime.String()
 		interval = &spelled
 	}

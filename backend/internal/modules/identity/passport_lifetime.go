@@ -22,25 +22,25 @@ func admitCallerChosenFields(in IssuePassportInput) error {
 	return nil
 }
 
-// lifetimeOf is how long a passport lives, nil for one that never expires.
+// lifetimeOf is how long a passport lives, zero for one that never expires.
 // A connection's passport always expires: its refresh is what renews it, and the
 // connection readers compare against its expiry.
-func lifetimeOf(in IssuePassportInput, grantBound bool) (*time.Duration, error) {
+func lifetimeOf(in IssuePassportInput, grantBound bool) (time.Duration, error) {
 	if in.NeverExpires {
 		switch {
 		case grantBound:
-			return nil, &InvalidPassportFieldError{Field: "never_expires", Code: "never_expires_on_connection", Message: "a connection's passport always expires; mint a passport by hand to have one that does not"}
+			return 0, &InvalidPassportFieldError{Field: "never_expires", Code: "never_expires_on_connection", Message: "a connection's passport always expires; mint a passport by hand to have one that does not"}
 		case in.TTL != nil:
-			return nil, &InvalidPassportFieldError{Field: "never_expires", Code: "never_expires_with_ttl", Message: "choose either a lifetime in hours or never_expires, not both"}
+			return 0, &InvalidPassportFieldError{Field: "never_expires", Code: "never_expires_with_ttl", Message: "choose either a lifetime in hours or never_expires, not both"}
 		}
-		return nil, nil
+		return 0, nil
 	}
 	ttl := defaultPassportTTL
 	if in.TTL != nil {
 		ttl = *in.TTL
 	}
 	if ttl <= 0 || ttl > maxPassportTTL {
-		return nil, fmt.Errorf("passport lifetime %s is outside 0 to %s", ttl, maxPassportTTL)
+		return 0, fmt.Errorf("passport lifetime %s is outside 0 to %s", ttl, maxPassportTTL)
 	}
-	return &ttl, nil
+	return ttl, nil
 }

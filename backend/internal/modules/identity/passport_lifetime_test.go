@@ -14,14 +14,14 @@ func TestAHandMintedPassportMayNeverExpire(t *testing.T) {
 	if err != nil {
 		t.Fatalf("never expires was refused: %v", err)
 	}
-	if lifetime != nil {
-		t.Fatalf("lifetime = %v, want none", *lifetime)
+	if lifetime != 0 {
+		t.Fatalf("lifetime = %v, want none", lifetime)
 	}
 }
 
 func TestAPassportWithNoLifetimeChosenLastsThirtyDays(t *testing.T) {
 	lifetime, err := lifetimeOf(IssuePassportInput{}, false)
-	if err != nil || lifetime == nil || *lifetime != 30*24*time.Hour {
+	if err != nil || lifetime != 30*24*time.Hour {
 		t.Fatalf("lifetime = %v, %v; want 720h", lifetime, err)
 	}
 }

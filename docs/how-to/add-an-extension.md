@@ -16,9 +16,10 @@ the allow mark.
 
 [Build a custom Margince](build-a-custom-margince.md) says how to mark an example for development and tests.
 
-`extensions/openchannel` is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
-key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/de`
-(a country pack) and `fixtures/extensions/crm-hello` (the smallest unit that runs) are the smaller shapes.
+`fixtures/extensions/crm-relay` shows the most capabilities. It owns a table, serves a tool, and declares a per-member
+channel, a user secret, a job and an ingress source. Copy it first. `extensions/de` (a country pack),
+`extensions/finance-demo` (a finance source) and `fixtures/extensions/crm-hello` (the smallest unit that runs, with
+a screen and an entry) are the other shapes.
 
 A unit can ship a frontend too. `extensions/<name>/frontend/` is a pnpm package whose
 default export the web app mounts at `#/ext/<name>`. A unit that ships no screen still gets a route and a
@@ -159,9 +160,9 @@ Get the legal content right: it is legal content, not a default. Pin it with a t
 ## Declare an operation under the rules (if you need one)
 
 A unit may also add operations it serves. These are named verbs that `extroutes.go` mounts REST calls on. An
-agent tool under the rules (`x-mcp-tool`) also serves them over MCP. `extensions/openchannel` is the worked
-example from the main project; copy its shape. Every `openchannel` operation is
-`x-agent-access: human-only` today: REST and UI can reach it, and MCP never can. Read
+agent tool under the rules (`x-mcp-tool`) also serves them over MCP. `fixtures/extensions/crm-relay` is the worked
+example; copy its shape. Its one operation is `x-agent-access: human-only`: REST and UI can reach it, and MCP
+never can. Read
 [below](#publish-http-routes-and-their-agent-tools) for which mark your own operation needs.
 
 **The rules live in the contract.** An `extension.Tool` is a **verb and a function**, and nothing more. The
@@ -171,15 +172,15 @@ text, the version and both schemas (see the next section):
 
 ```go
 Tools: []extension.Tool{{
-	Name:   "openchannel_open", // lower snake_case; must equal an x-mcp-tool OR x-agent-access verb in THIS unit's api/ fragment
-	Handle: open,               // omit for a contract-only request: declared, published, answers 501
+	Name:   "crm_relay_count_notes", // lower snake_case; must equal an x-mcp-tool OR x-agent-access verb in THIS unit's api/ fragment
+	Handle: countNotes,              // omit for a contract-only request: declared, published, answers 501
 }}
 ```
 
 The handler signature carries the capability handle:
 
 ```go
-func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error)
+func countNotes(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error)
 ```
 
 `rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
@@ -246,9 +247,9 @@ core contract it adds to**. `api/crm.yaml` adds to `backend/api/crm.yaml`, and `
 contract. `gen-composition` merges them into `build/composition/api/`. The operator manifest, the generated
 client types, the mounted routes and the docs all read the merged document.
 
-Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss them:
+Copy `fixtures/extensions/crm-relay/api/crm.yaml`. These rules fail you if you miss them:
 
-- **Paths start from the `servers` URL**, which already ends in `/v1`. Write `/ext/<name>/inbound`, never
+- **Paths start from the `servers` URL**, which already ends in `/v1`. Write `/ext/<name>/notes`, never
   `/v1/ext/...`. The server puts the base path back when it mounts the route. Written twice, it publishes
   `/v1/v1/ext/...` to every generated client (the `composition` tool refuses it).
 - **Every path must be under `/ext/<your-unit>/`.** Another unit's space, a core path, or a path template
@@ -257,7 +258,7 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
   rules, so the seam reads its arguments from one place. That is the request body for POST, PUT and PATCH, and
   the query for GET. If you declare them on the other side, the generator fails with a named error. The seam
   would publish that shape to every client, then drop it on every call (`gen-composition/extverbschemas.go`).
-  A GET that only reads and takes no arguments is allowed, and one ships: `openchannelReadEndpoint`.
+  A GET that only reads and takes no arguments is allowed: `crmRelayCountNotes` in the `crm-relay` fixture.
 - **`x-mcp-tool` is where the rules live**: `verb`, `version`, `title`, `tier`, `scope`, `description`. The
   `verb` must equal the `Name` of one of your unit's `Tools` entries for the operation to be served. You must
   set `description` (it is the text a model picks the tool by), and `version` too.
@@ -268,11 +269,11 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
   ```yaml
   x-agent-access:
     access: human-only
-    verb: openchannel_open      # still the registry dispatch key — REST invokes it by this name
+    verb: crm_relay_count_notes   # still the registry dispatch key: REST invokes it by this name
     version: 1.0.0
-    title: Open an inbound endpoint
+    title: Count relayed notes
     description: >-
-      Open the calling contact's own inbound endpoint...
+      Count the notes the relay fixture keeps...
   ```
 
   REST and UI can reach a `human-only` operation, as they can reach a tool verb. Its `verb` still names the
@@ -282,9 +283,6 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
   That
   happens before the body is read, before any approval waits, and before any limit is used. It never shows in an agent's `tools/list` or on the operator's
   `GET /v1/agent-tools` page. Use it for a capability that should stay for humans and the UI only.
-
-  The whole surface of `openchannel` is the worked example. It opens or reads an endpoint and makes its signing
-  secret. It turns the endpoint off for a time, registers where it sends, and lists messages in and out.
 
   `x-agent-access` carries **no** `tier`, `scope` or `subject`. Those ask for agent rights, and a human-only
   operation asks for none. So one of them next to `access: human-only` is refused.
@@ -336,7 +334,7 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
     scope: write
     subject:
       arg: note_id            # the argument carrying the row's id, as a uuid string
-      table: ext_openchannel_inbound   # the unit table that row lives in
+      table: ext_crm_relay_note   # the unit table that row lives in
   ```
 
   A call that needs a confirm first is refused and **parked** as an approval. An approval is about a
@@ -473,7 +471,7 @@ values that a table name is written through in most cases, and refuses a table o
 
 A unit
 test that seeds a core table fails the same check. Name the schema: `ext` is on no `search_path` the app
-connects with. So a bare `ext_openchannel_inbound` names a *public* table you do not own.
+connects with. So a bare `ext_crm_relay_note` names a *public* table you do not own.
 
 Keep the name in a
 constant. A name built at run time is a finding too, because a reader that cannot see the table cannot check
@@ -486,8 +484,7 @@ line above it, and the check skips it. A marker with no reason is a finding.
 
 **A new migration is a new file**, even for an index. `dbmigrate` keys on the version. So a line added to an
 applied `0001` runs only on installations that do not need it (a new one). It never runs on the ones that
-do. `extensions/openchannel/migrations/0003_drain.up.sql` is the worked example. What it adds belongs to
-tables the earlier files created, and it is still its own file.
+do.
 
 **Index what your reads sort by.** Until an index covers that order, a list that reads the newest first and
 limits the page is a full scan. It also sorts every row the unit has ever written. That is no problem at the size a
@@ -657,7 +654,7 @@ Declare `vitest`,
 them, and keeps shipped code from doing so.
 
 **Ship your text with your screen.** Put one flat JSON object per language in `frontend/i18n/<locale>.json`,
-keyed `ext<CamelUnit>.`, for example `extOpenchannel.endpoint.enabled`. `<CamelUnit>` starts each part between
+keyed `ext<CamelUnit>.`, for example `extCrmHello.panel`. `<CamelUnit>` starts each part between
 one hyphen and the next with a capital letter. A part that starts with a number gets an `_` before it
 (`crm-2-x` → `extCrm_2X.`).
 
@@ -723,7 +720,7 @@ const { view, record } = useEntryContext();
 see it, as for any other id.
 
 The registry the SPA reads is generated from the enabled set, so removing the unit removes its entries. Nothing in
-the core names a unit. `extensions/openchannel` declares a contact header entry.
+the core names a unit. `fixtures/extensions/crm-hello` declares a deal header entry.
 
 ## Declare settings an admin can change
 

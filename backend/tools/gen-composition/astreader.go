@@ -150,12 +150,12 @@ type unitReader struct {
 	// manifest: it is validated after the walk and never emitted.
 	description string
 	// handlerAliases names, per published handler type ("ToolHandler",
-	// "JobHandler", "InboundHandler"), every package-local type alias of it —
-	// `type Handler = extension.InboundHandler` binds "Handler" under
-	// "InboundHandler". isStaticallyNilHandler consults this so a nil
+	// "JobHandler"), every package-local type alias of it:
+	// `type Handler = extension.JobHandler` binds "Handler" under
+	// "JobHandler". isStaticallyNilHandler consults this so a nil
 	// conversion spelled through the local alias (`Handler(nil)`) is
 	// recognized exactly as one spelled through the published type
-	// (`extension.InboundHandler(nil)`) is.
+	// (`extension.JobHandler(nil)`) is.
 	handlerAliases map[string]map[string]bool
 }
 

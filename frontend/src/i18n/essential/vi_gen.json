@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.personal_channel_sweep": "Dọn tệp và câu trả lời của kênh cá nhân",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
@@ -4169,6 +4170,7 @@
   "roles.object.capture_settings": "Quy tắc thu thập",
   "roles.object.capture_trace": "Hoạt động kênh dùng chung",
   "roles.object.channel_connection": "Bot nhắn tin",
+  "roles.object.personal_channel": "Kênh cá nhân",
   "roles.object.integrations": "Nhà cung cấp dữ liệu",
   "roles.object.webhook_subscription": "Webhook",
   "roles.object.import_run": "Nhập dữ liệu",

@@ -64,6 +64,8 @@ const (
 	tierDir = "../extensions"
 	// ciWorkflow is the workflow whose extension lane stages fixtures.
 	ciWorkflow = "../.github/workflows/ci.yml"
+	// instanceGoMod turns a fixture on for development builds, and CI's lane on for its walk.
+	instanceGoMod = "../instance/go.mod"
 )
 
 // stagingStep matches a workflow step requiring one fixture unit from its folder.
@@ -129,7 +131,8 @@ func TestTheCensusCountsAStagedFixtureAndStillReportsAFieldNobodyDeclares(t *tes
 // extensions/*/frontend for suites and passes over a tier that ships none.
 func TestEveryComposedLayerIsShippedByALiveUnit(t *testing.T) {
 	t.Parallel()
-	units := liveUnits(t)
+	// A staged fixture counts: CI composes it and walks the layer it ships.
+	units := append(liveUnits(t), stagedFixtures(t)...)
 	for _, layer := range composedLayers(t) {
 		shippers := unitsWhere(units, func(u unit) bool { return slices.Contains(u.layers, layer) })
 		if len(shippers) == 0 {
@@ -293,15 +296,24 @@ func readUnit(t *testing.T, dir, name string) (unit, bool) {
 	return unit{name: name, capabilities: declaredCapabilities(t, dir), layers: shippedLayers(t, dir)}, true
 }
 
-// stagedFixtures reads every fixture unit the CI workflow requires.
+// stagedFixtures reads every fixture unit the CI workflow or the instance requires.
 // A staged name with no unit behind it fails: the step would require nothing.
 func stagedFixtures(t *testing.T) []unit {
 	t.Helper()
 	var units []unit
-	for _, step := range stagingStep.FindAllStringSubmatch(readFile(t, ciWorkflow), -1) {
+	for _, source := range []string{ciWorkflow, instanceGoMod} {
+		units = append(units, fixturesStagedBy(t, source)...)
+	}
+	return units
+}
+
+func fixturesStagedBy(t *testing.T, source string) []unit {
+	t.Helper()
+	var units []unit
+	for _, step := range stagingStep.FindAllStringSubmatch(readFile(t, source), -1) {
 		dir := filepath.Join("..", "fixtures", "extensions", step[1])
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
-			t.Errorf("%s stages fixtures/extensions/%s, which is not a Go unit", ciWorkflow, step[1])
+			t.Errorf("%s stages fixtures/extensions/%s, which is not a Go unit", source, step[1])
 			continue
 		}
 		if u, ok := readUnit(t, dir, step[1]); ok {

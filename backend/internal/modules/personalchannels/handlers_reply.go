@@ -48,8 +48,10 @@ func (h Handlers) AckPersonalChannelReplies(w http.ResponseWriter, r *http.Reque
 	}
 	acks := make([]Ack, 0, len(req.Acks))
 	for _, a := range req.Acks {
-		acks = append(acks, Ack{DeliveryID: ids.UUID(a.DeliveryId), Outcome: string(a.Outcome),
-			ProviderMessageID: deref(a.ProviderMessageId), Reason: deref(a.Reason)})
+		acks = append(acks, Ack{
+			DeliveryID: ids.UUID(a.DeliveryId), Outcome: string(a.Outcome),
+			ProviderMessageID: deref(a.ProviderMessageId), Reason: deref(a.Reason),
+		})
 	}
 	results, err := h.store.Ack(r.Context(), acks)
 	if err != nil {

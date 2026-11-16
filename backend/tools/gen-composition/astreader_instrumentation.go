@@ -25,7 +25,7 @@ type unitInstrumentation struct {
 }
 
 // instrumentEdge is the session-less route an Instrumentation.Edge opens,
-// published with its bounds as an Inbound endpoint is.
+// published with its bounds.
 type instrumentEdge struct {
 	Path           string `json:"path"`
 	MaxBody        int64  `json:"max_body"`

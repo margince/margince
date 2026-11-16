@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: BUSL-1.1
+# SPDX-FileCopyrightText: 2026 Gradion
+#
+# crm-relay's contract fragment: one tool with a Go handler, so the composed
+# path from a unit's Tools declaration to a served route is walked.
+overlay: 1.0.0
+info:
+  title: crm-relay
+  version: "0.1.0"
+actions:
+  - target: $.paths['/ext/crm-relay/notes']
+    update:
+      get:
+        operationId: crmRelayCountNotes
+        summary: Count the fixture's relayed notes.
+        tags: [Extensions]
+        x-rbac-object: ext_crm_relay_note
+        x-rbac-action: read
+        x-rbac-defaults:
+          admin: [read]
+        x-agent-access:
+          access: human-only
+          verb: crm_relay_count_notes
+          version: 1.0.0
+          title: Count relayed notes
+          description: >-
+            Count the notes the relay fixture keeps. It exists to walk a unit
+            tool end to end and reads nothing else.
+        responses:
+          '200':
+            description: The count.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [notes]
+                  properties:
+                    notes: { type: integer, format: int64 }
+  - target: $.paths['/ext/crm-relay/messages']
+    update:
+      post:
+        operationId: crmRelayPostMessage
+        summary: Post an email-shaped test message for capture to land.
+        tags: [Extensions]
+        x-rbac-object: ext_crm_relay_message
+        x-rbac-action: create
+        x-rbac-defaults:
+          admin: [create]
+        x-mcp-tool:
+          verb: crm_relay_post_message
+          version: 1.0.0
+          title: Post a test message
+          tier: auto_execute
+          scope: write
+          description: >-
+            Keep one email-shaped message for the relay fixture's next tick to
+            land through capture, on the caller's own authority. It exists for
+            development builds, to put a captured email on a timeline by hand.
+            A message_id already posted by the caller is kept once.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [message_id, from]
+                properties:
+                  message_id: { type: string, minLength: 1, maxLength: 200 }
+                  subject: { type: string, maxLength: 500 }
+                  body: { type: string, maxLength: 20000 }
+                  occurred_at: { type: string, format: date-time }
+                  from:
+                    type: object
+                    additionalProperties: false
+                    required: [email]
+                    properties:
+                      email: { type: string, format: email, maxLength: 320 }
+                      name: { type: string, maxLength: 200 }
+                  to:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      email: { type: string, format: email, maxLength: 320 }
+                      name: { type: string, maxLength: 200 }
+        responses:
+          '200':
+            description: Whether the message was kept; false means it was posted before.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [queued]
+                  properties:
+                    queued: { type: boolean }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+          '422': { $ref: '#/components/responses/ValidationError' }

@@ -58,14 +58,10 @@ func member(ctx context.Context) (ids.UUID, error) {
 	return ids.UUID{}, fmt.Errorf("personal channels belong to a member; this caller acts for none: %w", apperrors.ErrPermissionDenied)
 }
 
-// ensureConnection returns the caller's connection row, creating it off.
-func ensureConnection(ctx context.Context, tx pgx.Tx, user ids.UUID) (ids.UUID, error) {
-	var id ids.UUID
-	err := tx.QueryRow(ctx, `
-		INSERT INTO personal_channel_connection (user_id) VALUES ($1)
-		ON CONFLICT (user_id) DO UPDATE SET user_id = EXCLUDED.user_id
-		RETURNING id`, user).Scan(&id)
-	return id, err
+// ensureConnection creates the caller's connection row, off, if it has none.
+func ensureConnection(ctx context.Context, tx pgx.Tx, user ids.UUID) error {
+	_, err := tx.Exec(ctx, `INSERT INTO personal_channel_connection (user_id) VALUES ($1) ON CONFLICT (user_id) DO NOTHING`, user)
+	return err
 }
 
 // tx runs fn for the caller's own channels, once the caller passed auth.Require.

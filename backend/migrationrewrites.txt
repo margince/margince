@@ -150,3 +150,5 @@
 1794804055_a_member_may_bring_their_own_chats_in.up.sql | *, role | the trigger statements change no row; updates only the fixed set of system roles, at most six rows per workspace; the three tables it creates are empty
 1794804055_a_member_may_bring_their_own_chats_in.down.sql | role | runs only on a rollback and updates only the fixed set of system roles
 1794808137_a_personal_channel_message_names_who_sent_it_in.up.sql | * | the trigger statements change no row; the migration creates one empty table
+1794815563_openchannel_is_retired.up.sql | channel_provider, extension_ingest_position, extension_ingest_refusal, extension_secret, role | touches only the retired openchannel unit's rows: its few secrets, ingest positions and refusals, the fixed system roles, and one channel_provider row
+1794815563_openchannel_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing

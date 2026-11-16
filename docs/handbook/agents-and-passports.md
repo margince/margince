@@ -29,7 +29,9 @@ Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot,
 
 ### What is an agent passport?
 An agent passport in Margince is your personal access token: whatever uses it, an AI tool or your own code, acts as you. It carries your own seat, permissions and record visibility, cut down to the **Agent permissions** you tick.
-Those are **Read records**, **Draft messages**, **Change records**, **Send messages** and **Use AI and buy data**. An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI assistants**, under **For developers**.
+Those are **Read records**, **Draft messages**, **Change records**, **Send messages**, **Use AI and buy data** and **Personal channels**.
+
+**Personal channels** lets a client send your own chats in and pick your replies up, and nothing else; see [Personal channels](personal-channels.md). An agent can never do more than you can. You create and revoke passports yourself in **Settings → AI assistants**, under **For developers**.
 Also called: API key, token, agent credential, access token.
 
 ### How do I give an agent access to Margince?
@@ -42,7 +44,7 @@ To give a script or your own code access to Margince, open **Settings → AI ass
 6. Choose **Mint passport**.
 7. Choose **Copy passport** now: "Passport created. It is shown only once, so copy it now."
 8. Under **Next, use it**, choose **Download skill** for an AI tool, or **Copy example** for your own code.
-A passport lasts 30 days. To use Margince in Claude, ChatGPT, Copilot or Gemini, [connect the tool](#how-do-i-connect-my-ai-tool-to-margince) instead.
+A passport lasts 30 days unless you tick **Never expires**. One that never expires works until you revoke it or your account is turned off. To use Margince in Claude, ChatGPT, Copilot or Gemini, [connect the tool](#how-do-i-connect-my-ai-tool-to-margince) instead.
 Also called: create an API key, script access, integrate an agent.
 
 ### How do I use a passport in my AI tool?

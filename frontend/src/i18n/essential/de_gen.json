@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.personal_channel_sweep": "Dateien und Antworten persönlicher Kanäle bereinigen",
   "systemJob.meeting_profile": "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
@@ -4169,6 +4170,7 @@
   "roles.object.capture_settings": "Capture-Regeln",
   "roles.object.capture_trace": "Aktivität geteilter Kanäle",
   "roles.object.channel_connection": "Chat-Bots",
+  "roles.object.personal_channel": "Persönliche Kanäle",
   "roles.object.integrations": "Datenanbieter",
   "roles.object.webhook_subscription": "Webhooks",
   "roles.object.import_run": "Datenimporte",

@@ -119,7 +119,7 @@ func (s *Store) pushOne(ctx context.Context, connection, user ids.UUID, m PushMe
 	res := PushResult{MessageID: m.MessageID}
 	n, err := Normalize(connection, m)
 	if err != nil {
-		return refused(ctx, res, err), nil
+		return refused(ctx, res, err), nil //nolint:nilerr // a refused message is its own result; the batch goes on
 	}
 	var files []extension.InboundFile
 	if len(m.UploadIDs) > 0 {
@@ -132,7 +132,7 @@ func (s *Store) pushOne(ctx context.Context, connection, user ids.UUID, m PushMe
 	}
 	landed, err := s.lander.Land(ctx, user, n, files)
 	if err != nil {
-		return refused(ctx, res, err), nil
+		return refused(ctx, res, err), nil //nolint:nilerr // a refused message is its own result; the batch goes on
 	}
 	res.Status, res.Reason = landed.Status, landed.Reason
 	if landed.Status == StatusLanded || landed.Status == StatusDuplicate {

@@ -1,8 +1,7 @@
 # `extensions/notes`: scope
 
-> **Historical record, 2026-08-28.** `extensions/notes` was removed when
-> `openchannel` replaced it as the tier's one reference unit, so the unit below
-> is no longer in the tree; see the sibling README for why the
+> **Historical record, 2026-08-28.** `extensions/notes` was removed, so the
+> unit below is no longer in the tree; see the sibling README for why the
 > evidence is kept. The RLS and `workspace_id` statements here describe the tier
 > as it was in August 2026.
 

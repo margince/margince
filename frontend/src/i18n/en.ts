@@ -4,7 +4,8 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
-  "systemJob.personal_channel_sweep": "Cleaning up personal channel files and replies",
+  "systemJob.personal_channel_sweep":
+    "Cleaning up personal channel files and replies",
   "systemJob.meeting_profile":
     "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
@@ -11818,23 +11819,29 @@ export const en = {
   "connectors.title": "Mail and calendar",
   "personalChannels.title": "Personal channels",
   "personalChannels.apiTitle": "Personal channels API",
-  "personalChannels.apiIntro": "Send chats and files in, and pull replies, from Chat Bridge or your own code. Create a passport with Personal channels ticked, then follow the guide. The skill download carries the same guide.",
+  "personalChannels.apiIntro":
+    "Send chats and files in, and pull replies, from Chat Bridge or your own code. Create a passport with Personal channels ticked, then follow the guide. The skill download carries the same guide.",
   "personalChannels.readGuide": "Read the guide",
   "personalChannels.mintForBridge": "New passport for Chat Bridge",
   "personalChannels.turnOn": "Turn on",
   "personalChannels.turnOff": "Turn off",
   "personalChannels.loading": "Loading personal channels…",
-  "personalChannels.intro": "Bring your own WhatsApp, Zalo or other chats into Margince. You choose what is sent; each message lands on the contact’s timeline, and you can reply from Margince.",
-  "personalChannels.ownClient": "Building your own client, such as Chat Bridge?",
+  "personalChannels.intro":
+    "Bring your own WhatsApp, Zalo or other chats into Margince. You choose what is sent; each message lands on the contact’s timeline, and you can reply from Margince.",
+  "personalChannels.ownClient":
+    "Building your own client, such as Chat Bridge?",
   "personalChannels.developers": "See For developers in AI assistants.",
   "personalChannels.assistant": "Through your AI assistant",
   "personalChannels.connected": "Connected",
   "personalChannels.notConnected": "Not connected",
-  "personalChannels.assistantFacts": "Claude, ChatGPT, Gemini, Copilot or any MCP client sends chats and files for you.",
+  "personalChannels.assistantFacts":
+    "Claude, ChatGPT, Gemini, Copilot or any MCP client sends chats and files for you.",
   "personalChannels.setUp": "Set up",
-  "personalChannels.step1": "Open Connect your AI tool in Settings → AI assistants.",
+  "personalChannels.step1":
+    "Open Connect your AI tool in Settings → AI assistants.",
   "personalChannels.step2": "On Authorize access, tick Personal channels.",
-  "personalChannels.step3": "Ask your assistant: “Send this chat with An to Margince.”",
+  "personalChannels.step3":
+    "Ask your assistant: “Send this chat with An to Margince.”",
   "personalChannels.replies": "Replies",
   "personalChannels.waiting_one": "{count} waiting",
   "personalChannels.waiting_other": "{count} waiting",

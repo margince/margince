@@ -15,6 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
+// bounceReasonField is the audited column the reason lands in.
+const bounceReasonField = "bounce_reason"
+
 // RecordChannelNotDeliveredTx marks a channel message the provider accepted as
 // one that never reached its recipient, the way a hard bounce marks a mail. A
 // member's own client reports this after the send, so the timeline stops
@@ -35,7 +38,7 @@ func RecordChannelNotDeliveredTx(ctx context.Context, tx pgx.Tx, at time.Time, a
 		return err
 	}
 	_, err = storekit.Audit(ctx, tx, "update", "comms_outbound", id,
-		map[string]any{"bounced_at": nil, "bounce_kind": nil, "bounce_reason": nil},
-		map[string]any{"bounce_kind": "hard", "bounce_reason": reason})
+		map[string]any{"bounced_at": nil, "bounce_kind": nil, bounceReasonField: nil},
+		map[string]any{"bounce_kind": "hard", bounceReasonField: reason})
 	return err
 }

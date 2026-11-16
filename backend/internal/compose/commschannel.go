@@ -19,15 +19,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
-	"github.com/margince/margince/backend/internal/modules/personalchannels"
-
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )

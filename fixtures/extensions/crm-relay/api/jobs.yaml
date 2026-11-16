@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: BUSL-1.1
+# SPDX-FileCopyrightText: 2026 Gradion
+#
+# crm-relay's job fragment: one tick that reads its own table and postpones
+# itself by its own cadence when there is nothing to do.
+overlay: 1.0.0
+info:
+  title: crm-relay
+  version: "0.1.0"
+actions:
+  - target: $.kinds['ext_crm_relay_tick']
+    update:
+      job: tick
+      role: dispatcher
+      queue: default
+      cadence: 60s
+      timeout: 30s
+      tier: auto_execute
+      scope: read
+
+  - target: $.kinds['ext_crm_relay_tick_ws']
+    update:
+      job: tick
+      role: worker
+      queue: default
+      timeout: 60s
+      max_attempts: 3

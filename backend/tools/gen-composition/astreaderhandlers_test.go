@@ -22,10 +22,10 @@ import ext "github.com/margince/margince/backend/pkg/extension"
 
 type Tool = ext.ToolHandler
 type Job = (ext.JobHandler)
-type Defined ext.InboundHandler
+type Defined ext.JobHandler
 type NotAHandler = ext.Extension
 type (
-	Grouped = ext.InboundHandler
+	Grouped = ext.JobHandler
 	Plain   int
 )
 `, `package x
@@ -57,9 +57,8 @@ type FromDefined = Defined
 	got := collectHandlerAliases(pkgs, extensionPkgPath)
 
 	want := map[string]map[string]bool{
-		"ToolHandler":    {"Tool": true, "Tool2": true, "Tool3": true},
-		"JobHandler":     {"Job": true, "Job2": true},
-		"InboundHandler": {"Grouped": true},
+		"ToolHandler": {"Tool": true, "Tool2": true, "Tool3": true},
+		"JobHandler":  {"Job": true, "Job2": true, "Grouped": true},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("aliases = %v, want %v", got, want)

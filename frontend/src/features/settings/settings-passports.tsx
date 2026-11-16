@@ -19,6 +19,7 @@ import {
   OverflowMenu,
 } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { Heading } from "../../design-system/heading";
 import {
   Panel,
   PanelBody,
@@ -37,7 +38,6 @@ import {
   usePassportUsageDetail,
 } from "../automations/agentusage";
 import { PassportUses } from "./settings.passportuse";
-import { Heading } from "../../design-system/heading";
 import { MintDialog } from "./settings-passports-mint";
 import "./settings.css";
 import { useViewerZone } from "../../lib/viewerzone";

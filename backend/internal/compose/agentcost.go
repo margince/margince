@@ -16,8 +16,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -26,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // AgentTokenSpend adapts the volume meter to the AI runtime's token seam, so a

@@ -2,7 +2,7 @@
 
 Vietnamese is translated from the English catalog beside it: `frontend/src/i18n/en.ts` for
 `frontend/src/i18n/vi.ts`, and the sibling `en.json` for each extension's `vi.json` (for example
-`extensions/openchannel/frontend/i18n/en.json`). It also follows [ui-copy-style.md](ui-copy-style.md); this
+`extensions/de/frontend/i18n/en.json`). It also follows [ui-copy-style.md](ui-copy-style.md); this
 page states only what Vietnamese adds or changes. [ui-copy-style-de.md](ui-copy-style-de.md) is a sibling, not
 a source: where German keeps a loanword, Vietnamese decides.
 

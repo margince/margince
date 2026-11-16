@@ -106,14 +106,14 @@ func TestAnUnusedUploadIsSweptAfterADay(t *testing.T) {
 
 func TestOnlyTheSweepMayDeleteStagedFiles(t *testing.T) {
 	e := setupChannels(t)
-	if _, err := sweepFilesAs(e, e.as(e.rep, repGrant)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := sweepFilesAs(e.as(e.rep, repGrant), e); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a member ran the sweep: err = %v", err)
 	}
 }
 
-func sweepFilesAs(e *channelEnv, ctx context.Context) (int, error) {
+func sweepFilesAs(ctx context.Context, e *channelEnv) (int, error) {
 	files, _, err := Sweep(ctx, e.store.db, &notDelivered{settled: map[ids.UUID]string{}}, e.now)
 	return files, err
 }
 
-func sweepFiles(e *channelEnv) (int, error) { return sweepFilesAs(e, e.system()) }
+func sweepFiles(e *channelEnv) (int, error) { return sweepFilesAs(e.system(), e) }

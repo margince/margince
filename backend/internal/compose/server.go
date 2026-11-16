@@ -9,7 +9,6 @@ package compose
 // recovery) is platform/httpserver; what lives here is the wiring.
 
 import (
-	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"log/slog"
 	"net/http"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"

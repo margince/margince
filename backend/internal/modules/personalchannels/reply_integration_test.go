@@ -35,8 +35,10 @@ func (e *channelEnv) queued(t *testing.T, user ids.UUID, key string) ids.UUID {
 		t.Fatal(err)
 	}
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		return QueueReply(ctx, tx, ReplyInput{Connection: c.ID, ActivityID: activity, DeliveryKey: key,
-			Network: "whatsapp", Account: "8490", Body: "Yes, the 2nd works"})
+		return QueueReply(ctx, tx, ReplyInput{
+			Connection: c.ID, ActivityID: activity, DeliveryKey: key,
+			Network: "whatsapp", Account: "8490", Body: "Yes, the 2nd works",
+		})
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -119,17 +121,17 @@ func TestAnUnpulledReplyExpiresAtSevenDays(t *testing.T) {
 	e.on(t, e.rep)
 	activity := e.queued(t, e.rep, "d-old")
 	e.exec(t, `UPDATE personal_channel_reply SET created_at = $1`, e.now.Add(-replyLifetime+time.Hour))
-	if n, err := expire(e, e.system(), settled); err != nil || n != 0 {
+	if n, err := expire(e.system(), e, settled); err != nil || n != 0 {
 		t.Fatalf("before 7 days expired %d, %v", n, err)
 	}
 	e.exec(t, `UPDATE personal_channel_reply SET created_at = $1`, e.now.Add(-replyLifetime-time.Minute))
-	if n, err := expire(e, e.system(), settled); err != nil || n != 1 {
+	if n, err := expire(e.system(), e, settled); err != nil || n != 1 {
 		t.Fatalf("after 7 days expired %d, %v", n, err)
 	}
 	if settled.settled[activity] != notDeliveredByExpiry {
 		t.Fatalf("settled = %v", settled.settled)
 	}
-	if _, err := expire(e, e.as(e.rep, repGrant), settled); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := expire(e.as(e.rep, repGrant), e, settled); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a member ran the expiry: %v", err)
 	}
 }
@@ -145,7 +147,7 @@ func TestPullAndAckAreRefusedWhileOff(t *testing.T) {
 	}
 }
 
-func expire(e *channelEnv, ctx context.Context, settler Settler) (int, error) {
+func expire(ctx context.Context, e *channelEnv, settler Settler) (int, error) {
 	_, replies, err := Sweep(ctx, e.store.db, settler, e.now)
 	return replies, err
 }

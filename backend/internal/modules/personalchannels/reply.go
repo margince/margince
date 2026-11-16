@@ -48,6 +48,9 @@ const (
 
 const replyEntity = "personal_channel_reply"
 
+// auditState is the audited field a reply's state changes in.
+const auditState = "state"
+
 // notDeliveredByClient is the reason a failed ack that named none is given.
 const notDeliveredByClient = "the client could not send it"
 
@@ -125,12 +128,12 @@ func QueueReply(ctx context.Context, tx pgx.Tx, in ReplyInput) error {
 	return err
 }
 
-// Pull leases up to max of the caller's waiting replies, oldest first.
-func (s *Store) Pull(ctx context.Context, max int) (PullAnswer, error) {
+// Pull leases up to limit of the caller's waiting replies, oldest first.
+func (s *Store) Pull(ctx context.Context, limit int) (PullAnswer, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return PullAnswer{}, err
 	}
-	if max < 1 || max > maxPull {
+	if limit < 1 || limit > maxPull {
 		return PullAnswer{}, invalid("pull 1 to %d replies at a time", maxPull)
 	}
 	var out PullAnswer
@@ -140,7 +143,7 @@ func (s *Store) Pull(ctx context.Context, max int) (PullAnswer, error) {
 			return err
 		}
 		now := s.now()
-		if out.Replies, err = leaseReplies(ctx, tx, conn.ID, now, max); err != nil {
+		if out.Replies, err = leaseReplies(ctx, tx, conn.ID, now, limit); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx, `UPDATE personal_channel_connection SET last_pull_at = $2 WHERE id = $1`, conn.ID, now); err != nil {
@@ -153,7 +156,7 @@ func (s *Store) Pull(ctx context.Context, max int) (PullAnswer, error) {
 	return out, err
 }
 
-func leaseReplies(ctx context.Context, tx pgx.Tx, connection ids.UUID, now time.Time, max int) ([]Reply, error) {
+func leaseReplies(ctx context.Context, tx pgx.Tx, connection ids.UUID, now time.Time, limit int) ([]Reply, error) {
 	rows, err := tx.Query(ctx, `
 		WITH picked AS MATERIALIZED (
 			SELECT id FROM personal_channel_reply
@@ -164,7 +167,7 @@ func leaseReplies(ctx context.Context, tx pgx.Tx, connection ids.UUID, now time.
 		   SET state = 'pulled', leased_until = $3, attempt = r.attempt + 1, updated_at = $2
 		 WHERE r.id IN (SELECT id FROM picked)
 		RETURNING r.id, r.network, r.recipient_account, r.thread_id, coalesce(r.reply_to, ''), coalesce(r.body, ''), r.attempt`,
-		connection, now, now.Add(replyLease), max)
+		connection, now, now.Add(replyLease), limit)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +242,7 @@ func (s *Store) ackOne(ctx context.Context, tx pgx.Tx, connection ids.UUID, a Ac
 		return res, err
 	}
 	if _, err := storekit.Audit(ctx, tx, "update", replyEntity, a.DeliveryID,
-		map[string]any{"state": state}, map[string]any{"state": a.Outcome, "reason": a.Reason}); err != nil {
+		map[string]any{auditState: state}, map[string]any{auditState: a.Outcome, "reason": a.Reason}); err != nil {
 		return res, err
 	}
 	res.Result = AckRecorded
@@ -263,7 +266,7 @@ func expireReplies(ctx context.Context, db *database.DB, settler Settler, now ti
 		}
 		for _, d := range dues {
 			if _, err := storekit.Audit(ctx, tx, "update", replyEntity, d.reply,
-				map[string]any{"state": d.was}, map[string]any{"state": stateExpired}); err != nil {
+				map[string]any{auditState: d.was}, map[string]any{auditState: stateExpired}); err != nil {
 				return err
 			}
 			if err := settler.NotDelivered(ctx, tx, d.activity, notDeliveredByExpiry); err != nil {

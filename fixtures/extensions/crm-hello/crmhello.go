@@ -36,7 +36,7 @@ var note = reach.Table{
 // New returns the unit's declaration. hello_ping in api/crm.yaml has no Tools
 // entry: a contract-only request reaches the manifest and serves
 // nothing. The subscription puts a declared system read in the extension lane,
-// and the panel puts the frontend layer and a panel slot there. The note
+// and the panel and entry put the frontend layer and two slots there. The note
 // table puts a migrations layer, a Reach and a Privacy declaration there.
 func New() extension.Extension {
 	return extension.Extension{
@@ -54,6 +54,7 @@ func New() extension.Extension {
 		Panels: []extension.Panel{
 			{Slot: extension.SlotDealPanel, Export: "DealHello", Object: "ext_crm_hello_ping"},
 		},
+		Entries:         []extension.Entry{{Slot: extension.SlotDealHeader, Label: "extCrmHello.title", Icon: extension.IconPlug, Object: "ext_crm_hello_ping"}},
 		Instrumentation: &extension.Instrumentation{Start: startInstrumentation, Browser: "instrument", Edge: instrumentationEdge()},
 		Migrations:      migrations,
 		Reach:           []reach.Table{note},

@@ -200,7 +200,6 @@ docs/explanation/ai-runtime.md migration 0105
 docs/explanation/company-context.md migration 0102
 docs/explanation/company-context.md migration 0103
 docs/explanation/company-context.md migration 0105
-docs/how-to/add-an-extension.md migration 0003
 frontend/e2e/leads.spec.ts migration 0038
 frontend/src/components/relationships.edges.tsx migration 0007
 frontend/src/components/relationships.test.tsx migration 0007

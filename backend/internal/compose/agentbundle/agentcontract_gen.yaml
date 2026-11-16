@@ -12432,6 +12432,8 @@ paths:
         with a reason the client can act on, or `deferred` when the request ran out of time
         (send those again). One message's refusal does not refuse the rest.
 
+        Needs the passport permission Personal channels.
+
         Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
@@ -12462,6 +12464,8 @@ paths:
         days expires and shows as not delivered. The answer also carries the connection's state.
         Refused while the caller's personal channels are off.
 
+        Needs the passport permission Personal channels.
+
         Runs at once.
       requestBody:
         required: true
@@ -12488,6 +12492,8 @@ paths:
         Always the CALLER's own. `failed` shows the reply as not delivered on the timeline; it is
         not retried, so the member sends it again. A delivery id that is not the caller's answers
         `unknown_delivery`, the same as one that never existed.
+
+        Needs the passport permission Personal channels.
 
         Runs at once.
       parameters:
@@ -12518,6 +12524,8 @@ paths:
         staged file no message names within 24 hours is deleted. The type is read from the bytes.
         A file may be at most 25 MiB; through an AI assistant, at most what one MCP request
         carries inline. Refused while the caller's personal channels are off.
+
+        Needs the passport permission Personal channels.
 
         Runs at once.
       requestBody:

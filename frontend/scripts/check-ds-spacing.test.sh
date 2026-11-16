@@ -153,11 +153,12 @@ check_repo_census css "${CSS_PATHSPEC[@]}"
 # A count, not a verdict — but only where there is something to count.
 # extensions/ is the fork-owned tier: a downstream shipping only backend units
 # has no unit frontend at all, and "the gate inspects nothing there" is then a
-# true statement about an empty tree rather than a broken pathspec.
+# true statement about an empty tree rather than a broken pathspec. A unit that
+# ships only i18n copy has no screen, so only *.tsx files count as screens.
 EXT_TSX="$(git -C "$ROOT" ls-files -- "${TSX_PATHSPEC[@]}" | grep -c '^extensions/' || true)"
-EXT_SCREENS="$(git -C "$ROOT" ls-files -- 'extensions/*/frontend/*' | grep -c . || true)"
+EXT_SCREENS="$(git -C "$ROOT" ls-files -- 'extensions/*/frontend/*' | grep -c '\.tsx$' || true)"
 if [[ "$EXT_SCREENS" -gt 0 && "$EXT_TSX" -eq 0 ]]; then
-  fail "the unit tier ships $EXT_SCREENS frontend file(s) and the *.tsx pathspecs collect 0 of them — the gate is inspecting nothing there"
+  fail "the unit tier ships $EXT_SCREENS screen file(s) and the *.tsx pathspecs collect 0 of them — the gate is inspecting nothing there"
 fi
 
 if [[ "$FAILURES" -ne 0 ]]; then

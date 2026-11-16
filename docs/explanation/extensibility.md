@@ -5,15 +5,16 @@
 The *extension tier* is how a small, closed add-on comes into this product without a change to any file
 the core owns. A unit is one named folder with a version under `extensions/<name>/`. It is its own Go
 module, it reaches the core through one small public surface, and the build composes it in. The plain
-tree, with no add-ons of its own, ships three units:
+tree, with no add-ons of its own, ships two units:
 
 | Unit | What it is |
 |---|---|
 | `extensions/de` | The German jurisdiction pack: the legal floors on retention and the outbound messaging rules |
 | `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
-| `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
-Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
+CI also turns on two test fixtures, `fixtures/extensions/crm-hello` and `fixtures/extensions/crm-relay`, because
+they declare capabilities no shipped unit does. A dev build (`make dev`) turns on `crm-relay` too: its tool
+`crm_relay_post_message` lands an email-shaped test message through capture. Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).
 
 ## The whole tier in one map
 
@@ -298,8 +299,8 @@ registered is a state the system cannot reach.
 
 The agent tool is the governed kind. A tool that declares a `Handle` **is served**: `buildExtensionTools`
 turns it into the core `mcp.Tool` seam. Boot registers it in the same `agents.Registry`, admission gate
-and tool list the core tools use. `extensions/openchannel` is the reference unit that runs that path from
-end to end. A declaration with no handler stays a request in the manifest and serves nothing.
+and tool list the core tools use. The fixture `fixtures/extensions/crm-relay` runs that path from end to end
+in CI. A declaration with no handler stays a request in the manifest and serves nothing.
 
 A *served* 🟡 tool, one that must be confirmed first, is refused at boot instead of registered. This path
 only carries data, so it cannot build the staging seam of the registry. Its approvals could never be
@@ -356,9 +357,7 @@ checked against the full budget for names, so a name a unit takes today stays go
 - **Its own governed tools**: an `x-mcp-tool` verb on a declared operation. It is served through the same
   admission gate a core tool passes, at the tier and scope the contract declares. An operation that REST
   and the UI may reach, but an agent never may, declares `x-agent-access: human-only` instead. That is
-  how the core names it too (`docs/how-to/add-an-extension.md`). The whole surface of `openchannel` is
-  `human-only`. It creates and returns a durable signing secret over an edge with no sign-in, and no
-  agent may hold that capability with no human watching.
+  how the core names it too (`docs/how-to/add-an-extension.md`).
 - **Its own scheduled jobs**: declared in a `jobs.yaml` fragment, and sent out as one job with a worker
   run per live tenant.
 - **Its own secret namespace**: reached through `Runtime.Secrets()`, keyed by the plain names the unit
@@ -423,7 +422,7 @@ checked against the full budget for names, so a name a unit takes today stays go
   Authority works the other way from `tx.Core()`. An ingest is refused from a call that has a caller, and
   it runs on the live authority of the member named in `on`. That member must hold one of the user-scoped
   secrets of this unit now. Giving a credential to a unit is the step that says "you may work for this
-  user". `extensions/openchannel` is the unit that runs the path from end to end.
+  user".
 
 - **Its own messaging transport**: a `Channel` declares a provider the unit can carry messages on. When a
   user replies to a captured conversation, the reply leaves through the unit. It goes on the credential
@@ -593,12 +592,10 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 | The committed plain stub (and its `replace` in `backend/go.mod`) | `composition/extensions_gen.go` |
 | The `GOWORK` switch every build lane carries | `backend/Makefile` (`GOWORK_COMPOSED`) |
 | The first-party German pack | `extensions/de/de.go` |
-| The reference unit (every capability but a finance source), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
-| Its connector half: ingress, merge key, transport | `extensions/openchannel/drain.go`, `record.go`, `send.go` |
-| Its inbound edge with no sign-in | `extensions/openchannel/inbound.go` |
-| Its screen, in the workspace package of the unit | `extensions/openchannel/frontend/screen.tsx` |
-| The tests of that screen, and the lane that runs them | `extensions/openchannel/frontend/screen.test.tsx`, `frontend/vitest.ext.config.ts` |
 | The reference fixture | `fixtures/extensions/crm-hello/crmhello.go` |
+| A unit screen, in the workspace package of the unit | `fixtures/extensions/crm-hello/frontend/screen.tsx` |
+| The test of that screen, and the lane that runs it | `fixtures/extensions/crm-hello/frontend/instrument.test.ts`, `frontend/vitest.ext.config.ts` |
+| The fixture with a served tool, a per-member channel, a user secret, a job that defers itself, an ingress source and its own tables | `fixtures/extensions/crm-relay/relay.go` |
 | The fixture units that must fail migration | `fixtures/extensions/bad-unprefixed-table/`, `bad-overbudget-table/` |
 | The fixture that proves one unit cannot read the secrets of another | `fixtures/extensions/crm-nosy/crmnosy.go` |
 | The fitness tests of the extension tier | `backend/gates/extensions_arch_test.go` |

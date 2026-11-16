@@ -12,9 +12,9 @@ import { ProviderList, ProviderRow } from "../../design-system/providerrow";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { useViewerZone } from "../../lib/viewerzone";
 import { usePassports } from "../../lib/passports.queries";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 
 type Connection = components["schemas"]["PersonalChannelConnection"];
 
@@ -26,8 +26,7 @@ const AI_ASSISTANTS_HREF = "#/settings/agents";
 function useConnection() {
   return useQuery({
     queryKey: CONNECTION_KEY,
-    queryFn: async () =>
-      unwrap(await api.GET("/personal-channels/connection")),
+    queryFn: async () => unwrap(await api.GET("/personal-channels/connection")),
   });
 }
 
@@ -125,14 +124,22 @@ function Rows({ connection }: Readonly<{ connection: Connection }>) {
           name={t("personalChannels.replies")}
           status={{
             tone: connection.replies_waiting > 0 ? "warning" : "default",
-            label: plural("personalChannels.waiting", connection.replies_waiting, {
-              count: formatNumber(connection.replies_waiting, locale),
-            }),
+            label: plural(
+              "personalChannels.waiting",
+              connection.replies_waiting,
+              {
+                count: formatNumber(connection.replies_waiting, locale),
+              },
+            ),
           }}
           facts={[
             connection.oldest_reply_waiting_at
               ? t("personalChannels.oldest", {
-                  date: formatDate(connection.oldest_reply_waiting_at, locale, zone),
+                  date: formatDate(
+                    connection.oldest_reply_waiting_at,
+                    locale,
+                    zone,
+                  ),
                 })
               : null,
             connection.last_pull_at
