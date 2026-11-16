@@ -7852,8 +7852,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.basisOn.agreement":
     "thực hiện thỏa thuận giữa quý khách và {controller} theo Điều 19.1(d) Luật Bảo vệ dữ liệu cá nhân",
   "privacynotice.basisOn.us": "chúng tôi",
+  "privacynotice.basis.none":
+    "Chưa có căn cứ xử lý được ghi nhận cho việc sử dụng này.",
+  "privacynotice.basisOn.none": "chưa có căn cứ xử lý được ghi nhận",
   "confirm.done.bodyNamed":
-    "Đã ghi nhận câu trả lời. Nhân viên của {controller} sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, {controller} sẽ báo lý do cho quý khách. Liên kết này đã hết lượt dùng.",
+    "Đã ghi nhận câu trả lời. Nhân viên của {controller} sẽ xử lý yêu cầu của quý khách: chỉnh sửa thông tin trong 10 ngày và xóa thông tin trong 20 ngày. Nếu cần thêm thời gian, quý khách sẽ được báo lý do. Liên kết này đã hết lượt dùng.",
   "sendPermission.unanswered":
     "Lần kiểm tra trước khi gửi chưa hoàn tất. Khi gửi sẽ kiểm tra lại.",
   "sendPermission.reason.objected":

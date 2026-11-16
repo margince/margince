@@ -75378,10 +75378,12 @@ components:
           type: array
           description: |
             The basis on record for each entry in `purposes`, at the same index: `consent` for a
-            purpose the reader agreed to, else the kind of a live communication basis.
+            purpose the reader agreed to, else the kind of a live communication basis. `none` says
+            no basis is recorded, for a reader whose country has no legitimate-interest basis and
+            whose record holds neither their consent nor an agreement with them.
           items:
             type: string
-            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement]
+            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement, none]
             x-extensible-enum: true
         data_categories:
           type: array

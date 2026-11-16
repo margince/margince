@@ -88,12 +88,16 @@ export function PrivacyNotice({
     since: since[i] ?? null,
   }));
   // The basis as the clause the purpose card reads: a consent with its date,
-  // an agreement with the controller named, else the basis's own sentence.
+  // an agreement with the controller named, or that none is recorded. Any
+  // other basis keeps its own sentence.
   const basisClause = (purpose: (typeof purposes)[number]): string | null => {
     if (purpose.basis === "consent" && purpose.since) {
       return t("privacynotice.basisOn.consent", {
         date: formatDate(purpose.since, locale, tz),
       });
+    }
+    if (purpose.basis === "none") {
+      return t("privacynotice.basisOn.none");
     }
     if (purpose.basis === "contract") {
       return t("privacynotice.basisOn.agreement", {

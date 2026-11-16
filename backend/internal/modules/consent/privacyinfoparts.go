@@ -128,9 +128,8 @@ func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *Privac
 
 // settleUsesTx is the uses the page lists. A reader whose pack has no
 // legitimate-interest basis is never shown one. A reader with no use on record
-// is shown business correspondence, so the page always names a purpose. Under
-// such a pack it rests on the agreement with them (Law 91/2025 Art. 19.1(d)).
-// Elsewhere it rests on legitimate interests (GDPR Art. 14(1)(c)).
+// is shown business correspondence, so the page always names a purpose
+// (GDPR Art. 14(1)(c)). Its basis is defaultUseBasis.
 func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse) ([]NoticeUse, error) {
 	who := ruleSubject{Kind: entityContact, ID: subject.ContactID.String()}
 	if subject.ContactID.IsZero() {
@@ -152,11 +151,31 @@ func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []
 	if len(kept) > 0 {
 		return kept, nil
 	}
-	basis := commsauthz.BasisLegitimateInterests
+	var onRecord commsauthz.Basis
 	if noInterests {
-		basis = commsauthz.BasisContract
+		if onRecord, err = lawfulUseOnRecordTx(ctx, tx, subjectRef{Kind: who.Kind, ID: who.ID}); err != nil {
+			return nil, err
+		}
 	}
-	return []NoticeUse{{PurposeKey: PurposeBusinessCorrespondence, Basis: string(basis)}}, nil
+	return []NoticeUse{{PurposeKey: PurposeBusinessCorrespondence, Basis: defaultUseBasis(noInterests, onRecord)}}, nil
+}
+
+// noBasisRecorded is the basis code the page shows when nothing lawful is on
+// record. The page says so plainly instead of naming an agreement that does
+// not exist.
+const noBasisRecorded = "none"
+
+// defaultUseBasis is the basis of the purpose a reader with no use on record
+// is shown. Outside a pack without legitimate interests it is legitimate
+// interests. Under one it is the consent or agreement on record, else none.
+func defaultUseBasis(noInterests bool, onRecord commsauthz.Basis) string {
+	switch {
+	case !noInterests:
+		return string(commsauthz.BasisLegitimateInterests)
+	case onRecord == "":
+		return noBasisRecorded
+	}
+	return string(onRecord)
 }
 
 // namePurposesTx names each use by its purpose's published label. The key

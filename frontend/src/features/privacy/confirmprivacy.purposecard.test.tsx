@@ -111,3 +111,24 @@ describe("the Vietnamese privacy page", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("a Vietnamese reader with nothing on record", () => {
+  it("is told no basis is recorded, and no agreement is claimed", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        ...NOTICE,
+        purposes: ["Business correspondence"],
+        purpose_keys: ["business_correspondence"],
+        purpose_bases: ["none"],
+        purpose_since: [null],
+      }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-vi-none" />);
+
+    expect(
+      await screen.findByText(/chưa có căn cứ xử lý được ghi nhận/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Điều 19\.1\(d\)/)).not.toBeInTheDocument();
+  });
+});

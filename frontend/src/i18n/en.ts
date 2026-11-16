@@ -8046,6 +8046,8 @@ export const en = {
   "privacynotice.basisOn.agreement":
     "to carry out the agreement between you and {controller}",
   "privacynotice.basisOn.us": "us",
+  "privacynotice.basis.none": "No basis is recorded for this use.",
+  "privacynotice.basisOn.none": "no basis recorded",
   "confirm.done.bodyNamed":
     "Your answer is recorded. Staff at {controller} will handle your request and give you the reason if they need more time. This link is now used up.",
   "sendPermission.unanswered":

@@ -142,6 +142,9 @@ func TestTheRecipientsPackDecidesTheControllerMailAndThePages(t *testing.T) {
 					t.Errorf("the privacy page names legitimate interests under a pack that has no such basis")
 				}
 			}
+			if c.owesID && (len(bases) != 1 || bases[0] != noBasisRecorded) {
+				t.Errorf("with nothing on record the privacy page names %v, want no basis recorded", bases)
+			}
 
 			lines, err := e.store.Disclosures(e.ctx, commsauthz.CategoryReplyToInbound,
 				[]string{"subject-" + e.contact.String() + "@example.test"}, ids.UUID{})

@@ -8046,6 +8046,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.basisOn.agreement":
     "Erfüllung der Vereinbarung zwischen Ihnen und {controller}",
   "privacynotice.basisOn.us": "uns",
+  "privacynotice.basis.none":
+    "Für diese Nutzung ist keine Rechtsgrundlage erfasst.",
+  "privacynotice.basisOn.none": "keine Rechtsgrundlage erfasst",
   "confirm.done.bodyNamed":
     "Ihre Antwort wurde erfasst. Das Team von {controller} bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "sendPermission.unanswered":

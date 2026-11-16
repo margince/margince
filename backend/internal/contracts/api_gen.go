@@ -19070,6 +19070,7 @@ const (
 	PrivacyInformationPagePurposeBasesExistingCustomerException      PrivacyInformationPagePurposeBases = "existing_customer_exception"
 	PrivacyInformationPagePurposeBasesLegalObligation                PrivacyInformationPagePurposeBases = "legal_obligation"
 	PrivacyInformationPagePurposeBasesLegitimateInterests            PrivacyInformationPagePurposeBases = "legitimate_interests"
+	PrivacyInformationPagePurposeBasesNone                           PrivacyInformationPagePurposeBases = "none"
 	PrivacyInformationPagePurposeBasesPrecontractRequest             PrivacyInformationPagePurposeBases = "precontract_request"
 	PrivacyInformationPagePurposeBasesSubjectInitiatedCorrespondence PrivacyInformationPagePurposeBases = "subject_initiated_correspondence"
 	PrivacyInformationPagePurposeBasesVitalOrSecurityInterest        PrivacyInformationPagePurposeBases = "vital_or_security_interest"
@@ -19088,6 +19089,8 @@ func (e PrivacyInformationPagePurposeBases) Valid() bool {
 	case PrivacyInformationPagePurposeBasesLegalObligation:
 		return true
 	case PrivacyInformationPagePurposeBasesLegitimateInterests:
+		return true
+	case PrivacyInformationPagePurposeBasesNone:
 		return true
 	case PrivacyInformationPagePurposeBasesPrecontractRequest:
 		return true
@@ -58905,7 +58908,9 @@ type PrivacyInformationPage struct {
 	Language *MailLanguage `json:"language,omitempty"`
 
 	// PurposeBases The basis on record for each entry in `purposes`, at the same index: `consent` for a
-	// purpose the reader agreed to, else the kind of a live communication basis.
+	// purpose the reader agreed to, else the kind of a live communication basis. `none` says
+	// no basis is recorded, for a reader whose country has no legitimate-interest basis and
+	// whose record holds neither their consent nor an agreement with them.
 	PurposeBases []PrivacyInformationPagePurposeBases `json:"purpose_bases"`
 
 	// PurposeKeys The key of each entry in `purposes`, at the same index. A page names a purpose the
