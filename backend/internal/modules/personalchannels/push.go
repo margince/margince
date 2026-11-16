@@ -6,7 +6,7 @@ package personalchannels
 import (
 	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -26,6 +26,9 @@ const (
 	StatusRefused   = "refused"
 	StatusDeferred  = "deferred"
 )
+
+// errNoLander is a wiring fault: compose always supplies a lander.
+var errNoLander = errors.New("personal channels: no lander is composed")
 
 // MaxPush is how many messages one push may carry.
 const MaxPush = 50
@@ -72,9 +75,9 @@ func origin(ctx context.Context) (kind string, id *ids.UUID) {
 }
 
 // Push lands msgs for the caller. One message's refusal does not refuse the
-// rest; messages left when deadline passes answer deferred, and a resend lands
-// them safely because each is keyed by its message_id.
-func (s *Store) Push(ctx context.Context, msgs []PushMessage, deadline time.Time) ([]PushResult, error) {
+// rest. Messages left when the budget runs out answer deferred. A resend lands
+// them safely, because each is keyed by its message_id.
+func (s *Store) Push(ctx context.Context, msgs []PushMessage, budget time.Duration) ([]PushResult, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return nil, err
 	}
@@ -82,8 +85,9 @@ func (s *Store) Push(ctx context.Context, msgs []PushMessage, deadline time.Time
 		return nil, invalid("send 1 to %d messages at a time", MaxPush)
 	}
 	if s.lander == nil {
-		return nil, errors.New("personal channels: no lander is composed")
+		return nil, errNoLander
 	}
+	deadline := s.now().Add(budget)
 	user, err := member(ctx)
 	if err != nil {
 		return nil, err
@@ -115,7 +119,7 @@ func (s *Store) pushOne(ctx context.Context, connection, user ids.UUID, m PushMe
 	res := PushResult{MessageID: m.MessageID}
 	n, err := Normalize(connection, m)
 	if err != nil {
-		return refused(res, err), nil
+		return refused(ctx, res, err), nil
 	}
 	var files []extension.InboundFile
 	if len(m.UploadIDs) > 0 {
@@ -123,19 +127,19 @@ func (s *Store) pushOne(ctx context.Context, connection, user ids.UUID, m PushMe
 			files, err = readUploadsTx(ctx, tx, user, m.UploadIDs)
 			return err
 		}); err != nil {
-			return refused(res, err), nil
+			return refused(ctx, res, err), nil
 		}
 	}
 	landed, err := s.lander.Land(ctx, user, n, files)
 	if err != nil {
-		return refused(res, err), nil
+		return refused(ctx, res, err), nil
 	}
 	res.Status, res.Reason = landed.Status, landed.Reason
 	if landed.Status == StatusLanded || landed.Status == StatusDuplicate {
 		id := landed.ActivityID
 		res.ActivityID = &id
 	}
-	if landed.Status != StatusLanded {
+	if landed.Status != StatusLanded && landed.Status != StatusDuplicate {
 		return res, nil
 	}
 	return res, s.recordLanding(ctx, connection, n, landed.ActivityID, m.UploadIDs)
@@ -160,13 +164,14 @@ func (s *Store) recordLanding(ctx context.Context, connection ids.UUID, n Normal
 	})
 }
 
-// refused answers a message the push cannot land, with the reason a client can
-// act on. Only an invalid or unknown message is the client's to fix; anything
-// else is reported as a refusal too, so one message never fails the batch.
-func refused(res PushResult, err error) PushResult {
+// refused answers a message the push cannot land. Only an invalid or unknown
+// message is the client's to fix, so only those carry their reason. Anything
+// else is logged and answered with a fixed reason, so one never fails the batch.
+func refused(ctx context.Context, res PushResult, err error) PushResult {
 	res.Status, res.Reason = StatusRefused, err.Error()
 	if !errors.Is(err, apperrors.ErrInvalidArgument) && !errors.Is(err, apperrors.ErrNotFound) {
-		res.Reason = fmt.Sprintf("Margince could not land it: %v", err)
+		slog.ErrorContext(ctx, "personal channels: a pushed message could not land", "message_id", res.MessageID, "err", err)
+		res.Reason = "Margince could not land it; send it again"
 	}
 	return res
 }

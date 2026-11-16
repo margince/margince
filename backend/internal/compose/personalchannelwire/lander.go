@@ -106,7 +106,7 @@ func participants(m personalchannels.NormalizedMessage) []connector.MessageParti
 	}
 	out := make([]connector.MessageParticipant, 0, len(m.Participants))
 	for _, p := range m.Participants {
-		out = append(out, connector.MessageParticipant{ChannelUserID: m.Network + "/" + p.Account, DisplayName: p.Name})
+		out = append(out, connector.MessageParticipant{ChannelUserID: personalchannels.ParticipantIdentity(m, p.Account), DisplayName: p.Name})
 	}
 	return connector.CapParticipants(out).Participants
 }

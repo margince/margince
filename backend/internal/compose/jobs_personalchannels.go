@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -37,9 +38,9 @@ type personalChannelSweepWorker struct {
 
 func (w *personalChannelSweepWorker) Work(ctx context.Context, _ *river.Job[PersonalChannelSweepArgs]) error {
 	passCtx, err := installationJobCtx(ctx, w.identity)
-	passCtx = principal.SystemActing(passCtx, personalchannels.SweepActor)
-	if err == nil {
-		err = personalchannelwire.Sweep(passCtx, InstallationDB(w.pool), time.Now(), w.log)
+	if err != nil {
+		return jobs.FaultContext(ctx, fmt.Errorf("personal_channel_sweep: resolving the installation: %w", err))
 	}
-	return jobs.FaultContext(ctx, err)
+	passCtx = principal.SystemActing(passCtx, personalchannels.SweepActor)
+	return jobs.FaultContext(ctx, personalchannelwire.Sweep(passCtx, InstallationDB(w.pool), time.Now(), w.log))
 }

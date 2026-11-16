@@ -12,7 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -25,19 +26,36 @@ const (
 	maxPull       = 50
 )
 
-// What a client may say about a reply it pulled, and what an ack can answer.
+// A reply's states, as personal_channel_reply_state_check lists them.
 const (
-	OutcomeSent           = "sent"
-	OutcomeFailed         = "failed"
-	AckRecorded           = "recorded"
-	AckUnknownDelivery    = "unknown_delivery"
-	AckAlreadySettled     = "already_settled"
-	stateWaiting          = "waiting"
-	stateExpired          = "expired"
-	notDeliveredByExpiry  = "no client picked the reply up within 7 days"
-	notDeliveredByClient  = "the client could not send it"
-	unknownDeliveryReason = "no reply of yours has that delivery id"
+	stateWaiting = "waiting"
+	statePulled  = "pulled"
+	stateExpired = "expired"
 )
+
+// What a client may say about a reply it pulled.
+const (
+	OutcomeSent   = "sent"
+	OutcomeFailed = "failed"
+)
+
+// What an ack answers.
+const (
+	AckRecorded        = "recorded"
+	AckUnknownDelivery = "unknown_delivery"
+	AckAlreadySettled  = "already_settled"
+)
+
+const replyEntity = "personal_channel_reply"
+
+// notDeliveredByClient is the reason a failed ack that named none is given.
+const notDeliveredByClient = "the client could not send it"
+
+// notDeliveredByExpiry is the reason an expired reply is given.
+var notDeliveredByExpiry = fmt.Sprintf("no client picked the reply up within %d days", int(replyLifetime/(24*time.Hour)))
+
+// errNoSettler is a wiring fault: compose always supplies a settler.
+var errNoSettler = errors.New("personal channels: no settler is composed")
 
 // ReplyInput is one reply a rep wrote, as the send path queues it.
 type ReplyInput struct {
@@ -81,10 +99,11 @@ type AckResult struct {
 	Result     string
 }
 
-// Settler marks a reply's delivery as not delivered on the timeline. compose
-// supplies it, because the delivery belongs to comms.
+// Settler marks a reply's delivery as not delivered on the timeline, in the
+// transaction that settled the reply. compose supplies it, because the delivery
+// belongs to comms.
 type Settler interface {
-	NotDelivered(ctx context.Context, activity ids.UUID, reason string) error
+	NotDelivered(ctx context.Context, tx pgx.Tx, activity ids.UUID, reason string) error
 }
 
 // WithSettler returns a copy of the store that settles failed and expired replies through t.
@@ -162,13 +181,21 @@ func leaseReplies(ctx context.Context, tx pgx.Tx, connection ids.UUID, now time.
 }
 
 // Ack records the client's word on each reply. A failed one is settled as not
-// delivered; the core does not retry it, and the member sends it again.
+// delivered in the same transaction; the core does not retry it.
 func (s *Store) Ack(ctx context.Context, acks []Ack) ([]AckResult, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return nil, err
 	}
 	if len(acks) == 0 || len(acks) > maxPull {
 		return nil, invalid("ack 1 to %d replies at a time", maxPull)
+	}
+	for _, a := range acks {
+		if a.Outcome != OutcomeSent && a.Outcome != OutcomeFailed {
+			return nil, invalid("an ack's outcome is sent or failed, not %q", a.Outcome)
+		}
+	}
+	if s.settler == nil {
+		return nil, errNoSettler
 	}
 	out := make([]AckResult, 0, len(acks))
 	err := s.tx(ctx, func(tx pgx.Tx, user ids.UUID) error {
@@ -190,9 +217,6 @@ func (s *Store) Ack(ctx context.Context, acks []Ack) ([]AckResult, error) {
 
 func (s *Store) ackOne(ctx context.Context, tx pgx.Tx, connection ids.UUID, a Ack) (AckResult, error) {
 	res := AckResult{DeliveryID: a.DeliveryID}
-	if a.Outcome != OutcomeSent && a.Outcome != OutcomeFailed {
-		return res, invalid("an ack's outcome is sent or failed, not %q", a.Outcome)
-	}
 	var activity ids.UUID
 	var state string
 	err := tx.QueryRow(ctx, `SELECT activity_id, state FROM personal_channel_reply WHERE id = $1 AND connection_id = $2 FOR UPDATE`,
@@ -203,7 +227,7 @@ func (s *Store) ackOne(ctx context.Context, tx pgx.Tx, connection ids.UUID, a Ac
 		return res, nil
 	case err != nil:
 		return res, err
-	case state != "pulled" && state != stateWaiting:
+	case state != statePulled && state != stateWaiting:
 		res.Result = AckAlreadySettled
 		return res, nil
 	}
@@ -214,56 +238,72 @@ func (s *Store) ackOne(ctx context.Context, tx pgx.Tx, connection ids.UUID, a Ac
 		 WHERE id = $1`, a.DeliveryID, a.Outcome, a.Reason, a.ProviderMessageID, s.now()); err != nil {
 		return res, err
 	}
+	if _, err := storekit.Audit(ctx, tx, "update", replyEntity, a.DeliveryID,
+		map[string]any{"state": state}, map[string]any{"state": a.Outcome, "reason": a.Reason}); err != nil {
+		return res, err
+	}
 	res.Result = AckRecorded
 	if a.Outcome == OutcomeFailed {
-		return res, s.settle(ctx, activity, firstNonEmpty(a.Reason, notDeliveredByClient))
+		return res, s.settler.NotDelivered(ctx, tx, activity, firstNonEmpty(a.Reason, notDeliveredByClient))
 	}
 	return res, nil
 }
 
-// ExpireReplies settles every reply no client acked within replyLifetime. Only
-// the sweep runs it.
-func (s *Store) ExpireReplies(ctx context.Context, now time.Time) (int, error) {
-	if err := onlyTheSweep(ctx); err != nil {
-		return 0, err
+// expireReplies settles every reply no client acked within replyLifetime, each
+// with its delivery in one transaction.
+func expireReplies(ctx context.Context, db *database.DB, settler Settler, now time.Time) (int, error) {
+	if settler == nil {
+		return 0, errNoSettler
 	}
-	var expired []ids.UUID
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			UPDATE personal_channel_reply
-			   SET state = 'expired', body = NULL, recipient_account = NULL, leased_until = NULL,
-			       reason = $2, settled_at = $1, updated_at = $1
-			 WHERE state IN ('waiting', 'pulled') AND created_at < $3
-			RETURNING activity_id`, now, notDeliveredByExpiry, now.Add(-replyLifetime))
+	var expired int
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
+		dues, err := expireDue(ctx, tx, now)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var id ids.UUID
-			if err := rows.Scan(&id); err != nil {
+		for _, d := range dues {
+			if _, err := storekit.Audit(ctx, tx, "update", replyEntity, d.reply,
+				map[string]any{"state": d.was}, map[string]any{"state": stateExpired}); err != nil {
 				return err
 			}
-			expired = append(expired, id)
+			if err := settler.NotDelivered(ctx, tx, d.activity, notDeliveredByExpiry); err != nil {
+				return err
+			}
 		}
-		return rows.Err()
+		expired = len(dues)
+		return nil
 	})
-	if err != nil {
-		return 0, err
-	}
-	for _, activity := range expired {
-		if err := s.settle(ctx, activity, notDeliveredByExpiry); err != nil {
-			return len(expired), err
-		}
-	}
-	return len(expired), nil
+	return expired, err
 }
 
-func (s *Store) settle(ctx context.Context, activity ids.UUID, reason string) error {
-	if s.settler == nil {
-		return fmt.Errorf("personal channels: no settler is composed: %w", apperrors.ErrConflict)
+type dueReply struct {
+	reply, activity ids.UUID
+	was             string
+}
+
+func expireDue(ctx context.Context, tx pgx.Tx, now time.Time) ([]dueReply, error) {
+	rows, err := tx.Query(ctx, `
+		WITH due AS MATERIALIZED (
+			SELECT id, state FROM personal_channel_reply
+			 WHERE state IN ('waiting', 'pulled') AND created_at < $3 FOR UPDATE)
+		UPDATE personal_channel_reply r
+		   SET state = 'expired', body = NULL, recipient_account = NULL, leased_until = NULL,
+		       reason = $2, settled_at = $1, updated_at = $1
+		  FROM due WHERE r.id = due.id
+		RETURNING r.id, r.activity_id, due.state`, now, notDeliveredByExpiry, now.Add(-replyLifetime))
+	if err != nil {
+		return nil, err
 	}
-	return s.settler.NotDelivered(ctx, activity, reason)
+	defer rows.Close()
+	var out []dueReply
+	for rows.Next() {
+		var d dueReply
+		if err := rows.Scan(&d.reply, &d.activity, &d.was); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
 }
 
 func firstNonEmpty(a, b string) string {

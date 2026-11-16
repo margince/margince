@@ -28,10 +28,10 @@ func TestTheNetworkIsFoldedIntoTheIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if n.Account != "whatsapp/8490@s.whatsapp.net" {
+	if n.Account != "whatsapp/8490@s.whatsapp.net/"+testConnection.String() {
 		t.Fatalf("account = %q", n.Account)
 	}
-	want := "personal_channels:" + testConnection.String() + ":whatsapp/8490@s.whatsapp.net"
+	want := "personal_channels:" + testConnection.String() + ":" + n.Account
 	if n.ThreadKey != want {
 		t.Fatalf("thread key = %q, want %q", n.ThreadKey, want)
 	}
@@ -44,7 +44,7 @@ func TestAMessageWithNoNetworkIsGeneric(t *testing.T) {
 	m := inbound()
 	m.Network = ""
 	n, err := Normalize(testConnection, m)
-	if err != nil || n.Network != "generic" || n.Account != "generic/8490@s.whatsapp.net" {
+	if err != nil || n.Network != "generic" || n.Account != "generic/8490@s.whatsapp.net/"+testConnection.String() {
 		t.Fatalf("n = %+v, %v", n, err)
 	}
 }
@@ -54,7 +54,7 @@ func TestAnOutboundMessageNamesTheCustomerAsItsCounterparty(t *testing.T) {
 	m.Direction = DirectionOutbound
 	m.From, m.To = m.To, m.From
 	n, err := Normalize(testConnection, m)
-	if err != nil || n.Account != "whatsapp/8490@s.whatsapp.net" || n.Direction != DirectionOutbound {
+	if err != nil || n.Account != "whatsapp/8490@s.whatsapp.net/"+testConnection.String() || n.Direction != DirectionOutbound {
 		t.Fatalf("n = %+v, %v", n, err)
 	}
 }
@@ -66,7 +66,7 @@ func TestAGroupMessageThreadsPerSenderWithinTheGroup(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "personal_channels:" + testConnection.String() + ":whatsapp/8490@s.whatsapp.net:group-9"
+	want := "personal_channels:" + testConnection.String() + ":" + n.Account + ":group-9"
 	if n.ThreadKey != want {
 		t.Fatalf("thread key = %q, want %q", n.ThreadKey, want)
 	}
@@ -89,5 +89,18 @@ func TestAMessageThatCannotBeKeyedIsRefused(t *testing.T) {
 				t.Fatalf("err = %v, want invalid argument", err)
 			}
 		})
+	}
+}
+
+func TestTheSameAccountFromTwoConnectionsIsTwoIdentities(t *testing.T) {
+	other := ids.MustParse("019a0000-0000-7000-8000-000000000002")
+	a, errA := Normalize(testConnection, inbound())
+	b, errB := Normalize(other, inbound())
+	if errA != nil || errB != nil || a.Account == b.Account {
+		t.Fatalf("identities %q and %q must differ per connection", a.Account, b.Account)
+	}
+	network, account, ok := SplitIdentity(a.Account)
+	if !ok || network != "whatsapp" || account != "8490@s.whatsapp.net" {
+		t.Fatalf("SplitIdentity(%q) = %q, %q, %v", a.Account, network, account, ok)
 	}
 }

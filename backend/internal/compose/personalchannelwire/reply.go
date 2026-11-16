@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -18,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// ErrNotTheirChannel refuses a reply from anyone but the member whose own chat
-// app carries the thread: it would go out as words they did not write.
+// ErrNotTheirChannel refuses a reply from anyone but the member whose chat app
+// carries the thread. It would go out as words that member did not write.
 var ErrNotTheirChannel = fmt.Errorf("only the member whose personal channel brought this chat in can reply here, from their own chat app: %w", comms.ErrCannotSend)
 
 // ReplySender queues a reply for the client of the member who sends it.
@@ -37,7 +38,7 @@ func (s ReplySender) SendMessage(ctx context.Context, _ connector.Auth, msg conn
 	if len(msg.Files) > 0 {
 		return connector.SendReceipt{}, connector.ErrFilesNotCarried
 	}
-	network, account, ok := strings.Cut(msg.Recipient.ChannelUserID, "/")
+	network, account, ok := personalchannels.SplitIdentity(msg.Recipient.ChannelUserID)
 	if !ok {
 		return connector.SendReceipt{}, fmt.Errorf("personal channels: recipient %q names no network: %w", msg.Recipient.ChannelUserID, comms.ErrCannotSend)
 	}
@@ -89,11 +90,11 @@ func (s ReplySender) threadConnection(ctx context.Context, tx pgx.Tx, activity i
 }
 
 // Settler marks a reply not delivered on its comms delivery.
-type Settler struct{ Comms *comms.Store }
+type Settler struct{}
 
 var _ personalchannels.Settler = Settler{}
 
 // NotDelivered settles the reply's delivery as not delivered.
-func (s Settler) NotDelivered(ctx context.Context, activity ids.UUID, reason string) error {
-	return s.Comms.RecordChannelNotDelivered(ctx, activity, reason)
+func (Settler) NotDelivered(ctx context.Context, tx pgx.Tx, activity ids.UUID, reason string) error {
+	return comms.RecordChannelNotDeliveredTx(ctx, tx, time.Now(), activity, reason)
 }

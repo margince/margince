@@ -33,8 +33,8 @@ function useConnection() {
 
 /**
  * Personal channels: a member brings their own chats in through an AI
- * assistant (or, in the developer section, their own client) and picks the
- * replies up. Off until the member turns it on.
+ * assistant and picks the replies up. Their own client is set up in the
+ * developer section. Off until the member turns it on.
  */
 export function PersonalChannelsCard() {
   const t = useT();

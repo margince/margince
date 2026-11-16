@@ -28,7 +28,7 @@ func (h Handlers) PushPersonalChannelMessages(w http.ResponseWriter, r *http.Req
 	for _, m := range req.Messages {
 		msgs = append(msgs, pushMessageOf(m))
 	}
-	results, err := h.store.Push(r.Context(), msgs, time.Now().Add(pushBudget))
+	results, err := h.store.Push(r.Context(), msgs, pushBudget)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

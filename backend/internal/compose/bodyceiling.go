@@ -4,9 +4,10 @@
 package compose
 
 import (
-	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"mime"
 	"net/http"
+
+	"github.com/margince/margince/backend/internal/modules/personalchannels"
 
 	"github.com/go-chi/chi/v5"
 

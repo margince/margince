@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package personalchannels lets a member bring their own chats and files into
-// Margince and pull their replies back out, through a client they run (an AI
-// assistant over MCP, or their own program with a passport). Margince never
-// reads a chat network itself. Handlers→Store.
+// Margince and pull their replies back out. A client the member runs does the
+// work: an AI assistant over MCP, or their own program with a passport. Margince
+// never reads a chat network itself. Handlers→Store.
 //
 // Tables owned: docs/reference/entity-model/personalchannels.md.
 package personalchannels

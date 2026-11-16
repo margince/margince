@@ -11,18 +11,18 @@
       "covered": 39,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 916,
-      "web_app_calls_open": 755,
+      "web_app_calls": 918,
+      "web_app_calls_open": 756,
       "web_app_calls_ask_first": 106,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 135,
+      "web_app_calls_security": 136,
       "web_app_calls_covered": 25,
       "parity_signed_in_percent": 81.6,
-      "parity_web_app_percent": 82.4
+      "parity_web_app_percent": 82.3
     },
-    "open_with_no_web_app_call_found": 115,
-    "parity_web_app_counting_covered_percent": 85.1,
-    "parity_web_app_once_pending_is_open_percent": 85.1
+    "open_with_no_web_app_call_found": 114,
+    "parity_web_app_counting_covered_percent": 85,
+    "parity_web_app_once_pending_is_open_percent": 85
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -769,14 +769,14 @@
       "covered": 1,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 59,
-      "web_app_calls_open": 45,
+      "web_app_calls": 61,
+      "web_app_calls_open": 46,
       "web_app_calls_ask_first": 11,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 13,
+      "web_app_calls_security": 14,
       "web_app_calls_covered": 1,
       "parity_signed_in_percent": 75.3,
-      "parity_web_app_percent": 76.2,
+      "parity_web_app_percent": 75.4,
       "areas": [
         {
           "key": "capture_triage",
@@ -809,14 +809,14 @@
           "covered": 1,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 33,
-          "web_app_calls_open": 20,
+          "web_app_calls": 35,
+          "web_app_calls_open": 21,
           "web_app_calls_ask_first": 7,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 12,
+          "web_app_calls_security": 13,
           "web_app_calls_covered": 1,
           "parity_signed_in_percent": 63.4,
-          "parity_web_app_percent": 60.6
+          "parity_web_app_percent": 60
         },
         {
           "key": "finance_source",
@@ -14770,7 +14770,8 @@
       "scope": "read",
       "verb": "read_personal_channel",
       "router": "read_workspace",
-      "action": "personal_channel"
+      "action": "personal_channel",
+      "web_app": "direct"
     },
     {
       "method": "PATCH",
@@ -14781,7 +14782,8 @@
       ],
       "group": "capture",
       "area": "connectors",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "POST",

@@ -7,12 +7,16 @@ package personalchannels
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 var pngHeader = []byte("\x89PNG\r\n\x1a\n0000000000000000")
@@ -66,10 +70,19 @@ func TestAnotherMembersUploadIsNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.store.ReadUploads(e.as(e.other, repGrant), []ids.UUID{up.ID}); !errors.Is(err, apperrors.ErrNotFound) {
+	read := func(user ids.UUID) ([]extension.InboundFile, error) {
+		var files []extension.InboundFile
+		err := e.store.db.Tx(e.as(user, repGrant), func(tx pgx.Tx) error {
+			var err error
+			files, err = readUploadsTx(e.as(user, repGrant), tx, user, []ids.UUID{up.ID})
+			return err
+		})
+		return files, err
+	}
+	if _, err := read(e.other); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not found for another member's upload", err)
 	}
-	files, err := e.store.ReadUploads(e.as(e.rep, repGrant), []ids.UUID{up.ID})
+	files, err := read(e.rep)
 	if err != nil || len(files) != 1 || !bytes.Equal(files[0].Body, pngHeader) {
 		t.Fatalf("own upload = %v, %v", files, err)
 	}
@@ -82,18 +95,25 @@ func TestAnUnusedUploadIsSweptAfterADay(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.exec(t, `UPDATE personal_channel_upload SET created_at = $1`, e.now.Add(-23*time.Hour-59*time.Minute))
-	if n, err := e.store.SweepUploads(e.system(), e.now); err != nil || n != 0 {
+	if n, err := sweepFiles(e); err != nil || n != 0 {
 		t.Fatalf("at 23h59 swept %d, %v; want 0", n, err)
 	}
 	e.exec(t, `UPDATE personal_channel_upload SET created_at = $1`, e.now.Add(-24*time.Hour-time.Minute))
-	if n, err := e.store.SweepUploads(e.system(), e.now); err != nil || n != 1 {
+	if n, err := sweepFiles(e); err != nil || n != 1 {
 		t.Fatalf("at 24h01 swept %d, %v; want 1", n, err)
 	}
 }
 
 func TestOnlyTheSweepMayDeleteStagedFiles(t *testing.T) {
 	e := setupChannels(t)
-	if _, err := e.store.SweepUploads(e.as(e.rep, repGrant), e.now); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := sweepFilesAs(e, e.as(e.rep, repGrant)); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a member ran the sweep: err = %v", err)
 	}
 }
+
+func sweepFilesAs(e *channelEnv, ctx context.Context) (int, error) {
+	files, _, err := Sweep(ctx, e.store.db, &notDelivered{settled: map[ids.UUID]string{}}, e.now)
+	return files, err
+}
+
+func sweepFiles(e *channelEnv) (int, error) { return sweepFilesAs(e, e.system()) }

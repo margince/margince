@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -71,6 +72,9 @@ func (s *Store) StageUpload(ctx context.Context, filename string, body io.Reader
 		if err != nil {
 			return err
 		}
+		if err := underStagingLimit(ctx, tx, conn.ID, up.Size); err != nil {
+			return err
+		}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO personal_channel_upload (connection_id, filename, content_type, byte_size, sha256, content)
 			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
@@ -82,21 +86,6 @@ func (s *Store) StageUpload(ctx context.Context, filename string, body io.Reader
 		return err
 	})
 	return up, err
-}
-
-// ReadUploads returns the caller's own staged files by id, every one or none:
-// an id that is not theirs is not found, as one that never existed.
-func (s *Store) ReadUploads(ctx context.Context, uploads []ids.UUID) ([]extension.InboundFile, error) {
-	if err := auth.Require(ctx, rbacObject, principal.ActionRead); err != nil {
-		return nil, err
-	}
-	var out []extension.InboundFile
-	err := s.tx(ctx, func(tx pgx.Tx, user ids.UUID) error {
-		var err error
-		out, err = readUploadsTx(ctx, tx, user, uploads)
-		return err
-	})
-	return out, err
 }
 
 func readUploadsTx(ctx context.Context, tx pgx.Tx, user ids.UUID, uploads []ids.UUID) ([]extension.InboundFile, error) {
@@ -134,6 +123,27 @@ func readUploadsTx(ctx context.Context, tx pgx.Tx, user ids.UUID, uploads []ids.
 	return out, nil
 }
 
+// The most one connection may hold staged at once, so a client in a loop cannot
+// fill the database before the sweep runs.
+const (
+	maxStagedFiles = 50
+	maxStagedBytes = 200 << 20
+)
+
+func underStagingLimit(ctx context.Context, tx pgx.Tx, connection ids.UUID, adding int64) error {
+	var files int
+	var bytes int64
+	if err := tx.QueryRow(ctx, `SELECT count(*), coalesce(sum(byte_size), 0) FROM personal_channel_upload WHERE connection_id = $1`,
+		connection).Scan(&files, &bytes); err != nil {
+		return err
+	}
+	if files >= maxStagedFiles || bytes+adding > maxStagedBytes {
+		return fmt.Errorf("at most %d files or %d MiB may wait staged; push the messages that name them first: %w",
+			maxStagedFiles, maxStagedBytes>>20, apperrors.ErrConflict)
+	}
+	return nil
+}
+
 // SweepActor is the system principal the sweep job binds, and the only one
 // SweepUploads admits.
 const SweepActor = "personal_channel_sweep"
@@ -147,13 +157,22 @@ func onlyTheSweep(ctx context.Context) error {
 	return fmt.Errorf("only the personal channel sweep deletes staged files: %w", apperrors.ErrPermissionDenied)
 }
 
-// SweepUploads deletes staged files no message named within uploadLifetime.
-func (s *Store) SweepUploads(ctx context.Context, now time.Time) (int, error) {
+// Sweep deletes staged files no message named within uploadLifetime and
+// expires replies no client acked within replyLifetime. Only the sweep job runs it.
+func Sweep(ctx context.Context, db *database.DB, settler Settler, now time.Time) (files, replies int, err error) {
 	if err := onlyTheSweep(ctx); err != nil {
-		return 0, err
+		return 0, 0, err
 	}
+	if files, err = sweepUploads(ctx, db, now); err != nil {
+		return files, 0, err
+	}
+	replies, err = expireReplies(ctx, db, settler, now)
+	return files, replies, err
+}
+
+func sweepUploads(ctx context.Context, db *database.DB, now time.Time) (int, error) {
 	var n int64
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `DELETE FROM personal_channel_upload WHERE created_at < $1`, now.Add(-uploadLifetime))
 		n = tag.RowsAffected()
 		return err

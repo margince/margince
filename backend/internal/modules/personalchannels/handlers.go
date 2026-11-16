@@ -66,7 +66,7 @@ func (h Handlers) UploadPersonalChannelFile(w http.ResponseWriter, r *http.Reque
 		httperr.Write(w, r, err)
 		return
 	}
-	// upload:route /v1/personal-channels/uploads — compose.uploadCeilings bounds the body.
+	// upload:route /v1/personal-channels/uploads (compose.uploadCeilings bounds the body).
 	//nolint:gosec // G120: the route's own MaxBytesReader is the bound; this is the spill threshold.
 	if err := r.ParseMultipartForm(uploadSpillBytes); err != nil {
 		if tooLarge, over := errors.AsType[*http.MaxBytesError](err); over {

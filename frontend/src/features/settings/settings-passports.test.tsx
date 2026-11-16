@@ -181,7 +181,7 @@ describe("PassportCard — minting", () => {
     await user.click(within(dialog).getByText("Agent name"));
     expect(name).toHaveFocus();
 
-    // Six choices that belong together ARE a group, and the group has a name.
+    // Six choices that belong together are a group, and the group has a name.
     const group = within(dialog).getByRole("group", {
       name: /agent permissions/i,
     });

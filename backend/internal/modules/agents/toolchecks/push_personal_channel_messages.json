@@ -1,4 +1,6 @@
 {
   "verb": "push_personal_channel_messages",
-  "checks": []
+  "checks": [
+    "personal_channel.create"
+  ]
 }

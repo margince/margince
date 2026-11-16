@@ -41,7 +41,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 |---|---:|---|---|---|---|---|---|
 | [Business operations](#business-operations) | 382 | 381✓ 1✗ | 355✓ 27✗ | 356✓ 26✗ | 355✓ 27✗ | 178✓ 204✗ | 326✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 31✓ 16✗ | 10✓ 37✗ | 26✓ 21✗ |
-| [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
+| [Capture and connectors](#capture-and-connectors) | 49 | 49✓ 0✗ | 43✓ 6✗ | 43✓ 6✗ | 44✓ 5✗ | 28✓ 21✗ | 42✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
 | [Admin settings](#admin-settings) | 115 | 115✓ 0✗ | 10✓ 105✗ | 0✓ 115✗ | 82✓ 33✗ | 0✓ 115✗ | 0✓ 115✗ |
 | [The user's own account and security](#the-users-own-account-and-security) | 18 | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 17✓ 1✗ | 18✓ 0✗ |
@@ -666,12 +666,17 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_capture.set_signature_enrichment` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_capture.unlink_channel` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_settings.disconnect_provider` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
+| `personal_channels.ack_replies` | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| `personal_channels.pull_replies` | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| `personal_channels.push_messages` | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| `personal_channels.upload_file` | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
 | `read_details.backfill_preview` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `read_details.channel_link` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.channel_connections` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.channel_providers` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.connector_containers` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.connectors` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `read_workspace.personal_channel` | ✓ | ✓ | ✓ | ✗ | ✗ | ✓ |
 | `read_workspace.provider_connections` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `run_research.start_backfill` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.link_channel` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -1540,12 +1545,17 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Connectors and provider connections | `change_capture.set_signature_enrichment` | `set_connector_signature_enrichment` |  |
 | Connectors and provider connections | `change_capture.unlink_channel` | `unlink_channel` | `deal.update` |
 | Connectors and provider connections | `change_settings.disconnect_provider` | `disconnect_provider` | `integrations.delete` |
+| Connectors and provider connections | `personal_channels.ack_replies` | `ack_personal_channel_replies` | `personal_channel.update` |
+| Connectors and provider connections | `personal_channels.pull_replies` | `pull_personal_channel_replies` | `personal_channel.update` |
+| Connectors and provider connections | `personal_channels.push_messages` | `push_personal_channel_messages` | `personal_channel.create` |
+| Connectors and provider connections | `personal_channels.upload_file` | `upload_personal_channel_file` | `personal_channel.create` |
 | Connectors and provider connections | `read_details.backfill_preview` | `preview_connector_backfill` | `activity.create` `contact.create` `lead.create` |
 | Connectors and provider connections | `read_details.channel_link` | `channel_link` | `deal.read` |
 | Connectors and provider connections | `read_workspace.channel_connections` | `list_channel_connections` | `channel_connection.read` |
 | Connectors and provider connections | `read_workspace.channel_providers` | `list_channel_providers` |  |
 | Connectors and provider connections | `read_workspace.connector_containers` | `list_connector_containers` |  |
 | Connectors and provider connections | `read_workspace.connectors` | `list_connectors` |  |
+| Connectors and provider connections | `read_workspace.personal_channel` | `read_personal_channel` | `personal_channel.read` |
 | Connectors and provider connections | `read_workspace.provider_connections` | `list_provider_connections` | `integrations.read` |
 | Connectors and provider connections | `run_research.start_backfill` | `start_connector_backfill` | `activity.create` `contact.create` `lead.create` |
 | Connectors and provider connections | `send_outbound.link_channel` | `link_channel` | `deal.update` |

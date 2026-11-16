@@ -19,7 +19,7 @@ import (
 
 type notDelivered struct{ settled map[ids.UUID]string }
 
-func (n *notDelivered) NotDelivered(_ context.Context, activity ids.UUID, reason string) error {
+func (n *notDelivered) NotDelivered(_ context.Context, _ pgx.Tx, activity ids.UUID, reason string) error {
 	n.settled[activity] = reason
 	return nil
 }
@@ -119,27 +119,33 @@ func TestAnUnpulledReplyExpiresAtSevenDays(t *testing.T) {
 	e.on(t, e.rep)
 	activity := e.queued(t, e.rep, "d-old")
 	e.exec(t, `UPDATE personal_channel_reply SET created_at = $1`, e.now.Add(-replyLifetime+time.Hour))
-	if n, err := e.store.ExpireReplies(e.system(), e.now); err != nil || n != 0 {
+	if n, err := expire(e, e.system(), settled); err != nil || n != 0 {
 		t.Fatalf("before 7 days expired %d, %v", n, err)
 	}
 	e.exec(t, `UPDATE personal_channel_reply SET created_at = $1`, e.now.Add(-replyLifetime-time.Minute))
-	if n, err := e.store.ExpireReplies(e.system(), e.now); err != nil || n != 1 {
+	if n, err := expire(e, e.system(), settled); err != nil || n != 1 {
 		t.Fatalf("after 7 days expired %d, %v", n, err)
 	}
 	if settled.settled[activity] != notDeliveredByExpiry {
 		t.Fatalf("settled = %v", settled.settled)
 	}
-	if _, err := e.store.ExpireReplies(e.as(e.rep, repGrant), e.now); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := expire(e, e.as(e.rep, repGrant), settled); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a member ran the expiry: %v", err)
 	}
 }
 
 func TestPullAndAckAreRefusedWhileOff(t *testing.T) {
 	e := setupChannels(t)
+	e.settling()
 	if _, err := e.store.Pull(e.as(e.rep, repGrant), 10); !errors.Is(err, ErrOff) {
 		t.Fatalf("pull while off: %v", err)
 	}
 	if _, err := e.store.Ack(e.as(e.rep, repGrant), []Ack{{DeliveryID: ids.NewV7(), Outcome: OutcomeSent}}); !errors.Is(err, ErrOff) {
 		t.Fatalf("ack while off: %v", err)
 	}
+}
+
+func expire(e *channelEnv, ctx context.Context, settler Settler) (int, error) {
+	_, replies, err := Sweep(ctx, e.store.db, settler, e.now)
+	return replies, err
 }

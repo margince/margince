@@ -65,11 +65,20 @@ func setupPersonalChannels(t *testing.T) channelEnv {
 
 func (e channelEnv) push(t *testing.T, msgs ...personalchannels.PushMessage) []personalchannels.PushResult {
 	t.Helper()
-	out, err := e.store.Push(e.member, msgs, e.now.Add(time.Minute))
+	out, err := e.store.Push(e.member, msgs, time.Minute)
 	if err != nil {
 		t.Fatalf("pushing: %v", err)
 	}
 	return out
+}
+
+func (e channelEnv) connection(t *testing.T) ids.UUID {
+	t.Helper()
+	c, err := e.store.Connection(e.member)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return c.ID
 }
 
 func (e channelEnv) count(t *testing.T, sql string, args ...any) int {
@@ -139,7 +148,7 @@ func TestOneAccountOnTwoNetworksIsTwoIdentities(t *testing.T) {
 			t.Fatalf("result = %+v", r)
 		}
 	}
-	if n := e.count(t, `SELECT count(*) FROM contact_channel_identity WHERE provider = 'personal_channels' AND channel_user_id IN ('whatsapp/8492', 'zalo/8492')`); n != 2 {
+	if n := e.count(t, `SELECT count(*) FROM contact_channel_identity WHERE provider = 'personal_channels' AND (channel_user_id LIKE 'whatsapp/8492/%' OR channel_user_id LIKE 'zalo/8492/%')`); n != 2 {
 		t.Fatalf("bindings = %d, want one per network", n)
 	}
 }
@@ -155,7 +164,7 @@ func TestARefusedMessageDoesNotRefuseTheBatch(t *testing.T) {
 
 func TestAPushRunsOutOfTimeAndDefersTheRest(t *testing.T) {
 	e := setupPersonalChannels(t)
-	res, err := e.store.Push(e.member, []personalchannels.PushMessage{whatsapp("late.1", "8494")}, e.now.Add(-time.Second))
+	res, err := e.store.Push(e.member, []personalchannels.PushMessage{whatsapp("late.1", "8494")}, -time.Second)
 	if err != nil || res[0].Status != personalchannels.StatusDeferred {
 		t.Fatalf("results = %+v, %v; want deferred", res, err)
 	}
@@ -167,7 +176,7 @@ func TestOnlyTheMemberWhoseChannelBroughtTheChatInMayReply(t *testing.T) {
 	activity := ids.From[ids.ActivityKind](*landed[0].ActivityID)
 	msg := connector.ChannelMessage{
 		ActivityID: activity, Body: "Yes, the 2nd works", IdempotencyKey: "delivery-1",
-		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: "whatsapp/8495"},
+		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: "whatsapp/8495/" + e.connection(t).String()},
 	}
 	db := compose.InstallationDB(e.Pool)
 	other := personalchannelwire.ReplySender{DB: db, Member: e.Rep2}

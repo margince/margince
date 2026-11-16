@@ -2,6 +2,14 @@
   "tool": "personal_channels",
   "action": "upload_file",
   "verb": "upload_personal_channel_file",
-  "allowed_for": [],
-  "refused_for": []
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "rep"
+  ],
+  "refused_for": [
+    "ops",
+    "read_only"
+  ]
 }
