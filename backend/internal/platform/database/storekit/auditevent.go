@@ -48,8 +48,8 @@ func AuditEventWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType s
 }
 
 // writeAuditRow writes one row through insertAuditRows, which every door here
-// reaches: Audit and AuditWithEvidence after they have judged the before-image,
-// AuditEvent without one to judge, and AuditEach for many rows.
+// reaches. Audit and AuditWithEvidence get there after judging the before-image,
+// AuditEvent with none to judge, and AuditEach with many rows.
 //
 // The table takes writes from elsewhere too — approvals sends its own statement
 // for the approval row's lifecycle, a different subject carrying no field images
@@ -63,19 +63,24 @@ func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, en
 	if err != nil {
 		return ids.Nil, err
 	}
-	return row.id, insertAuditRows(ctx, tx, action, entityType, []auditRow{row})
+	written, err := insertAuditRows(ctx, tx, action, entityType, []auditRow{row})
+	if err != nil {
+		return ids.Nil, err
+	}
+	return written[0], nil
 }
 
 // auditRow is one audit_log row ready to insert: its images and evidence
-// marshalled, linked and masked.
+// marshalled, linked and masked. Its id is made at the insert, so ids keep the
+// order rows land in.
 type auditRow struct {
-	id, entityID            ids.UUID
+	entityID                ids.UUID
 	before, after, evidence []byte
 }
 
 //craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
 func prepareAuditRow(ctx context.Context, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (auditRow, error) {
-	row := auditRow{id: ids.NewV7(), entityID: entityID}
+	row := auditRow{entityID: entityID}
 	var err error
 	if row.before, err = marshalOrNil(before); err != nil {
 		return auditRow{}, err
@@ -99,30 +104,33 @@ func prepareAuditRow(ctx context.Context, entityType string, entityID ids.UUID, 
 }
 
 // insertAuditRows is this package's INSERT into audit_log: rows of one action
-// and entity type, by the bound actor, in one statement.
-func insertAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, rows []auditRow) error {
+// and entity type, by the bound actor, in one statement. It answers the ids it
+// wrote, in the order of rows.
+func insertAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, rows []auditRow) ([]ids.UUID, error) {
 	p, err := Actor(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	rule, batch := auth.AuthzRule(p, entityType, action), batchOf(ctx)
 	var args []any
-	arg := func(v any) string {
-		args = append(args, v)
-		return "$" + strconv.Itoa(len(args))
-	}
-	shared := strings.Join([]string{
-		arg(string(p.Type)), arg(p.ID), arg(UUIDOrNil(p.PassportID)), arg(UUIDOrNil(p.OnBehalfOf)),
-		arg(action), arg(entityType),
-	}, ", ")
-	tail := arg(auth.AuthzRule(p, entityType, action)) + ", " + arg(batchOf(ctx))
 	values := make([]string, 0, len(rows))
+	written := make([]ids.UUID, 0, len(rows))
 	for _, row := range rows {
-		values = append(values, "("+arg(row.id)+", "+shared+", "+arg(row.entityID)+", "+
-			arg(row.before)+", "+arg(row.after)+", "+arg(row.evidence)+", "+tail+")")
+		id := ids.NewV7()
+		written = append(written, id)
+		holders := make([]string, 0, 13)
+		for _, v := range []any{
+			id, string(p.Type), p.ID, UUIDOrNil(p.PassportID), UUIDOrNil(p.OnBehalfOf), action, entityType,
+			row.entityID, row.before, row.after, row.evidence, rule, batch,
+		} {
+			args = append(args, v)
+			holders = append(holders, "$"+strconv.Itoa(len(args)))
+		}
+		values = append(values, "("+strings.Join(holders, ", ")+")")
 	}
 	// No tenant column: the installation is the only answer to where. The table
 	// name is the constant the fault classifier reads, so a rename moves both.
 	_, err = tx.Exec(ctx, `INSERT INTO `+TableAudit+` (id, actor_type, actor_id, passport_id, on_behalf_of, action, entity_type, entity_id, before, after, evidence, authorization_rule, batch_id)
 		 VALUES `+strings.Join(values, ", "), args...)
-	return err
+	return written, err
 }

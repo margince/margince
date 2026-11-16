@@ -467,8 +467,8 @@ func emissionBearingFunctions(fset *token.FileSet, dir string) (map[string]bool,
 }
 
 // storekitWriterSets are storekit's exported writers, derived from its call
-// graph: emits reach emitEnvelope, the INSERT into event_outbox, and audits
-// reach insertAuditRows, the INSERT into audit_log, without emitting. A new
+// graph. Emits reach emitEnvelope, the INSERT into event_outbox. Audits reach
+// insertAuditRows, the INSERT into audit_log, and do not emit. A new
 // writer is held by the event rule the day it is added.
 type storekitWriterSets struct {
 	audits, emits map[string]bool
@@ -498,8 +498,8 @@ func storekitWriters(t *testing.T) storekitWriterSets {
 	return sets
 }
 
-// storekitCalls maps each package-level storekit function to the package
-// functions it calls by name.
+// storekitCalls maps each storekit function, method and package variable to
+// the names it refers to.
 func storekitCalls(t *testing.T) map[string][]string {
 	t.Helper()
 	const dir = "internal/platform/database/storekit"
@@ -518,21 +518,41 @@ func storekitCalls(t *testing.T) map[string][]string {
 			t.Fatal(err)
 		}
 		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil || fn.Recv != nil {
-				continue
-			}
-			ast.Inspect(fn.Body, func(n ast.Node) bool {
-				if call, ok := n.(*ast.CallExpr); ok {
-					if callee, ok := call.Fun.(*ast.Ident); ok {
-						calls[fn.Name.Name] = append(calls[fn.Name.Name], callee.Name)
+			switch d := decl.(type) {
+			case *ast.FuncDecl:
+				// A method counts under its own name, and a function value
+				// counts as much as a call: either way the writer is reached.
+				if d.Body != nil {
+					calls[d.Name.Name] = append(calls[d.Name.Name], referencedNames(d.Body)...)
+				}
+			case *ast.GenDecl:
+				// var Writer = Audit makes Writer a writer too.
+				for _, spec := range d.Specs {
+					if value, ok := spec.(*ast.ValueSpec); ok {
+						for _, name := range value.Names {
+							for _, expr := range value.Values {
+								calls[name.Name] = append(calls[name.Name], referencedNames(expr)...)
+							}
+						}
 					}
 				}
-				return true
-			})
+			}
 		}
 	}
 	return calls
+}
+
+// referencedNames lists the bare identifiers under node. The package functions
+// a body calls or passes on are among them.
+func referencedNames(node ast.Node) []string {
+	var names []string
+	ast.Inspect(node, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok {
+			names = append(names, ident.Name)
+		}
+		return true
+	})
+	return names
 }
 
 // reachersOf is target and every function that calls it, directly or through others.

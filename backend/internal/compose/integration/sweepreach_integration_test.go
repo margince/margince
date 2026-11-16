@@ -275,8 +275,12 @@ func TestAuditEachWritesOneRowPerIDAcrossChunks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("AuditEach: %v", err)
 	}
-	if n := e.WsCount(t, `SELECT count(DISTINCT a.id) FROM audit_log a WHERE a.entity_id = ANY($1) AND a.action = 'update'
-		AND a.entity_type = 'ext_reachtest_note' AND a.actor_id <> '' AND a.after->>'company_id' = 'to'`, moved); n != len(moved) {
-		t.Errorf("AuditEach wrote %d audit rows for %d moved rows", n, len(moved))
+	// Every moved id has one row of its own, by the admin, with both images.
+	if n := e.WsCount(t, `SELECT count(*) FROM unnest($1::uuid[]) m(id)
+		WHERE (SELECT count(*) FROM audit_log a WHERE a.entity_id = m.id AND a.action = 'update'
+		         AND a.entity_type = 'ext_reachtest_note' AND a.actor_id = $2
+		         AND a.before->>'company_id' = 'from' AND a.after->>'company_id' = 'to') = 1`,
+		moved, "human:"+e.AdminUser.String()); n != len(moved) {
+		t.Errorf("%d of %d moved rows have exactly one audit row of their own", n, len(moved))
 	}
 }

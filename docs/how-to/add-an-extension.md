@@ -520,9 +520,9 @@ A row belongs to a subject when one of its links names the subject. Erasure and 
 needs one of the other three.
 
 The merge check refuses to merge away a record that a link names. Declare the same column in the unit's
-`Reach` field, and the merge moves it to the record that stays instead. The merge writes an audit row for
-each row it moves, so a table in `Reach` needs a `uuid` column named `id`, NOT NULL and unique. The
-boot refuses a unit whose `Reach` table has none. `fixtures/extensions/crm-hello`
+`Reach` field, and the merge moves it to the record that stays instead. The merge audits each row it moves
+by its id. So a table in `Reach` needs a `uuid` column named `id`, NOT NULL and unique, or the boot refuses
+the unit. `fixtures/extensions/crm-hello`
 declares its note table in both.
 
 A table with no `Links` and no `Personal` columns declares that it holds no personal data. A table with

@@ -240,8 +240,8 @@ func checkRowID(table string, have map[string]column) error {
 	return nil
 }
 
-// VerifyRowIDs holds each named table of a unit to a row id, for a table a
-// merge moves rows of (reach.Table): the merge audits each moved row by it.
+// VerifyRowIDs holds each named table of a unit to a row id. A merge moves
+// rows of these tables (reach.Table) and audits each moved row by its id.
 func VerifyRowIDs(ctx context.Context, q Querier, namespace string, names []string) error {
 	if len(names) == 0 {
 		return nil
