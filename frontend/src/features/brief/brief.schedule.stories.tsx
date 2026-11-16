@@ -194,7 +194,7 @@ export const MoreNamesThanFit: Story = {
   ),
   play: async ({ canvasElement }) => {
     const who = canvasElement.querySelector(".rail-schedule-attendees");
-    await expect(who?.textContent).toContain("Weber GmbH · Anna Weber");
+    await expect(who?.querySelectorAll("a")).toHaveLength(4);
     // A colleague is on every meeting here, so the row leaves them out.
     await expect(who?.textContent).not.toContain("Rita Rep");
   },

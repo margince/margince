@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Fragment } from "react";
 import type { components } from "../../api/schema";
-import { EntityRef } from "../../components/entityref";
 import { MeetingOthers } from "../../components/meetingothers";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
+import { Avatar } from "../../design-system/avatar";
 import { Panel, PanelRow } from "../../design-system/panel";
+import { Chip } from "../../design-system/readings";
 import {
   type SectionState,
   SurfaceState,
@@ -15,6 +15,7 @@ import {
 import { activityStartsIn, activityTimeOfDay } from "../../format/activitywhen";
 import { useNow } from "../../format/now";
 import { type Locale, useLocale, useT } from "../../i18n";
+import { ENTITY } from "../../lib/entity";
 import { isUnprepared } from "../../lib/meetingreadiness";
 import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
@@ -63,8 +64,8 @@ function answered(state: SectionState): boolean {
 /**
  * Today's external meetings by start time, each saying who it is with. The
  * server sends only meetings with somebody from outside the own domains, so
- * this panel applies no rule of its own. The next timed meeting adds how soon
- * it starts and its brief, and is otherwise a row like the rest.
+ * this panel applies no rule of its own. The next timed meeting sits on an
+ * outlined plate with how soon it starts and the way into its brief.
  */
 export function SchedulePanel({
   day,
@@ -165,7 +166,11 @@ function MeetingRow({
         )
       : null;
   return (
-    <PanelRow className="rail-schedule-row">
+    <PanelRow
+      className={
+        isNext ? "rail-schedule-row rail-schedule-next" : "rail-schedule-row"
+      }
+    >
       <span className="t-caption rail-schedule-when">
         {whenOf(item, locale, zone)}
       </span>
@@ -322,11 +327,10 @@ function NextMeetingRow({
 }
 
 /**
- * Who a meeting is with: the account, then the outside contacts by name.
- * Each is a link to its record where it has one, then comes how many more.
- * Colleagues are left out, because every meeting here has them and the reader
- * is asking which customer it is. One run of text, so the commas wrap with the
- * names they follow.
+ * Who a meeting is with: the account, then the outside contacts, as the same
+ * linked chips a task card names its records with. Outside addresses and how
+ * many more there are follow as text. Colleagues are left out, because every
+ * meeting here has them and the reader is asking which customer it is.
  */
 function MeetingWho({
   company,
@@ -341,33 +345,41 @@ function MeetingWho({
     return null;
   }
   return (
-    <span className="t-caption rail-schedule-attendees">
+    <span className="rail-schedule-attendees">
       {company && (
-        <>
-          <EntityRef
-            kind="company"
-            id={company.company_id}
-            name={company.company_name}
-          />
-          {(contacts.length > 0 || outside.length > 0 || more > 0) && " · "}
-        </>
+        <RecordMarkChip
+          id={company.company_id}
+          label={company.company_name}
+          href={routeHash(ENTITY.company.route(company.company_id))}
+        />
       )}
-      {contacts.map((contact, index) => (
-        <Fragment key={contact.contact_id}>
-          {index > 0 && ", "}
-          <EntityRef
-            kind="contact"
-            id={contact.contact_id}
-            name={contact.full_name}
-          />
-        </Fragment>
+      {contacts.map((contact) => (
+        <RecordMarkChip
+          key={contact.contact_id}
+          id={contact.contact_id}
+          label={contact.full_name}
+          href={routeHash(ENTITY.contact.route(contact.contact_id))}
+        />
       ))}
-      <MeetingOthers
-        others={outside}
-        more={more}
-        afterContacts={contacts.length > 0}
-      />
+      {(outside.length > 0 || more > 0) && (
+        <span className="t-caption">
+          <MeetingOthers others={outside} more={more} afterContacts={false} />
+        </span>
+      )}
     </span>
+  );
+}
+
+/** One record as the task card's chip: its avatar and name, linked to its page. */
+function RecordMarkChip({
+  id,
+  label,
+  href,
+}: Readonly<{ id: string; label: string; href: string }>) {
+  return (
+    <Chip dense appHref={href} lead={<Avatar name={label} identity={id} />}>
+      {label}
+    </Chip>
   );
 }
 

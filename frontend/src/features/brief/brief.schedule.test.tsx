@@ -81,8 +81,8 @@ describe("the schedule panel", () => {
 
   // No row claims the reader is free: an internal meeting is not on this
   // panel, so a gap between two rows is not free time. Only the next meeting
-  // says how soon it starts and opens its brief, and it is a row like the rest.
-  it("marks the next meeting without setting it apart", () => {
+  // stands on its plate, says how soon it starts and opens its brief.
+  it("sets the next meeting on its plate", () => {
     const day = readingsDay({}, [
       { ...meetingRow("m1", true, "2026-09-03T08:00:00Z"), title: "Started" },
       { ...meetingRow("m2", true, "2026-09-03T10:00:00Z"), title: "Next up" },
@@ -103,7 +103,8 @@ describe("the schedule panel", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0].textContent).toContain("Started");
     expect(rows[1].textContent).toContain("in 20 minutes");
-    expect(rows[1].className).toBe(rows[0].className);
+    expect(rows[0].classList.contains("rail-schedule-next")).toBe(false);
+    expect(rows[1].classList.contains("rail-schedule-next")).toBe(true);
     // Only the next meeting offers a brief, and pressing it asks for that one.
     const prepare = en["worklist.verb.open_meeting_brief"];
     expect(within(rows[0] as HTMLElement).queryByText(prepare)).toBeNull();
@@ -145,9 +146,16 @@ describe("the schedule panel", () => {
 
     const panel = screen.getByRole("region");
     // Colleagues are on every meeting here, so the row leaves them out.
-    expect(panel.querySelector(".rail-schedule-attendees")?.textContent).toBe(
-      "Weber GmbH · Anna Weber, Ben Ortiz, cfo@weber.example and 3 more",
-    );
+    const links = within(panel).getAllByRole("link");
+    expect(links.map((link) => link.textContent)).toEqual([
+      "WGWeber GmbH",
+      "AWAnna Weber",
+      "BOBen Ortiz",
+    ]);
+    expect(
+      panel.querySelector(".rail-schedule-attendees")?.textContent,
+    ).toContain("cfo@weber.example and 3 more");
+    expect(panel.textContent).not.toContain("Rita Rep");
     expect(
       within(panel)
         .getByRole("link", { name: "Weber GmbH" })
@@ -363,7 +371,12 @@ it("lists the next meeting's outside attendees as one sentence", () => {
   const attendees = screen
     .getByRole("region")
     .querySelector(".rail-schedule-attendees");
-  expect(attendees?.textContent).toBe("Anna Weber, Ben Ortiz");
+  expect(
+    within(attendees as HTMLElement)
+      .getAllByRole("link")
+      .map((link) => link.getAttribute("href")),
+  ).toEqual(["/#/contacts/c-1", "/#/contacts/c-2"]);
+  expect(attendees?.textContent).not.toContain("Rita Rep");
 });
 
 it("opens today's meeting from its title, not the record it is about", () => {

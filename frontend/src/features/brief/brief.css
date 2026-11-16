@@ -416,11 +416,36 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* The attendees take the full width and wrap as a sentence. */
+/* Who the meeting is with: the record chips wrap onto as many lines as they need. */
 .rail-schedule-attendees {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
   min-width: 0;
 }
-
+/* The next meeting is set apart by an outline on the card's own ground.
+   The plate keeps the row's inset, so its time and title stay on the columns
+   above and below. Its height is its content's, so a longer row grows it. */
+.rail-schedule-next {
+  /* Half the card's inset outside the outline and half inside, at any width. */
+  margin: var(--space-1) calc(var(--padPanel) / 2);
+  padding: var(--space-3) calc(var(--padPanel) / 2 - 1px);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
+}
+/* As the card's last row, the plate keeps the same air below it as beside it. */
+.rail-schedule-next:last-child {
+  margin-block-end: calc(var(--padPanel) / 2);
+}
+.rail-schedule-next::before,
+.rail-schedule-next + .panel-row::before {
+  content: none;
+}
+.rail-schedule-next .rail-schedule-what > :first-child {
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+}
 .rail-schedule-prep {
   margin-block-start: var(--space-2);
 }
