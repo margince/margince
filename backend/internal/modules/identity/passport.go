@@ -87,7 +87,9 @@ type IssuePassportInput struct {
 	Label  *string
 	Scopes []string
 	TTL    *time.Duration
-	Areas  principal.WorkAreas
+	// NeverExpires asks for no expiry at all; only a hand-minted passport may.
+	NeverExpires bool
+	Areas        principal.WorkAreas
 	// App is set only by AuthenticateAppCaller, never from a request body.
 	App *AppCaller
 }
@@ -97,7 +99,7 @@ type IssuedPassport struct {
 	ID        ids.PassportID
 	Token     string
 	Scopes    []string
-	ExpiresAt time.Time
+	ExpiresAt *time.Time
 }
 
 // InvalidPassportFieldError maps to 422 naming Field: a request value the
@@ -121,6 +123,29 @@ func admitCallerChosenFields(in IssuePassportInput) error {
 		return &InvalidPassportFieldError{Field: "ttl_hours", Code: "ttl_out_of_range", Message: fmt.Sprintf("must be 1 to %d hours", int(maxPassportTTL/time.Hour))}
 	}
 	return nil
+}
+
+// lifetimeOf is how long a passport lives, nil for one that never expires.
+// A connection's passport always expires: its refresh is what renews it, and the
+// connection readers compare against its expiry.
+func lifetimeOf(in IssuePassportInput, grantBound bool) (*time.Duration, error) {
+	if in.NeverExpires {
+		switch {
+		case grantBound:
+			return nil, &InvalidPassportFieldError{Field: "never_expires", Code: "never_expires_on_connection", Message: "a connection's passport always expires; mint a passport by hand to have one that does not"}
+		case in.TTL != nil:
+			return nil, &InvalidPassportFieldError{Field: "never_expires", Code: "never_expires_with_ttl", Message: "choose either a lifetime in hours or never_expires, not both"}
+		}
+		return nil, nil
+	}
+	ttl := defaultPassportTTL
+	if in.TTL != nil {
+		ttl = *in.TTL
+	}
+	if ttl <= 0 || ttl > maxPassportTTL {
+		return nil, fmt.Errorf("passport lifetime %s is outside 0 to %s", ttl, maxPassportTTL)
+	}
+	return &ttl, nil
 }
 
 // IssuePassport mints a passport for the authenticated human in id — the
@@ -199,12 +224,14 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 			return IssuedPassport{}, err
 		}
 	}
-	ttl := defaultPassportTTL
-	if in.TTL != nil {
-		ttl = *in.TTL
-		if ttl <= 0 || ttl > maxPassportTTL {
-			return IssuedPassport{}, fmt.Errorf("passport lifetime %s is outside 0 to %s", ttl, maxPassportTTL)
-		}
+	lifetime, err := lifetimeOf(in, grantID != nil)
+	if err != nil {
+		return IssuedPassport{}, err
+	}
+	var interval *string
+	if lifetime != nil {
+		spelled := lifetime.String()
+		interval = &spelled
 	}
 
 	// Every issuance path, the OAuth exchange included, refuses a member on an
@@ -227,7 +254,7 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas, app_issuer, app_subject)
 		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7, $8, $9)
 		 RETURNING id, expires_at`,
-		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas), appIssuer, appSubject).
+		id.UserID, in.Label, in.Scopes, hashToken(token), interval, grantID, areasColumn(in.Areas), appIssuer, appSubject).
 		Scan(&out.ID, &out.ExpiresAt); err != nil {
 		return IssuedPassport{}, err
 	}

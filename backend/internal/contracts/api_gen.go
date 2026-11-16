@@ -53368,6 +53368,9 @@ type IssuePassportRequest struct {
 	// Label Which agent this binds, e.g. "Claude Desktop".
 	Label *string `json:"label,omitempty"`
 
+	// NeverExpires The passport never expires; it works until it is revoked or its human is turned off. Not together with ttl_hours.
+	NeverExpires *bool `json:"never_expires,omitempty"`
+
 	// Scopes Verb classes the passport may exercise; effective authority is always ∩ the granting human's RBAC.
 	Scopes []IssuePassportRequestScopes `json:"scopes" unique:"items"`
 
@@ -53380,7 +53383,8 @@ type IssuePassportRequestScopes string
 
 // IssuePassportResponse defines model for IssuePassportResponse.
 type IssuePassportResponse struct {
-	ExpiresAt time.Time `json:"expires_at"`
+	// ExpiresAt When the passport stops working; null for one that never expires.
+	ExpiresAt *time.Time `json:"expires_at"`
 
 	// OnBehalfOf The human whose RBAC bounds every call this passport makes.
 	OnBehalfOf openapi_types.UUID `json:"on_behalf_of"`

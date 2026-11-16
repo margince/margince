@@ -25,8 +25,8 @@ const UnrevokedSetterSQL = `(CASE WHEN p.oauth_grant_id IS NULL THEN p.revoked_a
 // out only when it holds no unexpired passport and can mint none. So an access token
 // that lapsed on a grant that can still refresh is not dead.
 func LiveSetterSQL(at string) string {
-	return `(` + UnrevokedSetterSQL + ` AND (CASE WHEN p.oauth_grant_id IS NULL THEN ` + at + ` < p.expires_at
-	ELSE EXISTS (SELECT 1 FROM passport q WHERE q.oauth_grant_id = g.id AND q.revoked_at IS NULL AND ` + at + ` < q.expires_at)
+	return `(` + UnrevokedSetterSQL + ` AND (CASE WHEN p.oauth_grant_id IS NULL THEN ` + PassportUnexpiredSQL("p", at) + `
+	ELSE EXISTS (SELECT 1 FROM passport q WHERE q.oauth_grant_id = g.id AND q.revoked_at IS NULL AND ` + PassportUnexpiredSQL("q", at) + `)
 	  OR (g.refresh_allowed AND EXISTS (SELECT 1 FROM oauth_refresh_token r
 	       WHERE r.grant_id = g.id AND r.consumed_at IS NULL AND ` + at + ` < r.expires_at)) END))`
 }

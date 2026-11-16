@@ -67,6 +67,7 @@ export function MintDialog({
     new Set(["read", "draft"]),
   );
   const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
+  const [neverExpires, setNeverExpires] = useState(false);
   const tokenRegion = useRef<HTMLDivElement | null>(null);
   const titleId = useId();
   const formId = useId();
@@ -77,12 +78,14 @@ export function MintDialog({
       label: string;
       scopes: PassportScope[];
       areas: PassportAreas;
+      neverExpires: boolean;
     }) => {
       const { data, error, response } = await api.POST("/passports", {
         body: {
           label: request.label.trim() || null,
           scopes: request.scopes,
           areas: request.areas,
+          ...(request.neverExpires ? { never_expires: true } : {}),
         },
       });
       // An expired session must not read as a mint that did nothing. Drop every
@@ -118,6 +121,7 @@ export function MintDialog({
     setLabel("");
     setScopes(new Set(["read", "draft"]));
     setAreas(ALL_AREAS);
+    setNeverExpires(false);
     mint.reset();
   };
   // Refused mid-flight, as `mint.reset()` does not cancel the POST. Once the
@@ -156,7 +160,7 @@ export function MintDialog({
           onSubmit={(event) => {
             event.preventDefault();
             if (scopes.size > 0 && areasComplete(areas) && !mint.isPending) {
-              mint.mutate({ label, scopes: [...scopes], areas });
+              mint.mutate({ label, scopes: [...scopes], areas, neverExpires });
             }
           }}
         >
@@ -198,6 +202,19 @@ export function MintDialog({
             reachable={reachable}
             value={areas}
             onChange={setAreas}
+          />
+          <Checkbox
+            checked={neverExpires}
+            onChange={(event) => setNeverExpires(event.target.checked)}
+            label={
+              <>
+                {t("settings.passportNeverExpires")}
+                <span className="t-caption">
+                  {" "}
+                  {t("settings.passportNeverExpiresHint")}
+                </span>
+              </>
+            }
           />
           <WriteRefused titleKey="settings.mintFailed" error={mint.error} />
         </form>

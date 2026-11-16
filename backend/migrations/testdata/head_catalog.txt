@@ -8076,7 +8076,7 @@ public.passport acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/marg
 public.passport.app_issuer text gen=- def=-
 public.passport.app_subject text gen=- def=-
 public.passport.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.passport.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.passport.expires_at timestamp with time zone gen=- def=-
 public.passport.granted_by uuid NOT NULL gen=- def=-
 public.passport.id uuid NOT NULL gen=- def=uuidv7()
 public.passport.label text gen=- def=-

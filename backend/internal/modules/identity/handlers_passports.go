@@ -50,6 +50,9 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 		ttl := time.Duration(*req.TtlHours) * time.Hour
 		in.TTL = &ttl
 	}
+	if req.NeverExpires != nil {
+		in.NeverExpires = *req.NeverExpires
+	}
 
 	issued, err := h.svc.IssuePassport(r.Context(), id, in)
 	if err != nil {
@@ -130,7 +133,7 @@ func passportSummary(p PassportRow) crmcontracts.PassportSummary {
 		Scopes:     p.Scopes,
 		Areas:      areasToWire(p.Areas),
 		CreatedAt:  p.CreatedAt,
-		ExpiresAt:  &p.ExpiresAt,
+		ExpiresAt:  p.ExpiresAt,
 		RevokedAt:  p.RevokedAt,
 		AppBound:   &p.AppBound,
 		LastUsedAt: p.LastUsedAt,

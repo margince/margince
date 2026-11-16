@@ -16,6 +16,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -158,7 +160,7 @@ func (c *passportShareCeiling) livePassports(ctx context.Context) int {
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		var n int
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM passport WHERE revoked_at IS NULL AND expires_at > now()`).Scan(&n); err != nil {
+			`SELECT count(*) FROM passport p WHERE p.revoked_at IS NULL AND `+workforce.PassportUnexpiredSQL("p", "now()")).Scan(&n); err != nil {
 			return err
 		}
 		if n > 1 {

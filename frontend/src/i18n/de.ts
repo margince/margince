@@ -9900,6 +9900,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportNeverUsed": "Nie",
   "settings.passportNeverUsedCaption": "Nie genutzt",
   "settings.passportNoExpiry": "Kein Ablauf",
+  "settings.passportNeverExpires": "Läuft nie ab",
+  "settings.passportNeverExpiresHint":
+    "Er gilt, bis Sie ihn widerrufen oder Ihr Konto deaktiviert wird. Bewahren Sie ihn sicher auf.",
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
   "settings.revokeNamed": "{name} widerrufen",

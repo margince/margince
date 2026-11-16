@@ -9905,6 +9905,9 @@ export const en = {
   "settings.passportNeverUsed": "Never",
   "settings.passportNeverUsedCaption": "Never used",
   "settings.passportNoExpiry": "No expiry",
+  "settings.passportNeverExpires": "Never expires",
+  "settings.passportNeverExpiresHint":
+    "It works until you revoke it or your account is turned off. Keep it somewhere safe.",
   "settings.passportLastUsedOn": "Last used {date}",
   "settings.passportExpiresOn": "Expires {date}",
   "settings.revokeNamed": "Revoke {name}",

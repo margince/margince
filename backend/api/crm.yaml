@@ -77137,6 +77137,9 @@ components:
           minimum: 1
           maximum: 2160
           description: Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time.
+        never_expires:
+          type: boolean
+          description: The passport never expires; it works until it is revoked or its human is turned off. Not together with ttl_hours.
         areas:
           allOf: [ { $ref: '#/components/schemas/PassportAreas' } ]
           description: Where the passport may act. Absent means all areas.
@@ -77151,7 +77154,7 @@ components:
           type: array
           items: { type: string }
         on_behalf_of: { type: string, format: uuid, description: The human whose RBAC bounds every call this passport makes. }
-        expires_at:   { type: string, format: date-time }
+        expires_at:   { type: [string, 'null'], format: date-time, description: When the passport stops working; null for one that never expires. }
 
     ContactAcquisitionRequest:
       type: object

@@ -56942,6 +56942,8 @@ export interface components {
             scopes: ("read" | "draft" | "write" | "send" | "enrich")[];
             /** @description Lifetime in hours (default 720 = 30 days, max 90 days). Revocable at any time. */
             ttl_hours?: number | null;
+            /** @description The passport never expires; it works until it is revoked or its human is turned off. Not together with ttl_hours. */
+            never_expires?: boolean;
             /** @description Where the passport may act. Absent means all areas. */
             areas?: components["schemas"]["PassportAreas"];
         };
@@ -56956,8 +56958,11 @@ export interface components {
              * @description The human whose RBAC bounds every call this passport makes.
              */
             on_behalf_of: string;
-            /** Format: date-time */
-            expires_at: string;
+            /**
+             * Format: date-time
+             * @description When the passport stops working; null for one that never expires.
+             */
+            expires_at: string | null;
         };
         /** @description A request to hear from us that the contact's acquisition records. */
         ContactAcquisitionRequest: {

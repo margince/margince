@@ -38,7 +38,8 @@ func TestOnlyALivePassportIsAskedForUsage(t *testing.T) {
 	now := time.Date(2026, 7, 15, 8, 0, 0, 0, time.UTC)
 	live, revoked, expired := passportRowForTest(), passportRowForTest(), passportRowForTest()
 	revoked.RevokedAt = &now
-	expired.ExpiresAt = now.Add(-time.Hour)
+	lapsed := now.Add(-time.Hour)
+	expired.ExpiresAt = &lapsed
 	connection := passportRowForTest()
 	connection.Connection = &PassportConnectionRow{GrantID: ids.NewV7(), ClientID: "c", ClientName: "Claude"}
 	reader := &recordedUsage{}

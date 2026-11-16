@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -139,7 +141,7 @@ func grantForTx(ctx context.Context, tx pgx.Tx, userID ids.UserID, spec string) 
 	// about whether their authority still works.
 	row := tx.QueryRow(ctx, `
 		SELECT g.user_id, g.agent_spec, g.state, g.passport_id, g.decided_at,
-		       coalesce(p.revoked_at IS NULL AND p.expires_at > now(), false),
+		       coalesce(p.revoked_at IS NULL AND `+workforce.PassportUnexpiredSQL("p", "now()")+`, false),
 		       coalesce(p.scopes, '{}')
 		  FROM agent_standing_grant g
 		  LEFT JOIN passport p ON p.id = g.passport_id
@@ -204,7 +206,7 @@ func (s *Store) LiveGrantsFor(ctx context.Context, spec string) ([]StandingGrant
 			   -- a broken night instead of the honest "your authority
 			   -- lapsed, renew it" the grant state is there to give them.
 			   AND p.revoked_at IS NULL
-			   AND p.expires_at > now()
+			   AND `+workforce.PassportUnexpiredSQL("p", "now()")+`
 			 ORDER BY g.user_id`, spec, GrantStateGranted)
 		if err != nil {
 			return fmt.Errorf("read the live standing grants: %w", err)

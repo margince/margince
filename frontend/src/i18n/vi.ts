@@ -9632,6 +9632,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportNeverUsed": "Chưa dùng",
   "settings.passportNeverUsedCaption": "Chưa dùng lần nào",
   "settings.passportNoExpiry": "Không hết hạn",
+  "settings.passportNeverExpires": "Không bao giờ hết hạn",
+  "settings.passportNeverExpiresHint":
+    "Có hiệu lực cho đến khi bạn thu hồi hoặc tài khoản của bạn bị tắt. Hãy cất giữ an toàn.",
   "settings.passportLastUsedOn": "Dùng lần cuối {date}",
   "settings.passportExpiresOn": "Hết hạn {date}",
   "settings.revokeNamed": "Thu hồi {name}",
