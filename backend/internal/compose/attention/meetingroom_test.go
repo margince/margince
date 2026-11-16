@@ -5,9 +5,8 @@ package attention
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
-
-	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -35,11 +34,10 @@ func (r *roomsSaying) WorklistMeetingRooms(_ context.Context, meetingIDs []ids.U
 func TestAMeetingRowAheadNamesWhoIsInTheRoom(t *testing.T) {
 	t.Parallel()
 	readable, withheld, over := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	buyer := crmcontracts.WorklistMeetingRoom{}
-	buyer.Participants = append(buyer.Participants, struct {
-		ContactId openapi_types.UUID `json:"contact_id"`
-		FullName  string             `json:"full_name"`
-	}{ContactId: openapi_types.UUID(ids.NewV7()), FullName: "Bea Buyer"})
+	var buyer crmcontracts.WorklistMeetingRoom
+	if err := json.Unmarshal([]byte(`{"participants":[{"contact_id":"`+ids.NewV7().String()+`","full_name":"Bea Buyer"}]}`), &buyer); err != nil {
+		t.Fatalf("decoding the room: %v", err)
+	}
 	rooms := &roomsSaying{rooms: map[ids.UUID]crmcontracts.WorklistMeetingRoom{readable: buyer, over: buyer}}
 	svc := &Service{rooms: rooms}
 	seat := ids.NewV7()
