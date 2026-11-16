@@ -143,10 +143,8 @@ export const Loading: Story = {
   },
 };
 
-// The prompt in dark. This is a decision screen with no rail around it, so the
-// form IS the page, and the checkboxes and the two submits — an Authorize that
-// must read as the loud one and a Deny that must still read as a real control —
-// have to stay legible against a darker ground.
+// The prompt in dark. No rail surrounds this screen, so Authorize and Deny
+// must both stay legible against the darker ground.
 export const ConsentPromptDark: Story = {
   globals: { theme: "dark" },
   render: story(consentHash({ consent: NONCE }), everyScope),

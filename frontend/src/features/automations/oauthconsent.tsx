@@ -135,8 +135,8 @@ function ConsentErrorCard({
   );
 }
 
-// The sign-in surface in its notice form: the reader is already signed in, so
-// the system does not greet them and the legal line claims nothing about access.
+// The sign-in surface in its notice form. The reader is already signed in, so
+// it does not greet them and its legal line claims nothing about access.
 function ConsentFrame({
   phase,
   wide = false,
