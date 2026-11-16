@@ -211,9 +211,18 @@ func TestARepsWeakerStopDoesNotSwallowTheSubjectsOwn(t *testing.T) {
 		t.Fatal("the subject's press recorded nothing because a rep had already written a " +
 			"weaker row — an admin lifting that row leaves the subject's decision nowhere")
 	}
-	if level := standingStops(t, e)["subject_request"]; level != string(commsauthz.LevelSubject) {
-		t.Errorf("the strongest standing subject_request is at level %q, want %q",
-			level, commsauthz.LevelSubject)
+	// Counted, not read through standingStops: two rows of one kind stand here,
+	// and that map keeps whichever the database returns last.
+	var subjects int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM communication_suppression
+		 WHERE contact_id = $1 AND revoked_at IS NULL
+		   AND kind = 'subject_request' AND decided_by_level = $2`,
+		e.contact, string(commsauthz.LevelSubject)).Scan(&subjects); err != nil {
+		t.Fatalf("counting the subject's stops: %v", err)
+	}
+	if subjects != 1 {
+		t.Errorf("%d standing subject_request rows at level %q, want 1", subjects, commsauthz.LevelSubject)
 	}
 }
 

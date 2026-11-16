@@ -27,7 +27,13 @@ import { useViewerZone } from "../../../lib/viewerzone";
  */
 export function DealMarginceChangesCard({
   dealId,
-}: Readonly<{ dealId: string }>) {
+  canWrite,
+}: Readonly<{
+  dealId: string;
+  // Whether this reader may write the deal. An Undo writes it, so one who may
+  // not reads the changes without one.
+  canWrite: boolean;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
@@ -76,7 +82,7 @@ export function DealMarginceChangesCard({
                 <ReceiptDetail receipt={change} />
               </>
             }
-            right={<ReceiptVerbs receipt={change} />}
+            right={<ReceiptVerbs receipt={change} undoable={canWrite} />}
           />
         ))}
       </OverviewList>

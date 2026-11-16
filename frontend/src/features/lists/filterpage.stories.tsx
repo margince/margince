@@ -303,7 +303,9 @@ export const SwitchTypeAsks: Story = {
     const user = userEvent.setup();
     const canvas = within(canvasElement);
     await addCity(user, canvas, "Berlin");
-    await user.click(canvas.getByRole("button", { name: "Companies" }));
+    await user.click(canvas.getByRole("combobox", { name: "Record type" }));
+    const page = within(canvasElement.ownerDocument.body);
+    await user.click(await page.findByRole("option", { name: "Companies" }));
   },
 };
 

@@ -329,9 +329,10 @@ describe("an opened list", () => {
         jsonResponse({ data: members, page: { has_more: false } }),
     });
     page(LIVE_ID);
-    const joined = (await screen.findByText("MiTek")).closest(
-      "tr",
-    ) as HTMLElement;
+    // The history names MiTek too, as the record that joined.
+    const joined = (
+      await screen.findByText("MiTek", { selector: ".lists-member-name" })
+    ).closest("tr") as HTMLElement;
     expect(
       await within(joined).findByText(en["lists.members.new"]),
     ).toBeInTheDocument();

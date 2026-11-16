@@ -47,6 +47,7 @@ const held: ConfirmDetails = {
 const meta: Meta<typeof ConfirmDetailsScreen> = {
   title: "Signed out/Confirm your details/Page",
   component: ConfirmDetailsScreen,
+  parameters: { layout: "fullscreen" },
 };
 export default meta;
 

@@ -6,11 +6,9 @@
 // and the deal's committee card were split out before it: the record-view render
 // callback stays under the complexity ceiling.
 //
-// An archived deal is read-only (no edit/archive/advance path exists
-// server-side for a non-live row), so its verbs render REFUSED rather than
-// missing: the page's one sentence about the archive says why, and each of
-// them points at it (STATE-4a). A missing control says nothing about the
-// deal, while a refused one names the reason.
+// An archived deal's verbs stay, refused, and point at the page's sentence
+// about the archive (STATE-4a). A deal this reader may not write is refused by
+// permission, not state, so the verbs that change it are left out.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, FileText, Phone } from "lucide-react";
@@ -31,6 +29,7 @@ import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
 import { dealRecordKeys } from "../../../lib/activitykeys";
+import { useCanWriteRecord } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
@@ -203,6 +202,7 @@ export function DealActions({
   refusedReasonId?: string;
 }>) {
   const t = useT();
+  const canWrite = useCanWriteRecord("deal", deal);
   const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
@@ -305,18 +305,22 @@ export function DealActions({
         </Button>
         {/* Worded rather than a bare pencil: among named verbs the square
             would be the one row naming nothing. */}
-        <Button onClick={onEditDetails}>{t("deal.editDetails")}</Button>
-        <ShareAction
-          recordType="deal"
-          recordId={deal.id}
-          disabledReasonId={refusedReasonId}
-        />
+        {canWrite && (
+          <Button onClick={onEditDetails}>{t("deal.editDetails")}</Button>
+        )}
+        {canWrite && (
+          <ShareAction
+            recordType="deal"
+            recordId={deal.id}
+            disabledReasonId={refusedReasonId}
+          />
+        )}
         <AddToShortlistAction entityType="deal" entityId={deal.id} />
         <RequestLegalReviewAction deal={deal} />
         {/* Reopen answers a CLOSED deal, so an open one has no reason to be
             told about it — absent, not refused. An archived closed deal keeps
             it, refused: the reader came asking whether this can come back. */}
-        {(deal.status === "won" || deal.status === "lost") && (
+        {canWrite && (deal.status === "won" || deal.status === "lost") && (
           <>
             <CorrectCloseDayAction
               deal={deal}
@@ -330,28 +334,30 @@ export function DealActions({
             />
           </>
         )}
-        <ArchiveAction
-          requires={{ object: "deal", action: "delete" }}
-          archivable={deal.archivable ?? false}
-          refusedReason={t("deal.archiveRefused")}
-          disabledReasonId={refusedReasonId}
-          label={t("deal.archive")}
-          confirmText={t("deal.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: deal.name })}
-          archive={async () => {
-            return unwrap(
-              await api.DELETE("/deals/{id}", {
-                params: {
-                  path: { id: deal.id },
-                  ...ifMatch(requireVersion(deal.version)),
-                },
-              }),
-            );
-          }}
-          invalidate="deals"
-          recordKey="deal"
-          onArchived={(from) => from.navigateReplacing({ screen: "deals" })}
-        />
+        {canWrite && (
+          <ArchiveAction
+            requires={{ object: "deal", action: "delete" }}
+            archivable={deal.archivable ?? false}
+            refusedReason={t("deal.archiveRefused")}
+            disabledReasonId={refusedReasonId}
+            label={t("deal.archive")}
+            confirmText={t("deal.archiveConfirm")}
+            archivedMessage={t("record.archiveDone", { name: deal.name })}
+            archive={async () => {
+              return unwrap(
+                await api.DELETE("/deals/{id}", {
+                  params: {
+                    path: { id: deal.id },
+                    ...ifMatch(requireVersion(deal.version)),
+                  },
+                }),
+              );
+            }}
+            invalidate="deals"
+            recordKey="deal"
+            onArchived={(from) => from.navigateReplacing({ screen: "deals" })}
+          />
+        )}
       </OverflowMenu>
     </>
   );
