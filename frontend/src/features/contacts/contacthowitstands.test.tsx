@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { ContactHowItStands } from "./contacthowitstands";
@@ -53,7 +53,7 @@ function standingText(view: Contact360): string {
   const { container } = render(
     <QueryClientProvider client={new QueryClient()}>
       <LocaleProvider initial="en">
-        <ContactHowItStands view={view} />
+        <ContactHowItStands view={view} onOpenTab={() => undefined} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -105,23 +105,17 @@ describe("ContactHowItStands", () => {
   );
 });
 
-it("keeps the way back to the Worklist when a figure opens another tab", () => {
-  globalThis.history.replaceState(
-    null,
-    "",
-    "#/contacts/p-1?from=worklist&queue_scope=team",
-  );
+it("opens a figure's tab through the page's own tab move", () => {
+  const onOpenTab = vi.fn();
   const { container } = render(
     <QueryClientProvider client={new QueryClient()}>
       <LocaleProvider initial="en">
-        <ContactHowItStands view={VIEW} />
+        <ContactHowItStands view={VIEW} onOpenTab={onOpenTab} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
   const lastReply = container.querySelector(".stat-card-open");
   if (!lastReply) throw new Error("the last-reply figure has no way in");
   fireEvent.click(lastReply);
-  expect(globalThis.location.hash).toBe(
-    "#/contacts/p-1/timeline?from=worklist&queue_scope=team",
-  );
+  expect(onOpenTab).toHaveBeenCalledWith("timeline");
 });
