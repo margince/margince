@@ -92,6 +92,7 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
 
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
 const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
+const buildRevision = process.env.MARGINCE_BUILD_REVISION ?? "";
 
 const entries = initialEntries(frontendRoot);
 const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
@@ -171,9 +172,11 @@ export default defineConfig({
   // would compile every MARGINCE_* variable in the build environment into the
   // bundle, which is one careless deploy away from shipping a secret to every
   // browser. Empty is the local default, and empty disables the comparison.
+  // The revision only labels an unstamped build and never feeds the comparison.
   define: {
     __MARGINCE_RELEASE_VERSION__: JSON.stringify(release),
     __MARGINCE_CORE_VERSION__: JSON.stringify(coreRelease),
+    __MARGINCE_BUILD_REVISION__: JSON.stringify(buildRevision),
   },
   resolve: {
     // An ARRAY rather than a record, because one entry must match a pattern:

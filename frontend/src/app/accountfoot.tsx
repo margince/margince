@@ -5,7 +5,13 @@ import { LogOut } from "lucide-react";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
-import { CORE_RELEASE, comparableRelease, SPA_RELEASE } from "../lib/release";
+import {
+  BUILD_REVISION,
+  CORE_RELEASE,
+  comparableRelease,
+  SPA_RELEASE,
+  shortRevision,
+} from "../lib/release";
 import { useLogout } from "../lib/session";
 import type { RowSeat } from "./accountseats";
 
@@ -56,7 +62,7 @@ export function SignOutRow({ seat }: Readonly<{ seat: RowSeat }>) {
 export type BuildRelease =
   | Readonly<{ kind: "instance"; core: string; instance?: string }>
   | Readonly<{ kind: "core"; release: string }>
-  | Readonly<{ kind: "unstamped" }>;
+  | Readonly<{ kind: "unstamped"; revision?: string }>;
 
 export function buildRelease(): BuildRelease {
   if (comparableRelease(CORE_RELEASE)) {
@@ -68,7 +74,7 @@ export function buildRelease(): BuildRelease {
   }
   return comparableRelease(SPA_RELEASE)
     ? { kind: "core", release: SPA_RELEASE }
-    : { kind: "unstamped" };
+    : { kind: "unstamped", revision: shortRevision(BUILD_REVISION) };
 }
 
 /**
@@ -103,7 +109,11 @@ export function AccountRelease() {
   } else if (build.kind === "core") {
     lines.push(t("shell.version", { version: build.release }));
   } else {
-    lines.push(t("shell.help.devBuild"));
+    lines.push(
+      build.revision
+        ? t("shell.help.devBuildRevision", { revision: build.revision })
+        : t("shell.help.devBuild"),
+    );
   }
   return (
     <div className="acctversion t-caption" role="none">
