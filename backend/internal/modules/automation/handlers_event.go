@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -121,12 +122,41 @@ func (w stageChangeCreateTask) Plan(ctx context.Context, ev workflow.Event) (wor
 			return workflow.Effect{}, err
 		}
 	}
+	why, err := stageMoveReason(ev.Payload)
+	if err != nil {
+		return workflow.Effect{}, err
+	}
 	if configured.TaskTitle != "" {
-		return ownedTaskEffectNoKey(ctx, w.ex, ev, configured.TaskTitle, dueAt)
+		return ownedTaskEffectNoKey(ctx, w.ex, ev, taskWords{subject: configured.TaskTitle, why: why}, dueAt)
 	}
 	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.stage_change")})
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, systemtext.Literal("automation.stage_change"),
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, taskWords{subject: systemtext.Literal("automation.stage_change"), why: why},
 		dueAt)
+}
+
+// stageMoveReason says which stages the deal moved between, by the names
+// they had at the move. A payload without the destination's name says nothing.
+func stageMoveReason(payload json.RawMessage) (func(string) *systemtext.Component, error) {
+	if len(payload) == 0 {
+		return nil, nil
+	}
+	var moved crmcontracts.PublicEventDealStageChanged
+	if err := json.Unmarshal(payload, &moved); err != nil {
+		return nil, fmt.Errorf("automation: reading the stage move: %w", err)
+	}
+	if moved.ToStageName == nil || *moved.ToStageName == "" {
+		return nil, nil
+	}
+	to := *moved.ToStageName
+	if moved.FromStageName == nil || *moved.FromStageName == "" {
+		return func(deal string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.stage_placed", systemtext.Text(deal), systemtext.Text(to))
+		}, nil
+	}
+	from := *moved.FromStageName
+	return func(deal string) *systemtext.Component {
+		return systemtext.Sentence("automation.why.stage_moved", systemtext.Text(deal), systemtext.Text(from), systemtext.Text(to))
+	}, nil
 }
 
 func (w stageChangeCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
@@ -213,8 +243,13 @@ func (w routeLeadCreateTask) Plan(ctx context.Context, ev workflow.Event) (workf
 		return workflow.Effect{}, err
 	}
 	ctx = systemtext.WithMessage(ctx, &systemtext.Message{Version: 1, Subject: systemtext.Sentence("automation.new_lead")})
-	return ownedTaskEffectNoKey(ctx, w.ex, ev, systemtext.Literal("automation.new_lead"),
-		dueAt)
+	day := ev.OccurredAt.UTC().Format(time.DateOnly)
+	return ownedTaskEffectNoKey(ctx, w.ex, ev, taskWords{
+		subject: systemtext.Literal("automation.new_lead"),
+		why: func(lead string) *systemtext.Component {
+			return systemtext.Sentence("automation.why.new_lead", systemtext.Text(lead), systemtext.Date(day))
+		},
+	}, dueAt)
 }
 
 func (w routeLeadCreateTask) Apply(ctx context.Context, _ workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {

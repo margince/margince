@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -38,9 +39,9 @@ func TestTheTaskCountsItsFindingsInWords(t *testing.T) {
 		{textlang.German, 2, "2 Angaben zur Prognose müssen geprüft werden"},
 		{textlang.Vietnamese, 3, "3 đầu vào dự báo cần xem lại"},
 	} {
-		got, err := bundleTaskSubject(c.findings).Render(c.lang)
+		got, err := assurance.TaskSubject(c.findings).Render(c.lang)
 		if err != nil || got != c.want {
-			t.Errorf("bundleTaskSubject(%d) in %s = %q (%v), want %q", c.findings, c.lang, got, err, c.want)
+			t.Errorf("TaskSubject(%d) in %s = %q (%v), want %q", c.findings, c.lang, got, err, c.want)
 		}
 		// An English task stored before its descriptor is recognised, so the repair gives it one.
 		if recovered, err := systemtext.RecoverCanonicalText(c.want); c.lang == textlang.English && (err != nil || recovered == nil) {

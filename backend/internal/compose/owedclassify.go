@@ -140,6 +140,7 @@ const (
 type owedResult struct {
 	ID         string            `json:"id"`
 	Verdict    string            `json:"verdict"` // owedVerdictKey
+	Ask        string            `json:"ask"`     // owedverdict.AskKey
 	Confidence schema.Confidence `json:"confidence"`
 }
 
@@ -156,10 +157,11 @@ func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 	if err := c.store.CaptureEmailRequests(ctx, c.now()); err != nil {
 		return err
 	}
-	if err := c.judgeWorkspace(ctx, maxVerdicts); err != nil {
+	asks := activities.RequestAsks{}
+	if err := c.judgeWorkspace(ctx, maxVerdicts, asks); err != nil {
 		return err
 	}
-	return c.store.CaptureEmailRequests(ctx, c.now())
+	return c.store.CaptureEmailRequestsAsked(ctx, c.now(), asks)
 }
 
 // judgeWorkspace judges new mail first, then re-judges what older rules decided.
@@ -169,19 +171,19 @@ func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 // can never delay a customer who wrote this morning: on the deploy that moves
 // the prompt, every judged row in the installation is stale at once, and a
 // single shared bound would spend the whole pass on them.
-func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) error {
+func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int, asks activities.RequestAsks) error {
 	if c.brain == nil {
 		return nil
 	}
 	if maxVerdicts <= 0 {
 		maxVerdicts = owedCatchUpCap
 	}
-	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
+	if err := c.drain(ctx, maxVerdicts, "backlog", asks, func() ([]owedCandidate, time.Time, error) {
 		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
 	}); err != nil {
 		return err
 	}
-	return c.drain(ctx, owedRestaleCap, "re-judge", func() ([]owedCandidate, time.Time, error) {
+	return c.drain(ctx, owedRestaleCap, "re-judge", asks, func() ([]owedCandidate, time.Time, error) {
 		return c.store.OwedRestale(ctx, owedverdict.Ruleset, owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
 	})
 }
@@ -196,7 +198,7 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) er
 // row with nine abstentions makes progress by the verdict count and re-asks the
 // same nine every iteration. sweepCalls counts every call, a split batch's
 // included, so the bound holds whatever the batches do.
-func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func() ([]owedCandidate, time.Time, error)) error {
+func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, asks activities.RequestAsks, next func() ([]owedCandidate, time.Time, error)) error {
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, owedBatchSize)
 	for judged < maxVerdicts && calls.remain() {
@@ -210,7 +212,7 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 		if len(batch) == 0 {
 			return nil
 		}
-		n, err := c.judgeBatch(ctx, batch, readAt, calls)
+		n, err := c.judgeBatch(ctx, batch, readAt, calls, asks)
 		judged += n
 		if sweepPaused(err) {
 			c.log.InfoContext(ctx, "owed classify: stopping the pass",
@@ -246,7 +248,7 @@ type owedPredictionSink struct {
 
 // judgeBatch sends the model only messages with words of their own. One that is
 // only a quote or a forward asks nothing of us: it is stamped declined, unjudged.
-func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time, calls *sweepCalls) (int, error) {
+func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, readAt time.Time, calls *sweepCalls, asks activities.RequestAsks) (int, error) {
 	worded := make([]owedCandidate, 0, len(batch))
 	for _, msg := range batch {
 		if msg.Body != "" {
@@ -262,7 +264,9 @@ func (c *OwedClassifier) judgeBatch(ctx context.Context, batch []owedCandidate, 
 	}
 	judged, err := c.predictBatch(ctx, worded, calls, owedPredictionSink{
 		accept: func(ctx context.Context, msg owedCandidate, result owedResult) (bool, error) {
-			return c.store.SetOwedVerdict(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt)
+			applied, err := c.store.SetOwedVerdict(ctx, msg.ID, result.Verdict, owedverdict.Ruleset, readAt)
+			asks.Keep(msg.ID, applied, owedverdict.VerbatimAsk(result.Verdict, result.Ask, msg.Body))
+			return applied, err
 		},
 		decline: func(ctx context.Context, msg owedCandidate, cause error) error {
 			recorded, err := c.store.MarkOwedVerdictDeclined(ctx, msg.ID, owedverdict.Ruleset)
@@ -366,8 +370,8 @@ func (c *OwedClassifier) predictEach(ctx context.Context, msgs []owedCandidate, 
 // so no message can close its own span and reach the text of another sender's
 // mail to have it judged.
 //
-//promptlang:exempt the reply is a closed set of verdict enum values keyed by id, never a sentence — validateOwedPayload refuses anything outside owedSchema's vocabulary, so a language instruction could only turn an enum into a parse failure.
-//promptvoice:exempt the reply is a closed set of verdict enum values keyed by id, never a sentence.
+//promptlang:exempt the reply is a closed set of verdict enum values keyed by id, plus an ask copied verbatim from the mail; owedverdict.VerbatimAsk drops any ask that is not a span of it, so a language instruction could only make a quote stop matching.
+//promptvoice:exempt the reply is verdict enum values and a verbatim span of the sender's mail, never a sentence the model writes.
 func owedRequest(batch []owedCandidate) model.Request {
 	fence := promptfence.New()
 	return model.Request{
@@ -450,9 +454,10 @@ func owedSchema(requested []string) json.RawMessage {
 				map[string]schema.Node{
 					"id":                    requestedIDNode(requested),
 					owedVerdictKey:          schema.Enum(activities.OwedVerdictAsksUs, activities.OwedVerdictInformsUs),
+					owedverdict.AskKey:      schema.String(),
 					extractionConfidenceKey: schema.Number(),
 				},
-				"id", owedVerdictKey, extractionConfidenceKey)),
+				"id", owedVerdictKey, owedverdict.AskKey, extractionConfidenceKey)),
 		},
 		owedResultsKey))
 }

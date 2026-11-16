@@ -79353,6 +79353,18 @@ components:
         display_name: { type: string }
         status: { type: string, enum: [open, done, dismissed], x-extensible-enum: true }
 
+    WorkGrounds:
+      type: object
+      additionalProperties: false
+      required: [text]
+      description: >-
+        Why a piece of work exists, written when the work was made: who did or said what, about
+        which record, and when. A sender's words in it are quoted exactly.
+      properties:
+        text:
+          type: string
+          maxLength: 600
+          description: The reason, in the reader's language where Margince wrote it, else in its author's.
     AttentionItem:
       type: object
       description: |
@@ -79435,6 +79447,12 @@ components:
 
             Both now travel typed — `quiet_days` and `staged` below — and the client writes
             the sentence in the reader's own language.
+        why:
+          allOf: [{ $ref: '#/components/schemas/WorkGrounds' }]
+          description: >-
+            Why this work exists, as whoever made it said it. A
+            reader acts on this sentence instead of on the row's date. Absent when its maker
+            gave none, never filled with a stock sentence.
         summary_parts:
           allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
           description: >-
@@ -81330,6 +81348,12 @@ components:
             Not a channel for anything else. A value the queue itself reads travels typed
             beside this field, never inside it: a figure parsed back out of a sentence reads
             as zero the day somebody rewords the sentence.
+        why:
+          allOf: [{ $ref: '#/components/schemas/WorkGrounds' }]
+          description: >-
+            Why this work exists, as whoever made it said it. A
+            reader acts on this sentence instead of on the row's date. Absent when its maker
+            gave none, never filled with a stock sentence.
         because:
           type: array
           items: { $ref: '#/components/schemas/WorklistReason' }

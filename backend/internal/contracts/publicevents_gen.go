@@ -2290,6 +2290,9 @@ type PublicEventLeadSlaBreached struct {
 	// EscalationTarget The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`.
 	EscalationTarget *openapi_types.UUID `json:"escalation_target,omitempty"`
 
+	// LeadName The lead's name at breach time. The escalation names the lead it is about without reading it back.
+	LeadName *string `json:"lead_name,omitempty"`
+
 	// OwnerId The lead's owner at breach time (absent when unrouted).
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
@@ -3960,7 +3963,7 @@ var PublicEventSamples = map[string]string{
 	"lead.disqualified":                         "{}",
 	"lead.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.promoted":                             "{\"carried_activity_ids\":[\"0190a7f2-0000-7000-8000-000000000010\"],\"dedupe_outcome\":\"Sample dedupe outcome\",\"evidence_ref\":\"0190a7f2-0000-7000-8000-000000000010\",\"promoted_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"trigger\":\"Sample trigger\"}",
-	"lead.sla_breached":                         "{\"deadline\":\"2026-10-14T09:12:00Z\",\"escalation_target\":\"0190a7f2-0000-7000-8000-000000000010\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"lead.sla_breached":                         "{\"deadline\":\"2026-10-14T09:12:00Z\",\"escalation_target\":\"0190a7f2-0000-7000-8000-000000000010\",\"lead_name\":\"Sample lead name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.updated":                              "{\"changed_fields\":{}}",
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

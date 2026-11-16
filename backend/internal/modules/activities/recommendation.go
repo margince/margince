@@ -54,6 +54,9 @@ func (s *Store) checkTaskRecommendation(ctx context.Context, tx pgx.Tx, in *LogA
 	if !reflect.DeepEqual(taskIntent(*in), taskIntent(current)) {
 		return fmt.Errorf("the suggested step changed; refresh it before accepting: %w", apperrors.ErrVersionSkew)
 	}
+	if in.Body == nil {
+		in.Body = current.Body
+	}
 	if in.RequestActivityID == nil {
 		sourceID, err := acceptedRecommendationID(ctx, *in.Recommendation)
 		if err != nil {
@@ -86,8 +89,10 @@ func (s *Store) replayedTaskRecommendation(ctx context.Context, tx pgx.Tx, in Lo
 	return *replay, true, err
 }
 
+// taskIntent is what an acceptance must match. The body is the suggestion's
+// reason, which counts days, so a task accepted later keeps today's wording.
 func taskIntent(in LogActivityInput) LogActivityInput {
-	in.Recommendation = nil
+	in.Recommendation, in.Body = nil, nil
 	in.customColumns, in.customChecked = nil, false
 	in.Origin = ""
 	return in

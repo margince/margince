@@ -916,6 +916,8 @@ export interface components {
              * @description The first-response deadline that passed.
              */
             deadline: string;
+            /** @description The lead's name at breach time. The escalation names the lead it is about without reading it back. */
+            lead_name?: string;
             /**
              * Format: uuid
              * @description The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`.

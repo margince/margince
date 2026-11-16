@@ -54780,6 +54780,17 @@ components:
         contact_id: {type: string, format: uuid}
         display_name: {type: string}
         status: {type: string, enum: [open, done, dismissed]}
+    WorkGrounds:
+      type: object
+      additionalProperties: false
+      required: [text]
+      description: >-
+        Why a piece of work exists, written when the work was made: who did or said what, about which record, and when. A sender's words in it are quoted exactly.
+      properties:
+        text:
+          type: string
+          maxLength: 600
+          description: The reason, in the reader's language where Margince wrote it, else in its author's.
     AttentionPair:
       type: object
       description: |-
@@ -55856,6 +55867,10 @@ components:
           description: |-
             One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
             stopped, what an AI task was about.
+        why:
+          allOf: [{$ref: '#/components/schemas/WorkGrounds'}]
+          description: >-
+            Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence.
         because:
           type: array
           items: {$ref: '#/components/schemas/WorklistReason'}

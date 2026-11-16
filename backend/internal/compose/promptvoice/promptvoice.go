@@ -64,7 +64,7 @@ Say what you could not see. Never fill a gap to make the answer look complete â€
 
 Never write: "Absolutely", "Great question", "I'd be happy to help", "Successfully completed", "Based on the provided context", "As an AI", "Please be advised", "leverage", "unlock", "seamlessly".
 No greetings. No praise. No exclamation marks. No hedging â€” no "it appears that", no "it seems". No corporate register. No claim to feelings or experience.
-Never restate the record's own name back to the reader; they are looking at it.`
+Name the contacts, companies and deals you write about, and the event that prompted you, with its date: "Anna Weber wrote on 14 Nov that the rollout moves to March", never "a contact has been updated". Text read away from its record, on a home page, a task or a notice, has no other way to say who it is about.`
 
 // Move is composed after Rule by the prompts whose recommendations
 // claims.OpensWithWriterSubject refuses, so the model is told the rule its output is held to.

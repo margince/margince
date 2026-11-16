@@ -82,7 +82,12 @@ func planInquiryTask(ctx context.Context, ev workflow.Event, policy crmcontracts
 	targetEvent.Entity = receipt.Target
 	system, source := provenance.WebsiteInquiryTaskSource(receipt.Key, receipt.Target.Type == datasource.EntityContact)
 	key := taskNaturalKey{System: system, ID: source}
-	effect, err := taskCreateEffectFor(ctx, targetEvent, policy.TaskTitle, due, nil, &key)
+	effect, err := taskCreateEffectFor(ctx, targetEvent, taskWords{
+		subject: policy.TaskTitle,
+		// The why is the submission itself: the row carries it as its
+		// website_inquiry facts, in the sender's own words.
+		why: nil,
+	}, "", due, nil, &key)
 	if err != nil {
 		return workflow.Effect{}, err
 	}

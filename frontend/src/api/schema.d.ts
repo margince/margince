@@ -58848,6 +58848,11 @@ export interface components {
             /** @enum {string} */
             status: "open" | "done" | "dismissed";
         };
+        /** @description Why a piece of work exists, written when the work was made: who did or said what, about which record, and when. A sender's words in it are quoted exactly. */
+        WorkGrounds: {
+            /** @description The reason, in the reader's language where Margince wrote it, else in its author's. */
+            text: string;
+        };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
          *     the record that owns it. The client routes a verb to that owner's endpoint — this
@@ -58918,6 +58923,8 @@ export interface components {
              *     the sentence in the reader's own language.
              */
             detail?: string;
+            /** @description Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence. */
+            why?: components["schemas"]["WorkGrounds"];
             /** @description On an approval, its title taken apart, so the row can show the proposed values as a list. Absent when the title is a sentence alone. */
             summary_parts?: components["schemas"]["ApprovalSummaryParts"];
             staged?: components["schemas"]["AttentionStagedFacts"];
@@ -60655,6 +60662,8 @@ export interface components {
              *     as zero the day somebody rewords the sentence.
              */
             detail?: string;
+            /** @description Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence. */
+            why?: components["schemas"]["WorkGrounds"];
             /** @description The facts that put this item at this level, in the order they were weighed. */
             because: components["schemas"]["WorklistReason"][];
             above_next?: components["schemas"]["WorklistComparison"];

@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,6 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // EmailRequestTaskSource identifies tasks derived from a confirmed email request.
@@ -43,6 +46,24 @@ func emailRequestAssigneeSQL(identities string) string {
 // addressed requests remain in review; this pass neither assigns them silently
 // nor recreates reminders a human archived or completed.
 func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error {
+	return s.CaptureEmailRequestsAsked(ctx, asOf, nil)
+}
+
+// RequestAsks is what each judged message asks, in the sender's own words,
+// keyed by the message. A message absent from it files a reminder that says
+// nothing beyond its subject.
+type RequestAsks map[ids.UUID]string
+
+// Keep records what a message asks, once its verdict is written.
+func (a RequestAsks) Keep(message ids.UUID, written bool, ask string) {
+	if written && ask != "" {
+		a[message] = ask
+	}
+}
+
+// CaptureEmailRequestsAsked is CaptureEmailRequests for a pass that just
+// judged the messages, so each reminder it files quotes what its sender asked.
+func (s *Store) CaptureEmailRequestsAsked(ctx context.Context, asOf time.Time, asks RequestAsks) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalSystem {
 		return apperrors.ErrPermissionDenied
@@ -112,7 +133,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 				}
 				seats[candidate.user] = seat
 			}
-			if err := s.captureEmailRequest(ctx, tx, candidate.message, seat, asOf); err != nil {
+			if err := s.captureEmailRequest(ctx, tx, candidate.message, seat, asOf, asks[candidate.message]); err != nil {
 				return err
 			}
 		}
@@ -120,13 +141,16 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 	})
 }
 
-func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID ids.UUID, seat principal.Principal, asOf time.Time) error {
+func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID ids.UUID, seat principal.Principal, asOf time.Time, ask string) error {
 	source, err := readActivity(ctx, tx, ids.From[ids.ActivityKind](messageID), storekit.LiveOnly)
 	if err != nil {
 		return err
 	}
 	request, err := emailRequestTask(ctx, tx, source, seat, asOf)
 	if err != nil {
+		return err
+	}
+	if err := quoteTheAsk(ctx, tx, &request, messageID, ask); err != nil {
 		return err
 	}
 	due, stated, err := s.statedRequestDue(ctx, tx, source, asOf)
@@ -138,4 +162,29 @@ func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID id
 	}
 	_, _, err = s.LogActivityTx(ctx, tx, request)
 	return err
+}
+
+// quoteTheAsk gives the reminder its reason: who asked, and what, in their own
+// words. The words are the mail's own, so the reminder reads as the sender
+// wrote in every reader's language; only the frame around them translates.
+func quoteTheAsk(ctx context.Context, tx pgx.Tx, request *LogActivityInput, message ids.UUID, ask string) error {
+	ask = strings.TrimSpace(ask)
+	if ask == "" {
+		return nil
+	}
+	// The name the sender's own mail gives them, so the reminder says what
+	// every reader of that mail already sees.
+	var sender string
+	err := tx.QueryRow(ctx, `
+		SELECT p.display_name FROM activity_participant p
+		 WHERE p.activity_id = $1 AND p.role = 'from' AND nullif(btrim(p.display_name), '') IS NOT NULL
+		 ORDER BY p.id LIMIT 1`, message).Scan(&sender)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("activities: reading who asked: %w", err)
+	}
+	why := systemtext.Sentence("request.asked_unnamed", systemtext.Text(ask))
+	if sender != "" {
+		why = systemtext.Sentence("request.asked", systemtext.Text(sender), systemtext.Text(ask))
+	}
+	return request.SayWhy(why, textlang.English)
 }

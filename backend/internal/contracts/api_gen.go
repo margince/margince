@@ -37005,6 +37005,9 @@ type AttentionItem struct {
 	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
 	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
 
+	// Why Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence.
+	Why *WorkGrounds `json:"why,omitempty"`
+
 	// WithContact Who a meeting is with: the first attendee by name who holds no seat here, is not
 	// employed by the installation's own company, and is a contact this caller may
 	// see. Sent by `source: meeting` and `source: meeting_outcome`. On a `meeting`
@@ -70844,6 +70847,12 @@ type WorkEvidenceBasis struct {
 	SourceVersion *RowVersion `json:"source_version,omitempty" minimum:"1"`
 }
 
+// WorkGrounds Why a piece of work exists, written when the work was made: who did or said what, about which record, and when. A sender's words in it are quoted exactly.
+type WorkGrounds struct {
+	// Text The reason, in the reader's language where Margince wrote it, else in its author's.
+	Text string `json:"text"`
+}
+
 // WorkingHours When one contact is bookable, on their own clock.
 //
 // Personal, never installation-wide: contacts on one team sit in different
@@ -71964,6 +71973,9 @@ type WorklistItem struct {
 
 	// WebsiteInquiry Inquiry facts under the current task and source content permissions. Missing source facts remain unknown.
 	WebsiteInquiry *WebsiteInquiryWork `json:"website_inquiry,omitempty"`
+
+	// Why Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence.
+	Why *WorkGrounds `json:"why,omitempty"`
 
 	// WithContact Whose record a `meeting` row's brief is read on, carried out from
 	// `AttentionItem.with_contact`.
