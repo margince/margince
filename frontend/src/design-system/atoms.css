@@ -841,6 +841,10 @@
   /* A second row only once the words themselves cannot share one: a strip on
      two rows reads as two controls. */
   flex-wrap: wrap;
+  /* A set size, so a host that stretches its children never leaves empty
+     track after the last option. */
+  inline-size: fit-content;
+  max-inline-size: 100%;
   background: var(--bgChip);
   color: var(--textPrimary);
   border-radius: var(--r-sm);
