@@ -13,7 +13,7 @@ package compose
 //
 // The dispatch is the whole of the file on purpose. Everything a hold actually
 // DOES — the authority check, the row lock, the refusal of a no-op, the audit
-// row carrying the stated reason — is storekit.SetLegalHold, called by each
+// row carrying the stated reason, the record's .updated event — is storekit.SetLegalHold, called by each
 // owner. Putting any of it here would make compose a sixth writer of records
 // it does not own.
 

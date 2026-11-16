@@ -34,7 +34,7 @@ import (
 const legalHoldColumn = "legal_hold"
 
 // LegalHoldUpdated builds the owner's <record>.updated payload from the
-// changed fields, so the event type is bound to its schema by the compiler.
+// changed fields. SetLegalHold refuses a payload for another record type.
 type LegalHoldUpdated func(changedFields map[string]any) events.Payload
 
 // SetLegalHold places or lifts the hold on one record. It audits the reason
