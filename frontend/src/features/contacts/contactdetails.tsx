@@ -34,6 +34,7 @@ import { currentEmployer } from "../../lib/employmentcurrency";
 import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
+import { useRecordCarriesTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
@@ -71,6 +72,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
     ? undefined
     : proposedEmployer(view, view.employments?.data ?? []);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
+  const tagsRows = useTagsRows(contact);
   // Every row opens its edit from its value; an empty one still folds.
   // A handle (an address or number with its marks and glyphs) lays them out.
   const field = (
@@ -182,6 +184,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
             </>
           ),
         }),
+        ...tagsRows,
       ],
     },
     {
@@ -202,6 +205,22 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
             ),
         }),
       ],
+    },
+  ];
+}
+
+// An archived contact is closed to the reads its tags hang off.
+function useTagsRows(contact: Contact): DetailRow[] {
+  const t = useT();
+  const tagged = useRecordCarriesTags("contact", contact.id, contact.tags);
+  if (contact.archived_at) return [];
+  return [
+    {
+      key: "tags",
+      term: t("tags.panelTitle"),
+      block: true,
+      empty: !tagged,
+      value: <ContactTagsSection contact={contact} />,
     },
   ];
 }
@@ -347,7 +366,6 @@ export function ContactDetails({
           ),
         }}
         canEdit={edit.canEdit}
-        // Tags as one more row of the card: filing beside the facts it files.
         extraRows={
           <>
             {/* What a provider sold that no field holds: shown as bought facts
@@ -356,11 +374,6 @@ export function ContactDetails({
               profiles={profiles}
               runs={contact.bought_fields}
             />
-            {contact.archived_at ? null : (
-              <FieldRow label={t("tags.panelTitle")} align="top">
-                <ContactTagsSection contact={contact} />
-              </FieldRow>
-            )}
             <FieldRow label={t("list.created")}>
               {formatDateAbbrev(contact.created_at, locale, zone)}
             </FieldRow>

@@ -28,6 +28,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
+import { useRecordCarriesTags } from "../../lib/tags.queries";
 import { CompanyContactCard } from "./companycontactcard";
 import {
   companyWebsite,
@@ -40,6 +41,7 @@ import {
   useCompanyFieldSave,
 } from "./companyrailedit";
 import { useOwnershipRows, useRegistrationRows } from "./companyrailgroups";
+import { CompanyTagsSection } from "./companyrailtags";
 
 // The company's details under its head: About, Ownership, Registration and
 // Lists as flat groups. Every empty field folds behind one link, and the
@@ -290,6 +292,7 @@ function useAboutRows(
   const industryOptions = useIndustryOptions(company);
   const website = companyWebsite(company);
   const wayIn = useWayIn(company, view, loading);
+  const tagged = useRecordCarriesTags("company", company.id, view?.tags);
   return [
     // The head already links the site; here the value opens the domains form.
     compound("domains", t("field.domain"), website && displayHost(website)),
@@ -332,6 +335,15 @@ function useAboutRows(
           },
         ]
       : []),
+    {
+      key: "tags",
+      term: t("tags.panelTitle"),
+      block: true,
+      empty: Boolean(company.archived_at) || !tagged,
+      value: (
+        <CompanyTagsSection company={company} companyId={company.id} bare />
+      ),
+    },
   ];
 }
 

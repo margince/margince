@@ -73,7 +73,7 @@ export function bodyState(withheld: boolean, count: number): SectionState {
 /**
  * The left column under the head: About, Ownership, Consent & channels and an
  * unconfirmed source as flat groups. Then the lists the contact is on, the one link to the empty
- * fields, and the page's footnote. Employers, billing roles, tags, the record's
+ * fields, and the page's footnote. Employers, billing roles, the record's
  * source and the consent proof live on the Network and Research tabs.
  */
 export function ContactRail({

@@ -381,6 +381,27 @@ describe("the sibling sections governed by their own grants", () => {
   });
 });
 
+describe("the contact's tags in the left column", () => {
+  it("shows the tags it carries and the verb to add one", async () => {
+    mount({
+      ...granted,
+      contact: {
+        ...contact,
+        tags: [{ tag_id: "t-1", name: "Champion", color: "teal" }],
+      },
+    });
+
+    const about = screen.getByRole("region", {
+      name: en["record.details.about"],
+    });
+    await within(about).findByText("Champion");
+    expect(within(about).getByText(en["tags.panelTitle"])).toBeTruthy();
+    expect(
+      within(about).getByRole("button", { name: en["tags.add"] }),
+    ).toBeTruthy();
+  });
+});
+
 // What the modal SENDS, and whether the box the reader looked at agreed with it.
 // The two must never part company. A modal that omits the field for a box the
 // reader never touched leaves the server to decide, and the server's answer can
