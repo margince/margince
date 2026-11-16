@@ -27656,6 +27656,14 @@ paths:
                   description: |
                     What the contact was told, in their words. Stored because a suppression somebody
                     later asks to lift is only reviewable if the record says why it was made.
+                received_at:
+                  type: string
+                  format: date-time
+                  description: |
+                    When the refusal reached you: the arrival time of the mail that said so, or the
+                    time of the call. Never the time you record it. Left out, it is the time of
+                    recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+                    so a later time than now is refused.
       responses:
         '204': { description: Recorded. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -27878,6 +27886,34 @@ paths:
                   description: Why the stop is being taken back. Required.
       responses:
         '204': { description: Lifted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/consent/optout-records:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: exportContactOptOutRecords
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: export_contact_optout_records, router: read_details, action: contact_optout_records, tier: auto_execute, scope: read, served_by: route }
+      summary: Export this contact's registrations, refusals and opt-out receipts for an inspection.
+      description: |
+        The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email to keep for at
+        least one year and to show an inspector: every consent the contact gave or withdrew, every
+        stop recorded on them with the time the refusal arrived and the time sending stopped, and
+        every opt-out receipt sent or queued to them. Nothing here ages out; all three are kept
+        until the contact is erased.
+
+        An archived contact is answered too. Times are UTC.
+      responses:
+        '200':
+          description: The records, newest first in each list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OptOutRecords' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -69974,7 +70010,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 8
+          maxItems: 9
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -77179,6 +77215,48 @@ components:
           format: date-time
           description: When the earliest of them happened. Null when nobody recorded the time.
 
+    OptOutRecords:
+      type: object
+      description: One contact's registrations, refusals and opt-out receipts, as kept for an inspection.
+      required: [contact_id, generated_at, consent_events, stops, receipts]
+      properties:
+        contact_id: { type: string, format: uuid }
+        generated_at: { type: string, format: date-time }
+        consent_events:
+          type: array
+          description: Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`.
+          items: { $ref: '#/components/schemas/ConsentEvent' }
+        stops:
+          type: array
+          description: Every stop recorded on the contact, lifted ones included.
+          items: { $ref: '#/components/schemas/OptOutRecordStop' }
+        receipts:
+          type: array
+          description: Every opt-out receipt filed under the contact.
+          items: { $ref: '#/components/schemas/OptOutReceiptRecord' }
+    OptOutRecordStop:
+      type: object
+      required: [id, kind, received_at, stopped_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          description: '`subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`.'
+        purpose_key: { type: [string, 'null'], description: The one purpose a narrow stop binds. }
+        received_at: { type: string, format: date-time, description: When the refusal reached the controller. }
+        stopped_at: { type: string, format: date-time, description: When sending stopped. }
+        revoked_at: { type: [string, 'null'], format: date-time, description: When the stop was lifted. Null while it stands. }
+    OptOutReceiptRecord:
+      type: object
+      required: [message_id, status, template_version, queued_at]
+      properties:
+        message_id: { type: string, description: 'The receipt''s Message-ID. One refusal has one.' }
+        status: { type: string, description: 'The delivery''s state, such as `queued`, `sent` or `parked`.' }
+        template_version: { type: integer, description: The version of the receipt wording it carries. }
+        queued_at: { type: string, format: date-time }
+        sent_at: { type: [string, 'null'], format: date-time }
+        subject: { type: [string, 'null'], description: Null once an erasure removed it. }
+        body: { type: [string, 'null'], description: The plain-text body. Null once an erasure removed it. }
     ContactStop:
       type: object
       description: One live stop on a contact, and whether the caller may take it back.

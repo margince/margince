@@ -151,7 +151,7 @@ func validateOptOutAcknowledgement(
 	// acknowledgement is subject-level ("we received your opt-out"), not
 	// purpose-level ("we received your opt-out of THIS newsletter"). Filtering
 	// by purpose here would refuse the acknowledgement a narrow objection
-	// equally owes, under-serving the subject Art. 16 exists to protect.
+	// equally owes, under-serving the subject Decree 91/2020 Art. 20 exists to protect.
 	var standing bool
 	// An unsubscribe press writes no suppression, only marketing withdrawals.
 	// So a standing marketing-class withdrawal is evidence too; no other class is.

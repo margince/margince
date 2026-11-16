@@ -18815,6 +18815,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/{id}/consent/optout-records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Export this contact's registrations, refusals and opt-out receipts for an inspection.
+         * @description The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email to keep for at
+         *     least one year and to show an inspector: every consent the contact gave or withdrew, every
+         *     stop recorded on them with the time the refusal arrived and the time sending stopped, and
+         *     every opt-out receipt sent or queued to them. Nothing here ages out; all three are kept
+         *     until the contact is erased.
+         *
+         *     An archived contact is answered too. Times are UTC.
+         */
+        get: operations["exportContactOptOutRecords"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/consent/allow": {
         parameters: {
             query?: never;
@@ -56974,6 +57003,58 @@ export interface components {
              */
             occurred_at?: string | null;
         };
+        /** @description One contact's registrations, refusals and opt-out receipts, as kept for an inspection. */
+        OptOutRecords: {
+            /** Format: uuid */
+            contact_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            /** @description Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`. */
+            consent_events: components["schemas"]["ConsentEvent"][];
+            /** @description Every stop recorded on the contact, lifted ones included. */
+            stops: components["schemas"]["OptOutRecordStop"][];
+            /** @description Every opt-out receipt filed under the contact. */
+            receipts: components["schemas"]["OptOutReceiptRecord"][];
+        };
+        OptOutRecordStop: {
+            /** Format: uuid */
+            id: string;
+            /** @description `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`. */
+            kind: string;
+            /** @description The one purpose a narrow stop binds. */
+            purpose_key?: string | null;
+            /**
+             * Format: date-time
+             * @description When the refusal reached the controller.
+             */
+            received_at: string;
+            /**
+             * Format: date-time
+             * @description When sending stopped.
+             */
+            stopped_at: string;
+            /**
+             * Format: date-time
+             * @description When the stop was lifted. Null while it stands.
+             */
+            revoked_at?: string | null;
+        };
+        OptOutReceiptRecord: {
+            /** @description The receipt's Message-ID. One refusal has one. */
+            message_id: string;
+            /** @description The delivery's state, such as `queued`, `sent` or `parked`. */
+            status: string;
+            /** @description The version of the receipt wording it carries. */
+            template_version: number;
+            /** Format: date-time */
+            queued_at: string;
+            /** Format: date-time */
+            sent_at?: string | null;
+            /** @description Null once an erasure removed it. */
+            subject?: string | null;
+            /** @description The plain-text body. Null once an erasure removed it. */
+            body?: string | null;
+        };
         /** @description One live stop on a contact, and whether the caller may take it back. */
         ContactStop: {
             /**
@@ -90973,6 +91054,14 @@ export interface operations {
                      *     later asks to lift is only reviewable if the record says why it was made.
                      */
                     reason?: string;
+                    /**
+                     * Format: date-time
+                     * @description When the refusal reached you: the arrival time of the mail that said so, or the
+                     *     time of the call. Never the time you record it. Left out, it is the time of
+                     *     recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+                     *     so a later time than now is refused.
+                     */
+                    received_at?: string;
                 };
             };
         };
@@ -91150,6 +91239,33 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    exportContactOptOutRecords: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The records, newest first in each list. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OptOutRecords"];
+                };
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
