@@ -19,8 +19,9 @@ import (
 )
 
 // A transcript that records a meeting names it in source_activity_id. The
-// meeting's readers are its readers. It has the same audience and reason, the
-// same selected members, and the same colleagues among its guests.
+// meeting's readers are its readers. It has the same audience and reason and
+// the same selected members. Its guests are read from the meeting itself
+// (auth.guestRowsSQL); the copy here names who attended for its readings.
 
 // recordingTranscriptSQL is a live transcript, alias t, of a meeting, alias m.
 const recordingTranscriptSQL = `t.source_system = '` + transcriptSourceSystem + `' AND t.source_activity_id = m.id
@@ -67,8 +68,8 @@ func copyMeetingReadersTx(ctx context.Context, tx pgx.Tx, transcript, meeting id
 	if _, err := carryMissingParticipantsTx(ctx, tx, meeting, transcript); err != nil {
 		return err
 	}
-	// Only a colleague's row admits a reader, so only those leave with the
-	// meeting, including a copied row that does not stand on the meeting.
+	// A colleague who left the meeting leaves the transcript's attendance too,
+	// as does a copied row that does not stand on the meeting.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant p USING activity m WHERE p.activity_id = $1 AND m.id = $2
 		   AND p.user_id IS NOT NULL AND p.user_id NOT IN (`+meetingColleaguesSQL+`)`,
