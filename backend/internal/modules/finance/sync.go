@@ -90,7 +90,7 @@ func (s *Store) SyncConnection(
 		if err := mirrorCustomers(ctx, tx, conn.id, customers, source); err != nil {
 			return err
 		}
-		links, err = readLinks(ctx, tx, conn.id)
+		links, err = readLinks(ctx, tx, conn.id, "")
 		return err
 	})
 	if err != nil || !connected {
@@ -142,16 +142,11 @@ func (s *Store) mirrorCustomerLedger(
 		stillConnected = true
 		// A link removed while the ledger was read writes nothing, and one
 		// moved to another company follows the move.
-		current, err := readLinks(ctx, tx, connectionID)
-		if err != nil {
+		current, err := readLinks(ctx, tx, connectionID, externalCustomerID)
+		if err != nil || len(current) == 0 {
 			return err
 		}
-		for _, l := range current {
-			if l.externalCustomerID == externalCustomerID {
-				return s.mirrorLedger(ctx, tx, connectionID, l, ledger, source, out)
-			}
-		}
-		return nil
+		return s.mirrorLedger(ctx, tx, connectionID, current[0], ledger, source, out)
 	})
 	return stillConnected, err
 }
@@ -164,12 +159,15 @@ type link struct {
 	externalCustomerID string
 }
 
-func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) ([]link, error) {
+// readLinks reads the live links of one connection. A non-empty onlyCustomer
+// reads that source customer's link alone.
+func readLinks(ctx context.Context, tx pgx.Tx, connectionID ids.UUID, onlyCustomer string) ([]link, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT id, company_id, external_customer_id
 		  FROM finance_customer_link
 		 WHERE connection_id = $1 AND archived_at IS NULL
-		 ORDER BY external_customer_id`, connectionID)
+		   AND ($2 = '' OR external_customer_id = $2)
+		 ORDER BY external_customer_id`, connectionID, onlyCustomer)
 	if err != nil {
 		return nil, fmt.Errorf("read the customer links: %w", err)
 	}
