@@ -2,7 +2,9 @@ import type { EvidenceMarkSource } from "../../design-system/evidencemark";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { confidenceLevel } from "../../design-system/trust";
 import { formatDate, formatDateTime } from "../../format/format";
-import { type Locale, translate } from "../../i18n";
+import { type Locale, translate, useLocale } from "../../i18n";
+import { type SourceOpenerFor, useSourceOpener } from "../../lib/opensource";
+import { useViewerZone } from "../../lib/viewerzone";
 
 /**
  * A row carrying its own provenance: a profile field, a fact, a technical
@@ -25,6 +27,8 @@ export type EvidenceBearingRow = Readonly<{
   // The meeting itself keeps its own audience.
   source?: string;
   source_occurred_at?: string | null;
+  // The meeting's id, present only when this reader may open it.
+  source_activity_id?: string | null;
 }>;
 
 /**
@@ -43,6 +47,7 @@ export function derivedSource(
   row: EvidenceBearingRow,
   locale: Locale,
   recordZone: string,
+  openerFor?: SourceOpenerFor,
 ): EvidenceMarkSource | undefined {
   const provenance = provenanceOf(row.captured_by);
   if (provenance.kind === "human") {
@@ -62,7 +67,21 @@ export function derivedSource(
             date: formatDate(row.source_occurred_at, locale, recordZone),
           })
         : undefined,
+    openOrigin:
+      row.source === "meeting"
+        ? openerFor?.({ id: row.source_activity_id, kind: "meeting" })
+        : undefined,
     sourceUrl: row.source_url,
     at: observed ? formatDateTime(observed, locale, recordZone) : undefined,
   };
+}
+
+/** derivedSource for this reader: their locale and zone, and the shell's drawer. */
+export function useDerivedSource(): (
+  row: EvidenceBearingRow,
+) => EvidenceMarkSource | undefined {
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const openerFor = useSourceOpener();
+  return (row) => derivedSource(row, locale, zone, openerFor);
 }
