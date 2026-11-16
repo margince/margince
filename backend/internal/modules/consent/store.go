@@ -429,6 +429,9 @@ func stateOrUnknown(state string) string {
 	return state
 }
 
+// codeInvalid is the machine code a refused consent field carries.
+const codeInvalid = "invalid"
+
 // ValidationError maps to a 422 at the transport.
 type ValidationError struct {
 	Field  string
@@ -440,5 +443,5 @@ func (e *ValidationError) Error() string { return "consent: " + e.Field + ": " +
 // FieldFault is what lets every surface answer the refusal as the 422 it is,
 // without a handler having to know this module's error type.
 func (e *ValidationError) FieldFault() (field, code, message string) {
-	return e.Field, "invalid", e.Reason
+	return e.Field, codeInvalid, e.Reason
 }

@@ -64,7 +64,7 @@ func (e *NoSubjectRequestError) Error() string { return "consent: " + contactIDK
 
 // FieldFault answers the refusal as a 422 naming the contact.
 func (e *NoSubjectRequestError) FieldFault() (field, code, message string) {
-	return contactIDKey, "invalid", e.reason()
+	return contactIDKey, codeInvalid, e.reason()
 }
 
 func (e *NoSubjectRequestError) reason() string {
