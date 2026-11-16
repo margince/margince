@@ -67,7 +67,7 @@ func badgeAndWorklist(t *testing.T, e *loadEnv, id ids.UUID, domain string) (crm
 }
 
 // A colleague's invitation without the seat stamp is owed nothing on the History
-// badge, as on the Worklist: both test the sender against our own domains.
+// badge, as on the Worklist. Both test the sender against our own domains.
 func TestTheBadgeAndTheWorklistAgreeAColleaguesUnstampedInvitationIsNotOwed(t *testing.T) {
 	e := setupLoad(t)
 	domain := colleagueDomainBound(t)

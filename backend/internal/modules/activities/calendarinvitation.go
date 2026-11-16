@@ -53,11 +53,9 @@ const mailOccurrenceSQL = `(CASE WHEN a.calendar_event->>'occurrence' ~ '^[0-9]{
 // invitationNeverOwedSQL is a calendar invitation no verdict can make owed. A
 // colleague's invitation waits on nobody's written reply. Neither does one
 // whose event has begun by asOf: every meeting it names has begun.
-// Every reader of "owed" applies it, so the deal card, the Worklist, the
-// History badge and the reminder writer agree.
-//
-// A colleague is the seat stamp or a sender at one of ownDomains, the bound
-// own-domain list: the stamp is missing on older mail and on non-seat senders.
+// Every reader of "owed" applies it, so the History badge and the Worklist agree.
+// A colleague is the seat stamp or a sender at one of ownDomains. The stamp is
+// missing on older mail and on non-seat senders.
 func invitationNeverOwedSQL(asOf, ownDomains string) string {
 	meetingOfUID := `FROM activity_identity ai JOIN activity mt ON mt.id = ai.activity_id
 	        WHERE ai.identity_kind = '` + IdentityKindMeeting + `'

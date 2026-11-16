@@ -12,22 +12,17 @@ import (
 )
 
 // ColleagueDomainsReader reads the workspace's own email domains in the
-// caller's transaction. It is the same read OwnDomains.Domains answers for a
-// store: compose binds capture's ColleagueDomainsTx to both.
+// caller's transaction. Compose binds capture's ColleagueDomainsTx here and
+// behind OwnDomains.Domains. A compose integration test holds the two to one list:
+// TestTheBadgeAndTheWorklistReadOneOwnDomainListThroughTheProductionWiring.
 type ColleagueDomainsReader func(ctx context.Context, tx pgx.Tx) ([]string, error)
 
 // boundColleagueDomains is the reader compose bound at startup, nil for none.
 var boundColleagueDomains atomic.Pointer[ColleagueDomainsReader]
 
-// UseColleagueDomains binds the own-domain reader for the reads that have no
-// store to ask: the History mail badge (EmailStatesFor, MailMovesFor,
-// MailMoveColumnSQL) and the other free functions that judge whether a reply is
-// owed. invitationNeverOwedSQL needs the list to tell a colleague's calendar
-// invitation from a customer's when the seat stamp is missing.
-//
-// Compose calls it once; nil unbinds. Unbound, the list is empty and only the
-// seat stamp marks a colleague's invitation, the same open default an unwired
-// store has.
+// UseColleagueDomains binds the own-domain reader for the owed reads that have
+// no store, such as the History mail badge. Compose calls it once; nil unbinds.
+// Unbound, the list is empty, the open default an unwired store has.
 func UseColleagueDomains(read ColleagueDomainsReader) {
 	if read == nil {
 		boundColleagueDomains.Store(nil)
