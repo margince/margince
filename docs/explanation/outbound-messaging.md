@@ -276,7 +276,7 @@ The text at the end of the mail uses the language of the message above it. That 
 the body, then the subject, then the installation's own language, then English. Nothing records the
 recipient's own choice. The pages a link opens carry a language switch, which is the way back.
 
-### Agents send on their own authority
+### Human approval for agent sends
 
 All three send operations (`sendEmail`, `sendCompanyEmail`, `sendMessage`) declare
 `tier: auto_execute` and `scope: send` in the contract's `x-mcp-tool` extension. The gate for agent
@@ -284,7 +284,10 @@ actions (`auth.Gate.Admit`) checks that scope before the request reaches the han
 without `send` is refused there, and nothing is staged for a human to approve.
 
 A passport with `send` acts on the seat, grants and row scope of the human who gave it. So an agent
-can send only what that human could send in the app. See
+can send only what that human could send in the app. A direct human instruction counts as
+approval; a connected client must ask before sending without one. The send scope alone
+does not approve unattended messages. The runner marks its context as unattended, so
+`auth.TierFor` stages send-scope calls for human approval, including after a run resumes. See
 [authorization.md](authorization.md#what-a-passport-is).
 
 ### Pace: the policies that wait

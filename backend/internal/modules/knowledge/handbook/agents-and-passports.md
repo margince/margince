@@ -121,29 +121,24 @@ Also called: overnight agent, scheduled agent, background agent.
 
 ## The two tiers
 
-Every action an agent can take has one of two labels. The label applies no
-matter how the agent connects.
+Routine CRM updates happen automatically, with changes you can review and undo.
+Keeping records current should not mean approving every field change.
 
-**auto-execute.** An auto-execute action happens at once, with the agent named
-on it in the audit trail. This is the default, and it covers most of what an
-agent does. That is looking records up, searching, writing summaries, drafting, and
-ordinary field updates. It is also logging an activity, promoting a lead,
-archiving a record, and sending an email or a message.
+**auto-execute.** An action happens at once, with the agent named in the audit trail.
+This covers reading, searching, writing summaries, drafting and ordinary field updates.
+The agent still needs your permissions and access to the record.
 
-**confirm-first.** A confirm-first action does not happen. What the agent means
-to do is written down as an approval, and a human decides.
+**confirm-first.** The proposed action is saved as an approval and waits for a human decision.
 
-An agent on your passport does what you could do yourself in the app, without
-an approval. For it, only enriching from the web is confirm-first.
+### When can an agent send?
+A message needs human approval before it goes out. A direct instruction such as
+“send this email to Anna” counts as approval. Your connected assistant can carry it out
+without asking you to click Send again in Margince. It must ask first if you did not
+instruct it to send. A passport's send permission alone is not approval of a message.
 
-### Why sending is not confirm-first by default
-A passport carries the seat, permissions and record visibility of the colleague who
-created it. So a send an agent can make is one that colleague could already make
-alone, in the app. Asking that same colleague to confirm it again would add a
-click without adding a check.
-
-What is kept behind a confirmation is narrower: the calls where the passport
-holder did not choose where they go.
+Margince's unattended agent runs stage sends for approval and pause. After approval,
+only that staged call is released; another send needs its own approval. Routine updates
+continue to run automatically. Sending limits and access checks still apply.
 
 ### What actually waits for a human
 **Enriching from the web.** This includes reading a company's site. Here the

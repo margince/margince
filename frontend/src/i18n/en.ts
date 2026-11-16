@@ -9888,7 +9888,7 @@ export const en = {
   "settings.tierRead":
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
-    "Send email, book meetings, update a contact or deal: runs immediately if the agent has that permission. Granting the permission is the approval.",
+    "Routine CRM updates run automatically and can be reviewed and undone. Sending needs human approval: a direct instruction counts; unattended sends wait.",
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
@@ -17954,7 +17954,7 @@ export const en = {
   "consent.scopeNote.read": "sees what you can see",
   "consent.scopeNote.draft": "prepares messages for your review",
   "consent.scopeNote.write": "creates, edits and archives records as you",
-  "consent.scopeNote.send": "sends messages as you, without asking first",
+  "consent.scopeNote.send": "sends messages with human approval, including a direct instruction",
   "consent.scopeNote.enrich": "runs AI work and buys contact data",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",

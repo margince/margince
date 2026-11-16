@@ -9884,7 +9884,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
-    "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
+    "Laufende CRM-Änderungen laufen automatisch und lassen sich prüfen und rückgängig machen. Versand braucht menschliche Freigabe: Ein direkter Auftrag zählt; unbeaufsichtigter Versand wartet.",
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
@@ -18141,7 +18141,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
-    "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+    "sendet Nachrichten mit menschlicher Freigabe, auch per direktem Auftrag",
   "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",

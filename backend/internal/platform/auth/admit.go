@@ -190,8 +190,11 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// and one it did name is still bound below. Automatic work with nobody
 	// behind it keeps both rules.
 	resolvedAuto := tier == mcp.TierAutoExecute
-	if TierFor(p, spec) == mcp.TierAutoExecute {
+	effectiveTier := TierFor(ctx, p, spec)
+	if effectiveTier == mcp.TierAutoExecute {
 		tier = mcp.TierAutoExecute
+	} else if effectiveTier == mcp.TierConfirmationRequired {
+		tier = mcp.TierConfirmationRequired
 	} else if tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil {
 		return ctx, fmt.Errorf(
 			"gate: %s resolved to auto-execute without naming the record version it was resolved from: %w",
@@ -312,12 +315,12 @@ func (g *Gate) AdmitRead(ctx context.Context) error {
 	return nil
 }
 
-// TierFor is the tier spec carries for p before any argument is read. An agent
-// acting as its user (principal.ActsAsItsUser) runs every tool as the colleague
-// could, so it sees auto-execute, except where spec.WaitsEvenForItsUser. The
-// gate admits on it, and the tool listing advertises it, so what a caller is
-// told is what it is admitted on.
-func TierFor(p principal.Principal, spec mcp.ToolSpec) mcp.RiskTier {
+// TierFor keeps admission and listings aligned: unattended sends wait even
+// on a passport that otherwise acts as its user.
+func TierFor(ctx context.Context, p principal.Principal, spec mcp.ToolSpec) mcp.RiskTier {
+	if principal.Unattended(ctx) && spec.RequiredScope == principal.ScopeSend {
+		return mcp.TierConfirmationRequired
+	}
 	if p.ActsAsItsUser() && !spec.WaitsEvenForItsUser {
 		return mcp.TierAutoExecute
 	}

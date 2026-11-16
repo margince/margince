@@ -4,6 +4,10 @@
 An agent in Margince acts for the human who gave it a **passport**, the credential an agent carries
 ([how to make one](../how-to/mint-a-passport.md)). It can only do what that human could do alone.
 
+Messages need human approval. A direct instruction to send counts; standing send permission
+alone does not. Connected clients must ask before an unrequested send. Unattended runs
+stage every `send`-scope call and pause until a person approves that call.
+
 Most tools run at once for an agent that acts as its own user, because it can do only what that user could do alone. Some
 still wait for a human then. These are the `enrich` tool and these actions: `set_up_partner` and `merge_member_accounts` on
 `change_state`, and `relink` and `relink_many` on `change_activities`.
@@ -154,7 +158,7 @@ human who gave the passport. It is never both added up, and never the passport a
 | `read` | Reads only. It is also the only scope that makes a tool `readOnlyHint: true`, and the only scope a **read seat** may spend at all. |
 | `draft` | Writes a draft. Not read-only: `draft_email` leaves a first message in the drafts of the human it acts for (never on a timeline; a reply it writes in no place). `draft_follow_ups_for` stores a draft activity on the deal timeline. |
 | `write` | Creates, patches, archives, moves on, merges, moves leads up or out, links again: every change that stays inside the workspace. |
-| `send` | Egress verbs: they reach outside the workspace. `invite_meeting` is 🟡. The others run at once, on the rights of the human who gave the passport. |
+| `send` | Egress verbs: they reach outside the workspace. `invite_meeting` is 🟡. Directed sends run on the rights of the human who gave the passport. Unattended runs stage every send for approval. |
 | `enrich` | `enrich`, which gets data from a third party, 🟡 and `Egress: true`: the cap buys the right to ask. `run_research`, AI work that stays inside Margince and runs at once with no approval; only its `research_contact` action asks an outside provider, and `start_backfill` reads old mail from the user's own mailbox. |
 
 The live count per scope is in [mcp-info.md](mcp-info.md).
