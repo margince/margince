@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { DealCard } from "../../design-system/dealcard";
 import type { BoardDeal } from "../../design-system/pipelineboard";
+import { useOwnToast } from "../../design-system/toast";
 import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
@@ -14,7 +15,7 @@ import {
 import { DealCardMenu } from "./dealcardmenu";
 import type { Deal, Stage } from "./deals";
 
-// One card's "…" menu in each state a deal can be in, opened on the card.
+// One card's "…" menu on an open, a won and an archived deal, opened on the card.
 
 const stages: Stage[] = (
   [
@@ -57,6 +58,15 @@ function MenuOnCard({ deal }: Readonly<{ deal: Deal }>) {
       deal: ["read", "update", "delete"],
     }),
   });
+  return (
+    <StoryProviders>
+      <CardWithMenu deal={deal} />
+    </StoryProviders>
+  );
+}
+
+function CardWithMenu({ deal }: Readonly<{ deal: Deal }>) {
+  const copyRefusal = useOwnToast();
   const archived = Boolean(deal.archived_at);
   const card: BoardDeal = {
     id: deal.id,
@@ -76,26 +86,25 @@ function MenuOnCard({ deal }: Readonly<{ deal: Deal }>) {
     onAddTask: archived ? undefined : () => undefined,
   };
   return (
-    <StoryProviders>
-      <div style={{ width: 300, maxWidth: "100%" }}>
-        <DealCard
-          deal={card}
-          href="#/deals/d-1"
-          zone={browserZone()}
-          actions={{
-            ...verbs,
-            menu: (
-              <DealCardMenu
-                deal={deal}
-                stages={stages}
-                verbs={verbs}
-                onAdvance={() => undefined}
-              />
-            ),
-          }}
-        />
-      </div>
-    </StoryProviders>
+    <div style={{ width: 300, maxWidth: "100%" }}>
+      <DealCard
+        deal={card}
+        href="#/deals/d-1"
+        zone={browserZone()}
+        actions={{
+          ...verbs,
+          menu: (
+            <DealCardMenu
+              deal={deal}
+              stages={stages}
+              verbs={verbs}
+              onAdvance={() => undefined}
+              copyRefusal={copyRefusal}
+            />
+          ),
+        }}
+      />
+    </div>
   );
 }
 
@@ -103,7 +112,6 @@ const meta: Meta = { title: "Records/Deals/Deal card menu" };
 export default meta;
 type Story = StoryObj;
 
-// Opens the card's menu and waits for an item the story is about.
 function openMenuShowing(first: string) {
   return async ({
     canvasElement,
@@ -151,5 +159,13 @@ export const ArchivedDeal: Story = {
   render: () => (
     <MenuOnCard deal={wire({ archived_at: "2026-09-10T09:00:00Z" })} />
   ),
-  play: openMenuShowing("Copy link"),
+  play: async (context) => {
+    await openMenuShowing("Copy link")(context);
+    await expect(
+      screen.queryByRole("button", { name: "Move to stage" }),
+    ).toBeNull();
+    await expect(
+      screen.queryByRole("button", { name: "Archive deal" }),
+    ).toBeNull();
+  },
 };

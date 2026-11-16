@@ -12,6 +12,7 @@ import {
   type BoardDeal,
   PipelineBoard,
 } from "../../design-system/pipelineboard";
+import { useOwnToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
@@ -69,6 +70,7 @@ export function DealPipelineBoard({
       canFileTask && !deal.archived ? () => setTaskFor(deal.id) : undefined,
   });
   const followMove = useFocusFollowsMove();
+  const copyRefusal = useOwnToast();
   const records = new Map(menu?.deals.map((deal) => [deal.id, deal]));
   const cardActions = (deal: BoardDeal): DealCardActions => {
     const verbs = cardVerbs(deal);
@@ -80,6 +82,7 @@ export function DealPipelineBoard({
           deal={record}
           stages={menu.stages}
           verbs={verbs}
+          copyRefusal={copyRefusal}
           onAdvance={(dealId, stageId) => {
             void menu.onAdvance(dealId, stageId).then((landed) => {
               if (landed) {
@@ -122,7 +125,7 @@ type SavedMove = Readonly<{ dealId: string; to: string }>;
 // old menu trigger held. Focus follows it there, unless the reader moved on.
 function useFocusFollowsMove() {
   const moving = useRef<SavedMove | null>(null);
-  // Waits only for the reads the save started. A card they leave undrawn, by a
+  // Waits while the board's deal reads run. A card they leave undrawn, by a
   // filter or past a loaded page, is not followed later.
   const reading = useIsFetching({ queryKey: ["deals"] }) > 0;
   useEffect(() => {

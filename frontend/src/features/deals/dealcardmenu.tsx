@@ -9,7 +9,7 @@ import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import type { DealCardActions } from "../../design-system/dealcard";
 import { ListPopover } from "../../design-system/listpopover";
 import { useCloseOverflowMenu } from "../../design-system/overflowmenu";
-import { useOwnToast, useToast } from "../../design-system/toast";
+import { type useOwnToast, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { appHref } from "../../lib/recordaddress";
@@ -18,6 +18,7 @@ import type { Deal, Stage } from "./deals";
 import { archiveDeal } from "./deals.write";
 
 type CardVerbs = Pick<DealCardActions, "onSummary" | "onEmail" | "onAddTask">;
+type RefusalSlot = ReturnType<typeof useOwnToast>;
 
 // A board card's "…" items: the moves a drag makes, for a reader with no
 // pointer to drag with, then the card's verbs and the record's.
@@ -26,12 +27,15 @@ export function DealCardMenu({
   stages,
   verbs,
   onAdvance,
+  copyRefusal,
 }: Readonly<{
   deal: Deal;
   /** The pipeline's stages, in position order. */
   stages: readonly Stage[];
   verbs: CardVerbs;
   onAdvance: (dealId: string, stageId: string) => void;
+  /** The board's one slot for a refused copy, so refusals never stack. */
+  copyRefusal: RefusalSlot;
 }>) {
   const t = useT();
   // An archived deal takes no change, so it keeps only what reads it.
@@ -48,7 +52,7 @@ export function DealCardMenu({
       {verbs.onAddTask && (
         <Button onClick={verbs.onAddTask}>{t("log.addTask")}</Button>
       )}
-      <CopyDealLink dealId={deal.id} />
+      <CopyDealLink dealId={deal.id} refusal={copyRefusal} />
       {live && (
         <>
           <AddToShortlistAction entityType="deal" entityId={deal.id} />
@@ -131,10 +135,12 @@ function DealMoves({
 
 // The menu closes on the press, so both answers go to a toast, and a refusal
 // stays until it is read. One refusal at a time: a new press withdraws it.
-function CopyDealLink({ dealId }: Readonly<{ dealId: string }>) {
+function CopyDealLink({
+  dealId,
+  refusal,
+}: Readonly<{ dealId: string; refusal: RefusalSlot }>) {
   const t = useT();
   const toast = useToast();
-  const refusal = useOwnToast();
   const link = `${globalThis.location.origin}${appHref(routeHash({ screen: "deals", id: dealId }))}`;
   const clipboard = useClipboardCopy(
     link,

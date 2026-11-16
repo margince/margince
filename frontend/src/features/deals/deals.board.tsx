@@ -362,14 +362,15 @@ export function useBoardInteractions({
   const requestAdvance = (dealId: string, stageId: string) => {
     settle(false);
     const toStage = stages.find((stage) => stage.id === stageId);
-    if (!toStage) {
-      return Promise.resolve(false);
-    }
     // The version the reader saw. The cards and this lookup read the one deal
     // array this render was handed. So the precondition names the row as drawn
     // on the board, not as it has become since: the claim optimistic
-    // concurrency makes.
-    const version = loadedDeals.find((deal) => deal.id === dealId)?.version;
+    // concurrency makes. Text dropped on a column names no card here.
+    const drawn = loadedDeals.find((deal) => deal.id === dealId);
+    if (!toStage || !drawn) {
+      return Promise.resolve(false);
+    }
+    const version = drawn.version;
     if (toStage.semantic === "open") {
       return advance.mutateAsync({ dealId, version, toStage }).then(
         () => true,

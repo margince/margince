@@ -41,9 +41,12 @@ async function settled(client: QueryClient) {
   );
 }
 
-async function openCardMenu(user: ReturnType<typeof userEvent.setup>) {
+async function openCardMenu(
+  user: ReturnType<typeof userEvent.setup>,
+  dealName = "Fleet retrofit",
+) {
   const trigger = await screen.findByRole("button", {
-    name: "More actions for Fleet retrofit",
+    name: `More actions for ${dealName}`,
   });
   await user.click(trigger);
   const panel = document.getElementById(
@@ -62,6 +65,17 @@ function cardLinkIn(stageId: string) {
     if (!column) throw new Error(`no column for stage ${stageId}`);
     return within(column).getByRole("link", { name: "Fleet retrofit" });
   });
+}
+
+const COPY_REFUSED =
+  "Could not copy the link. Open the deal and copy the address from the browser’s address bar.";
+
+async function closeShownToast(user: ReturnType<typeof userEvent.setup>) {
+  const close = document.querySelector<HTMLElement>(
+    '[data-toast-control="close"]',
+  );
+  if (!close) throw new Error("no toast is showing a close button");
+  await user.click(close);
 }
 
 describe("deal card menu on the deals board", () => {
@@ -204,12 +218,14 @@ describe("deal card menu on the deals board", () => {
     const search = await screen.findByRole("combobox", {
       name: "Pick a stage",
     });
+    await user.type(search, "Prop");
     const setData = vi.fn();
     fireEvent.dragStart(search, { dataTransfer: { setData } });
 
-    dropOnStage("s2", "");
+    dropOnStage("s2", "Prop");
     expect(setData).not.toHaveBeenCalled();
     expect(client.isMutating()).toBe(0);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   // A chat preview reads the path and the page opens the fragment: both name
@@ -233,19 +249,41 @@ describe("deal card menu on the deals board", () => {
     expect(await screen.findByText("Link copied")).toBeTruthy();
   });
 
-  it("says a refused copy once, however often it is pressed", async () => {
+  // The region draws one toast at a time, so a second refusal queued behind
+  // the first shows only once the first is closed.
+  it("leaves one refused copy to close, however often it is pressed", async () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     const user = userEvent.setup();
     stubClipboard("refuses");
     render(<DealsScreen />);
-    const refusal =
-      "Could not copy the link. Open the deal and copy the address from the browser’s address bar.";
-    for (const _press of [1, 2]) {
-      const menu = await openCardMenu(user);
-      await user.click(menu.getByRole("button", { name: "Copy link" }));
-      await screen.findByText(refusal);
-    }
-    expect(screen.getAllByText(refusal)).toHaveLength(1);
+    const first = await openCardMenu(user);
+    await user.click(first.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+    const second = await openCardMenu(user);
+    await user.click(second.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+
+    await closeShownToast(user);
+    expect(screen.queryByText(COPY_REFUSED)).toBeNull();
+  });
+
+  it("leaves one refused copy to close across two cards", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({}), deal({ id: "d2", name: "Harbour cranes" })]),
+    );
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    render(<DealsScreen />);
+    const first = await openCardMenu(user);
+    await user.click(first.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+    const second = await openCardMenu(user, "Harbour cranes");
+    await user.click(second.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+
+    await closeShownToast(user);
+    expect(screen.queryByText(COPY_REFUSED)).toBeNull();
   });
 
   it("asks before marking a deal won, and posts only after the confirm", async () => {
