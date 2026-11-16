@@ -48,6 +48,7 @@ when it builds the adapter, and names what is missing.
 | `gemini_vertex` | `GEMINI_VERTEX_SA_JSON` (the JSON of the key file of the service account) | **refused**: the host comes from `location` | BYOK cloud, the `gemini` wire served by Vertex AI; **`location` required** |
 | `jev` | `TYPESAFE_API_KEY` | can be skipped (default `https://api.typesafe.ai/v1/systemone`, the full endpoint) | decisions lane only; the TypeSafe API |
 | `jev_compatible` | `JEV_COMPATIBLE_API_KEY` (**not needed**: sent when stored, never asked for) | **required**, the full endpoint | decisions lane only; any server on the Jev wire: OpenRouter (`https://openrouter.ai/api/alpha/decisions`, key = your OpenRouter key) or a server you run on your own (`http://127.0.0.1:8767/v1/systemone`, most often with no key) |
+| `gemini_decision` | `GEMINI_API_KEY`, the key of `gemini` | can be skipped (default `https://generativelanguage.googleapis.com/v1beta/decisions`, the full endpoint) | decisions lane only; the Decisions API of Google, on the Gemini Developer API alone, with no EU region |
 
 `base_url` and `location` belong to the provider, set once under `providers:`. That is
 `providers.<name>.base_url`, `providers.gemini_vertex.location`, and for an OpenRouter host

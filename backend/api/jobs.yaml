@@ -942,9 +942,25 @@ kinds:
     cadence: 1h
     reason: >-
       Removes the company fields a meeting filled once its transcript was
-      narrowed, restricted, archived or redacted. Hourly, so a value stops
-      speaking for a meeting its readers lost within the hour; database-only,
-      and bounded per workspace pass.
+      narrowed, restricted, archived or redacted, or no participant works at
+      that company any more. Hourly, so a value stops speaking for such a
+      meeting within the hour. Database-only; each transaction is bounded, and
+      the timeout bounds the pass.
+
+  transcript_audience_sweep:
+    role: worker
+    fleet: true
+    go_type: TranscriptAudienceSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Gives each meeting transcript the readers its meeting has now. A guest
+      added to or taken off the meeting by calendar sync or any other writer
+      reaches the transcript within a quarter hour; an audience set by hand
+      reaches it at once. Database-only; each transaction is bounded, and
+      the timeout bounds the pass.
 
   initiative_enrolment_sweep:
     role: worker

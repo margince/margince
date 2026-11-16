@@ -20397,17 +20397,17 @@
     "marketing_wording":
      "Eingereichter Marketingtext",
     "meeting_documents_added":
-     "Besprechungsnotizen aus dem Kalender verknüpft",
+     "Terminnotizen aus dem Kalender verknüpft",
     "meeting_end":
      "Ende (mit UTC-Abweichung)",
     "meeting_guests_removed":
-     "Gäste an ihre eigene Besprechung zurückgegeben",
+     "Gäste an ihren eigenen Termin zurückgegeben",
     "meeting_host":
      "Organisiert von",
     "meeting_intent":
      "Terminbeginn (Ortszeit)",
     "meeting_location":
-     "Ort oder Besprechungslink",
+     "Ort oder Terminlink",
     "meeting_start":
      "Beginn (mit UTC-Abweichung)",
     "meeting_status":
@@ -29059,9 +29059,9 @@
     "merge_profile_field/text/lost_reason":
      "Verlustgrund",
     "merge_profile_field/text/meeting_documents_added":
-     "Besprechungsnotizen aus dem Kalender verknüpft",
+     "Terminnotizen aus dem Kalender verknüpft",
     "merge_profile_field/text/meeting_guests_removed":
-     "Gäste an ihre eigene Besprechung zurückgegeben",
+     "Gäste an ihren eigenen Termin zurückgegeben",
     "merge_profile_field/text/meeting_intent":
      "Terminbeginn (Ortszeit)",
     "merge_profile_field/text/meeting_status":
@@ -29359,9 +29359,9 @@
     "merge_profile_field/lifecycle/lost_reason":
      "Verlustgrund",
     "merge_profile_field/lifecycle/meeting_documents_added":
-     "Besprechungsnotizen aus dem Kalender verknüpft",
+     "Terminnotizen aus dem Kalender verknüpft",
     "merge_profile_field/lifecycle/meeting_guests_removed":
-     "Gäste an ihre eigene Besprechung zurückgegeben",
+     "Gäste an ihren eigenen Termin zurückgegeben",
     "merge_profile_field/lifecycle/meeting_intent":
      "Terminbeginn (Ortszeit)",
     "merge_profile_field/lifecycle/meeting_status":

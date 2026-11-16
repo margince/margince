@@ -276,7 +276,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | `ai.capture_payloads` | `MARGINCE_AI_CAPTURE_PAYLOADS` | — | `bool` | `false` | api, worker | Keep each AI call's request and answer in `ai_call_payload`, aged by its retention policy; set it on the api and the worker together. |
 | `ai.price_sync` | `MARGINCE_AI_PRICE_SYNC` | — | `object`, stored | `{"auto_sync":true}` | api, worker | Whether the daily job syncs model prices, as `{"auto_sync"`: true\|false}. Refresh now runs either way. |
 | `ai.provider_keys_anthropic` | `ANTHROPIC_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK API key for the Anthropic provider; required only when a binding names it. |
-| `ai.provider_keys_gemini` | `GEMINI_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK API key for the Gemini provider; required only when a binding names it. |
+| `ai.provider_keys_gemini` | `GEMINI_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK API key for the Gemini provider, also sent by `gemini_decision`; required only when a binding names either. |
 | `ai.provider_keys_gemini_vertex` | `GEMINI_VERTEX_SA_JSON` | — | `string`, secret, stored, kept by a reset | — | api, worker | BYOK service-account key (the JSON key file's contents) for the `gemini_vertex` provider; required only when a binding names it. |
 | `ai.provider_keys_jev` | `TYPESAFE_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | API key for the TypeSafe decision provider; required only when the decisions lane binds it. |
 | `ai.provider_keys_jev_compatible` | `JEV_COMPATIBLE_API_KEY` | — | `string`, secret, stored, kept by a reset | — | api, worker | API key for a `jev_compatible` decision server; sent when set and never required. |
@@ -450,7 +450,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `license.token` | `MARGINCE_LICENSE` | — | `string`, secret | — | api, worker | Licence token; unset with no `license.token_file` runs with no license, which production refuses. |
+| `license.token` | `MARGINCE_LICENSE` | — | `string`, secret | — | api, worker | Licence token, read once at boot, or at each licence check when it is a `${file:}` reference; with it, `license.token_file` and the key vault all empty, production runs the 14-day trial and then locks, while dev and test run with no license. |
 | `license.token_file` | `MARGINCE_LICENSE_TOKEN_FILE` | — | `string` | — | api, worker | Path to a file holding the licence token, read again at each licence check; license.token wins over it. |
 
 ### `lists`

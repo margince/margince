@@ -877,3 +877,51 @@ export const PhoneAgentPanel: Story = {
     );
   },
 };
+
+// A frameless page paints its own ground to the viewport edge, so its scroller
+// reserves no gutter, short page or long. Classic scrollbars are the case the
+// default Mac look hides, so the computed style is asserted rather than seen.
+function framelessScroller(canvasElement: HTMLElement) {
+  const scroller = canvasElement.querySelector(".app.railless .scroll");
+  if (!scroller) throw new Error("no frameless scroller on this frame");
+  return scroller;
+}
+
+const LONG_PAGE = Array.from({ length: 40 }, (_, n) => `Content ${n + 1}`);
+
+function FramelessPage({ rows }: Readonly<{ rows: readonly string[] }>) {
+  stubSession();
+  return (
+    <StoryProviders>
+      <SeedInstallation>
+        <ShellExample at="#/onboarding">
+          <div className="wrap">
+            {rows.map((row) => (
+              <Card as="div" key={row}>
+                {row}
+              </Card>
+            ))}
+          </div>
+        </ShellExample>
+      </SeedInstallation>
+    </StoryProviders>
+  );
+}
+
+export const FramelessPageShort: Story = {
+  name: "a frameless page — short, no reserved gutter",
+  render: () => <FramelessPage rows={["Content"]} />,
+  play: async ({ canvasElement }) => {
+    await waitFor(() =>
+      expect(
+        getComputedStyle(framelessScroller(canvasElement)).scrollbarGutter,
+      ).toBe("auto"),
+    );
+  },
+};
+
+export const FramelessPageOverflowing: Story = {
+  name: "a frameless page — overflowing, no reserved gutter",
+  render: () => <FramelessPage rows={LONG_PAGE} />,
+  play: FramelessPageShort.play,
+};

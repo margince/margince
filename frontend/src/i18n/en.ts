@@ -6,6 +6,7 @@ export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
   "systemJob.personal_channel_sweep":
     "Cleaning up personal channel files and replies",
+  "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
     "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
@@ -2093,9 +2094,7 @@ export const en = {
   "brief.schedule.connect": "Connect a calendar",
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
-  "brief.schedule.now": "Now",
-  "brief.schedule.freeUntil": "Free until {time}",
-  "brief.schedule.clearRest": "Nothing else booked today",
+  "brief.schedule.clearRest": "No more external meetings today",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -2778,6 +2777,7 @@ export const en = {
   "shell.help.releaseNotes": "Release notes",
   "shell.help.licenses": "Web app licenses",
   "shell.help.devBuild": "Development build",
+  "shell.help.devBuildRevision": "Development build · {revision}",
   "shell.shortcuts.anywhere": "Anywhere",
   "shell.shortcuts.search": "Open search",
   "shell.shortcuts.sidebar": "Show or hide sidebar",
@@ -7059,7 +7059,7 @@ export const en = {
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.panel.schedule": "Your day",
+  "brief.panel.schedule": "External meetings",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -10523,6 +10523,7 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.transcript_audience_sweep": "Meeting notes readers",
   "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
   "jobs.kind.intro_expiry": "Introduction expiry",
@@ -17657,6 +17658,9 @@ export const en = {
     "A file’s category, title, state, pinning or the file it replaces changes.",
   "webhooks.event.attachment.archived.label": "File archived",
   "webhooks.event.attachment.archived.when": "A file is archived off a record.",
+  "webhooks.event.attachment.restored.label": "File restored",
+  "webhooks.event.attachment.restored.when":
+    "An archived file is back on a record.",
   "webhooks.eventGroup.projects": "Projects",
   "webhooks.event.project.created.label": "Project created",
   "webhooks.event.project.created.when": "A project is opened on a company.",
@@ -20908,6 +20912,7 @@ export const en = {
   "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-compatible",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Built-in test provider",
@@ -21571,6 +21576,8 @@ export const en = {
   "aiServing.guide": "Routing guide ↗",
   "aiServing.blocked.decisions":
     "The decision model answers through OpenRouter’s decisions endpoint, which takes no routing block. Its timeout is set per task under AI tasks.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} serves the decision model itself, so host routing does not apply. Its timeout is set per task under AI tasks.",
   "aiServing.blocked.provider":
     "Host routing applies only to OpenRouter. {provider} serves this model itself. Thinking level and timeout are still set per task under AI tasks.",
   "aiServing.blocked.host":

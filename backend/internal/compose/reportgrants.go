@@ -23,16 +23,31 @@ import (
 // table its column references; row scope never stands in for that grant.
 func requireVocabularyGrants(ctx context.Context, spec reportSpec, names []string) error {
 	for _, name := range names {
-		for _, object := range append(referencedTables(spec, name), spec.grants[name]) {
-			if object == "" {
-				continue
-			}
+		for _, object := range vocabularyObjects(spec, name) {
 			if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
 				return err
 			}
 		}
 	}
 	return nil
+}
+
+// vocabularyGranted answers whether the caller holds every grant name owes. It
+// asks unrecorded: a missing grant only narrows the vocabulary, so it must not
+// hide the tool from a role that lacks it.
+func vocabularyGranted(ctx context.Context, spec reportSpec, name string) bool {
+	for _, object := range vocabularyObjects(spec, name) {
+		if _, err := auth.Unrecorded(ctx, object, principal.ActionRead); err != nil {
+			return false
+		}
+	}
+	return true
+}
+
+// vocabularyObjects is the record types whose read grant name owes.
+func vocabularyObjects(spec reportSpec, name string) []string {
+	return slices.DeleteFunc(append(referencedTables(spec, name), spec.grants[name]),
+		func(object string) bool { return object == "" })
 }
 
 // referencedTables is the table a dimension's or filter's column references.
@@ -53,7 +68,7 @@ func referencedTables(spec reportSpec, name string) (out []string) {
 func grantedNames(ctx context.Context, spec reportSpec, vocabulary map[string]string) []string {
 	var out []string
 	for _, name := range slices.Sorted(maps.Keys(vocabulary)) {
-		if requireVocabularyGrants(ctx, spec, []string{name}) == nil {
+		if vocabularyGranted(ctx, spec, name) {
 			out = append(out, name)
 		}
 	}
@@ -83,7 +98,7 @@ func grantedFilters(ctx context.Context, spec reportSpec) map[string]string {
 func grantedDefaultAggregates(ctx context.Context, spec reportSpec) []reportAggregate {
 	out := make([]reportAggregate, 0, len(spec.defaultAggs))
 	for _, agg := range spec.defaultAggs {
-		if agg.Field != "" && requireVocabularyGrants(ctx, spec, []string{agg.Field}) != nil {
+		if agg.Field != "" && !vocabularyGranted(ctx, spec, agg.Field) {
 			continue
 		}
 		out = append(out, agg)

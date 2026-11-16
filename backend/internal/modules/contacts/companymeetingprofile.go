@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,21 +33,42 @@ const CompanySourceMeeting = "meeting"
 const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at IS NULL AND t.archived_at IS NULL
 	AND cardinality(t.redacted_fields) = 0`
 
+// meetingCompanyPresentSQL holds while transcript t still has a participant
+// who could speak for the company of field alias. That is a stated, standing
+// party in a role a reading attributes, and the company is its current primary
+// employer. A reading takes its speakers from activities.PartiesOf under the
+// same tests.
+func meetingCompanyPresentSQL(field string) string {
+	return `EXISTS (SELECT 1 FROM activity_participant p JOIN relationship rel ON rel.contact_id = p.contact_id
+		WHERE p.activity_id = t.id AND p.role IN ('from', 'to', 'cc', 'organizer', 'attendee')
+		  AND NOT ` + auth.ParticipantUnstatedSQL("p") + ` AND ` + auth.ParticipantStandsSQL("p", "t") + `
+		  AND rel.company_id = ` + field + `.company_id AND rel.kind = 'employment'
+		  AND rel.archived_at IS NULL AND ` + employment.CurrentPrimarySQL("rel") + `)`
+}
+
+// meetingFieldStandsSQL holds while field alias may keep its meeting value:
+// its transcript t is shared and still has someone from the company.
+func meetingFieldStandsSQL(field string) string {
+	return `(` + meetingTranscriptSharedSQL + `) AND ` + meetingCompanyPresentSQL(field)
+}
+
 // RetractStaleMeetingProfilesTx removes up to limit company fields whose
-// transcript may no longer fill them: narrowed, restricted, archived or redacted
-// since. One statement tests and deletes, so a transcript that qualifies again
-// meanwhile keeps its fields. It returns how many it removed.
+// transcript may no longer fill them. It was narrowed, restricted, archived or
+// redacted since, or nobody from the company is on it any more. One statement
+// tests and deletes, so a transcript that qualifies again meanwhile keeps its
+// fields. It returns how many it removed. It sweeps every
+// company and so is the system's alone: no caller's write right covers that.
 func RetractStaleMeetingProfilesTx(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
-	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
 	}
 	rows, err := tx.Query(ctx, `WITH picked AS MATERIALIZED (
 		  SELECT s.id FROM company_profile_field s JOIN activity t ON t.id = s.source_activity_id
-		   WHERE s.source = 'meeting' AND NOT (`+meetingTranscriptSharedSQL+`)
+		   WHERE s.source = 'meeting' AND NOT (`+meetingFieldStandsSQL("s")+`)
 		   ORDER BY s.id LIMIT $1 FOR UPDATE OF s SKIP LOCKED)
 		DELETE FROM company_profile_field f USING activity t
 		WHERE f.id IN (SELECT id FROM picked)
-		  AND f.source = 'meeting' AND t.id = f.source_activity_id AND NOT (`+meetingTranscriptSharedSQL+`)
+		  AND f.source = 'meeting' AND t.id = f.source_activity_id AND NOT (`+meetingFieldStandsSQL("f")+`)
 		RETURNING f.company_id, f.field, f.value`, limit)
 	if err != nil {
 		return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)

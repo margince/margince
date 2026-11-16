@@ -294,11 +294,14 @@ rate lane. It keeps its answer (`decision_choice`, `decision_confidence`) whethe
 That is because floors are set from real cases of falling back, `no_payload` tasks too. `GET /v1/ai/usage` counts
 `decisions` per call.
 
-Two providers speak the one wire, with `base_url` being the full endpoint. `jev` is the own API of TypeSafe,
+Three providers speak the one wire, with `base_url` being the full endpoint. `jev` is the own API of TypeSafe,
 and `jev_compatible` is any server that speaks the Jev wire. That is OpenRouter
 ([openrouter-routing-fields.md](../reference/openrouter-routing-fields.md#the-decisions-endpoint)), or a Kev, Laya or LiteLLM that you
 host on your own machine. `sovereign` refuses `jev`, and holds `jev_compatible` to its endpoint rule. See
 [configuration.md](../reference/configuration.md).
+
+`gemini_decision` is the Decisions API of Google. It sends the state as `input` text and the `gemini` key in
+`x-goog-api-key`, so one client speaks both forms of the wire. `sovereign` refuses it.
 
 ## The one gate: `ai.Router`
 
@@ -464,7 +467,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | BYOK keys | one stored secret setting per provider (`ai.provider_keys_<provider>`), sealed in the key vault and set under Settings → AI → AI models → Providers. The usual environment values (`GEMINI_API_KEY`, `GEMINI_VERTEX_SA_JSON`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `TYPESAFE_API_KEY`, `JEV_COMPATIBLE_API_KEY`) win over the vault and lock the key; they are never sealed |
 | The gate | `internal/modules/ai`: `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Decision lane | `decisions:` in the routing setting · `Router.Decide` (`decideroute.go`) · certified rows in `decisioncert_gen.go` |
-| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible` (`providerregistry.go`) |
+| Providers | `anthropic`, `openai`, `gemini`, `gemini_vertex` (built in; `gemini_vertex` is the `gemini` wire on Vertex AI, bound by `location`) · `ollama`, `vllm`, `openai_compatible` · `fake` · decision lane only: `jev`, `jev_compatible`, `gemini_decision` (`providerregistry.go`) |
 | Tracing | `ai_call` / `ai_call_payload` / `ai_call_config` (migrations `0088`, `0089`, `0100`, `0102`) |
 | Cost rates | `ai_model_rate` (per provider and model, dated, micro-USD) · seeded by `SeedModelRates` |
 | Pricer (actuals) | `PriceCall` + `RateStore` (`internal/modules/ai`) → `/ai/usage` `cost_est_minor` |

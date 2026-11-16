@@ -370,6 +370,14 @@ func ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
+	return TrustedColleagueDomainsTx(ctx, tx)
+}
+
+// TrustedColleagueDomainsTx is ColleagueDomainsTx without the reader's gate,
+// for a rule evaluated inside a read that gates its own rows. The list is
+// workspace setting, and a derived answer such as whose move a mail is must
+// not change with who asks.
+func TrustedColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	own, err := TrustedOwnDomainsTx(ctx, tx)
 	if err != nil {
 		return nil, err

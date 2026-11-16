@@ -258,7 +258,8 @@ WORKDIR /app/frontend
 # `pnpm build:composed` type-checks incrementally, and the cache mount below keeps
 # its .tsbuildinfo across builds. Content hashes still re-check a changed file.
 # The same revision the api target is built with, written into each MCP App view
-# document so the api can report skew between the two tiers. See the api-build
+# document so the api can report skew between the two tiers, and compiled into
+# the bundle to label an unstamped build. See the api-build
 # stage for why an absent value disables the comparison rather than alarming.
 ARG MARGINCE_BUILD_REVISION=""
 ENV MARGINCE_BUILD_REVISION=$MARGINCE_BUILD_REVISION

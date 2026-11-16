@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { SourceOpenerFor } from "../../lib/opensource";
 import { derivedSource } from "./evidencesource";
 
 const machine = "system:transcript-reader";
@@ -36,5 +37,39 @@ describe("a profile field's source mark", () => {
     );
     expect(source?.origin).toBeUndefined();
     expect(source?.sourceUrl).toBe("https://brandt.example/about");
+  });
+
+  it("opens the cited meeting only when the reader may and a drawer is hosted", () => {
+    const meeting = {
+      captured_by: machine,
+      source: "meeting",
+      source_occurred_at: "2026-11-12T09:00:00Z",
+      source_activity_id: "0190a7f2-0000-7000-8000-000000000010",
+    };
+    const open = vi.fn();
+    const openerFor: SourceOpenerFor = (ref) => {
+      const id = ref.id;
+      return id ? () => open(id, ref.kind) : undefined;
+    };
+    derivedSource(meeting, "en", "UTC", openerFor)?.openOrigin?.();
+    expect(open).toHaveBeenCalledWith(meeting.source_activity_id, "meeting");
+
+    const hidden = { ...meeting, source_activity_id: null };
+    expect(
+      derivedSource(hidden, "en", "UTC", openerFor)?.openOrigin,
+    ).toBeUndefined();
+    expect(derivedSource(meeting, "en", "UTC")?.openOrigin).toBeUndefined();
+  });
+
+  it("opens nothing for a value that does not cite a meeting", () => {
+    const site = {
+      captured_by: machine,
+      source: "site_read",
+      source_activity_id: "0190a7f2-0000-7000-8000-000000000010",
+    };
+    const openerFor: SourceOpenerFor = () => vi.fn();
+    expect(
+      derivedSource(site, "en", "UTC", openerFor)?.openOrigin,
+    ).toBeUndefined();
   });
 });

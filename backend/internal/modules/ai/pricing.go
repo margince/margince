@@ -288,6 +288,8 @@ func vendorSheetRates(day time.Time) []ModelRate {
 		// it carries the same row until a release is priced apart.
 		decideOn(day, providerJev, "jev-1.13.0", 42_000),
 		decideOn(day, providerJev, "jev-latest", 42_000),
+		// Google's Decisions API page, read 2026-11-14: $0.10 per MTok input, output free.
+		decideOn(day, providerGeminiDecision, geminiDecisionModel, 100_000),
 	}
 }
 
