@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.personal_channel_sweep": "Dọn tệp và câu trả lời của kênh cá nhân",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
@@ -10248,6 +10249,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.meeting_profile_retract_sweep": "Trường công ty từ cuộc họp",
   "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
   "jobs.kind.intro_expiry": "Hết hạn lời giới thiệu",
+  "jobs.kind.personal_channel_sweep": "Dọn dẹp kênh cá nhân",
   "jobs.kind.knowledge_ingest": "Lập chỉ mục tài liệu",
   "jobs.kind.list_evaluate": "Kiểm tra danh sách tự cập nhật",
   "jobs.kind.notification_email": "Thư thông báo",
@@ -14616,6 +14618,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "roles.object.capture_settings": "Quy tắc thu thập",
   "roles.object.capture_trace": "Hoạt động kênh dùng chung",
   "roles.object.channel_connection": "Bot nhắn tin",
+  "roles.object.personal_channel": "Kênh cá nhân",
   "roles.object.integrations": "Nhà cung cấp dữ liệu",
   "roles.object.webhook_subscription": "Webhook",
   "roles.object.import_run": "Nhập dữ liệu",

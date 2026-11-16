@@ -29,11 +29,11 @@
     }
   ],
   "catalog": {
-    "tools": 48,
+    "tools": 49,
     "system_frame_tokens": 672,
-    "tokens": 51134,
+    "tokens": 51469,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1064
+    "mean_tool_tokens": 1049
   },
   "agents": [
     {
@@ -46,7 +46,7 @@
         "read_brief",
         "read_record"
       ],
-      "of_served_tools": 48,
+      "of_served_tools": 49,
       "tokens": 4367,
       "listing_tokens": 2048,
       "step_schema_tokens": 1646,
@@ -67,7 +67,7 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "of_served_tools": 48,
+      "of_served_tools": 49,
       "tokens": 6632,
       "listing_tokens": 3347,
       "step_schema_tokens": 2613,
@@ -96,12 +96,12 @@
       "tokens": 2821
     },
     {
-      "name": "read_reports",
-      "tokens": 2784
+      "name": "read_workspace",
+      "tokens": 2785
     },
     {
-      "name": "read_workspace",
-      "tokens": 2780
+      "name": "read_reports",
+      "tokens": 2784
     },
     {
       "name": "change_state",
@@ -246,6 +246,10 @@
     {
       "name": "list_documents",
       "tokens": 331
+    },
+    {
+      "name": "personal_channels",
+      "tokens": 329
     },
     {
       "name": "read_project",

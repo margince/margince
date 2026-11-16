@@ -90,6 +90,10 @@ export const CORE_OBJECTS: Readonly<Record<CoreRbacObject, CoreObjectName>> = {
     area: "data",
     label: "roles.object.channel_connection",
   },
+  personal_channel: {
+    area: "data",
+    label: "roles.object.personal_channel",
+  },
   integrations: { area: "data", label: "roles.object.integrations" },
   webhook_subscription: {
     area: "data",

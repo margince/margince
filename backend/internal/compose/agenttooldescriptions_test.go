@@ -475,7 +475,7 @@ func toolsListDescriptions(t *testing.T, registry *agents.Registry) map[string]s
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:descriptions", OnBehalfOf: ids.NewV7(),
 		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeDraft,
-			principal.ScopeWrite, principal.ScopeSend, principal.ScopeEnrich),
+			principal.ScopeWrite, principal.ScopeSend, principal.ScopeEnrich, principal.ScopePersonalChannels),
 		SeatType: principal.SeatFull, Permissions: everyMeasuredGrant(t),
 	})
 	handler := agents.NewHTTPHandler(registry,

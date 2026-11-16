@@ -91,10 +91,10 @@ The 3 tables owned by `personalchannels`, as the migrations build them. [Back to
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `byte_size` | `bigint` | yes |  |
 | `connection_id` | `uuid` | yes | Points at `personal_channel_connection.id`. |
-| `content_type` | `text` | yes |  |
+| `content` | `bytea` | yes |  |
+| `content_type` | `text` | yes | The type read from the bytes. |
 | `filename` | `text` | yes |  |
-| `object_key` | `text` | yes |  |
-| `sha256` | `text` | yes |  |
+| `sha256` | `text` | yes | Hex SHA-256 of the bytes. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -114,5 +114,5 @@ The 3 tables owned by `personalchannels`, as the migrations build them. [Back to
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"sha256": 120, "filename": 500, "object_key": 500, "content_type": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sha256": 120, "filename": 500, "object_key": 500, "content_type": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"sha256": 120, "filename": 500, "content_type": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"sha256":120}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sha256": 120, "filename": 500, "content_type": 500}')) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"sha256":120}')`

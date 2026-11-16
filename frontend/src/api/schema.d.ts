@@ -11142,6 +11142,29 @@ export interface paths {
         patch: operations["replaceChannelToken"];
         trace?: never;
     };
+    "/personal-channels/uploads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stage one file for a chat message you send in next.
+         * @description Always the CALLER's own. The answer's `upload_id` goes in the next message's `files`. A
+         *     staged file no message names within 24 hours is deleted. The type is read from the bytes.
+         *     A file may be at most 25 MiB; through an AI assistant, at most what one MCP request
+         *     carries inline. Refused while the caller's personal channels are off.
+         */
+        post: operations["uploadPersonalChannelFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/personal-channels/connection": {
         parameters: {
             query?: never;
@@ -32174,6 +32197,17 @@ export interface components {
          * @enum {string}
          */
         ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
+        /** @description One staged file, named by its upload_id in the next message's files. */
+        PersonalChannelUpload: {
+            /** Format: uuid */
+            upload_id: string;
+            filename: string;
+            /** @description The type read from the bytes. */
+            content_type: string;
+            size: number;
+            /** @description Hex SHA-256 of the bytes. */
+            sha256: string;
+        };
         /** @description A member's personal channels connection. */
         PersonalChannelConnection: {
             /** @description Whether chats may come in and replies be pulled. */
@@ -81105,6 +81139,40 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    uploadPersonalChannelFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The file as the chat had it.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The staged file. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonalChannelUpload"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getPersonalChannelConnection: {

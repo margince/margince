@@ -4,7 +4,8 @@
 -- and when their client last picked replies up.
 -- personal_channel_reply is a reply waiting for that client: its body is kept only
 -- until the client acks it or it expires, and erasure clears the recipient.
--- personal_channel_upload is a file staged for a message that has not landed yet.
+-- personal_channel_upload is a file staged for a message that has not landed yet; its
+-- bytes live here until the message lands or the sweep deletes it a day later.
 SET LOCAL lock_timeout = '5s';
 
 CREATE TABLE personal_channel_connection (
@@ -56,7 +57,7 @@ CREATE TABLE personal_channel_upload (
     content_type text NOT NULL,
     byte_size bigint NOT NULL,
     sha256 text NOT NULL,
-    object_key text NOT NULL,
+    content bytea NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT personal_channel_upload_pkey PRIMARY KEY (id),
     CONSTRAINT personal_channel_upload_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES personal_channel_connection(id) ON DELETE CASCADE,
@@ -73,9 +74,9 @@ WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"delivery_key":500,"
 CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."personal_channel_reply" FOR EACH ROW
 WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"delivery_key":500,"network":120,"provider_message_id":500,"reason":500,"recipient_account":500,"reply_to":500,"state":20000,"thread_id":500}')) EXECUTE FUNCTION public.refuse_oversized_text('{"delivery_key":500,"network":120,"provider_message_id":500,"reason":500,"recipient_account":500,"reply_to":500,"state":20000,"thread_id":500}');
 CREATE OR REPLACE TRIGGER "text_bound_insert" AFTER INSERT ON "public"."personal_channel_upload" FOR EACH ROW
-WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"content_type":500,"filename":500,"object_key":500,"sha256":120}')) EXECUTE FUNCTION public.refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}');
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), NULL, '{"content_type":500,"filename":500,"sha256":120}')) EXECUTE FUNCTION public.refuse_oversized_text('{"content_type":500,"filename":500,"sha256":120}');
 CREATE OR REPLACE TRIGGER "text_bound_update" AFTER UPDATE ON "public"."personal_channel_upload" FOR EACH ROW
-WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"content_type":500,"filename":500,"object_key":500,"sha256":120}')) EXECUTE FUNCTION public.refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}');
+WHEN (public.text_row_exceeds_bounds(to_jsonb(NEW), to_jsonb(OLD), '{"content_type":500,"filename":500,"sha256":120}')) EXECUTE FUNCTION public.refuse_oversized_text('{"content_type":500,"filename":500,"sha256":120}');
 
 -- seedSystemRoles writes each role once, so installations that exist already get
 -- the grants the compiled defaults carry here.

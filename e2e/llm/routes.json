@@ -428,6 +428,12 @@
         "list": "list_record_documents"
       }
     },
+    "personal_channels": {
+      "field": "action",
+      "actions": {
+        "upload_file": "upload_personal_channel_file"
+      }
+    },
     "read_analytics": {
       "field": "step",
       "actions": {

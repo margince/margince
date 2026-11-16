@@ -17282,6 +17282,38 @@ paths:
   # keeps a card in the channel and posts what happens on the record; what the
   # channel decides comes back as summarised notes. Linking needs the right to
   # edit the record, and reading needs the right to see it.
+  /personal-channels/uploads:
+    post:
+      tags: [Connectors]
+      operationId: uploadPersonalChannelFile
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: upload_personal_channel_file, router: personal_channels, action: upload_file, tier: auto_execute, scope: personal_channels, served_by: route }
+      summary: Stage one file for a chat message you send in next.
+      description: |
+        Always the CALLER's own. The answer's `upload_id` goes in the next message's `files`. A
+        staged file no message names within 24 hours is deleted. The type is read from the bytes.
+        A file may be at most 25 MiB; through an AI assistant, at most what one MCP request
+        carries inline. Refused while the caller's personal channels are off.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary, description: "The file as the chat had it." }
+      responses:
+        '201':
+          description: The staged file.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PersonalChannelUpload' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /personal-channels/connection:
     get:
       tags: [Connectors]
@@ -45963,6 +45995,17 @@ components:
       enum: [everything, important, milestones, silent]
       x-extensible-enum: true
       description: How much Margince posts into a linked channel.
+    PersonalChannelUpload:
+      type: object
+      description: One staged file, named by its upload_id in the next message's files.
+      required: [upload_id, filename, content_type, size, sha256]
+      properties:
+        upload_id: { type: string, format: uuid }
+        filename: { type: string }
+        content_type: { type: string, description: The type read from the bytes. }
+        size: { type: integer, minimum: 1 }
+        sha256: { type: string, description: Hex SHA-256 of the bytes. }
+
     PersonalChannelConnection:
       type: object
       description: A member's personal channels connection.

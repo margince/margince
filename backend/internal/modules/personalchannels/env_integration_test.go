@@ -93,3 +93,11 @@ func (e *channelEnv) as(user ids.UUID, grant principal.ObjectGrant) context.Cont
 }
 
 var repGrant = principal.ObjectGrant{Create: true, Read: true, Update: true}
+
+func (e *channelEnv) system() context.Context {
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: SweepActor,
+		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
+	})
+}

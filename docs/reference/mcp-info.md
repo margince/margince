@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 273.5 KB |
+| Tool catalog | 273.6 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71433 |
+| Approx. wire tokens | 71438 |
 | Largest tool | `read_details` (17.2 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 53.4 KB | 19% | Yes, every step |
 | Input schemas | 156.8 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.2 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **210.3 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -105,7 +105,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1889 |
-| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2780 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2785 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 484 |
@@ -12093,6 +12093,7 @@ and stage_id for a deal. Take every name verbatim; a custom field is spelled cf_
         "change_state",
         "change_tags",
         "list_documents",
+        "personal_channels",
         "read_details",
         "read_reports",
         "read_workspace",

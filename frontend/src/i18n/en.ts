@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.personal_channel_sweep": "Cleaning up personal channel files and replies",
   "systemJob.meeting_profile":
     "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
@@ -10524,6 +10525,7 @@ export const en = {
   "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
   "jobs.kind.intro_expiry": "Introduction expiry",
+  "jobs.kind.personal_channel_sweep": "Personal channel clean-up",
   "jobs.kind.knowledge_ingest": "Document indexing",
   "jobs.kind.list_evaluate": "Live list check",
   "jobs.kind.notification_email": "Notification email",
@@ -14941,6 +14943,7 @@ export const en = {
   "roles.object.capture_settings": "Capture rules",
   "roles.object.capture_trace": "Shared channel activity",
   "roles.object.channel_connection": "Chat bots",
+  "roles.object.personal_channel": "Personal channels",
   "roles.object.integrations": "Data providers",
   "roles.object.webhook_subscription": "Webhooks",
   "roles.object.import_run": "Data imports",

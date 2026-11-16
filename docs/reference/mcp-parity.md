@@ -9,11 +9,11 @@ Counting what another tool covers, it is 85.1%. Once every pending operation ope
 
 | Counted over | Operations | Open to an agent | Parity |
 |---|---:|---:|---:|
-| Every operation in the contract | 1105 | 866 | 78.3% |
-| Operations a signed-in user reaches | 1061 | 866 | 81.6% |
+| Every operation in the contract | 1106 | 867 | 78.3% |
+| Operations a signed-in user reaches | 1062 | 867 | 81.6% |
 | Operations the web app calls for a signed-in user | 916 | 755 | 82.4% |
 
-The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 111 of those are open, so an agent can do them.
+The last count answers the question of parity with the web app, so it leads this page. The first adds pages for visitors with no account, where no agent acts because no signed-in user does. The second adds routes where the scan found no web app call: 112 of those are open, so an agent can do them.
 
 | Of the operations the web app calls | Count |
 |---|---:|
@@ -48,7 +48,7 @@ Each operation is in one group. Ask first is a part of Open, so leave it out of 
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | [Business operations](#business-operations) | Sales work | 596 | 541 | 43 | 0 | 29 | 26 | 503 | 91.4% | 90.7% |
 | [Compliance and privacy](#compliance-and-privacy) | Compliance and privacy | 68 | 48 | 21 | 0 | 20 | 0 | 55 | 69.0% | 70.5% |
-| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 65 | 48 | 12 | 0 | 16 | 1 | 59 | 76.2% | 73.8% |
+| [Capture and connectors](#capture-and-connectors) | Email and calendar capture | 66 | 49 | 12 | 0 | 16 | 1 | 59 | 76.2% | 74.2% |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | Company settings | 88 | 68 | 4 | 0 | 12 | 8 | 73 | 82.1% | 77.2% |
 | [Admin settings](#admin-settings) | Admin settings | 160 | 118 | 32 | 0 | 41 | 1 | 148 | 75.6% | 73.7% |
 | [The user's own account and security](#the-users-own-account-and-security) | My account | 32 | 18 | 5 | 0 | 11 | 2 | 29 | 58.6% | 56.2% |
@@ -117,7 +117,7 @@ Passport area: Email and calendar capture.
 | Area | Operations | Open | Ask first | Pending | Security | Covered | Web app calls | Parity (web app) | Parity (signed-in) |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | Capture review | 19 | 18 | 3 | 0 | 1 | 0 | 17 | 100.0% | 94.7% |
-| Connectors and provider connections | 37 | 22 | 7 | 0 | 14 | 1 | 33 | 60.6% | 59.4% |
+| Connectors and provider connections | 38 | 23 | 7 | 0 | 14 | 1 | 33 | 60.6% | 60.5% |
 | Accounting source | 9 | 8 | 2 | 0 | 1 | 0 | 9 | 88.8% | 88.8% |
 
 ## Workspace settings a non-admin can reach
@@ -902,6 +902,7 @@ An operation an agent can call, by the passport area that admits it. A passport 
 | `syncFinanceSource` | `POST /finance/source/sync` | `sync_finance_source` |
 | `listLeadConversationSuggestions` | `GET /leads/{id}/conversation-suggestions` | `read_view` |
 | `getPersonalChannelConnection` | `GET /personal-channels/connection` | `read_personal_channel` |
+| `uploadPersonalChannelFile` | `POST /personal-channels/uploads` | `upload_personal_channel_file` |
 | `listProviderConnections` | `GET /provider-connections` | `list_provider_connections` |
 | `disconnectProvider` | `DELETE /provider-connections/{provider}` | `disconnect_provider` |
 

@@ -909,6 +909,7 @@
     "uploadAttachment": "business",
     "uploadCorpusDocument": "business",
     "uploadLegalEntityLogo": "admin_settings",
+    "uploadPersonalChannelFile": "capture",
     "upsertPartner": "business",
     "useDealEstimate": "business",
     "validateImportRun": "business",
@@ -2013,6 +2014,7 @@
     "uploadImportSource": "imports",
     "uploadLegalEntityLogo": "company_profile",
     "uploadMyAvatar": "own_profile",
+    "uploadPersonalChannelFile": "connectors",
     "upsertPartner": "companies",
     "useDealEstimate": "deals",
     "validateImportRun": "imports",
@@ -4110,6 +4112,9 @@
     "upload_legal_entity_logo": [
       "company_profile"
     ],
+    "upload_personal_channel_file": [
+      "connectors"
+    ],
     "upsert_partner": [
       "companies"
     ],
@@ -6173,6 +6178,9 @@
     ],
     "upload_legal_entity_logo": [
       "admin_settings"
+    ],
+    "upload_personal_channel_file": [
+      "capture"
     ],
     "upsert_partner": [
       "business"

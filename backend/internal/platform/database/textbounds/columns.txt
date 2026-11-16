@@ -1155,7 +1155,6 @@ public.personal_channel_reply.state document
 public.personal_channel_reply.thread_id line
 public.personal_channel_upload.content_type line
 public.personal_channel_upload.filename line
-public.personal_channel_upload.object_key line
 public.personal_channel_upload.sha256 label
 public.pipeline.name label
 public.preference_token.revoked_reason note

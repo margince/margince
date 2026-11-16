@@ -3227,6 +3227,10 @@ func (stubs) UpdatePersonalChannelConnection(w nethttp.ResponseWriter, r *nethtt
 	httperr.NotImplemented(w, r, "UpdatePersonalChannelConnection")
 }
 
+func (stubs) UploadPersonalChannelFile(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "UploadPersonalChannelFile")
+}
+
 func (stubs) ListPipelines(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListPipelinesParams) {
 	httperr.NotImplemented(w, r, "ListPipelines")
 }

@@ -8146,17 +8146,17 @@ public.personal_channel_reply_pkey CREATE UNIQUE INDEX personal_channel_reply_pk
 public.personal_channel_upload acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.personal_channel_upload.byte_size bigint NOT NULL gen=- def=-
 public.personal_channel_upload.connection_id uuid NOT NULL gen=- def=-
+public.personal_channel_upload.content bytea NOT NULL gen=- def=-
 public.personal_channel_upload.content_type text NOT NULL gen=- def=-
 public.personal_channel_upload.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.personal_channel_upload.filename text NOT NULL gen=- def=-
 public.personal_channel_upload.id uuid NOT NULL gen=- def=uuidv7()
-public.personal_channel_upload.object_key text NOT NULL gen=- def=-
 public.personal_channel_upload.personal_channel_upload_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES personal_channel_connection(id) ON DELETE CASCADE
 public.personal_channel_upload.personal_channel_upload_pkey PRIMARY KEY (id)
 public.personal_channel_upload.personal_channel_upload_size_check CHECK (((byte_size >= 1) AND (byte_size <= '9007199254740991'::bigint)))
 public.personal_channel_upload.sha256 text NOT NULL gen=- def=-
-public.personal_channel_upload.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.personal_channel_upload FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"sha256": 120, "filename": 500, "object_key": 500, "content_type": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}')
-public.personal_channel_upload.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.personal_channel_upload FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sha256": 120, "filename": 500, "object_key": 500, "content_type": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"object_key":500,"sha256":120}')
+public.personal_channel_upload.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.personal_channel_upload FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"sha256": 120, "filename": 500, "content_type": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"sha256":120}')
+public.personal_channel_upload.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.personal_channel_upload FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"sha256": 120, "filename": 500, "content_type": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"content_type":500,"filename":500,"sha256":120}')
 public.personal_channel_upload_age_idx CREATE INDEX personal_channel_upload_age_idx ON public.personal_channel_upload USING btree (created_at)
 public.personal_channel_upload_pkey CREATE UNIQUE INDEX personal_channel_upload_pkey ON public.personal_channel_upload USING btree (id)
 public.pipeline acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

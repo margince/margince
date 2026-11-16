@@ -6,6 +6,7 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.personal_channel_sweep": "Dateien und Antworten persönlicher Kanäle bereinigen",
   "systemJob.meeting_profile":
     "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
@@ -10539,6 +10540,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.initiative_enrolment_sweep":
     "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
+  "jobs.kind.personal_channel_sweep": "Bereinigung persönlicher Kanäle",
   "jobs.kind.knowledge_ingest": "Indexierung von Dokumenten",
   "jobs.kind.list_evaluate": "Prüfung der Live-Listen",
   "jobs.kind.notification_email": "Benachrichtigungs-E-Mail",
@@ -15019,6 +15021,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "roles.object.capture_settings": "Capture-Regeln",
   "roles.object.capture_trace": "Aktivität geteilter Kanäle",
   "roles.object.channel_connection": "Chat-Bots",
+  "roles.object.personal_channel": "Persönliche Kanäle",
   "roles.object.integrations": "Datenanbieter",
   "roles.object.webhook_subscription": "Webhooks",
   "roles.object.import_run": "Datenimporte",

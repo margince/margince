@@ -48,6 +48,10 @@ var contractRouters = []mcp.ToolSpec{
 		Name: "change_capture", Title: "Decide what comes into the CRM",
 		Description: changeCaptureCopy.render(), Instead: changeCaptureCopy.Instead,
 	},
+	{
+		Name: "personal_channels", Title: "Send the user's own chats in and pick their replies up",
+		Description: personalChannelsCopy.render(), Instead: personalChannelsCopy.Instead,
+	},
 }
 
 // registerContractRouters lists each contract router the contract gave actions.

@@ -29,6 +29,8 @@ var grantableScopes = map[principal.Scope]bool{
 	principal.ScopeWrite:  true,
 	principal.ScopeSend:   true,
 	principal.ScopeEnrich: true,
+	// The fifth's sibling: no other scope grants it.
+	principal.ScopePersonalChannels: true,
 }
 
 func TestTheContractScopeMatchesTheRegisteredToolScope(t *testing.T) {

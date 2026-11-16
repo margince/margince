@@ -73,6 +73,7 @@ const JOB_KIND_NAME: Readonly<Record<string, MessageKey>> = {
   initiative_enrolment_sweep: "jobs.kind.initiative_enrolment_sweep",
   meeting_profile_retract_sweep: "jobs.kind.meeting_profile_retract_sweep",
   intro_expiry: "jobs.kind.intro_expiry",
+  personal_channel_sweep: "jobs.kind.personal_channel_sweep",
   knowledge_ingest: "jobs.kind.knowledge_ingest",
   link_reconcile: "systemJob.link_reconcile",
   linkedin_rematch: "systemJob.linkedin_rematch",

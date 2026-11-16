@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "4a470aa751d30f7fc75cb645470da98d47828032cb1b143902cb74d9a2ec2085"
+const jobContractHash = "95aa5e16f96b0220eac18d1be6af9c6de4f06328bd9a4b53be4a959d8f8820cb"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -101,6 +101,7 @@ func (SendNotificationEmailArgs) declaredJobType(SendNotificationEmailArgs)     
 func (OwedVerdictArgs) declaredJobType(OwedVerdictArgs)                               {}
 func (ParticipantBackfillArgs) declaredJobType(ParticipantBackfillArgs)               {}
 func (PastActivityClockRefoldArgs) declaredJobType(PastActivityClockRefoldArgs)       {}
+func (PersonalChannelSweepArgs) declaredJobType(PersonalChannelSweepArgs)             {}
 func (RequestProofExpiryArgs) declaredJobType(RequestProofExpiryArgs)                 {}
 func (PrivacyRetentionArgs) declaredJobType(PrivacyRetentionArgs)                     {}
 func (ProjectHealthScanArgs) declaredJobType(ProjectHealthScanArgs)                   {}

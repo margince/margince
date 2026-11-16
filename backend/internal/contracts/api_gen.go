@@ -58583,6 +58583,18 @@ type PersonalChannelConnection struct {
 	RepliesWaiting int `json:"replies_waiting" minimum:"0"`
 }
 
+// PersonalChannelUpload One staged file, named by its upload_id in the next message's files.
+type PersonalChannelUpload struct {
+	// ContentType The type read from the bytes.
+	ContentType string `json:"content_type"`
+	Filename    string `json:"filename"`
+
+	// Sha256 Hex SHA-256 of the bytes.
+	Sha256   string             `json:"sha256"`
+	Size     int                `json:"size" minimum:"1"`
+	UploadId openapi_types.UUID `json:"upload_id"`
+}
+
 // Pipeline A pipeline. Mirrors the `pipeline` table (with embedded stages on GET).
 type Pipeline struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
@@ -78636,6 +78648,12 @@ type ListPartnersParamsPartnerRole string
 // ListPartnersParamsCertStatus defines parameters for ListPartners.
 type ListPartnersParamsCertStatus string
 
+// UploadPersonalChannelFileMultipartBody defines parameters for UploadPersonalChannelFile.
+type UploadPersonalChannelFileMultipartBody struct {
+	// File The file as the chat had it.
+	File openapi_types.File `json:"file"`
+}
+
 // ListPipelinesParams defines parameters for ListPipelines.
 type ListPipelinesParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
@@ -82164,6 +82182,9 @@ type SetPassportAreasJSONRequestBody = PassportAreas
 
 // UpdatePersonalChannelConnectionJSONRequestBody defines body for UpdatePersonalChannelConnection for application/json ContentType.
 type UpdatePersonalChannelConnectionJSONRequestBody = UpdatePersonalChannelConnectionRequest
+
+// UploadPersonalChannelFileMultipartRequestBody defines body for UploadPersonalChannelFile for multipart/form-data ContentType.
+type UploadPersonalChannelFileMultipartRequestBody UploadPersonalChannelFileMultipartBody
 
 // CreatePipelineJSONRequestBody defines body for CreatePipeline for application/json ContentType.
 type CreatePipelineJSONRequestBody = CreatePipelineRequest
@@ -98287,6 +98308,9 @@ type ServerInterface interface {
 	// Turn your personal channels on or off.
 	// (PATCH /personal-channels/connection)
 	UpdatePersonalChannelConnection(w http.ResponseWriter, r *http.Request)
+	// Stage one file for a chat message you send in next.
+	// (POST /personal-channels/uploads)
+	UploadPersonalChannelFile(w http.ResponseWriter, r *http.Request)
 	// List pipelines.
 	// (GET /pipelines)
 	ListPipelines(w http.ResponseWriter, r *http.Request, params ListPipelinesParams)
@@ -104008,6 +104032,12 @@ func (_ Unimplemented) GetPersonalChannelConnection(w http.ResponseWriter, r *ht
 // Turn your personal channels on or off.
 // (PATCH /personal-channels/connection)
 func (_ Unimplemented) UpdatePersonalChannelConnection(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Stage one file for a chat message you send in next.
+// (POST /personal-channels/uploads)
+func (_ Unimplemented) UploadPersonalChannelFile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -140964,6 +140994,28 @@ func (siw *ServerInterfaceWrapper) UpdatePersonalChannelConnection(w http.Respon
 	handler.ServeHTTP(w, r)
 }
 
+// UploadPersonalChannelFile operation middleware
+func (siw *ServerInterfaceWrapper) UploadPersonalChannelFile(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadPersonalChannelFile(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListPipelines operation middleware
 func (siw *ServerInterfaceWrapper) ListPipelines(w http.ResponseWriter, r *http.Request) {
 
@@ -156789,6 +156841,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/personal-channels/connection", wrapper.UpdatePersonalChannelConnection)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/personal-channels/uploads", wrapper.UploadPersonalChannelFile)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/pipelines", wrapper.ListPipelines)
