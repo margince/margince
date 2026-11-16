@@ -389,7 +389,11 @@ describe("CustomFieldsAdmin", () => {
     renderAdmin();
     const dialog = await openBuilder();
     await userEvent.type(dialog.getByLabelText(/^Label/i), "Deal size");
-    await userEvent.click(dialog.getByRole("button", { name: /^Number$/i }));
+    await pickOption(
+      userEvent.setup(),
+      dialog.getByRole("combobox", { name: "Type" }),
+      "Number",
+    );
     await userEvent.click(dialog.getByRole("button", { name: "Add field" }));
     await waitFor(() =>
       expect(calls.some((call) => call.method === "POST")).toBe(true),
@@ -510,7 +514,11 @@ describe("CustomFieldsAdmin", () => {
     );
     const dialog = await openBuilder();
     await userEvent.type(dialog.getByLabelText(/^Label/i), "Doomed field");
-    await userEvent.click(dialog.getByRole("button", { name: /^Number$/i }));
+    await pickOption(
+      userEvent.setup(),
+      dialog.getByRole("combobox", { name: "Type" }),
+      "Number",
+    );
     await userEvent.click(dialog.getByRole("button", { name: "Add field" }));
     // The POST is attempted…
     await waitFor(() =>

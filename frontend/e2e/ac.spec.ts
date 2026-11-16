@@ -3324,25 +3324,20 @@ test.describe("filters and views", () => {
   }) => {
     await page.goto("/#/filters/deals");
     await expectShellRendered(page);
-    const objects = page.getByRole("group", {
-      name: "Datensatztyp",
-    });
-    await expect(
-      objects.getByRole("button", { name: "Deals", pressed: true }),
-    ).toBeVisible();
+    const objects = page.getByRole("combobox", { name: "Datensatztyp" });
+    await expect(objects).toHaveText("Deals");
 
     // "Kontakte": `filters.tab.contacts` is a different KEY from the nav's, and
     // a key is not a word — the catalog moved this one with it. The tab says
     // what every other surface says.
-    await objects.getByRole("button", { name: "Kontakte" }).click();
+    await objects.click();
+    await page.getByRole("option", { name: "Kontakte" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
     // Reloaded, not just navigated: the tab is where you ARE, so a shared link
     // and a refresh have to land on the same object.
     await page.reload();
-    await expect(
-      objects.getByRole("button", { name: "Kontakte", pressed: true }),
-    ).toBeVisible();
+    await expect(objects).toHaveText("Kontakte");
   });
 });
 
