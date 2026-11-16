@@ -55,6 +55,9 @@ func (s *Store) confirmRulesTx(
 	return out, nil
 }
 
+// codeInvalid is the field code of a 422 that names a value the rules refuse.
+const codeInvalid = "invalid"
+
 // NoSubjectRequestError refuses a consent-confirmation mail a user asked for
 // when the recipient's rules need the contact's own request and none is on
 // record.
