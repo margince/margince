@@ -90,14 +90,14 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 // erases what was written since. It certifies once: the first tombstone stays
 // the only one, and its account is the answer.
 func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error) {
-	return e.eraseContactCounted(ctx, contactID, reason, nil)
+	return e.runContactErasure(ctx, contactID, reason, nil)
 }
 
-// eraseContactCounted runs the cascade. keep, when set, can refuse it before
+// runContactErasure runs the cascade. keep, when set, can refuse it before
 // anything is destroyed.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) eraseContactCounted(ctx context.Context, contactID ids.UUID, reason string, keep erasureKeep) (erased erasureaccount.Account, err error) {
+func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reason string, keep erasureKeep) (erased erasureaccount.Account, err error) {
 	ctx = originalstore.Bind(corefeatures.RetainedDataContext(ctx), e.db, e.blob)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err

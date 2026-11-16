@@ -23,7 +23,7 @@ type erasureKeep func(ctx context.Context, tx pgx.Tx, subject ids.ContactID) err
 // admitErasure takes the subject's stop locks, asks keep under them, and then
 // refuses a contact the erasure may not touch and resolves its floor.
 func (e *Eraser) admitErasure(ctx context.Context, tx pgx.Tx, subject ids.ContactID, keep erasureKeep) (FloorPolicy, error) {
-	if err := storekit.LockStopKey(ctx, tx, subject.UUID.String()); err != nil {
+	if err := storekit.LockStopKey(ctx, tx, subject.String()); err != nil {
 		return FloorPolicy{}, err
 	}
 	if err := storekit.LockSubjectsStopAddresses(ctx, tx, subject.UUID); err != nil {
@@ -43,7 +43,7 @@ func (e *Eraser) admitErasure(ctx context.Context, tx pgx.Tx, subject ids.Contac
 // An Art. 17 request is not held by that floor: its cascade puts the subject's
 // addresses on the erasure list, which refuses every send to them.
 func (e *Eraser) eraseContactForRetention(ctx context.Context, contactID ids.UUID) error {
-	_, err := e.eraseContactCounted(ctx, contactID, causeRetention, keptByOptOutFloor)
+	_, err := e.runContactErasure(ctx, contactID, causeRetention, keptByOptOutFloor)
 	return err
 }
 
