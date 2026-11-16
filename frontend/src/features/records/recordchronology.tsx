@@ -176,18 +176,19 @@ export function useRecordChronology({
     changes.data?.pages.flatMap((page) => page.data ?? []) ?? [];
   // The contacts on each exchange, named through the resolver the change rows
   // use for their stored ids. Both cuts then name a contact the same way.
+  const nameOf = values.nameOf;
   const activityEntries = activityTimeline(
     activities,
     viewerId,
     renderActions,
-    values.nameOf
-      ? {
-          nameOf: (entityType, entityId) =>
-            entityType === "contact" ? values.nameOf?.(entityId) : undefined,
-          t,
-          locale: values.locale,
-        }
-      : undefined,
+    {
+      nameOf: nameOf
+        ? (entityType, entityId) =>
+            entityType === "contact" ? nameOf(entityId) : undefined
+        : undefined,
+      t,
+      locale: values.locale,
+    },
   ).map((entry) =>
     // Only an email has a drawer to open, and only when the caller has one to
     // open it in.
