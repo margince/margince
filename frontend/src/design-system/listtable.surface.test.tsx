@@ -5,14 +5,16 @@ import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { FOLD_MAX_WIDTH, widthMedia } from "../lib/viewport";
 import { openViewStep, viewButton } from "../testing/listview.testkit";
 import { type ListChip, ListTable, type ListView } from "./listtable";
 import { pagerSlots } from "./listtable.paging";
 import { columns, render, testRows } from "./listtable.testkit";
 import { pickOption } from "./select-testing";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 // A header whose verbs fold into one menu must behave like the row of verbs it
 // replaced. By default the menu defers its children to the first open. That is
@@ -135,7 +137,6 @@ describe("a folded header's verbs are live", () => {
     // button being visible, because the fold sets `hidden` on it. Visibility is
     // the wrong question and would pass on a dead control.
     expect(mounted).toHaveBeenCalledTimes(1);
-    vi.unstubAllGlobals();
   });
 });
 
@@ -579,47 +580,6 @@ describe("empty state", () => {
     // Two different offers: one undoes every narrowing, the screen's own note
     // usually undoes one.
     expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
-  });
-});
-
-describe("phone card layout hooks", () => {
-  function stubFoldedViewport() {
-    vi.stubGlobal("matchMedia", (query: string) => ({
-      matches: query === widthMedia(FOLD_MAX_WIDTH),
-      media: query,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-    }));
-  }
-
-  it("marks each phone fact with its place, draws no other column, and keeps the table roles", () => {
-    stubFoldedViewport();
-    render(
-      <ListTable
-        rows={testRows(1)}
-        columns={columns.map((column) =>
-          column.key === "value"
-            ? { ...column, phone: "end" as const }
-            : column.key === "region"
-              ? { ...column, phone: "caption" as const }
-              : column,
-        )}
-        rowKey={(row) => row.id}
-        unit="rows"
-      />,
-    );
-
-    expect(screen.getByRole("table")).toBeTruthy();
-    const [, dataRow] = screen.getAllByRole("row");
-    const [identity, value, region, ...rest] =
-      within(dataRow).getAllByRole("cell");
-    expect(rest).toEqual([]);
-    expect(identity).toHaveClass("lt-identity");
-    expect(identity).not.toHaveAttribute("data-phone");
-    expect(value).toHaveAttribute("data-phone", "end");
-    expect(region).toHaveAttribute("data-phone", "caption");
-    expect(screen.queryByRole("cell", { name: "-" })).toBeNull();
-    vi.unstubAllGlobals();
   });
 });
 

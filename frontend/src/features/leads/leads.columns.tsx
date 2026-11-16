@@ -44,11 +44,12 @@ export function leadColumns(
       header: t("contacts.name"),
       cell: (lead: Lead) => {
         const terminal = terminalBadge(lead);
-        const name = leadIdentityName(lead) || t("lead.unnamed");
+        const shown = leadIdentityName(lead);
         return (
           <span className="avatar-row">
-            <Avatar identity={lead.id} name={name} />
-            <strong>{name}</strong>
+            {/* Not the fallback words: they would draw letters for a lead with no name. */}
+            <Avatar identity={lead.id} name={shown} />
+            <strong>{shown || t("lead.unnamed")}</strong>
             {terminal && (
               <Badge tone={terminal.tone}>{t(terminal.label)}</Badge>
             )}
@@ -75,10 +76,7 @@ export function leadColumns(
       ),
       sort: "company_name",
       phone: "caption",
-      folded: (lead: Lead) =>
-        lead.company_id || lead.company_name?.trim() ? (
-          <LeadCompanyName lead={lead} asText />
-        ) : null,
+      folded: (lead: Lead) => <LeadCompanyName lead={lead} asText />,
     },
     {
       key: "score",

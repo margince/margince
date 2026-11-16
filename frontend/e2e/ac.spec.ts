@@ -1597,23 +1597,26 @@ test.describe("§3.8: 390px mobile", () => {
     test(`no AA violations on the phone rows of #/${list}`, async ({
       page,
     }) => {
-      await page.route(/\/v1\/partners(\?.*)?$/, (route) =>
-        route.fulfill({
-          json: listPage([
-            {
-              company_id: brandt.id,
-              partner_kinds: ["hosting", "referral"],
-              cert_status: "certified",
-              relationship_stage: "active",
-              stage_label: "Live",
-              stage_meaning: "active",
-              version: 1,
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-06-01T00:00:00Z",
-            },
-          ]),
-        }),
-      );
+      // The mock API serves no partner, and an empty list draws no row.
+      if (list === "partners") {
+        await page.route(/\/v1\/partners(\?.*)?$/, (route) =>
+          route.fulfill({
+            json: listPage([
+              {
+                company_id: brandt.id,
+                partner_kinds: ["hosting", "referral"],
+                cert_status: "certified",
+                relationship_stage: "active",
+                stage_label: "Live",
+                stage_meaning: "active",
+                version: 1,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-06-01T00:00:00Z",
+              },
+            ]),
+          }),
+        );
+      }
       await page.goto(`/#/${list}`);
       await page.waitForLoadState("networkidle");
       await expectShellRendered(page);

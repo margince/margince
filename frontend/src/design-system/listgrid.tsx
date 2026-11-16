@@ -243,7 +243,8 @@ export function GridBody<Row>({
       {pending &&
         PLACEHOLDER_ROWS.map((placeholder) => (
           <tr key={placeholder} className="lt-loading" role="row">
-            {row.shown.map((column) => (
+            {/* A phone row's placeholder: the name's line and one caption line. */}
+            {(row.phone ? row.shown.slice(0, 2) : row.shown).map((column) => (
               <td key={column.key} role="cell">
                 <span className="skeleton lt-bone" />
               </td>
@@ -432,7 +433,7 @@ function phoneContent<Row>(column: ListColumn<Row>, row: Row): ReactNode {
   return said === undefined ? column.cell(row) : said;
 }
 
-/** A phone row's cells: line one's, then one caption of the facts with something to say. */
+/** A phone row's cells: line one's, then one caption cell; CSS leaves out a fact that renders nothing. */
 function phoneCells<Row>(
   row: Row,
   shown: readonly ListColumn<Row>[],
@@ -447,13 +448,11 @@ function phoneCells<Row>(
       continue;
     }
     const content = phoneContent(column, row);
-    if (content == null || content === false || content === "") {
-      continue;
-    }
     if (place === "caption") {
       facts.push(
         <Fragment key={column.key}>
           {facts.length > 0 && " "}
+          <span className="sr-only">{column.header}</span>
           <span className="lt-fact">{content}</span>
         </Fragment>,
       );

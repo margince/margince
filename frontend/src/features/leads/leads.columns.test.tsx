@@ -152,6 +152,13 @@ describe("the lead table's columns", () => {
     expect(cell).toHaveTextContent(/^AEAnna Example$/);
   });
 
+  it("draw no letters for a lead with neither name nor address", () => {
+    renderCell("name", { ...lead, full_name: null, email: null });
+    const cell = screen.getByTestId("cell");
+    expect(cell).toHaveTextContent(/^Unnamed lead$/);
+    expect(cell.querySelector(".avatar")).toBeEmptyDOMElement();
+  });
+
   it("draw the monogram from the address a lead with no name shows", () => {
     renderCell("name", {
       ...lead,

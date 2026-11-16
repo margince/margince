@@ -1,7 +1,7 @@
-/** @vitest-environment happy-dom */
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+/** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
@@ -119,8 +119,7 @@ describe("a deal's row on a phone", () => {
     renderTable([deal]);
     await screen.findByText("Acme GmbH");
     const row = await phoneRowOf("Fleet retrofit");
-    expect(row.end).toHaveLength(1);
-    expect(row.end[0]).toMatch(/48,000/);
+    expect(row.end).toEqual(["€48,000.00"]);
     expect(row.caption).toEqual(["Acme GmbH", "Proposal", "02/03/2026"]);
   });
 
@@ -150,7 +149,7 @@ describe("a deal's row on a phone", () => {
       },
     ]);
     const row = await phoneRowOf("Fleet retrofit");
-    expect(row.end).toHaveLength(1);
-    expect(row.caption).toHaveLength(3);
+    expect(row.end).toEqual(["••••"]);
+    expect(row.caption).toEqual(["••••", "Proposal", "02/03/2026"]);
   });
 });

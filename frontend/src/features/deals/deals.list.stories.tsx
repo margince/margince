@@ -233,7 +233,7 @@ export const TablePhone: Story = {
     const canvas = within(canvasElement);
     await canvas.findAllByText("Acme GmbH");
     const retrofit = phoneRow(canvas.getByText("Fleet retrofit"));
-    await expect(retrofit.end).toHaveLength(1);
+    await expect(retrofit.end).toEqual(["€48,000.00"]);
     await expect(retrofit.caption).toEqual([
       "Acme GmbH",
       "Qualify",
@@ -242,7 +242,7 @@ export const TablePhone: Story = {
     const depot = phoneRow(canvas.getByText("Depot rollout"));
     await expect(depot.caption).toEqual(["Acme GmbH", "Proposal"]);
     const northgate = phoneRow(canvas.getByText("Northgate framework"));
-    await expect(northgate.caption).toHaveLength(2);
+    await expect(northgate.caption).toEqual(["••••", "Qualify"]);
   },
 };
 

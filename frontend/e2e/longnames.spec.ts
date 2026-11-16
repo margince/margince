@@ -157,7 +157,7 @@ for (const width of [768, 1024, 1440]) {
   });
 }
 
-test("the companies list wraps a long name in its card at 390px", async ({
+test("the companies list wraps a long name inside its phone row at 390px", async ({
   page,
 }) => {
   await openCompaniesWithLongNames(page, 390);
@@ -171,13 +171,13 @@ test("the companies list wraps a long name in its card at 390px", async ({
       const box = (selector: string) =>
         tr.querySelector(selector)?.getBoundingClientRect() ?? null;
       return {
-        card: tr.getBoundingClientRect(),
+        rowBox: tr.getBoundingClientRect(),
         name: box("td.lt-identity strong"),
         end: box('td[data-phone="end"]'),
         caption: box('td[data-phone="caption"]'),
       };
     });
-    const { card, name: words, end, caption } = lines;
+    const { rowBox, name: words, end, caption } = lines;
     if (!words || !end || !caption) {
       throw new Error(`${name} lacks its name, end item or caption`);
     }
@@ -185,8 +185,8 @@ test("the companies list wraps a long name in its card at 390px", async ({
       words.right,
       `${name} wraps before the end item`,
     ).toBeLessThanOrEqual(end.left + 0.5);
-    expect(end.right, `${name}'s end item inside the card`).toBeLessThanOrEqual(
-      card.right + 0.5,
+    expect(end.right, `${name}'s end item inside its row`).toBeLessThanOrEqual(
+      rowBox.right + 0.5,
     );
     expect(end.top, `${name}'s end item on line one`).toBeLessThan(
       words.bottom,

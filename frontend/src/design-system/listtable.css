@@ -1427,6 +1427,7 @@
     padding-block: var(--space-3);
   }
   .lt-table.lt-phonerows tr.lt-loading > td + td {
+    inline-size: 60%;
     margin-block-start: var(--space-2);
   }
   .lt-table.lt-phonerows .lt-slack {
@@ -1499,6 +1500,7 @@
     grid-column: menu;
   }
   .lt-table.lt-phonerows td[data-phone="caption"] {
+    position: relative;
     grid-column: name / -1;
     grid-row: 2;
     margin-block-start: var(--space-1);
@@ -1510,10 +1512,20 @@
     display: inline-flex;
     vertical-align: middle;
   }
-  /* The dot ends each fact but the last, as a timeline head's does, so a
-   * wrapped line never opens on one. */
-  .lt-table.lt-phonerows .lt-fact:not(:last-child)::after {
-    content: "·";
+  /* DataTable's rule: a cell that renders nothing takes no place, its label and
+   * dot with it, and a caption with no fact left is not drawn. */
+  .lt-table.lt-phonerows td[data-phone="end"]:empty,
+  .lt-table.lt-phonerows .lt-fact:empty,
+  .lt-table.lt-phonerows .sr-only:has(+ .lt-fact:empty),
+  .lt-table.lt-phonerows
+    td[data-phone="caption"]:not(:has(.lt-fact:not(:empty))) {
+    display: none;
+  }
+  /* The dot ends a fact another follows, as a timeline head's does, so a wrapped
+   * line never opens on one; a screen reader hears the facts' labels instead. */
+  .lt-table.lt-phonerows
+  .lt-fact:not(:empty):has(~ .lt-fact:not(:empty))::after {
+    content: "·" / "";
     margin-inline-start: var(--space-1);
   }
 

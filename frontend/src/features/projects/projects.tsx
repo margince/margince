@@ -244,7 +244,7 @@ export function ProjectsScreen({
             // the page by nothing rather than by a name it withholds.
             sort: "company_id",
             phone: "caption",
-            // A list page carries no `companies`, so the name is still read per row.
+            // A list page carries no `companies`; each row reads its company's name.
             folded: (project: Project) =>
               project.company_id ? (
                 <EntityRef kind="company" id={project.company_id} asText />

@@ -10,6 +10,7 @@ import {
 import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
 import { playOpenViewStep } from "../testing/listview.play";
+import { phoneRow } from "../testing/phonerow";
 import { Badge, Button, OverflowMenu } from "./atoms";
 import { Avatar } from "./avatar";
 import type { ListChip } from "./listsurface";
@@ -695,7 +696,9 @@ export const CardsOnPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A stage badge ends the name's line; industry and owner are its caption.
+// A partner the reader may not see: the cell renders nothing, as `EntityRef` can.
+const Unseen = () => null;
+// A stage badge ends the name's line; industry, owner and partner are its caption.
 const phoneRowColumns: ListColumn<Company>[] = [
   ...columns.slice(0, 1),
   ...columns
@@ -719,24 +722,24 @@ const phoneRowColumns: ListColumn<Company>[] = [
       </Badge>
     ),
   },
+  {
+    key: "partner",
+    header: "Partner",
+    phone: "caption",
+    cell: () => <Unseen />,
+  },
   ...columns.slice(4),
 ];
 
-function factsOf(row: Element | null | undefined): string[] {
-  const parts = row?.querySelectorAll(
-    'td:not([data-phone]), [data-phone="end"], .lt-fact',
-  );
-  return [...(parts ?? [])]
-    .filter((part) => part.checkVisibility())
-    .map((part) => part.textContent ?? "");
-}
+const lineOf = ({ identity, end, caption }: ReturnType<typeof phoneRow>) =>
+  [identity.textContent, ...end, ...caption].join(" | ");
 
 // Line one: the name and its stage badge; line two: industry · owner.
 export const PhoneRow: Story = {
   render: () => <Surface rows={companies(4)} columns={phoneRowColumns} />,
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText("Company 01");
-    await expect(factsOf(name.closest("tr")).join(" | ")).toBe(
+    await expect(lineOf(phoneRow(name))).toBe(
       "Company 01 | Customer | Manufacturing | Lars",
     );
   },
@@ -744,7 +747,7 @@ export const PhoneRow: Story = {
   tags: ["uat-phone"],
 };
 
-// "Unowned" stands in for nothing, so the phone row leaves it out with its dot.
+// "Unowned" and the unseen partner say nothing, so each goes with its dot.
 export const PhoneRowSkipsPlaceholder: Story = {
   render: () => (
     <Surface
@@ -755,12 +758,14 @@ export const PhoneRowSkipsPlaceholder: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
-    const name = await within(canvasElement).findByText("Company 02");
-    const row = name.closest("tr");
-    await expect(factsOf(row)).toEqual(["Company 02", "Prospect", "Logistics"]);
-    const industry = row?.querySelector(".lt-fact");
-    if (!industry) throw new Error("the row drew no caption");
-    await expect(getComputedStyle(industry, "::after").content).toBe("none");
+    const dots = async (name: string) => {
+      const { row } = phoneRow(await within(canvasElement).findByText(name));
+      return [...row.querySelectorAll(".lt-fact")].map((fact) =>
+        getComputedStyle(fact, "::after").content.includes("·"),
+      );
+    };
+    await expect(await dots("Company 01")).toEqual([true, false, false]);
+    await expect(await dots("Company 02")).toEqual([false, false, false]);
   },
   ...phoneStory,
   tags: ["uat-phone"],
@@ -830,10 +835,9 @@ export const PhoneRowMenuAndSelection: Story = {
     />
   ),
   play: async (context) => {
-    const canvas = within(context.canvasElement);
-    const box = await canvas.findByRole("checkbox", {
-      name: "Select Company 01",
-    });
+    const box = await within(context.canvasElement).findByLabelText(
+      "Select Company 01",
+    );
     await expect(box).toBeVisible();
     const [name, caption] = ["strong", '[data-phone="caption"]'].map((part) =>
       box.closest("tr")?.querySelector(part)?.getBoundingClientRect(),
@@ -869,7 +873,7 @@ export const PhoneRowFoldedName: Story = {
   ),
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText("Company 01");
-    await expect(factsOf(name.closest("tr")).join(" | ")).toBe(
+    await expect(lineOf(phoneRow(name))).toBe(
       "Company 01 | Customer | Manufacturing | Lars | Since 2026",
     );
   },

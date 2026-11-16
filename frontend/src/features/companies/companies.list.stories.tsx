@@ -90,7 +90,7 @@ export const LongNames: Story = {
 // Line one ends in the lifecycle, line two is the website's host; a fact the
 // company lacks is left out.
 export const LongNamesPhone: Story = {
-  name: "long names wrap in the card — on a phone",
+  name: "long names wrap in the row — on a phone",
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

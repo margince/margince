@@ -1,6 +1,23 @@
 import type { ReactNode } from "react";
 
-export type ListColumn<Row> = {
+/** A phone-only column needs a phone place, or it would never be drawn. */
+type PhonePlacement =
+  | {
+      /**
+       * Its place in a phone row: "end" closes the name's line (the first declared wins),
+       * "caption" is a fact under the name. A list that places no column keeps the labelled card.
+       * Not DataTable's `fold`: a fold keeps a column without one on line two, a phone row drops it.
+       */
+      phone?: "end" | "caption";
+      phoneOnly?: undefined;
+    }
+  | {
+      phone: "end" | "caption";
+      /** Drawn in phone rows alone: no desktop column, tick, width or place in the order. */
+      phoneOnly: true;
+    };
+
+export type ListColumn<Row> = PhonePlacement & {
   key: string;
   header: string;
   cell: (row: Row) => ReactNode;
@@ -31,13 +48,6 @@ export type ListColumn<Row> = {
   holds?: "date" | "colleague";
   /** Starts unticked in the Display menu: offered rather than drawn. */
   initiallyHidden?: boolean;
-  /**
-   * Its place in a phone row: "end" closes the name's line (one per list), "caption" is a fact
-   * under the name. A list that places no column keeps the labelled phone card.
-   */
-  phone?: "end" | "caption";
-  /** Drawn in phone rows alone: no desktop column, tick, width or place in the order. */
-  phoneOnly?: boolean;
   /**
    * What the cell says in a phone row, the identity's included: `null` says
    * nothing, so the fact and its separator go; `undefined` keeps the cell.
