@@ -32,6 +32,48 @@ function show(ui: React.ReactNode) {
 }
 
 describe("evidence mark", () => {
+  it("opens the meeting a value was read from, and closes the receipt", async () => {
+    const openOrigin = vi.fn();
+    show(
+      <EvidenceMark
+        value="Through resellers"
+        source={{
+          provenance: { kind: "agent", agent: "capture" },
+          origin: "From a meeting on 12 Nov 2026",
+          openOrigin,
+        }}
+      />,
+    );
+    const trigger = screen.getByRole("button", { name: /Through resellers/ });
+    await userEvent.click(trigger);
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: "From a meeting on 12 Nov 2026",
+      }),
+    );
+    expect(openOrigin).toHaveBeenCalledOnce();
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("names a meeting the reader may not open as plain text", async () => {
+    show(
+      <EvidenceMark
+        value="Through resellers"
+        source={{
+          provenance: { kind: "agent", agent: "capture" },
+          origin: "From a meeting on 12 Nov 2026",
+        }}
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: /Through resellers/ }),
+    );
+    await screen.findByText("From a meeting on 12 Nov 2026");
+    expect(
+      screen.queryByRole("button", { name: "From a meeting on 12 Nov 2026" }),
+    ).toBeNull();
+  });
+
   it("marks a derived value and shows where it came from", async () => {
     show(
       <EvidenceMark
