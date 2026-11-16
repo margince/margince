@@ -172,6 +172,13 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
             />
           ),
         }),
+        namePart(
+          field,
+          "first_name",
+          t("create.firstName"),
+          contact.first_name,
+        ),
+        namePart(field, "last_name", t("create.lastName"), contact.last_name),
         field("address", t("co.address.summary"), address !== "", {
           keys: ADDRESS_FIELDS.map((entry) => entry.key),
           reading: address,
@@ -223,6 +230,25 @@ function useTagsRows(contact: Contact): DetailRow[] {
       value: <ContactTagsSection contact={contact} />,
     },
   ];
+}
+
+// The first or last name a greeting reads, corrected where it is read.
+function namePart(
+  field: (
+    key: string,
+    term: string,
+    present: boolean,
+    change: Omit<ComponentProps<typeof RailField>, "edit" | "label">,
+  ) => DetailRow,
+  key: "first_name" | "last_name",
+  term: string,
+  value: string | null | undefined,
+): DetailRow {
+  return field(key, term, Boolean(value), {
+    keys: [key],
+    text: value ?? "",
+    reading: value,
+  });
 }
 
 function employerValue(

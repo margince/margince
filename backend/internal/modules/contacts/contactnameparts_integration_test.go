@@ -186,3 +186,27 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 		t.Fatal("the parts edit never finished after the colleague committed")
 	}
 }
+
+// A rename to another person leaves no old name part behind, and a reload of
+// the record reads the parts as cleared.
+func TestRenamingToAnotherPersonClearsTheOldNameParts(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	created, err := e.store.CreateContact(ctx, CreateContactInput{
+		FullName: "Stefan Altmann", FirstName: new("Stefan"), LastName: new("Altmann"), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
+	if _, err := e.store.UpdateContact(ctx, id, UpdateContactInput{FullName: new("Maria Neumann")}); err != nil {
+		t.Fatalf("rename: %v", err)
+	}
+	got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if got.FullName != "Maria Neumann" || got.FirstName != nil || got.LastName != nil {
+		t.Fatalf("got %q / %v / %v, want Maria Neumann with no parts", got.FullName, got.FirstName, got.LastName)
+	}
+}

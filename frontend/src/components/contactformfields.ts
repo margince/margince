@@ -357,11 +357,8 @@ const STATED_SOURCE_LABEL: Readonly<
   other: "create.source.other",
 };
 
-// The split name parts are taken once, for a mail merge's greeting. The
-// employer is an edge, edited on the Company card.
+// The employer is an edge, edited on the Company card.
 const CREATE_ONLY = new Set([
-  "first_name",
-  "last_name",
   contactCompanyField.key,
   "acquisition_source",
   "acquisition_note",

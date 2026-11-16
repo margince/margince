@@ -238,12 +238,13 @@ func linkedInURLFolded(in UpdateContactInput) (UpdateContactInput, error) {
 }
 
 // readContactToEdit reads the row the edit decides on. An edit that moves a name
-// part decides full_name from the stored parts, so it reads them under the row
-// lock. That lock comes first in the lock order (lockorder.go).
+// part decides full_name from the stored parts. A rename decides which parts it
+// drops. So both read them under the row lock, which comes first in the lock
+// order (lockorder.go).
 func readContactToEdit(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
-	if movesANamePart(in) {
+	if movesANamePart(in) || in.FullName != nil {
 		if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
 			return crmcontracts.Contact{}, err
 		}
@@ -277,11 +278,31 @@ func contactEditPatch(
 }
 
 // updateAsWritten completes the input with what the request implies: the core
-// fields cleared to NULL, and the display name that follows the name parts.
+// fields cleared to NULL, the name parts a rename drops, and the display name.
 func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column) UpdateContactInput {
-	in.Clear = storekit.CoreFieldClears(in.Clear, active, in.CustomFields)
+	in.Clear = append(storekit.CoreFieldClears(in.Clear, active, in.CustomFields), namePartsARenameDrops(current, in)...)
 	in.FullName = displayNameAfter(current, in)
 	return in
+}
+
+// namePartsARenameDrops lists each stored name part the new display name no
+// longer holds as a run of its words. A greeting then never reads the old
+// person's name. An update that states a part decides that part itself.
+func namePartsARenameDrops(current crmcontracts.Contact, in UpdateContactInput) []string {
+	if in.FullName == nil || *in.FullName == current.FullName || movesANamePart(in) {
+		return nil
+	}
+	words := nameWords(foldedNameKey(*in.FullName))
+	var dropped []string
+	for _, part := range [...]struct {
+		column string
+		stored *string
+	}{{columnFirstName, current.FirstName}, {columnLastName, current.LastName}} {
+		if name := derefString(part.stored); name != "" && !containsRun(words, nameWords(foldedNameKey(name))) {
+			dropped = append(dropped, part.column)
+		}
+	}
+	return dropped
 }
 
 // displayNameAfter is the full_name an update writes. A display name that was

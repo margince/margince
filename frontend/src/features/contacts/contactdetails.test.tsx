@@ -352,3 +352,39 @@ it("converts the lead that holds an edited address by saving again", async () =>
     emails: [expect.objectContaining({ email: "dana@lead.example" })],
   });
 });
+
+describe("the name parts in the About group", () => {
+  function About({ page }: Readonly<{ page: typeof view }>) {
+    return <RecordDetails sections={useContactAboutSections(page)} />;
+  }
+
+  it("corrects the first name a greeting reads, and sends only it", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "PATCH /contacts/p-1": (body) => {
+        sent.push(body);
+        return jsonResponse({ ...contact, first_name: "Daniela" });
+      },
+    });
+    render(
+      <StoryProviders>
+        <About
+          page={{ ...view, contact: { ...contact, first_name: "Dana" } }}
+        />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: new RegExp(`^Change ${en["create.firstName"]}`),
+      }),
+    );
+    const input = screen.getByRole("textbox", {
+      name: en["create.firstName"],
+    });
+    await user.clear(input);
+    await user.type(input, "Daniela{Enter}");
+    await waitFor(() => expect(sent).toEqual([{ first_name: "Daniela" }]));
+  });
+});
