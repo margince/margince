@@ -914,7 +914,7 @@ effective_flag() { # key
 }
 
 log_as() { # role — tag each line of stdin and append to $log
-  awk -v mode=tag -v role="$1" -v colour="$log_colour" \
+  devlog_awk -v mode=tag -v role="$1" -v colour="$log_colour" \
     -f "${repo_root}/scripts/lib/devlog.awk" >>"$log"
 }
 

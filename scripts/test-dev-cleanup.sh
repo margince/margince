@@ -750,6 +750,25 @@ wait_ready "http://127.0.0.1:${port}/" 5 "$dead_pid" || status=$?
 check 2 "$status" "a launch that died is reported as exited even when another server answers its port"
 kill "$stale_server" 2>/dev/null || true
 wait "$stale_server" 2>/dev/null || true
+
+echo "dev.sh: a log line reaches the file while its writer is still running"
+
+# The writer keeps the pipe open, as a quiet server does, so only a tagger that
+# reads a line at a time has anything in the file before the pipe closes.
+: >"$log"
+mkfifo "$boot_dir/quiet"
+log_as api <"$boot_dir/quiet" &
+tagger=$!
+exec 9>"$boot_dir/quiet"
+echo 'level=INFO msg="the first line of a quiet server"' >&9
+arrived=no
+for _ in $(seq 1 50); do
+    if [[ -s "$log" ]]; then arrived=yes; break; fi
+    sleep 0.1
+done
+exec 9>&-
+wait "$tagger" 2>/dev/null || true
+check yes "$arrived" "the line is in the log before the pipe that carried it closes"
 rm -rf "$boot_dir"
 
 echo "dev.sh: infrastructure that does not come up is reported on the console"
