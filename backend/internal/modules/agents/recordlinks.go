@@ -92,11 +92,9 @@ func addDisplays(node any, inherited string) bool {
 		if currency != "" {
 			added = addPairDisplays(typed, currency)
 		}
-		if base, ok := typed[values.ConvertedCurrency].(string); ok && base != "" {
-			inherited = base
-		} else if own, ok := typed[values.AmountCurrency].(string); ok && own != "" {
-			inherited = ""
-		}
+		converted, _ := typed[values.ConvertedCurrency].(string)
+		own, _ := typed[values.AmountCurrency].(string)
+		inherited = values.CurrencyBelow(converted, own, inherited)
 		for _, child := range typed {
 			added = addDisplays(child, inherited) || added
 		}
