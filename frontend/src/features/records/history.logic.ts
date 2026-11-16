@@ -130,6 +130,11 @@ const DERIVED_COLUMNS: ReadonlySet<string> = new Set([
   "version",
 ]);
 
+// Whether a history field is one of the record's own, rather than a stamp.
+export function isRecordField(field: string): boolean {
+  return !DERIVED_COLUMNS.has(field);
+}
+
 export function entryFieldChanges(
   entry: Pick<AuditHistoryEntry, "before" | "after" | "edge">,
 ): EntryFieldChange[] {
@@ -154,7 +159,7 @@ export function entryFieldChanges(
     }
   }
   return fields
-    .filter((field) => !DERIVED_COLUMNS.has(field))
+    .filter(isRecordField)
     .map(
       (field): EntryFieldChange => ({
         field,

@@ -172,6 +172,36 @@ describe("historyValue", () => {
     ).toBe("example.com");
   });
 
+  // Older rows recorded the after image with the input's own field names, and
+  // the history still reads them.
+  it("renders email and phone rows recorded with capitalised keys", () => {
+    expect(
+      historyValue(
+        "emails",
+        '[{"Email":"ada@example.com","EmailType":"work","IsPrimary":true,"Position":0,"VouchedNotCorresponded":false}]',
+        ctx(),
+      ),
+    ).toBe("ada@example.com (Work)");
+    expect(
+      historyValue(
+        "phones",
+        '[{"IsPrimary":false,"Phone":"+49301234567","PhoneType":"mobile","Position":0}]',
+        ctx(),
+      ),
+    ).toBe("+49301234567 (Mobile)");
+  });
+
+  it("renders social links as their addresses, and no link as absent", () => {
+    expect(
+      historyValue(
+        "social",
+        '{"linkedin":"https://www.linkedin.com/in/ada"}',
+        ctx(),
+      ),
+    ).toBe("https://www.linkedin.com/in/ada");
+    expect(historyValue("social", '{"linkedin":null}', ctx())).toBeNull();
+  });
+
   it("renders a row of an unknown shape as its JSON, never as [object Object]", () => {
     const shown = historyValue(
       "links",

@@ -17,11 +17,13 @@ import (
 )
 
 // replaceSetsChange is what a save's replace-sets changed. Any change bumps the
-// version. A changed identifier re-runs the duplicate check. social is the
-// links as they now stand, which the audit row compares.
+// version. A changed identifier re-runs the duplicate check. The sets as they
+// now stand are the audit row's after image, in the shape of its before image.
 type replaceSetsChange struct {
 	any, emails, phones bool
 	social              *map[string]any
+	emailRows           *[]crmcontracts.ContactEmail
+	phoneRows           *[]crmcontracts.ContactPhone
 }
 
 // applyContactReplaceSets lands the social merge and the email and phone
@@ -65,7 +67,10 @@ func replaceContactSetsAndCompare(
 	_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
 	_, emails := differs["emails"]
 	_, phones := differs["phones"]
-	return replaceSetsChange{any: len(differs) > 0, emails: emails, phones: phones, social: after.Social}, nil
+	return replaceSetsChange{
+		any: len(differs) > 0, emails: emails, phones: phones,
+		social: after.Social, emailRows: after.Emails, phoneRows: after.Phones,
+	}, nil
 }
 
 // replaceContactSets writes each set the update carries. It takes the write

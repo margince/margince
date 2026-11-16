@@ -74,3 +74,25 @@ describe("FieldHistoryTimeline money", () => {
     expect(screen.queryByText("amount_minor")).toBeNull();
   });
 });
+
+describe("FieldHistoryTimeline fields", () => {
+  // The write path stamps updated_at on every save; nobody edited it.
+  it("offers no section and no filter for a column the write path stamps", async () => {
+    vi.stubGlobal(
+      "fetch",
+      servingOnePage([
+        repriced,
+        {
+          ...repriced,
+          id: "f2",
+          field: "updated_at",
+          old_value: "2026-07-14T09:00:00Z",
+          new_value: "2026-07-14T10:00:00Z",
+        },
+      ]),
+    );
+    render(<FieldHistoryTimeline kind="deal" id="d1" currency="EUR" />);
+    expect(await screen.findByText(/25,000/)).toBeTruthy();
+    expect(screen.queryByText(/updated at/i)).toBeNull();
+  });
+});

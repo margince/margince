@@ -213,13 +213,11 @@ func contactChangeImages(
 			before["social"], after["social"] = was, now
 		}
 	}
-	if in.Emails != nil {
-		before["emails"] = current.Emails
-		after["emails"] = in.Emails
+	if sets.emails {
+		before["emails"], after["emails"] = current.Emails, sets.emailRows
 	}
-	if in.Phones != nil {
-		before["phones"] = current.Phones
-		after["phones"] = in.Phones
+	if sets.phones {
+		before["phones"], after["phones"] = current.Phones, sets.phoneRows
 	}
 	return before, after
 }
