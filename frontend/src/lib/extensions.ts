@@ -227,8 +227,8 @@ export function extensionRbacObject(
  * The components the units' frontend packages export as their app, by unit.
  * Annotated here, at the registry's one import site, so a unit's export that
  * is not a component fails this assignment. It sits in this module, not in
- * extensionapps.ts: loading the screens loads each unit, and a unit imports
- * the app surface, which reads this module while it is still loading.
+ * extensionapps.ts. Loading the screens loads each unit. A unit imports the
+ * app surface, which reads this module while it is still loading.
  */
 export type ExtensionAppRegistry = Readonly<
   Record<string, ComponentType | undefined>
