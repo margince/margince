@@ -232,7 +232,7 @@ When Margince reads old mail, it checks newer messages before it creates work. W
 
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task. Check the quoted words and any later replies before adding a follow-up from the linked record. A task linked to the contact follows the automatic rule above, with **Undo**.
 
-A later reply on the promise's thread may keep a promise that rule did not close, such as a colleague's reply. Margince then asks **This may be done**, naming the day the email went out. Home, the Worklist, the contact page and the company page ask the same question. While they ask, the task is not shown as overdue. Choose **Done** or **Not yet**. **Not yet** shows the task as before on every page, until someone writes on the thread again.
+A later reply on the promise's thread may keep a promise that rule did not close, such as a colleague's reply. Margince then asks **This may be done**, naming the day the email went out. Home, the Worklist, the contact page and the company page ask the same question. While they ask, the task is not shown as overdue. Choose **Done** or **Not yet**. **Not yet** shows the task as before on every page, until someone writes on the thread again. When nobody answered the email a promise came from, Home and the Worklist show one item. The promise names it, and the email shows under it with **Draft follow-up** and **Done**. **Done** finishes the task and ends the reminder for that email. Another email to the same person or company stays its own item.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 

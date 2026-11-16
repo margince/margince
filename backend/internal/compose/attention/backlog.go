@@ -42,6 +42,9 @@ type TaskBacklog interface {
 	// TasksOnDeals reads every task of the window filed under any of these
 	// deals, drawn as the lane draws them.
 	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
+	// TasksFromActivities reads every task of the window derived from any of
+	// these activities, drawn as the lane draws them.
+	TasksFromActivities(ctx context.Context, window TaskWindow, sources []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that

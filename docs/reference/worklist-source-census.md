@@ -20,11 +20,12 @@ that can remove or merge a source's rows.
 | D | `relationshipChoices` (`relationshipchoices.go`) | Moves `relationship_decay` rows out of the queue unless pinned; drops one whose contact is already on another row |
 | E | `foldBriefIntoRisk` (`briefdedupe.go`) | Merges a `brief_item` onto the row about the same deal |
 | F | `dropDone` (`done.go`) | Drops rows the reader marked done that have not come back |
+| F2 | `foldFollowUpsIntoPromises` (`followuppromise.go`) | Puts an `awaiting_reply` row onto each open task derived from its email, and drops the reminder |
 | G | `foldAndRepin` and `foldRoutineDecisionsBounded` (`batches.go`, `pins.go`) | Folds routine decisions and system incidents into `batch` rows at `batchFloor` = 3 members; skipped for `filter=decisions` and `filter=system` |
 | H | `keepFiltered` (`page.go`) | Applies the `filter` value |
 | I | `markCrowding` (`crowding.go`) | Marks rows past the lead of one source; removes none |
 
-The page counts two populations. `considered` is the rows left after step F, before folding, filtering and
+The page counts two populations. `considered` is the rows left after step F2, before folding, filtering and
 crowding; `summary`, `readings` and the considered half of `counts` and `reach` read it. `shown` is what is left
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
@@ -77,13 +78,14 @@ through a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
-| `task` | A, C, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, in every scope (see below) |
+| `task` | A, C, F2, H | Yes, by due date | Yes; continued below the ranked rows | Yes, both windows, in every scope (see below) |
 | `meeting` | A, C, F, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `meeting_outcome` | A, C, H | Yes | Cursor exists, unused | `CountActivities` exists, uncalled |
 | `brief_item` | A, C, E, H | Rank in Go | No | No; the run ranks its items in Go, and step E merges them onto other rows |
 | `deal_at_risk` | A, B, C, E (absorbs), F, H | Yes, by expected close | Yes; continued below the ranked rows | No; step B does not fit the first page (see below) |
 | `customer_waiting` | Seam drops machine senders and folds threads; then A, B, C (twice), F, H. The tail runs the fold in SQL | Yes, by arrival | Yes; continued below the ranked rows | No; it does not fit the first page (see below) |
-| `awaiting_reply`, `meeting_follow_up` | A, C, F, H | Yes | No | No; step F |
+| `awaiting_reply` | A, C, F, F2, H | Yes | No | No; step F |
+| `meeting_follow_up` | A, C, F, H | Yes | No | No; step F |
 | `weekly_commitment` | A, C, H | Go | No | Not needed: the lane has no bound, so its rows are its total |
 | `approval` | A, C, G, H | Yes, newest staged first | Yes; continued below the ranked rows | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
 | `dedupe_candidate` | A, C, G, H | Yes | Yes | No total; its cut is judged with `contact_case`'s against one count (see below) |
@@ -96,7 +98,9 @@ through a verb of their own: a task is completed, a decision is decided.
 | System sources | A, C, F, G (incidents), H | Yes | No | No; see [System sources](#system-sources) |
 
 The task source's admitted population is counted in SQL on a first page, only for a window its lane cut. Today's
-window is the planned lane's own count; the later window is `CountTasks`. A team page reads, counts and continues
+window is the planned lane's own count; the later window is `CountTasks`. When a window is cut,
+`TasksFromActivities` reads the open tasks derived from the follow-up reminders' emails, so step F2 meets each
+task on the first page and the tail does not show it again. A team page reads, counts and continues
 its tasks through one roster arm (`TeamQueueOf` in `modules/activities`), so the lane's cap is spent on the rows step
 C keeps. On the `make bench-worklist-backlog` data, with 16,169 open tasks on one team, the roster count of today's
 window took 38 ms, against 69 ms for the count of every readable task it replaces. The later window's count took

@@ -193,6 +193,9 @@ func timelineNarrowings(in ListActivitiesInput, reminders string, arg func(any) 
 	if in.SourceActivityID != nil {
 		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
 	}
+	if in.SourceActivityIn != nil {
+		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = ANY ($%d::uuid[])", arg(in.SourceActivityIn)))
+	}
 	if in.Kind != nil {
 		where = append(where, kindPredicate([]string{*in.Kind}, arg))
 	}
@@ -367,7 +370,7 @@ func occurredWindowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil || in.WebsiteFormID != nil ||
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil || in.SourceActivityIn != nil || in.WebsiteFormID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.SourceIDs) > 0 || len(in.CustomFilters) > 0
 }
 

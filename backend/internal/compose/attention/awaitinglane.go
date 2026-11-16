@@ -60,7 +60,10 @@ func (a AwaitedReply) sent() occurredday.Moment {
 // followUpRead is the reader's follow-ups, read per request like planRows:
 // read says the source ran, cut that it stopped at its bound.
 type followUpRead struct {
-	rows         []ranked
+	rows []ranked
+	// promises are the tasks derived from these rows' emails that the
+	// planned lane cut (readingFollowUpPromises).
+	promises     []ranked
 	read         bool
 	cut          bool
 	meetingsRead bool

@@ -253,23 +253,47 @@ func (t attentionTasks) TasksAfter(
 func (t attentionTasks) TasksOnDeals(
 	ctx context.Context, window attention.TaskWindow, deals []ids.UUID,
 ) ([]attention.Task, error) {
+	rows, err := t.everyTaskOf(ctx, window, deals, t.listTaskPage, func(in *activities.ListActivitiesInput) { in.LinkedToDeals = deals })
+	if err != nil || len(rows) == 0 {
+		return nil, err
+	}
+	return t.taskRows(ctx, rows, window.Scope, window.AsOf)
+}
+
+// TasksFromActivities reads every open task of the window derived from any of
+// these activities, under the lane's own narrowing (openTasksDueBy). It draws
+// them as the lane does. It runs only for a cut lane, so it keeps no generic plan.
+func (t attentionTasks) TasksFromActivities(
+	ctx context.Context, window attention.TaskWindow, sources []ids.UUID,
+) ([]attention.Task, error) {
+	rows, err := t.everyTaskOf(ctx, window, sources, t.store.ListActivities, func(in *activities.ListActivitiesInput) { in.SourceActivityIn = sources })
+	if err != nil || len(rows) == 0 {
+		return nil, err
+	}
+	return t.asTasks(ctx, rows, window.Scope, window.AsOf)
+}
+
+// everyTaskOf reads every page of the window's open tasks that narrow keeps.
+// An empty among asks for nothing, so it reads nothing.
+func (t attentionTasks) everyTaskOf(
+	ctx context.Context, window attention.TaskWindow, among []ids.UUID,
+	list func(context.Context, activities.ListActivitiesInput) ([]crmcontracts.Activity, storekit.Page, error),
+	narrow func(*activities.ListActivitiesInput),
+) ([]crmcontracts.Activity, error) {
 	in, ok := openTasksDueBy(ctx, window.AsOf, window.Until, window.Scope, window.Owner, window.Team)
-	if !ok || len(deals) == 0 {
+	if !ok || len(among) == 0 {
 		return nil, nil
 	}
 	page := reminderPage
-	in.LinkedToDeals, in.Limit = deals, &page
-	var tasks []attention.Task
+	narrow(&in)
+	in.Limit = &page
+	var tasks []crmcontracts.Activity
 	for {
-		rows, next, err := t.listTaskPage(ctx, in)
+		rows, next, err := list(ctx, in)
 		if err != nil {
 			return nil, err
 		}
-		pageTasks, err := t.taskRows(ctx, rows, window.Scope, window.AsOf)
-		if err != nil {
-			return nil, err
-		}
-		tasks = append(tasks, pageTasks...)
+		tasks = append(tasks, rows...)
 		if !next.HasMore {
 			return tasks, nil
 		}

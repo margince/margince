@@ -133,18 +133,27 @@ const ANSWER_BY_SOURCE: Partial<
     verbs: ["complete"],
     draw: (item) => ({ primary: <PromiseKept id={item.id} /> }),
   },
+  // A task carrying the email it was promised in drafts the follow-up first,
+  // and completing it stays beside the draft.
   task: {
     verbs: ["complete"],
-    draw: (item, quiet) => ({
-      primary: (
+    draw: (item, quiet) => {
+      const complete = (
         <TaskComplete
           id={item.id}
           version={item.version}
           quiet={quiet}
           inquiry={item.kind === "website_inquiry"}
         />
-      ),
-    }),
+      );
+      const replyTo = replyTarget(item);
+      return replyTo
+        ? {
+            primary: <WaitingReply item={item} to={replyTo} />,
+            equals: complete,
+          }
+        : { primary: complete };
+    },
   },
   // The row's id is the contact's here, which is what the dismissal endpoint
   // takes, so this verb is offered on this lane alone. `dismiss` on brief_item

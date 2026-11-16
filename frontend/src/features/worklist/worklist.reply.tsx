@@ -66,6 +66,22 @@ export function replyIsTheMove(item: WorklistItem): boolean {
 }
 
 /**
+ * Whether the reply follows up on our own unanswered mail. A reminder row does,
+ * and so does the promise task that carries the reminder.
+ */
+function followsUp(item: WorklistItem): boolean {
+  return item.source === "awaiting_reply" || item.source === "task";
+}
+
+/**
+ * The message the reply answers. A task's own id names the task, so its
+ * follow-up answers the mail the promise was read out of.
+ */
+function repliedMessage(item: WorklistItem): string {
+  return item.source === "task" ? (item.move?.activity_id ?? item.id) : item.id;
+}
+
+/**
  * Answering the buyer, over the row that named the wait.
  *
  * Its own component so it can hold the hook that refreshes the queue. The
@@ -93,7 +109,7 @@ export function WaitingReply({
         // Not `moveLabel`: its "Read and reply" names a link to the record.
         // This control opens the composer itself, so it says it drafts.
         label: t(
-          item.source === "awaiting_reply"
+          followsUp(item)
             ? "worklist.verb.draft_follow_up_now"
             : "worklist.verb.draft_reply_now",
         ),
@@ -111,7 +127,7 @@ export function WaitingReply({
   }
   return (
     <ChannelReplyAction
-      activityId={item.id}
+      activityId={repliedMessage(item)}
       kind="email"
       entityType={to.type}
       entityId={to.id}
@@ -147,17 +163,20 @@ function replyIntent(
   locale: Locale,
   zone: string,
 ): string {
-  const why = phrasedReasons(item, false).flatMap(
-    (reason) => reasonText(reason, t, locale, zone, partyName(item)) ?? [],
-  )[0];
   // The composer's own phrase for answering a message, not a second spelling
   // of it: one sentence reaches the model whichever surface opened the drawer.
   // A follow-up is anchored on OUR message, which has nothing of theirs to
   // reply to.
-  const phrase =
-    item.source === "awaiting_reply"
-      ? t("contact.composer.intentFollowUp")
-      : t("contact.composer.intentReply");
+  const phrase = followsUp(item)
+    ? t("contact.composer.intentFollowUp")
+    : t("contact.composer.intentReply");
+  // A promise names what the follow-up is for; the queue's reason does not.
+  if (item.source === "task" && item.title) {
+    return intentAbout(phrase, item.title);
+  }
+  const why = phrasedReasons(item, false).flatMap(
+    (reason) => reasonText(reason, t, locale, zone, partyName(item)) ?? [],
+  )[0];
   return intentAbout(phrase, why);
 }
 

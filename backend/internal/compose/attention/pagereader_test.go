@@ -20,13 +20,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// pageSeat is pageReader's seat, the assignee of the reader's own tasks.
+var pageSeat = ids.MustParse("01a05500-0000-7000-8000-0000000000fe")
+
 // pageReader is a seated human with workspace-wide row scope: the widest
 // ordinary reader, so a lane assertion fails on the lane's own rule rather
 // than on a scope the fixture chose.
 func pageReader() context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
 		Type:        principal.PrincipalHuman,
-		UserID:      ids.MustParse("01a05500-0000-7000-8000-0000000000fe"),
+		UserID:      pageSeat,
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
 }
