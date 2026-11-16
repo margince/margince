@@ -2,10 +2,8 @@
   "verb": "get_analytics_schema",
   "checks": [
     "activity.read",
-    "company.read",
     "deal.read",
     "lead.read",
-    "project.read",
-    "relationship.read"
+    "project.read"
   ]
 }

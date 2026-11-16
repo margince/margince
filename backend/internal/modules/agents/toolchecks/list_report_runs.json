@@ -2,10 +2,8 @@
   "verb": "list_report_runs",
   "checks": [
     "activity.read",
-    "company.read",
     "deal.read",
     "lead.read",
-    "project.read",
-    "relationship.read"
+    "project.read"
   ]
 }

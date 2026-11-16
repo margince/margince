@@ -7,7 +7,6 @@
     "installation_settings.read",
     "lead.read",
     "project.read",
-    "relationship.read",
     "report_definition.read"
   ],
   "takes": [

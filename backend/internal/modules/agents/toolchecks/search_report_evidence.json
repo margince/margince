@@ -2,7 +2,6 @@
   "verb": "search_report_evidence",
   "checks": [
     "activity.read",
-    "company.read",
     "deal.read",
     "installation_settings.read",
     "lead.read",
