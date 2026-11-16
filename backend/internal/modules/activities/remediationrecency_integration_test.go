@@ -60,6 +60,7 @@ func setupRecency(t *testing.T) *recencyEnv {
 	if err := testdb.EnsureSchema(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
+	emptyDatabase(t)
 	e := &recencyEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)

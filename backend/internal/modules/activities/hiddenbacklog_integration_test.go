@@ -328,7 +328,7 @@ func TestAColleagueRequestDoesNotEnterPersonalHiddenFigures(t *testing.T) {
 	// reads against the wall clock, so the mail is moved inside its horizon.
 	colleague.exec(t, `UPDATE activity SET occurred_at = now() - interval '2 days' WHERE id = $1`, held)
 
-	e := setupLoad(t)
+	e := joinLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
