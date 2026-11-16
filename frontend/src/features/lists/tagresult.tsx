@@ -7,7 +7,7 @@ import { Building2, Contact, Handshake, UserPlus } from "lucide-react";
 import { useEffect } from "react";
 
 import { api } from "../../api/client";
-import { Button } from "../../design-system/atoms";
+import { AppLink } from "../../design-system/applink";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -262,16 +262,12 @@ function ResultGroup({
             has needs no way to see more, and the tag's own count cannot be the
             test here for the same reason it is not the header. */}
         {listed.length >= PREVIEW_ROWS && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              window.location.hash = allRecordsHref(group.screen, tagID).slice(
-                1,
-              );
-            }}
+          <AppLink
+            className="btn btn-ghost"
+            href={allRecordsHref(group.screen, tagID)}
           >
             {t("tagResult.viewAll", { count: shown, kind: title })}
-          </Button>
+          </AppLink>
         )}
       </PanelBody>
     </Panel>

@@ -16,7 +16,7 @@ import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
 import { scrollPageToTop } from "../../lib/reveal";
-import { useUrlParams } from "../../lib/urlstate";
+import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { leadBand } from "./leadband";
 import { LeadDetails, useFieldSave } from "./leaddetails";
@@ -127,11 +127,17 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
   // A link from a surface that met this lead while creating a contact opens
   // the Qualify dialog, so the reader converts in one step.
   const [params] = useUrlParams();
-  const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(() =>
+  const [pressed, setDialog] = useState<"qualify" | "disqualify" | null>(null);
+  const addressed =
     params.get(ACTION_PARAM) === QUALIFY_ACTION && !lead.archived_at
       ? "qualify"
-      : null,
-  );
+      : null;
+  const dialog = pressed ?? addressed;
+  // The address goes with it, or Back would reopen what the reader closed.
+  const closeDialog = () => {
+    setDialog(null);
+    replaceDial(ACTION_PARAM, undefined);
+  };
   // What the last qualify did, said once: the contact and, when one was
   // opened, the deal. The page stays (ADR-0119) and the outcome panel below
   // carries the links on, so this is the confirmation rather than the record —
@@ -259,9 +265,9 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
       <LeadDialogs
         lead={lead}
         dialog={dialog}
-        onClose={() => setDialog(null)}
+        onClose={closeDialog}
         onQualified={(done) => {
-          setDialog(null);
+          closeDialog();
           toast.show(done);
         }}
       />

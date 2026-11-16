@@ -3,7 +3,7 @@
 
 import { useEffect } from "react";
 import { type CoreFeature, screenEnabled } from "../lib/corefeatures";
-import { navigateReplacing } from "../lib/router";
+import { navigateReplacing, useHash } from "../lib/router";
 import { firstAvailableRoute } from "./nav";
 
 export function useFeatureLanding(
@@ -11,14 +11,15 @@ export function useFeatureLanding(
   confined: boolean,
   disabled: readonly CoreFeature[],
 ) {
+  const hash = useHash();
   useEffect(() => {
     if (
       ready &&
       !confined &&
-      ["", "#", "#/"].includes(window.location.hash) &&
+      ["", "#", "#/"].includes(hash) &&
       !screenEnabled("home", disabled)
     ) {
       navigateReplacing(firstAvailableRoute(disabled));
     }
-  }, [ready, confined, disabled]);
+  }, [ready, confined, disabled, hash]);
 }

@@ -10,8 +10,16 @@ import {
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { entryDepth } from "../lib/historydepth";
 import { problemMessageOf } from "../lib/problem";
-import { navigate, type Route, routeHash, useHash } from "../lib/router";
+import {
+  navigate,
+  type Route,
+  routeHash,
+  samePage,
+  useHash,
+  watchAddress,
+} from "../lib/router";
 import { useScrollMemory } from "../lib/scrollmemory";
 import { currentParams, useUrlParams } from "../lib/urlstate";
 import type {
@@ -276,32 +284,24 @@ export function ListTable<Row>({
     }
   }, [query.q]);
 
-  // The reader left with a word still settling. The effect above follows `q`.
-  // But the reader may walk away from the list a word was typed against, with
-  // a `q` that never moved. Example: Back to a differently sorted view of the
-  // same list. The word would then land on a list it was not typed into.
-  //
-  // The browser's own navigation is the discriminator, with no false hits.
-  // `replaceParams` uses `history.replaceState`, which fires neither event, so
-  // every dial this surface turns is silent here. Both events are heard: Back
-  // moves the address at `popstate`, and a fragment-only move also fires
-  // `hashchange` a task later. A timer firing between them would write the word
-  // over the address Back restored. These are the raw events and not
-  // lib/router.tsx's `watchAddress`, which also runs for the app's own
-  // `replaceParams` announcements. Those must not abandon the word.
+  // The reader left with a word still settling, and the word must not land on
+  // where they went: another entry (Back, Forward, a link), or another page the
+  // app replaced in place (a redirect). A dial this list turns keeps both.
   useEffect(() => {
-    const abandonPendingSearch = () => {
+    let entry = { hash: globalThis.location.hash, depth: entryDepth() };
+    return watchAddress(() => {
+      const left =
+        entryDepth() !== entry.depth ||
+        !samePage(globalThis.location.hash, entry.hash);
+      entry = { hash: globalThis.location.hash, depth: entryDepth() };
+      if (!left) {
+        return;
+      }
       const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
       committed.current = live;
       typed.current = live;
       setLocalSearch(live);
-    };
-    globalThis.addEventListener("popstate", abandonPendingSearch);
-    globalThis.addEventListener("hashchange", abandonPendingSearch);
-    return () => {
-      globalThis.removeEventListener("popstate", abandonPendingSearch);
-      globalThis.removeEventListener("hashchange", abandonPendingSearch);
-    };
+    });
   }, [state.paramScope]);
 
   useEffect(() => {

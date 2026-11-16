@@ -70,10 +70,11 @@ let assign: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
   assign = vi.fn();
-  vi.stubGlobal("location", { ...globalThis.location, assign });
+  vi.spyOn(globalThis.location, "assign").mockImplementation(assign);
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   sessionStorage.clear();
 });
