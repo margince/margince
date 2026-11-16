@@ -142,7 +142,8 @@ On a won or lost deal the move items are grey: "This deal is closed. Reopen it
 on its page to move it." Someone who may not change the deal sees neither the
 move items nor **Archive deal**. The menu also holds **Deal summary**,
 **Write email**, **Add task**, **Copy link**, **Add to Shortlist** and
-**Archive deal**. On an archived deal it holds only **Deal summary** and **Copy link**.
+**Archive deal**. On an archived deal it holds only **Deal summary** and
+**Copy link**.
 
 If two colleagues move the same deal at once, the second is refused, so it does
 not write over the first. A deal can only move to a stage in its own pipeline,
