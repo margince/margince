@@ -36,7 +36,7 @@ them, so ask whoever runs your Margince to make an export for you.
 How the licence goes in depends on where your server admin puts the key:
 
 - **In a licence file** (`license.token_file`): an admin presses **Check now** on the same screen,
-  or in **Settings → Seats and license**. Margince opens again with no restart.
+  or in **Settings → Seats and license**. Margince opens again without starting Margince again.
 - **In the configuration** (`license.token` or `MARGINCE_LICENSE`): the admin starts Margince
   again, because that value is read only when Margince starts.
 
