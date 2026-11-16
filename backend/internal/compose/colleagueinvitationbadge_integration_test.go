@@ -16,8 +16,8 @@ import (
 )
 
 // The History badge and the Worklist read our own domains through the
-// production wiring: the badge through the startup binding, the Worklist
-// through the store's reader. A colleague's invitation captured before its
+// production wiring. The badge reads the startup binding, the Worklist the
+// store's reader. A colleague's invitation captured before its
 // domain was registered carries no seat stamp, and both say nothing is owed.
 func TestTheBadgeAndTheWorklistReadOneOwnDomainListThroughTheProductionWiring(t *testing.T) {
 	o := setupOwed(t)
