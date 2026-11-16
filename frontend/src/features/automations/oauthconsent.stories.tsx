@@ -2,6 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -81,6 +83,7 @@ function story(hash: string, payload: unknown, status = 200) {
 const meta: Meta<typeof OAuthConsent> = {
   title: "Signed out/Authorize access",
   component: OAuthConsent,
+  parameters: { layout: "fullscreen" },
 };
 export default meta;
 type Story = StoryObj<typeof OAuthConsent>;
@@ -106,10 +109,47 @@ export const ConsentPrompt: Story = {
   render: story(consentHash({ consent: NONCE }), everyScope),
 };
 
-// The prompt in dark. This is a decision screen with no rail around it, so the
-// card IS the page, and the checkboxes and the two submits — an Authorize that
-// must read as the loud one and a Deny that must still read as a real control —
-// have to stay legible against a darker ground.
+export const ConsentPromptPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: story(consentHash({ consent: NONCE }), adminClient),
+};
+
+// Nothing ticked: Authorize refuses, and the line saying why sits under the
+// verbs so they stay where they were.
+export const NothingPicked: Story = {
+  render: story(consentHash({ consent: NONCE }), everyScope),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("checkbox", { name: /Read records/ });
+    for (const box of canvas.getAllByRole("checkbox")) {
+      await userEvent.click(box);
+    }
+    await expect(canvas.getByText(en["consent.pickOne"])).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: en["consent.approve"] }),
+    ).toBeDisabled();
+  },
+};
+
+// The read still out: the title stands and the form waits under it.
+export const Loading: Story = {
+  render: () => {
+    globalThis.location.hash = consentHash({ consent: NONCE });
+    installFetchStub({
+      "GET /me": meRoute({}, { roles: ["rep"] }),
+      "GET /oauth/consent-request": () => new Promise(() => {}),
+    });
+    return (
+      <StoryProviders>
+        <OAuthConsent />
+      </StoryProviders>
+    );
+  },
+};
+
+// The prompt in dark. No rail surrounds this screen, so Authorize and Deny
+// must both stay legible against the darker ground.
 export const ConsentPromptDark: Story = {
   globals: { theme: "dark" },
   render: story(consentHash({ consent: NONCE }), everyScope),

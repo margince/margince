@@ -7,7 +7,7 @@ import { useLocale, useT } from "../i18n";
 import { Badge, Button } from "./atoms";
 import { type ReadingTone, readingColours } from "./readingtone";
 import type { StageStep } from "./stageladder";
-import { LadderRun } from "./stageladder.run";
+import { isOfferedExit, LadderRun } from "./stageladder.run";
 
 type BarVars = CSSProperties & Record<`--${string}`, string | number>;
 
@@ -30,7 +30,7 @@ export function LadderBars({
   tone: ReadingTone;
 }>) {
   const run = steps.filter((step) => !step.terminal);
-  const exits = steps.filter((step) => step.terminal);
+  const exits = steps.filter(isOfferedExit);
   const vars: BarVars = {
     "--stage-ladder-here": readingColours(tone).mark,
   };
@@ -86,7 +86,7 @@ function Position({ run }: Readonly<{ run: readonly StageStep[] }>) {
         })}
       </span>
       <span className="stage-ladder-name">{current.label}</span>
-      {next && (
+      {next?.onPick && (
         <Button
           variant="ghost"
           disabled={next.disabled}
@@ -116,6 +116,9 @@ function BarStep({ step }: Readonly<{ step: StageStep }>) {
         {body}
       </span>
     );
+  }
+  if (!step.onPick) {
+    return <span className="stage-ladder-bar-step">{body}</span>;
   }
   return (
     <Button

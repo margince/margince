@@ -326,7 +326,7 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 const settlementEvidenceShare = "the settlement evidence generation, not a guard: it takes a shared advisory lock on the deleted row's conversation keys and refuses no delete. A reset waits only while a settlement verdict holds the same conversation, for that verdict's short transaction"
 
 // replySettledClear is the reason for the triggers that clear the stamp the owed check reads first.
-const replySettledClear = "clears the reply-settled stamps on the deleted row's thread so the stamping job reads them again, and refuses no delete. Its UPDATE skips restricted rows, so the restricted-row guard never fires; the sweep deletes every stamped message too, so no stale stamp survives a reset"
+const replySettledClear = "clears the reply-settled stamps on the deleted rows' threads so the stamping job reads them again, and refuses no delete. Its UPDATE skips restricted rows, so the restricted-row guard never fires; the sweep deletes every stamped message too, so no stale stamp survives a reset"
 
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	"raw_capture raw_original_object_retired":  "records retired object keys and refuses no delete; reset preserves stored_object_intent so the cleanup worker can remove their bytes",
@@ -368,7 +368,7 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	"activity_link settlement_evidence_share":           settlementEvidenceShare,
 	"contact_email settlement_evidence_share":           settlementEvidenceShare,
 
-	"activity activity_clears_reply_settled":                replySettledClear,
+	"activity deleted_mail_clears_reply_settled":            replySettledClear,
 	"activity_participant participant_clears_reply_settled": replySettledClear,
 	"contact_email contact_email_clears_reply_settled":      replySettledClear,
 

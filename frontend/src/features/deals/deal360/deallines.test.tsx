@@ -78,6 +78,7 @@ function show(state: DealCommercial, posted: unknown[] = []) {
   });
   renderWithQueryClient(
     <DealProductsCard
+      canWrite
       dealId={DEAL}
       currency="EUR"
       typedAmount={state.mode === "lines" ? null : "€1,000.00"}
@@ -218,7 +219,12 @@ describe("a deal priced from its lines", () => {
         ),
     });
     renderWithQueryClient(
-      <DealProductsCard dealId={DEAL} currency="EUR" typedAmount={null} />,
+      <DealProductsCard
+        dealId={DEAL}
+        currency="EUR"
+        typedAmount={null}
+        canWrite
+      />,
     );
     const user = userEvent.setup();
     await user.click(

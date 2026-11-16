@@ -55,11 +55,10 @@ type NextMeeting = NonNullable<Worklist["next_meeting"]>;
  * What today's calendar lets the page say, read once for the readings strip
  * and the schedule panel so one morning cannot be told two ways.
  *
- * `counted` keeps the figure as it stands; `unread` is a meetings lane that
- * never answered. `not_connected` and `unreadable` are a zero that measured
- * nothing, so neither surface may draw it as a day without meetings, though a
- * meeting booked by hand is still a fact the CRM can name. `quiet` is a zero
- * that did measure, with the next booked conversation to name.
+ * `counted` keeps the figure; `unread` is a meetings lane that never answered.
+ * `not_connected` is a zero over Margince's own meetings, `unreadable` one the
+ * calendar could not measure: neither is a clear day. `quiet` is a measured
+ * zero, with the next booked conversation to name.
  */
 export type CalendarDay =
   | Readonly<{ state: "counted" | "unread" }>

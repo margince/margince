@@ -3324,25 +3324,20 @@ test.describe("filters and views", () => {
   }) => {
     await page.goto("/#/filters/deals");
     await expectShellRendered(page);
-    const objects = page.getByRole("group", {
-      name: "Datensatztyp",
-    });
-    await expect(
-      objects.getByRole("button", { name: "Deals", pressed: true }),
-    ).toBeVisible();
+    const objects = page.getByRole("combobox", { name: "Datensatztyp" });
+    await expect(objects).toHaveText("Deals");
 
     // "Kontakte": `filters.tab.contacts` is a different KEY from the nav's, and
     // a key is not a word — the catalog moved this one with it. The tab says
     // what every other surface says.
-    await objects.getByRole("button", { name: "Kontakte" }).click();
+    await objects.click();
+    await page.getByRole("option", { name: "Kontakte" }).click();
     await expect(page).toHaveURL(/#\/filters\/contacts$/);
 
     // Reloaded, not just navigated: the tab is where you ARE, so a shared link
     // and a refresh have to land on the same object.
     await page.reload();
-    await expect(
-      objects.getByRole("button", { name: "Kontakte", pressed: true }),
-    ).toBeVisible();
+    await expect(objects).toHaveText("Kontakte");
   });
 });
 
@@ -3695,4 +3690,142 @@ test.describe("calling a contact", () => {
       await expect(callVerb(dialog)).toHaveAttribute("href", tel);
     });
   });
+});
+
+// Authorize access is reached from an AI tool's redirect, never from the rail,
+// so neither route list above sweeps it.
+test.describe("Authorize access on the sign-in surface", () => {
+  const consentAddress = (extra: Record<string, string>) =>
+    `/#/oauth-consent?${new URLSearchParams({
+      response_type: "code",
+      client_id: "https://claude.ai/oauth/mcp-oauth-client-metadata",
+      redirect_uri: "https://claude.ai/api/mcp/auth_callback",
+      scope: "read",
+      code_challenge: "x",
+      code_challenge_method: "S256",
+      resource: "https://margince.example/mcp",
+      state: "s",
+      ...extra,
+    }).toString()}`;
+
+  test.beforeEach(async ({ page }) => {
+    await page.route("**/v1/oauth/consent-request**", (route) =>
+      route.fulfill({
+        json: {
+          client_name: "Claude",
+          offline: true,
+          scopes: ["read", "draft", "write", "send", "enrich"],
+          areas: ["business", "compliance", "own_account"],
+        },
+      }),
+    );
+  });
+
+  for (const colorScheme of ["light", "dark"] as const) {
+    for (const width of [390, 1440]) {
+      test(`the prompt meets AA at ${width}px in ${colorScheme}`, async ({
+        page,
+      }) => {
+        await page.emulateMedia({ colorScheme });
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(consentAddress({ consent: "nonce" }));
+        await expect(
+          page.getByRole("heading", { level: 1, name: de["consent.title"] }),
+        ).toBeVisible();
+        await expect(page.locator(".auth-wordmark")).toBeVisible();
+        await expect(
+          page.getByRole("button", {
+            name: de["consent.approve"],
+            exact: true,
+          }),
+        ).toBeVisible();
+        await settleAnimations(page);
+        await expectNoAaViolations(page, `oauth-consent (${colorScheme})`);
+        expect(await pageOverflow(page)).toEqual([]);
+      });
+    }
+  }
+
+  test("Deny sits before Authorize on the end edge, and a phone stacks them in the same order", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    const deny = page.getByRole("button", { name: de["consent.deny"] });
+    const authorize = page.getByRole("button", {
+      name: de["consent.approve"],
+      exact: true,
+    });
+    const wide = {
+      deny: await deny.boundingBox(),
+      authorize: await authorize.boundingBox(),
+    };
+    expect(wide.deny?.x).toBeLessThan(wide.authorize?.x ?? 0);
+    expect(wide.deny?.y).toBe(wide.authorize?.y);
+    const contentEnd = await page
+      .locator(".oauthconsent-pane")
+      .evaluate((pane) => {
+        const style = getComputedStyle(pane);
+        return (
+          pane.getBoundingClientRect().right -
+          Number.parseFloat(style.borderRightWidth) -
+          Number.parseFloat(style.paddingRight)
+        );
+      });
+    expect(
+      Math.abs(
+        (wide.authorize?.x ?? 0) + (wide.authorize?.width ?? 0) - contentEnd,
+      ),
+    ).toBeLessThanOrEqual(1);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const phone = {
+      deny: await deny.boundingBox(),
+      authorize: await authorize.boundingBox(),
+    };
+    expect(phone.deny?.y).toBeLessThan(phone.authorize?.y ?? 0);
+    expect(phone.authorize?.width).toBe(phone.deny?.width);
+  });
+
+  test("the wordmark stays clear of the pane at a tablet width", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 700, height: 800 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    await expect(
+      page.getByRole("button", { name: de["consent.approve"], exact: true }),
+    ).toBeVisible();
+    const mark = await page.locator(".auth-wordmark").boundingBox();
+    const pane = await page.locator(".oauthconsent-pane").boundingBox();
+    expect(pane?.y ?? 0).toBeGreaterThanOrEqual(
+      (mark?.y ?? Number.POSITIVE_INFINITY) + (mark?.height ?? 0),
+    );
+  });
+
+  test("a laptop keeps the pane at the top, beside the wordmark", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    await expect(
+      page.getByRole("radio", { name: de["workArea.mode.all"] }),
+    ).toBeVisible();
+    const mark = await page.locator(".auth-wordmark").boundingBox();
+    const pane = await page.locator(".oauthconsent-pane").boundingBox();
+    expect(pane?.y ?? Number.POSITIVE_INFINITY).toBeLessThan(mark?.y ?? 0);
+  });
+
+  for (const error of ["invalid_request", "method_off", "stale_consent"]) {
+    test(`the ${error} refusal meets AA on the same surface`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(consentAddress({ error }));
+      await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+      await expect(page.locator(".auth-surface .auth-wordmark")).toBeVisible();
+      await settleAnimations(page);
+      await expectNoAaViolations(page, `oauth-consent ${error}`);
+      expect(await pageOverflow(page)).toEqual([]);
+    });
+  }
 });

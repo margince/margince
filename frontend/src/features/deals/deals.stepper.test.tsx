@@ -108,17 +108,8 @@ afterEach(() => {
 
 // The page already prints this sentence in its header band, so the rungs point
 // at THAT one rather than drawing a second copy under each of themselves.
-it.each([
-  [
-    "a colleague's deal",
-    { owner_id: "u-else", writable: false } as Partial<Deal>,
-  ],
-  [
-    "an archived deal",
-    { archived_at: "2026-07-01T00:00:00Z" } as Partial<Deal>,
-  ],
-])("names the page's own sentence on %s", async (_what, fields) => {
-  mount(deal(fields));
+it("names the page's own sentence on an archived deal", async () => {
+  mount(deal({ archived_at: "2026-07-01T00:00:00Z" }));
 
   const step = await proposalStep();
   expect(step.hasAttribute("disabled")).toBe(true);
@@ -127,6 +118,16 @@ it.each([
   // The SAME element the page's band draws, not a copy of its words: a second
   // copy would drift, and a ladder of five rungs would print it five times.
   expect(screen.getAllByText(reason ?? "")).toHaveLength(1);
+});
+
+// The server refuses every move to a reader who may not write the deal, so
+// the ladder reads where the deal stands and offers none.
+it("draws a colleague's deal as stage names, with no move and no way out", async () => {
+  mount(deal({ owner_id: "u-else", writable: false }));
+
+  expect(await screen.findByText("Proposal")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Proposal" })).toBeNull();
+  expect(screen.queryByText("Won")).toBeNull();
 });
 
 // Nothing on the page says this one, so the ladder draws it — once, under the
