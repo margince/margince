@@ -429,13 +429,13 @@ describe("adding a company", () => {
   // forbids, and here it would also lie usefully: a control that stopped being an
   // <input> would read `undefined`, which is falsy, so every "not ticked"
   // assertion below would keep passing over a checkbox that no longer exists.
-  function currentEmployerTicked(): boolean {
+  function primaryEmployerTicked(): boolean {
     const box = screen.getByRole("checkbox", {
-      name: "This is their current employer",
+      name: "This is their primary employer",
     });
     if (!(box instanceof HTMLInputElement)) {
       throw new Error(
-        `the current-employer control is a ${box.tagName}, not an input`,
+        `the primary-employer control is a ${box.tagName}, not an input`,
       );
     }
     return box.checked;
@@ -477,7 +477,7 @@ describe("adding a company", () => {
 
     // The state the reader sees BEFORE touching anything — the reading that a
     // modal deciding the field only on interaction cannot honour.
-    expect(currentEmployerTicked()).toBe(true);
+    expect(primaryEmployerTicked()).toBe(true);
 
     await user.type(screen.getByRole("searchbox"), "emp");
     await user.click(await screen.findByText("Employer GmbH"));
@@ -492,15 +492,39 @@ describe("adding a company", () => {
     await screen.findByRole("button", { name: "Add company" });
     await openAndPickEmployer(user);
     await user.click(
-      screen.getByRole("checkbox", { name: "This is their current employer" }),
+      screen.getByRole("checkbox", { name: "This is their primary employer" }),
     );
-    expect(currentEmployerTicked()).toBe(false);
+    expect(primaryEmployerTicked()).toBe(false);
     await user.click(screen.getByRole("button", { name: "Create" }));
 
     // `false`, not absent. A reader who unticks a box has decided, and the
     // server must not derive over them.
     const body = await employmentBody();
     expect("is_current_primary" in body).toBe(true);
+    expect(body.is_current_primary).toBe(false);
+    // The box names the primary employer only: the job itself stays current.
+    expect(body.employment_status).toBe("current");
+  });
+
+  it("adds a past job as former, with the end date it was given", async () => {
+    const user = driver();
+    mount(emptyButGranted);
+    await screen.findByRole("button", { name: "Add company" });
+    await openAndPickEmployer(user);
+    await user.click(
+      screen.getByRole("combobox", { name: "Employment status" }),
+    );
+    await user.click(screen.getByRole("option", { name: "Former" }));
+    await user.type(screen.getByLabelText("End date"), "2019-03");
+
+    // A former job cannot be the primary employer, so the box says no.
+    expect(primaryEmployerTicked()).toBe(false);
+    await user.click(screen.getByRole("button", { name: "Create" }));
+
+    const body = await employmentBody();
+    expect(body.employment_status).toBe("former");
+    expect(body.ended_at).toBe("2019-03-01");
+    expect(body.ended_precision).toBe("month");
     expect(body.is_current_primary).toBe(false);
   });
 
@@ -515,12 +539,12 @@ describe("adding a company", () => {
     const { rerender } = mount(granted);
     await screen.findByRole("button", { name: "Add company" });
     await user.click(screen.getByRole("button", { name: "Add company" }));
-    expect(currentEmployerTicked()).toBe(false);
+    expect(primaryEmployerTicked()).toBe(false);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     rerender(emptyButGranted);
     await user.click(screen.getByRole("button", { name: "Add company" }));
-    expect(currentEmployerTicked()).toBe(true);
+    expect(primaryEmployerTicked()).toBe(true);
   });
 
   // The start date is the field #415 is about: an employment with no window
@@ -597,7 +621,7 @@ describe("adding a company", () => {
     await screen.findByRole("button", { name: "Add company" });
     await user.click(screen.getByRole("button", { name: "Add company" }));
 
-    expect(currentEmployerTicked()).toBe(false);
+    expect(primaryEmployerTicked()).toBe(false);
   });
 });
 

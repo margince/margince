@@ -18648,7 +18648,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employer": "Nơi làm việc",
   "contact.rail.allCompaniesConnected":
     "Mọi kết quả khớp đều đã liên kết với liên hệ này.",
-  "contact.rail.isCurrentEmployer": "Đây là nơi làm việc hiện tại của họ",
+  "contact.rail.isPrimaryEmployer": "Đây là nơi làm việc chính của họ",
   "contact.rail.markEnded": "Đánh dấu đã kết thúc",
   "contact.rail.removeEmploymentTitle": "Gỡ liên kết công ty?",
   "contact.rail.removeEmploymentBody":

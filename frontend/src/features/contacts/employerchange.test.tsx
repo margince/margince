@@ -252,7 +252,7 @@ describe("the About column's employer", () => {
     );
     expect(
       await screen.findByRole("checkbox", {
-        name: "This is their current employer",
+        name: "This is their primary employer",
       }),
     ).toHaveProperty("checked", true);
   });

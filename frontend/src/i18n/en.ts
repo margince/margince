@@ -18944,7 +18944,7 @@ export const en = {
   "contact.rail.employer": "Employer",
   "contact.rail.allCompaniesConnected":
     "All matches are already linked to this contact.",
-  "contact.rail.isCurrentEmployer": "This is their current employer",
+  "contact.rail.isPrimaryEmployer": "This is their primary employer",
   "contact.rail.markEnded": "Mark as ended",
   "contact.rail.removeEmploymentTitle": "Remove company link?",
   "contact.rail.removeEmploymentBody":

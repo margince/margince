@@ -19163,7 +19163,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.rail.employer": "Arbeitgeber",
   "contact.rail.allCompaniesConnected":
     "Alle Treffer sind bereits mit diesem Kontakt verknüpft.",
-  "contact.rail.isCurrentEmployer": "Das ist der aktuelle Arbeitgeber",
+  "contact.rail.isPrimaryEmployer": "Das ist der Hauptarbeitgeber",
   "contact.rail.markEnded": "Als beendet markieren",
   "contact.rail.removeEmploymentTitle":
     "Verknüpfung zum Unternehmen entfernen?",

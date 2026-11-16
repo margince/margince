@@ -79,8 +79,8 @@ New contacts use the same company check from every source. A company name can fi
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
 1. Under **Employer**, search for the company and pick it. It must already be in Margince; create it first under **Companies** if it is not.
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
-3. Tick **This is their current employer** if it is.
-4. Choose **Create**.
+3. For a past job, set **Employment status** to **Former** and enter the **End date**.
+4. Tick **This is their primary employer** if it is their main job now, and choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact to another company, choose **Employer** in **About** and pick it, or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
 A company name Margince read for a contact with no current job shows under **Work history** on the **Companies** tab and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates and links the company, with the domain of the contact's work email unless that is consumer mail, blocked or another company's. If you can open the company that holds the domain, Margince uses it and links the contact. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature, past employers, former companies, job history.

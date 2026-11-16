@@ -21,13 +21,14 @@ import {
   searchCompanyCandidates,
 } from "./contactemployers";
 import { datePatch, validDateEntry } from "./employmentpatch";
+import { EmploymentStatusFields } from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
-// The "add a company" modal: pick the company (RecordPicker, the shared
-// debounced search-and-pick), optionally its role, and whether it is the
-// current primary employer — a Checkbox, not a Switch, because ticking it
-// states an intent this modal's own Save then writes, it is not itself the
-// write (design-system/README.md's Checkbox/Switch distinction).
+// The "add a company" modal. It picks the company with RecordPicker (the shared
+// debounced search-and-pick). It asks for the role and dates, whether the job
+// is still held, and whether it is the primary employer. That last is a
+// Checkbox, not a Switch: ticking it states an intent this modal's Save writes
+// (design-system/README.md's Checkbox/Switch distinction).
 export function AddEmploymentModal({
   open,
   onClose,
@@ -73,6 +74,10 @@ export function AddEmploymentModal({
   // Optional, and empty stays empty: "I do not know when" is a real answer, and
   // a form that defaulted to today would write a fact nobody has.
   const [start, setStart] = useState("");
+  // A past job is entered as one, in one step, rather than created current and
+  // then corrected.
+  const [status, setStatus] = useState<"current" | "former">("current");
+  const [end, setEnd] = useState("");
   // Ticked by default for somebody with no current job, because that is what
   // the save will do either way: the server marks a contact's only current
   // employment as their primary one. A box that started unticked and then
@@ -119,6 +124,8 @@ export function AddEmploymentModal({
     // A caller may keep the modal mounted, so each field is put back by hand:
     // a start date left standing would date the next employer.
     setStart("");
+    setStatus("current");
+    setEnd("");
     setAllConnected(false);
     create.reset();
     onClose();
@@ -168,10 +175,17 @@ export function AddEmploymentModal({
             />
           )}
         </Field>
-        <Checkbox
-          label={t("contact.rail.isCurrentEmployer")}
-          checked={isCurrent}
+        <EmploymentStatusFields
+          status={status}
+          onStatusChange={setStatus}
+          end={end}
+          onEndChange={setEnd}
           disabled={create.isPending}
+        />
+        <Checkbox
+          label={t("contact.rail.isPrimaryEmployer")}
+          checked={status === "current" && isCurrent}
+          disabled={status !== "current" || create.isPending}
           onChange={(event) => setIsCurrent(event.target.checked)}
         />
         <ErrorLine error={create.error} />
@@ -182,13 +196,14 @@ export function AddEmploymentModal({
         </Button>
         <Button
           variant="primary"
-          disabled={!company || !validDateEntry(start)}
+          disabled={!company || !validDateEntry(start) || !validDateEntry(end)}
           pending={create.isPending}
           onClick={async () => {
             if (!company) {
               return;
             }
-            const started = datePatch(start);
+            const started = datePatch(start),
+              ended = datePatch(end);
             // Awaited rather than a mutate callback: the link can replace the
             // row that holds this dialog, and an unmounted observer drops those.
             const linked = await create
@@ -199,7 +214,10 @@ export function AddEmploymentModal({
                 role: role.trim() || undefined,
                 started_at: started.date,
                 started_precision: started.precision,
-                is_current_primary: isCurrent,
+                employment_status: status,
+                ended_at: ended.date,
+                ended_precision: ended.precision,
+                is_current_primary: status === "current" && isCurrent,
                 // `manual` is the one word for a first-party write by a
                 // contact — through this form or through an assistant. It used
                 // to say "ui", which named the screen rather than the origin,
