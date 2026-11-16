@@ -23,6 +23,55 @@ import (
 // own audience decides who reads what was said.
 const CompanySourceMeeting = "meeting"
 
+// meetingTranscriptSharedSQL is a transcript, alias t, that may fill a company
+// field. Every reader may open it, and it is not restricted, archived or redacted.
+const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at IS NULL AND t.archived_at IS NULL
+	AND cardinality(t.redacted_fields) = 0`
+
+// RetractStaleMeetingProfilesTx removes up to limit company fields whose
+// transcript may no longer fill them: narrowed, restricted, archived or redacted
+// since. One statement tests and deletes, so a transcript that qualifies again
+// meanwhile keeps its fields. It returns how many it removed.
+func RetractStaleMeetingProfilesTx(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
+	if err := auth.Require(ctx, "company", principal.ActionUpdate); err != nil {
+		return 0, err
+	}
+	rows, err := tx.Query(ctx, `WITH picked AS MATERIALIZED (
+		  SELECT s.id FROM company_profile_field s JOIN activity t ON t.id = s.source_activity_id
+		   WHERE s.source = 'meeting' AND NOT (`+meetingTranscriptSharedSQL+`)
+		   ORDER BY s.id LIMIT $1 FOR UPDATE OF s SKIP LOCKED)
+		DELETE FROM company_profile_field f USING activity t
+		WHERE f.id IN (SELECT id FROM picked)
+		  AND f.source = 'meeting' AND t.id = f.source_activity_id AND NOT (`+meetingTranscriptSharedSQL+`)
+		RETURNING f.company_id, f.field, f.value`, limit)
+	if err != nil {
+		return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)
+	}
+	changed := map[ids.CompanyID]*meetingFieldImages{}
+	removed := 0
+	for rows.Next() {
+		var company ids.UUID
+		var field string
+		var was *string
+		if err := rows.Scan(&company, &field, &was); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)
+		}
+		changedOf(changed, ids.From[ids.CompanyKind](company)).note(field, was, nil)
+		removed++
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("remove the company fields whose meeting no longer stands: %w", err)
+	}
+	for company, images := range changed {
+		if err := recordMeetingProfile(ctx, tx, company, images); err != nil {
+			return 0, err
+		}
+	}
+	return removed, nil
+}
+
 // MeetingProfileField is one field a meeting states about the company.
 type MeetingProfileField struct {
 	Field      string
@@ -41,8 +90,8 @@ func ApplyMeetingProfileTx(
 		return err
 	}
 	var shared bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity WHERE id = $1
-		   AND audience = 'workspace' AND restricted_at IS NULL AND archived_at IS NULL)`, transcript.UUID).Scan(&shared); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity t WHERE t.id = $1 AND `+meetingTranscriptSharedSQL+`)`,
+		transcript.UUID).Scan(&shared); err != nil {
 		return fmt.Errorf("read the transcript's audience: %w", err)
 	}
 	if !shared {

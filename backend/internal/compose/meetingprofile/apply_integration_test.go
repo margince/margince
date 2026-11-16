@@ -205,3 +205,23 @@ func TestAUsersCorrectionStopsCitingTheMeeting(t *testing.T) {
 			got.Source, got.SourceActivityId, got.SourceOccurredAt)
 	}
 }
+
+func TestAMeetingValueGoesOnceItsTranscriptIsNarrowedOrRedacted(t *testing.T) {
+	for _, change := range []string{
+		`UPDATE activity SET audience = 'participants' WHERE id = $1`,
+		`UPDATE activity SET redacted_fields = ARRAY['body'] WHERE id = $1`,
+	} {
+		m := newMeeting(t, "workspace")
+		company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
+		m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "sales_motion", distributors})
+		if _, err := integration.OwnerConn(t).Exec(context.Background(), change, m.transcript.UUID); err != nil {
+			t.Fatal(err)
+		}
+		if err := (meetingprofile.Sweep{Pool: m.e.Pool}).Workspace(context.Background(), m.e.WS); err != nil {
+			t.Fatalf("sweeping: %v", err)
+		}
+		if got, ok := m.field(t, company, "sales_motion"); ok {
+			t.Errorf("after %q the field still says %q for a transcript its readers lost", change, got.Value)
+		}
+	}
+}
