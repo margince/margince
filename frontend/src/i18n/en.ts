@@ -4,6 +4,7 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
   "systemJob.meeting_profile":
     "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
@@ -10517,6 +10518,7 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.transcript_audience_sweep": "Meeting notes readers",
   "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
   "jobs.kind.intro_expiry": "Introduction expiry",
@@ -17618,6 +17620,9 @@ export const en = {
     "A file’s category, title, state, pinning or the file it replaces changes.",
   "webhooks.event.attachment.archived.label": "File archived",
   "webhooks.event.attachment.archived.when": "A file is archived off a record.",
+  "webhooks.event.attachment.restored.label": "File restored",
+  "webhooks.event.attachment.restored.when":
+    "An archived file is back on a record.",
   "webhooks.eventGroup.projects": "Projects",
   "webhooks.event.project.created.label": "Project created",
   "webhooks.event.project.created.when": "A project is opened on a company.",

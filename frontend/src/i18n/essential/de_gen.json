@@ -1,5 +1,6 @@
 {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.transcript_audience": "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile": "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
