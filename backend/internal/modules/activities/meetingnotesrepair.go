@@ -16,12 +16,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const unlinkedMeetingNotes = `t.kind = 'meeting' AND t.source_system = 'transcript'
+const unlinkedMeetingNotes = `t.kind = 'meeting' AND t.source_system = '` + transcriptSourceSystem + `'
  AND t.source = 'meeting_notes' AND t.captured_by = 'connector:gdocs' AND t.source_activity_id IS NULL
  AND t.archived_at IS NULL AND t.restricted_at IS NULL
  `
 
-const liveNotesMeeting = `m.kind = 'meeting' AND m.source_system IS DISTINCT FROM 'transcript'
+const liveNotesMeeting = `m.kind = 'meeting' AND m.source_system IS DISTINCT FROM '` + transcriptSourceSystem + `'
  AND m.archived_at IS NULL AND m.restricted_at IS NULL`
 
 type notesToRepair struct {
