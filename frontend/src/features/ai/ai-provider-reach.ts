@@ -3,8 +3,8 @@
 
 import type { components } from "../../api/schema";
 import { type AvailableModels, useAvailableModels } from "../../lib/ai-models";
-import { keyRowFor } from "../../lib/ai-provider-keys";
 import { boundProviders, type RoutingRead } from "../../lib/ai-routing-query";
+import { keyRowFor } from "./ai-provider-keys";
 
 // Which providers a binding editor may offer, and which of them still lack the
 // key a call needs.

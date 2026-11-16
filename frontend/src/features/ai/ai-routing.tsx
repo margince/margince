@@ -13,7 +13,6 @@ import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useAiModelCatalogue, withBorrowedRows } from "../../lib/ai-models";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
-import { unkeyedProviders } from "../../lib/ai-provider-keys";
 import { providerName } from "../../lib/ai-provider-names";
 import {
   ROUTING_KEY,
@@ -30,6 +29,7 @@ import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
 import { useAiHealth } from "./ai-health";
 import { useProviderKeys } from "./ai-provider-key-hooks";
+import { unkeyedProviders } from "./ai-provider-keys";
 import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";
