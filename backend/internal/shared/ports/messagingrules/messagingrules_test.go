@@ -4,6 +4,7 @@
 package messagingrules
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -332,5 +333,36 @@ func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
 	// consolation prize for having lost the rules.
 	if got.ReplyWindow != 30*24*time.Hour {
 		t.Errorf("reply window = %s, want the shorter one", got.ReplyWindow)
+	}
+}
+
+// A fold keeps every advertising content rule either side declares: the
+// refusal layout, every restricted claim, and the first language stated.
+func TestAdvertisingContentRulesSurviveTheFold(t *testing.T) {
+	a := Rules{Jurisdiction: "aa", Version: 1, ClaimsNeedProof: []string{"best"}}
+	b := Rules{Jurisdiction: "bb", Version: 1, AdvertisingLanguage: "vi",
+		RefusalSectionLast: true, ClaimsNeedProof: []string{"best", "tốt nhất"}}
+
+	got := stricter(a, b)
+	if got.AdvertisingLanguage != "vi" || !got.RefusalSectionLast {
+		t.Errorf("the fold dropped a layout rule: language %q, refusal last %v",
+			got.AdvertisingLanguage, got.RefusalSectionLast)
+	}
+	if !slices.Equal(got.ClaimsNeedProof, []string{"best", "tốt nhất"}) {
+		t.Errorf("claims %v, want each restricted word once", got.ClaimsNeedProof)
+	}
+	if !slices.Equal(a.ClaimsNeedProof, []string{"best"}) {
+		t.Errorf("the fold wrote into its input: %v", a.ClaimsNeedProof)
+	}
+}
+
+// A caller that edits the means it was handed must not edit the registered
+// rule for every later send.
+func TestTheRegistryHandsOutItsOwnCopyOfTheMeans(t *testing.T) {
+	r := Rules{Disclosures: []Disclosure{{Kind: ObjectionRoute, Means: []ContactMeans{MeansWeb}}}}
+	copied := clone(r)
+	copied.Disclosures[0].Means[0] = MeansPhone
+	if r.Disclosures[0].Means[0] != MeansWeb {
+		t.Error("the clone shares its means with the registered rule set")
 	}
 }

@@ -125,6 +125,27 @@ type Rules struct {
 	// uncapped by this jurisdiction.
 	FrequencyCap *FrequencyCap
 
+	// Advertising content and layout: the language advertising leads with,
+	// where the refusal sits, and which claims need a stated proof.
+
+	// AdvertisingLanguage is the language advertising to a recipient here is
+	// written in first, as a lower-case ISO 639-1 code. The marketing
+	// disclosures are printed in it, and a send is refused while the
+	// installation has not stated them in it. Empty sets no language.
+	AdvertisingLanguage string
+
+	// RefusalSectionLast says an advertising message ends with its refusal
+	// section. It states the right to refuse all advertising from the
+	// advertiser, then the objection route and the opt-out links. The
+	// advertiser's contact block stands directly before it.
+	RefusalSectionLast bool
+
+	// ClaimsNeedProof are the words of a claim an advertising draft may make
+	// only beside a stated proof: the proving document's name, number and
+	// date. A draft that uses one without a proof is flagged before it is
+	// sent; nothing is refused.
+	ClaimsNeedProof []string
+
 	// OptOutAcknowledgement records whether an opt-out is owed a confirming
 	// message. False means none is owed, which is the default.
 	//
@@ -235,10 +256,46 @@ type Disclosure struct {
 	// MarketingOnly limits the obligation to advertising. False means every
 	// first message carries it.
 	MarketingOnly bool
+
+	// Means are the ways of reaching someone the stated text must name. Text
+	// that lacks one does not meet the obligation. Empty asks for none.
+	Means []ContactMeans
 }
 
-// Validate checks the kind.
-func (d Disclosure) Validate() error { return d.Kind.Validate() }
+// Validate checks the kind and each means.
+func (d Disclosure) Validate() error {
+	if err := d.Kind.Validate(); err != nil {
+		return err
+	}
+	for _, m := range d.Means {
+		if err := m.Validate(); err != nil {
+			return fmt.Errorf("disclosure %q: %w", string(d.Kind), err)
+		}
+	}
+	return nil
+}
+
+// ContactMeans names one way of reaching someone that a disclosed text must
+// name. Closed, because the engine has to recognise each one in the text.
+type ContactMeans string
+
+const (
+	// MeansWeb is a web page or a social-network link.
+	MeansWeb ContactMeans = "web"
+	// MeansEmail is an email address.
+	MeansEmail ContactMeans = "email"
+	// MeansPhone is a phone number.
+	MeansPhone ContactMeans = "phone"
+)
+
+// Validate enforces membership in the closed set.
+func (m ContactMeans) Validate() error {
+	switch m {
+	case MeansWeb, MeansEmail, MeansPhone:
+		return nil
+	}
+	return fmt.Errorf("contact means %q is not one the engine recognises", string(m))
+}
 
 // FrequencyCap bounds how many advertising messages one address may receive in
 // a rolling window.
@@ -346,6 +403,24 @@ func (r Rules) Validate() error {
 	if r.FrequencyCap != nil {
 		if err := r.FrequencyCap.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+		}
+	}
+	if err := r.validateAdvertisingContent(); err != nil {
+		return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
+	}
+	return nil
+}
+
+// validateAdvertisingContent refuses a language that is not a two-letter code,
+// and a claim word that matches nothing or everything.
+func (r Rules) validateAdvertisingContent() error {
+	if language := r.AdvertisingLanguage; language != "" &&
+		(len(language) != 2 || strings.Trim(language, "abcdefghijklmnopqrstuvwxyz") != "") {
+		return fmt.Errorf("advertising language %q is not a lower-case ISO 639-1 code", language)
+	}
+	for _, word := range r.ClaimsNeedProof {
+		if strings.TrimSpace(word) == "" || strings.TrimSpace(word) != word {
+			return fmt.Errorf("claim word %q is empty or padded, so it would flag every draft or none", word)
 		}
 	}
 	return nil

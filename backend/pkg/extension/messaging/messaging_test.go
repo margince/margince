@@ -149,3 +149,35 @@ func TestAMalformedJurisdictionIsRefused(t *testing.T) {
 		t.Error("an upper-case jurisdiction code was accepted")
 	}
 }
+
+// A means the engine cannot recognise in text would be an obligation no
+// stated particular could ever meet.
+func TestADisclosureMeansMustBeOneTheEngineRecognises(t *testing.T) {
+	if err := (Disclosure{Kind: ObjectionRoute, Means: []ContactMeans{"fax"}}).Validate(); err == nil {
+		t.Error("a means nothing recognises was accepted")
+	}
+	if err := (Disclosure{Kind: ObjectionRoute, Means: []ContactMeans{MeansWeb, MeansEmail, MeansPhone}}).Validate(); err != nil {
+		t.Errorf("the three recognised means were refused: %v", err)
+	}
+}
+
+func TestAdvertisingContentRulesAreRefusedWhenNothingCouldApplyThem(t *testing.T) {
+	cases := []struct {
+		name  string
+		rules Rules
+		ok    bool
+	}{
+		{"a two-letter language", Rules{AdvertisingLanguage: "vi"}, true},
+		{"an upper-case language", Rules{AdvertisingLanguage: "VI"}, false},
+		{"a three-letter language", Rules{AdvertisingLanguage: "vie"}, false},
+		{"a claim word", Rules{ClaimsNeedProof: []string{"tốt nhất"}}, true},
+		{"an empty claim word", Rules{ClaimsNeedProof: []string{""}}, false},
+		{"a padded claim word", Rules{ClaimsNeedProof: []string{" nhất"}}, false},
+	}
+	for _, c := range cases {
+		c.rules.Jurisdiction, c.rules.Version = "zz", 1
+		if err := c.rules.Validate(); (err == nil) != c.ok {
+			t.Errorf("%s: Validate() = %v, want accepted=%v", c.name, err, c.ok)
+		}
+	}
+}

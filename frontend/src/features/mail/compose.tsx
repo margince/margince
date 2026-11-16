@@ -4,7 +4,7 @@ import { SendPermission } from "../../components/sendpermission";
 import { useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
-import { ChannelDraftNotice } from "./compose.notices";
+import { ChannelDraftNotice, DraftContentNotice } from "./compose.notices";
 import {
   useComposeThread,
   useConversationNames,
@@ -448,6 +448,9 @@ export function ComposeWindow({
                   onRecheck={send.permission.recheck}
                 />
               )}
+            />
+            <DraftContentNotice
+              findings={send.permission.preview?.content_findings}
             />
           </div>
           <ComposeFoot

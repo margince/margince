@@ -119,7 +119,13 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 			// store answers no country, so applicableRules finds no pack and
 			// every message silently owes nothing — the failure this seam
 			// exists to end, arriving through the wiring instead.
-			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf))}).
+			WithInstallationCountry(consent.InstallationCountryFunc(identity.CountryOf)).
+			// The installation's language, which says whether the default
+			// particulars already meet a pack's advertising language.
+			WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf))}).
+		// The advertising content rules a draft is checked against while it
+		// is written. See compose/draftcontent.go.
+		WithDraftContent(draftContentAdapter{store: consent.NewStore(InstallationDB(pool))}).
 		// The sender's own sign-off (core 0235). contacts owns the row because
 		// it owns the contact the seat belongs to; activities appends it because
 		// it owns the one send. The edge is injected here rather than imported,

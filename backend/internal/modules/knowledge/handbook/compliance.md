@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -109,6 +109,12 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
+
+The **Company details in mail** card on the same page holds what your mail says about your company. Its fields are **Legal name**, **Postal address**, **Data protection contact**, **How to refuse advertising** and **Advertiser contact**.
+
+Where a law in use asks for its own language, the card shows the same fields in that language. Mail and pages in that language show this text where you fill it in.
+
+Under Vietnamese law, **How to refuse advertising** must name a web page or social network link, an email address and a phone number. Saving without one of them shows which part is missing. Sales mail to a recipient under Vietnamese law goes out only once **How to refuse advertising** and **Advertiser contact** are filled in, in Vietnamese.
 
 How long business mail is kept follows the legal entity of the colleague it belongs to. That is the colleague who sent it, or whose mailbox it arrived in. Mail that names no colleague follows the owner of the contact or deal it is filed under. A legal entity that follows another law keeps its colleagues' mail under that law, but never for a shorter time than the law chosen here. Mail that belongs to nobody uses the law chosen here. When the colleagues of one mail work under two different laws, the mail is kept for the longer time.
 

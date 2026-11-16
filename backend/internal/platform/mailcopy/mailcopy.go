@@ -123,12 +123,17 @@ type Copy struct {
 
 	RoomSharedBy   string
 	ControllerFrom string
-	// The labels over the particulars a controller mail discloses. The
-	// particulars are in the language the operator typed them in.
+	// The labels over the particulars a controller mail discloses. A
+	// particular prints its translation in the mail's language where one is
+	// stated, else the text the operator typed.
 	DisclosureController     string
 	DisclosurePrivacyContact string
 	DisclosureObjection      string
 	DisclosureAdvertiser     string
+	// The refusal section that closes an advertising mail where a pack asks
+	// for one. %s names the advertiser.
+	AdvertisingRefusal    string
+	AdvertisingDataChoice string
 	// PoweredBy is the small line under the letterhead of mail the system
 	// relay sends as the installation.
 	PoweredBy string

@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useSettledValue } from "../../design-system/debouncedsearch";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
@@ -374,12 +375,20 @@ export function useComposeSend({
   const evidence = contextDealId ? { deal_id: contextDealId } : undefined;
   // The engine's answer, asked while the rep writes. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
+  // An advertising draft is also checked against its recipients' content
+  // rules, once the text has stood still.
+  const settledSubject = useSettledValue(fields.subject);
+  const settledBody = useSettledValue(fields.body);
   const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,
     links,
     context: claimedContext,
     evidence,
+    draft:
+      claimedContext === "marketing"
+        ? { subject: settledSubject, body: settledBody }
+        : undefined,
     enabled: open && !isChannelReply,
   });
   // A consent refusal joins the engine's answer as one status, and only while

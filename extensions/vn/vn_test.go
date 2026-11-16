@@ -4,6 +4,7 @@
 package vn
 
 import (
+	"slices"
 	"testing"
 	"time"
 
@@ -158,8 +159,44 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 // TestTheVersionMovedWithTheInstruments. The number exists to tell two records
 // apart, so it is meaningless if it stays put when the law it names changes.
 func TestTheVersionMovedWithTheInstruments(t *testing.T) {
-	if got := messagingRules().Version; got != 2 {
-		t.Errorf("ruleset version = %d, want 2 — the pack now states the 2025 "+
-			"instruments and a decision must be able to say which set judged it", got)
+	if got := messagingRules().Version; got != 3 {
+		t.Errorf("ruleset version = %d, want 3 — the refusal means, the advertising "+
+			"language and the claims needing proof changed what a decision was judged under", got)
+	}
+}
+
+// TestRefusalIsPossibleByWebEmailAndPhone pins Decree 91/2020/ND-CP Art. 20.2.
+func TestRefusalIsPossibleByWebEmailAndPhone(t *testing.T) {
+	for _, d := range messagingRules().Disclosures {
+		if d.Kind != messaging.ObjectionRoute {
+			continue
+		}
+		want := []messaging.ContactMeans{messaging.MeansWeb, messaging.MeansEmail, messaging.MeansPhone}
+		if !slices.Equal(d.Means, want) {
+			t.Errorf("the objection route asks for %v, want %v", d.Means, want)
+		}
+		return
+	}
+	t.Fatal("the pack declares no objection route")
+}
+
+// TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal pins the Law on
+// Advertising Art. 18 and Decree 91/2020/ND-CP Art. 19 and 20.1.
+func TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal(t *testing.T) {
+	r := messagingRules()
+	if r.AdvertisingLanguage != "vi" {
+		t.Errorf("advertising language = %q, want vi", r.AdvertisingLanguage)
+	}
+	if !r.RefusalSectionLast {
+		t.Error("advertising does not end with the refusal section")
+	}
+}
+
+// TestSuperlativesNeedAProof pins Law on Advertising Art. 8.11.
+func TestSuperlativesNeedAProof(t *testing.T) {
+	for _, word := range []string{"nhất", "duy nhất", "tốt nhất", "số một"} {
+		if !slices.Contains(messagingRules().ClaimsNeedProof, word) {
+			t.Errorf("%q is not among the claims that need a proof", word)
+		}
 	}
 }

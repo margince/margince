@@ -115,6 +115,19 @@ func vnInstruments() []messaging.Instrument {
 	}
 }
 
+// refusalMeans are the ways Decree 91/2020/ND-CP Art. 20.2 requires a
+// recipient to be able to refuse advertising email.
+func refusalMeans() []messaging.ContactMeans {
+	return []messaging.ContactMeans{messaging.MeansWeb, messaging.MeansEmail, messaging.MeansPhone}
+}
+
+// superlatives are the claims Law on Advertising Art. 8.11 and Circular
+// 12/2026/TT-BVHTTDL Art. 3 allow only with a listed proof shown in the mail.
+// "nhất" alone also catches the forms built on it ("lớn nhất", "rẻ nhất").
+func superlatives() []string {
+	return []string{"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu"}
+}
+
 // messagingRules is what Vietnamese law requires of an outbound message, stated
 // as data the core engine applies. Nothing here decides a send.
 //
@@ -160,12 +173,10 @@ func vnInstruments() []messaging.Instrument {
 func messagingRules() messaging.Rules {
 	return messaging.Rules{
 		Jurisdiction: "vn",
-		// 2, because the instruments below changed. The obligations the engine
-		// applies did not: a decision recording version 1 was judged under
-		// Decree 91/2020 alone, and one recording version 2 was judged under
-		// the same decree as amended. The number is what tells those two apart
-		// in a record read years later, which is the only reason it moves.
-		Version:            2,
+		// 3: the objection route must name three means, advertising leads
+		// with Vietnamese and ends with the refusal section, and superlatives
+		// need a stated proof. A decision recording 2 was judged without them.
+		Version:            3,
 		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
@@ -176,10 +187,13 @@ func messagingRules() messaging.Rules {
 		Disclosures: []messaging.Disclosure{
 			{Kind: messaging.ControllerIdentity},
 			{Kind: messaging.PrivacyContact},
-			{Kind: messaging.ObjectionRoute, MarketingOnly: true},
+			{Kind: messaging.ObjectionRoute, MarketingOnly: true, Means: refusalMeans()},
 			{Kind: messaging.AdvertiserContact, MarketingOnly: true},
 		},
-		SubjectPrefix: advertisingLabel,
+		AdvertisingLanguage: "vi",
+		RefusalSectionLast:  true,
+		ClaimsNeedProof:     superlatives(),
+		SubjectPrefix:       advertisingLabel,
 		FrequencyCap: &messaging.FrequencyCap{
 			Messages: vnAdvertisingMessagesPerDay,
 			Window:   vnAdvertisingWindow,

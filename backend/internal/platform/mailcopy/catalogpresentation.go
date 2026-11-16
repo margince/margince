@@ -170,4 +170,12 @@ func controllerPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.DisclosurePrivacyContact }, "Data protection contact:", "Kontakt zum Datenschutz:", "Liên hệ về bảo vệ dữ liệu:")
 	line(func(c *Copy) *string { return &c.DisclosureObjection }, "How to object:", "Widerspruch:", "Cách phản đối:")
 	line(func(c *Copy) *string { return &c.DisclosureAdvertiser }, "Advertiser contact:", "Kontakt des Werbenden:", "Liên hệ bên quảng cáo:")
+	line(func(c *Copy) *string { return &c.AdvertisingRefusal },
+		"You have the right to refuse all advertising from %s. To refuse:",
+		"Sie können jede Werbung von %s ablehnen. So lehnen Sie ab:",
+		"Quý khách có quyền từ chối nhận tất cả quảng cáo của %s. Cách từ chối:")
+	line(func(c *Copy) *string { return &c.AdvertisingDataChoice },
+		"You also choose whether we use your details for advertising: open your preferences below.",
+		"Sie entscheiden auch, ob wir Ihre Daten für Werbung nutzen: Öffnen Sie dazu unten Ihre Einstellungen.",
+		"Quý khách cũng có quyền chọn cho phép hay không cho phép chúng tôi dùng thông tin của quý khách để quảng cáo: mở phần quản lý tùy chọn bên dưới.")
 }

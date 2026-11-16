@@ -318,6 +318,12 @@ export const SETTINGS_SECTIONS = {
     "jurisdiction.effects.title",
     "jurisdiction.selected.label",
     "jurisdiction.documents.title",
+    "particulars.title",
+    "particulars.legalName",
+    "particulars.postalAddress",
+    "particulars.privacyContact",
+    "particulars.objectionRoute",
+    "particulars.advertiserContact",
   ],
   audit: [],
   "system-health": {

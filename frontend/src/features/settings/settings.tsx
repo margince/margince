@@ -48,6 +48,7 @@ import { KnowledgeCard } from "../voice-knowledge/knowledge";
 import { VoiceDnaCard, VoiceIntakeHost } from "../voice-knowledge/voice-dna";
 import { AccountSettings } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
+import { ControllerParticularsCard } from "./controllerparticulars";
 import { FinanceSourceCard } from "./financesource";
 import { FollowUpSettingsCard } from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
@@ -250,7 +251,12 @@ export function tabContent(
     case "privacy":
       return <PrivacyLanes tab={tab} />;
     case "jurisdiction":
-      return <JurisdictionCard />;
+      return (
+        <>
+          <JurisdictionCard />
+          <ControllerParticularsCard />
+        </>
+      );
     case "audit":
       // Its own page: it answers to `audit_log`, where the privacy page answers
       // to consent and retention, and one reader can hold one without the other.
