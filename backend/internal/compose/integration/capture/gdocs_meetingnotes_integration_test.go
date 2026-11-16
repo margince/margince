@@ -110,7 +110,7 @@ func connectNotes(t *testing.T, env captureEnv, feed *docsFeed, account string, 
 	oauth := gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
 	conn := gdocs.New(oauth, gdocs.NewOwner(stub.Client(), stub.URL)).WithDocs(gdocs.NewDocsAPI(stub.Client(), stub.URL))
 	reg := compose.NewCaptureRegistry(env.e.Pool, newTestKeyvault(t, env.e), compose.CaptureConfig{
-		Now: func() time.Time { return captureNow }, TranscriptEnqueue: queued.enqueue,
+		Now: func() time.Time { return env.now }, TranscriptEnqueue: queued.enqueue,
 	})
 	reg.Register(conn)
 	authReq, err := gdocs.AuthRequestFrom("the-code", "https://app.test/v1/connectors/gdocs/callback")
@@ -140,7 +140,7 @@ func meetingWithNotes(t *testing.T, env captureEnv) (ids.UUID, *calendarFeed, fu
 	seatFor(t, env.e, guestColleagueA)
 	ensureGuestContact(t, env.e, guestKnown)
 	feed := &calendarFeed{}
-	feed.set(withNotes(lateGuestEvent("review", "confirmed", captureNow.AddDate(0, 0, -3), guestColleagueA, guestList()...),
+	feed.set(withNotes(lateGuestEvent("review", "confirmed", env.now.AddDate(0, 0, -3), guestColleagueA, guestList()...),
 		driveFile(notesFileID, "Kick-off review - Notes by Gemini")))
 	sync := connectFeed(t, env, feed)
 	sync()
