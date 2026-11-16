@@ -105,6 +105,13 @@ func (m *meeting) readAs(reader context.Context, t *testing.T, entries []saidBy,
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A speaker is a participant of the transcript, where the reading's parties come from.
+	for _, entry := range entries {
+		if _, err := integration.OwnerConn(t).Exec(context.Background(), `INSERT INTO activity_participant (activity_id, contact_id, role)
+			VALUES ($1, $2, 'attendee') ON CONFLICT DO NOTHING`, m.transcript.UUID, entry.speaker); err != nil {
+			t.Fatal(err)
+		}
+	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := database.WithWorkspaceTx(reader, m.e.Pool, func(tx pgx.Tx) error {
 		return meetingprofile.Apply(reader, tx, quiet, raw, 1, m.transcript, parties)
@@ -333,5 +340,37 @@ func TestOnlyTheSystemRunsTheMeetingProfileSweep(t *testing.T) {
 	})
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an administrator ran the meeting-profile sweep: err = %v, want a permission refusal", err)
+	}
+}
+
+// A value stands while someone from its company is on the meeting. Taking the
+// speaker off the transcript, or the speaker leaving the company, removes it.
+func TestAMeetingValueGoesOnceNobodyFromItsCompanyIsOnTheMeeting(t *testing.T) {
+	for name, change := range map[string]string{
+		"speaker taken off": `DELETE FROM activity_participant WHERE activity_id = $1 AND contact_id = $2`,
+		"speaker left":      `UPDATE relationship SET archived_at = now() WHERE contact_id = $2 AND kind = 'employment' AND $1::uuid IS NOT NULL`,
+		"speaker only bcc":  `UPDATE activity_participant SET role = 'bcc' WHERE activity_id = $1 AND contact_id = $2`,
+	} {
+		m := newMeeting(t, "workspace")
+		company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
+		speaker := m.employee(t, company, "Dana Brandt")
+		m.read(t, saidBy{speaker, "sales_motion", distributors})
+		sweep := func() {
+			t.Helper()
+			if err := (meetingprofile.Sweep{Pool: m.e.Pool}).Workspace(context.Background(), m.e.WS); err != nil {
+				t.Fatalf("sweeping: %v", err)
+			}
+		}
+		sweep()
+		if _, ok := m.field(t, company, "sales_motion"); !ok {
+			t.Fatalf("%s: the sweep removed a value whose speaker is still on the meeting", name)
+		}
+		if _, err := integration.OwnerConn(t).Exec(context.Background(), change, m.transcript.UUID, speaker); err != nil {
+			t.Fatal(err)
+		}
+		sweep()
+		if got, ok := m.field(t, company, "sales_motion"); ok {
+			t.Errorf("%s: the field still says %q with nobody from the company on the meeting", name, got.Value)
+		}
 	}
 }

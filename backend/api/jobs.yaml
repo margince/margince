@@ -942,9 +942,10 @@ kinds:
     cadence: 1h
     reason: >-
       Removes the company fields a meeting filled once its transcript was
-      narrowed, restricted, archived or redacted. Hourly, so a value stops
-      speaking for a meeting its readers lost within the hour. Database-only;
-      each transaction is bounded, and the timeout bounds the pass.
+      narrowed, restricted, archived or redacted, or no participant works at
+      that company any more. Hourly, so a value stops speaking for such a
+      meeting within the hour. Database-only; each transaction is bounded, and
+      the timeout bounds the pass.
 
   transcript_audience_sweep:
     role: worker
