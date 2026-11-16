@@ -16,6 +16,7 @@ import { navigate, type Route } from "../lib/router";
 import { fieldControl, MultiselectField } from "./create.controls";
 import {
   type CreateField,
+  type FormRow,
   type FormRows,
   fieldLabel,
   rowsRequirementMet,
@@ -27,6 +28,7 @@ import {
   offeredHint,
   usePrefilledPick,
 } from "./create.offered";
+import { repeatedRowValue } from "./createrows";
 import { RepeatableRowsField } from "./repeatablerowsfield";
 
 // A submit button's resting and busy labels travel as one pair, so an edit
@@ -37,6 +39,16 @@ export const SUBMIT_COPY = {
 } as const satisfies Record<string, { label: MessageKey; busy: MessageKey }>;
 
 export type SubmitIntent = keyof typeof SUBMIT_COPY;
+
+function repeatedRowRefusal(
+  field: CreateField,
+  rows: readonly FormRow[],
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  const valueKey = field.rowFields?.[0]?.key;
+  const value = valueKey ? repeatedRowValue(rows, valueKey) : undefined;
+  return value === undefined ? undefined : t("field.rowRepeated", { value });
+}
 
 // Fields, error and Cancel/Save, shared by create and edit: only the values'
 // origin and the submit intent differ, and those stay with each modal's owner.
@@ -109,7 +121,11 @@ export function RecordFormBody({
   });
   const refusals = new Map(
     shown.flatMap((field) => {
-      const refusal = field.validate?.(values[field.key] ?? "", values, rows);
+      const refusal =
+        (field.rowsUnique
+          ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
+          : undefined) ??
+        field.validate?.(values[field.key] ?? "", values, rows);
       return refusal ? [[field.key, refusal] as const] : [];
     }),
   );
@@ -158,7 +174,7 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               labelHidden={titledByDialog}
-              error={fieldRefusals?.get(field.key)}
+              error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
               rows={rows[field.key] ?? []}
               setRows={(next) => {
                 setEdited(true);

@@ -7298,6 +7298,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.expectedClose": "Ngày chốt dự kiến",
 
   "keyCode.label": "Khóa: {key}",
+  "field.rowRepeated": "{value} có ở hai dòng. Hãy xóa một dòng.",
   "field.addEmail": "Thêm email",
   "field.addPhone": "Thêm điện thoại",
   "field.editEmails": "Sửa danh sách email",

@@ -304,6 +304,7 @@ export function companyCreateFields(
       addLabel: "field.addDomain",
       rowFields: [{ key: "domain", label: "field.domain", required: true }],
       primaryKey: "is_primary",
+      rowsUnique: true,
     },
   ];
 }
@@ -413,6 +414,7 @@ export function companyEditFields(
       addLabel: "field.addDomain",
       rowFields: [{ key: "domain", label: "field.domain", required: true }],
       primaryKey: "is_primary",
+      rowsUnique: true,
     },
   ];
 }

@@ -7478,6 +7478,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.expectedClose": "Erwarteter Abschluss",
 
   "keyCode.label": "Schlüssel: {key}",
+  "field.rowRepeated": "{value} steht in zwei Zeilen. Entferne eine davon.",
   "field.addEmail": "E-Mail hinzufügen",
   "field.addPhone": "Telefon hinzufügen",
   "field.editEmails": "E-Mail-Adressen bearbeiten",

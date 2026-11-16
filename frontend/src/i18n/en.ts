@@ -7489,6 +7489,7 @@ export const en = {
   "create.expectedClose": "Expected close",
 
   "keyCode.label": "Key: {key}",
+  "field.rowRepeated": "{value} is in two rows. Remove one of them.",
   "field.addEmail": "Add email",
   "field.addPhone": "Add phone",
   "field.editEmails": "Edit emails",

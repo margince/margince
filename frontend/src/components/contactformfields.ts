@@ -299,6 +299,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
         },
       ],
       primaryKey: "is_primary",
+      rowsUnique: true,
       typeKey: "email_type",
       typeDefault: "work",
     },
