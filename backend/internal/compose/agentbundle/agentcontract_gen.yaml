@@ -12430,7 +12430,8 @@ paths:
         the order sent: `landed` with its activity, `duplicate` when its message_id already
         landed, `skipped` when capture did not keep it (an erased contact, for one), `refused`
         with a reason the client can act on, or `deferred` when the request ran out of time
-        (send those again). One message's refusal does not refuse the rest.
+        (send those again, under a new Idempotency-Key). One message's refusal does not refuse
+        the rest.
 
         Needs the passport permission Personal channels.
 

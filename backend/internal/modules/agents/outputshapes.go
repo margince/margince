@@ -143,11 +143,10 @@ type jsonSchema struct {
 // additionalProperties is JSON Schema's own union: a BOOLEAN closing or opening
 // the object, or a SCHEMA every extra member must satisfy.
 //
-// It is a union rather than just the schema because a hand-written schema is
-// free to use either — `extensions/openchannel` closes its results with `false`, and a
-// reader that could not parse that would report a perfectly good schema as
-// unreadable and withhold structured content from every call to that tool. The
-// deriver only ever emits the schema arm, for a map's values.
+// It is a union because a hand-written schema may use either; a unit may close
+// its results with `false`. A reader that could not parse that would withhold
+// structured content from every call to that tool. The deriver only ever emits
+// the schema arm, for a map's values.
 type additionalProperties struct {
 	// Closed is set when the member was a boolean. false means no member beyond
 	// the declared ones is allowed; true is the default and says nothing.

@@ -18180,7 +18180,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
   "consent.scopeNote.enrich": "führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.scopeNote.personal_channels":
-    "übermittelt Ihre Chats und Dateien und holt Ihre Antworten ab; jede zeigt, wer sie übermittelt hat",
+    "übermittelt Ihre Chats und Dateien und holt Ihre Antworten ab",
   "consent.ceiling":
     "Nie mehr als deine eigenen Berechtigungen. Du kannst die Verbindung jederzeit in den Einstellungen unter KI-Assistenten trennen.",
   "consent.preset.label": "Assistentenrechte",

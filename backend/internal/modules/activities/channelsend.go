@@ -363,6 +363,7 @@ func (s *Store) resolveConversation(ctx context.Context, anchorID ids.ActivityID
 		if err != nil {
 			return err
 		}
+		reachable = namedByThread(reachable, out.threadKey)
 		if len(reachable) != 1 {
 			return &ChannelRecipientError{Provider: provider, Reachable: len(reachable)}
 		}

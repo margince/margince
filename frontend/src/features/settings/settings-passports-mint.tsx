@@ -24,7 +24,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../../lib/problem";
 import { resetToSignedOut } from "../../lib/session";
-import { MintedPassport } from "./settings.passportuse";
+import { examplePathFor, MintedPassport } from "./settings.passportuse";
 
 const PASSPORT_SCOPES = [
   "read",
@@ -160,7 +160,11 @@ export function MintDialog({
           {mint.isSuccess && <p>{t("settings.passportCreated")}</p>}
         </div>
         {mint.isSuccess && (
-          <MintedPassport token={mint.data.token} apiBaseUrl={apiBaseUrl} />
+          <MintedPassport
+            token={mint.data.token}
+            apiBaseUrl={apiBaseUrl}
+            examplePath={examplePathFor([...scopes])}
+          />
         )}
       </div>
       {!mint.isSuccess && (

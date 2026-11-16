@@ -61,6 +61,7 @@ The 4 tables owned by `personalchannels`, as the migrations build them. [Back to
 
 **Indexes**
 
+- `personal_channel_message_connection_idx`: `btree (connection_id)`
 - `personal_channel_message_pkey`: `unique, btree (activity_id)`
 
 **Triggers**
@@ -107,9 +108,11 @@ The 4 tables owned by `personalchannels`, as the migrations build them. [Back to
 
 **Indexes**
 
+- `personal_channel_reply_activity_idx`: `btree (activity_id)`
 - `personal_channel_reply_delivery_key`: `unique, btree (delivery_key)`
 - `personal_channel_reply_open_idx`: `btree (connection_id, created_at) WHERE (state = ANY (ARRAY['waiting', 'pulled']))`
 - `personal_channel_reply_pkey`: `unique, btree (id)`
+- `personal_channel_reply_sent_idx`: `btree (connection_id, network, provider_message_id) WHERE (provider_message_id IS NOT NULL)`
 
 **Triggers**
 
@@ -144,6 +147,7 @@ The 4 tables owned by `personalchannels`, as the migrations build them. [Back to
 **Indexes**
 
 - `personal_channel_upload_age_idx`: `btree (created_at)`
+- `personal_channel_upload_connection_idx`: `btree (connection_id)`
 - `personal_channel_upload_pkey`: `unique, btree (id)`
 
 **Triggers**

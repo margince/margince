@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 49,
     "system_frame_tokens": 672,
-    "tokens": 51586,
+    "tokens": 51456,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1052
+    "mean_tool_tokens": 1049
   },
   "agents": [
     {
@@ -89,7 +89,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3159
+      "tokens": 3146
     },
     {
       "name": "change_activities",
@@ -117,11 +117,11 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1817
+      "tokens": 1804
     },
     {
       "name": "change_attention",
-      "tokens": 1775
+      "tokens": 1762
     },
     {
       "name": "send_outbound",
@@ -133,19 +133,19 @@
     },
     {
       "name": "run_research",
-      "tokens": 1344
+      "tokens": 1331
     },
     {
       "name": "change_compliance",
-      "tokens": 1274
+      "tokens": 1261
     },
     {
       "name": "change_offers",
-      "tokens": 1096
+      "tokens": 1083
     },
     {
       "name": "change_access",
-      "tokens": 1074
+      "tokens": 1061
     },
     {
       "name": "read_analytics",
@@ -169,11 +169,11 @@
     },
     {
       "name": "change_my_settings",
-      "tokens": 867
+      "tokens": 854
     },
     {
       "name": "change_relationships",
-      "tokens": 816
+      "tokens": 803
     },
     {
       "name": "bulk_update_records",
@@ -213,7 +213,7 @@
     },
     {
       "name": "personal_channels",
-      "tokens": 447
+      "tokens": 434
     },
     {
       "name": "decide_approvals",

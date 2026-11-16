@@ -70,8 +70,9 @@ func TestEveryMutatingToolIsAdvertisedWithTheRetryKey(t *testing.T) {
 					"would refuse to serve", spec.Name, retryKeyMember)
 			}
 		// A route-backed verb's answer is its route's, which carries no replay
-		// evidence, so it offers no key it could not honour.
-		case runsARoute[spec.Name]:
+		// evidence, so it offers no key it could not honour. A router whose every
+		// action is one is the same.
+		case runsARoute[spec.Name] || everyActionRunsARoute(spec, runsARoute):
 			if advertised {
 				t.Errorf("%s runs its REST route and advertises `%s`, promising a retry the replay gate "+
 					"would refuse to serve", spec.Name, retryKeyMember)
@@ -108,4 +109,17 @@ func TestAToolsClaimEndpointCannotCollideWithARestOne(t *testing.T) {
 		}
 		seen[endpoint] = spec.Name
 	}
+}
+
+// everyActionRunsARoute reports a router whose actions all run REST routes.
+func everyActionRunsARoute(spec mcp.ToolSpec, runsARoute map[string]bool) bool {
+	if len(spec.Actions) == 0 {
+		return false
+	}
+	for _, action := range spec.Actions {
+		if !runsARoute[action.Verb] {
+			return false
+		}
+	}
+	return true
 }

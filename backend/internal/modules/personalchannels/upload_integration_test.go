@@ -74,7 +74,7 @@ func TestAnotherMembersUploadIsNotFound(t *testing.T) {
 		var files []extension.InboundFile
 		err := e.store.db.Tx(e.as(user, repGrant), func(tx pgx.Tx) error {
 			var err error
-			files, err = readUploadsTx(e.as(user, repGrant), tx, user, []ids.UUID{up.ID})
+			files, _, err = claimUploadsTx(e.as(user, repGrant), tx, user, []ids.UUID{up.ID})
 			return err
 		})
 		return files, err

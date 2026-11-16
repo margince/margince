@@ -19,7 +19,19 @@ import (
 )
 
 // ErrOff refuses a channel call while the member has their connection off.
-var ErrOff = fmt.Errorf("personal channels are off; turn them on in Settings → Connections: %w", apperrors.ErrConflict)
+var ErrOff error = offError{}
+
+// offError is a conflict whose message names the switch to turn, and nothing more.
+type offError struct{}
+
+func (offError) Error() string {
+	return "personal channels are off; turn them on in Settings → Connections"
+}
+
+func (offError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault answers the conflict code with the sentence a client shows its member.
+func (e offError) MessageFault() (code, message string) { return "conflict", e.Error() }
 
 // Connection is the caller's switch and the replies waiting on it.
 type Connection struct {

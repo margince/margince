@@ -45,9 +45,16 @@ export function providerNameKey(provider: Provider): MessageKey {
   return labelFor(PROVIDER_NAME, provider);
 }
 
+// A member's own chats land under the core's personal channels connector, which
+// is no capture connection a member connects.
+const PERSONAL_CHANNELS = "personal_channels";
+
 // An id this build cannot name comes back as sent: a newer server's provider is
 // still one the reader can quote.
 export function providerName(id: string, t: (key: MessageKey) => string) {
+  if (id === PERSONAL_CHANNELS) {
+    return t("personalChannels.title");
+  }
   return isCaptureProvider(id) ? t(labelFor(PROVIDER_NAME, id)) : id;
 }
 

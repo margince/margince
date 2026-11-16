@@ -119,20 +119,26 @@ func (s *Store) pushOne(ctx context.Context, connection, user ids.UUID, m PushMe
 	res := PushResult{MessageID: m.MessageID}
 	n, err := Normalize(connection, m)
 	if err != nil {
-		return refused(ctx, res, err), nil //nolint:nilerr // a refused message is its own result; the batch goes on
+		return refused(ctx, res, err), nil
 	}
-	var files []extension.InboundFile
-	if len(m.UploadIDs) > 0 {
-		if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-			files, err = readUploadsTx(ctx, tx, user, m.UploadIDs)
-			return err
-		}); err != nil {
-			return refused(ctx, res, err), nil
+	if n.Direction == DirectionOutbound {
+		if sent, ok, err := s.sentAsReply(ctx, connection, n.Network, m.MessageID); err != nil || ok {
+			res.Status, res.ActivityID = StatusDuplicate, sent
+			return res, err
 		}
 	}
-	landed, err := s.lander.Land(ctx, user, n, files)
+	files, claimed, err := s.claimUploads(ctx, user, m.UploadIDs)
 	if err != nil {
-		return refused(ctx, res, err), nil //nolint:nilerr // a refused message is its own result; the batch goes on
+		return refused(ctx, res, err), nil
+	}
+	landed, err := s.lander.Land(ctx, user, n, files)
+	if err != nil || (landed.Status != StatusLanded && landed.Status != StatusDuplicate) {
+		if restoreErr := restoreUploads(ctx, s.db, claimed); restoreErr != nil {
+			return res, restoreErr
+		}
+	}
+	if err != nil {
+		return refused(ctx, res, err), nil
 	}
 	res.Status, res.Reason = landed.Status, landed.Reason
 	if landed.Status == StatusLanded || landed.Status == StatusDuplicate {
@@ -142,24 +148,52 @@ func (s *Store) pushOne(ctx context.Context, connection, user ids.UUID, m PushMe
 	if landed.Status != StatusLanded && landed.Status != StatusDuplicate {
 		return res, nil
 	}
-	return res, s.recordLanding(ctx, connection, n, landed.ActivityID, m.UploadIDs)
+	return res, s.recordLanding(ctx, connection, n, landed.ActivityID)
 }
 
-// recordLanding keeps which network and client the landed message came from, and
-// deletes the staged files it carried.
-func (s *Store) recordLanding(ctx context.Context, connection ids.UUID, n NormalizedMessage, activity ids.UUID, uploads []ids.UUID) error {
+// claimUploads takes the files a message names off staging, in a transaction of
+// its own, before the landing opens another.
+func (s *Store) claimUploads(ctx context.Context, user ids.UUID, uploads []ids.UUID) ([]extension.InboundFile, []claimedUpload, error) {
+	if len(uploads) == 0 {
+		return nil, nil, nil
+	}
+	var files []extension.InboundFile
+	var claimed []claimedUpload
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		files, claimed, err = claimUploadsTx(ctx, tx, user, uploads)
+		return err
+	})
+	return files, claimed, err
+}
+
+// sentAsReply finds the reply a client acked as sent under this chat-app id. The
+// same message pushed back as outbound is that reply, not a second activity.
+func (s *Store) sentAsReply(ctx context.Context, connection ids.UUID, network, messageID string) (*ids.UUID, bool, error) {
+	var activity ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT activity_id FROM personal_channel_reply
+			 WHERE connection_id = $1 AND network = $2 AND provider_message_id = $3 AND state = 'sent'
+			 LIMIT 1`, connection, network, messageID).Scan(&activity)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return &activity, true, nil
+}
+
+// recordLanding keeps which network and client the landed message came from.
+func (s *Store) recordLanding(ctx context.Context, connection ids.UUID, n NormalizedMessage, activity ids.UUID) error {
 	kind, id := origin(ctx)
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx, `
+		_, err := tx.Exec(ctx, `
 			INSERT INTO personal_channel_message (activity_id, connection_id, network, origin_kind, origin_id)
 			VALUES ($1, $2, $3, $4, $5) ON CONFLICT (activity_id) DO NOTHING`,
-			activity, connection, n.Network, kind, id); err != nil {
-			return err
-		}
-		if len(uploads) == 0 {
-			return nil
-		}
-		_, err := tx.Exec(ctx, `DELETE FROM personal_channel_upload WHERE connection_id = $1 AND id = ANY($2)`, connection, uploads)
+			activity, connection, n.Network, kind, id)
 		return err
 	})
 }

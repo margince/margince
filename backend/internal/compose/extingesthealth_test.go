@@ -25,19 +25,19 @@ func TestOneUnitsClassesFoldOntoOneEntry(t *testing.T) {
 	late := time.Date(2026, 9, 17, 4, 0, 0, 0, time.UTC)
 
 	var units []crmcontracts.ExtensionUnitIngestHealth
-	units = appendRefusal(units, "openchannel", "participants", 40, late)
-	units = appendRefusal(units, "openchannel", "key", 2, early)
+	units = appendRefusal(units, "crm-relay", "participants", 40, late)
+	units = appendRefusal(units, "crm-relay", "key", 2, early)
 	units = appendRefusal(units, "relaydemo", "activity", 7, early)
 
 	if len(units) != 2 {
 		t.Fatalf("got %d units, want one entry per unit: %+v", len(units), units)
 	}
 	first := units[0]
-	if first.Unit != "openchannel" || first.Refused != 42 {
-		t.Errorf("first entry = %q refused %d, want openchannel refused 42", first.Unit, first.Refused)
+	if first.Unit != "crm-relay" || first.Refused != 42 {
+		t.Errorf("first entry = %q refused %d, want crm-relay refused 42", first.Unit, first.Refused)
 	}
 	if len(first.Refusals) != 2 {
-		t.Fatalf("got %d classes for openchannel, want both", len(first.Refusals))
+		t.Fatalf("got %d classes for crm-relay, want both", len(first.Refusals))
 	}
 	// Largest first is the statement's order and the reason it is worth having:
 	// the class an operator acts on is the one refusing most of the traffic.

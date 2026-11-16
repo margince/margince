@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 280132,
+    "tool_catalog_bytes": 278530,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71438,
+    "approx_wire_tokens_total": 71038,
     "largest_tool_bytes": 17633,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 54713,
-      "input_schema_bytes": 160593,
+      "input_schema_bytes": 158991,
       "output_schema_bytes": 52718,
-      "description_plus_input_schema_bytes": 215306
+      "description_plus_input_schema_bytes": 213704
     }
   },
   "tools": {
@@ -841,11 +841,6 @@
               "description": "add_team_member, assign_legal_entity, change_role, claim_record, deactivate_member, end_assignment, hand_over_work, offer_ownership, reactivate_member, remove_member, remove_team_member, request_ownership, share_contacts, unshare, update_assignment, update_member, update_record_role, update_team, withdraw_ownership_offer, withdraw_ownership_request only",
               "type": "string"
             },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
-              "type": "string"
-            },
             "if_version": {
               "description": "claim_record, unshare only: The version the caller read; the write is refused as skew if the record moved since",
               "type": "integer"
@@ -1291,11 +1286,6 @@
               "description": "accept_applied_change, accept_deal_suggestion, accept_tag_suggestion, acknowledge_company_view, acknowledge_contact_view, acknowledge_failed_approval, answer_teammate, archive_signal, ask_for_help, dismiss_company_suggestion, dismiss_contact_moment, dismiss_deal_move, dismiss_deal_suggestion, dismiss_nudge, dismiss_tag_suggestion, edit_commitment, mark_notice_read, resolve_signal, restore_company_suggestion, restore_contact_moment, restore_deal_move, restore_nudge, set_commitment_state, update_signal, visit_list only",
               "type": "string"
             },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
-              "type": "string"
-            },
             "if_version": {
               "description": "accept_applied_change, update_signal only: The version the caller read; the write is refused as skew if the record moved since",
               "type": "integer"
@@ -1410,11 +1400,6 @@
               "description": "archive_corpus, cancel_import_run, disconnect_channel, lift_counterparty_hold, lift_exclusion, remove_consumer_mail_domain, restore_owner_identity, set_channel_verbosity, undo_import_run, unlink_channel, update_corpus, update_import_run, upload_corpus_document, validate_import_run, withdraw_owner_identity only",
               "type": "string"
             },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
-              "type": "string"
-            },
             "provider": {
               "description": "cancel_backfill, disconnect_mailbox, dismiss_mailbox_silence, set_context_tag, set_history_baseline, set_mail_posture, set_signature_enrichment only",
               "type": "string"
@@ -1491,11 +1476,6 @@
             },
             "id": {
               "description": "assign_notice_case, assign_notice_case_review, confirm_notice_source, lift_lead_suppression, lift_suppression, record_communication_context, record_consent, record_lead_qualifying_event, record_qualifying_event, resolve_confirm_submission, retract_acquisition_request, retract_lead_qualifying_event, retract_qualifying_event, revoke_override, suppress_contact, update_data_subject_request only",
-              "type": "string"
-            },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
               "type": "string"
             },
             "overrideId": {
@@ -1833,11 +1813,6 @@
               "description": "add_voice_source, apply_voice_version, archive_voice_profile, reject_voice_version, rollback_voice_version, update_voice_profile, update_voice_source only",
               "type": "string"
             },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
-              "type": "string"
-            },
             "if_version": {
               "description": "apply_voice_version, archive_voice_profile, reject_voice_version, update_voice_profile, update_voice_source only: The version the caller read; the write is refused as skew if the record moved since",
               "type": "integer"
@@ -1914,11 +1889,6 @@
             },
             "id": {
               "description": "accept_offer, add_deal_line, archive_contract, archive_room, cancel_contract, close_room, pause_room, refresh_offer_from_deal, reject_offer, remove_deal_line, render_offer, renew_contract, resolve_room_thread, revoke_room_participant, send_offer, set_contract_status, set_deal_products, update_contract, update_deal_line, update_room_participant, use_deal_estimate only",
-              "type": "string"
-            },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
               "type": "string"
             },
             "if_version": {
@@ -2283,11 +2253,6 @@
             },
             "id": {
               "description": "apply_employment_import, cancel_intro_request, check_vat, complete_intro_request, decide_intro_request, link_contacts, reassign_handoff, record_introduction, record_promise, replace_intro_request, request_intro, restore_profile_field, save_research, settle_promise, take_over_promise only",
-              "type": "string"
-            },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
               "type": "string"
             },
             "request_body": {
@@ -2720,11 +2685,6 @@
             },
             "id": {
               "description": "archive_automation, archive_exit_criterion, archive_legal_entity, archive_pipeline, archive_saved_view, archive_stage, archive_web_form, create_exit_criterion, delete_disqualify_reason, delete_lead_origin, delete_lead_source, handle_website_inquiries, put_product_translation, remove_legal_entity_logo, rename_custom_field, reorder_stages, restore_pipeline, retire_custom_field, retry_automation_run, update_acquisition_source, update_automation, update_custom_field_options, update_disqualify_reason, update_exit_criterion, update_lead_origin, update_lead_source, update_legal_entity, update_loss_reason, update_partner_stage, update_pipeline, update_review_template, update_saved_view, update_stage, update_web_form, upload_legal_entity_logo, upsert_partner only",
-              "type": "string"
-            },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
               "type": "string"
             },
             "if_version": {
@@ -11587,11 +11547,6 @@
             },
             "id": {
               "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
-              "type": "string"
-            },
-            "idempotency_key": {
-              "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-              "maxLength": 255,
               "type": "string"
             },
             "project_id": {

@@ -20,8 +20,9 @@ import (
 )
 
 // ErrNotTheirChannel refuses a reply from anyone but the member whose chat app
-// carries the thread. It would go out as words that member did not write.
-var ErrNotTheirChannel = fmt.Errorf("only the member whose personal channel brought this chat in can reply here, from their own chat app: %w", comms.ErrCannotSend)
+// carries the thread. It would go out as words that member did not write. It
+// parks at once: no retry makes it someone else's chat app.
+var ErrNotTheirChannel = fmt.Errorf("only the member whose personal channel brought this chat in can reply here, from their own chat app: %w", connector.ErrRecipientUnreachable)
 
 // ReplySender queues a reply for the client of the member who sends it.
 type ReplySender struct {
@@ -80,13 +81,26 @@ func (s ReplySender) threadConnection(ctx context.Context, tx pgx.Tx, activity i
 	case err != nil:
 		return ids.UUID{}, "", err
 	case !enabled:
-		return ids.UUID{}, "", fmt.Errorf("personal channels are off for this member: %w", comms.ErrNoMailbox)
+		return ids.UUID{}, "", fmt.Errorf("personal channels are off for this member: %w", connector.ErrRecipientUnreachable)
 	}
 	group := ""
 	if len(parts) == 4 {
 		group = parts[3]
 	}
 	return connection, group, nil
+}
+
+// SendCapable reports whether member's personal channels are on, so a reply
+// is refused when it is written rather than parked after.
+func SendCapable(ctx context.Context, db *database.DB, member ids.UUID) (bool, error) {
+	var on bool
+	err := db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT enabled FROM personal_channel_connection WHERE user_id = $1`, member).Scan(&on)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return on, err
 }
 
 // Settler marks a reply not delivered on its comms delivery.

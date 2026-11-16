@@ -116,6 +116,9 @@ func TestAContractRouterListsTheContractsActions(t *testing.T) {
 	if strings.Contains(string(verb.InputSchema), idempotencyKeyArg) {
 		t.Error("a route verb advertises the retry key it cannot honour")
 	}
+	if strings.Contains(string(spec.InputSchema), idempotencyKeyArg) {
+		t.Error("a contract router advertises the retry key every one of its route actions refuses")
+	}
 }
 
 func TestAContractActionJoinsAHandWrittenRouter(t *testing.T) {

@@ -4,6 +4,9 @@
 package compose
 
 import (
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -19,3 +22,9 @@ func corePerMemberTransports() []channelProviderFacts {
 
 // corePerMemberProviders names those transports, for the sets built from names.
 func corePerMemberProviders() []string { return []string{personalchannels.Provider} }
+
+// wirePersonalChannels serves /personal-channels over the capture sink the
+// options configured.
+func (s *Server) wirePersonalChannels(pool *pgxpool.Pool) {
+	s.personalChannelHandlers = personalchannelwire.NewHandlers(pool, InstallationDB(pool), newCaptureSink(pool, s.captureConfig))
+}

@@ -184,7 +184,8 @@ func leaseReplies(ctx context.Context, tx pgx.Tx, connection ids.UUID, now time.
 }
 
 // Ack records the client's word on each reply. A failed one is settled as not
-// delivered in the same transaction; the core does not retry it.
+// delivered in the same transaction; the core does not retry it. It runs while
+// the connection is off too: a reply already sent must not be offered again.
 func (s *Store) Ack(ctx context.Context, acks []Ack) ([]AckResult, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return nil, err
@@ -202,7 +203,10 @@ func (s *Store) Ack(ctx context.Context, acks []Ack) ([]AckResult, error) {
 	}
 	out := make([]AckResult, 0, len(acks))
 	err := s.tx(ctx, func(tx pgx.Tx, user ids.UUID) error {
-		conn, err := s.RequireEnabled(ctx, tx, user)
+		conn, err := readConnection(ctx, tx, user)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return ErrOff
+		}
 		if err != nil {
 			return err
 		}
@@ -288,7 +292,8 @@ func expireDue(ctx context.Context, tx pgx.Tx, now time.Time) ([]dueReply, error
 	rows, err := tx.Query(ctx, `
 		WITH due AS MATERIALIZED (
 			SELECT id, state FROM personal_channel_reply
-			 WHERE state IN ('waiting', 'pulled') AND created_at < $3 FOR UPDATE)
+			 WHERE created_at < $3
+			   AND (state = 'waiting' OR (state = 'pulled' AND leased_until <= $1)) FOR UPDATE)
 		UPDATE personal_channel_reply r
 		   SET state = 'expired', body = NULL, recipient_account = NULL, leased_until = NULL,
 		       reason = $2, settled_at = $1, updated_at = $1

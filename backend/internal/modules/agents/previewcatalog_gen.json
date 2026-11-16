@@ -6998,6 +6998,8 @@
      "Outlook Calendar",
     "merge_channel_provider/text/imap":
      "IMAP mailbox",
+    "merge_channel_provider/text/personal_channels":
+     "Personal channels",
     "merge_channel_provider/text/test_mailbox":
      "Test mailbox",
     "merge_channel_provider/lifecycle/gcal":
@@ -7012,6 +7014,8 @@
      "Outlook Calendar",
     "merge_channel_provider/lifecycle/imap":
      "IMAP mailbox",
+    "merge_channel_provider/lifecycle/personal_channels":
+     "Personal channels",
     "merge_channel_provider/lifecycle/test_mailbox":
      "Test mailbox",
     "merge_channel_provider/boolean/true":
@@ -9694,6 +9698,8 @@
      "Outlook Calendar",
     "merge_provider/text/imap":
      "IMAP mailbox",
+    "merge_provider/text/personal_channels":
+     "Personal channels",
     "merge_provider/text/test_mailbox":
      "Test mailbox",
     "merge_provider/lifecycle/gcal":
@@ -9708,6 +9714,8 @@
      "Outlook Calendar",
     "merge_provider/lifecycle/imap":
      "IMAP mailbox",
+    "merge_provider/lifecycle/personal_channels":
+     "Personal channels",
     "merge_provider/lifecycle/test_mailbox":
      "Test mailbox",
     "merge_provider/boolean/true":
@@ -26864,6 +26872,8 @@
      "Outlook-Kalender",
     "merge_channel_provider/text/imap":
      "IMAP-Postfach",
+    "merge_channel_provider/text/personal_channels":
+     "Persönliche Kanäle",
     "merge_channel_provider/text/test_mailbox":
      "Testpostfach",
     "merge_channel_provider/lifecycle/gcal":
@@ -26878,6 +26888,8 @@
      "Outlook-Kalender",
     "merge_channel_provider/lifecycle/imap":
      "IMAP-Postfach",
+    "merge_channel_provider/lifecycle/personal_channels":
+     "Persönliche Kanäle",
     "merge_channel_provider/lifecycle/test_mailbox":
      "Testpostfach",
     "merge_channel_provider/boolean/true":
@@ -29560,6 +29572,8 @@
      "Outlook-Kalender",
     "merge_provider/text/imap":
      "IMAP-Postfach",
+    "merge_provider/text/personal_channels":
+     "Persönliche Kanäle",
     "merge_provider/text/test_mailbox":
      "Testpostfach",
     "merge_provider/lifecycle/gcal":
@@ -29574,6 +29588,8 @@
      "Outlook-Kalender",
     "merge_provider/lifecycle/imap":
      "IMAP-Postfach",
+    "merge_provider/lifecycle/personal_channels":
+     "Persönliche Kanäle",
     "merge_provider/lifecycle/test_mailbox":
      "Testpostfach",
     "merge_provider/boolean/true":
@@ -46730,6 +46746,8 @@
      "Lịch Outlook",
     "merge_channel_provider/text/imap":
      "Hộp thư IMAP",
+    "merge_channel_provider/text/personal_channels":
+     "Kênh cá nhân",
     "merge_channel_provider/text/test_mailbox":
      "Hộp thư kiểm thử",
     "merge_channel_provider/lifecycle/gcal":
@@ -46744,6 +46762,8 @@
      "Lịch Outlook",
     "merge_channel_provider/lifecycle/imap":
      "Hộp thư IMAP",
+    "merge_channel_provider/lifecycle/personal_channels":
+     "Kênh cá nhân",
     "merge_channel_provider/lifecycle/test_mailbox":
      "Hộp thư kiểm thử",
     "merge_channel_provider/boolean/true":
@@ -49426,6 +49446,8 @@
      "Lịch Outlook",
     "merge_provider/text/imap":
      "Hộp thư IMAP",
+    "merge_provider/text/personal_channels":
+     "Kênh cá nhân",
     "merge_provider/text/test_mailbox":
      "Hộp thư kiểm thử",
     "merge_provider/lifecycle/gcal":
@@ -49440,6 +49462,8 @@
      "Lịch Outlook",
     "merge_provider/lifecycle/imap":
      "Hộp thư IMAP",
+    "merge_provider/lifecycle/personal_channels":
+     "Kênh cá nhân",
     "merge_provider/lifecycle/test_mailbox":
      "Hộp thư kiểm thử",
     "merge_provider/boolean/true":

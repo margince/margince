@@ -34,12 +34,24 @@ const SNIPPET_LANGUAGE_NAMES: Record<SnippetLanguage, string> = {
   javascript: "JavaScript",
 };
 
+// The read a new passport is shown making. A passport holding only Personal
+// channels reads no records, so it is shown reading its own connection.
+const RECORDS_EXAMPLE = "/companies?limit=5";
+const CHANNELS_EXAMPLE = "/personal-channels/connection";
+
+export function examplePathFor(scopes: readonly string[]): string {
+  return !scopes.includes("read") && scopes.includes("personal_channels")
+    ? CHANNELS_EXAMPLE
+    : RECORDS_EXAMPLE;
+}
+
 export function passportSnippet(
   language: SnippetLanguage,
   apiBaseUrl: string,
+  path: string = RECORDS_EXAMPLE,
 ): string {
   const base = apiBaseUrl.endsWith("/") ? apiBaseUrl.slice(0, -1) : apiBaseUrl;
-  const url = `${base}/companies?limit=5`;
+  const url = `${base}${path}`;
   switch (language) {
     case "curl":
       return [
@@ -104,16 +116,18 @@ export function SkillDownloadButton() {
 // written since, so two buttons never both read Copied over one clipboard.
 export function PassportSnippet({
   apiBaseUrl,
+  examplePath,
   onCopied,
   holdsClipboard = true,
 }: Readonly<{
   apiBaseUrl: string;
+  examplePath?: string;
   onCopied?: () => void;
   holdsClipboard?: boolean;
 }>) {
   const t = useT();
   const [language, setLanguage] = useState<SnippetLanguage>("curl");
-  const code = passportSnippet(language, apiBaseUrl);
+  const code = passportSnippet(language, apiBaseUrl, examplePath);
   const labels = {
     copy: t("settings.snippetCopy"),
     copied: t("settings.snippetCopied"),
@@ -152,10 +166,12 @@ export function PassportSnippet({
 // dialog. The code row waits for the API address the server states.
 export function PassportUses({
   apiBaseUrl,
+  examplePath,
   onSnippetCopied,
   snippetHoldsClipboard,
 }: Readonly<{
   apiBaseUrl: string | undefined;
+  examplePath?: string;
   onSnippetCopied?: () => void;
   snippetHoldsClipboard?: boolean;
 }>) {
@@ -175,6 +191,7 @@ export function PassportUses({
           control={
             <PassportSnippet
               apiBaseUrl={apiBaseUrl}
+              examplePath={examplePath}
               onCopied={onSnippetCopied}
               holdsClipboard={snippetHoldsClipboard}
             />
@@ -190,7 +207,12 @@ export function PassportUses({
 export function MintedPassport({
   token,
   apiBaseUrl,
-}: Readonly<{ token: string; apiBaseUrl: string | undefined }>) {
+  examplePath,
+}: Readonly<{
+  token: string;
+  apiBaseUrl: string | undefined;
+  examplePath?: string;
+}>) {
   const t = useT();
   const [holder, setHolder] = useState<"token" | "snippet" | null>(null);
   const labels = {
@@ -217,6 +239,7 @@ export function MintedPassport({
       <Eyebrow as="h3">{t("settings.passportNext")}</Eyebrow>
       <PassportUses
         apiBaseUrl={apiBaseUrl}
+        examplePath={examplePath}
         onSnippetCopied={() => setHolder("snippet")}
         snippetHoldsClipboard={holder === "snippet"}
       />

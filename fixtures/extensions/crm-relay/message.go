@@ -6,7 +6,9 @@ package relay
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -18,6 +20,10 @@ const ingressSystem = "crm-relay"
 
 // activityKindEmail is the core timeline kind of a captured email.
 const activityKindEmail = "email"
+
+// tokenKey is the user secret the declaration asks for, which spells it as a
+// literal because the composer reads declarations statically.
+const tokenKey = "token"
 
 // landBatch bounds how many posted messages one tick lands.
 const landBatch = 20
@@ -61,6 +67,9 @@ func postMessage(ctx context.Context, rt extension.Runtime, args json.RawMessage
 	if err := msg.check(); err != nil {
 		return nil, err
 	}
+	if err := consent(ctx, rt, extension.UserID(owner)); err != nil {
+		return nil, err
+	}
 	var queued int64
 	err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		var err error
@@ -72,6 +81,17 @@ func postMessage(ctx context.Context, rt extension.Runtime, args json.RawMessage
 		return nil, err
 	}
 	return json.Marshal(map[string]bool{"queued": queued == 1})
+}
+
+// consent deposits the fixture's token for the member who posts, once. Posting
+// is their own act, and the core lands a unit's record only for a member who
+// deposited a credential with it.
+func consent(ctx context.Context, rt extension.Runtime, owner extension.UserID) error {
+	_, err := rt.Secrets().GetUser(ctx, owner, tokenKey)
+	if !errors.Is(err, extension.ErrSecretNotFound) {
+		return err
+	}
+	return rt.Secrets().PutUser(ctx, owner, tokenKey, []byte("crm-relay-development"))
 }
 
 type postedMessage struct {
@@ -120,7 +140,9 @@ func landOne(ctx context.Context, rt extension.Runtime, p postedMessage) error {
 	}
 	result, err := rt.Ingest(ctx, extension.UserID(p.owner), recordFor(msg, p.postedAt, p.document))
 	if err != nil {
-		return err
+		// Marked handled anyway, so one message the core cannot take does not
+		// hold every later one back.
+		slog.WarnContext(ctx, "crm-relay: a test message did not land", "message_id", msg.MessageID, "err", err)
 	}
 	var activity *string
 	if result.Disposition == extension.DispositionAccepted && result.Ref.ID != "" {

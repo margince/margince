@@ -18,7 +18,7 @@ import (
 // deferred, well inside the server's response deadline.
 const pushBudget = 20 * time.Second
 
-// PushPersonalChannelMessages implements (POST /personal-channels/messages).
+// PushPersonalChannelMessages implements (POST /personal-channels/chats).
 func (h Handlers) PushPersonalChannelMessages(w http.ResponseWriter, r *http.Request, _ crmcontracts.PushPersonalChannelMessagesParams) {
 	var req crmcontracts.PushPersonalChannelMessagesRequest
 	if !httperr.Decode(w, r, &req) {

@@ -41,7 +41,7 @@ const ROWS = [
 function story(canManage: boolean) {
   return () => (
     <StoryProviders>
-      <Panel title="openchannel">
+      <Panel title="crm-relay">
         <PanelGroupHead title="Endpoint" level="h3" id="grants-endpoint" />
         <GrantMatrix
           rowHeader="Role"

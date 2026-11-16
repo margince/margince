@@ -88,41 +88,6 @@ func (s *Store) StageUpload(ctx context.Context, filename string, body io.Reader
 	return up, err
 }
 
-func readUploadsTx(ctx context.Context, tx pgx.Tx, user ids.UUID, uploads []ids.UUID) ([]extension.InboundFile, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT u.id, u.filename, u.content_type, u.content
-		  FROM personal_channel_upload u
-		  JOIN personal_channel_connection c ON c.id = u.connection_id
-		 WHERE c.user_id = $1 AND u.id = ANY($2)`, user, uploads)
-	if err != nil {
-		return nil, err
-	}
-	byID := map[ids.UUID]extension.InboundFile{}
-	for rows.Next() {
-		var id ids.UUID
-		var f extension.InboundFile
-		if err := rows.Scan(&id, &f.Filename, &f.ContentType, &f.Body); err != nil {
-			rows.Close()
-			return nil, err
-		}
-		byID[id] = f
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	out := make([]extension.InboundFile, 0, len(uploads))
-	for i, id := range uploads {
-		f, ok := byID[id]
-		if !ok {
-			return nil, fmt.Errorf("upload %s is not one of yours: %w", id, apperrors.ErrNotFound)
-		}
-		f.Ordinal = i
-		out = append(out, f)
-	}
-	return out, nil
-}
-
 // The most one connection may hold staged at once, so a client in a loop cannot
 // fill the database before the sweep runs.
 const (
@@ -145,7 +110,7 @@ func underStagingLimit(ctx context.Context, tx pgx.Tx, connection ids.UUID, addi
 }
 
 // SweepActor is the system principal the sweep job binds, and the only one
-// SweepUploads admits.
+// Sweep admits.
 const SweepActor = "personal_channel_sweep"
 
 // onlyTheSweep refuses every caller but the sweep job: an open bulk delete would

@@ -17706,7 +17706,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
   "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
   "consent.scopeNote.personal_channels":
-    "gửi đoạn chat và tệp của bạn vào, và lấy câu trả lời của bạn; mỗi mục ghi rõ ai đã gửi vào",
+    "gửi đoạn chat và tệp của bạn vào, và lấy câu trả lời của bạn",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",
   "consent.preset.label": "Quyền của trợ lý",

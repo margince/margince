@@ -205,15 +205,11 @@ func (r *callRuntime) ingressAuthority(ctx context.Context, on extension.UserID)
 // another one" check pass by construction rather than by the unit getting it
 // right.
 //
-// WithProviderAttestedParticipants is deliberately NOT called, which leaves the
-// roster un-attested and keeps the mail rule over it: capture may resolve a
-// party to a contact the installation already holds, and may never bind a
-// colleague's user_id from one. A unit's roster is a remote system's text —
-// openchannel's edge is a signed URL anybody holding the secret may post to — so
-// a roster that bound a seat would let a sender name our own CEO as present and
-// manufacture the interaction edge that then names them the warmest route to the
-// sender's own contact. That is the Cc-line forgery the mail rule refuses, in a
-// second vocabulary.
+// WithProviderAttestedParticipants is not called, so the mail rule holds over
+// the roster. Capture may resolve a party to a contact the installation already
+// holds. It may never bind a colleague's user_id from one. A unit's roster is a
+// remote system's text. Binding a seat from it would let a sender name our CEO
+// as present. That forges the warmest route to the sender's own contact.
 //
 // The absence is written down because the zero value is doing the work: reaching
 // for that setter here means deleting this paragraph first.

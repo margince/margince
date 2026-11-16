@@ -11157,12 +11157,14 @@ export interface paths {
          *     the order sent: `landed` with its activity, `duplicate` when its message_id already
          *     landed, `skipped` when capture did not keep it (an erased contact, for one), `refused`
          *     with a reason the client can act on, or `deferred` when the request ran out of time
-         *     (send those again). One message's refusal does not refuse the rest.
+         *     (send those again, under a new Idempotency-Key). One message's refusal does not refuse
+         *     the rest.
          *
          *     A party carries an `account` and a `name` and never an address. `network` names the
          *     chat it came from (`whatsapp`, `zalo`, …; absent means `generic`). `direction` is
-         *     `outbound` for a message the member sent from their phone. Each landed message shows
-         *     who sent it in. Refused while the caller's personal channels are off.
+         *     `outbound` for a message the member sent from their phone; one a client already acked
+         *     as a sent reply answers `duplicate`. A message names at most 20 staged files, 50 MB
+         *     together. Refused while the caller's personal channels are off.
          */
         post: operations["pushPersonalChannelMessages"];
         delete?: never;

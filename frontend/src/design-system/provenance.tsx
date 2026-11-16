@@ -248,7 +248,7 @@ function humanLabel(
 
 /**
  * The core catalogue cannot know the jobs an extension unit declares. So an
- * extension dispatcher (`agent:ext_openchannel_drain`) is named by its unit
+ * extension dispatcher (`agent:ext_crm_relay_tick`) is named by its unit
  * and job in words. The prefix mirrors the backend's extension.NamespacePrefix,
  * and frontendagentlabels_test.go holds the two together.
  */

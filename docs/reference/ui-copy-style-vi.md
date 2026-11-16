@@ -287,7 +287,6 @@ the reviewer in the sense its row gives.
 | Evidence | bằng chứng | `chứng cứ` |
 | Transcript | bản chép lời | `bản ghi lời` |
 | Enrichment | bổ sung dữ liệu | `làm giàu dữ liệu` |
-| Open channel endpoint | endpoint | `điểm cuối` |
 | Consent (the legal concept) | sự đồng ý (verb: đồng ý) | |
 | Capture of mail and meetings | thu thập; a report snapshot is chụp | |
 | Remove, delete | gỡ, xóa | |

@@ -152,3 +152,5 @@
 1794808137_a_personal_channel_message_names_who_sent_it_in.up.sql | * | the trigger statements change no row; the migration creates one empty table
 1794815563_openchannel_is_retired.up.sql | channel_provider, extension_ingest_position, extension_ingest_refusal, extension_secret, role | touches only the retired openchannel unit's rows: its few secrets, ingest positions and refusals, the fixed system roles, and one channel_provider row
 1794815563_openchannel_is_retired.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794824242_openchannel_leaves_no_queued_jobs.up.sql | * | deletes only queued river_job rows of the retired openchannel unit, a handful at most: its drain ran on a cadence and each run replaced the last
+1794824242_openchannel_leaves_no_queued_jobs.down.sql | * | the down migration is a single SELECT 1 that changes nothing

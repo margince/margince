@@ -16,7 +16,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -103,6 +102,9 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 		opt(&srv, pool)
 	}
 	srv.applySendPath(pool)
+	// After the options, because WithBlobstore decides whether a pushed file
+	// has anywhere to land.
+	srv.wirePersonalChannels(pool)
 	srv.publishCoreFeatures()
 	srv.publishListsAvailability(pool)
 	srv.authHandlers = srv.WithAnalyticsStartup(srv.analyticsStartup)
@@ -204,10 +206,9 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		projectsHandlers: projects.HandlersOver(ProjectsStore(pool)),
 		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
-		dealroomsHandlers:       dealrooms.NewHandlers(InstallationDB(pool)),
-		personalChannelHandlers: personalchannelwire.NewHandlers(pool, InstallationDB(pool), newCaptureSink(pool, boundCaptureConfig())),
-		commissionsHandlers:     commissions.NewHandlers(InstallationDB(pool)),
-		activitiesHandlers:      newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
+		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
+		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
+		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
 		// The ranking lane is the one read a page limit does not bound.
 		// search_tsv is built with the 'simple' configuration and keeps
 		// stopwords, so a high-frequency token matches nearly every row of

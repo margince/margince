@@ -136,14 +136,46 @@ func TestAnUnpulledReplyExpiresAtSevenDays(t *testing.T) {
 	}
 }
 
-func TestPullAndAckAreRefusedWhileOff(t *testing.T) {
+func TestPullIsRefusedWhileOffButAPulledReplyCanStillBeAcked(t *testing.T) {
 	e := setupChannels(t)
 	e.settling()
+	if _, err := e.store.Ack(e.as(e.rep, repGrant), []Ack{{DeliveryID: ids.NewV7(), Outcome: OutcomeSent}}); !errors.Is(err, ErrOff) {
+		t.Fatalf("ack with no connection: %v", err)
+	}
+	e.on(t, e.rep)
+	e.queued(t, e.rep, "d-sent-then-off")
+	pulled, err := e.store.Pull(e.as(e.rep, repGrant), 10)
+	if err != nil || len(pulled.Replies) != 1 {
+		t.Fatalf("pull = %+v, %v", pulled, err)
+	}
+	if _, err := e.store.SetEnabled(e.as(e.rep, repGrant), false); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := e.store.Pull(e.as(e.rep, repGrant), 10); !errors.Is(err, ErrOff) {
 		t.Fatalf("pull while off: %v", err)
 	}
-	if _, err := e.store.Ack(e.as(e.rep, repGrant), []Ack{{DeliveryID: ids.NewV7(), Outcome: OutcomeSent}}); !errors.Is(err, ErrOff) {
-		t.Fatalf("ack while off: %v", err)
+	res, err := e.store.Ack(e.as(e.rep, repGrant), []Ack{{DeliveryID: pulled.Replies[0].DeliveryID, Outcome: OutcomeSent}})
+	if err != nil || res[0].Result != AckRecorded {
+		t.Fatalf("ack after turning off = %+v, %v; want it recorded so the reply is not offered again", res, err)
+	}
+}
+
+func TestAReplyBeingSentIsNotExpiredUnderItsLease(t *testing.T) {
+	e := setupChannels(t)
+	settled := e.settling()
+	e.on(t, e.rep)
+	e.queued(t, e.rep, "d-leased")
+	e.exec(t, `UPDATE personal_channel_reply SET created_at = $1`, e.now.Add(-replyLifetime+time.Minute))
+	if _, err := e.store.Pull(e.as(e.rep, repGrant), 10); err != nil {
+		t.Fatal(err)
+	}
+	e.now = e.now.Add(2 * time.Minute)
+	if n, err := expire(e.system(), e, settled); err != nil || n != 0 {
+		t.Fatalf("expired %d, %v while the client holds the lease", n, err)
+	}
+	e.now = e.now.Add(replyLease)
+	if n, err := expire(e.system(), e, settled); err != nil || n != 1 {
+		t.Fatalf("expired %d, %v once the lease lapsed", n, err)
 	}
 }
 

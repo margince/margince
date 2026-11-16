@@ -48,10 +48,11 @@ func setupPersonalChannels(t *testing.T) channelEnv {
 	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'rep'
 		ON CONFLICT DO NOTHING`, e.Rep1)
 	db := compose.InstallationDB(e.Pool)
+	sink := compose.NewCaptureSink(e.Pool, compose.CaptureConfig{Blob: blobstore.NewMemory()})
 	passport := e.SeedPassportFor(t, integration.OwnerConn(t), "Chat Bridge", e.Rep1)
 	ce := channelEnv{
 		Env:      e,
-		store:    personalchannelwire.NewStore(e.Pool, db, compose.NewCaptureSink(e.Pool, compose.CaptureConfig{Blob: blobstore.NewMemory()})),
+		store:    personalchannelwire.NewStore(e.Pool, db, sink),
 		passport: passport,
 		member:   e.AgentOnPassport(t, e.Rep1, nil, channelRepPerms, ids.From[ids.PassportKind](passport)),
 		now:      clocktest.Now(t),
