@@ -22,7 +22,8 @@ To connect your AI tool to Margince, open **Settings → AI assistants** and ans
 4. For a chat app, under **Whose plan is it?**, choose **My company’s** or **My own**. If the card says "First, your admin.", choose **Download guide for your admin** and send them the file. It holds their steps and your Margince address.
 5. To paste the address, a command or text for a file, choose **Copy address** or **Copy**.
 6. Follow the numbered steps the card shows for that one case.
-7. When Margince opens, sign in. **Authorize access** ticks all five permissions; **Send messages** allows sending, but the client must get your approval or a direct instruction first. Clear any permissions the tool should not get, then choose **Authorize**.
+7. When Margince opens, sign in. **Authorize access** ticks all five permissions. **Send messages** allows sending, but the client must get your approval or a request to send first. Clear any permissions the tool should not get, then choose **Authorize**.
+
 To refuse, choose **Deny access**.
 Authorizing creates the connection, listed under **Your connections**, so you need no passport.
 Also called: connect Claude, let Claude access my CRM, connect ChatGPT, Copilot, Gemini, AI assistant, connector, MCP.
@@ -131,12 +132,12 @@ The agent still needs your permissions and access to the record.
 **confirm-first.** The proposed action is saved as an approval and waits for a human decision.
 
 ### When can an agent send?
-A message needs human approval before it goes out. A direct instruction such as
+A message needs human approval before it goes out. A request such as
 “send this email to Anna” counts as approval. Your connected assistant can carry it out
 without asking you to click Send again in Margince. It must ask first if you did not
-instruct it to send. A passport's send permission alone is not approval of a message.
+ask it to send. A passport's send permission alone is not approval of a message.
 
-Margince's unattended agent runs stage sends for approval and pause. After approval,
+When Margince runs on its own, it stages sends for approval and pauses. After approval,
 only that staged call is released; another send needs its own approval. Routine updates
 continue to run automatically. Sending limits and access checks still apply.
 
@@ -162,7 +163,7 @@ relinking it away does not remove that. A member can take the filing back with
 **Undo filing**; an agent cannot. See
 [Capture](capture.md#filing-under-a-project-starts-a-retention-clock).
 
-The **Autonomy tiers** card states the same rule. Find it in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. Routine updates run automatically. Connected clients must get approval or a direct instruction before sending. Unattended sends and enrichment from the web wait in **Approvals**.
+The **Autonomy tiers** card states the same rule. Find it in **Settings → AI assistants**, on the **Agent rules** tab under **For developers**. Routine updates run automatically. Connected clients must get your approval or request to send. Sends from runs working alone and enrichment from the web wait in **Approvals**.
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
@@ -209,7 +210,7 @@ in these cases:
 
 So an agent may answer a card staged for the colleague it acts for, its own
 proposal included, within the rules above. That is what the colleague could
-have answered in the app, and could put back later. An unattended agent
+have answered in the app, and could put back later. An agent working alone
 cannot approve a card, because nobody is there to have said yes. It can still reject a proposal.
 
 **Raising its own allowance.** An agent can never answer a request to raise its
@@ -245,9 +246,9 @@ record visibility, the same limit the colleague behind it has.
 
 ## What protects a send
 
-A direct instruction authorizes a send without a second click in Margince. Connected
-clients must ask before an unrequested send; the server cannot inspect their conversation.
-Unattended runs stage sends for a human decision. These four further checks still apply.
+Your request to send authorizes it without a second click in Margince. Connected
+clients must ask before sending without your request; the server cannot read their conversation.
+Runs working alone stage sends for a human decision. These four further checks still apply.
 
 **Consent, refused by default, per purpose.** A send is refused unless an
 active consent, with its evidence, exists for the *purpose* that send falls under. Consent

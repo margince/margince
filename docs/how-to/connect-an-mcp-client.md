@@ -81,10 +81,10 @@ by `DELETE /passports/{id}` from your signed-in session. That route refuses a pa
 `/oauth/revoke` answers `200` for such a passport and leaves it working, as RFC 7009 allows for a token it does not
 own.
 
-**What a passport can do.** Routine, reversible updates run at once. A passport carries your seat,
+**What a passport can do.** Updates you can undo run at once. A passport carries your seat,
 grants and row scope, so it reaches only what you could reach in the app. A direct instruction to send
-counts as approval; the client must ask before an unrequested send. Standing send permission alone
-is not approval, and the server cannot inspect the client's conversation. Unattended Margince runs
+counts as approval; the client must ask before sending without your request. Standing send permission alone
+is not approval, and the server cannot read the client's conversation. Margince runs with no human present
 stage sends for a human decision, even on your passport.
 
 Your own limits still apply. They are RBAC, row scope, the seat limit, and the end date of the

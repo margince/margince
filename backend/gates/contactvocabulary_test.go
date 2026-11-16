@@ -305,6 +305,7 @@ var retired = gatekit.Waive(map[string]string{
 		"record-noun.test.ts holds, which it cannot do without the German word for a human being",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
+	"backend/gates/uiautonomyclaims_test.go":  "this gate quotes the retired slogan to forbid it",
 
 	// Surfe serves POST /v2/people/enrich and reads its subjects from a
 	// `people` array. That is the VENDOR's noun for its own API, and this

@@ -59,7 +59,7 @@ func TestAScheduledRunDoesNotReleaseTheChangeItsCredentialProposed(t *testing.T)
 
 	_, trace, _ := re.runRow(t, trigger)
 	if len(trace) == 0 || trace[0].Tool != "decide_approvals" || trace[0].Admission != runner.AdmissionRefused ||
-		!strings.Contains(trace[0].Observation, "proposed the action") {
+		!strings.Contains(trace[0].Observation, "cannot supply a human approval") {
 		t.Fatalf("the run never had its own release refused: trace = %+v", trace)
 	}
 	var status string

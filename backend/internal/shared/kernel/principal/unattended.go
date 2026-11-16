@@ -7,7 +7,7 @@ import "context"
 
 type unattendedKey struct{}
 
-// WithUnattended marks work with no person present to authorise its sends.
+// WithUnattended marks work with no human present to authorise its sends.
 func WithUnattended(ctx context.Context) context.Context {
 	return context.WithValue(ctx, unattendedKey{}, true)
 }

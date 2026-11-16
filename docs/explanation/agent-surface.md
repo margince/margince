@@ -113,8 +113,9 @@ their tool `ask_user_first`. Who acts on that mark depends on the surface.
   to many records goes ahead as it does for a client that cannot show one.
 
 Three things bound a run instead. Its passport holds its scopes, the work it may touch, and its user's
-grants and seat. Its catalog entry names its tools, and the tier decides the rest. The runner marks both fresh and resumed work as unattended. `auth.TierFor` makes
+grants and seat. Its catalog entry names its tools, and the tier decides the rest. The runner marks both fresh and resumed work as having nobody there. `auth.TierFor` makes
 every tool with the `send` scope wait for approval, even on the user's passport.
+
 A human decision releases only the staged call. Routine writes still run at once.
 A tool marked `WaitsEvenForItsUser`, such as `enrich`, also stages and pauses the run.
 
