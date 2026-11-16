@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { DealCard } from "../../design-system/dealcard";
 import type { BoardDeal } from "../../design-system/pipelineboard";
+import { browserZone } from "../../format/timezone";
 import {
   installFetchStub,
   meRoute,
@@ -80,7 +81,7 @@ function MenuOnCard({ deal }: Readonly<{ deal: Deal }>) {
         <DealCard
           deal={card}
           href="#/deals/d-1"
-          zone="Europe/Berlin"
+          zone={browserZone()}
           actions={{
             ...verbs,
             menu: (
