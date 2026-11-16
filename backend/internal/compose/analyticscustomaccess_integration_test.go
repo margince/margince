@@ -181,6 +181,11 @@ func TestAnUnreadablePopulationNarrowsTheSchemaWithoutHidingTheTool(t *testing.T
 	if len(schema.Entities) == 0 {
 		t.Fatal("a role reading deals was handed no population")
 	}
+	for key := range schema.Entities {
+		if entity := prebuiltReports[key].entity; entity != "deal" {
+			t.Errorf("a role reading only deals was handed %s, a %s population", key, entity)
+		}
+	}
 	anyOf := ""
 	for _, check := range recorded().Checks {
 		if strings.Contains(check, ",") {
@@ -191,8 +196,10 @@ func TestAnUnreadablePopulationNarrowsTheSchemaWithoutHidingTheTool(t *testing.T
 			t.Errorf("deriving the schema recorded %s alone, which would hide the tool from a role without it", check)
 		}
 	}
-	if !strings.Contains(anyOf, "deal.read") || !strings.Contains(anyOf, "activity.read") {
-		t.Errorf("the recorded population check is %q, want one any-of over every population", anyOf)
+	for _, check := range analyticsPopulationChecks(prebuiltReports) {
+		if !strings.Contains(anyOf, check.String()) {
+			t.Errorf("the recorded population check %q leaves out %s", anyOf, check)
+		}
 	}
 
 	none, recordedNone := auth.RecordChecksForTest(seatWith())
