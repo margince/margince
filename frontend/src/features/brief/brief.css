@@ -373,7 +373,7 @@
   gap: var(--space-2);
 }
 
-/* ── Your day, in the rail ─────────────────────────────────────────────────
+/* ── External meetings, in the rail ─────────────────────────────────────────────────
  * One card: each row is a time and what fills it, the title over its caption.
  * The card owns the time column and every row takes it as a subgrid, so a date
  * in one row and an hour in the next start their titles on one edge.
@@ -409,17 +409,6 @@
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
-/* Now is marked by a filled disc ahead of the word. */
-.rail-schedule-now .rail-schedule-title::before {
-  content: "";
-  display: inline-block;
-  inline-size: var(--space-2);
-  block-size: var(--space-2);
-  margin-inline-end: var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accent);
-}
 /* How soon it starts, and the prep badge beside it. */
 .rail-schedule-meta {
   display: flex;
@@ -427,14 +416,17 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* The attendees take the full width and wrap as a sentence. */
+/* Who the meeting is with: the record chips wrap onto as many lines as they need. */
 .rail-schedule-attendees {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
   min-width: 0;
 }
-
 /* The next meeting is set apart by an outline on the card's own ground.
    The plate keeps the row's inset, so its time and title stay on the columns
-   above and below. */
+   above and below. Its height is its content's, so a longer row grows it. */
 .rail-schedule-next {
   /* Half the card's inset outside the outline and half inside, at any width. */
   margin: var(--space-1) calc(var(--padPanel) / 2);
