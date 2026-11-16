@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -142,8 +141,7 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 	if err != nil {
 		return notesReader{}, false, fmt.Errorf("capture: reading the calendar a notes connection pairs with: %w", err)
 	}
-	account := strings.ToLower(bareAddress(*label))
-	if calendarLabel == nil || account == "" || account != strings.ToLower(bareAddress(*calendarLabel)) {
+	if MeetingNotesConcern(provider, scopes, label, calendarLabel) != "" {
 		return notesReader{}, false, nil
 	}
 	// The organizer must be on a domain the company vouched for. The seat's own

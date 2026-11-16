@@ -132,6 +132,7 @@ func passportSummary(p PassportRow) crmcontracts.PassportSummary {
 		CreatedAt:  p.CreatedAt,
 		ExpiresAt:  &p.ExpiresAt,
 		RevokedAt:  p.RevokedAt,
+		AppBound:   &p.AppBound,
 		LastUsedAt: p.LastUsedAt,
 	}
 	// A passport may carry no label at all (the column is nullable); the wire
@@ -160,6 +161,29 @@ func (h Handlers) RevokePassport(w http.ResponseWriter, r *http.Request, id crmc
 		return
 	}
 	if err := h.svc.RevokePassport(r.Context(), identity, ids.From[ids.PassportKind](ids.UUID(id))); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// ReleasePassportAppBinding implements (DELETE /passports/{id}/app-binding).
+func (h Handlers) ReleasePassportAppBinding(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	identity, ok := identityFrom(r.Context())
+	if !ok {
+		httperr.Unauthorized(w, r, "an app binding is released by a signed-in human")
+		return
+	}
+	err := h.svc.ReleaseAppBinding(r.Context(), identity, ids.From[ids.PassportKind](ids.UUID(id)))
+	if errors.Is(err, ErrAppBindingLive) {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict,
+			Code:   "passport_still_live",
+			Detail: "This passport is still live. Revoke it first.",
+		})
+		return
+	}
+	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}

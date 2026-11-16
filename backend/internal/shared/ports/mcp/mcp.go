@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Tool is a single governed MCP tool, exposed identically to every
@@ -254,6 +255,23 @@ const ConflictingSourcesRule = "When two sources disagree, say that they disagre
 	"it in that same sentence (\"the note dates it to March\"), including in a translation, and " +
 	"never restate it as something that happened. Leaving the prose's claim out does not " +
 	"settle the disagreement: still say that the two disagree."
+
+// OwnershipRule is how a model reports a record someone else holds. It is a
+// conversation rule, so the instructions and the runner frame state it once.
+const OwnershipRule = "When a record's `owner.is_you` is false, say whose it is when you report it " +
+	"(or that its owner could not be named, when `owner.name` is absent), and treat contacting " +
+	"it as theirs to decide rather than advising an approach as though the record were unowned. " +
+	"When the user tells you to act on it, act, and say whose it is."
+
+// LocalTimeRule is how a model sets a time the user named. Some writes offer
+// a local pick (`due_intent`) beside the instant, and some only the instant.
+// A model told of the pick went looking for one on a write that lacks it.
+const LocalTimeRule = "Where a write lists a field ending in _intent, such as due_intent, send a time the user " +
+	"named in local terms there: wall_clock as YYYY-MM-DDTHH:MM in the user's own IANA timezone (whoami says it), " +
+	"and the server sets the matching _at field and whether it has a time of day. A deadline with no time of day " +
+	"is that date at T" + values.DayOnlyClock + ", seconds included; any other clock, T23:59 too, sets a time of day. " +
+	"A write that lists only the _at field takes an exact instant: " +
+	"convert the user's local time with that timezone yourself, and never look for an _intent field it does not list."
 
 // RiskTier is the autonomy class (A34/ADR-0026). AutoExecute and ConfirmationRequired are
 // static — the declared value is the tool's whole tier. Dynamic means the

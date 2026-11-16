@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import {
+  HOME_DAY_STALE_RETRY_MS,
   homeDayWait,
   readWorklistPage,
   untilNextDue,
@@ -48,6 +49,33 @@ describe("the Home day's refresh", () => {
     expect(homeDayWait([page(["2026-10-31T11:00:00Z"])], now)).toBe(5 * 60_000);
     expect(homeDayWait([page(["2026-10-31T08:00:00Z"])], now)).toBe(5 * 60_000);
     expect(homeDayWait([], now)).toBe(5 * 60_000);
+  });
+
+  it("asks again shortly after the server served a kept answer past its freshness", () => {
+    const stale = {
+      ...page(["2026-10-31T11:00:00Z"]),
+      as_of: "2026-10-31T08:50:00Z",
+      served_stale: true,
+    };
+    expect(homeDayWait([stale], now)).toBe(HOME_DAY_STALE_RETRY_MS);
+    expect(homeDayWait([{ ...stale, served_stale: false }], now)).toBe(
+      5 * 60_000,
+    );
+  });
+
+  it("stops asking soon once the same stale answer came back three times", () => {
+    const stale = {
+      ...page(["2026-10-31T11:00:00Z"]),
+      as_of: "2026-10-31T08:40:00Z",
+      served_stale: true,
+    };
+    const waits = [1, 2, 3, 4].map(() => homeDayWait([stale], now));
+    expect(waits).toEqual([
+      HOME_DAY_STALE_RETRY_MS,
+      HOME_DAY_STALE_RETRY_MS,
+      HOME_DAY_STALE_RETRY_MS,
+      5 * 60_000,
+    ]);
   });
 
   it("replaces the minute poll on the reader's own day only", () => {

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../../../api/schema";
 import { StoryProviders } from "../../../testing/story-utils";
+import type { IntroRequest } from "../introrequests";
 import "../contactnetwork.css";
 import { MomentsPanel } from "./moments";
 
@@ -31,10 +32,29 @@ const moved: Moments = {
   ],
 };
 
-function card(view: Moments) {
+// A declined ask from between the two changes, so it sits between them.
+const declined: IntroRequest = {
+  id: "018f3a1b-0000-7000-8000-0000000000a2",
+  contact_id: "018f3a1b-0000-7000-8000-000000000010",
+  origin: "asked",
+  requester_user_id: "018f3a1b-0000-7000-8000-000000000031",
+  introducer_user_id: "018f3a1b-0000-7000-8000-000000000032",
+  route_type: "direct",
+  internal_reason: "he owns the account we are being routed through",
+  status: "declined",
+  name_drop_allowed: false,
+  fallback_policy: "none",
+  note_generated_by: "human",
+  note_ai_generated: false,
+  requested_at: "2026-08-24T09:00:00Z",
+  decided_at: "2026-08-29T09:00:00Z",
+  version: 1,
+};
+
+function card(view: Moments, asks: IntroRequest[] = []) {
   return () => (
     <StoryProviders>
-      <MomentsPanel view={view} />
+      <MomentsPanel view={view} asks={asks} />
     </StoryProviders>
   );
 }
@@ -50,6 +70,12 @@ type Story = StoryObj<typeof MomentsPanel>;
 
 /** Something moved, and the newest change is the strip's reason to act. */
 export const Moved: Story = { render: card(moved) };
+
+/** An earlier ask, placed by date between the two changes. */
+export const WithEarlierAsk: Story = {
+  name: "With an earlier ask",
+  render: card(moved, [declined]),
+};
 
 /** Nothing has moved — a fact the page HAS, so it is stated as one. */
 export const Nothing: Story = {
@@ -74,5 +100,5 @@ export const Withheld: Story = {
 export const MovedDark: Story = {
   name: "Moved — dark",
   globals: { theme: "dark" },
-  render: card(moved),
+  render: card(moved, [declined]),
 };

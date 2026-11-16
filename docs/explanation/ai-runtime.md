@@ -278,18 +278,15 @@ The routing config may bind one `decisions:` lane beside `embeddings:`, with the
 `Router.Decide` asks the lane first, inside the same call and rail entry. It falls back to the task's own
 ladder and prompt unless every check passes, in this order:
 
-1. **Local only stays local.** Nothing checks this today. `localOnlyAdmits`
-   (`internal/modules/ai/localonly.go`) admits every call. It is the predicate that this lane and the
-   ladder's `servableLadder` both read. See <https://github.com/margince/margince/issues/3351>.
-2. **The answer stands.** The state has its secrets stripped and is capped at 48,000 bytes. The call
+1. **The answer stands.** The state has its secrets stripped and is capped at 48,000 bytes. The call
    has the task's [decision timeout](../reference/ai-request-settings.md). The answer must clear the **site's own**
    floor (the floor of its LLM path).
 
-No certification row is needed, only the two checks above.
+No certification row is needed, only the answer checks above.
 
 [Certifying a site](../how-to/certify-a-decision-site.md) is advice: a measured record that an operator
 trusts it by, never something `Router.Decide` reads. A fallback leaves its reason on the ladder's first
-attempt: `decision_local_only`, `decision_state_too_large`, `decision_error`, `decision_off_enum` or
+attempt: `decision_state_too_large`, `decision_error`, `decision_off_enum` or
 `decision_below_floor`.
 
 A decision attempt is its own `ai_call` row (`kind = decision`, tier `decide`), priced on the `decisions`

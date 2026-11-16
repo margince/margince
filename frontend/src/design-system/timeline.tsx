@@ -1,6 +1,6 @@
 import { Lock } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useLocale, useT } from "../i18n";
 import { Button } from "./atoms";
 import { EmailEntry } from "./emailentry";
@@ -10,6 +10,7 @@ import { ProvenanceTag } from "./trust";
 import { VisibilityBadge } from "./visibility";
 import "./composed.css";
 
+import { ChatEpisodeLine, ChatSummaryFlag } from "./timelinechat";
 import {
   AiAssistedFlag,
   AutomaticFlag,
@@ -75,6 +76,7 @@ export function GroupedTimelineList({
   // a caller that cannot complete it: a bulk group has no thread to ask for.
   onOpenThread?: (threadKey: string) => void;
 }>) {
+  const anchorPrefix = useId();
   const { locale } = useLocale();
   const repeats = dayRepeats(
     groups.map((group) => group.entries[0]),
@@ -101,6 +103,7 @@ export function GroupedTimelineList({
             zone={zone}
             repeatsDay={repeats[index]}
             onOpenThread={onOpenThread}
+            anchorPrefix={anchorPrefix}
           />
         ) : (
           <BulkGroupRow
@@ -387,6 +390,7 @@ export function TimelineRow({
           )}
           <AutomaticFlag entry={entry} />
           <AiAssistedFlag entry={entry} />
+          <ChatSummaryFlag entry={entry} />
           <CopiesFlag entry={entry} />
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
@@ -418,6 +422,7 @@ export function TimelineRow({
             server has not caught up should not lose the fold. */}
         <TimelineRowText entry={entry} />
         {entry.detail}
+        <ChatEpisodeLine entry={entry} />
         <span className="tl-meta">
           <ProvenanceTag provenance={entry.provenance} />
         </span>

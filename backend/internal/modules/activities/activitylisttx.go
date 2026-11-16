@@ -26,7 +26,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if in.mailIdentities, err = listMailSeatIdentities(ctx, tx, in); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if in.WithOutsideParty {
+	if in.WithOutsideParty || in.AwaitingOutcomeAsOf != nil {
 		in.outsideParty = outsidePartyClause(ctx, tx)
 	}
 	limit := storekit.ClampLimit(in.Limit)
@@ -41,11 +41,6 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	}
 	// Collected rather than streamed: AttachLinks runs a second query on
 	// this same transaction, which needs the cursor already closed.
-	type pagedRow struct {
-		activity crmcontracts.Activity
-		key      *string
-		copies   SeatCopies
-	}
 	paged, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (pagedRow, error) {
 		var copies SeatCopies
 		activity, key, err := scanActivityPage(ctx, row, sorted, query.copyDest(&copies)...)
@@ -55,33 +50,24 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	activities := make([]crmcontracts.Activity, 0, len(paged))
-	for _, row := range paged {
-		activities = append(activities, row.activity)
+	activities, page, err := pageListedRows(in, sorted, paged, limit)
+	if err != nil {
+		return nil, storekit.Page{}, err
 	}
-	if in.positions != nil && in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
-		for i := range min(len(paged), limit) {
-			after, err := sorted.EncodePageCursor(paged[i].key, paged[i].activity.CreatedAt, ids.UUID(paged[i].activity.Id))
-			if err != nil {
-				return nil, storekit.Page{}, err
-			}
-			*in.positions = append(*in.positions, after)
+	switch {
+	case in.FactsOnly:
+		err = WithEmailRowFacts(ctx, tx, activities, listClock(in))
+	case in.LinkedFactsOnly:
+		if err = WithEmailRowFacts(ctx, tx, activities, listClock(in)); err == nil {
+			err = AttachLinks(ctx, tx, activities)
 		}
+	default:
+		err = FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in))
 	}
-	var page storekit.Page
-	if len(activities) > limit {
-		activities = activities[:limit]
-		if in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
-			last := activities[limit-1]
-			next, err := sorted.EncodePageCursor(paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
-			if err != nil {
-				return nil, storekit.Page{}, err
-			}
-			page = storekit.Page{HasMore: true, NextCursor: next}
-		}
-		// Request priority has no resumable cursor; its count still includes later rows.
+	if err == nil && in.foldsInvitations() {
+		err = WithInvitationSummaries(ctx, tx, activities)
 	}
-	if err := FinishActivityRows(ctx, tx, in.Columns, activities, listClock(in)); err != nil {
+	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 	copies := make([]SeatCopies, len(activities))
@@ -98,6 +84,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 // ScanActivityRow with the rest a row off /activities carries. That is mail
 // facts, links, creators, affordances and custom-field values. A reader outside
 // this module that scans rows itself calls it, so its rows answer the same.
+// A FactsOnly list stops after the first step, the mail facts.
 func FinishActivityRows(ctx context.Context, tx pgx.Tx, columns CustomColumns, activities []crmcontracts.Activity, asOf time.Time) error {
 	if err := WithEmailRowFacts(ctx, tx, activities, asOf); err != nil {
 		return err
@@ -157,4 +144,43 @@ func orWallClock(at *time.Time) time.Time {
 		return *at
 	}
 	return time.Now()
+}
+
+// pagedRow is one scanned row with its sort key and the copies folded into it.
+type pagedRow struct {
+	activity crmcontracts.Activity
+	key      *string
+	copies   SeatCopies
+}
+
+// pageListedRows cuts the scanned rows to the page and encodes where the next
+// page starts, and each row's position when the caller asked for them.
+func pageListedRows(in ListActivitiesInput, sorted *storekit.ListSort, paged []pagedRow, limit int) ([]crmcontracts.Activity, storekit.Page, error) {
+	activities := make([]crmcontracts.Activity, 0, len(paged))
+	for _, row := range paged {
+		activities = append(activities, row.activity)
+	}
+	if in.positions != nil && in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
+		for i := range min(len(paged), limit) {
+			after, err := sorted.EncodePageCursor(paged[i].key, paged[i].activity.CreatedAt, ids.UUID(paged[i].activity.Id))
+			if err != nil {
+				return nil, storekit.Page{}, err
+			}
+			*in.positions = append(*in.positions, after)
+		}
+	}
+	var page storekit.Page
+	if len(activities) > limit {
+		activities = activities[:limit]
+		if in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
+			last := activities[limit-1]
+			next, err := sorted.EncodePageCursor(paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
+			if err != nil {
+				return nil, storekit.Page{}, err
+			}
+			page = storekit.Page{HasMore: true, NextCursor: next}
+		}
+		// Request priority has no resumable cursor; its count still includes later rows.
+	}
+	return activities, page, nil
 }

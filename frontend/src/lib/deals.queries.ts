@@ -14,8 +14,9 @@ import {
   rangeQueryParams,
   WIN_PROBABILITY_DIAL,
 } from "./dealranges";
+import { useHealthScope } from "./healthscope";
 import { translatedPipeline } from "./labeltranslation";
-import { defaultPipelineOf } from "./pipelines.queries";
+import { defaultPipelineOf, pipelinesOptions } from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
@@ -32,22 +33,16 @@ import { bandOfDial } from "./winprobabilitybands";
 export function usePipeline(pipelineId?: string | null) {
   const { locale } = useLocale();
   return useQuery({
-    select: (pipeline) => translatedPipeline(pipeline, locale),
-    queryKey: ["pipelines", pipelineId ?? "default"],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
+    ...pipelinesOptions,
+    select: (pipelines) => {
       const pipeline =
         (pipelineId &&
-          data.data.find((candidate) => candidate.id === pipelineId)) ||
-        defaultPipelineOf(data.data);
+          pipelines.find((candidate) => candidate.id === pipelineId)) ||
+        defaultPipelineOf(pipelines);
       if (!pipeline) {
         throw new Error("no pipeline");
       }
-      return pipeline;
+      return translatedPipeline(pipeline, locale);
     },
   });
 }
@@ -145,11 +140,13 @@ export function nextCursorOf(page: DealListPage): string | undefined {
  */
 export function useDeals(f: DealFilters, enabled = true, limit = 100) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
+  // The rows one reader scope may see; nothing is read before /me names it.
+  const readerScope = useHealthScope();
   return useInfiniteQuery({
-    enabled,
+    enabled: enabled && readerScope !== undefined,
     // The days, not the dial's word: a list opened after the quarter turns
     // never reuses the old quarter's cached page. Today is read at mount.
-    queryKey: ["deals", f, closeDay, limit],
+    queryKey: ["deals", readerScope ?? "", f, closeDay, limit],
     // `as` steers useInfiniteQuery's TPageParam generic to the cursor type: a
     // bare `undefined` infers TPageParam=undefined and the string cursor no
     // longer type-checks.
@@ -231,17 +228,32 @@ export function totalsRefusedBecause(
 // Reports exclude archived deals, so that broader board population withholds
 // its totals through the same rule as every other unsupported filter.
 export function useStageTotals(f: DealFilters, enabled = true) {
+  // The reader's grants decide what the report counts, so a changed grant must
+  // never reuse totals counted under the old one.
+  const scope = useHealthScope();
+  const reportFilters = dealsByStageReportFilters(f);
+  const withheld = totalsWithheldBecause(f);
   return useQuery({
     // Under ["deals"], so the one invalidation every deal mutation fires
     // refreshes the column headers along with the cards. Keyed apart, a moved
     // card would sit under a header still counting it in the stage it left.
-    queryKey: ["deals", "by-stage-totals", f],
+    // Keyed by the request body, not the whole filter set. A table sort then
+    // reuses the board's fresh totals on return, since sort never reaches it.
+    // A withheld key is never read, so it never holds a total.
+    queryKey: [
+      "deals",
+      "by-stage-totals",
+      scope,
+      reportFilters,
+      withheld ?? null,
+    ],
     // Asked only when the report would count the deals the board is drawing.
     // totalsWithheldBecause owns that decision and the words for it both, so
     // the column cannot explain a missing total by the wrong rule.
-    enabled: enabled && totalsWithheldBecause(f) === undefined,
-    queryFn: async (): Promise<Map<string, StageTotals> | null> => {
+    enabled: enabled && scope !== undefined && withheld === undefined,
+    queryFn: async ({ signal }): Promise<Map<string, StageTotals> | null> => {
       const { data, error, response } = await api.POST("/reports/{report}", {
+        signal,
         params: { path: { report: "deals-by-stage" } },
         body: {
           group_by: ["stage_id"],
@@ -255,7 +267,7 @@ export function useStageTotals(f: DealFilters, enabled = true) {
             },
             { fn: "count", field: "amount_base_minor", as: "priced_deals" },
           ],
-          filters: dealsByStageReportFilters(f),
+          filters: reportFilters,
         },
       });
       if (error) {

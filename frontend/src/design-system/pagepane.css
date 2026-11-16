@@ -29,6 +29,11 @@
      picture until the pointer is on the pane. */
   scrollbar-color: transparent transparent;
 }
+/* The pane scrolls instead of its children shrinking. A clipping panel in a
+   flex column has a minimum height of zero, so the cap above cut its rows. */
+.page-pane-sticky > * {
+  flex-shrink: 0;
+}
 /* Under :where() so the shell's accent still lights the bar itself
    (app.css). */
 .page-pane-sticky:where(:hover) {

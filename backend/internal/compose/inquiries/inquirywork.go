@@ -5,6 +5,8 @@ package inquiries
 
 import (
 	"context"
+	"maps"
+	"slices"
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -30,8 +32,21 @@ func NewWork(db *database.DB, routing Routing) *Work {
 }
 
 // ForTasks gives the inquiry facts of each task filed from a website
-// submission. Other tasks have no entry.
+// submission. Other tasks have no entry. Any number of tasks is read, in
+// batches of what one assignment read answers.
 func (w *Work) ForTasks(ctx context.Context, tasks []crmcontracts.Activity) (map[ids.UUID]*crmcontracts.WebsiteInquiryWork, error) {
+	out := map[ids.UUID]*crmcontracts.WebsiteInquiryWork{}
+	for batch := range slices.Chunk(tasks, automation.MaxInquiryAssignments) {
+		facts, err := w.forTaskBatch(ctx, batch)
+		if err != nil {
+			return nil, err
+		}
+		maps.Copy(out, facts)
+	}
+	return out, nil
+}
+
+func (w *Work) forTaskBatch(ctx context.Context, tasks []crmcontracts.Activity) (map[ids.UUID]*crmcontracts.WebsiteInquiryWork, error) {
 	out := map[ids.UUID]*crmcontracts.WebsiteInquiryWork{}
 	taskIDs := make([]ids.ActivityID, 0, len(tasks))
 	submissions := map[ids.UUID]string{}

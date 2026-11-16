@@ -35,7 +35,7 @@ class ResolveTest(unittest.TestCase):
     def test_gemini_runs_only_through_agy(self):
         route = candidates.resolve("gemini", "cli")
         self.assertEqual((route.model, route.folder, route.wire),
-                         ("gemini-3.8-flash-medium", "gemini-3.8-flash-medium@agy-cli", "agy-cli"))
+                         ("gemini-4-hydrogen-medium", "gemini-4-hydrogen-medium@agy-cli", "agy-cli"))
         with self.assertRaisesRegex(candidates.RouteError, "gemini has no api route"):
             candidates.resolve("gemini", "api")
 

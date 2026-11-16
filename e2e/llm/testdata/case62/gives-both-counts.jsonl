@@ -1,0 +1,3 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__read_reports", "mcp__margince__read_analytics"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__read_reports", "input": {"kind": "standard", "mode": "report", "report": "meeting-conversion"}}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "This quarter to date you held 6 meetings, and none of them became an opportunity: a 0% conversion rate.", "num_turns": 2}

@@ -262,12 +262,19 @@ func TestTheWaitingQueryUsesTheContentGate(t *testing.T) {
 	if !strings.Contains(waitingRepliesSQL, "%[2]s") {
 		t.Fatal("the waiting query no longer binds an activity scope clause at all")
 	}
+	// Every surface that judges waiting mail, so none disagrees with the queue.
+	for _, file := range []string{"waitingslots.go", "waitingcards.go", "waitingrecordscope.go", "hiddenbacklog.go"} {
+		judged, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatalf("reading the waiting source: %v", err)
+		}
+		if !strings.Contains(string(judged), `auth.ActivityMessageContentClause(ctx, "a"`) {
+			t.Fatalf("%s judges waiting mail without the message content gate the queue uses", file)
+		}
+	}
 	source, err := os.ReadFile("waitingslots.go")
 	if err != nil {
 		t.Fatalf("reading the waiting source: %v", err)
-	}
-	if !strings.Contains(string(source), "auth.ActivityContentClause") {
-		t.Fatal("the waiting read admits rows through the discover gate, which is for safe markers only")
 	}
 	if !strings.Contains(string(source), "auth.LinkTargetReadableClause") {
 		t.Fatal("the waiting read returns links without checking the reader may read what they point at")

@@ -53,8 +53,13 @@ function useDealSummary(dealId: string) {
 function dealSummaryQuery(dealId: string) {
   return {
     queryKey: ["deal", dealId],
-    queryFn: async (): Promise<Deal | null> => {
+    queryFn: async ({
+      signal,
+    }: {
+      signal: AbortSignal;
+    }): Promise<Deal | null> => {
       const { data, error, response } = await api.GET("/deals/{id}", {
+        signal,
         params: { path: { id: dealId } },
       });
       if (error) {
@@ -78,11 +83,12 @@ function useDealCompany(companyId: string | null | undefined) {
   return useQuery({
     queryKey: ["company", companyId ?? null],
     enabled: companyId != null,
-    queryFn: async (): Promise<Company | null> => {
+    queryFn: async ({ signal }): Promise<Company | null> => {
       if (!companyId) {
         return null;
       }
       const { data, error, response } = await api.GET("/companies/{id}", {
+        signal,
         params: { path: { id: companyId } },
       });
       if (error) {

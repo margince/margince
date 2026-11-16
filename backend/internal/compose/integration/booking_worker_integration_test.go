@@ -87,6 +87,12 @@ func TestALeadBookingSurvivesReplayPromotionDeliveryAndCancellation(t *testing.T
 	if status := e.Call(t, http.MethodPost, "/v1/leads", AnyMap{"full_name": "Lea Booker", "email": address}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("lead: %d", status)
 	}
+	// Owned by whoever created it, because a lead nobody owns has nobody to ask
+	// to qualify it.
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE lead SET owner_id = split_part(captured_by, ':', 2)::uuid WHERE id = $1`, lead.ID); err != nil {
+		t.Fatalf("owning the lead: %v", err)
+	}
 
 	monday := nextMonday()
 	body := AnyMap{

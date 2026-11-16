@@ -377,10 +377,10 @@ func verdictPatch(patch *storekit.Patch, change VerdictChange, current VerdictVa
 func humanEditedAfter(ctx context.Context, tx pgx.Tx, deal ids.DealID, columns []string, after time.Time) (bool, error) {
 	var edited bool
 	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM audit_log
-		                WHERE entity_type = 'deal' AND entity_id = $1 AND actor_type = $2
-		                  AND after ?| $3 AND occurred_at > $4)`,
-		deal, string(principal.PrincipalHuman), columns, after).Scan(&edited)
+		SELECT EXISTS (SELECT 1 FROM audit_log a
+		                WHERE a.entity_type = 'deal' AND a.entity_id = $1 AND `+storekit.AuditForAUser("a")+`
+		                  AND a.after ?| $2 AND a.occurred_at > $3)`,
+		deal, columns, after).Scan(&edited)
 	if err != nil {
 		return false, fmt.Errorf("deals: reading who last edited the deal: %w", err)
 	}

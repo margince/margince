@@ -20,7 +20,7 @@ this installation goes, so an operator must choose it; it is never inherited.
 | [`qwen3_local_vllm.yaml`](qwen3_local_vllm.yaml) | every tier to Qwen3-14B (MLX 4-bit) on loopback vLLM, embeddings to `bge-m3` on a second vLLM; zero egress | two vLLM servers started with the flags in the file's header |
 
 `gemini_cloud.yaml` uses the provider a dev stack starts with, the Gemini Developer API, with
-`gemini-3.6-flash` in `premium` and `frontier`. The binding in `margince.dev.yaml` is its own and
+`gemini-3.8-flash` in `premium` and `frontier`. The binding in `margince.dev.yaml` is its own and
 names other models there, because that file is the dev posture and has to stand alone.
 
 `gemini_vertex_eu.yaml` binds the models of `gemini_cloud.yaml` at their thinking levels, on

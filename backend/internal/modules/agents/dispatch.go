@@ -258,6 +258,9 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 		// answering -32601 there reads as a broken server rather than a
 		// legitimate empty catalog.
 		resp.Result = map[string]any{"resources": s.resourceList(ctx, fr)}
+		if IsAppCall(ctx) {
+			resp.Result = map[string]any{"resources": []any{}}
+		}
 	case methodResourcesRead:
 		// Assigned on separate branches so a failed read never carries a
 		// result alongside its error, which JSON-RPC forbids.
@@ -270,6 +273,9 @@ func (s *Dispatcher) dispatch(ctx context.Context, req rpcRequest, fr framing) r
 		resp.Result = map[string]any{"resourceTemplates": []any{}}
 	case methodPromptsList:
 		resp.Result = map[string]any{"prompts": s.promptList(ctx)}
+		if IsAppCall(ctx) {
+			resp.Result = map[string]any{"prompts": []any{}}
+		}
 	case methodPromptsGet:
 		if result, rpcErr := s.promptGet(ctx, req.Params); rpcErr != nil {
 			resp.Error = rpcErr

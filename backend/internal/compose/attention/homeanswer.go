@@ -29,6 +29,7 @@ type worklistQuestion struct {
 	limit               int
 	token               string
 	omitRelationships   bool
+	home                bool
 }
 
 // worklistAnswer is the page q asks for. Home's own first page is served from
@@ -50,7 +51,11 @@ func (h Handlers) worklistAnswer(ctx context.Context, svc *Service, q worklistQu
 	if err != nil || !home {
 		return fresh(ctx)
 	}
-	return homecache.Serve(ctx, h.home, reader, homecache.Worklist, key, fresh, walkStartedBy)
+	out, stale, err := homecache.Serve(ctx, h.home, reader, homecache.Worklist, key, fresh, walkStartedBy)
+	if stale {
+		out.ServedStale = &stale
+	}
+	return out, err
 }
 
 // homeKey names Home's own question as the service answers it, so the spellings
@@ -73,8 +78,8 @@ func (s *Service) homeKey(ctx context.Context, q worklistQuestion) (string, bool
 		return "", false, err
 	}
 	day := storekit.StartOfDay(s.now(), loc)
-	return fmt.Sprintf("zone=%s&day=%s&own_owner=%t&limit=%d&locale=%s",
-		loc.String(), day.Format(time.DateOnly), !q.owner.IsZero(), pageLimit(q.limit), systemtext.Locale(ctx)), true, nil
+	return fmt.Sprintf("zone=%s&day=%s&own_owner=%t&limit=%d&locale=%s&home=%t",
+		loc.String(), day.Format(time.DateOnly), !q.owner.IsZero(), pageLimit(q.limit), systemtext.Locale(ctx), q.home), true, nil
 }
 
 // walkStartedBy is the walk a first page's cursor resumes, so a cached page is

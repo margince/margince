@@ -349,6 +349,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "worklist.ask.changedInvitation",
     "worklist.ask.meeting.updated",
     "worklist.ask.meeting.canceled",
+    "worklist.ask.meeting_outcome.read_only",
     // Automation authority and assignments name human account holders.
     "auto.setup.noAuthorizer",
     "auto.setup.inactive",

@@ -67,8 +67,8 @@ func newDisclosure() PrivacyInformation {
 }
 
 // subjectRights is what Art. 14(2)(c)-(e) requires naming, in the order a
-// reader meets them: see it, fix it, remove it, pause it, object to it, and
-// complain to somebody who is not us.
+// reader meets them. See it, fix it, remove it, pause it, take it elsewhere.
+// Object to it, withdraw a consent, and complain to somebody who is not us.
 //
 // A literal rather than derived from what the product implements, and that is
 // deliberate: these rights exist whether or not this installation has built a
@@ -76,8 +76,8 @@ func newDisclosure() PrivacyInformation {
 // be telling the subject they have fewer rights than the law gives them.
 func subjectRights() []string {
 	return []string{
-		"access", "rectification", "erasure",
-		"restriction", "objection", "complain_to_authority",
+		"access", "rectification", "erasure", "restriction", "portability",
+		"objection", "withdraw_consent", "complain_to_authority",
 	}
 }
 

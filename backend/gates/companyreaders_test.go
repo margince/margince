@@ -40,10 +40,11 @@ import (
 // failure messages below read it, so neither can drift from the subject.
 const companyTable = "company"
 
-// companyGate is the subject. No platform spelling gateSeeds it: like the lead,
-// a company has no bespoke admission helper — auth.Require(ctx, "company", …)
-// and auth.ReadGranted(ctx, "company") ARE the object gate, and objectGate
-// reads both off the call.
+// companyGate is the subject. auth.Require(ctx, "company", …) and
+// auth.ReadGranted(ctx, "company") are the object gate, and objectGate reads
+// both off the call. The project-company builders are its only seeds: each asks
+// ReadGranted itself and hands a caller without company.read a predicate that
+// admits no company.
 //
 // No row-half allowance either. contacts asks the object gate at its company
 // entry points, so the transitive resolution reaches the gate itself and never
@@ -54,6 +55,7 @@ var companyGate = objectGate{
 	object:              companyTable,
 	literal:             gatekit.TableReadPattern(companyTable),
 	objectGateSatisfies: true,
+	gateSeeds:           []string{"ProjectCompanyPredicates", "ProjectCustomerSQL", "ProjectCompanyEdgesSQL"},
 }
 
 // predicateCompanyReads: the company table appears only inside a JOIN or EXISTS
@@ -147,6 +149,8 @@ var lifecycleCompanyReads = gatekit.Waive(map[string]string{
 	"internal/compose/captureofflinedemo.go:accounts":                         "the offline capture demo's fixture accounts, read to seed a mailbox that has something to capture against. It is demo seeding, not a product read path, and it runs where the demo binds its own principal",
 	"internal/modules/contacts/companyprofilefieldupsert.go":                  "the profile-field upsert's own liveness guard: `FROM company o WHERE o.id = $1 AND o.archived_at IS NULL` is what makes the INSERT decline against an account archived mid-apply, which its own doc records as the residue a stale write is meant to leave. It is a WRITE, gated by the entry point that composes it, and no company column is selected",
 	"internal/modules/contacts/companylogowrite.go":                           "the logo write and the key read beside it. The UPDATE's RETURNING sub-selects read back the slot it just wrote so the caller learns which key now stands, and companyLogoKeyRead answers where one slot's bytes live; both are reached from SetCompanyLogo and the logo serve, past the company object gate",
+	"internal/compose/reportprojects.go:colProjectCustomer":                   "a project report's company dimension: company appears only in a JOIN that drops an archived company. The id it yields is row-scoped by the spec's referenceScopes, and naming it owes relationship.read through the spec's grants",
+	"internal/compose/reportprojects.go:withProjectCompany":                   "the company filter of a project report: company appears only in an EXISTS that drops an archived company, and nothing of it is selected. The bound company is read-gated by filterScopes before it binds",
 	"internal/modules/collections/vocab.go":                                   "the collection vocabulary's company arm: which record types a saved view may range over, and the column names each admits. It reads the catalog rather than any account's row — what it produces is the vocabulary a view is validated against",
 })
 
@@ -165,6 +169,7 @@ var lifecycleCompanyReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X. rbacgate_test.go's header records being bitten by exactly that.
 var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/finance/customerpaymentrows.go:customerPaymentRows":         "called only by readCustomerPayments from Store.CustomerPayments, which requires company and finance read before opening the transaction; SQL also intersects company identity and financial owner scopes",
 	"internal/modules/activities/emailtarget.go:companyCandidatesSQL":             "the record an email about a written-about row goes to (activities.emailTargets). linkedCandidates asks auth.ReadGranted for the object it reads and renders that object's row scope, so a caller with no company grant is told about none; the census cannot see it because the object arrives as a PARAMETER",
 	"internal/modules/activities/emailtarget.go:dealCompanyCandidatesSQL":         "the company of a task's deal, as the record an email about the task goes to. linkedCandidates asks auth.ReadGranted for company and renders its row scope, and asks it for deal too; the object arrives as a PARAMETER",
 	"internal/modules/activities/emailtarget.go:employerCandidatesSQL":            "the company a task's contacts work at, as the record an email about the task goes to. linkedCandidates asks auth.ReadGranted for company and renders its row scope; the object arrives as a PARAMETER",
@@ -174,7 +179,7 @@ var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
 	"internal/compose/assurancesignals.go:assuranceSignalSubjectsQuery":           "the statement AssuranceSignalSubjects runs, its one caller, which asks the company, signal and activity read gates first",
 	"internal/modules/contacts/addressrepair.go:unsplitCompanyAddress":            "one company's unsplit address, read by unsplitProposal to split it. Its one caller chain is repairUnsplitCompanyAddress ← RepairUnsplitCompanyAddressesTx, which asks auth.RequireSystem and auth.Require(ctx, entityCompany, read) first",
 	"internal/modules/contacts/unarchive.go":                                      "the un-archive shapes: the company's label and state under FOR UPDATE, and company liveness inside a relationship restore. Read only through RestoreCompanyTx and RestoreContactTx, which ask auth.Require for the delete grant and auth.EnsureWritable on the row first (ensureRestorable)",
-	"internal/compose/magic/undoversion.go":                                       "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached only from magic.Service.Read and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
+	"internal/compose/magic/undoversion.go":                                       "the version an undo on the magic receipt is sent with, for the restore route's If-Match; no other column. Reached from magic.Service.CompletedChanges and LineRecords, and only for a record their done lane already placed through doneForType, which asks auth.Require for the object grant and renders auth.ScopeClauseFor on the same row; the restore write re-asks everything under its own lock",
 	"internal/modules/contacts/company_read.go:readCompanyRow":                    "the shared single-row company read, and the spine every company surface goes through — get, create, update, archive, restore, the merge survivor. Each of those entry points asks auth.Require for the company object and most take a row probe as well; the spine trusts them rather than re-asking inside one transaction. It stamps writability through auth.StampWritable, which is the row half spelled on the way out",
 	"internal/modules/contacts/merge_company.go:absorbCompanyReferences":          "the merge's re-parenting arm: every record pointing at the source account is moved to the survivor. Reached only through relinkCompanyAssociations from MergeCompany, past that same object gate and lock, and its effect is an UPDATE rather than a response",
 	"internal/modules/contacts/anchorcompany.go:anchorCompany":                    "resolves the installation's own anchor account — the record that represents the company running the installation. Every caller asks the company object gate first: GetAnchorCompany, GetCompanyContext, OnboardingCompanyState, the logo write and the site-read comparison. What it answers is an id",
@@ -202,6 +207,7 @@ var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
 // ruledCompanyReads: a DISCLOSING read the product has ruled needs no company
 // grant.
 var ruledCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/assurance/freshness.go:readFreshness":                  "the owners of the companies whose buying signals changed since the last check, read only as seats for the small-group floor of Show individual performance. Its one caller, LatestRun, asks auth.Require for forecast read; only seat ids leave, no company field",
 	"internal/modules/activities/projectfiling.go":                           "the undo of a project filing locks the linked record FOR SHARE so a legal hold placed on it cannot land between the undo reading the holds and clearing the class. It takes a shared row lock (shareLockQualifyingRecords) on the records the activity is linked to, so the undo of a project filing serializes with a hold or a stamp being written; it selects only a row count, no field, and returns nothing to the caller.",
 	"internal/modules/contacts/leadcompany.go:namesCompany":                  "whether a lead's company name or domain still names the company the lead is linked to: an edit of the name or candidate key (unlinkUnnamedCompany) and a lead merge's carry of the link (carryLeadCompanyLink). It reads that one linked company's name and domain claim into a comparison and answers a boolean that only decides whether the lead keeps or takes the link; no company field reaches the caller, who holds lead update and may hold no company grant",
 	"internal/modules/contacts/bookingbrand.go:readAnchorBrandTx":            "booking pages publish the installation's own anchor company name and logo, including to anonymous guests. The anchor selector fixes the record; callers cannot choose another company or read its private profile. This branding is independent of the grant for customer accounts",

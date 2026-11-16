@@ -27,7 +27,8 @@ expect:
     floor: 40
   rubric: >
     Score whether the months spread the yearly goal of 300,000 over the
-    pattern both years show. October, November and December must each get a
+    pattern both years show. The product scales the twelve months to add up
+    to the yearly goal exactly, so judge their shape, not their raw sum. October, November and December must each get a
     larger goal than January, February and March. The reason must name the
     stronger year end in plain words with no figure in it. An even spread, or
     a plan that follows neither year, fails the scenario.

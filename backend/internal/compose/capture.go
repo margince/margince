@@ -292,7 +292,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// The meeting-notes reader lands a Doc as a transcript, which starts
 		// its reading only where the role wired an enqueue.
 		WithNotesLanding(capturetimeline.NotesWriter{
-			Store: activities.NewStore(InstallationDB(pool)).WithTranscriptEnqueue(cfg.TranscriptEnqueue),
+			Store: activities.NewStore(InstallationDB(pool)).WithTranscriptEnqueue(cfg.TranscriptEnqueue).WithLeadQualifyTasks(newLeadWorkTasks(InstallationDB(pool), slog.Default())),
 		}).
 		WithClock(cfg.clock()).
 		WithStager(mergeStager{svc: NewApprovalsService(InstallationDB(pool))}).

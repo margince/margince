@@ -60,7 +60,7 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
-	every := func(func(any) int) (string, error) { return scopeUnbounded, nil }
+	every := everyMeetingFollowUp
 	statement, args, err := meetingFollowUpsStatement(e.as(), asOf, 3, every, AwaitingReplyScanCap)
 	if err != nil {
 		t.Fatal(err)

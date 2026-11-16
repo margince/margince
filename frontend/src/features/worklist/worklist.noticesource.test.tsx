@@ -116,9 +116,14 @@ function stubServer() {
     if (url.includes(`/activities/${MAIL_ID}/email-presentation`)) {
       return jsonResponse(presentation);
     }
-    if (url.includes(`/activities/${MAIL_ID}`)) return jsonResponse(mail);
-    if (url.includes(`/activities/${MEETING_ID}`)) return jsonResponse(meeting);
-    return jsonResponse({ data: [] });
+    const path = new URL(url, "http://localhost").pathname;
+    if (path.endsWith(`/activities/${MAIL_ID}`)) return jsonResponse(mail);
+    if (path.endsWith(`/activities/${MEETING_ID}`))
+      return jsonResponse(meeting);
+    return jsonResponse({
+      data: [],
+      page: { has_more: false, next_cursor: null },
+    });
   });
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;

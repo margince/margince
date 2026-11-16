@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "080ec4617990fa0a2364b0339ec4e13e4a017fa4e3f7c0e7141f9b632758c544"
+const jobContractHash = "dd78b5cdfb064666d97f707ed14d5c1251f5898f68f3278f6a5dcd9095089d0a"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -49,6 +49,9 @@ func (CaptureSyncArgs) declaredJobType(CaptureSyncArgs)                         
 func (CaptureTraceSweepArgs) declaredJobType(CaptureTraceSweepArgs)               {}
 func (CapturedDealRefileArgs) declaredJobType(CapturedDealRefileArgs)             {}
 func (CapturedDealRefileSweepArgs) declaredJobType(CapturedDealRefileSweepArgs)   {}
+func (ChatLinkFlushArgs) declaredJobType(ChatLinkFlushArgs)                       {}
+func (ChatPullArgs) declaredJobType(ChatPullArgs)                                 {}
+func (ChatPullSweepArgs) declaredJobType(ChatPullSweepArgs)                       {}
 func (CheckCompanyVatArgs) declaredJobType(CheckCompanyVatArgs)                   {}
 func (CloseDateSweepArgs) declaredJobType(CloseDateSweepArgs)                     {}
 func (AuthzDisagreementArgs) declaredJobType(AuthzDisagreementArgs)               {}
@@ -103,6 +106,7 @@ func (ProjectHealthScanArgs) declaredJobType(ProjectHealthScanArgs)             
 func (ProviderLookupSweepArgs) declaredJobType(ProviderLookupSweepArgs)           {}
 func (ProviderRunPollSweepArgs) declaredJobType(ProviderRunPollSweepArgs)         {}
 func (ProviderRunSubmitArgs) declaredJobType(ProviderRunSubmitArgs)               {}
+func (ReplySettledStampArgs) declaredJobType(ReplySettledStampArgs)               {}
 func (ReportScheduleSweepArgs) declaredJobType(ReportScheduleSweepArgs)           {}
 func (RiskVerdictSweepArgs) declaredJobType(RiskVerdictSweepArgs)                 {}
 func (SignalScanArgs) declaredJobType(SignalScanArgs)                             {}
@@ -154,6 +158,7 @@ var (
 	_ jobs.FleetWide = CaptureEnrichArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CapturedDealRefileSweepArgs{}
+	_ jobs.FleetWide = ChatPullSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = CompanyNamePromotionArgs{}
 	_ jobs.FleetWide = DataTaskReconcileArgs{}
@@ -181,6 +186,7 @@ var (
 	_ jobs.FleetWide = ProjectHealthScanArgs{}
 	_ jobs.FleetWide = ProviderLookupSweepArgs{}
 	_ jobs.FleetWide = ProviderRunPollSweepArgs{}
+	_ jobs.FleetWide = ReplySettledStampArgs{}
 	_ jobs.FleetWide = ReportScheduleSweepArgs{}
 	_ jobs.FleetWide = RiskVerdictSweepArgs{}
 	_ jobs.FleetWide = SignalScanArgs{}
@@ -203,6 +209,8 @@ var (
 	_ jobs.WorkspaceScoped = CaptureBackfillArgs{}
 	_ jobs.WorkspaceScoped = CaptureSyncArgs{}
 	_ jobs.WorkspaceScoped = CapturedDealRefileArgs{}
+	_ jobs.WorkspaceScoped = ChatLinkFlushArgs{}
+	_ jobs.WorkspaceScoped = ChatPullArgs{}
 	_ jobs.WorkspaceScoped = CheckCompanyVatArgs{}
 	_ jobs.WorkspaceScoped = ScheduledSendArgs{}
 	_ jobs.WorkspaceScoped = SendEmailArgs{}

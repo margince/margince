@@ -37,16 +37,17 @@ type mailSeatSnapshot struct {
 	tx         pgx.Tx
 	actorID    string
 	identities map[string][]string
+	records    []mailSeatIdentity
 }
 
 // WithMailSeatIdentitySnapshot shares one identity read inside this caller's read transaction.
 func WithMailSeatIdentitySnapshot(ctx context.Context, tx pgx.Tx) (context.Context, error) {
-	identities, err := UnambiguousMailSeatIdentities(ctx, tx)
+	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
 		return ctx, err
 	}
 	actor, _ := principal.Actor(ctx)
-	return context.WithValue(ctx, mailSeatSnapshotKey{}, mailSeatSnapshot{tx: tx, actorID: actor.ID, identities: identities}), nil
+	return context.WithValue(ctx, mailSeatSnapshotKey{}, mailSeatSnapshot{tx: tx, actorID: actor.ID, identities: foldMailSeatIdentities(records), records: records}), nil
 }
 
 // PreparedMailSeatIdentitiesSQL refuses sorting projections without their prepared read snapshot.
@@ -69,6 +70,10 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	if err != nil {
 		return nil, err
 	}
+	return foldMailSeatIdentities(records), nil
+}
+
+func foldMailSeatIdentities(records []mailSeatIdentity) map[string][]string {
 	owners, strengths := map[string]string{}, map[string]int{}
 	// Keyed by the folded address, so a Unicode and a punycode spelling of one
 	// mailbox are one claim, and two seats holding them collide.
@@ -106,7 +111,7 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 			out[seat] = append(out[seat], mailidentity.AddressSpellings(address)...)
 		}
 	}
-	return out, nil
+	return out
 }
 
 // MailSeatIdentities reads live mailbox identities for restoring factual
@@ -137,7 +142,10 @@ const (
 	withdrawnMailboxSource = "withdrawn_mailbox"
 )
 
-type mailSeatIdentity struct{ seat, label, source string }
+type mailSeatIdentity struct {
+	seat, label, source string
+	provedMailbox       bool
+}
 
 // decidesNew is the lifecycle of a withdrawn mailbox: its label is no evidence
 // for a decision made now. Only a disconnect withdraws; a mailbox in error or
@@ -146,20 +154,25 @@ type mailSeatIdentity struct{ seat, label, source string }
 func (r mailSeatIdentity) decidesNew() bool { return r.source != withdrawnMailboxSource }
 
 func readMailSeatIdentities(ctx context.Context, tx pgx.Tx) ([]mailSeatIdentity, error) {
+	actor, _ := principal.Actor(ctx)
+	if snapshot, ok := ctx.Value(mailSeatSnapshotKey{}).(mailSeatSnapshot); ok && snapshot.tx == tx && snapshot.actorID == actor.ID {
+		return snapshot.records, nil
+	}
+
 	rows, err := tx.Query(ctx, `SELECT u.id::text, u.email,
- CASE WHEN u.status = 'invited' THEN '`+invitedLoginSource+`' ELSE '`+loginSource+`' END
+ CASE WHEN u.status = 'invited' THEN '`+invitedLoginSource+`' ELSE '`+loginSource+`' END, false
  FROM app_user u WHERE `+workforce.ActivatableMemberSQL("u")+`
- UNION SELECT i.user_id::text, i.value, i.source FROM capture_owner_identity i
+ UNION SELECT i.user_id::text, i.value, i.source, false FROM capture_owner_identity i
  JOIN app_user u ON u.id = i.user_id WHERE i.kind = 'address' AND `+workforce.LiveMemberSQL("u")+`
  UNION SELECT c.user_id::text, c.account_label, CASE WHEN `+provedMailboxClause("c")+` THEN '`+provedMailboxSource+`'
-   WHEN c.status = 'disconnected' THEN '`+withdrawnMailboxSource+`' ELSE '' END FROM capture_connection c
+   WHEN c.status = 'disconnected' THEN '`+withdrawnMailboxSource+`' ELSE '' END, `+provedMailboxClause("c")+` FROM capture_connection c
  JOIN app_user u ON u.id = c.user_id WHERE c.archived_at IS NULL AND `+workforce.LiveMemberSQL("u")+` AND coalesce(c.account_label, '') <> ''`)
 	if err != nil {
 		return nil, fmt.Errorf("reading mail identities: %w", err)
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (mailSeatIdentity, error) {
 		var value mailSeatIdentity
-		err := row.Scan(&value.seat, &value.label, &value.source)
+		err := row.Scan(&value.seat, &value.label, &value.source, &value.provedMailbox)
 		return value, err
 	})
 }

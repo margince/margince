@@ -37,6 +37,8 @@ import (
 // record (datasource.RecordType) never names an activity, while a thing
 // hung OFF an object (datasource.EntityType) can.
 var enumBindings = map[string]struct{ pkgDir, typeName string }{
+	"activity.capture_label":                          {"internal/contracts", "ActivityCaptureLabel"},
+	"contact_signature_enrich_state.last_skip_reason": {"internal/modules/contacts", "SignatureSkipReason"},
 	// Which check the ingress grammar refused a record on. The core writes the
 	// class and the column holds the vocabulary, so a class Go learned and the
 	// schema did not must fail the insert rather than land a value nothing can
@@ -61,6 +63,10 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// know, so a half-widened palette reaches a reader as a tag with no dot,
 	// which is exactly how an uncoloured tag looks.
 	"tag.color": {"internal/contracts", "TagColor"},
+	// A chat link's level and state are served as they are stored, so the
+	// contract's enums and the CHECKs are one vocabulary.
+	"chat_link.verbosity": {"internal/contracts", "ChannelVerbosity"},
+	"chat_link.status":    {"internal/contracts", "ChannelLinkStatus"},
 	// Where a saved draft was opened. The wire enum is what the composer sends,
 	// so a value the contract admits and the CHECK refuses would be a save that
 	// fails with a constraint error instead of a validation answer.
@@ -493,6 +499,7 @@ func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 			t.Errorf("enumBindings[%s]: no CHECK vocabulary found in %s — stale binding or broken derivation", col, vocabularyCatalog)
 			continue
 		}
+		want = readVocabulary(col, want)
 		got := goConstSet(t, binding.pkgDir, binding.typeName)
 		if len(got) == 0 {
 			t.Errorf("enumBindings[%s]: no %s constants found in %s", col, binding.typeName, binding.pkgDir)

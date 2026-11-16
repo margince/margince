@@ -158,7 +158,7 @@ func apiV1Base(base string) string {
 // is not baked into the shared contract.
 func audienceIs(clientID string) func(oidctoken.Claims) error {
 	return func(c oidctoken.Claims) error {
-		if c.Aud != clientID {
+		if !c.Aud.Is(clientID) {
 			return fmt.Errorf("%w: aud mismatch", oidctoken.ErrRejected)
 		}
 		return nil

@@ -121,4 +121,9 @@ const (
 	// robots.txt groups that have nothing to say about it.
 	ModelCatalogueProduct = "margince-modelcatalogue"
 	ModelCatalogueHeader  = ModelCatalogueProduct + "/" + version
+
+	// ChatProduct identifies the calls a chat bot makes to the team chat a
+	// deal or project channel lives in.
+	ChatProduct = "margince-chat"
+	ChatHeader  = ChatProduct + "/" + version
 )

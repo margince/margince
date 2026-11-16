@@ -42,6 +42,8 @@ func (h Handlers) GetProgressBySwitch(w http.ResponseWriter, r *http.Request) {
 }
 
 // An iteration that skips ahead before the check leaves the rows unchecked.
+// A pass that skips a row adds nothing, so what is written holds only rows
+// read through the check: a filter is a floor.
 func (h Handlers) GetEachRowSkippingOne(w http.ResponseWriter, r *http.Request) {
 	var out []int
 	for _, row := range teamFigures() {

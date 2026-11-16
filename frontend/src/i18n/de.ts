@@ -2105,8 +2105,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "aiAdmin.decisionSkip.uncertified":
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
-  "aiAdmin.decisionSkip.local_only":
-    "Entscheidungsmodell nicht genutzt: Diese Aktivität nutzt nur einen lokalen Anbieter für Entscheidungen.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -2398,6 +2396,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.deal_key_names": "Ergänzung von Deal-Schlüsseln",
   "systemJob.deal_room_link_request": "Link-Anfrage für den Deal Room",
   "systemJob.deal_room_timeline": "Verlauf im Deal Room",
+  "systemJob.chat_links": "Chat-Kanäle",
   "systemJob.dedupe_recheck": "Erneute Prüfung der Duplikat-Prüfliste",
   "systemJob.deployment_secret_seal": "Versiegelung von Geheimnissen",
   "systemJob.domain_triage": "Vorprüfung von Websites",
@@ -2446,6 +2445,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.owed_verdict": "Prüfung offener Antworten",
   "systemJob.own_sent_mail_repair": "Korrektur gesendeter E-Mails",
   "systemJob.participant_backfill": "Ergänzung der Teilnehmenden von E-Mails",
+  "systemJob.reply_settled_stamp": "Antwortstatus von E-Mails",
   "systemJob.past_activity_clock_refold":
     "Aktualisierung des Datums der letzten Aktivität",
   "systemJob.private_thread_strip": "Entfernen privater Threads",
@@ -3359,6 +3359,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Rolle",
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
+  "rel.former": "Früher",
   "rel.current": "Aktuell",
   "rel.endedOn": "Bis {when}",
   "rel.remove": "Entfernen",
@@ -3896,6 +3897,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
   "timeline.group.mayContinue": "Möglicherweise gibt es frühere Nachrichten",
+  "timeline.group.newerPart": "Spätere Nachrichten weiter oben",
+  "timeline.group.olderPart": "Frühere Nachrichten weiter unten",
   "timeline.group.kind": "Thread",
   "timeline.group.earlier_other": "{count} frühere Nachrichten anzeigen",
   "timeline.group.earlier_one": "{count} frühere Nachricht anzeigen",
@@ -4247,6 +4250,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "billing.saveChange": "Änderung speichern",
   "billing.versionUnresolved":
     "Die Änderung wurde nicht gesendet, da der Rechnungskontakt nicht erneut gelesen werden konnte. Bitte lade die Seite neu und versuche es erneut.",
+  "payments.refresh": "Aktualisieren",
+  "payments.title": "Kundenzahlungen",
+  "payments.none": "Keine überfälligen Rechnungen.",
+  "payments.overdueAmount": "{amount} überfällig",
+  "payments.invoices_one": "{count} Rechnung",
+  "payments.invoices_other": "{count} Rechnungen",
+  "payments.customers_one": "{count} Kunde",
+  "payments.customers_other": "{count} Kunden",
+  "payments.oldest_one": "Älteste Rechnung seit 1 Tag überfällig",
+  "payments.oldest_other": "Älteste Rechnung seit {days} Tagen überfällig",
+  "payments.viewInvoices": "Überfällige Rechnungen ansehen",
+  "payments.customer": "Kunde",
+  "payments.openAmount": "Offener Betrag",
+  "payments.stale":
+    "Die Rechnungsdaten können sich seit der letzten Synchronisierung geändert haben.",
+  "payments.syncFailed":
+    "Die Synchronisierung der Buchhaltung ist fehlgeschlagen. Die Beträge stammen aus der letzten erfolgreichen Synchronisierung.",
+  "payments.syncUnavailable":
+    "Rechnungsdaten sind erst nach einer erfolgreichen Synchronisierung der Buchhaltung verfügbar.",
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
@@ -4912,6 +4934,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Erweiterung",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
+  "timeline.chatSummary.badge": "KI-Zusammenfassung",
+  "timeline.chatSummary.from": "Aus {provider}",
+  "timeline.chatSummary.meta_one": "{count} Nachricht, bis {ended}",
+  "timeline.chatSummary.meta_other": "{count} Nachrichten, bis {ended}",
+  "timeline.chatSummary.open": "In {provider} öffnen",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an: Die letzte Zustellung wurde abgelehnt, und seitdem war keine erfolgreich. Sende trotzdem oder verwende eine andere Adresse.",
   "compose.threadShare": "Mit dem Unternehmen teilen",
@@ -5165,6 +5192,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.needsAction": "Keine Antwort",
   "meeting.attendeesMore_one": "und {count} weiterer Gast",
   "meeting.attendeesMore_other": "und {count} weitere Gäste",
+  "meeting.invitation.invited_one": "{count} eingeladen",
+  "meeting.invitation.invited_other": "{count} eingeladen",
+  "meeting.invitation.accepted_one": "{count} zugesagt",
+  "meeting.invitation.accepted_other": "{count} zugesagt",
+  "meeting.invitation.declined_one": "{count} abgesagt",
+  "meeting.invitation.declined_other": "{count} abgesagt",
+  "meeting.invitation.tentative_one": "{count} vielleicht",
+  "meeting.invitation.tentative_other": "{count} vielleicht",
   "activity.detail.guestsLeftOut_one":
     "und {count} weiterer Gast, nicht aufgeführt",
   "activity.detail.guestsLeftOut_other":
@@ -5228,8 +5263,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.profileField.register_number": "Registernummer",
   "co.profileField.industry": "Branche",
   "co.profileField.history": "Geschichte",
-  "co.narrative.title": "Wie sie kaufen",
+  "co.narrative.title": "Wie und an wen sie verkaufen",
   "co.narrative.add": "Hinzufügen",
+  "co.narrative.notOnSite": "Nicht auf ihrer Website",
+  "co.narrative.notReadYet": "Website noch nicht analysiert",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Letzter Austausch",
   "co.contacts.strength": "Beziehung",
@@ -6833,13 +6870,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
   "brief.first.title": "Braucht dich",
-  "brief.intro.waiting": "Wartet auf dich",
-  "brief.intro.meetings": "Termine heute",
-  "brief.intro.urgent": "Dringend",
-  "brief.intro.read_one": "Letzter Nachtlauf: 1 E-Mail synchronisiert.",
-  "brief.intro.read_other":
-    "Letzter Nachtlauf: {count} E-Mails synchronisiert.",
-  "brief.intro.skip": "Beliebige Taste drücken oder klicken, um fortzufahren",
   "brief.order.withheld":
     "In dieser Reihenfolge nicht berücksichtigt: {factors}",
   "brief.factor.warmth": "Beziehungsnähe",
@@ -7563,6 +7593,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.kindTask": "Aufgabe",
   "log.kindMeeting": "Termin",
   "log.kindCall": "Anruf",
+  "log.kindMessage": "Nachricht",
+  "log.channel": "Chat-App",
+  "log.channelPlaceholder": "Chat-App wählen",
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Füge ein Transkript eines Anrufs oder Termins ein. Vorhandene Sprecherangaben bleiben erhalten.",
@@ -9866,6 +9899,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
   "settings.revokeNamed": "{name} widerrufen",
+  "settings.allowAgain": "Wieder zulassen",
+  "settings.allowAgainNamed": "{name} wieder zulassen",
   "settings.revokeConfirm":
     "Die Zugangsdaten des Passports werden sofort ungültig. Der Agent verliert beim nächsten Aufruf den Zugriff.",
   "import.withheld": "Nur Admins und Operations können Dateien importieren.",
@@ -10513,6 +10548,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_company": "Technische Abfrage für Unternehmen",
   "jobs.kind.telegram_ingest": "Übernahme von Telegram-Nachrichten",
   "jobs.kind.telegram_poll": "Abruf von Telegram-Nachrichten",
+  "jobs.kind.chat_link_flush": "Beiträge in Chat-Kanälen",
+  "jobs.kind.chat_pull": "Zusammenfassungen aus Chat-Kanälen",
+  "jobs.kind.chat_pull_sweep": "Prüfung der Chat-Kanäle",
   "jobs.kind.telegram_poll_sweep": "Planung der Telegram-Abrufe",
   "jobs.kind.time_scan": "Prüfung zeitgesteuerter Automatisierungen",
   "jobs.kind.transcript_propose": "Lesen des Transkripts",
@@ -11049,6 +11087,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.rights.title": "Ihre Rechte an diesen Daten",
   "privacynotice.rights.how":
     "Um eines dieser Rechte zu nutzen, antworten Sie auf die Nachricht, die Sie hierher geführt hat, oder kontaktieren Sie uns über die Adresse auf unserer Website.",
+  "privacynotice.rights.howContact":
+    "Um eines dieser Rechte zu nutzen, wenden Sie sich an uns: {contact}",
   "privacynotice.right.access":
     "Bitten Sie uns um eine Kopie der Daten, die wir über Sie gespeichert haben.",
   "privacynotice.right.rectification":
@@ -11058,8 +11098,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bitten Sie uns, die Nutzung Ihrer Daten auszusetzen, solange etwas strittig ist.",
   "privacynotice.right.objection":
     "Widersprechen Sie der Nutzung Ihrer Daten durch uns.",
+  "privacynotice.right.portability":
+    "Verlangen Sie die Daten, die Sie uns gegeben haben, in einem gängigen maschinenlesbaren Format, oder lassen Sie sie an jemand anderen übermitteln.",
+  "privacynotice.right.withdrawConsent":
+    "Widerrufen Sie eine erteilte Einwilligung jederzeit. Das ändert nichts an dem, was wir vorher getan haben.",
   "privacynotice.right.complain":
-    "Reichen Sie eine Beschwerde bei der für Sie zuständigen Datenschutzbehörde ein.",
+    "Beschweren Sie sich bei einer Datenschutz-Aufsichtsbehörde, zum Beispiel in dem Land, in dem Sie leben oder arbeiten.",
   "privacynotice.controller.title": "Wer verantwortlich ist",
   "privacynotice.controller.contact": "Fragen zu Ihren Daten: {contact}",
   "privacynotice.categories.title": "Was wir speichern",
@@ -11101,6 +11145,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mitarbeitende, die mit unserem CRM arbeiten.",
   "privacynotice.recipient.serviceProviders":
     "Unternehmen, die unser CRM betreiben und seine E-Mails für uns zustellen. Ein Vertrag verpflichtet sie, Ihre Daten nur nach unseren Weisungen zu nutzen.",
+  "privacynotice.retention.afterYears_one": "{count} Jahr",
+  "privacynotice.retention.afterYears_other": "{count} Jahren",
+  "privacynotice.retention.afterDays_one": "{count} Tag",
+  "privacynotice.retention.afterDays_other": "{count} Tagen",
   "privacynotice.retention.title": "Wie lange wir die Daten speichern",
   "privacynotice.retention.archive":
     "{scope}: nach {days} aus der täglichen Nutzung genommen.",
@@ -12183,6 +12231,84 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramReplaceCta": "Token ersetzen",
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
+
+  "connectors.bot.provDispact": "Dispact",
+  "connectors.bot.dispactTitle": "Dispact-Bot",
+  "connectors.bot.dispactSub":
+    "Ein Bot postet Neues zu Deals und Projekten in private Kanäle eures Team-Chats und liest, was das Team dort schreibt.",
+  "connectors.bot.dispactConnectCta": "Dispact-Bot verbinden",
+  "connectors.bot.dispactEmptyNote":
+    "Mit einem verbundenen Bot kann jeder Deal und jedes Projekt einen privaten Kanal im Team-Chat bekommen.",
+  "connectors.bot.dispactDisconnectBody":
+    "Das löscht den gespeicherten Token. Margince postet nicht mehr in verknüpfte Kanäle und liest dort nicht mehr mit; bereits abgelegte Notizen bleiben im CRM.",
+  "connectors.bot.dispactModalTitle": "Dispact-Bot verbinden",
+  "connectors.bot.dispactTokenHint":
+    "Der App-Token des Bots. Er beginnt mit gwapp_, wird im Schlüsseltresor gespeichert und nie wieder angezeigt.",
+  "connectors.bot.dispactAddress": "Chat-Adresse",
+  "connectors.bot.dispactAddressHint":
+    "Die Webadresse eures Team-Chats, etwa https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Ereignis-Schlüssel",
+  "connectors.bot.eventsSecretHint":
+    "Optional. Kopiert den Ereignis-Schlüssel (whsec_…) von der Seite der Margince-App in eurem Chat. Mit ihm liest Margince einen Kanal, sobald er neue Nachrichten hat, und prüft den Rest stündlich; ohne ihn prüft Margince jeden Kanal jede Minute.",
+  "connectors.bot.eventsSecretKeepHint":
+    "Leer lassen, um den gespeicherten Ereignis-Schlüssel zu behalten.",
+
+  "channelLink.title": "Team-Chat",
+  "channelLink.none": "Noch kein Kanal",
+  "channelLink.noneSub":
+    "Ein privater Kanal hält das Team zu diesem Datensatz auf dem Laufenden.",
+  "channelLink.create": "Kanal erstellen",
+  "channelLink.linkExisting": "Vorhandenen Kanal verknüpfen",
+  "channelLink.linkCta": "Kanal verknüpfen",
+  "channelLink.linkFailed": "Kanal nicht verknüpft",
+  "channelLink.channelField": "Kanalname oder Link",
+  "channelLink.channelHint":
+    "Wähle einen privaten Kanal, in dem der Bot ist. Für einen anderen Kanal füge den Bot dort zuerst im Chat hinzu.",
+  "channelLink.summarize":
+    "Bisherige Unterhaltung zusammenfassen (bis zu 5 Zusammenfassungen)",
+  "channelLink.verbosity": "Was Margince postet",
+  "channelLink.verbosityHint":
+    "Die Karte im Kanal bleibt auf jeder Stufe aktuell.",
+  "channelLink.verbosityFailed": "Einstellung nicht gespeichert",
+  "channelLink.verbosity.everything": "Alles",
+  "channelLink.verbosity.important": "Nur Wichtiges",
+  "channelLink.verbosity.milestones": "Nur Meilensteine",
+  "channelLink.verbosity.silent": "Still (nur die Karte)",
+  "channelLink.open": "{name} im Team-Chat öffnen",
+  "channelLink.copy": "Kanallink kopieren",
+  "channelLink.copied": "Kanallink kopiert",
+  "channelLink.copyRemedy": "Öffne den Kanal und kopiere dort seine Adresse.",
+  "channelLink.notInChat_one":
+    "{count} eingeladenes Mitglied hat kein Chat-Konto.",
+  "channelLink.notInChat_other":
+    "{count} eingeladene Mitglieder haben kein Chat-Konto.",
+  "channelLink.notAdded_one":
+    "{count} eingeladenes Mitglied wurde nicht hinzugefügt. Prüfe die Zielgruppe der App in Dispact.",
+  "channelLink.notAdded_other":
+    "{count} eingeladene Mitglieder wurden nicht hinzugefügt. Prüfe die Zielgruppe der App in Dispact.",
+  "channelLink.pausedBadge": "Pausiert",
+  "channelLink.paused": "Kanal pausiert",
+  "channelLink.pausedBody":
+    "Der Kanal wurde archiviert, oder der Bot hat den Zugriff verloren. Es wird nichts gepostet, bis du ihn trennst und einen anderen Kanal verknüpfst.",
+  "channelLink.unlink": "Trennen",
+  "channelLink.unlinkNamed": "{name} trennen",
+  "channelLink.unlinkTitle": "Diesen Kanal trennen?",
+  "channelLink.unlinkBody":
+    "Margince postet und liest dort nicht mehr. Der Kanal und seine Nachrichten bleiben im Chat.",
+  "channelLink.refused.botNotConnected":
+    "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
+  "channelLink.refused.channelNotFound":
+    "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
+  "channelLink.refused.channelNotPrivate":
+    "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
+  "channelLink.refused.botNotMember":
+    "Der Bot ist kein Mitglied dieses Kanals. Füge ihn dem Kanal hinzu und versuche es dann noch einmal.",
+  "channelLink.refused.channelAlreadyLinked":
+    "Dieser Kanal gehört schon zu einem anderen Deal oder Projekt.",
+  "channelLink.refused.recordAlreadyLinked":
+    "Dieser Datensatz hat schon einen Kanal.",
+  "channelLink.refused.providerUnreachable":
+    "Der Chat war nicht erreichbar. Es wurde nichts geändert, versuche es also noch einmal.",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
@@ -13317,7 +13443,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "prefs.alwaysOn": "Immer an",
   "confirm.title": "Ihre Angaben",
   "confirm.intro":
-    "Margince, ein KI-System, führt dieses CRM. Unten steht alles, was über Sie erfasst ist. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
+    "Unten steht alles, was über Sie erfasst ist. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
+  "confirm.introNamed":
+    "{controller} hat die folgenden Angaben über Sie gespeichert. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
   "confirm.card.title": "Erfasste Angaben",
   "confirm.field.fullName": "Name",
   "confirm.field.title": "Jobtitel",
@@ -13355,7 +13483,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.done.body":
     "Ihre Antwort wurde erfasst. Änderungen gehen zur Übernahme an eine Person aus dem Team. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
-    "Dieser Link ist nicht mehr gültig. Der Link wurde möglicherweise bereits verwendet oder ist abgelaufen.",
+    "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
+  "confirm.questionChanged":
+    "Die Frage auf dieser Seite hat sich geändert, nachdem Sie sie geöffnet haben. Laden Sie die Seite neu und antworten Sie noch einmal.",
   "prefs.lockedWhy":
     "Dieser Zweck bleibt aktiviert, da er für einen von Ihnen angeforderten Vorgang benötigt wird.",
   "prefs.confirmationNeededWhy":
@@ -13910,7 +14040,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Kontaktdaten",
   "settings.part.integrations.accounting": "Buchhaltung",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Telegram-Bot",
+  "settings.part.integrations.telegram": "Chat-Bots",
   "settings.part.integrations.sharedMailboxes": "Gemeinsame Postfächer",
   "sharedMailboxes.title": "Gemeinsame Postfächer",
   "sharedMailboxes.intro":
@@ -15542,8 +15672,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eingabe zu groß für das Entscheidungsmodell",
   "aicalls.reason.decision_uncertified":
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
-  "aicalls.reason.decision_local_only":
-    "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
@@ -18087,7 +18215,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es konnte nicht gelesen werden, welche Teammitglieder in den Threads dieses Kontakts kein Postfach verbunden haben.",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
-  "contact.graph.sideColumn": "Vorstellungen und Veränderungen",
   "contact.graph.recordWorksWith": "Erfassen: arbeitet mit {name}",
   "contact.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "contact.graph.withColleague": "mit {name}",
@@ -18138,7 +18265,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.lastYesterday": "Gestern",
   "contact.intro.lastDays": "Vor {days} Tagen",
   "contact.intro.lastNever": "Keiner in 90 Tagen",
-  "contact.intro.stripWho": "Wege",
   "contact.intro.stripWhoMix":
     "{direct} direkt · {indirect} über einen Kontakt",
   "contact.intro.stripWhoOwn": "Inklusive deiner eigenen Beziehung",
@@ -18158,14 +18284,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.warmed": "Wärmer",
   "contact.intro.change.cooled": "Kühler",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Anfrage zur Vorstellung",
   "contact.intro.handoffNotStarted": "Nicht begonnen",
   "contact.intro.handoffUnread": "Nicht lesbar",
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
   "contact.intro.relayTitle": "Status der Vorstellung",
-  "contact.intro.stripLabel": "Netzwerk in Zahlen",
+  "contact.chapter.jump": "Auf diesem Tab",
+  "contact.chapter.wayIn": "Zugang",
+  "contact.chapter.whoAnswer":
+    "Wer aus deinem Team und aus dem Unternehmen mit {name} korrespondiert, und wie oft.",
+  "contact.chapter.progress": "Fortschritt",
+  "contact.chapter.routes_one": "{count} Weg",
+  "contact.chapter.routes_other": "{count} Wege",
+  "contact.chapter.allDirect_one": "direkt",
+  "contact.chapter.allDirect_other": "alle direkt",
+  "contact.chapter.allVia_one": "über einen Kontakt",
+  "contact.chapter.allVia_other": "alle über einen Kontakt",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Vorstellung: {handoff}. Letzte Änderung: {change}.",
+  "contact.chapter.toCheck": "Zu prüfen",
+  "contact.chapter.toCheckAnswer":
+    "Was Margince aus E-Mails und Seiten gelesen hat. Jeder Eintrag lässt sich bestätigen, korrigieren oder verwerfen.",
+  "contact.chapter.sources": "Quellen",
+  "contact.chapter.sourcesAnswer":
+    "Was jede Quelle sagt. Nichts hier überschreibt, was ein Teammitglied eingetragen hat.",
+  "contact.chapter.recordKeeping": "Datenpflege",
+  "contact.chapter.recordKeepingAnswer":
+    "Felder, Einwilligungen und Einstellungen zu diesem Kontakt.",
+  "contact.chapter.researchAction": "Öffentliche Quellen recherchieren",
   "contact.intro.mapTitle": "Wer {name} kennt",
   "contact.intro.stepRoute": "Weg wählen",
   "contact.intro.stepRoutePick": "auswählen, wen du fragst",
@@ -18311,7 +18460,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.unavailable": "Nicht verfügbar",
   "contact.network.momentsTitle": "Was sich geändert hat",
   "contact.network.momentsSub":
-    "Veränderungen in dieser Beziehung, aus den Nachrichten.",
+    "Veränderungen aus den Nachrichten und frühere Vorstellungen.",
   "contact.network.noMoments": "Keine neuen Veränderungen in dieser Beziehung.",
   "contact.change.repliedAfterGap":
     "Der Kontakt hat nach {days} ruhigen Tagen geantwortet.",
@@ -19777,6 +19926,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.title.automation_run.failed": "{name} ist fehlgeschlagen",
   "worklist.title.automation_run.blocked": "{name} wurde blockiert",
   "worklist.title.meeting_outcome": "Ergebnis von {name} festhalten",
+  "worklist.title.meeting_outcome.read_only": "Noch kein Ergebnis für {name}",
   "worklist.title.meeting_follow_up": "Bei {name} nachfassen",
   "worklist.title.awaiting_reply": "Noch keine Antwort: {name}",
   "worklist.title.bounce": "Unzustellbar: {name}",
@@ -20063,6 +20213,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
   "worklist.ask.meeting_outcome":
     "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest. Fand er nicht statt, wähle „Hat nicht stattgefunden“ oder sag ihn über die Kalendereinladung ab.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Wer den Termin organisiert hat, hält fest, wie er gelaufen ist. Du kannst ihn nicht ändern. Erinnere bei Bedarf daran und markiere diese Erinnerung dann als erledigt.",
   "worklist.ask.weekly_commitment":
     "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
   "worklist.ask.awaiting_reply":
@@ -20595,6 +20747,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.meetingSkipNextStep": "Nächsten Schritt überspringen",
+  "worklist.verb.meetingNextStep": "Wie geht es weiter?",
   "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
@@ -21070,6 +21224,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
+  "lead.company.addedOnQualify":
+    "Noch kein Unternehmen verknüpft. Beim Qualifizieren wird es verknüpft oder angelegt.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.company.matchedByDomain": "Gleiche Website-Domain",
@@ -21303,6 +21459,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "activity.notes.connectHint":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen, um sie zu lesen.",
+  "activity.notes.otherAccount":
+    "Notizen sind angehängt. Verbinde Besprechungsnotizen mit dem Google-Konto deines Kalenders.",
+  "captureConcern.notesGrant":
+    "Besprechungsnotizen können nicht gelesen werden",
+  "captureConcern.notesAccount":
+    "Besprechungsnotizen benötigen dasselbe Google-Konto wie der Kalender",
   "captureConcern.reauth": "Erneute Verbindung erforderlich",
   "captureConcern.error": "Verbindungsfehler",
   "captureConcern.failing": "Synchronisierung schlägt fehl",
@@ -21963,6 +22127,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Berichtseinrichtung oder Umsatzziele vorschlagen",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
+  "aiTask.name.chat_summary": "Zusammenfassung eines Chat-Kanals",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",

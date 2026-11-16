@@ -177,9 +177,8 @@ describe("the confirm page branches on what the link was for", () => {
 // The seeded purposes are stored with English labels, so a page that printed
 // the label put English inside a German or Vietnamese page.
 describe("a confirm page names the seeded purposes in the reader's language", () => {
-  // The heading is a label and speaks the reader's language. The sentence is
-  // the consent proof. The server records the published question with the
-  // stored label, so the page shows and submits that same sentence.
+  // The heading and the consent sentence name the purpose the same way. The
+  // server records the published question with that same name.
   it("shows and submits the same consent sentence the server records", async () => {
     const user = userEvent.setup();
     const submitted: string[] = [];
@@ -203,7 +202,8 @@ describe("a confirm page names the seeded purposes in the reader's language", ()
     expect(
       await screen.findByRole("heading", { name: "Produktneuigkeiten" }),
     ).toBeInTheDocument();
-    const shown = "Bestätigen Sie, dass Sie Marketing email erhalten möchten.";
+    const shown =
+      "Bestätigen Sie, dass Sie Produktneuigkeiten erhalten möchten.";
     expect(screen.getByText(shown)).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", { name: "Abonnement bestätigen" }),
@@ -314,7 +314,7 @@ describe("the page speaks the language the mail was sent in", () => {
   });
 });
 
-const VI_INVALID_LINK = VIETNAMESE["prefs.invalidLink"];
+const VI_INVALID_LINK = VIETNAMESE["confirm.invalidLink"];
 
 describe("an expired link still speaks the language its mail was sent in", () => {
   afterEach(() => {
@@ -400,5 +400,172 @@ describe("a privacy notice discloses who answers, why, what, to whom and for how
     ).toBeInTheDocument();
     expect(screen.getByText("To object: Reply STOP")).toBeInTheDocument();
     expect(screen.queryByText("Object to how we use it.")).toBeNull();
+  });
+});
+
+describe("the confirm pages name the controller and sit in the public frame", () => {
+  const CONTROLLER = {
+    legal_name: "Example Trading GmbH",
+    identity: "Example Trading GmbH\nMusterstraße 1\n10115 Berlin",
+    privacy_contact: "privacy@example.test",
+  };
+  const NOTICE = {
+    ...NOTICE_LISTS,
+    kind: "privacy_notice",
+    acquired_as: "referral",
+    rights: ["access"],
+  };
+
+  it("names the controller on the record page, not the software", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ ...RECORD, controller: CONTROLLER }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-record-named" />);
+
+    expect(
+      await screen.findByText(/^Example Trading GmbH holds the details below/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/an AI system/)).toBeNull();
+    expect(screen.getByText("Sent via Margince")).toBeInTheDocument();
+  });
+
+  it("names the controller on the subscription page", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ ...SUBSCRIPTION, controller: CONTROLLER }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-subscription-named" />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Who is responsible" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^Example Trading GmbH/)).toBeInTheDocument();
+    expect(screen.getByText("Sent via Margince")).toBeInTheDocument();
+  });
+
+  it("names every right and the controller's contact for them", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        ...NOTICE,
+        controller: CONTROLLER,
+        rights: [
+          "access",
+          "portability",
+          "withdraw_consent",
+          "complain_to_authority",
+        ],
+      }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-rights" />);
+
+    expect(
+      await screen.findByText(/^Ask for the data you gave us/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Withdraw a consent you gave/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/^Complain to a data protection supervisory authority/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("To use any of these, contact us: privacy@example.test"),
+    ).toBeInTheDocument();
+  });
+
+  it("says in German after how many years, in the dative", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({
+        ...NOTICE,
+        retention: [
+          { scope: "activity", retain_days: 1095, action: "archive" },
+        ],
+      }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-de-retention" />, "de");
+
+    expect(
+      await screen.findByText(/nach 3 Jahren aus der täglichen Nutzung/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("a confirm page asks the question its link pinned", () => {
+  const SERVED = {
+    version: "v5",
+    text: "Bestätigen Sie, dass Sie Produktneuigkeiten erhalten möchten.\nAbonnement bestätigen",
+    ask: "Bestätigen Sie, dass Sie Produktneuigkeiten erhalten möchten.",
+    answers: ["Abonnement bestätigen"],
+  };
+
+  function answering(page: unknown, reply: () => Response) {
+    const submitted: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const request = input instanceof Request ? input : undefined;
+      if ((request?.method ?? init?.method ?? "GET") === "GET") {
+        return jsonResponse(page);
+      }
+      const body = request ? await request.text() : String(init?.body);
+      submitted.push(JSON.parse(body).marketing_wording);
+      return reply();
+    });
+    return submitted;
+  }
+
+  it("shows the served question and sends its whole text back", async () => {
+    const user = userEvent.setup();
+    const submitted = answering(
+      { ...SUBSCRIPTION, purpose_key: "marketing_email", question: SERVED },
+      () => jsonResponse({}),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-served" />, "de");
+
+    expect(await screen.findByText(SERVED.ask)).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Abonnement bestätigen" }),
+    );
+    await screen.findByText("Abonnement aktiv");
+    expect(submitted).toEqual([SERVED.text]);
+  });
+
+  it("sends the record page's served question back with a yes", async () => {
+    const user = userEvent.setup();
+    const question = {
+      version: "v5",
+      text: "Occasional news?\nYes please\nNo thanks",
+      ask: "Occasional news?",
+      answers: ["Yes please", "No thanks"],
+    };
+    const submitted = answering({ ...RECORD, question }, () =>
+      jsonResponse({ cases: [] }),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-record-served" />);
+
+    expect(await screen.findByText("Occasional news?")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Yes please" }));
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await screen.findByText("Thank you");
+    expect(submitted).toEqual([question.text]);
+  });
+
+  it("asks a reader on a page older than its question to reload", async () => {
+    const user = userEvent.setup();
+    answering(
+      { ...SUBSCRIPTION, purpose_key: "marketing_email", question: SERVED },
+      () => jsonResponse({ title: "Conflict", code: "version_skew" }, 409),
+    );
+
+    render(<ConfirmDetailsScreen token="tok-skew" />, "de");
+
+    await user.click(
+      await screen.findByRole("button", { name: "Abonnement bestätigen" }),
+    );
+    expect(
+      await screen.findByText(/^Die Frage auf dieser Seite hat sich geändert/),
+    ).toBeInTheDocument();
   });
 });

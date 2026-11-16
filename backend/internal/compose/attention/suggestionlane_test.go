@@ -29,14 +29,16 @@ type stubSuggestions struct {
 
 type ownerSetSeen struct{ owners *storekit.OwnerSet }
 
+// OpenSuggestions answers a complete page when the stub holds no more open
+// suggestions than its rows and the limit allows.
 func (s *stubSuggestions) OpenSuggestions(
 	_ context.Context, owners *storekit.OwnerSet, limit int,
-) ([]crmcontracts.DealSuggestion, error) {
+) ([]crmcontracts.DealSuggestion, bool, error) {
 	s.listed = &ownerSetSeen{owners}
 	if s.err != nil {
-		return nil, s.err
+		return nil, false, s.err
 	}
-	return s.rows[:min(limit, len(s.rows))], nil
+	return s.rows[:min(limit, len(s.rows))], s.open == 0 && len(s.rows) <= limit, nil
 }
 
 func (s *stubSuggestions) CountOpen(_ context.Context, owners *storekit.OwnerSet) (int, error) {
@@ -150,7 +152,7 @@ func TestABrokenSuggestionReadIsNamedFailedAndTheRestOfTheDayStillLoads(t *testi
 	stalled := errors.New("canceling statement due to statement timeout")
 	for name, suggestions := range map[string]*stubSuggestions{
 		"the list fails": {err: stalled},
-		"the list answers and then the count fails": {rows: suggestionRows(3), countErr: stalled},
+		"the list answers and then the count fails": {rows: suggestionRows(3), open: 40, countErr: stalled},
 	} {
 		t.Run(name, func(t *testing.T) {
 			svc := decisionsService(stubApprovals{rows: []crmcontracts.Approval{approval("a staged send")}}, stubDuplicates{}).
@@ -191,4 +193,17 @@ func tallyByWorklistSource(queue []crmcontracts.WorklistItem) map[string]int {
 		seen[string(item.Source)]++
 	}
 	return seen
+}
+
+// A page that holds every open suggestion is its own count, so no count is read.
+func TestACompleteSuggestionPageIsItsOwnCount(t *testing.T) {
+	suggestions := &stubSuggestions{rows: suggestionRows(3)}
+	service := decisionsService(stubApprovals{}, stubDuplicates{}).WithDealSuggestions(suggestions)
+	_, count, err := service.decisionsToDepth(pageReader(), needsYouPage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if suggestions.counted != nil || count.suggestions == nil || *count.suggestions != 3 {
+		t.Fatalf("a complete page counted %v (count read %v), want 3 with no count read", count.suggestions, suggestions.counted != nil)
+	}
 }

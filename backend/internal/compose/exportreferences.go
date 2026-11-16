@@ -30,6 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/projectexport"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -118,6 +119,9 @@ func withholdUnreadableReferences(
 	refs := referencesByTable[table]
 	if len(refs) == 0 || len(rows) == 0 {
 		return nil
+	}
+	if err := projectexport.WriteCustomers(ctx, tx, table, columns, rows); err != nil {
+		return err
 	}
 	for _, ref := range refs {
 		at := indexOfColumn(columns, ref.column)

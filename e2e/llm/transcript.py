@@ -254,11 +254,22 @@ def _agy_tool(out, step, conversation, workspace=""):
         if step.get("state") == "ERROR":
             text, is_error = str((info.get("error") or {}).get("message") or "the call failed"), True
         else:
-            text, is_error = str(info.get("output") or ""), False
+            text, is_error = str(info.get("output") or "") or _agy_spilled(conversation, step.get("step_index")), False
         out.tool_results([(call_id, text, is_error)])
         return ""
-    target = params.get("ServerName") or params.get("Path") or ""
+    # The arguments say what the model went outside for, which is the whole of
+    # the diagnosis when the prompt left something unclear.
+    target = params.get("ServerName") or params.get("Path") or json.dumps(params, ensure_ascii=False)[:300]
     return f"agy used a tool outside the lane's MCP server: {name} {target}".strip()
+
+
+def _agy_spilled(conversation, step_index):
+    """The long result agy kept out of the stream, read from the file it wrote."""
+    path = os.path.expanduser(f"~/.gemini/antigravity-cli/brain/{conversation}/.system_generated/steps/{step_index}/output.txt")
+    if not conversation or not os.path.isfile(path):
+        return ""
+    with open(path, encoding="utf-8", errors="replace") as handle:
+        return handle.read()
 
 
 def _agy_usage(usage):

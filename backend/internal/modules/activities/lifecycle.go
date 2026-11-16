@@ -51,6 +51,11 @@ func updateActivityInTx(
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	if !held && in.FollowUpTask != nil {
+		if err := admitOutcomeFollowUp(ctx, current, in); err != nil {
+			return crmcontracts.Activity{}, err
+		}
+	}
 	// A held row still reaches the UPDATE, whose trigger owes the 423.
 	if !held && in.changesNothing(current) {
 		return current, nil

@@ -49,8 +49,8 @@ var published = []publishedBudget{
 	{"PERF-2", "List/table view (50 rows, filtered)", "< 150 ms server", []string{dailyTarget}},
 	{"PERF-3", "Search (full-text)", "< 200 ms", []string{"bench-perf"}},
 	{"PERF-4", "Save/mutation", "< 150 ms server", []string{"bench-record"}},
-	{"PERF-5", "AI baseline action (summary/draft)", "first token < 1.5 s", nil},
-	{"PERF-6", "Cold start (single binary)", "< 2 s", nil},
+	{"PERF-5", "AI baseline action (summary/draft)", "first token < 1.5 s", []string{"bench-ai"}},
+	{"PERF-6", "Cold start (single binary)", "< 2 s", []string{"bench-coldstart"}},
 	{"PERF-7", "Context-graph assembly", "< 300 ms at mid-market", []string{"bench-perf", dailyTarget}},
 	{"PERF-8", "Worklist and Home, as the screen calls them", "< 1 s", []string{dailyTarget}},
 	{"PERF-9", "Analytics screen", "< 300 ms", []string{dailyTarget}},
@@ -89,19 +89,21 @@ type measurement struct {
 	Caveat   string  `json:"caveat,omitempty"`
 	// The fields below mirror BudgetMeasurement in
 	// internal/compose/integration/perfrecord.go; older records leave them empty.
-	Seat          string  `json:"seat,omitempty"`
-	Flow          string  `json:"flow,omitempty"`
-	Verdict       string  `json:"verdict,omitempty"`
-	KnownIssue    int     `json:"known_issue,omitempty"`
-	Status5xx     int     `json:"status_5xx,omitempty"`
-	Allowed5xx    bool    `json:"allowed_5xx,omitempty"`
-	Status422     int     `json:"status_422,omitempty"`
-	Allowed422    bool    `json:"allowed_422,omitempty"`
-	PoolWaitMs    float64 `json:"pool_wait_ms,omitempty"`
-	PoolWaitMaxMs float64 `json:"pool_wait_max_ms,omitempty"`
-	Acquires      int64   `json:"acquires,omitempty"`
-	PoolSize      int32   `json:"pool_size,omitempty"`
-	Note          string  `json:"note,omitempty"`
+	Seat                 string  `json:"seat,omitempty"`
+	Flow                 string  `json:"flow,omitempty"`
+	Verdict              string  `json:"verdict,omitempty"`
+	KnownIssue           int     `json:"known_issue,omitempty"`
+	Status5xx            int     `json:"status_5xx,omitempty"`
+	Status422            int     `json:"status_422,omitempty"`
+	Allowed422           bool    `json:"allowed_422,omitempty"`
+	PoolWaitMs           float64 `json:"pool_wait_ms,omitempty"`
+	PoolWaitMaxMs        float64 `json:"pool_wait_max_ms,omitempty"`
+	Acquires             int64   `json:"acquires,omitempty"`
+	AdmissionWaitMs      float64 `json:"admission_wait_ms,omitempty"`
+	AdmissionWaitMaxMs   float64 `json:"admission_wait_max_ms,omitempty"`
+	AdmissionPeakWaiters int64   `json:"admission_peak_waiters,omitempty"`
+	PoolSize             int32   `json:"pool_size,omitempty"`
+	Note                 string  `json:"note,omitempty"`
 }
 
 // corpus mirrors CorpusFacts in perfrecord.go: what a seeded bench ran over.

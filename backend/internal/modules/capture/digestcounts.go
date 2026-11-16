@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -29,9 +30,9 @@ func readDigestCounts(ctx context.Context, tx pgx.Tx, userID ids.UUID, since, un
   (SELECT count(*) FROM company WHERE (captured_by LIKE 'connector:%' OR source LIKE 'domain\_triage:%') AND `+created+` AND owner_id = `+reader+`),
   (SELECT count(*) FROM activity a WHERE capture_label = 'commitment' AND `+labeled+imported+`),
   (SELECT count(*) FROM activity a WHERE capture_label = 'meeting' AND `+labeled+imported+`),
-  (SELECT count(*) FROM activity a WHERE capture_label = 'noise' AND `+labeled+imported+`)`, args...).Scan(
+  (SELECT count(*) FROM activity a WHERE `+capturekind.SQL("a.capture_label")+` = 'other' AND `+labeled+imported+`)`, args...).Scan(
 		&p.Capture.ActivitiesCreated, &p.Capture.ContactsCreated, &p.Capture.CompaniesCreated,
-		&p.Review.Classify.Commitments, &p.Review.Classify.Meetings, &p.Review.Classify.Noise)
+		&p.Review.Classify.Commitments, &p.Review.Classify.Meetings, &p.Review.Classify.Other)
 	if err != nil {
 		return fmt.Errorf("capture: digest counts: %w", err)
 	}

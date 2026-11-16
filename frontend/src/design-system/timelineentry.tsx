@@ -32,6 +32,9 @@ export type TimelineGroup = {
   entries: TimelineEntry[];
   /** This group may continue past what the page holds. */
   partial: boolean;
+  newerPart?: string;
+  olderPart?: string;
+  threadEntries?: readonly TimelineEntry[];
 };
 
 type EmailSummary = components["schemas"]["EmailSummary"];
@@ -165,6 +168,8 @@ export type TimelineEntry = {
   automaticKind?: AutomaticKind | null;
   /** A model rewrote the words before a rep saved them (Polish wording). */
   aiAssisted?: boolean;
+  /** The chat talk an AI summary note was written from. */
+  chatEpisode?: components["schemas"]["ChatEpisode"] | null;
   /**
    * The message's own subject, when it had one. This is not the rendered
    * `title`, which falls back to the body (or to the kind) so a subjectless
@@ -345,7 +350,8 @@ export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
 // A thread also says how many messages each side wrote. Four from them and
 // five from the team then never read as nine from one contact.
 export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
-  const count = group.entries.length;
+  const entries = group.threadEntries ?? group.entries;
+  const count = entries.length;
   const base = {
     bulk: "timeline.group.bulk",
     newsletters: "timeline.group.newsletters",
@@ -358,7 +364,7 @@ export function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   if (group.kind !== "thread") {
     return total;
   }
-  const { theirs, ours } = threadSides(group.entries);
+  const { theirs, ours } = threadSides(entries);
   if (theirs + ours === 0) {
     return total;
   }

@@ -28,7 +28,7 @@ func openTxMemo(tx pgx.Tx) func() {
 }
 
 func memoOf(tx pgx.Tx) (*txMemo, bool) {
-	held, ok := txMemos.Load(tx)
+	held, ok := txMemos.Load(underlying(tx))
 	if !ok {
 		return nil, false
 	}

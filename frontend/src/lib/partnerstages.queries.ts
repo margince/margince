@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { useHealthScope } from "./healthscope";
 import { labelFor } from "./labelfor";
 import { throwProblem } from "./problem";
 import { shippedLabel, withShippedLabels } from "./shippedlabels";
@@ -197,9 +198,10 @@ export function useSwapPartnerStages() {
  * programmes. The deal form's partner picker shares its query key.
  */
 export function usePartnerCompanyOptions(enabled = true) {
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["partners", "names"],
-    enabled,
+    queryKey: ["partners", "names", readerScope ?? ""],
+    enabled: enabled && readerScope !== undefined,
     staleTime: 60_000,
     queryFn: async () => {
       const { data, error, response } = await api.GET("/companies", {

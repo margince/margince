@@ -20,12 +20,9 @@ var draftReportCopy = toolCopy{
 }
 
 var changeReportsCopy = toolCopy{
-	Purpose: "Work what the reporting and forecast pages write. draft saves a report's next charts as a " +
-		"draft, or with no report_id creates a new report only its author sees. The others create, update, " +
-		"publish, discard, restore or archive a report, set targets, the framework and schedules, freeze an " +
-		"edition, retry a run, define and launch a sales initiative, make a forecast call, answer an input " +
-		"check and share a forecast by link. record_decision records a decision from a sales review on its " +
-		"deal, with an owner and a review date; record_decision_outcome closes it.",
+	Purpose: "Work what the reporting and forecast pages write: reports and their drafts, targets, " +
+		"schedules and editions, sales initiatives, forecast calls and shares, input checks, and a " +
+		"sales review's decisions, each with an owner and a review date.",
 	Limits: "A draft is refused on a report that already has one. publish_draft, discard_draft, " +
 		"restore_revision, archive_report, publish_framework and launch_initiative " +
 		"change what colleagues see: ask the user first.",

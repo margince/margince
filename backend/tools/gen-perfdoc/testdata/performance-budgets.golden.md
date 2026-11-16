@@ -13,7 +13,7 @@ measured is listed as not measured. The budgets are the published claim; a
 record is evidence about one machine on one day.
 
 Re-measure with `make bench-perf`, `make bench-record`,
-`make bench-capture`, `make bench-daily` (each needs `make db-up`) or
+`make bench-ai`, `make bench-coldstart`, `make bench-capture`, `make bench-daily` (each needs `make db-up`) or
 `make bench-mobile`. Each writes its own record and re-renders this page.
 `make bench-perf-check` and `make bench-mobile-check` measure
 without recording. The weekly scheduled job records the SMB tier of
@@ -40,11 +40,6 @@ records, so a row changes only when a maintainer merges it.
 | `CAP-PARAM-1` | Capture to timeline | 60 s p95 |  | **not measured** |  |
 | `MOBILE-AC-2` | Record open, perceived, Fast-3G | < 300 ms perceived |  | **not measured** |  |
 
-### Still unmeasured
-
-No harness covers `PERF-5` (AI baseline action (summary/draft)), `PERF-6` (Cold start (single binary)). They are listed above as `not measured` rather than
-omitted, because a budget missing from this page reads as one that holds.
-
 ## Daily use (`make bench-daily`)
 
 The screens a rep and a manager open every day, timed over HTTP as the screen calls them.
@@ -59,7 +54,7 @@ A row with no data had nothing to time, and its note says why; a row not gated i
 | `app_shell_notices` | rep | 5.0 ms | 7.0 ms | 150 ms | 30 | within budget | empty on the seeded corpus |
 | `analytics_evaluate` | rep |  |  | 300 ms | 12 | no data | 12 samples, under the floor of 30: no p95 is claimed |
 | `worklist_first_load` | rep | 5200 ms | 5200 ms | 1000 ms | 1 | not gated |  |
-| `morning_load_cheap_route` | team | 60.0 ms | 240 ms | 150 ms | 40 | over budget (#7068) | pool wait 1250 ms in all, 48.0 ms at most, over 3200 acquires on a pool of 16 |
+| `morning_load_cheap_route` | team | 60.0 ms | 240 ms | 150 ms | 40 | over budget (#7068) | pool wait 1250 ms in all, 48.0 ms worst half-second mean, over 3200 acquires on a pool of 16 |
 
 ### Known-issue entries that could be removed
 

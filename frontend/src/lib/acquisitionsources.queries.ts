@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./problem";
 import { withShippedLabels } from "./shippedlabels";
 
@@ -109,4 +110,22 @@ export function useUpdateAcquisitionSource() {
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: ACQUISITION_SOURCES_KEY }),
   });
+}
+
+export function acquisitionOptions(
+  t: (k: MessageKey) => string,
+  sources: AcquisitionSource[],
+  current?: string | null,
+): { value: string; label: string }[] {
+  const options = [{ value: "", label: t("deal.acquisitionUnset") }];
+  for (const source of sources) {
+    if (source.active || source.key === current) {
+      options.push({ value: source.key, label: source.label });
+    }
+  }
+  // Keep a stored channel absent from the catalog so an unrelated edit cannot clear it.
+  if (current && !sources.some((source) => source.key === current)) {
+    options.push({ value: current, label: current });
+  }
+  return options;
 }

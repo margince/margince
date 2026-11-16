@@ -35,9 +35,10 @@ const whereAlways = "1=1"
 // the auth object and the table name — the module's record tables are
 // named after their objects.
 type listPageSpec[T any] struct {
-	entity  string
-	prepare func(context.Context, pgx.Tx) (context.Context, error)
-	columns func(context.Context, func(any) int) (string, error)
+	entity    string
+	firstPage bool
+	prepare   func(context.Context, pgx.Tx) (context.Context, error)
+	columns   func(context.Context, func(any) int) (string, error)
 	// fields is the core sortable vocabulary (data-model §13.5); active
 	// cf_ columns join it per request.
 	fields map[string]storekit.SortField
@@ -149,6 +150,10 @@ func listPageTx[T any](ctx context.Context, tx pgx.Tx, sortSpec *string, limit i
 	if recs, cursorKeys, err = spec.scan(rows, active, sorted); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	n, err := exactListTotal(ctx, tx, total, len(recs), limit, spec.firstPage)
+	if err != nil {
+		return nil, storekit.Page{}, fmt.Errorf("count %s: %w", spec.entity, err)
+	}
 	if len(recs) > limit {
 		recs = recs[:limit]
 		createdAt, id := spec.cursorKey(recs[len(recs)-1])
@@ -157,11 +162,6 @@ func listPageTx[T any](ctx context.Context, tx pgx.Tx, sortSpec *string, limit i
 			return nil, storekit.Page{}, err
 		}
 		page = storekit.Page{HasMore: true, NextCursor: next}
-	}
-	// The count shares the page snapshot so concurrent inserts cannot change its total.
-	var n int
-	if err := tx.QueryRow(ctx, total.sql, total.args...).Scan(&n); err != nil {
-		return nil, storekit.Page{}, fmt.Errorf("count %s: %w", spec.entity, err)
 	}
 	page.Total = &n
 	// On the page's own snapshot, so what it reports about the boundary

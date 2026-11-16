@@ -87,6 +87,9 @@ const dealTaggableType = "deal"
 type ListDealsInput struct {
 	IDs          []ids.UUID
 	WritableOnly bool
+	// FactsOnly answers the deal's own columns under the reader's field masks,
+	// without its creator, its probability setter, its last email and its tags.
+	FactsOnly bool
 	// TagIDs narrows to the deals carrying these tags, combined by TagMode.
 	// The predicate is storekit's, shared with the contact and account lists.
 	TagIDs      []ids.UUID
@@ -225,6 +228,9 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 		out, page, err = storekit.RunListPageTx(ctx, tx, pre, dealTable, dealColumns, active, where, scanDealPage,
 			func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 			func(tx pgx.Tx, page []crmcontracts.Deal) error {
+				if in.FactsOnly {
+					return maskDeals(ctx, tx, page)
+				}
 				if err := finishDealPage(ctx, tx, page); err != nil {
 					return err
 				}
@@ -252,7 +258,12 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 	}
 	return storekit.RunListPageTx(ctx, tx, pre, dealTable, dealColumns, active.cols, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
-		func(tx pgx.Tx, page []crmcontracts.Deal) error { return finishDealPage(ctx, tx, page) })
+		func(tx pgx.Tx, page []crmcontracts.Deal) error {
+			if in.FactsOnly {
+				return maskDeals(ctx, tx, page)
+			}
+			return finishDealPage(ctx, tx, page)
+		})
 }
 
 // dealListQuery is the half of a deal list both entry points share: the sort

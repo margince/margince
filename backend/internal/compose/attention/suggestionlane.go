@@ -24,7 +24,8 @@ const sourceDealSuggestion = "deal_suggestion"
 // under the deals store's own visibility rule, so the count is never of
 // suggestions the page could not show. Nil owners is unrestricted.
 type DealSuggestions interface {
-	OpenSuggestions(ctx context.Context, owners *storekit.OwnerSet, limit int) ([]crmcontracts.DealSuggestion, error)
+	// complete is whether the page holds every open suggestion, which is then the count.
+	OpenSuggestions(ctx context.Context, owners *storekit.OwnerSet, limit int) (page []crmcontracts.DealSuggestion, complete bool, err error)
 	CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error)
 }
 
@@ -71,10 +72,10 @@ func (s *Service) openSuggestionItems(
 	}
 	var owners *storekit.OwnerSet
 	return readSuggestionLane(ctx, s, sourceDealSuggestion,
-		func(ctx context.Context) ([]crmcontracts.DealSuggestion, error) {
+		func(ctx context.Context) ([]crmcontracts.DealSuggestion, bool, error) {
 			var err error
 			if owners, err = scoped.recordOwners(ctx); err != nil {
-				return nil, err
+				return nil, false, err
 			}
 			return s.suggestions.OpenSuggestions(ctx, owners, depth)
 		}, func(ctx context.Context) (int, error) {
@@ -90,14 +91,16 @@ func (s *Service) openSuggestionItems(
 // page, and a stall in it must cost the reader only their suggestions.
 func readSuggestionLane[T any](
 	ctx context.Context, s *Service, source string,
-	list func(context.Context) ([]T, error), count func(context.Context) (int, error),
+	list func(context.Context) ([]T, bool, error), count func(context.Context) (int, error),
 	render func(T) crmcontracts.AttentionItem,
 ) ([]crmcontracts.AttentionItem, *int, *crmcontracts.WorklistSourceUnavailable) {
 	var page []T
 	var open int
 	err := s.degradable(ctx, source, laneBudget, func(ctx context.Context) error {
+		var complete bool
 		var err error
-		if page, err = list(ctx); err != nil {
+		if page, complete, err = list(ctx); err != nil || complete {
+			open = len(page)
 			return err
 		}
 		open, err = count(ctx)

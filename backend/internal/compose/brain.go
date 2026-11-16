@@ -82,10 +82,11 @@ type ModelPath struct {
 	// company-view lane whose absence changes the ANSWER rather than the prose:
 	// its floor abstains, because grading is not a restatement of recorded
 	// values (DOSS-PARAM-7).
-	GrowthFit  completer
-	DraftReply completer // activity-anchored email reply drafting
-	Rewrite    completer // the rewrite verbs over a rep's own words, premium first
-	OfferDraft completer // the offer regenerate-from-signal drafting call
+	GrowthFit   completer
+	DraftReply  completer // activity-anchored email reply drafting
+	Rewrite     completer // the rewrite verbs over a rep's own words, premium first
+	ChatSummary completer // judges and summarises a linked chat channel's talk
+	OfferDraft  completer // the offer regenerate-from-signal drafting call
 	// CaptureClassify is the §2.8 batched mail-label lane (ADR-0063) —
 	// the highest-volume, cheapest task, routed L-S with the C-C solo
 	// re-ask riding the same ladder.
@@ -117,13 +118,7 @@ type ModelPath struct {
 	// classify labels a known contact's mail for attention, this decides
 	// whether a stranger becomes a record at all.
 	CaptureCounterpartyVerdict completer
-	// CaptureConfidentialityVerdict decides what one THREAD is about, so a
-	// classified mailbox can open the ordinary conversations instead of holding
-	// everything. A separate task from CaptureCounterpartyVerdict because it
-	// answers a different question about a different subject: that one decides
-	// whether a stranger becomes a record, this decides whether a colleague may
-	// read a conversation. Its ladder is local-only, so a deployment that binds
-	// no local rung holds every thread rather than sending mail to a cloud.
+	// Separate from sender classification: a known mailbox can still hold a private thread.
 	CaptureConfidentialityVerdict completer
 	// SignalExtract is the SIG-F-3 lane that reads the material events out of
 	// a settled conversation. It is a separate task from CaptureClassify
@@ -353,6 +348,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		GrowthFit:                     brain(ai.TaskGrowthFit),
 		DraftReply:                    brain(ai.TaskDraftReply),
 		Rewrite:                       brain(ai.TaskRewrite),
+		ChatSummary:                   brain(ai.TaskChatSummary),
 		OfferDraft:                    brain(ai.TaskOfferDraft),
 		CaptureClassify:               brain(ai.TaskCaptureClassify),
 		OwedVerdict:                   brain(ai.TaskOwedVerdict),

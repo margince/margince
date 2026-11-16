@@ -12,6 +12,7 @@ import { countryOptions } from "../../format/assignedcountries";
 import { formatAnalyticsNumber } from "../../format/format";
 import { INDUSTRY_CODES, industryLabelKey } from "../../format/industry";
 import { type Translator, useLocale, useT } from "../../i18n";
+import { useHealthScope } from "../../lib/healthscope";
 import { useSalesInitiatives } from "./reporting.initiatives.queries";
 import type { ReportingSelection } from "./reporting.model";
 import { VALUE_BASES, valueBasisOf } from "./reporting.selection";
@@ -79,8 +80,9 @@ type DimensionKey = (typeof DIMENSION_KEYS)[number];
 
 /** The products a reader may narrow a report to: the live, active catalog. */
 export function useProductOptions(enabled = true) {
+  const readerScope = useHealthScope();
   return useQuery({
-    queryKey: ["reporting-products"],
+    queryKey: ["reporting-products", readerScope ?? ""],
     queryFn: async () => {
       const { data, error } = await api.GET("/products", {
         params: { query: { active: true, limit: 200, sort: "name" } },
@@ -91,7 +93,7 @@ export function useProductOptions(enabled = true) {
         label: product.name,
       }));
     },
-    enabled,
+    enabled: enabled && readerScope !== undefined,
     staleTime: 60_000,
   });
 }

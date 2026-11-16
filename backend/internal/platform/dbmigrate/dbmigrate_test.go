@@ -260,7 +260,7 @@ func TestContactRenameAcceptsThePreviouslyShippedContent(t *testing.T) {
 // the list; this is what says so.
 func TestEquivalentContentIsAdmittedAndNothingElseIs(t *testing.T) {
 	t.Parallel()
-	for _, m := range loadNamespaceMigrations(t, "core") {
+	for _, m := range equivalenceSourceMigrations(t, "core") {
 		for _, entry := range equivalentContent["core"][m.Version] {
 			t.Run(m.Version+"/"+entry.applied, func(t *testing.T) {
 				version := m.Version
@@ -320,7 +320,7 @@ func TestEveryEquivalenceMatchesTheMigrationThatShips(t *testing.T) {
 	t.Parallel()
 	for namespace, versions := range equivalentContent {
 		shipped := map[string]Migration{}
-		for _, m := range loadNamespaceMigrations(t, namespace) {
+		for _, m := range equivalenceSourceMigrations(t, namespace) {
 			shipped[m.Version] = m
 		}
 		for version, entries := range versions {

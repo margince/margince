@@ -10,6 +10,7 @@ import (
 	"testing"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -72,6 +73,12 @@ func TestNoOfferedDescriptionNamesAnUnlistedTool(t *testing.T) {
 		offered := map[string]bool{}
 		for _, action := range spec.Actions {
 			offered[action.Action] = true
+		}
+		// read_view's own view names are offered the same way: the model sends one as view.
+		if spec.Name == agents.ReadViewTool {
+			for _, view := range readViews(agentPolicies) {
+				offered[view.Name] = true
+			}
 		}
 		text := spec.Description + " " + strings.Join(argumentDescriptions(t, spec.InputSchema), " ")
 		for _, word := range strings.FieldsFunc(text, func(c rune) bool {

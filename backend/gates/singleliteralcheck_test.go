@@ -42,9 +42,8 @@ type heldToOneValue string
 // each naming the writer that makes it a discriminator rather than a default
 // nobody moves.
 var oneValueColumns = gatekit.Waive(map[heldToOneValue]string{
-	"channel_connection.provider": "the channel provider, written explicitly by every connection insert and read back " +
-		"to route a send. It carries no default, so a row that named nothing would be refused rather than quietly " +
-		"becoming telegram, and the CHECK widens with the second provider implemented",
+	"chat_link.provider": "the chat a channel lives in, written by chatlinks.insertLink and read with the link. It " +
+		"carries no default, so a second chat (Slack) widens the CHECK rather than adding a column every reader must learn",
 	"communication_review.kind": "the review kind, written as reviewKindSingle by the slice that creates one and read " +
 		"on two paths. One review, one send, is the only shape this product performs today; the column is on the " +
 		"contract so a second kind is a widening rather than a new field every client has to learn",

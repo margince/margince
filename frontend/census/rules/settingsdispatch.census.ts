@@ -44,7 +44,7 @@ export const CARDS_THE_REGISTER_REACHED = [
   "ProviderCard",
   "FinanceSourceCard",
   "WebhooksCard",
-  "TelegramConnectorsPanel",
+  "WorkspaceBotPanel",
   "OwnDomainsCard",
   "CaptureSettingsCard",
   "ConsumerMailDomainsCard",

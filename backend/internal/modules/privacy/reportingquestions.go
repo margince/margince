@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -31,7 +32,7 @@ func heldQuestionSource() string {
  COALESCE(qd.legal_hold,false) OR COALESCE(qdc.legal_hold,false) OR COALESCE(qdp.legal_hold,false)
  OR COALESCE(ql.legal_hold,false) OR COALESCE(qp.legal_hold,false)
  OR EXISTS(SELECT 1 FROM company pc WHERE pc.legal_hold AND (pc.id=qp.company_id
- OR pc.id IN (SELECT company_id FROM relationship WHERE project_id=qp.id AND kind='project_company')))
+ OR pc.id IN (SELECT company_id FROM relationship WHERE project_id=qp.id AND kind='` + auth.ProjectCompanyKind + `')))
  OR EXISTS(SELECT 1 FROM relationship rel JOIN contact subject ON subject.id=rel.contact_id
  WHERE ((rel.deal_id=qd.id AND rel.kind='deal_stakeholder') OR (rel.project_id=qp.id AND rel.kind='project_stakeholder')) AND subject.legal_hold)
  OR EXISTS(SELECT 1 FROM contact lc WHERE lc.id IN (ql.promoted_contact_id, ql.from_contact_id) AND lc.legal_hold)

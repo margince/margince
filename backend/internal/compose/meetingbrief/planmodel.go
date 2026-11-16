@@ -41,7 +41,7 @@ Quote what contacts actually asked for. A question that would read the same abou
 Cite the refs the briefing gave you, in evidence only. A ref must never appear in the text a reader sees.
 "opening" has the same shape as "objective", and every "evidence" list in every field holds objects shaped exactly as in "objective" — {"entity_type":...,"entity_id":...} — never a bare ref string.
 The briefing's what_the_record_does_not_say list is already shown to the reader beside your plan: never copy its questions into yours, and add nothing to it.
-Each scenario's "coach" is for the rep's sales lead, not the rep: what the lead should watch for on that branch, and one question to ask the rep before the meeting, both from this deal's own record. It must say something the play does not. Omit it when the record gives the lead nothing to watch.
+Each scenario's "coach" is for the rep's sales lead, not the rep: what the lead should watch for on that branch, and one question to ask the rep before the meeting, both from this account's own record: its messages, open claims and deal. A meeting with no deal still has that record. It must say something the play does not. Omit it when the record gives the lead nothing to watch.
 At most five likely asks, five questions and three scenarios. Three good questions beat five ordinary ones.
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise.
 Say plainly when something is uncertain rather than filling the gap. Omit a field you have nothing real for.

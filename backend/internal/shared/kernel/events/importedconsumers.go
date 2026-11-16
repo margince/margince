@@ -51,6 +51,7 @@ var importedDecisions = map[string]ImportedDecision{
 	"cg:partner-activation": {SkipImported, "a sale an import brings in happened in the past, and activation is a fact of today"},
 	"cg:stage-evidence":     {SkipImported, "evidence settles what happened now, and imported history is not a new fact"},
 	"cg:deal-room-timeline": {SkipImported, "writes a note about a room that is live today"},
+	"cg:chat-links":         {SkipImported, "posts what changes today into a live chat channel"},
 	"cg:overnight-agent":    {SkipImported, "plans work against the live pipeline, and closed history is not work"},
 	"cg:workflows":          {SkipImported, "an automation starts on a change somebody makes, never on a bulk import"},
 	"cg:flow-bridge":        {SkipImported, "hands live events to the flow engine, which acts on them as news"},

@@ -55,11 +55,16 @@ const mergeEntry = {
   },
 };
 
-function serving(contact: Response) {
+function serving(contact: Response, references: Response) {
   return vi.fn(async (input: Request | string | URL) => {
     const url = input instanceof Request ? input.url : String(input);
     if (url.includes("/history")) {
       return jsonResponse({ data: [mergeEntry], page: { next_cursor: null } });
+    }
+    if (
+      new URL(url, "https://test.local").pathname === "/v1/records/references"
+    ) {
+      return references.clone();
     }
     return contact.clone();
   });
@@ -69,7 +74,12 @@ describe("a merge on the survivor's History", () => {
   it("names the record folded in and the counts in words", async () => {
     vi.stubGlobal(
       "fetch",
-      serving(jsonResponse({ id: FOLDED_IN, full_name: "Ann Smith" })),
+      serving(
+        jsonResponse({ id: FOLDED_IN, full_name: "Ann Smith" }),
+        jsonResponse({
+          data: [{ id: FOLDED_IN, name: "Ann Smith", archived: true }],
+        }),
+      ),
     );
     render(<RecordHistory kind="contact" id="c1" currency={null} />);
 
@@ -82,8 +92,26 @@ describe("a merge on the survivor's History", () => {
     expect(screen.queryByText("merged from id")).toBeNull();
   });
 
-  it("says another record when this reader may not read the one folded in", async () => {
-    vi.stubGlobal("fetch", serving(jsonResponse({ title: "Not found" }, 404)));
+  it.each([
+    { label: "the scoped read omits it", status: 200, body: { data: [] } },
+    {
+      label: "the reference endpoint is unavailable",
+      status: 404,
+      body: { title: "Not found" },
+    },
+    {
+      label: "the object read is denied",
+      status: 403,
+      body: { title: "Permission denied" },
+    },
+  ])("says another record when $label", async ({ body, status }) => {
+    vi.stubGlobal(
+      "fetch",
+      serving(
+        jsonResponse({ title: "Not found" }, 404),
+        jsonResponse(body, status),
+      ),
+    );
     render(<RecordHistory kind="contact" id="c1" currency={null} />);
 
     expect(await screen.findByText("another record")).toBeTruthy();

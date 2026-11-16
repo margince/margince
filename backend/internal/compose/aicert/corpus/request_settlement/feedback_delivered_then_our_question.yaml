@@ -35,6 +35,7 @@ fixture:
           The report is attached.
           > Confirm the launch date.
           Friday is confirmed.
+        attachments: [launch-report.pdf]
 expect:
   outcome: accepted
   answer:

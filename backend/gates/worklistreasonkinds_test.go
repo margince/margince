@@ -48,6 +48,9 @@ const (
 	frontendReasonCatalog = "../frontend/src/i18n/en.ts"
 )
 
+// knownReasonEntry reads one `kind: true` pair out of KNOWN_REASONS.
+var knownReasonEntry = regexp.MustCompile(`["']?\b([a-z][a-z0-9_]*)\b["']?:\s*(?:["'][a-z]+["']|true)`)
+
 // tsReasonCopyKey reads one `"worklist.because.<kind>":` key out of the English
 // catalog. de.ts and vi.ts are held to the same keys by i18n.test.ts.
 var tsReasonCopyKey = regexp.MustCompile(`"worklist\.because\.([a-z_]+)"\s*:`)
@@ -107,7 +110,7 @@ func clientReasonCensus(t *testing.T) []string {
 		body = body[:end]
 	}
 	var kinds []string
-	for _, m := range focusSurfaceEntry.FindAllStringSubmatch(tsComment.ReplaceAllString(body, ""), -1) {
+	for _, m := range knownReasonEntry.FindAllStringSubmatch(tsComment.ReplaceAllString(body, ""), -1) {
 		kinds = append(kinds, m[1])
 	}
 	slices.Sort(kinds)

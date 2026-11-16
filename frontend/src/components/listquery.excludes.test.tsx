@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ListChip } from "../design-system/listsurface";
 import { LocaleProvider } from "../i18n";
 import { openFilterValues } from "../testing/listquery.testkit";
+import { meFixture } from "../testing/mefixture";
 import {
   type ListPage,
   type ListQuery,
@@ -86,6 +87,7 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>

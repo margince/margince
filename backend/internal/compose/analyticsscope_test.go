@@ -182,10 +182,9 @@ func TestNamingYourselfIsAlwaysWithinYourOwnLens(t *testing.T) {
 // scope already hands a team manager, so a population clause that excludes it
 // would disagree with the manager's own list about a row that is in both.
 //
-// arg is a no-op collector here — the assertion is on the RENDERED SQL shape,
-// not on a live query — because this is the ManagedTeams path, the one kind
-// labelScope never touches a database for (analyticsUserLabel/analyticsTeamLabel
-// both need one), so this stays a pure policy test like its neighbours.
+// arg is a no-op collector here: the assertion is on the rendered SQL shape.
+// labelScope reads no database for ManagedTeams, unlike for an owner or a team.
+// So this stays a pure policy test like its neighbours.
 func TestManagedTeamsPopulationTreatsAnUnownedRowAsShared(t *testing.T) {
 	team := ids.NewV7()
 	actor := actorWithScope(principal.RowScopeTeam, team)

@@ -60,8 +60,8 @@ func registerContractRouters(r *Registry) {
 			continue
 		}
 		spec.Version = toolVersionV1
-		spec.InputSchema = schema(`{"type":"object","properties":{"action":{"description":"Which act to run; ` +
-			`read_workspace topic actions lists each action's body"}}}`)
+		spec.InputSchema = schema(`{"type":"object","properties":{"action":{"description":"read_workspace topic actions ` +
+			`lists each action's body"}}}`)
 		r.Register(contractRouter{spec: spec})
 	}
 }

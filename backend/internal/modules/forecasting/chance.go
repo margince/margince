@@ -13,6 +13,8 @@ import (
 	"cmp"
 	"math"
 	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // PriorStrength is how many resolved deals the typed chance counts as. Twenty
@@ -45,6 +47,8 @@ type StageEntry struct {
 type StageEvidence struct {
 	Resolved int
 	WonShare float64
+	// Seats are the owners of the deals behind the evidence.
+	Seats []ids.UUID
 }
 
 // EstimateStageEvidence is the Aalen–Johansen estimate of the eventual won

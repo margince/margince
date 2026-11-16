@@ -122,7 +122,6 @@ row that leaked. A leak is not an error rate that the pool may average away.
          ✅ Ready             all three hold
          ⚠️ Usable with care  ≥ 2/3 right, quality ≥ the lower bar, no veto
          ❌ Not reliable yet   anything less
-         🔒 Not served here    local-only data on a preset with no local model
          ❔ Not measured       nobody has run it on this model yet
 ```
 

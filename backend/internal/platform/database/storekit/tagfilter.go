@@ -196,9 +196,9 @@ func AttachRowTags[T any](
 			       row_number() OVER (PARTITION BY g.entity_id ORDER BY t.name, t.id) AS rank
 			  FROM taggable g
 			  JOIN tag t ON t.id = g.tag_id
-			 WHERE g.entity_type = $1 AND g.entity_id = ANY($2) AND t.archived_at IS NULL
+			 WHERE g.entity_type = `+TextLiterals(taggableType)+` AND g.entity_id = ANY($1) AND t.archived_at IS NULL
 		) ranked
-		 WHERE rank <= $3`, taggableType, recordIDs, RowTagCap)
+		 WHERE rank <= $2`, recordIDs, RowTagCap)
 	if err != nil {
 		return fmt.Errorf("storekit: reading row tags for %s: %w", taggableType, err)
 	}

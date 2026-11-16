@@ -129,6 +129,18 @@ function stubApi(
         idempotencyKey: headers?.get("Idempotency-Key") ?? null,
         form,
       });
+      if (
+        key === "GET /records/references" &&
+        url.searchParams.get("kind") === "deal"
+      ) {
+        return jsonResponse({
+          data: url.searchParams
+            .getAll("id")
+            .flatMap((id) =>
+              id === "d1" ? [{ id, name: "Renewal", archived: false }] : [],
+            ),
+        });
+      }
       if (key === "GET /activities/deal-filing") return jsonResponse(filing);
       if (key === "GET /deals/d1")
         return jsonResponse({ id: "d1", name: "Renewal" });

@@ -5,18 +5,9 @@ package compose
 
 // Vocabulary that reads ANOTHER record type than the report's own.
 //
-// The engine's admission gate covers spec.entity — the projects of a project
-// report, the activities of an activity report. A measure that folds the
-// deals under a project, or a dimension that names the project an activity
-// is filed under, reads a second record type, and the caller owes that
-// type's read grant as much as they owe the first. Without this, a seat
-// holding project.read alone would total deal money it could not list, and a
-// seat holding activity.read alone would learn which projects exist.
-//
-// A name the caller ASKS for without the grant is refused (403), on the
-// report and on the drill-through alike. A name the caller never asked for is
-// simply not served: the default plan drops it, and the drill-through omits
-// its column — the same answer shape a narrower seat gets everywhere else.
+// The engine's admission gate covers spec.entity. A name that reads a second
+// record type owes that type's read grant too. Asked for without it, the name
+// is refused (403); never asked for, it is not served.
 
 import (
 	"context"
@@ -28,19 +19,33 @@ import (
 )
 
 // requireVocabularyGrants refuses the first requested name whose grant the
-// caller lacks. names may mix dimensions and measures; a name outside
-// spec.grants owes nothing beyond the report's own gate.
+// caller lacks. A name owes what spec.grants declares and the read grant of any
+// table its column references; row scope never stands in for that grant.
 func requireVocabularyGrants(ctx context.Context, spec reportSpec, names []string) error {
 	for _, name := range names {
-		object, ok := spec.grants[name]
-		if !ok {
-			continue
-		}
-		if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
-			return err
+		for _, object := range append(referencedTables(spec, name), spec.grants[name]) {
+			if object == "" {
+				continue
+			}
+			if err := auth.Require(ctx, object, principal.ActionRead); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+// referencedTables is the table a dimension's or filter's column references.
+func referencedTables(spec reportSpec, name string) (out []string) {
+	for _, expr := range []string{spec.dimensions[name], spec.filters[name]} {
+		if table, scoped := spec.referenceScopes[expr]; scoped && expr != "" {
+			out = append(out, table)
+		}
+	}
+	if table, gated := spec.filterScopes[name]; gated {
+		out = append(out, table)
+	}
+	return out
 }
 
 // grantedNames filters a vocabulary down to the names this caller may be

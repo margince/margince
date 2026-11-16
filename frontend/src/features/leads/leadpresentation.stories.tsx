@@ -9,6 +9,7 @@ import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { LeadBoard } from "./leadpresentation";
@@ -67,6 +68,7 @@ function Board({
 export const Counted: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "POST /reports/leads-by-status": () =>
         jsonResponse({
           rows: [
@@ -82,6 +84,7 @@ export const Counted: Story = {
 export const CountsUnavailable: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "POST /reports/leads-by-status": () =>
         jsonResponse({ title: "Unavailable", status: 503 }, 503),
     });
@@ -97,6 +100,7 @@ export const CountsUnavailable: Story = {
 export const CountsWithheld: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "GET /leads": () =>
         jsonResponse({
           data: [],
@@ -122,6 +126,7 @@ export const CountsWithheld: Story = {
 export const CountsRefused: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "POST /reports/leads-by-status": () =>
         jsonResponse({ title: "Forbidden", status: 403 }, 403),
     });

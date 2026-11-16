@@ -34,6 +34,7 @@ export const ACTIVITY_LANE: Readonly<Record<ActivityKind, AgentLane>> = {
   capture_classify: "ingest",
   owed_verdict: "ingest",
   tag_suggest: "ingest",
+  chat_summary: "ingest",
   capture_confidentiality_verdict: "ingest",
   capture_counterparty_verdict: "ingest",
   cold_start: "ingest",

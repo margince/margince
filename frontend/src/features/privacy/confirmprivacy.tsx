@@ -21,6 +21,7 @@ import {
   ObjectionCard,
   RetentionCard,
 } from "./confirmprivacyparts";
+import { PublicPage } from "./publicpage";
 
 type PrivacyInformationPage = components["schemas"]["PrivacyInformationPage"];
 
@@ -52,7 +53,9 @@ const RIGHT_LABEL: Record<string, MessageKey> = {
   rectification: "privacynotice.right.rectification",
   erasure: "privacynotice.right.erasure",
   restriction: "privacynotice.right.restriction",
+  portability: "privacynotice.right.portability",
   objection: "privacynotice.right.objection",
+  withdraw_consent: "privacynotice.right.withdrawConsent",
   complain_to_authority: "privacynotice.right.complain",
 };
 
@@ -83,8 +86,9 @@ export function PrivacyNotice({
   // The right to object has a card of its own, so the list leaves it out.
   const rights = card.rights.filter((right) => right !== "objection");
 
+  const contact = card.controller?.privacy_contact;
   return (
-    <div className="pref-page">
+    <PublicPage>
       <Heading size="xlarge" className="t-h2">
         {t("privacynotice.title")}
       </Heading>
@@ -140,12 +144,16 @@ export function PrivacyNotice({
             </li>
           ))}
         </ul>
-        <p>{t("privacynotice.rights.how")}</p>
+        <p>
+          {contact
+            ? t("privacynotice.rights.howContact", { contact })
+            : t("privacynotice.rights.how")}
+        </p>
       </Card>
 
       {card.rights.includes("objection") ? (
         <ObjectionCard route={card.controller?.objection_route} />
       ) : null}
-    </div>
+    </PublicPage>
   );
 }

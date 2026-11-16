@@ -9,10 +9,6 @@ package compose
 // TestCounterpartyCriteriaNameExactlyTheVerdictKinds holds the labels,
 // TestCounterpartyDecisionStateCarriesTheLLMInputs the inputs, and
 // certification the judgment.
-//
-// The task is local_only, so the lane answers here only when the deployment's
-// decision model is local; everywhere else the router skips it and the ladder
-// answers as before.
 
 import (
 	"encoding/json"

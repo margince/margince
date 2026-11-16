@@ -13,11 +13,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 )
 
-// gatherInstallation reads the installation settings a card is written from.
-// The language is the one the card is worded in. The zone is the one every day
+// gatherInstallation reads the installation settings a card is written from:
+// the base language of its summary, and the reader's for its fixed sentences. The zone is the one every day
 // count on the card is reckoned in, the zone the reader sees the dates in.
 func (s *Service) gatherInstallation(ctx context.Context, f *facts) error {
 	f.lang = identity.BaseLanguageForPrompt(ctx, s.pool)
+	f.say = identity.ReaderLanguageForPrompt(ctx, s.pool)
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		loc, err := identity.ZoneAppliedTx(ctx, tx)
 		f.loc = loc

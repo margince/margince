@@ -61,28 +61,28 @@ func (s *Service) WithDecidedReceipts(d DecidedReceipts) *Service {
 // decidedDone reads the decisions and keeps those no drawn line stands for.
 // A seat that may not read approvals keeps its audit lines; the needs-you
 // lane already reports that source as withheld.
-func (s *Service) decidedDone(
+func (s *Service) decidedPage(
 	ctx context.Context, drawn []crmcontracts.MagicLine, from time.Time, limit int,
-) (lines []crmcontracts.MagicLine, floor bool, err error) {
+) (lines []crmcontracts.MagicLine, floor bool, unavailable bool, err error) {
 	if s.decided == nil {
-		return []crmcontracts.MagicLine{}, false, nil
+		return []crmcontracts.MagicLine{}, false, false, nil
 	}
 	// Refilled while overlap with the drawn lines leaves the page short and
 	// the source has more. Stopped at readCap, the lane's total is a floor.
 	for scan := limit; ; scan = min(scan*4, readCap) {
 		decided, more, err := s.decided.DecidedSince(ctx, from, scan)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
-			return []crmcontracts.MagicLine{}, false, nil
+			return []crmcontracts.MagicLine{}, false, true, nil
 		}
 		if err != nil {
-			return nil, false, err
+			return nil, false, false, err
 		}
 		lines := decidedLines(drawn, decided)
 		if !more || len(lines) >= limit {
-			return lines, false, nil
+			return lines, more, false, nil
 		}
 		if scan >= readCap {
-			return lines, true, nil
+			return lines, true, false, nil
 		}
 	}
 }

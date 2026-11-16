@@ -127,6 +127,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   register, and find why one gets no answer.
 - [set-up-outbound-mail.md](how-to/set-up-outbound-mail.md): which mail goes out through which server.
 - [connect-telegram.md](how-to/connect-telegram.md): set up the Telegram bot, and read what each error means.
+- [connect-dispact.md](how-to/connect-dispact.md): connect the Dispact bot, and read what each error means.
 - [import-a-company-spreadsheet.md](how-to/import-a-company-spreadsheet.md): import a CSV file of
   companies over MCP or REST.
 - [run-import-jobs.md](how-to/run-import-jobs.md): run the import worker, and read an import that
@@ -315,6 +316,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [channel-capture-parity.md](explanation/channel-capture-parity.md): whose messages a captured chat
   holds.
 - [outbound-messaging.md](explanation/outbound-messaging.md): how a message goes out.
+- [chat-channel-links.md](explanation/chat-channel-links.md): how a linked deal or project sends its changes to the team chat.
 - [outbound-webhooks.md](explanation/outbound-webhooks.md): how events reach a webhook.
 - [scheduling.md](explanation/scheduling.md): how the app finds a meeting time.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md): whether a message may go, and the GDPR

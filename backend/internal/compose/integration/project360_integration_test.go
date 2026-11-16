@@ -21,6 +21,7 @@ package integration
 //     itself refuses.
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
@@ -150,6 +151,7 @@ func TestProject360AssemblesEverySectionFromTheRealWriters(t *testing.T) {
 	assertProject360History(t, page, now)
 	assertProject360Collections(t, page, f)
 	assertProject360Counts(t, page)
+	assertCommitmentCarriesItsTaskVersion(t, e, page)
 }
 
 // The history is the two rows the writers appended, and the fold measures
@@ -175,6 +177,23 @@ func assertProject360History(t *testing.T, page crmcontracts.Project360, now tim
 		durations[0].Phase != projects.PhaseInitiative || durations[0].Seconds != wantInitiative || durations[0].Current ||
 		durations[1].Phase != "pursuing" || durations[1].Seconds != wantPursuing || !durations[1].Current {
 		t.Errorf("phase_durations = %+v, want initiative=%ds then pursuing=%ds (current)", durations, wantInitiative, wantPursuing)
+	}
+}
+
+// A commitment carries the task row's version, which the page's Done and
+// Snooze send, so the page reads no task before writing one.
+func assertCommitmentCarriesItsTaskVersion(t *testing.T, e *Env, page crmcontracts.Project360) {
+	t.Helper()
+	if page.Commitments == nil || len(page.Commitments.Data) != 1 {
+		t.Fatalf("commitments = %+v, want the one task", page.Commitments)
+	}
+	row := page.Commitments.Data[0]
+	var stored int64
+	if err := e.Pool.QueryRow(context.Background(), `SELECT version FROM activity WHERE id = $1`, row.ActivityId).Scan(&stored); err != nil {
+		t.Fatalf("reading the task's version: %v", err)
+	}
+	if row.Version != stored {
+		t.Errorf("commitment version = %d, want the task row's %d", row.Version, stored)
 	}
 }
 

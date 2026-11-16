@@ -2,7 +2,7 @@
 <!-- describes: frontend/src/features/worklist frontend/src/features/brief backend/internal/compose/attention backend/internal/compose/briefs backend/internal/compose/worklistsnap backend/internal/compose/morningmailview.go -->
 # Your day
 
-**Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week, its review and its plan are in [Your week](your-week.md).
+**Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week, its review and its plan are in [Your week](your-week.md). For overdue invoices on Home, see [Customer payments](customer-payments.md).
 
 The Worklist is the ranked to-do list in Margince: one list of everything waiting on you, in the order Margince ranks them. That is buyers to answer, tasks due, promises made, deals at risk and items to check. It lives on **Home**. Press **Show Worklist** to open it as a panel over the page; **Hide Worklist** closes it. It has no sidebar row of its own.
 
@@ -56,7 +56,7 @@ Only the colleague who holds the task is reminded. A colleague who opens your qu
 ### Why is this on my list?
 The open card under **Needs you** on **Home** says what happened, what to do next and its one current reason. **View details** adds the messages, contact, deal and every fact behind the row. An approval card shows what the agent proposes, such as the task it would add with its due day and note. Its **View details** holds the decision, so you can approve, edit or reject it there.
 
-A meeting with no outcome asks **How did it go?** with **It happened**, **Add notes** and **Did not happen**. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
+A meeting with no outcome asks **How did it go?** with **It happened** and **Add notes**, plus **Did not happen** unless Margince sent its invitation. A colleague's meeting you cannot change reads **No outcome yet for** the meeting. Press **Done** to take it off your list. A task Margince made for you says what made it. A reminder about a quiet contact, company, deal or lead says so, and asks you to get in touch and then press **Done**. Also called: what is this task, where did this task come from.
 
 The **Why this is on your list** panel in **View details** answers in four parts. **What happened** says the event, its day and who it is with, and for a contact the last contact each way. **Why now** lists the facts that put the row on your list. **If nothing is done** says what waiting costs, such as a contact who keeps waiting. **What to do** names the next step and who it is with. The title on the card and in **View details** says what is wrong, such as a deal that has gone quiet.
 
@@ -156,7 +156,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 ### What is on Today?
 **Today**, on **Home**, shows the kinds of work that need attention when the list is complete.
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
-- **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that.
+- **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that. A mailbox, booking page, AI task or automation that stopped takes no card. A badge beside **Needs you** counts the system issues and opens the Worklist on **System**. Mail that could not be delivered keeps its card and is counted there too.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
@@ -167,8 +167,7 @@ Each item names its record and shows the facts that call for action. A badge say
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Your day** and **Numbers**.
 - **Your day** is a line through today. **Now** sits at your clock and says "Free until" the next meeting, or "Nothing else booked today". The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
 
-A greeting covers the page on the day's first visit, once per browser, unless your settings turn motion off. It shows the date and the emails synced overnight. It also counts the items waiting on you in Today, how many of them are urgent and how many meetings you have. It stands at least 1.5 seconds and lifts once your page is ready, or after 4.5 seconds; any key or click ends it sooner.
-Also called: morning brief, daily brief, today, priorities, top cards, welcome screen.
+Also called: morning brief, daily brief, today, priorities, top cards.
 
 ### What comes first on Today?
 A customer who waits for your reply, and a reply deadline that comes close, come first on Today and in the Worklist.
@@ -189,14 +188,16 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 - That value is the full deal amount, not the amount you expect to lose. It may not be complete, and it is not a forecast.
 - Meetings count calendar entries still to come. Margince does not say you are prepared unless the source says so.
 
-The work counts come from the current Worklist read. The greeting's email count comes from the nightly run; it does not count today's decisions. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
+The work counts come from the current Worklist read. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. For a few seconds, Home may show a copy up to 15 minutes old. It then reads your day again and shows the new copy on its own. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 
 ### Done for you
-**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**. One card is open at a time; a closed card shows the deal's newest change, and a press opens it.
+**Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**.
 
-The small-changes card holds the work Margince did beside the deals, such as saving or filing an email. Closed, it names each kind of change on one line, and it opens by itself when no deal changed. Changes that read the same show as one step with a count, such as **Saved email or meeting** with **4 changes**. Each line in the step keeps its own **Undo**, and a line that touched more than one email or meeting opens with **View 2 changes**. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot. When some activity could not be counted, a line under the card says so.
+A short preview under the heading shows up to three recent changes in two lines, even when there are only small changes. Deal cards start closed. Press a card to read its changes; one deal is open at a time. **Small changes** starts closed and shows only its count until you open it.
+
+The small-changes card holds the work Margince did beside the deals, such as saving or filing an email. Open it to read the changes. Changes that read the same show as one step with a count, such as **Saved email or meeting** with **4 changes**. Each line in the step keeps its own **Undo**, and a line that touched more than one email or meeting opens with **View 2 changes**. **Details** under each one says when it happened, who did it, why, and why it cannot be undone when it cannot. When some activity could not be counted, a line under the card says so.
 
 An open card lists every change on the deal, newest first: what moved and when, and why Margince did it. When a change rests on the customer's own words, they show under "The customer wrote:". A deal Margince closed reads **Marked lost**, and "Reason unavailable" when you may not read why. Only the deal's owner reads why. A change a later one replaced is grey and reads "Replaced by a later change".
 
@@ -355,9 +356,9 @@ A task that is late, or whose reminder is due, stays in Today. Also called: late
 
 ### Change history
 
-**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Done for you**. A long list ends in **Show more**, which loads the next changes.
+**Change history**, on the Worklist, reads the same changes and time window as the Home preview. Press **Show recent changes** to read the action, record, time and status. **Details** on a change works as it does under **Done for you**. A long list ends in **Show more**, which loads the next changes.
 
-When there is nothing: "No actions taken on your behalf today."
+When there is nothing: "No actions taken on your behalf today." A read that fails says it could not read the changes instead.
 
 **Undo** puts the record back the way it was before a deal change. A change already undone stays in history with its status and has no action to take. **Undo changes on 3 deals** takes back every change Margince made to your deals in the last 7 days that you have not undone. A change to a field somebody edited since stays, and the deal's other changes go back. If somebody moved the deal after Margince moved it, none of that deal's changes go back, and other deals still do.
 

@@ -271,6 +271,11 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 		from = activities.SeatCopyFrom(ctx, candidates, contentArm, arg)
 		contentArm, trailing, candidates = activities.SeatCopyReadable, activities.SeatCopyColumns, "TRUE"
 	}
+	if !collapse {
+		from = activities.BoundActivityPage(from, candidates, " ORDER BY "+string(order), sectionCap+1)
+		candidates = "TRUE"
+	}
+	from, contentArm = activities.ActivityContentFrom(from, contentArm)
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
 	columns, err := activities.ActivityProjection(ctx, contentArm, arg)

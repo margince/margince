@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stable } from "../../format/collate";
 import type { DealFilters } from "../../lib/deals.queries";
+import { meFixture } from "../../testing/mefixture";
 import { STAGE_COLUMN_LIMIT, useStageColumns } from "./dealboard.queries";
 
 afterEach(() => {
@@ -88,7 +89,11 @@ const noDials: DealFilters = {
 };
 
 function newClient() {
-  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+  return client;
 }
 
 function renderColumns(

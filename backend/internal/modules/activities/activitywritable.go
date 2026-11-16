@@ -79,7 +79,7 @@ func stampAwaitingOutcome(ctx context.Context, tx pgx.Tx, page []crmcontracts.Ac
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	owed, err := awaitingOutcomeClause(ctx, asOf, arg)
+	owed, err := awaitingOutcomeClause(ctx, asOf, arg, outsidePartyClause(ctx, tx))
 	if err != nil {
 		return err
 	}

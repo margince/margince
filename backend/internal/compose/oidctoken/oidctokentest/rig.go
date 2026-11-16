@@ -52,7 +52,7 @@ func NewRig(t *testing.T) *Rig {
 	}
 	rig := &Rig{key: key, Base: time.Unix(1750000000, 0)}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/certs", func(w http.ResponseWriter, _ *http.Request) {
+	certs := func(w http.ResponseWriter, _ *http.Request) {
 		rig.certsHits.Add(1)
 		if rig.CertsGate != nil {
 			rig.CertsGate()
@@ -67,7 +67,11 @@ func NewRig(t *testing.T) *Rig {
 		}); err != nil {
 			t.Errorf("encode test JWKS response: %v", err)
 		}
-	})
+	}
+	mux.HandleFunc("/certs", certs)
+	// Where a Dispact install publishes its keys, so the rig's URL can stand
+	// in for the install's address.
+	mux.HandleFunc("/.well-known/jwks.json", certs)
 	rig.Srv = httptest.NewServer(mux)
 	t.Cleanup(rig.Srv.Close)
 	return rig

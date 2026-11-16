@@ -71,10 +71,6 @@ export const companyZoneSites: { file: string; why: string }[] = [
     why: "A task card's due day is the server's bucket, counted on the company's clock (decision B1), so the due-day text reads that clock; every other time on the row is the reader's.",
   },
   {
-    file: "features/brief/brief.intro.tsx",
-    why: "Whether today's read has been greeted, and the day the curtain names, follow the server's day on the company's clock (decision B1); the greeting hour is the reader's.",
-  },
-  {
     file: "mail-history/window-picker.tsx",
     why: "The server supplies the calendar day the import window starts on, counted on the company's clock.",
   },

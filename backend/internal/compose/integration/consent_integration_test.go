@@ -437,7 +437,7 @@ func (c *consentEnv) grantMarketingByConfirmLink(t *testing.T) string {
 	var receipt crmcontracts.ConfirmSubmissionReceipt
 	if s := publicCall(t, c.AppEnv, "POST", "/v1/public/confirm/"+token, AnyMap{
 		"marketing_choice":  "granted",
-		"marketing_wording": "Yes, send me occasional product news.",
+		"marketing_wording": servedQuestion(t, c.AppEnv, token).Text,
 	}, nil, &receipt); s != http.StatusOK {
 		t.Fatalf("the subject spends their own link → %d, want 200", s)
 	}

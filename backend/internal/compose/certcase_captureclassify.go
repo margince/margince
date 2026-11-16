@@ -151,7 +151,7 @@ func refuseUnreachableLabels(want []classifyExpected, messages int) error {
 	for i, expect := range want {
 		if (expect.Label != "" || !expect.judgesReply()) && !classifyLabels[expect.Label] {
 			return fmt.Errorf(
-				"capture_classify/classify: the scenario expects %q for message %d, which is not commitment|meeting|noise",
+				"capture_classify/classify: the scenario expects %q for message %d, which is not commitment|meeting|other",
 				expect.Label, i+1)
 		}
 		for _, verdict := range []string{expect.Reply, expect.NotReply} {

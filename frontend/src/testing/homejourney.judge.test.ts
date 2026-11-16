@@ -147,10 +147,27 @@ describe("degradedReasons", () => {
       answer({ read: "worklist", body: day({ focus: FOCUS }) }),
     );
     expect(degradedReasons(empty, WORK, READER)).toEqual([
-      "worklist: empty queue for a reader who has work",
       "worklist: no focus item for a reader who has work",
     ]);
     expect(degradedReasons(empty, NONE, READER)).toEqual([]);
+  });
+
+  it("accepts Home's Focus when the full queue is omitted", () => {
+    const home = healthy(
+      answer({ read: "worklist", body: day({ focus: busyDay.focus }) }),
+    );
+    expect(degradedReasons(home, WORK, READER)).toEqual([]);
+  });
+
+  it("rejects a Home answer with no Focus field", () => {
+    const { focus: _focus, ...missing } = busyDay;
+    expect(
+      degradedReasons(
+        healthy(answer({ read: "worklist", body: missing })),
+        WORK,
+        READER,
+      ),
+    ).toContain("worklist: no focus to lead with");
   });
 
   it("names a session answered for somebody else", () => {

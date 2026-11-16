@@ -200,7 +200,10 @@ func TestAJoinEdgeIsNeverReadAsAnInverseOne(t *testing.T) {
 		t.Fatalf("a join edge bound as a scalar one: column=%q forward=%v", hop.column, hop.forward)
 	}
 	compiler := &planCompiler{}
-	condition := compiler.edgeCondition(hop)
+	condition, err := compiler.edgeCondition(context.Background(), hop, entityContact)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !strings.Contains(condition, "FROM \"relationship\" j") {
 		t.Errorf("the edge does not traverse the join table: %s", condition)
 	}

@@ -56,7 +56,7 @@ func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any
 // query's is harmless.
 func waitingReplyExistsClause(ctx context.Context, arg func(any) int, asOf time.Time, entityType *string, entityID *ids.UUID, ownDomains, readerAddresses []string, horizonDays int, alsoBeforeTheCap, unjudgedResponses string) (string, error) {
 	instant := arg(asOf)
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
@@ -178,5 +178,8 @@ func appendRequestReviewClause(ctx context.Context, in ListActivitiesInput, arg 
 	wake := messageSnoozeLiftedSQL(instant, backContent)
 	reader := arg(readerOrNobody(ctx))
 	disposition := "NOT " + readerSetAsideSQL(fmt.Sprintf("$%d", reader), wake)
-	return append(where, "("+request+")", occurredday.BegunSQL("a", instant), disposition), nil
+	// A colleague's mail is not a customer waiting, as in the Worklist lane,
+	// unless a human took it on as a request.
+	colleague := "(" + acceptedRequestSQL + " OR NOT " + ownDomainSenderSQL("a", arg(in.ownDomains)) + ")"
+	return append(where, "("+request+")", occurredday.BegunSQL("a", instant), disposition, colleague), nil
 }

@@ -17,6 +17,7 @@ import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { project } from "../../testing/projects.fixtures";
 import { dealProjectFields } from "./dealproject";
@@ -177,6 +178,31 @@ function dealBackend(opts: {
           current = opts.afterPatch(current);
         }
         return jsonResponse(current);
+      }
+      const company = companyNamesAnswer(
+        url,
+        Object.fromEntries(
+          (opts.companies ?? [{ id: "o-1", display_name: "Brandt Automotive" }])
+            .concat(opts.farCompanies ?? [])
+            .map((row) => [row.id, row.display_name]),
+        ),
+      );
+      if (company) return company;
+      const asked = new URL(url);
+      if (
+        pathname === "/v1/records/references" &&
+        asked.searchParams.get("kind") === "project"
+      ) {
+        return jsonResponse({
+          data: asked.searchParams.getAll("id").flatMap((id) => {
+            const row = (opts.projects ?? []).find(
+              (project) => project.id === id,
+            );
+            return row
+              ? [{ id, name: row.name, archived: Boolean(row.archived_at) }]
+              : [];
+          }),
+        });
       }
       if (pathname.endsWith("/me")) {
         return jsonResponse(

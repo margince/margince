@@ -76,11 +76,11 @@ const ReasonConfirmationUnavailable = "confirmation_unavailable"
 func (s *Store) resubscribeTx(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, purposeID ids.PurposeID, purposeKey string,
 ) (ChoiceOutcome, bool, error) {
-	_, requiresDOI, err := loadConsentPurpose(ctx, tx, purposeID)
+	purpose, err := loadConsentPurpose(ctx, tx, purposeID)
 	if err != nil {
 		return ChoiceOutcome{}, false, err
 	}
-	if !requiresDOI {
+	if !purpose.requiresDOI {
 		return ChoiceOutcome{}, false, nil
 	}
 	// ALREADY CONFIRMED, so there is nothing to confirm. A subject re-ticking a

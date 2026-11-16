@@ -47,7 +47,7 @@ type Project360Section = components["schemas"]["Project360Section"];
 type Deal = components["schemas"]["Deal"];
 type Contract = components["schemas"]["Contract"];
 type Stakeholder = components["schemas"]["Project360Stakeholder"];
-type Commitment = components["schemas"]["Project360Commitment"];
+export type Commitment = components["schemas"]["Project360Commitment"];
 
 // Every section of the page the reader may lack a grant for. `documents`
 // rides the project grant itself and is never in `sections_omitted`, so it is
@@ -373,7 +373,7 @@ export function CommitmentsCard({
   // The signed-in user, so their own tasks read "You".
   meId?: string;
   // The complete box of one task, for a reader who may write tasks.
-  tick?: (activityId: string) => ReactNode;
+  tick?: (commitment: Commitment) => ReactNode;
   // Opens one commitment's task detail. Owned by the screen rather than by
   // this card, because the modal is one per page.
   onOpenTask?: (activityId: string) => void;
@@ -428,7 +428,7 @@ function CommitmentRow({
   commitment: Commitment;
   asOf: string;
   mine: boolean;
-  tick?: (activityId: string) => ReactNode;
+  tick?: (commitment: Commitment) => ReactNode;
   onOpenTask?: (activityId: string) => void;
 }>) {
   const t = useT();
@@ -452,7 +452,7 @@ function CommitmentRow({
   ].filter(Boolean);
   return (
     <OverviewRow
-      lead={tick?.(commitment.activity_id)}
+      lead={tick?.(commitment)}
       title={
         onOpenTask ? (
           <button

@@ -22,6 +22,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/margince/margince/backend/internal/compose/chatsync"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -195,6 +196,11 @@ type JobRunnerConfig struct {
 	// deal's evidence with. Nil = no AI configured: dates, amounts and
 	// probabilities change only by hand and by the close-date sweep.
 	DealVerdictBrain completer
+	// ChatSummaryBrain is the chat_summary lane; nil files no chat summary.
+	ChatSummaryBrain completer
+	// ChatPushMarks holds when Dispact last pushed a notice; nil reads every
+	// connection on every chat_pull_sweep tick.
+	ChatPushMarks chatsync.Marks
 	// TagSuggestBrain is the tag_suggest lane, which reads captured items
 	// against the suggestible tags' descriptions. Nil = the tag scout matches
 	// description phrases instead.
@@ -430,6 +436,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addFinanceJobs(reg, pool, cfg, log),
 		addAIPriceSyncJobs(reg, pool, cfg, log),
 		registerTelegramPoll(reg, pool, cfg, log),
+		registerChatLinkFlush(reg, pool, cfg, log),
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
 		addExtensionJobs(reg, pool, schedulesOf(cfg), log),

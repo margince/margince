@@ -10,6 +10,7 @@ import { ArchiveAction } from "../../components/archive";
 import { MergeAction } from "../../components/merge";
 import type { RecordPickerCandidate } from "../../design-system/recordpicker";
 import { useT } from "../../i18n";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { navigate } from "../../lib/router";
@@ -93,6 +94,14 @@ export function ContactRecordActions({
           // on either via survivorRoute must not see pre-merge state.
           await invalidateRecord(queryClient, "contact", contact.id);
           await invalidateRecord(queryClient, "contact", targetId);
+          // The source's files and message links move to the survivor.
+          await Promise.all(
+            [contact.id, targetId]
+              .flatMap((id) =>
+                fileListKeys({ entityType: "contact", entityId: id }, "moved"),
+              )
+              .map((queryKey) => queryClient.invalidateQueries({ queryKey })),
+          );
           return data;
         }}
         invalidate="contacts"

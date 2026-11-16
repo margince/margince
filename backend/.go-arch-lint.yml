@@ -96,6 +96,7 @@ components:
   deals:       { in: internal/modules/deals }
   projects:    { in: internal/modules/projects }
   dealrooms:   { in: internal/modules/dealrooms }
+  chatlinks:   { in: internal/modules/chatlinks/** }
   # Includes internal/modules/knowledge/handbook: the shipped prose and the
   # reader that opens it belong to the module that files them into a corpus.
   knowledge:   { in: [internal/modules/knowledge, internal/modules/knowledge/**] }
@@ -148,7 +149,7 @@ deps:
     # xmod: the API policy uses the standard semantic-version parser.
     # xtext: pdftext NFKC-folds a PDF's typographic ligatures back to the
     # characters the word is made of — a Unicode normal form the stdlib lacks.
-    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod]
+    canUse: [pgx, chi, oapi, redis, river, minio, yaml, xnet, ximage, oksvg, wazero, brotli, prometheus, pdfium, gopool, fpdf, xtext, xmod, xsemaphore]
   # Modules import shared + platform + contracts — NEVER a sibling; every
   # cross-module edge is injected by the composition layer.
   identity:
@@ -204,6 +205,10 @@ deps:
     canUse: [pgx, oapi]
   dealrooms:
     mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
+  chatlinks:
+    # chatlinks itself: the store calls its own dispact client subpackage.
+    mayDependOn: [chatlinks, contracts, platform]
     canUse: [pgx, oapi]
   knowledge:
     # knowledge itself: the module reads its own handbook subpackage, the same
@@ -289,7 +294,7 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   compose:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, recordlinks, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, knowledge, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, recordlinks, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, chatlinks, knowledge, assignments, platform, migrations, projects]
     # xtext: the evidence gate normalizes page text to NFC before matching
     # (evidencematch.go) — Unicode normal forms need golang.org/x/text.
     # yaml: aicert's corpus loader parses scenario files directly — the
@@ -392,5 +397,5 @@ deps:
     mayDependOn: [contracts, compose, ai, collections, webforms, platform, activities, aiactivity, agents, approvals, contacts, customfields, deals, forecasting, comms, identity, introductions, privacy, assurance, automation]
     canUse: [yaml, jsonschema]
   cmd:
-    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, recordlinks, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, assignments, platform, migrations, projects]
+    mayDependOn: [compose, identity, contacts, privacy, continuity, deals, activities, aiactivity, approvals, agents, automation, ai, search, capture, consent, collections, recordlinks, initiatives, signals, customfields, migration, webhooks, webforms, comms, notices, introductions, weeklyplan, forecasting, reporting, assurance, finance, integrations, agreements, commissions, contracts, dealrooms, chatlinks, assignments, platform, migrations, projects]
     canUse: [pgx, redis, xterm, composition]

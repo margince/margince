@@ -137,13 +137,18 @@ func TestAFailedCountLeavesItsCategoryAFloorAndNoPartialTotal(t *testing.T) {
 	for _, tc := range []struct {
 		name string
 		err  error
+		home bool
 		want *int
 	}{
-		{"a count that answers", nil, new(9)},
-		{"a count that fails", context.DeadlineExceeded, nil},
+		{"a count that answers", nil, false, new(9)},
+		{"a count that fails", context.DeadlineExceeded, false, nil},
+		{"Home, which names the cut window a floor", nil, true, nil},
 	} {
 		svc := NewService(stubApprovals{}, stubDuplicates{}, &stubTasks{upcoming: later}, stubReceipts{}, stubBriefing{},
 			nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, nil, fixedClock).WithTaskBacklog(&laterCount{err: tc.err})
+		if tc.home {
+			svc = svc.ShapedForHome()
+		}
 		day, err := svc.Worklist(pageReader(), "", "", ids.UUID{}, 25, "")
 		if err != nil {
 			t.Fatalf("%s: the page failed: %v", tc.name, err)

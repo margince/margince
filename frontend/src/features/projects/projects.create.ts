@@ -9,6 +9,7 @@ import { useObjectCustomFields } from "../../components/customfields.form";
 import { useOwnerPicker } from "../../components/recordowners";
 import { useSettledValue } from "../../design-system/debouncedsearch";
 import { useT } from "../../i18n";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import {
   mapProjectCreate,
@@ -79,8 +80,9 @@ function useKeyPreview(name: string): string | undefined {
 function useDealsOfCompany(
   companyId: string,
 ): readonly { value: string; label: string }[] {
+  const readerScope = useHealthScope();
   const deals = useQuery({
-    queryKey: ["deals", "of-company", companyId],
+    queryKey: ["deals", "of-company", companyId, readerScope ?? ""],
     queryFn: async () =>
       unwrap(
         await api.GET("/deals", {
@@ -89,7 +91,7 @@ function useDealsOfCompany(
           },
         }),
       ).data,
-    enabled: companyId !== "",
+    enabled: companyId !== "" && readerScope !== undefined,
     staleTime: 60_000,
   });
   return (deals.data ?? [])

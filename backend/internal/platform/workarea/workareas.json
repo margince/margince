@@ -267,6 +267,7 @@
     "exportForecastShare": "business",
     "exportReportingEdition": "business",
     "exportReportingEvaluation": "business",
+    "fileChannelMessage": "capture",
     "freezeReportingEdition": "business",
     "generateMorningBrief": "business",
     "getAccountCoverage": "business",
@@ -303,6 +304,7 @@
     "getAvailability": "business",
     "getBulkChange": "business",
     "getCaptureHealth": "operator",
+    "getChannelLink": "capture",
     "getClaimEvidence": "business",
     "getCommissionEntry": "business",
     "getCommissionSummary": "business",
@@ -339,6 +341,7 @@
     "getContract": "business",
     "getControllerParticulars": "compliance",
     "getCurrentWeeklyPlan": "business",
+    "getCustomerPayments": "capture",
     "getDataCoverage": "business",
     "getDataSubjectRequestDeadline": "compliance",
     "getDeal": "business",
@@ -475,6 +478,7 @@
     "launchSalesInitiative": "business",
     "liftLeadSuppression": "compliance",
     "liftSuppression": "compliance",
+    "linkChannel": "capture",
     "linkCompanyContacts": "business",
     "linkFinanceSourceCustomer": "capture",
     "linkLeadCompany": "business",
@@ -696,6 +700,7 @@
     "readAttachmentForFields": "business",
     "readCaptureTracePipeline": "capture",
     "readCorpus": "business",
+    "readRecordReferences": "business",
     "readTranscriptForNextSteps": "business",
     "reassignHandoff": "business",
     "recordCommunicationContext": "compliance",
@@ -809,6 +814,7 @@
     "setAiModelRate": "admin_settings",
     "setBlockedDomain": "workspace_settings",
     "setCaptureSenderDecision": "capture",
+    "setChannelVerbosity": "capture",
     "setConnectorContextTag": "capture",
     "setConnectorHistoryBaseline": "capture",
     "setConnectorMailPosture": "capture",
@@ -839,6 +845,7 @@
     "undoImportRun": "business",
     "undoMeetingReady": "business",
     "unhideDealDocument": "business",
+    "unlinkChannel": "capture",
     "unlinkFinanceSourceCustomer": "capture",
     "unpinWorklistRow": "business",
     "unsnoozeBriefItem": "business",
@@ -1189,6 +1196,7 @@
     "exportReportingEdition": "reports",
     "exportReportingEvaluation": "reports",
     "extOauthCallback": "oauth_callbacks",
+    "fileChannelMessage": "connectors",
     "fileChatCapture": "documents",
     "freezeReportingEdition": "reports",
     "generateMorningBrief": "worklist",
@@ -1234,6 +1242,7 @@
     "getBuyerRoom": "buyer_rooms",
     "getCaptureHealth": "system_health",
     "getCaptureSettings": "capture_rules",
+    "getChannelLink": "connectors",
     "getClaimEvidence": "companies",
     "getCommissionEntry": "commissions",
     "getCommissionSummary": "commissions",
@@ -1276,6 +1285,7 @@
     "getControllerParticulars": "privacy_notices",
     "getCurrentPrincipal": "own_profile",
     "getCurrentWeeklyPlan": "worklist",
+    "getCustomerPayments": "finance_source",
     "getDataCoverage": "reports",
     "getDataSubjectRequestDeadline": "privacy_requests",
     "getDeal": "deals",
@@ -1289,6 +1299,7 @@
     "getDealViability": "deals",
     "getDealWinEvidence": "deals",
     "getDedupeCandidate": "duplicates",
+    "getDispactAppManifest": "connectors",
     "getEmailPresentation": "activities",
     "getEmailSignatureTemplate": "sales_rules",
     "getExtensionIngestHealth": "system_health",
@@ -1448,6 +1459,7 @@
     "liftLeadSuppression": "consent",
     "liftLegalHold": "retention",
     "liftSuppression": "consent",
+    "linkChannel": "connectors",
     "linkCompanyContacts": "companies",
     "linkContactEmployer": "contacts",
     "linkFinanceSourceCustomer": "finance_source",
@@ -1552,6 +1564,7 @@
     "listLegalReviews": "legal_reviews",
     "listLinkSuggestions": "activities",
     "listLinkTypes": "search",
+    "listLinkableChannels": "connectors",
     "listListHistory": "lists",
     "listListMembers": "lists",
     "listLists": "lists",
@@ -1713,8 +1726,10 @@
     "readAttachmentForFields": "documents",
     "readCaptureTracePipeline": "capture_triage",
     "readCorpus": "knowledge",
+    "readRecordReferences": "search",
     "readTranscriptForNextSteps": "activities",
     "reassignHandoff": "leads",
+    "receiveDispactChannelEvent": "provider_notices",
     "recordAIFeedback": "ai_help",
     "recordCommunicationContext": "consent",
     "recordConsent": "consent",
@@ -1741,6 +1756,7 @@
     "rejectOffer": "offers",
     "rejectVoiceDraft": "voice",
     "rejectVoiceProfileVersion": "voice",
+    "releasePassportAppBinding": "passports",
     "releaseRestrictedActivity": "retention",
     "relinkActivities": "activities",
     "relinkActivity": "activities",
@@ -1865,6 +1881,7 @@
     "setAiProviderSettings": "ai_models",
     "setBlockedDomain": "capture_rules",
     "setCaptureSenderDecision": "capture_triage",
+    "setChannelVerbosity": "connectors",
     "setConnectorContextTag": "connectors",
     "setConnectorHistoryBaseline": "connectors",
     "setConnectorMailPosture": "connectors",
@@ -1914,6 +1931,7 @@
     "undoMeetingReady": "worklist",
     "undoProjectHealthAssessment": "projects",
     "unhideDealDocument": "documents",
+    "unlinkChannel": "connectors",
     "unlinkFinanceSourceCustomer": "finance_source",
     "unpinWorklistRow": "worklist",
     "unsnoozeBriefItem": "worklist",
@@ -2221,6 +2239,9 @@
     ],
     "change_user_role": [
       "members"
+    ],
+    "channel_link": [
+      "connectors"
     ],
     "check_availability": [
       "scheduling"
@@ -2576,6 +2597,9 @@
     ],
     "export_forecast_share": [
       "forecast"
+    ],
+    "file_channel_message": [
+      "connectors"
     ],
     "forecast_input_checks": [
       "forecast"
@@ -2939,6 +2963,9 @@
     ],
     "lift_lead_suppression": [
       "consent"
+    ],
+    "link_channel": [
+      "connectors"
     ],
     "link_company_contacts": [
       "companies"
@@ -3508,6 +3535,7 @@
       "deals",
       "documents",
       "duplicates",
+      "finance_source",
       "forecast",
       "imports",
       "lists",
@@ -3518,6 +3546,7 @@
       "sales_lists",
       "sales_rules",
       "scheduling",
+      "search",
       "sharing",
       "signals",
       "system_facts"
@@ -3837,6 +3866,9 @@
     "set_capture_sender_decision": [
       "capture_triage"
     ],
+    "set_channel_verbosity": [
+      "connectors"
+    ],
     "set_connector_context_tag": [
       "connectors"
     ],
@@ -3917,6 +3949,9 @@
     ],
     "unhide_deal_document": [
       "documents"
+    ],
+    "unlink_channel": [
+      "connectors"
     ],
     "unlink_finance_customer": [
       "finance_source"
@@ -4318,6 +4353,9 @@
     "change_user_role": [
       "admin_settings"
     ],
+    "channel_link": [
+      "capture"
+    ],
     "check_availability": [
       "business"
     ],
@@ -4666,6 +4704,9 @@
     ],
     "export_forecast_share": [
       "business"
+    ],
+    "file_channel_message": [
+      "capture"
     ],
     "forecast_input_checks": [
       "business"
@@ -5029,6 +5070,9 @@
     ],
     "lift_lead_suppression": [
       "compliance"
+    ],
+    "link_channel": [
+      "capture"
     ],
     "link_company_contacts": [
       "business"
@@ -5889,6 +5933,9 @@
     "set_capture_sender_decision": [
       "capture"
     ],
+    "set_channel_verbosity": [
+      "capture"
+    ],
     "set_connector_context_tag": [
       "capture"
     ],
@@ -5969,6 +6016,9 @@
     ],
     "unhide_deal_document": [
       "business"
+    ],
+    "unlink_channel": [
+      "capture"
     ],
     "unlink_finance_customer": [
       "capture"

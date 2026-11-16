@@ -26,9 +26,11 @@ const (
 	// sync sidecar recorded a failure class on the last attempt.
 	ConcernSyncFailing = "sync_failing"
 	// ConcernBackfillFailed: the latest history import ended in error.
-	ConcernBackfillFailed = "backfill_failed"
-	ConcernSyncStalled    = "sync_stalled"
-	ConcernCaptureSilent  = "capture_silent"
+	ConcernBackfillFailed       = "backfill_failed"
+	ConcernNotesGrantMissing    = "notes_grant_missing"
+	ConcernNotesAccountMismatch = "notes_account_mismatch"
+	ConcernSyncStalled          = "sync_stalled"
+	ConcernCaptureSilent        = "capture_silent"
 )
 
 // Connection statuses and the backfill terminal state this read derives from
@@ -98,6 +100,7 @@ func (r *Registry) HealthConcerns(ctx context.Context) ([]Concern, error) {
 // ConcernKinds orders simultaneous concerns by their displayed priority.
 var ConcernKinds = []string{
 	ConcernReauthRequired, ConcernConnectionError, ConcernSyncFailing,
+	ConcernNotesGrantMissing, ConcernNotesAccountMismatch,
 	ConcernBackfillFailed, ConcernSyncStalled, ConcernCaptureSilent,
 }
 
@@ -118,6 +121,9 @@ func connectionConcern(view ConnectionView, now time.Time) string {
 	}
 	if view.LastErrorClass != nil {
 		return ConcernSyncFailing
+	}
+	if concern := MeetingNotesConcern(view.Provider, view.ProviderScopes, view.AccountLabel, view.CalendarAccountLabel); concern != "" {
+		return concern
 	}
 	if view.Backfill != nil && view.Backfill.Status == backfillStatusError {
 		return ConcernBackfillFailed

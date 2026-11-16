@@ -82,7 +82,7 @@ var internalColumns = map[string]map[string]bool{
 		"done_at", "duration_seconds", "foreign_link", "has_calendar_part", "host_user_id",
 		"inbound_sender_authenticated", "internal_mail_authorization", "invitation_sender", "kind",
 		"language", "legal_entity_id", "origin", "owed_verdict_at", "owed_verdict_declined_at",
-		"owed_verdict_declined_ruleset", "raw", "raw_capture_id", "redacted_fields", "reply_verdict_at",
+		"owed_verdict_declined_ruleset", "raw", "raw_capture_id", "redacted_fields", "reply_settled_at", "reply_verdict_at",
 		"restricted_at", "restricted_reason", "restricted_until", "retention_class",
 		"retention_class_at", "sender_is_machine", "sender_was_stranger", "sent_by_colleague",
 		"source_activity_id", "thread_key",

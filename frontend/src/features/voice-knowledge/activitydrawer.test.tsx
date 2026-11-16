@@ -319,3 +319,36 @@ it("shows a website form's fields under their labels instead of the note's text"
   expect(screen.queryByRole("link", { name: /javascript/ })).toBeNull();
   expect(screen.queryByText(/Consent: not ticked/)).toBeNull();
 });
+
+it.each([
+  ["connect", "Notes are attached. Connect meeting notes to read them."],
+  [
+    "notes_account_mismatch",
+    "Notes are attached. Connect meeting notes with the same Google account as your calendar.",
+  ],
+])("explains a pending notes document with %s", async (concern, sentence) => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/source": () =>
+      jsonResponse({
+        id: "source",
+        kind: "meeting",
+        subject: "Discovery call",
+        occurred_at: "2026-11-14T10:00:00Z",
+        content_state: "available",
+        meeting_notes_connection: concern,
+        links: [],
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="source"
+      zone={browserZone()}
+      onClose={() => {}}
+    />,
+  );
+  expect(await screen.findByText(sentence)).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Connect meeting notes" }),
+  ).toBeTruthy();
+});

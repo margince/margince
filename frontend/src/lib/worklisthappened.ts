@@ -228,6 +228,7 @@ const TODO: Readonly<
 const WHOLE_ASKS: ReadonlySet<MessageKey> = new Set<MessageKey>([
   "worklist.ask.invitation",
   "worklist.ask.task_unchecked",
+  "worklist.ask.meeting_outcome.read_only",
 ]);
 
 /**
