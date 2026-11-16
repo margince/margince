@@ -3,14 +3,12 @@
 
 package ai
 
-// Thinking on the Anthropic wire. Anthropic's per-model table decides the
-// shape: 4.6-4.8 take `thinking: {type: "adaptive"}` and think only when asked;
-// 4.5 and earlier take only `{type: "enabled", budget_tokens: N}`; 5.x always
-// think, reject both thinking shapes, and take their depth from
-// `output_config.effort`, whose default is medium on Opus 5.5 and Haiku 5.5 and
-// high on the rest. A floor sends no effort to a 5.x model: every floor is at or
-// under each default, and an effort set to the floor would lower it. An admin's
-// exact level is sent, because the admin chose that depth.
+// Thinking on the Anthropic wire, shaped by Anthropic's per-model table. 4.6 to
+// 4.8 take `thinking: {type: "adaptive"}` and think only when asked. 4.5 and
+// earlier take only `{type: "enabled", budget_tokens: N}`. 5.x always think and
+// reject both shapes; `output_config.effort` sets their depth. That default is
+// medium on Opus 5.5 and Haiku 5.5, and high on the rest. A floor sends none,
+// since every floor is at or under each default; an admin's exact level is sent.
 
 import "strings"
 
@@ -47,6 +45,7 @@ var anthropicModelPrefixes = []struct {
 	{"claude-3-7-sonnet", anthropicThinksWithBudget},
 	{"claude-opus-5", anthropicThinksByDefault},
 	{"claude-sonnet-5", anthropicThinksByDefault},
+	{"claude-haiku-5", anthropicThinksByDefault},
 	{"claude-fable-5", anthropicThinksByDefault},
 	{"claude-mythos-5", anthropicThinksByDefault},
 }

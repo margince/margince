@@ -48,6 +48,7 @@ func TestAnAdminsThinkingLevelReachesAClaude5ModelAsEffort(t *testing.T) {
 	}{
 		{"an exact level is sent as effort", "claude-opus-5-5", effortHigh, "", effortHigh},
 		{"minimal asks for the lowest effort the wire has", "claude-sonnet-5-5", effortMinimal, "", effortLow},
+		{"haiku 5.x takes effort like the rest of 5.x", "claude-haiku-5-5", effortMedium, "", effortMedium},
 		{"a floor never lowers the model's own default", "claude-opus-5-5", "", effortLow, ""},
 		{"a model that does not think by default takes no effort", "claude-opus-4-8", effortHigh, "", ""},
 	}

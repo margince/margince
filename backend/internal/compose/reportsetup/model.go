@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
-	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // PromptVersion changes when the prompt or the reply shape changes.
@@ -113,36 +112,6 @@ func Request(in Input) model.Request {
 		SecretStripper: ai.NewSecretStripper(),
 		ResponseSchema: replySchema(),
 	}
-}
-
-// replySchema is replyShape. Ids stay open strings because the gate also
-// resolves a value by its label, and names back what the catalog lacks.
-func replySchema() json.RawMessage {
-	picked := schema.Array(schema.Record(
-		schema.Field("id", schema.String()),
-		schema.Field("phrase", schema.String()),
-	))
-	return schema.Must(schema.Record(
-		schema.Field("name", schema.String()),
-		schema.Field("filters", schema.Array(schema.Record(
-			schema.Field("field", schema.Enum("product", "industry", "country", "period")),
-			schema.Field("value", schema.String()),
-			schema.Field("phrase", schema.String()),
-		))),
-		schema.Field("metrics", picked),
-		schema.Field("charts", picked),
-		schema.Field("objective", schema.Optional(schema.Record(
-			schema.Field("metric", schema.String()),
-			schema.Field("target_value", schema.Optional(schema.Integer())),
-			schema.Field("deadline", schema.Optional(schema.String())),
-			schema.Field("phrase", schema.String()),
-		))),
-		schema.Field("clarifications", schema.Array(schema.String())),
-		schema.Field("unsupported", schema.Array(schema.Record(
-			schema.Field("phrase", schema.String()),
-			schema.Field("reason", schema.String()),
-		))),
-	))
 }
 
 // productRefs names each catalog product p1, p2, … in catalog order. The
