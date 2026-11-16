@@ -7690,6 +7690,9 @@ BEGIN
  IF zone_name ~ '[0-9]' THEN
   RETURN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name);
  END IF;
+ IF zone_name ~* '^interval' THEN
+  RETURN false;
+ END IF;
  BEGIN
   PERFORM set_config('TimeZone', zone_name, true);
   canonical := current_setting('TimeZone');

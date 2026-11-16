@@ -183,13 +183,17 @@ function FilteredPopup({
       return;
     }
     // Tab moves on from the trigger, not from a box portalled to the page end.
+    // With no stop beside the trigger, the browser's own Tab runs from it and
+    // leaves the page.
     if (event.key === "Tab") {
       const next = besideTheTrigger(
         listbox.trigger.current,
         popupRef.current,
         event.shiftKey ? -1 : 1,
       );
-      event.preventDefault();
+      if (next) {
+        event.preventDefault();
+      }
       event.stopPropagation();
       listbox.onKeyDown(event);
       (next ?? listbox.trigger.current)?.focus();

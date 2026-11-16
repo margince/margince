@@ -106,6 +106,8 @@ func Read(raw json.RawMessage, lineCount int) ([]Entry, string) {
 		switch {
 		case !slices.Contains(Fields, entry.Field):
 			return nil, fmt.Sprintf("the company profile names the field %.40q, which a meeting may not fill", entry.Field)
+		case entry.SpeakerRef == "":
+			return nil, fmt.Sprintf("the company profile's %s names no speaker", entry.Field)
 		case seen[[2]string{entry.SpeakerRef, entry.Field}]:
 			return nil, fmt.Sprintf("the company profile states %s twice for one speaker", entry.Field)
 		case entry.Value == "":
@@ -150,7 +152,8 @@ func Apply(
 
 // statedByCompany groups the entries by the employer of the outside contact
 // who said each one. An entry whose speaker is a colleague, unverified, or
-// employed nowhere today is left out.
+// employed nowhere today is left out. When two speakers of one company state a
+// field, the higher confidence wins and a tie keeps the earlier entry.
 func statedByCompany(
 	ctx context.Context, tx pgx.Tx, entries []Entry, parties []commitmentparty.Party,
 ) (map[ids.CompanyID][]contacts.MeetingProfileField, error) {
@@ -171,15 +174,26 @@ func statedByCompany(
 	if err != nil {
 		return nil, err
 	}
-	for i, contact := range said {
+	slot := map[ids.CompanyID]map[string]int{}
+	for i, entry := range entries {
+		contact, spoke := said[i]
 		employer, employed := employers[contact]
-		if !employed {
+		if !spoke || !employed {
 			continue
 		}
 		company := ids.From[ids.CompanyKind](ids.UUID(employer.CompanyId))
-		stated[company] = append(stated[company], contacts.MeetingProfileField{
-			Field: entries[i].Field, Value: entries[i].Value, Confidence: entries[i].Confidence,
-		})
+		field := contacts.MeetingProfileField{Field: entry.Field, Value: entry.Value, Confidence: entry.Confidence}
+		if slot[company] == nil {
+			slot[company] = map[string]int{}
+		}
+		if at, taken := slot[company][entry.Field]; taken {
+			if entry.Confidence > stated[company][at].Confidence {
+				stated[company][at] = field
+			}
+			continue
+		}
+		slot[company][entry.Field] = len(stated[company])
+		stated[company] = append(stated[company], field)
 	}
 	return stated, nil
 }

@@ -127,8 +127,14 @@ export function usePortalPanelFocus({
       if (active !== stops[stops.length - 1]) {
         return;
       }
+      // With no stop after the trigger, the browser's own Tab runs from it.
+      const next = besideTheTrigger(trigger.current, panel.current);
+      if (!next) {
+        trigger.current?.focus();
+        return;
+      }
       event.preventDefault();
-      besideTheTrigger(trigger.current, panel.current)?.focus();
+      next.focus();
     },
     [panel, trigger],
   );

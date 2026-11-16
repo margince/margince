@@ -111,6 +111,20 @@ describe("a long list", () => {
     expect(screen.getAllByRole("option")).toHaveLength(COLLEAGUES.length);
   });
 
+  // The trigger is the page's only stop, so one Tab leaves the page from it.
+  it.each([false, true])(
+    "hands Tab to the browser from the trigger when no stop is beside it (shift: %s)",
+    async (shiftKey) => {
+      const user = userEvent.setup();
+      const trigger = renderLong();
+      await user.click(trigger);
+      const box = screen.getByRole("combobox", { name: "Filter the list" });
+
+      expect(fireEvent.keyDown(box, { key: "Tab", shiftKey })).toBe(true);
+      expect(trigger).toHaveFocus();
+    },
+  );
+
   it.each([{ isComposing: true }, { keyCode: 229 }])(
     "keeps IME confirmation in the filter: %o",
     async (composition) => {
