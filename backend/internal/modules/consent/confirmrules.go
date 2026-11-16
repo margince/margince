@@ -42,7 +42,7 @@ func confirmRulesTx(
 	}
 	rules, _, found := applicableRules(country.Code)
 	if kind == LinkRecordConfirmation {
-		out.asksNews = !(found && rules.RecordConfirmationWithoutNews)
+		out.asksNews = !found || !rules.RecordConfirmationWithoutNews
 		return out, nil
 	}
 	if kind != LinkConsentConfirmation || !operatorAsks {
