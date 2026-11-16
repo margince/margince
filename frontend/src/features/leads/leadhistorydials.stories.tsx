@@ -40,7 +40,9 @@ export const CutsOpen: Story = {
       name: "Timeline filter",
     });
     await userEvent.click(cuts);
-    await expect(await screen.findByRole("listbox")).toBeVisible();
+    const list = await screen.findByRole("listbox");
+    await expect(within(list).getAllByRole("option")).toHaveLength(6);
+    await expect(cuts).toHaveAttribute("aria-expanded", "true");
   },
 };
 
