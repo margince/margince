@@ -2538,6 +2538,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird rückgängig gemacht…",
   "history.undo.confirmTitle": "Diese Änderung rückgängig machen?",
+  "history.undo.redoConfirmTitle": "Diese Änderung erneut anwenden?",
+  "history.undo.redoConfirmBody_one":
+    "{count} Feld erhält wieder seinen Wert vor dem Rückgängigmachen:",
+  "history.undo.redoConfirmBody_other":
+    "{count} Felder erhalten wieder ihre Werte vor dem Rückgängigmachen:",
   "history.undo.confirmEdgeBody":
     "Damit ändert sich die Verknüpfung mit {other}. Beide Datensätze bleiben bestehen, nur die Verknüpfung zwischen ihnen ändert sich.",
   "history.undo.confirmCreateBody":

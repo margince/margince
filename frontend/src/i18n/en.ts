@@ -2447,6 +2447,11 @@ export const en = {
   "history.undo.redo": "Redo",
   "history.undo.busy": "Undoing change…",
   "history.undo.confirmTitle": "Undo this change?",
+  "history.undo.redoConfirmTitle": "Redo this change?",
+  "history.undo.redoConfirmBody_one":
+    "{count} field goes back to its value before the undo:",
+  "history.undo.redoConfirmBody_other":
+    "{count} fields go back to their values before the undo:",
   "history.undo.confirmEdgeBody":
     "This changes the link with {other}. Both records stay; only the link between them changes.",
   "history.undo.confirmCreateBody":

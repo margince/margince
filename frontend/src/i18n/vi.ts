@@ -2469,6 +2469,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.undo.redo": "Làm lại",
   "history.undo.busy": "Đang hoàn tác thay đổi…",
   "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
+  "history.undo.redoConfirmTitle": "Làm lại thay đổi này?",
+  "history.undo.redoConfirmBody_one":
+    "{count} trường trở về giá trị trước khi hoàn tác:",
+  "history.undo.redoConfirmBody_other":
+    "{count} trường trở về giá trị trước khi hoàn tác:",
   "history.undo.confirmEdgeBody":
     "Thao tác này thay đổi liên kết với {other}. Cả hai hồ sơ vẫn còn; chỉ liên kết giữa hai hồ sơ thay đổi.",
   "history.undo.confirmCreateBody":
