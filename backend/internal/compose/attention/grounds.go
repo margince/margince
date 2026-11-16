@@ -39,20 +39,18 @@ func TaskGrounds(task crmcontracts.Activity) *crmcontracts.WorkGrounds {
 // firstParagraph is the first block of prose, without its headings: a
 // heading names a section, it never says why the work exists.
 func firstParagraph(markdown string) string {
-	for block := range strings.SplitSeq(strings.ReplaceAll(markdown, "\r\n", "\n"), "\n\n") {
-		var prose []string
-		for line := range strings.SplitSeq(block, "\n") {
-			line = strings.TrimSpace(line)
-			if strings.HasPrefix(line, "#") {
-				continue
-			}
-			if line = strings.TrimSpace(strings.TrimLeft(line, ">-*+ ")); line != "" {
-				prose = append(prose, line)
-			}
+	var prose []string
+	for line := range strings.Lines(strings.ReplaceAll(markdown, "\r\n", "\n")) {
+		line = strings.TrimSpace(line)
+		if line == "" && len(prose) > 0 {
+			break
 		}
-		if len(prose) > 0 {
-			return strings.Join(prose, " ")
+		if strings.HasPrefix(line, "#") {
+			continue
+		}
+		if line = strings.TrimSpace(strings.TrimLeft(line, ">-*+ ")); line != "" {
+			prose = append(prose, line)
 		}
 	}
-	return ""
+	return strings.Join(prose, " ")
 }

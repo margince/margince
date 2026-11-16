@@ -157,11 +157,10 @@ func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 	if err := c.store.CaptureEmailRequests(ctx, c.now()); err != nil {
 		return err
 	}
-	asks := activities.RequestAsks{}
-	if err := c.judgeWorkspace(ctx, maxVerdicts, asks); err != nil {
+	if err := c.judgeWorkspace(ctx, maxVerdicts); err != nil {
 		return err
 	}
-	return c.store.CaptureEmailRequestsAsked(ctx, c.now(), asks)
+	return c.store.CaptureEmailRequests(ctx, c.now())
 }
 
 // judgeWorkspace judges new mail first, then re-judges what older rules decided.
@@ -171,19 +170,19 @@ func (c *OwedClassifier) RunWorkspace(ctx context.Context, maxVerdicts int) erro
 // can never delay a customer who wrote this morning: on the deploy that moves
 // the prompt, every judged row in the installation is stale at once, and a
 // single shared bound would spend the whole pass on them.
-func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int, asks activities.RequestAsks) error {
+func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int) error {
 	if c.brain == nil {
 		return nil
 	}
 	if maxVerdicts <= 0 {
 		maxVerdicts = owedCatchUpCap
 	}
-	if err := c.drain(ctx, maxVerdicts, "backlog", asks, func() ([]owedCandidate, time.Time, error) {
+	if err := c.drain(ctx, maxVerdicts, "backlog", func() ([]owedCandidate, time.Time, error) {
 		return c.store.OwedBacklog(ctx, owedverdict.Ruleset, c.now(), owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
 	}); err != nil {
 		return err
 	}
-	return c.drain(ctx, owedRestaleCap, "re-judge", asks, func() ([]owedCandidate, time.Time, error) {
+	return c.drain(ctx, owedRestaleCap, "re-judge", func() ([]owedCandidate, time.Time, error) {
 		return c.store.OwedRestale(ctx, owedverdict.Ruleset, owedBatchSize, owedBodyLimit, owedPriorBodyLimit)
 	})
 }
@@ -198,7 +197,7 @@ func (c *OwedClassifier) judgeWorkspace(ctx context.Context, maxVerdicts int, as
 // row with nine abstentions makes progress by the verdict count and re-asks the
 // same nine every iteration. sweepCalls counts every call, a split batch's
 // included, so the bound holds whatever the batches do.
-func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, asks activities.RequestAsks, next func() ([]owedCandidate, time.Time, error)) error {
+func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string, next func() ([]owedCandidate, time.Time, error)) error {
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, owedBatchSize)
 	for judged < maxVerdicts && calls.remain() {
@@ -212,8 +211,14 @@ func (c *OwedClassifier) drain(ctx context.Context, maxVerdicts int, what string
 		if len(batch) == 0 {
 			return nil
 		}
+		// Each batch files its own reminders, so an ask it kept is never lost to
+		// a later batch's error.
+		asks := activities.RequestAsks{}
 		n, err := c.judgeBatch(ctx, batch, readAt, calls, asks)
 		judged += n
+		if fileErr := c.store.FileAskedRequests(ctx, c.now(), asks); fileErr != nil {
+			return errors.Join(err, fileErr)
+		}
 		if sweepPaused(err) {
 			c.log.InfoContext(ctx, "owed classify: stopping the pass",
 				"population", what, "judged", judged, "reason", err)

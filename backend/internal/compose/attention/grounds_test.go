@@ -29,3 +29,11 @@ func TestATaskWithoutProseHasNoReason(t *testing.T) {
 		}
 	}
 }
+
+func TestALineOfSpacesEndsTheReasonsParagraph(t *testing.T) {
+	t.Parallel()
+	got := GroundsFromProse("Anna requested a revised quote.\n \t\nOlder notes: the quote was approved.")
+	if got == nil || got.Text != "Anna requested a revised quote." {
+		t.Fatalf("reason = %+v, want only the first paragraph", got)
+	}
+}

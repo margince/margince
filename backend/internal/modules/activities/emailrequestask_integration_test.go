@@ -21,7 +21,7 @@ func TestARequestReminderQuotesWhatItsSenderAsked(t *testing.T) {
 	store := storeKnowing(e)
 	asks := RequestAsks{}
 	asks.Keep(source, true, "Please send the report.")
-	if err := store.CaptureEmailRequestsAsked(asClassifier(e), requestInstant.Add(time.Hour), asks); err != nil {
+	if err := store.FileAskedRequests(asClassifier(e), requestInstant.Add(time.Hour), asks); err != nil {
 		t.Fatal(err)
 	}
 	var task ids.UUID
@@ -38,5 +38,35 @@ func TestARequestReminderQuotesWhatItsSenderAsked(t *testing.T) {
 	}
 	if *got.Body != want {
 		t.Fatalf("reminder body %q, want %q", *got.Body, want)
+	}
+}
+
+// Filing the asked reminders reads only the asked messages. Other waiting
+// mail is left for the full pass.
+func TestFilingAskedRemindersLeavesOtherRequestsToTheFullPass(t *testing.T) {
+	e := setupLoad(t)
+	asked := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
+	other := seedEmailRequest(t, e, "Pricing sheet", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	asks := RequestAsks{}
+	asks.Keep(asked, true, "Please send the report.")
+	if err := store.FileAskedRequests(asClassifier(e), requestInstant.Add(time.Hour), asks); err != nil {
+		t.Fatal(err)
+	}
+	filed := func(source ids.UUID) bool {
+		var n int
+		if err := e.owner.QueryRow(e.as(), `SELECT count(*) FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1`, source).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n == 1
+	}
+	if !filed(asked) || filed(other) {
+		t.Fatalf("asked filed %v, other filed %v; want only the asked one", filed(asked), filed(other))
+	}
+	if err := store.FileAskedRequests(asClassifier(e), requestInstant.Add(time.Hour), RequestAsks{}); err != nil {
+		t.Fatal(err)
+	}
+	if filed(other) {
+		t.Fatal("an empty set of asks filed a reminder")
 	}
 }

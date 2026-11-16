@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"time"
 
@@ -46,7 +48,7 @@ func emailRequestAssigneeSQL(identities string) string {
 // addressed requests remain in review; this pass neither assigns them silently
 // nor recreates reminders a human archived or completed.
 func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error {
-	return s.CaptureEmailRequestsAsked(ctx, asOf, nil)
+	return s.captureEmailRequests(ctx, asOf, nil)
 }
 
 // RequestAsks is what each judged message asks, in the sender's own words,
@@ -61,9 +63,19 @@ func (a RequestAsks) Keep(message ids.UUID, written bool, ask string) {
 	}
 }
 
-// CaptureEmailRequestsAsked is CaptureEmailRequests for a pass that just
-// judged the messages, so each reminder it files quotes what its sender asked.
-func (s *Store) CaptureEmailRequestsAsked(ctx context.Context, asOf time.Time, asks RequestAsks) error {
+// FileAskedRequests files the reminders of the messages just judged, each
+// quoting what its sender asked. It reads only those messages, so a judging
+// pass files every ask it kept, however much other mail waits.
+func (s *Store) FileAskedRequests(ctx context.Context, asOf time.Time, asks RequestAsks) error {
+	if len(asks) == 0 {
+		return nil
+	}
+	return s.captureEmailRequests(ctx, asOf, asks)
+}
+
+// captureEmailRequests tidies the filed reminders and files new ones, or with
+// asks files only the asked messages: the pass before it already tidied.
+func (s *Store) captureEmailRequests(ctx context.Context, asOf time.Time, asks RequestAsks) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalSystem {
 		return apperrors.ErrPermissionDenied
@@ -75,17 +87,8 @@ func (s *Store) CaptureEmailRequestsAsked(ctx context.Context, asOf time.Time, a
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
-			return err
-		}
-		domains, err := s.ownDomainList(ctx, tx)
+		domains, err := s.tidyEmailRequests(ctx, tx, asOf, asks == nil)
 		if err != nil {
-			return err
-		}
-		if err := s.retireNeverOwedReminders(ctx, tx, asOf, domains); err != nil {
-			return err
-		}
-		if err := s.rehomeSharedReminders(ctx, tx, asOf); err != nil {
 			return err
 		}
 		args := []any{}
@@ -108,6 +111,9 @@ func (s *Store) CaptureEmailRequestsAsked(ctx context.Context, asOf time.Time, a
      AND NOT `+readerSetAsideSQL("("+assigneeSQL+")", wake), neverRelaxed)
 		if err != nil {
 			return err
+		}
+		if asks != nil {
+			eligible += fmt.Sprintf(" AND a.id = ANY($%d)", arg(slices.Collect(maps.Keys(asks))))
 		}
 		rows, err := tx.Query(ctx, `SELECT a.id, (`+assigneeSQL+`) FROM activity a
     WHERE `+eligible+` ORDER BY a.occurred_at DESC, a.id LIMIT 64 FOR UPDATE OF a SKIP LOCKED`, args...)
@@ -139,6 +145,24 @@ func (s *Store) CaptureEmailRequestsAsked(ctx context.Context, asOf time.Time, a
 		}
 		return nil
 	})
+}
+
+// tidyEmailRequests retires and rehomes the reminders already filed, when
+// tidy, and answers the workspace's own mail domains either way.
+func (s *Store) tidyEmailRequests(ctx context.Context, tx pgx.Tx, asOf time.Time, tidy bool) ([]string, error) {
+	if tidy {
+		if err := s.retireAgedReminders(ctx, tx, asOf); err != nil {
+			return nil, err
+		}
+	}
+	domains, err := s.ownDomainList(ctx, tx)
+	if err != nil || !tidy {
+		return domains, err
+	}
+	if err := s.retireNeverOwedReminders(ctx, tx, asOf, domains); err != nil {
+		return nil, err
+	}
+	return domains, s.rehomeSharedReminders(ctx, tx, asOf)
 }
 
 func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID ids.UUID, seat principal.Principal, asOf time.Time, ask string) error {
