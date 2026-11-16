@@ -264,6 +264,7 @@
     "explainReport": "business",
     "explainReportRunCell": "business",
     "explainReportingQuestionCard": "business",
+    "exportContactOptOutRecords": "compliance",
     "exportForecastShare": "business",
     "exportReportingEdition": "business",
     "exportReportingEvaluation": "business",
@@ -1192,6 +1193,7 @@
     "explainReport": "reports",
     "explainReportRunCell": "reports",
     "explainReportingQuestionCard": "reports",
+    "exportContactOptOutRecords": "consent",
     "exportForecastShare": "forecast",
     "exportReportingEdition": "reports",
     "exportReportingEvaluation": "reports",
@@ -2594,6 +2596,9 @@
     ],
     "explain_reporting_question_card": [
       "reports"
+    ],
+    "export_contact_optout_records": [
+      "consent"
     ],
     "export_forecast_share": [
       "forecast"
@@ -4701,6 +4706,9 @@
     ],
     "explain_reporting_question_card": [
       "business"
+    ],
+    "export_contact_optout_records": [
+      "compliance"
     ],
     "export_forecast_share": [
       "business"

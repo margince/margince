@@ -33,7 +33,8 @@ the cut. The Worklist drawer reads the queue itself when it opens.
 
 Worklist snapshots and ranked search queries share the pool's read allowance in
 `database/readadmission.go`. They wait for that allowance before they use a connection.
-This leaves room for short transactions such as the signed-in user's profile.
+The `database.read_concurrency` boot setting sizes that allowance, bounded by half the pool
+with at least one slot. This leaves room for short transactions such as the signed-in user's profile.
 The wait ends when the caller leaves or the queue deadline expires.
 
 Joining a snapshot shares its allowance and keeps its isolation and access checks.
