@@ -11,7 +11,7 @@ import {
   initialEntries,
   preloadEntries,
 } from "./scripts/vite-entry-chunks.ts";
-import { serveMcpApps } from "./scripts/vite-inline-views.ts";
+import { buildRevision, serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import { CostSequencer, compilerTests } from "./scripts/vitest-shards.ts";
@@ -92,7 +92,6 @@ const allowedHosts = (process.env.VITE_ALLOWED_HOSTS ?? "")
 
 const release = process.env.MARGINCE_RELEASE_VERSION ?? "";
 const coreRelease = process.env.MARGINCE_CORE_VERSION ?? "";
-const buildRevision = process.env.MARGINCE_BUILD_REVISION ?? "";
 
 const entries = initialEntries(frontendRoot);
 const bootstrap = entryChunks("bootstrap", entries.bootstrap, 20);
@@ -176,7 +175,7 @@ export default defineConfig({
   define: {
     __MARGINCE_RELEASE_VERSION__: JSON.stringify(release),
     __MARGINCE_CORE_VERSION__: JSON.stringify(coreRelease),
-    __MARGINCE_BUILD_REVISION__: JSON.stringify(buildRevision),
+    __MARGINCE_BUILD_REVISION__: JSON.stringify(buildRevision()),
   },
   resolve: {
     // An ARRAY rather than a record, because one entry must match a pattern:

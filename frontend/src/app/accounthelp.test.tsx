@@ -210,6 +210,23 @@ describe("Help and feedback", () => {
     },
   );
 
+  it.each([
+    ["0123456789abcdef", "&commit=0123456"],
+    ["dev", ""],
+  ])(
+    "names the revision of an unstamped build only when known (%j)",
+    async (revision, query) => {
+      bundle.revision = revision;
+      const user = userEvent.setup();
+      renderMenu();
+      await openHelp(user);
+      expect(helpItem(/^Report a problem/)).toHaveAttribute(
+        "href",
+        `https://github.com/margince/margince/issues/new?template=bug_report.yml${query}`,
+      );
+    },
+  );
+
   it("closes the whole menu when a link is chosen", async () => {
     const user = userEvent.setup();
     renderMenu();

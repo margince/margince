@@ -79,7 +79,7 @@ export function buildRelease(): BuildRelease {
 
 /**
  * The release a problem report names. The tracker is the core's, so an instance
- * build names the core release it pins.
+ * build names the core release it pins, and an unstamped one its commit.
  */
 export function reportedRelease(build: BuildRelease): string | undefined {
   switch (build.kind) {
@@ -88,7 +88,7 @@ export function reportedRelease(build: BuildRelease): string | undefined {
     case "core":
       return build.release;
     default:
-      return undefined;
+      return build.revision;
   }
 }
 

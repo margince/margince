@@ -42,15 +42,15 @@ export const CORE_RELEASE: string = __MARGINCE_CORE_VERSION__;
 
 declare const __MARGINCE_BUILD_REVISION__: string;
 
-/** BUILD_REVISION is the commit this bundle was built from; empty or "dev" when nothing stamped it. */
+/**
+ * BUILD_REVISION is the commit this bundle was built from; empty or "dev" when
+ * nothing stamped it.
+ */
 export const BUILD_REVISION: string = __MARGINCE_BUILD_REVISION__;
 
 const SHORT_REVISION_LENGTH = 7;
 
-/**
- * shortRevision is the first seven characters of a known revision, and
- * undefined for an absent, empty or "dev" one.
- */
+/** undefined for an absent, empty or "dev" revision. */
 export function shortRevision(
   revision: string | undefined,
 ): string | undefined {
