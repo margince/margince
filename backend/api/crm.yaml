@@ -28082,9 +28082,11 @@ paths:
       summary: Mail the subject a single-use link that confirms one marketing purpose.
       description: |
         Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-        primary address. The purpose must be live and must itself require double
-        opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
-        confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
+        primary address. The purpose must be live. A purpose of a marketing class must itself
+        require double opt-in, else this is a 422, because a mailed link asking about a
+        subscription that needs no confirmation asks a question the answer does not fit. A purpose
+        of another class may be asked about either way: it is how a contact with no lawful basis on
+        record is asked for consent to correspondence. The plaintext is never returned: this endpoint once handed it to the
         authenticated operator, who could paste it straight back into `recordConsent` — a round
         trip in which the subject's mailbox never participated, recorded as though it had. A double
         opt-in is evidence only because the data subject completed it from their own mailbox, so
@@ -61517,8 +61519,8 @@ components:
           format: uuid
           description: |
             For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
-            about for this use, the oldest live double-opt-in purpose whose class covers it and that
-            the contact has not withdrawn. `POST /contacts/{id}/consent/double-opt-in` with it mails
+            about for this use: the oldest live purpose whose class covers it, that the contact has
+            not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
             the request. The recipient's pack says for which purpose classes the contact's own request
             must be on record first. Absent when no such purpose exists, or when the recipient is a
             lead.

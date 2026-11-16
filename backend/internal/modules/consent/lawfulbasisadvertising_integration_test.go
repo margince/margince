@@ -165,13 +165,12 @@ func TestANoBasisRecipientCanBeAskedForConsentToCorrespondence(t *testing.T) {
 	}
 }
 
-// A fresh installation's correspondence purpose is not confirmed by double
-// opt-in, so the preview names no purpose and the composer offers no request.
-func TestNoConsentPurposeIsNamedWhenNoneAsksByMail(t *testing.T) {
+// With no purpose covering correspondence, the preview names no purpose and
+// the composer offers no request. A newsletter does not stand in for one.
+func TestNoConsentPurposeIsNamedWhenNoneCoversTheUse(t *testing.T) {
 	e := setupResolve(t)
 	placeUnderConsentOnly(t, e)
 	e.capturedMail(t, "thread-matter", "cc", true)
-	e.seedPurpose(t, "rp_plain_correspondence", "business_correspondence")
 	seedDoubleOptInPurpose(t, e, "rp_only_news", "marketing")
 
 	set, err := e.gate.Preview(e.ctx, commsauthz.Request{
@@ -184,7 +183,88 @@ func TestNoConsentPurposeIsNamedWhenNoneAsksByMail(t *testing.T) {
 		t.Fatalf("preview %+v, want the recipient marked", set.Decisions)
 	}
 	if got := set.Decisions[0].ConsentPurpose; !got.IsZero() {
-		t.Errorf("the preview names purpose %v, want none: no double-opt-in purpose covers correspondence", got)
+		t.Errorf("the preview names purpose %v, want none: no purpose covers correspondence", got)
+	}
+}
+
+// On the catalog a fresh installation seeds, a contact with no basis gets a
+// consent request for the built-in correspondence purpose. Confirming it
+// grants that purpose, and the next preview no longer warns.
+func TestTheSeededCatalogLetsANoBasisContactBeAskedForConsent(t *testing.T) {
+	e := setupResolve(t)
+	placeUnderConsentOnly(t, e)
+	e.capturedMail(t, "thread-matter", "cc", true)
+	seedDefaultCatalog(t, e)
+	var correspondence ids.UUID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM consent_purpose WHERE key = $1`, string(ClassBusinessCorrespondence)).Scan(&correspondence); err != nil {
+		t.Fatalf("reading the seeded correspondence purpose: %v", err)
+	}
+	preview := func() commsauthz.Decision {
+		t.Helper()
+		set, err := e.gate.Preview(e.ctx, commsauthz.Request{
+			Recipients: []connector.Recipient{{Email: e.address}}, ThreadKey: "thread-matter",
+		})
+		if err != nil || len(set.Decisions) != 1 {
+			t.Fatalf("previewing: %+v, %v", set.Decisions, err)
+		}
+		return set.Decisions[0]
+	}
+	if d := preview(); !d.LawfulBasisMissing || d.ConsentPurpose != correspondence {
+		t.Fatalf("preview %+v, want the recipient marked and the correspondence purpose %v named", d, correspondence)
+	}
+
+	store := e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")
+	ctx := withContactUpdate(e.ctx)
+	if rec := askConsent(t, ctx, Handlers{store: store}, e.contact, ids.From[ids.PurposeKind](correspondence)); rec.Code != http.StatusCreated {
+		t.Fatalf("asking for consent answered %d %s, want 201", rec.Code, rec.Body.String())
+	}
+	issued, err := store.IssueConsentLink(ctx, e.contact, ids.From[ids.PurposeKind](correspondence), "", "")
+	if err != nil {
+		t.Fatalf("minting the link the contact answers: %v", err)
+	}
+	if _, err := store.SubmitConfirmation(ctx, issued.Token, ConfirmSubmission{
+		MarketingChoice: string(StateGranted), MarketingWording: "Business correspondence.",
+	}); err != nil {
+		t.Fatalf("the contact confirming: %v", err)
+	}
+	if d := preview(); d.LawfulBasisMissing || d.Basis != commsauthz.BasisConsent {
+		t.Errorf("after the contact confirmed, preview %+v, want it resting on consent and unmarked", d)
+	}
+}
+
+// A marketing purpose not confirmed by double opt-in is still never asked
+// about by mail.
+func TestAMarketingPurposeWithoutDoubleOptInIsNotAskedByMail(t *testing.T) {
+	e := setupResolve(t)
+	e.seedPurpose(t, "rp_plain_news", "marketing")
+	var news ids.PurposeID
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT id FROM consent_purpose WHERE key = 'rp_plain_news'`).Scan(&news); err != nil {
+		t.Fatal(err)
+	}
+	h := Handlers{store: e.store.WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")}
+	rec := askConsent(t, withContactUpdate(e.ctx), h, e.contact, news)
+	if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "purpose_id") {
+		t.Errorf("asking about a marketing purpose without double opt-in answered %d %s, want 422 naming purpose_id",
+			rec.Code, rec.Body.String())
+	}
+}
+
+// seedDefaultCatalog plants the purposes a fresh installation starts with,
+// through the real seeder.
+func seedDefaultCatalog(t *testing.T, e *resolveEnv) {
+	t.Helper()
+	ctx := context.Background()
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := SeedDefaultPurposesTx(ctx, tx); err != nil {
+		t.Fatalf("seeding the catalog: %v", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
 	}
 }
 

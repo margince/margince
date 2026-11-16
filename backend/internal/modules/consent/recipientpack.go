@@ -14,7 +14,6 @@ package consent
 
 import (
 	"context"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -121,27 +120,38 @@ func settlePackBasisTx(ctx context.Context, tx pgx.Tx, subject subjectRef, res r
 }
 
 // askablePurposeTx is the purpose a consent request to this contact would ask
-// about for this use. It is the oldest live double-opt-in purpose whose class
-// covers the use and that the contact has not withdrawn. Zero when none is.
+// about for this use. It is the oldest live purpose whose class covers the use
+// and that the contact has not withdrawn. Zero when none is.
 func askablePurposeTx(ctx context.Context, tx pgx.Tx, contactID string, category commsauthz.Category) (ids.UUID, error) {
 	classes := classesCovering(category)
 	if len(classes) == 0 {
 		return ids.UUID{}, nil
 	}
-	var purpose ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT cp.id FROM consent_purpose cp
-		 WHERE cp.archived_at IS NULL AND cp.requires_double_opt_in AND cp.class = ANY($2)
+	rows, err := tx.Query(ctx, `
+		SELECT cp.id, cp.requires_double_opt_in, cp.class FROM consent_purpose cp
+		 WHERE cp.archived_at IS NULL AND cp.class = ANY($2)
 		   AND NOT EXISTS (SELECT 1 FROM contact_consent cc
 		                    WHERE cc.contact_id = $1::uuid AND cc.purpose_id = cp.id AND cc.state = 'withdrawn')
-		 ORDER BY cp.created_at, cp.id LIMIT 1`, contactID, classes).Scan(&purpose)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.UUID{}, nil
-	}
+		 ORDER BY cp.created_at, cp.id`, contactID, classes)
 	if err != nil {
 		return ids.UUID{}, wrapEvidenceRead("the purpose a consent request would ask about", err)
 	}
-	return purpose, nil
+	defer rows.Close()
+	for rows.Next() {
+		var purpose ids.UUID
+		var requiresDOI bool
+		var class string
+		if err := rows.Scan(&purpose, &requiresDOI, &class); err != nil {
+			return ids.UUID{}, wrapEvidenceRead("the purpose a consent request would ask about", err)
+		}
+		if confirmableByMail(requiresDOI, class) {
+			return purpose, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return ids.UUID{}, wrapEvidenceRead("the purpose a consent request would ask about", err)
+	}
+	return ids.UUID{}, nil
 }
 
 // consentCoversTx answers whether the subject has granted consent to a

@@ -64938,8 +64938,8 @@ type SendAuthorizationPreviewRecipient struct {
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
 	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
-	// about for this use, the oldest live double-opt-in purpose whose class covers it and that
-	// the contact has not withdrawn. `POST /contacts/{id}/consent/double-opt-in` with it mails
+	// about for this use: the oldest live purpose whose class covers it, that the contact has
+	// not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
 	// the request. The recipient's pack says for which purpose classes the contact's own request
 	// must be on record first. Absent when no such purpose exists, or when the recipient is a
 	// lead.
