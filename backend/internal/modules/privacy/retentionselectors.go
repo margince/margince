@@ -3,7 +3,10 @@
 
 package privacy
 
-import "github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+import (
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
+	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+)
 
 // The selector table: which records each (object_type, category) policy scope
 // governs. Split out of retention.go because it is also the AUTHORABLE
@@ -45,7 +48,7 @@ var retentionSelectors = map[string]string{
 		  AND NOT ` + retentionscope.HeldThroughAnyLink("a.id") + `
 		LIMIT $2`,
 	"activity/transcript": `SELECT a.id FROM activity a
-		WHERE a.source_system = 'transcript' AND a.body IS NOT NULL
+		WHERE a.source_system = '` + meetingoutcome.TranscriptSourceSystem + `' AND a.body IS NOT NULL
 		  AND a.occurred_at < now() - make_interval(days => $1) -- occurred_at raw: a retention age in days
 		  AND a.created_at < now() - make_interval(days => $1)
 		  ` + correspondenceFloorPredicate(3, 4) + `

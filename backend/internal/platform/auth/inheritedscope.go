@@ -149,12 +149,11 @@ func activityAttendanceArm(p principal.Principal, alias string, arg func(any) in
 func activityAttendanceForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
     OR %[5]s
-    OR EXISTS (SELECT 1 FROM activity_participant ap
-                WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND ap.address IS NOT NULL)
+    OR EXISTS (SELECT 1 FROM %[6]s AND guest.user_id IN (%[2]s) AND guest.address IS NOT NULL)
     OR (%[1]s.sent_by_colleague IN (%[2]s) AND EXISTS (SELECT 1 FROM data_task_run sender_check
          WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
         AND %[4]s))`,
-		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias), sharedMailboxReaderInSQL(alias, members))
+		alias, members, SenderStampsCheckedStep, senderAtOwnDomain(alias), sharedMailboxReaderInSQL(alias, members), guestRowsSQL(alias))
 }
 
 // senderAtOwnDomain re-asks at read time that the stamped seat's login address
@@ -203,8 +202,8 @@ func activityMembershipArm(p principal.Principal, alias string, arg func(any) in
 func activityMembershipForMemberSQL(alias, members string) string {
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id IN (%[2]s))
 	   OR %[4]s
-	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id IN (%[2]s) AND %[3]s))`,
-		alias, members, ParticipantStandsSQL("ap", alias), sharedMailboxReaderInSQL(alias, members))
+	   OR EXISTS (SELECT 1 FROM %[3]s AND guest.user_id IN (%[2]s) AND %[5]s))`,
+		alias, members, guestRowsSQL(alias), sharedMailboxReaderInSQL(alias, members), ParticipantStandsSQL("guest", "guest_of"))
 }
 
 func contentGateFor(p principal.Principal, alias string, arg func(any) int) string {
