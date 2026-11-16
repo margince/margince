@@ -1,27 +1,34 @@
 SET LOCAL lock_timeout = '3s';
+
+-- IF NOT EXISTS and DROP ... IF EXISTS: a development database that ran this
+-- file under its earlier number already holds the columns and checks.
 -- A purpose says how often its mail goes out, and the subscription page states
 -- it in the sentence a grant records. One closed word per frequency, so each
 -- language can name it.
-ALTER TABLE consent_purpose ADD COLUMN frequency text NOT NULL DEFAULT 'monthly';
+ALTER TABLE consent_purpose ADD COLUMN IF NOT EXISTS frequency text NOT NULL DEFAULT 'monthly';
+ALTER TABLE consent_purpose DROP CONSTRAINT IF EXISTS consent_purpose_frequency_check;
 ALTER TABLE consent_purpose ADD CONSTRAINT consent_purpose_frequency_check
     CHECK (frequency IN ('weekly', 'monthly', 'quarterly')) NOT VALID;
 
 -- Where the rep who typed a contact in says it came from. The privacy page
 -- prints it; `note` keeps the rep's own words beside it.
-ALTER TABLE contact_acquisition_evidence ADD COLUMN stated_source text;
+ALTER TABLE contact_acquisition_evidence ADD COLUMN IF NOT EXISTS stated_source text;
+ALTER TABLE contact_acquisition_evidence DROP CONSTRAINT IF EXISTS contact_acquisition_evidence_stated_source_check;
 ALTER TABLE contact_acquisition_evidence ADD CONSTRAINT contact_acquisition_evidence_stated_source_check
     CHECK (stated_source IN ('met_in_person', 'business_card', 'referral', 'website', 'other')) NOT VALID;
 
 -- A record-confirmation link that asks no news question. The recipient's
 -- country decides at mint, and the page and the submit read it from the link.
-ALTER TABLE confirm_token ADD COLUMN asks_news boolean NOT NULL DEFAULT true;
+ALTER TABLE confirm_token ADD COLUMN IF NOT EXISTS asks_news boolean NOT NULL DEFAULT true;
 
 -- The subject's own request a consent-confirmation mail answers, kept with the
 -- link and then with the grant it leads to.
-ALTER TABLE confirm_token ADD COLUMN subject_request_id uuid;
+ALTER TABLE confirm_token ADD COLUMN IF NOT EXISTS subject_request_id uuid;
+ALTER TABLE confirm_token DROP CONSTRAINT IF EXISTS confirm_token_subject_request_id_fkey;
 ALTER TABLE confirm_token ADD CONSTRAINT confirm_token_subject_request_id_fkey
     FOREIGN KEY (subject_request_id) REFERENCES consent_qualifying_event (id) ON DELETE SET NULL NOT VALID;
-ALTER TABLE consent_event ADD COLUMN subject_request_id uuid;
+ALTER TABLE consent_event ADD COLUMN IF NOT EXISTS subject_request_id uuid;
+ALTER TABLE consent_event DROP CONSTRAINT IF EXISTS consent_event_subject_request_id_fkey;
 ALTER TABLE consent_event ADD CONSTRAINT consent_event_subject_request_id_fkey
     FOREIGN KEY (subject_request_id) REFERENCES consent_qualifying_event (id) ON DELETE SET NULL NOT VALID;
 
