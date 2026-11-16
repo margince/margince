@@ -22,13 +22,18 @@ import (
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -36,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// sentStatements records every statement a pool sends.
 type sentStatements struct{ sql []string }
 
 func (s *sentStatements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -46,12 +50,23 @@ func (s *sentStatements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data 
 
 func (*sentStatements) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
+// A snapshot sends its session statements inside batches, so the census reads
+// a batch's statements as well.
+func (*sentStatements) TraceBatchStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceBatchStartData) context.Context {
+	return ctx
+}
+
+func (s *sentStatements) TraceBatchQuery(_ context.Context, _ *pgx.Conn, data pgx.TraceBatchQueryData) {
+	s.sql = append(s.sql, data.SQL)
+}
+
+func (*sentStatements) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchEndData) {}
+
 // predicateSpelling strips what a partial-index predicate says besides its
 // columns: literals, casts, null tests (of a column or a call) and calls. A
 // bound strict comparison proves the null test, so the generic plan keeps it.
 var predicateSpelling = regexp.MustCompile(`'(?:[^']|'')*'|::\w+(?:\[\])?|\b\w+\s*\([^()]*\)\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s*\(`)
 
-// predicateWords are the SQL words left in a predicate once predicateSpelling ran.
 var predicateWords = map[string]bool{
 	"and": true, "or": true, "not": true, "any": true, "array": true,
 	"is": true, "distinct": true, "from": true, "true": true, "false": true, "in": true, "null": true,
@@ -127,7 +142,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
-		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {
+		if _, err := plannedRead(ctx, attentionTasks{store: store}, at, at, true); err != nil {
 			return err
 		}
 		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
@@ -141,7 +156,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := cards.ReadFacts(ctx, ids.From[ids.DealKind](deal)); err != nil {
 			return err
 		}
-		if err := readSuggestionLanes(ctx, db); err != nil {
+		if err := readSuggestionLanes(ctx, db, deal); err != nil {
 			return err
 		}
 		if err := readPlannedOnceLanes(ctx, plannedOnceLanes{db: db, pool: pool, engine: engine}, deal, ids.UUID(mail.Id), at); err != nil {
@@ -168,6 +183,14 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if _, err := page.Assemble(reader, account); err != nil {
 		t.Fatalf("opening the account page: %v", err)
 	}
+	contactPage := contact360.NewService(pool, e.Contacts, e.Deals, e.Projects,
+		consent.NewStore(InstallationDB(pool)),
+		comms.NewStore(InstallationDB(pool), func() time.Time { return at }, activities.NewStore(InstallationDB(pool))),
+		ai.NewFeedbackStore(InstallationDB(pool)), func() time.Time { return at }).
+		WithActivityFields(activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)))
+	if _, err := contactPage.Assemble(reader, ids.From[ids.ContactKind](contact)); err != nil {
+		t.Fatalf("opening the contact page: %v", err)
+	}
 	sent.sql = append(sent.sql, capturedPartyPlanStatements(t, e, pool)...)
 	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
 	for _, bad := range []string{"WHERE a.kind = $3", "AND p.role IN ($2", "AND m.status = ANY($7)", "AND a.is_done = $4"} {
@@ -180,7 +203,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	}
 	for _, held := range []string{
 		"FROM activity_commitment_admission d", "FROM deal_suggestion s", "FROM tag_suggestion s",
-		"FROM brief_item bi", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
+		"FROM brief_item bi", "r.kind = 'deal_stakeholder' AND r.contact_id", "'deal_stakeholder'", "wd.source = 'domain_question'", "task_claims AS MATERIALIZED",
 		"a.meeting_status IS NULL OR a.meeting_status = 'booked'", "NOT (a.captured_by = 'system'",
 		"al.entity_type = 'deal'",
 	} {
@@ -258,7 +281,7 @@ func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *te
 			// The notice's custom-plan call restores the Worklist's generic mode.
 			generic = true
 		}
-		if strings.Contains(sql, "n.state = ANY(") && !generic {
+		if strings.Contains(sql, "n.state IN (") && !generic {
 			noticeCustom = true
 		}
 		if found := boundIndexedColumn.FindString(sql); generic && found != "" {
@@ -270,17 +293,12 @@ func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *te
 	}
 }
 
-// plannedOnceLanes is what the Worklist's other plan-reusing reads are built on.
 type plannedOnceLanes struct {
 	db     *database.DB
 	pool   *pgxpool.Pool
 	engine *briefs.BriefEngine
 }
 
-// readPlannedOnceLanes runs the Worklist's other plan-reusing reads through
-// their seams. They are the task flags and their claims, the domain questions,
-// the champion cover and the brief run items. readMeetingLanes runs the
-// meetings.
 func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, task ids.UUID, at time.Time) error {
 	store := activities.NewStore(lanes.db)
 	claims := contacts.NewStore(lanes.db)
@@ -298,26 +316,36 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 	return err
 }
 
-// readSuggestionLanes runs the needs_you lane's four suggestion reads through
-// the seams that reuse their plans.
-func readSuggestionLanes(ctx context.Context, db *database.DB) error {
-	dealSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}
-	if _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
+func readSuggestionLanes(ctx context.Context, db *database.DB, positionID ids.UUID) error {
+	dealSuggestions := suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())}
+	if _, _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
 		return err
 	}
 	if _, err := dealSuggestions.CountOpen(ctx, nil); err != nil {
 		return err
 	}
-	tagSuggestions := attentionTagSuggestions{store: collections.NewStore(db)}
+	position, err := deals.SuggestionPositionAfter(time.Unix(0, 0), positionID)
+	if err != nil {
+		return err
+	}
+	if _, _, err := dealSuggestions.SuggestionsAfter(ctx, nil, position, 10); err != nil {
+		return err
+	}
+	tagSuggestions := suggestionlanes.Tags{Store: collections.NewStore(db)}
 	if _, err := tagSuggestions.OpenTagSuggestions(ctx, 10); err != nil {
 		return err
 	}
-	_, err := tagSuggestions.CountOpenTagSuggestions(ctx)
+	if _, err := tagSuggestions.CountOpenTagSuggestions(ctx); err != nil {
+		return err
+	}
+	position, err = collections.TagSuggestionPositionAfter(time.Unix(0, 0), positionID)
+	if err != nil {
+		return err
+	}
+	_, _, err = tagSuggestions.TagSuggestionsAfter(ctx, position, 10)
 	return err
 }
 
-// seedPlannedMeeting books a meeting with the contact at the given start, so the
-// meeting lanes read a row and finish it.
 func seedPlannedMeeting(t *testing.T, e *integration.Env, contact ids.UUID, startsAt time.Time) {
 	t.Helper()
 	subject, status := "Kick-off", "booked"
@@ -329,8 +357,6 @@ func seedPlannedMeeting(t *testing.T, e *integration.Env, contact ids.UUID, star
 	}
 }
 
-// readMeetingLanes runs the meetings lanes' reads through the seams that reuse
-// their plans, under every scope a lane can be asked for.
 func readMeetingLanes(ctx context.Context, store *activities.Store, at time.Time, owner ids.UUID) error {
 	window := attention.MeetingWindow{From: at.Add(-24 * time.Hour), Until: at.Add(12 * time.Hour), DaysFrom: at, DaysUntil: at.AddDate(0, 0, 1)}
 	for _, scope := range []attention.TaskScope{attention.TasksVisible, attention.TasksMine, attention.TasksUnassigned, attention.TasksOwnedBy} {

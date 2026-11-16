@@ -178,7 +178,7 @@ func OpenBalanceAt(invoices []Invoice, asOf time.Time) OpenBalance {
 			return OpenBalance{RateUnavailable: true}
 		}
 		out.OpenMinorBase += inv.OpenMinorBase
-		if inv.Disputed || !pastDue(inv.DueOn, asOf) {
+		if !invoiceOverdue(inv, asOf) {
 			continue
 		}
 		out.OverdueMinorBase += inv.OpenMinorBase
@@ -192,6 +192,11 @@ func OpenBalanceAt(invoices []Invoice, asOf time.Time) OpenBalance {
 		}
 	}
 	return out
+}
+
+func invoiceOverdue(inv Invoice, asOf time.Time) bool {
+	return inv.Status != statusVoid && inv.OpenMinorBase > 0 &&
+		!inv.Disputed && pastDue(inv.DueOn, asOf)
 }
 
 // DaysLate is FIN-FORM-3 for one invoice: negative is early, zero is on the

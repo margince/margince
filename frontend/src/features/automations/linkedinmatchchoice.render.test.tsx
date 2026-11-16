@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Approval } from "../../lib/approvals.queries";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -44,8 +45,7 @@ function linkedInMatch(change: Record<string, unknown> = {}): Approval {
   } as Approval;
 }
 
-// The batched company-name read, naming Acme; any other id asked is one the
-// reader may not see, which the list answers by leaving it out.
+// The full company-list fixture remains available to list consumers.
 function acmeNamed(): Response {
   return jsonResponse({
     data: [{ id: ACME, display_name: "Acme GmbH" }],
@@ -53,10 +53,33 @@ function acmeNamed(): Response {
   });
 }
 
+function stubCompanyReferences(
+  read: (url: string) => Response | Promise<Response> = (url) =>
+    companyNamesAnswer(url, { [ACME]: "Acme GmbH" }) ??
+    jsonResponse({ data: [] }),
+) {
+  const routed = globalThis.fetch;
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = input instanceof Request ? input.url : String(input);
+    const asked = new URL(url, "https://test.local");
+    const method =
+      input instanceof Request ? input.method : (init?.method ?? "GET");
+    if (
+      method === "GET" &&
+      asked.pathname === "/v1/records/references" &&
+      asked.searchParams.get("kind") === "company"
+    ) {
+      return Promise.resolve(read(url));
+    }
+    return routed(input, init);
+  });
+}
+
 // Routes the reads the card makes and records what the accept sent.
 function stubCard(
   allow: GrantSpec,
   company: () => Response | Promise<Response> = acmeNamed,
+  reference?: (url: string) => Response | Promise<Response>,
 ) {
   const sent: unknown[] = [];
   installFetchStub({
@@ -69,6 +92,7 @@ function stubCard(
       return jsonResponse({ id: "ap-li", status: "approved" });
     },
   });
+  stubCompanyReferences(reference);
   return sent;
 }
 
@@ -159,6 +183,7 @@ describe("the LinkedIn match boxes", () => {
       "GET /me": meRoute(mayEmploy),
       "GET /companies": acmeNamed,
     });
+    stubCompanyReferences();
     const asked: string[] = [];
     const routed = globalThis.fetch;
     vi.stubGlobal("fetch", (request: Request) => {
@@ -188,7 +213,8 @@ describe("the LinkedIn match boxes", () => {
 
   it("keeps the staged employer box when accepted before the company has loaded", async () => {
     const user = userEvent.setup();
-    const sent = stubCard(mayEmploy, () => new Promise<Response>(() => {}));
+    const pending = () => new Promise<Response>(() => {});
+    const sent = stubCard(mayEmploy, pending, pending);
     show(linkedInMatch());
     await user.click(
       await screen.findByRole("checkbox", { name: "Use as job title" }),

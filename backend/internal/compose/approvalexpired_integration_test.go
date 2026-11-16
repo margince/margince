@@ -46,7 +46,7 @@ func TestAnExpiredButStoredPendingApprovalIsNoWorkOnAnySurface(t *testing.T) {
 		t.Fatalf("pending count = %d, err %v, want 1", count.Count, err)
 	}
 
-	lane, err := (attentionApprovals{svc: svc}).ListWire(e.Admin(), attention.ApprovalQuery{Status: status, Limit: 9, RequestedForReader: true})
+	lane, _, err := (attentionApprovals{svc: svc}).ListWire(e.Admin(), attention.ApprovalQuery{Status: status, Limit: 9, RequestedForReader: true})
 	if err != nil {
 		t.Fatal(err)
 	}

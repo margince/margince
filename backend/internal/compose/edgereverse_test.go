@@ -150,19 +150,15 @@ func TestAnEdgeTheCallerCannotReadIsAnswered(t *testing.T) {
 	}
 }
 
-// An edge patch coalesces every field against the column, so it cannot write a
-// NULL: reversing an entry that FILLED a field in would report success and leave
-// the value standing. The refusal names the fields rather than doing that.
-func TestReversingAnEntryThatFilledALinkFieldInIsRefusedByName(t *testing.T) {
-	row := edgeRow("update",
-		`{"ended_at":null,"role":null}`,
-		`{"ended_at":"2026-01-31T00:00:00Z","role":"coo"}`)
-	answer := judgeEdge(t, edgeEvaluator(employmentEdge()), row)
-	if answer.Reason != ReasonNullUnwritableByModule {
-		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNullUnwritableByModule)
+func TestReversingAnEntryThatFilledEmploymentFieldsUsesTheModuleClearPolicy(t *testing.T) {
+	fields, err := edgeFieldsNoPatchCanClear(
+		json.RawMessage(`{"ended_at":null,"role":null,"employment_status":null,"ended_precision":null}`),
+		json.RawMessage(`{"ended_at":"2026-01-31T00:00:00Z","role":"coo","employment_status":"former","ended_precision":"day"}`))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if answer.Detail != "ended_at, role" {
-		t.Errorf("detail = %q, want both fields named and sorted", answer.Detail)
+	if len(fields) != 0 {
+		t.Fatalf("employment clear refused: %v", fields)
 	}
 }
 

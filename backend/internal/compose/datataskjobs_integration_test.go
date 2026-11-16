@@ -200,8 +200,17 @@ func TestReconciliationQueuesCompletedCorrectionsAtANewerCodeVersion(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	if progress[0].Status != datatask.Pending {
-		t.Fatalf("completed old code reported done: %+v", progress[0])
+	found := false
+	for _, row := range progress {
+		if row.TaskID == tasks[0].ID {
+			found = true
+			if row.Status != datatask.Pending {
+				t.Fatalf("completed old code reported done: %+v", row)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("reconciled task is missing from progress")
 	}
 }
 

@@ -299,7 +299,7 @@ func noticeAgendaQuery(ctx context.Context, in NoticeAgendaInput) (string, []any
 	if err != nil {
 		return "", nil, err
 	}
-	where := storekit.SQLf("n.state = ANY($%d) AND c.archived_at IS NULL", arg(agendaNoticeStates()))
+	where := "n.state IN (" + storekit.TextLiterals(agendaNoticeStates()...) + ") AND c.archived_at IS NULL"
 	where += " AND NOT (" + UnverifiedNoticeSourceSQL("n", "e") + ")"
 	if scope != "" {
 		where += " AND " + scope

@@ -82,8 +82,9 @@ type Clock func() time.Time
 // Service assembles the feed. Every dependency is an interface a compose seam
 // binds to the owning module, so this package imports no module directly.
 type Service struct {
-	approvals  Approvals
-	duplicates Duplicates
+	handledReceipts Receipts
+	approvals       Approvals
+	duplicates      Duplicates
 	// suggestions is OPTIONAL: an unbound feed shows none (suggestionlane.go).
 	suggestions DealSuggestions
 	// tagSuggestions is OPTIONAL the same way (tagsuggestionlane.go).
@@ -151,6 +152,8 @@ type Service struct {
 	// not ask for it, on a per-request copy. A pinned decay row still reads it,
 	// except in a Done check.
 	omitDecay bool
+	// homeShape answers only what Home draws (cut).
+	homeShape bool
 	// pinned is this request's reader's own pins, resolved once by readingPins
 	// onto a copy of the service. Nil on the shared service.
 	pinned map[RowRef]bool
@@ -185,6 +188,8 @@ type Service struct {
 	// organizers is OPTIONAL in the same way: nil means a meeting row names
 	// whose calendar it came off as its host.
 	organizers MeetingOrganizers
+	// rooms is OPTIONAL in the same way: nil means a meeting row names no room.
+	rooms MeetingRooms
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves        DealMoves
@@ -345,7 +350,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		out.Counts.DealSuggestionsOpen = count.suggestions
 		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
-	beside := besideDay{failed: count.failed, until: until, zone: loc, approvalsFrom: count.approvalsFrom}
+	beside := besideDay{failed: count.failed, until: until, zone: loc, resumeAt: count.resumeAt}
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
@@ -397,7 +402,8 @@ type laneCount struct {
 	// when the read failed — and then failed names it.
 	suggestions, tagSuggestions *int
 	failed                      []*crmcontracts.WorklistSourceUnavailable
-	approvalsFrom               string // the inbox position after the last approval kept
+	// resumeAt is each decision source's store position after the last row the lane kept.
+	resumeAt map[crmcontracts.WorklistItemSource]string
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -435,11 +441,11 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 		return nil, laneCount{}, err
 	}
 	query := s.approvalQuery(depth)
-	staged, err := s.approvals.ListWire(ctx, query)
+	staged, complete, err := s.approvals.ListWire(ctx, query)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	openStaged, err := s.approvals.CountPending(ctx, query)
+	openStaged, err := s.pendingApprovals(ctx, query, len(staged), complete)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -477,22 +483,6 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
 	// Cases lead each round, so a reader's own case is never behind a pile of other pairs.
 	lane := interleave(depth, cases, duplicates, approvals, suggestions, tagged)
-	count.approvalsFrom, err = approvalTailStart(lane, staged)
+	count.resumeAt, err = decisionTailStarts(lane, staged)
 	return lane, count, err
-}
-
-// done is the receipt lane: what ran without asking, so a rep can see it and
-// challenge it.
-func (s *Service) done(ctx context.Context, asOf time.Time) ([]crmcontracts.AttentionItem, error) {
-	defer timeStage(ctx, "done_for_you")()
-	since := asOf.Add(-24 * time.Hour)
-	recent, err := s.receipts.Recent(ctx, since, doneCap)
-	if err != nil {
-		return nil, err
-	}
-	items := make([]crmcontracts.AttentionItem, 0, len(recent))
-	for _, receipt := range recent {
-		items = append(items, receiptItem(receipt))
-	}
-	return items, nil
 }

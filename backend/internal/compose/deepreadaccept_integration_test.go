@@ -31,6 +31,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -284,7 +285,7 @@ func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 		CompanyID: ids.From[ids.CompanyKind](company),
 		SourceURL: seedURL,
 		Fields: []contacts.DeepReadField{{
-			Field: "industry", Value: "Industrial automation software",
+			Field: "industry", Value: "Software",
 			EvidenceSnippet: "Acme builds industrial automation software.", SourceURL: seedURL, Confidence: 0.9,
 		}},
 	}); err != nil {
@@ -304,7 +305,7 @@ func TestDeepReadNeverOverwritesAnIndustryAColleagueSet(t *testing.T) {
 	if industry != "Logistics" {
 		t.Fatalf("industry = %q, want the colleague's value kept", industry)
 	}
-	if evidence != "Industrial automation software" {
+	if evidence != "software" {
 		t.Fatalf("industry evidence = %q, want the read's finding kept beside the column", evidence)
 	}
 }
@@ -387,5 +388,32 @@ func servicesOfferings() []contacts.DeepReadFact {
 			EvidenceSnippet: "Margince is our CRM product.",
 			SourceURL:       seedURL + "/services", Confidence: 1,
 		},
+	}
+}
+
+func TestSiteProfileStoresARecognizedIndustryAsItsCode(t *testing.T) {
+	e := integration.Setup(t)
+	company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Restaurant Profile", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	idx := newSnippetIndex([]crawlPage{{URL: "https://restaurant.example.test", Kind: crmcontracts.SiteReadPageKindHome, Text: "Our restaurant serves seasonal meals and local dishes."}})
+	fields, dropped := gateProfile(`{"fields":[{"f":"industry","v":"Restaurant","e":"s0","c":0.9}]}`, idx)
+	if len(fields) != 1 {
+		t.Fatalf("recognized industry refused: %v", dropped)
+	}
+	if err := e.Contacts.ApplyDeepRead(e.Admin(), contacts.DeepReadProposal{CompanyID: id, SourceURL: "https://restaurant.example.test", SiteReadID: ids.NewV7(), Fields: deepReadFields(fields)}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := e.Contacts.GetCompany(e.Admin(), id, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Industry == nil || string(*got.Industry) != "hospitality_tourism" {
+		t.Errorf("industry = %v, want hospitality_tourism", got.Industry)
+	}
+	if got.Description != nil {
+		t.Errorf("industry leaked into description: %v", got.Description)
 	}
 }

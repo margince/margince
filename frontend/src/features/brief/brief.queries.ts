@@ -11,7 +11,7 @@ import {
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { throwProblem, unwrap } from "../../lib/problem";
-import { briefKey, digestKey, worklistKey } from "../../lib/workkeys";
+import { briefKey, worklistKey } from "../../lib/workkeys";
 
 // Brief's reads, in one place. The screen fans out to five of them and each is
 // gated on its own, deliberately: a transient failure in the decisions queue
@@ -21,7 +21,6 @@ import { briefKey, digestKey, worklistKey } from "../../lib/workkeys";
 export type MorningBrief = components["schemas"]["MorningBrief"];
 export type WeeklyReview = components["schemas"]["WeeklyReview"];
 export type MorningBriefItem = components["schemas"]["MorningBriefItem"];
-export type MorningDigest = components["schemas"]["MorningDigest"];
 export type Deal = components["schemas"]["Deal"];
 
 export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
@@ -47,33 +46,6 @@ export const morningBriefOptions = queryOptions({
     return data ?? null;
   },
 });
-
-/**
- * The overnight digest (CAP-WIRE-6): the nightly build's stored counts — what
- * capture landed and what awaits review.
- *
- * `404 no_digest_yet` and `501` are the same fact to a reader (there is no
- * digest to show) and both return null. Reading 501 as an error is what once
- * put a permanent loading block on this page: a 501 is a 5xx, so the query
- * client retried it, and React Query PAUSES between retry attempts while the
- * document is hidden — the query sat at fetchStatus "paused" and never settled,
- * and the pending skeleton stood in for the refusal indefinitely.
- */
-export function useMorningDigest(): UseQueryResult<MorningDigest | null> {
-  return useQuery({
-    queryKey: digestKey,
-    queryFn: async (): Promise<MorningDigest | null> => {
-      const { data, error, response } = await api.GET("/digest");
-      if (response.status === 404 || response.status === 501) {
-        return null;
-      }
-      if (error) {
-        throwProblem(error);
-      }
-      return data ?? null;
-    },
-  });
-}
 
 /**
  * Ask for today's brief now. The overnight pass owns generation and a rep has

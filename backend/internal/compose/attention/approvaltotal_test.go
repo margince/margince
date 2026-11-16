@@ -22,8 +22,8 @@ type approvalsByScope struct {
 	forOwners map[ids.UUID]int
 }
 
-func (s approvalsByScope) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.Approval, error) {
-	return s.rows, nil
+func (s approvalsByScope) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.Approval, bool, error) {
+	return s.rows, false, nil
 }
 
 func (s approvalsByScope) CountPending(_ context.Context, in ApprovalQuery) (int, error) {

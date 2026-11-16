@@ -120,8 +120,9 @@ func versionedTables(t *testing.T) map[string]bool {
 // an entry without one is a finding, and one matching no function is
 // stale and fails.
 var unguardedByIDUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/chatlinks:SetCard":                    "the card columns are sync state the chat_link version trigger leaves out, and the one writer is the link's flush, which River runs once per link at a time",
 	"internal/modules/capture:storeDeferredOriginalTx":      "names the original of an activity this same transaction inserted; no other writer can hold the row yet",
-	"internal/modules/activities:inheritAudienceTx":         "sets the audience of an activity this same transaction inserted, before its create audit; no other writer can hold the row yet",
+	"internal/modules/activities:copyMeetingReadersTx":      "copies a meeting's audience onto its transcript, a derived value nobody edits by hand; every caller holds the transcript's row lock, and a new transcript is not yet visible to any other writer",
 	"internal/modules/consent:assessNoticeSourceTx":         "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the assessment reads or writes it",
 	"internal/modules/consent:ReviewUnverifiedNoticeTx":     "lockNoticeCase holds this privacy_notice_case FOR UPDATE before the source decision is read or changed",
 	"internal/modules/contacts:refreshContactPhoneEvidence": "recheckBatch holds every candidate from lockOpenPairs FOR UPDATE OF d through the evidence refresh in the same transaction",

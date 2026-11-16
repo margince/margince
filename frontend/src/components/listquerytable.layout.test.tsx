@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { openViewStep } from "../testing/listview.testkit";
+import { meFixture } from "../testing/mefixture";
 import { type ListPage, ListTable, useListQuery } from "./listquery";
 
 // Two record lists that count the same unit keep their own column layout.
@@ -50,6 +51,7 @@ function mount(layoutKey?: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

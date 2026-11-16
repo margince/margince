@@ -79,7 +79,13 @@ const openRequestReminderSQL = `EXISTS (SELECT 1 FROM activity reminder
 
 // confirmedRequestSQL is a request a human took, or one whose asks_us verdict
 // stands (storekit.AsksUsClause).
-var confirmedRequestSQL = storekit.AsksUsClause("a") + ` OR ` + acceptedRequestSQL
+var confirmedRequestSQL = confirmedRequestOf(acceptedRequestSQL)
+
+// confirmedRequestOf is confirmedRequestSQL over accepted, a boolean that says
+// a human took the request.
+func confirmedRequestOf(accepted string) string {
+	return storekit.AsksUsClause("a") + ` OR ` + accepted
+}
 
 var outstandingRequestSQL = requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `)`
 
@@ -100,9 +106,13 @@ func calendarMethodInSQL(methods []string) string {
 
 // A scheduling/commitment label is enough to keep an unjudged candidate for
 // review, never enough to assign it.
-var requestIntentSQL = confirmedRequestSQL + `
+var requestIntentSQL = requestIntentOf(acceptedRequestSQL)
+
+func requestIntentOf(accepted string) string {
+	return confirmedRequestOf(accepted) + `
  OR (a.owed_verdict IS NULL AND a.capture_label IN ('commitment', 'meeting')
      AND NOT ` + calendarCopySQL + `)`
+}
 
 var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)`
 
@@ -112,16 +122,17 @@ var requestCandidateSQL = requestUnsettledSQL + ` AND (` + requestIntentSQL + `)
 // otherwise become a standing obligation on the deal.
 // The machine arms read the mail's text, so they hold only where that text
 // may be judged. A request a human already took stays reviewable for them.
-func reviewableRequestSQL(asOf string) string {
-	return requestUnsettledSQL + ` AND (` + confirmedRequestSQL + `
+func reviewableRequestSQL(asOf, ownDomains string) string {
+	return requestUnsettledSQL + ` AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL(asOf, ownDomains) + `)
+ AND (` + confirmedRequestSQL + `
  OR (` + storekit.OwedVerdictStandsClause("a") + ` AND a.owed_verdict IS NULL AND (` + requestCandidateSQL + `
    OR (a.thread_key IS NOT NULL AND NOT ` + calendarCopySQL + `
        AND NOT ` + answeredSQL("a", asOf) + `))))`
 }
 
 // Current work needs confirmed intent and a responsible seat. Review remains broader.
-func currentRequestSQL(asOf, days, identities string, arg func(any) int) string {
-	admitted := "(" + owedSQL(asOf, neverRelaxed, neverRelaxed, neverRelaxed) + ") AND (" + confirmedRequestSQL + ") AND " +
+func currentRequestSQL(asOf, ownDomains, days, identities string, arg func(any) int) string {
+	admitted := "(" + owedSQL(asOf, ownDomains, neverRelaxed, neverRelaxed, neverRelaxed) + ") AND (" + confirmedRequestSQL + ") AND " +
 		withinWaitingHorizonSQL(asOf, days) + " AND " + personalMailResponsibilitySQL(nil, identities, arg, asOf, days)
 	return "((" + admitted + ") OR (" + requestUnsettledSQL + " AND " + heldRequestSQL() + "))"
 }

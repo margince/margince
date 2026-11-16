@@ -20,6 +20,7 @@ import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { ContactChatCapture } from "./contactchatcapture";
 import "./contact360.css";
+import { contactFilesKey } from "../../lib/attachmentkeys";
 
 // The contact's own files: unlike the sibling tabs in contacttabs.tsx, this one
 // is not a read of the 360 composite — the 360 does not carry attachments —
@@ -61,7 +62,7 @@ const RARE_CUTS: readonly Category[] = [
  */
 export function useContactFiles(contactId: string) {
   const query = useInfiniteQuery({
-    queryKey: ["attachments", "contact", contactId],
+    queryKey: contactFilesKey(contactId),
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
       return unwrap(

@@ -373,7 +373,7 @@
   gap: var(--space-2);
 }
 
-/* ── Your day, in the rail ─────────────────────────────────────────────────
+/* ── External meetings, in the rail ─────────────────────────────────────────────────
  * One card: each row is a time and what fills it, the title over its caption.
  * The card owns the time column and every row takes it as a subgrid, so a date
  * in one row and an hour in the next start their titles on one edge.
@@ -409,17 +409,6 @@
   color: var(--textPrimary);
   font-weight: var(--fontWeightMedium);
 }
-/* Now is marked by a filled disc ahead of the word. */
-.rail-schedule-now .rail-schedule-title::before {
-  content: "";
-  display: inline-block;
-  inline-size: var(--space-2);
-  block-size: var(--space-2);
-  margin-inline-end: var(--space-2);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--accent);
-}
 /* How soon it starts, and the prep badge beside it. */
 .rail-schedule-meta {
   display: flex;
@@ -427,14 +416,17 @@
   align-items: center;
   gap: var(--space-2);
 }
-/* The attendees take the full width and wrap as a sentence. */
+/* Who the meeting is with: the record chips wrap onto as many lines as they need. */
 .rail-schedule-attendees {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
   min-width: 0;
 }
-
 /* The next meeting is set apart by an outline on the card's own ground.
    The plate keeps the row's inset, so its time and title stay on the columns
-   above and below. */
+   above and below. Its height is its content's, so a longer row grows it. */
 .rail-schedule-next {
   /* Half the card's inset outside the outline and half inside, at any width. */
   margin: var(--space-1) calc(var(--padPanel) / 2);
@@ -749,7 +741,7 @@
 }
 /* Done for you: one card per deal under a band like Needs you. A card's
    changes run down one line of steps, newest first, and its verbs close it.
-   Only the open card shows its steps; a closed one says where the deal ended. */
+   Only the open card shows its steps. */
 .brief-done {
   gap: var(--space-3);
 }
@@ -820,8 +812,13 @@
 .brief-done-chips:empty {
   display: none;
 }
-.brief-done-net {
-  grid-column: 1 / -1;
+.brief-done-preview {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
   color: var(--textSecondary);
 }
 /* The steps: a dot per change on a hairline spine. The dot is indigo while
@@ -963,4 +960,25 @@
 .glance-greeting-name {
   display: inline-block;
   text-wrap: balance;
+}
+
+/* A small change names its record first on its line, so the record takes no
+   gap of its own before it. */
+.brief-done-small .magic-line-subject {
+  margin-inline-start: 0;
+}
+
+/* The embedded receipt's caveat body stays out of the grid when it has none. */
+.brief-done > .panel-body:empty {
+  display: none;
+}
+
+.brief-payments-customer {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.brief-payments-total {
+  font: var(--fontHeadingSmall);
 }

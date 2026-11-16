@@ -387,6 +387,10 @@ func (h *httpMCPHandler) legacyVersionServed(w http.ResponseWriter, r *http.Requ
 // exchange dispatches one request and writes its answer under the status its
 // framing pins.
 func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rpcRequest, fr framing) {
+	if refusal := seatlessRefusal(r.Context(), req.Method); refusal != nil {
+		refusal.WriteRefusal(w, r)
+		return
+	}
 	// A dynamic tool call can block on a model call, which modules/ai
 	// budgets at 120s per request; the api's server-wide WriteTimeout is
 	// 30s. Extend the deadline for THIS route only — raising the server's

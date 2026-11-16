@@ -174,8 +174,6 @@ export function attemptReasonLabel(reason: string, t: T): string {
       return t("aicalls.reason.decision_state_too_large");
     case "decision_uncertified":
       return t("aicalls.reason.decision_uncertified");
-    case "decision_local_only":
-      return t("aicalls.reason.decision_local_only");
     case "provider_error":
       return t("aicalls.reason.provider_error");
     case "schema_invalid":
@@ -202,8 +200,6 @@ export function decisionSkipLabel(reason: SkipReason, t: T): string {
       return t("aiAdmin.decisionSkip.unbound");
     case "uncertified":
       return t("aiAdmin.decisionSkip.uncertified");
-    case "local_only":
-      return t("aiAdmin.decisionSkip.local_only");
     default:
       return t(UNKNOWN_VALUE_LABEL);
   }

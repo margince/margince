@@ -451,7 +451,7 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 //
 //craft:ignore naked-any an argument takes whichever JSON type its verb's schema names
 func fixtureTables() []map[string]func(p *recordPool) map[string]any {
-	return []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures, captureFixtures, complianceFixtures, reportingFixtures, projectFixtures, setupFixtures, adminFixtures, voiceFixtures}
+	return []map[string]func(p *recordPool) map[string]any{toolRoleFixtures, routeVerbFixtures, captureFixtures, complianceFixtures, reportingFixtures, projectFixtures, setupFixtures, adminFixtures, voiceFixtures, channelFixtures}
 }
 
 // fixtureOf is the fixture a verb has in any table.

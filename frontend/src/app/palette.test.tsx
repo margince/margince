@@ -51,10 +51,11 @@ function wrap(ui: ReactNode, client: QueryClient) {
   );
 }
 
-const render = (ui: ReactNode) => {
+const render = (ui: ReactNode, session?: ReturnType<typeof meFixture>) => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  if (session) client.setQueryData(["me"], session);
   const view = rtlRender(wrap(ui, client));
   return {
     ...view,
@@ -95,9 +96,15 @@ function destinationRows(): HTMLElement[] {
     .filter((button) => !button.classList.contains("palette-ask"));
 }
 
+// Record search waits for the session to name its reader.
+const renderSignedIn = (ui: ReactNode) =>
+  render(ui, meFixture({ rowScope: "all" }));
+
 describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("shows the default command list with type tags, focuses the input", () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     expect(document.activeElement).toBe(screen.getByRole("searchbox"));
     expect(screen.getByText("Deals")).toBeTruthy();
     expect(screen.getByText("Record")).toBeTruthy(); // type tag rendered
@@ -108,7 +115,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // destination quietly removes it from the palette for everyone who knows it by
   // its older name.
   it("matches a keyword the row does not display, without showing it", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await userEvent.type(screen.getByRole("searchbox"), "pipeline");
     const rows = destinationRows();
     expect(rows[0].textContent).toContain("Deals");
@@ -118,7 +127,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   });
 
   it("filters by label+subtitle case-insensitively and puts the see-all row after them", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await userEvent.type(screen.getByRole("searchbox"), "COMPANY");
     const rows = destinationRows();
     expect(rows).toHaveLength(2);
@@ -129,7 +140,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   });
 
   it("Enter runs the selection; arrows move and clamp (AC-shell-5)", async () => {
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     const input = screen.getByRole("searchbox");
     await userEvent.keyboard("{ArrowUp}"); // clamps at 0
     await userEvent.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{ArrowDown}"); // clamps at end
@@ -147,7 +160,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("opens the dialog where the reader is, carrying the query and taking them nowhere", async () => {
     window.location.hash = "#/deals";
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
     await userEvent.type(screen.getByRole("searchbox"), "zzz nothing matches");
     await userEvent.click(screen.getByText("Ask your documents"));
     // The screen the reader was on is still the screen they are on.
@@ -165,7 +180,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   // and pressed it goes there, and asking is not what they did.
   it("Enter runs the first destination, not the ask", async () => {
     window.location.hash = "#/home";
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await userEvent.type(screen.getByRole("searchbox"), "deals");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
@@ -174,7 +191,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("runs nothing on an input method's Enter", async () => {
     window.location.hash = "#/home";
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
     const input = screen.getByRole("searchbox");
     await userEvent.type(input, "deals");
 
@@ -187,7 +206,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("closes on a selection that lands on the address it is already at", async () => {
     window.location.hash = "#/deals";
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
     await userEvent.type(screen.getByRole("searchbox"), "deals");
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
@@ -196,7 +217,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("closes on a backdrop press, never on a drag that ends there", () => {
     const onClose = vi.fn();
-    const { baseElement } = render(
+    const { baseElement } = renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
     const overlay = baseElement.querySelector<HTMLElement>(".palette-overlay");
@@ -214,7 +235,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("Esc closes; opening clears the previous query (AC-shell-3)", async () => {
     const onClose = vi.fn();
-    const view = render(
+    const view = renderSignedIn(
       <CommandPalette open onClose={onClose} commands={commands} />,
     );
     await userEvent.type(screen.getByRole("searchbox"), "deal");
@@ -236,7 +257,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
 
   it("Esc closes from a result row, not only from the search box", async () => {
     const onClose = vi.fn();
-    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
     const user = userEvent.setup();
     // Where the arrow keys put a reader — and where Escape used to do nothing,
     // because the handler belonged to the input this focus has left.
@@ -253,7 +276,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     outside.textContent = "a link on the page behind";
     document.body.append(outside);
     try {
-      render(<CommandPalette open onClose={() => {}} commands={commands} />);
+      renderSignedIn(
+        <CommandPalette open onClose={() => {}} commands={commands} />,
+      );
       const user = userEvent.setup();
       const dialog = screen.getByRole("dialog");
       screen.getByRole("searchbox").focus();
@@ -280,7 +305,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     document.body.append(opener);
     try {
       opener.focus();
-      const view = render(
+      const view = renderSignedIn(
         <CommandPalette open onClose={() => {}} commands={commands} />,
       );
       expect(document.activeElement).not.toBe(opener);
@@ -304,7 +329,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "acme");
     await waitFor(() =>
       expect(screen.getByText("Dana Buyer at Acme")).toBeTruthy(),
@@ -325,7 +352,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       "fetch",
       vi.fn(async () => new Response("nope", { status: 500 })),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "acme");
 
     expect(await screen.findByText(/Search failed/)).toBeTruthy();
@@ -356,7 +385,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    const { container } = render(
+    const { container } = renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
     await user.type(screen.getByRole("searchbox"), "brandt");
@@ -399,7 +428,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const { container } = render(
+    const { container } = renderSignedIn(
       <CommandPalette open onClose={() => {}} commands={commands} />,
     );
     await user.type(screen.getByRole("searchbox"), "acme");
@@ -446,7 +475,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "brandt");
     const row = await screen.findByRole("button", { name: /Brandt GmbH/ });
     expect(row.querySelector(".sub")?.textContent).toBe("Partner");
@@ -471,7 +502,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "acme");
 
     // The name starts with the initials the mark prints (WCAG 2.5.3).
@@ -503,7 +536,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "acme");
 
     const company = await screen.findByRole("button", { name: "Acme GmbH" });
@@ -535,7 +570,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "dana");
     const row = await screen.findByRole("button", { name: /Dana Buyer/ });
     expect(row.querySelector(".sub")).toBeNull();
@@ -555,7 +592,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "scrub");
     await waitFor(() =>
       expect(screen.getByText("Floor scrubber")).toBeTruthy(),
@@ -591,7 +630,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "roll");
     expect(await screen.findByText("ACME-CRM · Acme GmbH")).toBeTruthy();
     expect(screen.getByText("Brandt Automotive")).toBeTruthy();
@@ -622,7 +663,9 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
         }),
       ),
     );
-    render(<CommandPalette open onClose={() => {}} commands={commands} />);
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
     await user.type(screen.getByRole("searchbox"), "key");
     await waitFor(() => expect(screen.getByText("Key Account")).toBeTruthy());
 

@@ -207,20 +207,11 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 			out.Scope = &wired
 		}
 
-		for _, section := range s.sections(contactID, now, opts) {
-			if err := section.read(ctx, tx, &out); err != nil {
-				// A section the caller may not read is named, not returned
-				// empty. Any other failure is the whole read's failure —
-				// half a record page is worse than an error, because the
-				// reader cannot tell which half is missing.
-				if errors.Is(err, apperrors.ErrPermissionDenied) {
-					out.SectionsOmitted = append(out.SectionsOmitted, section.name)
-					continue
-				}
-				return fmt.Errorf("contact 360 section %q: %w", section.name, err)
-			}
-		}
-		return nil
+		// Each section's statement carries tens of kilobytes of row scope and
+		// plans longer than it runs, so the sections keep their generic plans.
+		return database.ReuseGenericPlansTx(ctx, tx, func() error {
+			return s.readSections(ctx, tx, contactID, now, opts, &out)
+		})
 	})
 	if err != nil {
 		return crmcontracts.Contact360{}, err
@@ -234,6 +225,22 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 		out.MailCoverage = &coverage
 	}
 	return out, nil
+}
+
+// readSections runs every section in order. A section the caller may not read
+// is named, not returned empty. Any other failure fails the whole read, because
+// a reader of half a page cannot tell which half is missing.
+func (s *Service) readSections(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, now time.Time, opts AssembleOptions, out *crmcontracts.Contact360) error {
+	for _, section := range s.sections(contactID, now, opts) {
+		if err := section.read(ctx, tx, out); err != nil {
+			if errors.Is(err, apperrors.ErrPermissionDenied) {
+				out.SectionsOmitted = append(out.SectionsOmitted, section.name)
+				continue
+			}
+			return fmt.Errorf("contact 360 section %q: %w", section.name, err)
+		}
+	}
+	return nil
 }
 
 // section is one independently-authorized part of the page.

@@ -64,8 +64,11 @@ func (a *assembly) readCommitments() error {
 			ActivityId: openapi_types.UUID(t.ID),
 			Subject:    t.Subject,
 			DueAt:      t.DueAt,
+			DueHasTime: t.DueHasTime,
+			DueIntent:  t.DueIntent,
 			AssigneeId: uuidPtr(t.AssigneeID),
 			Overdue:    deadline.Passed(t.DueAt, a.now),
+			Version:    t.Version,
 		}
 		if t.AssigneeID != nil {
 			name := t.AssigneeName

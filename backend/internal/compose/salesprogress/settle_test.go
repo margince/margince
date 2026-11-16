@@ -25,9 +25,9 @@ func TestSettleSharesAddsUpToTheTotalExactly(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := settleShares(tc.total, tc.weights)
+			got := SettleShares(tc.total, tc.weights)
 			if !slices.Equal(got, tc.want) {
-				t.Fatalf("settleShares(%d, %v) = %v, want %v", tc.total, tc.weights, got, tc.want)
+				t.Fatalf("SettleShares(%d, %v) = %v, want %v", tc.total, tc.weights, got, tc.want)
 			}
 		})
 	}

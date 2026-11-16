@@ -69,6 +69,8 @@
 1793747477_an_admin_keeps_tax_rates_per_country.down.sql | role | removes that one grant from the same fixed set of system roles
 1793769685_gemini_pro_is_priced_in_two_bands.up.sql | *, ai_model_rate, audit_log | one model on two providers: at most two inserted rows, and the few dated rows of that model still at its old flat price
 1793769685_gemini_pro_is_priced_in_two_bands.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794796825_google_decisions_are_priced.up.sql | *, ai_model_rate, audit_log | one model on one provider: at most one inserted row and its one audit row
+1794796825_google_decisions_are_priced.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1793774861_a_person_says_whether_they_chose_their_time_zone.up.sql | app_user | one row per seat, and a workspace holds at most its licensed seats plus a few agents; only seats that saved working hours are touched
 1793781269_only_a_call_that_reached_somebody_is_contact.up.sql | * | the bodies are the four last_activity_of_* read functions, re-created to read the call outcome, and two triggers re-created to fire on it; the migration validates two checks on a column every row holds NULL in and changes no existing row
 1793781269_only_a_call_that_reached_somebody_is_contact.down.sql | * | the down migration re-creates the same four read functions and two triggers as they were; it changes no existing row
@@ -133,3 +135,14 @@
 1794600202_custom_text_fields_check_their_limits.down.sql | * | the block drops only the two named custom-field guards from the schema catalog and changes no domain rows
 1794600300_machine_written_text_keeps_its_full_length.up.sql | * | runs unwrapped and replaces the two text guards on each table it names in place; the guards act on later writes only, and it changes no existing row
 1794600300_machine_written_text_keeps_its_full_length.down.sql | * | runs only on a rollback; replaces the same guards with their earlier bounds, and changes no existing row
+1794604300_a_deal_or_project_may_have_a_chat_channel.up.sql | * | the trigger statements change no row; the migration adds one channel_provider row and two empty tables, and channel_connection holds at most one live bot per provider
+1794604300_a_deal_or_project_may_have_a_chat_channel.down.sql | *, channel_connection, channel_provider | channel_connection holds at most one live bot per provider and its archived bindings, and channel_provider loses its one dispact row; the trigger statements change no row
+1794604700_the_chat_channel_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794604800_a_chat_app_caller_holds_a_passport.up.sql | * | the trigger statements change no row; the migration adds two empty columns, a NOT VALID check and a partial index to passport
+1794604800_a_chat_app_caller_holds_a_passport.down.sql | * | runs only on a rollback; the trigger statements restore the earlier bounds and change no row, then the two columns are dropped
+1794604900_the_app_caller_pair_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1794654294_an_inbound_message_keeps_when_its_thread_settled_it.up.sql | * | the procedural bodies clear the stamp on one thread's inbound messages when a row of that thread changes, and write the stamps of one locked batch the job read; the migration adds one empty column and changes no existing row
+1794701219_linkedin_can_name_a_logged_message.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
+1794701221_the_capture_label_check_is_validated.down.sql | * | the down migration is a single SELECT 1; validation changes no row
+1794701222_signature_read_state_checks_its_text.up.sql | * | installs two text-limit triggers on contact_signature_enrich_state; the guards apply to later writes and change no existing row
+1794766200_a_company_field_can_cite_a_meeting.down.sql | company_profile_field | the down migration deletes only the rows whose source is meeting, which this migration introduced; one row per company and field, written only from workspace-wide meeting transcripts

@@ -74,6 +74,8 @@ const (
 
 // unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	"internal/compose:adHocSpec":          "the ad-hoc project vocabulary names the project's first customer; withProjectCompany registers it in spec.referenceScopes, so the report engine applies the company row scope and requireVocabularyGrants the company and relationship grants before it is served",
+	"internal/compose:withProjectCompany": "a project report's company filter: the edge's company_id is compared with the bound company inside an EXISTS and never selected, and filterScopes read-gates the bound company before it binds",
 	// The tag scout's evidence read runs as the system principal
 	// "agent:tag-scout" (jobs_tagscout.go). Each record it names goes to
 	// collections.RecordTagSuggestionTx, never to a reader. A user sees the
@@ -142,12 +144,11 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// joins no deal, no stage and no company, so there is no current row
 	// for a scope to narrow. Freezing is the point — a past week that changed
 	// when a deal was renamed, archived or deleted would not be a record of
-	// that week. The review itself is already the acting rep's own
-	// (weeklystore.go's reviewUser reads the principal and takes no user id),
-	// so the lines a caller reaches are the lines of their own weeks; the deal
-	// id travels so the card can offer a link, which the deal page then gates
-	// on its own terms.
-	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by reviewUser",
+	// that week. The review itself is already the acting rep's own:
+	// auth.OwnSeat reads the principal and takes no user id. So the lines a
+	// caller reaches are the lines of their own weeks. The deal id travels so
+	// the card can offer a link, which the deal page then gates on its own terms.
+	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by auth.OwnSeat",
 
 	// The movement bridge's frozen drivers, the same shape as the deal lines
 	// above and for the same reasons: the label was written when the review was,
@@ -218,23 +219,19 @@ var rowScopeSpellings = map[string]bool{
 	"EnsureVisible": true, "EnsureVisibleLive": true, "EnsureVisibleExisting": true, "EnsureVisibleForSubjectRights": true,
 	"EnsureLinkTarget": true, "EnsureAttachTarget": true,
 	"VisibleTo": true, "LinkTargetVisibleClause": true, "LinkTargetReadableClause": true,
-	"ActivityDiscoverClause": true, "ActivityContentClause": true,
+	"ActivityDiscoverClause": true, "ActivityContentClause": true, "ActivityMessageContentClause": true,
 	"EnsureActivityVisible": true, "EnsureActivityVisibleLive": true,
 	"EnsureActivityContentVisible": true, "EnsureActivityContentVisibleLive": true,
 	"SignalScopeClause": true, "EnsureSignalVisible": true, "EnsureSignalVisibleLive": true,
 	"RelationshipEndpointScope": true, "EnsureRelationshipVisible": true,
-	// EdgeReadScope RETURNS RelationshipEndpointScope's clause — it is that
-	// conjunction with the object gate in front of it — so a read reaching it
-	// applies the endpoint bound as surely as one calling the conjunction
-	// directly. Its absence here was a gap rather than a policy: the first
-	// compose read whose ONLY row bound came through it reported as unscoped,
-	// and the fix a reader would reach for from that message is a SECOND scope
-	// call over a column the conjunction already covers.
+	// EdgeReadScope returns RelationshipEndpointScope's clause behind the
+	// object gate. A read reaching it applies the endpoint bound as surely as
+	// one calling the conjunction directly. Without this entry such a read
+	// reported as unscoped, inviting a second scope call over a covered column.
 	//
-	// Adding it does not weaken the census. The two halves are unbundled in
-	// exactly one direction: this list accepts the pair because the pair
-	// includes the row half, while backend/gates/edgereaders_test.go refuses the row
-	// half alone. Neither gate accepts the object half on its own.
+	// Adding it does not weaken the census. This list accepts the pair because
+	// it includes the row half; backend/gates/edgereaders_test.go refuses the
+	// row half alone. Neither gate accepts the object half on its own.
 	"EdgeReadScope": true,
 	// The write-authority family, for the same reason EdgeReadScope is here:
 	// each OPENS with a member of the EnsureVisible family and then narrows
@@ -256,6 +253,7 @@ var rowScopeSpellings = map[string]bool{
 	// projection whose references pass through it is bounded row by row.
 	// It counts at function granularity, as EnsureVisible and VisibleTo do.
 	"VisibleSubset": true, "PassingSubset": true, "ActivityContentSubset": true, "SignalVisibleLiveSubset": true, "RelationshipVisibleSubset": true,
+	"ProjectCompanyPredicates": true, "ProjectCustomerSQL": true, "ProjectCompanyEdgesSQL": true, // company scope
 }
 
 // referenceSite is one SQL select list in the compose tier that names a

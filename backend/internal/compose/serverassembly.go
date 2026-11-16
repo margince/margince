@@ -20,7 +20,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	"github.com/margince/margince/backend/internal/compose/erasurereturn"
+	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/hostauthority"
 	"github.com/margince/margince/backend/internal/compose/magic"
@@ -84,7 +86,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // modules its inbound and outbound edges need.
 func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 	gate := consentGateFor(pool)
-	return activities.NewHandlers(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).
+	return activities.NewHandlers(InstallationDB(pool)).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{}).WithIdentityProver(capture.ProvedUnambiguouslyTx).
 		WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).
 		WithTaskRecommendation(taskRecommendationReader(pool)).
 		WithInquiryAssignment(newInquiryAssignment(InstallationDB(pool))).
@@ -140,6 +142,12 @@ func newActivitiesHandlers(pool *pgxpool.Pool) activitiesHandlers {
 
 // Capture identities share the waiting scan's transaction snapshot.
 type ownDomainReader struct{ store *capture.OwnDomainStore }
+
+// init binds the own-domain list for the activities reads that have no store.
+// The History mail badge then tests a colleague's invitation as the Worklist does.
+func init() {
+	activities.UseColleagueDomains(capture.TrustedColleagueDomainsTx)
+}
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
 	return o.store.ColleagueDomainsTx(ctx, tx)
@@ -428,3 +436,14 @@ func (o ownDomainReader) MailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, b
 
 // salesProgressReading names the Progress handlers as the inventory embeds them.
 type salesProgressReading = salesprogress.Reading
+
+// goalProposalHandlers names the Sales goals proposal the same way.
+type goalProposalHandlers = goalproposal.Handlers
+
+// progressSummaryHandlers names the Progress summary the same way.
+type progressSummaryHandlers = salesprogress.SummaryHandlers
+
+// newGoalProposals reads a seller's closed revenue as Progress does.
+func (s *Server) newGoalProposals() goalProposalHandlers {
+	return goalproposal.Handlers{Progress: s.salesProgressReading, Now: time.Now}
+}

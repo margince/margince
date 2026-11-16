@@ -25,7 +25,9 @@ import {
   type MagicReceipt,
   useMagic,
 } from "../../lib/magic.queries";
+import { doneLinesApart } from "../../lib/magiccopy";
 import { sourceUnavailableText } from "../../lib/worklistcopy";
+import { MagicDoneCard } from "./magic.done";
 import { MagicLaneSection } from "./magic.lines";
 import { spansDays } from "./magic.marks";
 import "../brief/brief.css";
@@ -167,20 +169,15 @@ export function MagicPanel({
         </SurfaceState>
       </PanelBody>
       {drawn.map((lane) => (
-        <MagicLaneSection
+        <DrawnLane
           key={lane}
           lane={lane}
-          title={t(
-            embedded && lane === "done"
-              ? "magic.lane.doneOther"
-              : labelFor(LANE_HEADING, lane),
-          )}
-          rows={shown?.[lane] ?? []}
-          since={shown?.since}
+          shown={shown}
           zone={zone}
           byDay={byDay}
-          fold={lane === "done" ? doneFold : undefined}
+          embedded={embedded}
           note={laneNote(lane)}
+          done={{ fold: doneFold, floor: doneFloor }}
         />
       ))}
       {notShown.length > 0 && (
@@ -200,6 +197,57 @@ export function MagicPanel({
       </Eyebrow>
       {body}
     </section>
+  );
+}
+
+/**
+ * One lane under its heading. Embedded, the done lane is Done for you's last
+ * card instead, its coverage caveat under it.
+ */
+function DrawnLane({
+  lane,
+  shown,
+  zone,
+  byDay,
+  embedded,
+  note,
+  done,
+}: Readonly<{
+  lane: MagicLane;
+  shown: MagicReceipt | undefined;
+  zone: string;
+  byDay: boolean;
+  embedded: boolean;
+  /** Why the lane may hold more than it draws, under it. */
+  note: string | undefined;
+  done: Readonly<{ fold: string; floor: boolean }>;
+}>) {
+  const t = useT();
+  if (embedded && lane === "done") {
+    return (
+      <>
+        <MagicDoneCard
+          rows={rowsOf(shown?.done)}
+          since={shown?.since}
+          zone={zone}
+          byDay={byDay}
+          floor={done.floor}
+        />
+        {note && <p className="t-caption">{note}</p>}
+      </>
+    );
+  }
+  return (
+    <MagicLaneSection
+      lane={lane}
+      title={t(labelFor(LANE_HEADING, lane))}
+      rows={shown?.[lane] ?? []}
+      since={shown?.since}
+      zone={zone}
+      byDay={byDay}
+      fold={lane === "done" ? done.fold : undefined}
+      note={note}
+    />
   );
 }
 
@@ -319,12 +367,6 @@ function distinctReceipt(
     needs_you: receipt.needs_you?.filter(
       (line) => !approvalIds.includes(line.id),
     ),
-    // A grouped line names every change it stands for, so it leaves only when
-    // all of them are shown elsewhere. A line without ids always stays.
-    done: receipt.done?.filter(
-      (line) =>
-        !line.receipt_ids?.length ||
-        !line.receipt_ids.every((id) => receiptIds.includes(id)),
-    ),
+    done: receipt.done && doneLinesApart(receipt.done, receiptIds),
   };
 }

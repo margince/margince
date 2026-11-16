@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/homecache"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -31,8 +32,13 @@ import (
 const (
 	homeColdBudget = 3 * time.Second
 	homeWarmBudget = 250 * time.Millisecond
-	// homeColdRounds is how many cold reads the cold p95 is taken over.
-	homeColdRounds = 10
+	// homeColdRounds is how many cold reads the cold p95 is taken over. At ten
+	// the p95 is the slowest read. At thirty a single slow boot no longer moves
+	// it; a second one is needed.
+	homeColdRounds = 30
+	// homeMissBudget holds the read a running server assembles after a write
+	// forgot the reader's kept answer, its plans already chosen.
+	homeMissBudget = 500 * time.Millisecond
 )
 
 // homeBudgetModeEnv picks how the check judges speed. "absolute" (the default)
@@ -56,6 +62,7 @@ const homeBriefDelayEnv = "MARGINCE_HOME_BUDGET_BRIEF_DELAY"
 // so no DailyKnownIssues entry can ever cover one of their rows.
 var (
 	homeColdFlow = dailyFlow{Name: "home_cold", ID: "HOME-API", Budget: homeColdBudget, PerCall: true, Calls: homeCalls}
+	homeMissFlow = dailyFlow{Name: "home_miss", ID: "HOME-API", Budget: homeMissBudget, PerCall: true, Calls: homeCalls}
 	homeWarmFlow = dailyFlow{Name: "home_warm", ID: "HOME-API", Budget: homeWarmBudget, PerCall: true, Calls: homeCalls}
 )
 
@@ -74,14 +81,16 @@ func TestHomeBudget(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
 	start := time.Now()
-	profile := seedHomeProfile(t, e, createDailySeats(t, e))
+	profile := seedHomeProfile(t, e, createDailySeats(t, e), homeBudgetScale)
 	t.Logf("home-budget: seed %s", time.Since(start).Round(time.Millisecond))
 	database.ResetLargestSQLStatementBytes()
 
 	mode := homeBudgetModeFromEnv(t)
 	in := dailyInput{Seat: withPlantedBriefDelay(t, profile.Owner)}
 	start = time.Now()
-	rows := runHomeCold(t, e, in)
+	rows, timed := runHomeCold(t, e, in)
+	warmHomePlans(t, e, in.Seat, timed)
+	rows = append(rows, runHomeMiss(t, e, in.Seat, timed)...)
 	rows = append(rows, runDailyFlow(t, e, homeWarmFlow, in)...)
 	t.Logf("home-budget: measure %s", time.Since(start).Round(time.Millisecond))
 
@@ -90,6 +99,7 @@ func TestHomeBudget(t *testing.T) {
 		t.Logf("home-budget: row %s p50=%dms p95=%dms budget=%dms samples=%d 5xx=%d 422=%d",
 			r.Row, r.P50.Milliseconds(), r.P95.Milliseconds(), r.Budget.Milliseconds(), r.Samples, r.Status5xx, r.Status422)
 	}
+	logHomePlanning(t, e, in.Seat, timed, results)
 	failures := HomeBudgetFailures(results, mode)
 	largest := database.LargestSQLStatementBytes()
 	t.Logf("home-budget: sql largest=%d bytes limit=%d bytes", largest, homeStatementBudget)
@@ -112,7 +122,9 @@ func homeSQLSizeFailure(largest int64) string {
 
 // homePlannedSamples is how many samples each pass takes per read: one per
 // cold round, and the daily sampler's count warm.
-var homePlannedSamples = map[string]int{homeColdFlow.Name: homeColdRounds, homeWarmFlow.Name: dailySamples}
+var homePlannedSamples = map[string]int{
+	homeColdFlow.Name: homeColdRounds, homeMissFlow.Name: homeColdRounds, homeWarmFlow.Name: dailySamples,
+}
 
 // HomeBudgetFailures names every reason the Home check fails. It judges each
 // row on its own p95 with the daily rule, and never asks DailyKnownIssues. In
@@ -145,19 +157,19 @@ func HomeBudgetFailures(results []DailyResult, mode homeBudgetMode) []string {
 	return failures
 }
 
-// homeRequired keeps the rows the judge must see: every read in both passes,
+// homeRequired keeps the rows the judge must see: every read in every pass,
 // except an optional one the corpus has nothing behind. A required read with
 // no row at all comes back with zero samples, so the judge fails it.
 func homeRequired(rows []dailyRow, calls []dailyCall) []DailyResult {
 	var required []DailyResult
-	for _, flow := range []dailyFlow{homeColdFlow, homeWarmFlow} {
+	for _, flow := range []dailyFlow{homeColdFlow, homeMissFlow, homeWarmFlow} {
 		for _, call := range calls {
 			name := dailyRowName(flow.Name, call)
 			at := slices.IndexFunc(rows, func(r dailyRow) bool { return r.Measurement.Name == name })
 			switch {
 			case at >= 0 && (rows[at].Result.Samples > 0 || !call.Optional):
 				required = append(required, rows[at].Result)
-			case at < 0:
+			case at < 0 && !call.Optional:
 				required = append(required, DailyResult{Flow: flow.Name, Row: name, Budget: flow.Budget})
 			}
 		}
@@ -170,8 +182,8 @@ func homeRequired(rows []dailyRow, calls []dailyCall) []DailyResult {
 var homeCachedReads = map[string]homecache.Read{"worklist": homecache.Worklist, "magic": homecache.Magic}
 
 // Each cold sample uses a fresh app with no prepared plans or kept Home answer.
-// The original app is warmed separately for the warm pass.
-func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
+// It returns the rows and the reads it timed.
+func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) ([]dailyRow, []dailyCall) {
 	t.Helper()
 	f, s := homeColdFlow, in.Seat
 	var rows []dailyRow
@@ -213,7 +225,39 @@ func runHomeCold(t *testing.T, e *apptest.AppEnv, in dailyInput) []dailyRow {
 			}
 		}
 	}
-	warmHomePlans(t, e, s, timed)
+	for i, call := range timed {
+		spec := dailyRowSpec{flow: f.Name, id: f.ID, name: dailyRowName(f.Name, call), budget: f.Budget, gated: true}
+		rows = append(rows, dailyMeasuredRow(t, s, spec, samples[i], tallies[i]))
+	}
+	return rows, timed
+}
+
+// runHomeMiss times each read on the warmed app after its kept answer was
+// forgotten, so every sample assembles on plans a running server holds.
+func runHomeMiss(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall) []dailyRow {
+	t.Helper()
+	f := homeMissFlow
+	samples := make([][]time.Duration, len(timed))
+	tallies := make([]dailyTally, len(timed))
+	t.Log("home-budget: miss profile fresh-app=false prepared-plans=chosen kept-answer=forgotten")
+	for range homeColdRounds {
+		for i, call := range timed {
+			since := forgetHomeAnswers(t, e, s)
+			stagesBefore := worklistStagesSoFar()
+			status, body, elapsed := s.Get(t, e, call.Path)
+			if call.Name == "worklist" {
+				logWorklistStages(t, "miss "+s.Role, stagesBefore)
+			}
+			if err := f.admit(dailyResponse{call, status, body}, &tallies[i]); err != nil {
+				t.Fatalf("miss %s: %v", call.Name, err)
+			}
+			samples[i] = append(samples[i], elapsed)
+			if missed := cacheHits(t, e, s, []dailyCall{call}, since); len(missed) > 0 {
+				t.Fatalf("miss reads %v were served from home_read_cache, so they timed no assembly", missed)
+			}
+		}
+	}
+	rows := make([]dailyRow, 0, len(timed))
 	for i, call := range timed {
 		spec := dailyRowSpec{flow: f.Name, id: f.ID, name: dailyRowName(f.Name, call), budget: f.Budget, gated: true}
 		rows = append(rows, dailyMeasuredRow(t, s, spec, samples[i], tallies[i]))
@@ -263,8 +307,12 @@ type preparedStatement struct {
 	name string
 }
 
-// planCount is how often Postgres planned a prepared statement each way.
-type planCount struct{ custom, generic int64 }
+// planCount is how often Postgres ran a prepared statement on each kind of
+// plan, and the statement's SQL.
+type planCount struct {
+	custom, generic int64
+	sql             string
+}
 
 // preparedPlans reads every prepared statement on every connection of the
 // booted pool. All of them must be idle, or a busy one's statements would be
@@ -284,7 +332,7 @@ func preparedPlans(t *testing.T, booted *apptest.AppEnv) map[preparedStatement]p
 	plans := map[preparedStatement]planCount{}
 	for _, conn := range idle {
 		// The simple protocol prepares nothing, so the census does not count itself.
-		rows, err := conn.Query(ctx, `SELECT name, custom_plans, generic_plans FROM pg_prepared_statements`,
+		rows, err := conn.Query(ctx, `SELECT name, custom_plans, generic_plans, statement FROM pg_prepared_statements`,
 			pgx.QueryExecModeSimpleProtocol)
 		if err != nil {
 			t.Fatalf("reading prepared plans: %v", err)
@@ -293,7 +341,7 @@ func preparedPlans(t *testing.T, booted *apptest.AppEnv) map[preparedStatement]p
 		for rows.Next() {
 			var name string
 			var count planCount
-			if err := rows.Scan(&name, &count.custom, &count.generic); err != nil {
+			if err := rows.Scan(&name, &count.custom, &count.generic, &count.sql); err != nil {
 				t.Fatalf("reading prepared plans: %v", err)
 			}
 			plans[preparedStatement{pid, name}] = count
@@ -368,8 +416,14 @@ func cacheHits(t *testing.T, e *apptest.AppEnv, s Seat, timed []dailyCall, since
 // remains part of the cold read. Database buffers remain warm.
 func coldBoot(t *testing.T, e *apptest.AppEnv) *apptest.AppEnv {
 	t.Helper()
+	return coldBootWith(t, e, nil)
+}
+
+// coldBootWith is coldBoot over a pool whose config tune has changed.
+func coldBootWith(t *testing.T, e *apptest.AppEnv, tune func(*pgxpool.Config)) *apptest.AppEnv {
+	t.Helper()
 	ctx := context.Background()
-	booted := e.Reboot(t)
+	booted := e.RebootWith(t, tune)
 	conn, err := booted.Pool.Acquire(ctx)
 	if err != nil {
 		t.Fatalf("dialling the rebooted pool: %v", err)

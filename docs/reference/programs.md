@@ -329,6 +329,11 @@ the environment the container gets:
 | `MARGINCE_BENCH_BACKLOG_COUNTS_ONLY` | — | `make bench-worklist-backlog` | `1` skips every timed sample and prints only what each lane bound cuts and what the walk reaches. Those counts do not depend on the machine's load. |
 | `MARGINCE_HOME_BUDGET_MODE` | `absolute` | `make home-budget-api`, `bench-home.spec.ts` | how the Home check judges speed. `absolute` holds each read, and the time until Home's day list shows, to the fixed budgets. `relative` fails only a read or load that was not measured cleanly, and leaves speed to the comparison with the merge base. `make home-budget` sets it to `relative` when `HOME_BUDGET_BASE` is set. Any other value fails the check. |
 | `MARGINCE_HOME_BUDGET_BRIEF_DELAY` | — | `make home-budget-api` | a wait, such as `600ms`, that the Home check's client holds every `/v1/brief` for before it sends it. It proves the check turns red; a run with it set fails. A value that is not a positive time in Go's spelling fails the check. |
+| `MARGINCE_BENCH_GROWTH_STEPS` | `2` | `make bench-growth` | how many years of mail the growth bench measures, one step each. The least is `2`, since a line needs two points. Any other value fails the bench. |
+| `MARGINCE_BENCH_GROWTH_SCALE` | `0.01` | `make bench-growth` | multiplies every count in the growth bench's first year of test data, as `MARGINCE_BENCH_DAILY_SCALE` does. A value that is not a positive number fails the bench. |
+| `MARGINCE_BENCH_GROWTH_DELAY` | `3ms` | `make bench-growth` | the wait the growth bench adds to every round trip to Postgres, in Go's spelling of a time. It is `r` in the fit. A value that is not a time of zero or more fails the bench. |
+| `MARGINCE_BENCH_GROWTH_HORIZON` | `4` | `make bench-growth` | how many years past the last step a read must stay under `10 s` in the fit. A value that is not a whole number of zero or more fails the bench. |
+| `MARGINCE_BENCH_GROWTH_CPU_STRETCH` | `1` | `make bench-growth` | `k` in the fit: how many times longer Postgres takes for the same work. `2.2` matches a small cloud server held to its lowest CPU share. A value below `1` fails the bench. |
 
 ### Broker upstream preferences
 

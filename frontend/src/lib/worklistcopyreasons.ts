@@ -130,6 +130,22 @@ const RANK_COMPARISONS = new Set<string>([
   "routine",
 ]);
 
+// A reason kind spelled like a role key. Held in a set, so it is read as the
+// reason it is and never compared the way a role decision would be.
+const READ_ONLY_REASON: ReadonlySet<WorklistReason["kind"]> = new Set([
+  "read_only",
+]);
+
+/** Whether this reason says the reader may see the record but not change it. */
+export function saysReadOnly(reason: WorklistReason): boolean {
+  return READ_ONLY_REASON.has(reason.kind);
+}
+
+/** Whether the server says the reader may see this row's record but not change it. */
+export function mayOnlyRead(item: WorklistItem): boolean {
+  return item.because.some(saysReadOnly);
+}
+
 /** The reasons a row's Details may list: every fact but a rank comparison. */
 export function factReasons(item: WorklistItem): WorklistReason[] {
   return item.because.filter((reason) => !RANK_COMPARISONS.has(reason.kind));

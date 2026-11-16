@@ -171,6 +171,10 @@ func companyIsLinked(
 // action about a customer who is not one.
 const lifecycleFormerCustomer = "former_customer"
 
+func collectsFrom(lifecycle string) bool {
+	return lifecycle != lifecycleFormerCustomer
+}
+
 // companyLifecycle answers where the account stands, and answers the id that
 // names nobody with the same 404 a hidden account gets. Existence-hiding cuts
 // both ways: a caller must not be able to tell "no such account" from "not
@@ -272,7 +276,7 @@ func (s *Store) fillFigures(
 		// figure nobody can state a window for, which is the same "cannot be
 		// honestly computed" this card already answers with absence rather than
 		// a zero.
-		if lifecycle != lifecycleFormerCustomer {
+		if collectsFrom(lifecycle) {
 			fillOverdue(open, currency, out)
 		}
 	}

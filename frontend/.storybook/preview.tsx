@@ -33,6 +33,8 @@ import "../src/design-system/atoms.css";
 // spacing those stories exist to check.
 import "../src/features/settings/settings.css";
 import { setEdgeLightShown } from "../src/app/agent-edge-preference";
+import { settleFirstScreen } from "../src/lib/journeymarks";
+import { startPointerTarget } from "../src/lib/pointertarget";
 import { setSingleKeyShortcutsOn } from "../src/lib/shortcuts";
 
 // Theme decorator — sets data-theme on <html>, the same mechanism the shell
@@ -66,6 +68,12 @@ const withSurface: Decorator = (Story, context) => {
     </div>
   );
 };
+
+// A story renders one surface, and none of them is Home's first paint. The
+// frame's URL names no screen, so without this the shell waits out its grace.
+settleFirstScreen();
+// The scrollbar under the pointer lights as it does in the app (main.tsx).
+startPointerTarget();
 
 const preview: Preview = {
   // Storage outlives a story's page. A story that turns a switch off would leak it.

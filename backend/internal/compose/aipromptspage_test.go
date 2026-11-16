@@ -47,6 +47,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -176,6 +177,9 @@ type sitePrompt struct {
 	requests int
 	// shape is what this site does with untrusted items.
 	shape isolation
+	// unschemed is how many of the case's requests ask for JSON in their
+	// instruction and carry no response schema to hold the model to it.
+	unschemed int
 	// decisions holds the DISTINCT decision questions the site's decision form
 	// asked across its scenarios, for the same reason systems holds every
 	// distinct instruction: a question that varied by scenario and was shown
@@ -240,6 +244,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 				continue
 			}
 			got.decisions = appendDistinctQuestions(got.decisions, one.decisions)
+			got.unschemed += one.unschemed
 			for _, system := range one.systems {
 				if seenSystem[system] {
 					continue
@@ -264,8 +269,10 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 		default:
 			got.shape = oneFencedItem
 		}
+		checkSchemaDeclared(t, key, got.unschemed > 0)
 		prompts = append(prompts, got)
 	}
+	checkDeclaredSchemalessReached(t, prompts)
 	if len(prompts) == 0 {
 		// Under-recognition is the one failure this must not have: an empty
 		// walk would rewrite the page to nothing and report success.
@@ -342,7 +349,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 	if prepErr != nil {
 		return sitePrompt{}, nil, fmt.Errorf("the site refused its own committed fixture: %w", prepErr)
 	}
-	recorder := &recordingCompleter{reply: canaryReply}
+	recorder := &testmodel.Recorder{}
 	// A case may refuse the stand-in reply — that is its validator working, not
 	// a failure of this page, and the requests already issued are what gets
 	// published. The refusal is still reported rather than dropped: a site that
@@ -351,12 +358,16 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 	if _, runErr := prepared.Run(context.Background(), recorder); runErr != nil {
 		refused = runErr
 	}
-	if len(recorder.requests) == 0 {
+	if len(recorder.Requests) == 0 {
 		return sitePrompt{}, refused, errors.New("the case issued no request, so it has no prompt to publish")
 	}
 	var systems []string
 	seen := map[string]bool{}
-	for _, req := range recorder.requests {
+	unschemed := 0
+	for _, req := range recorder.Requests {
+		if strings.Contains(req.System+fmt.Sprint(req.Messages), "JSON") && len(req.ResponseSchema) == 0 {
+			unschemed++
+		}
 		canonical := promptfence.Canonicalize(req.System, req.System)
 		if seen[canonical] {
 			continue
@@ -364,7 +375,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		seen[canonical] = true
 		systems = append(systems, canonical)
 	}
-	first := recorder.requests[0]
+	first := recorder.Requests[0]
 	spans := 0
 	for _, msg := range first.Messages {
 		spans += fencedSpansIn(first.System, msg.Content)
@@ -375,7 +386,8 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		systems:   systems,
 		schema:    canonicalSchema(first.ResponseSchema),
 		spans:     spans,
-		requests:  len(recorder.requests),
+		requests:  len(recorder.Requests),
+		unschemed: unschemed,
 		decisions: decisionQuestionsOf(prepared),
 	}, refused, nil
 }
@@ -629,4 +641,41 @@ func declarationStillInTree(t *testing.T, sentence string) bool {
 		t.Fatalf("searching for the declaration %q: %v", sentence, err)
 	}
 	return found
+}
+
+// declaredSchemaless names the sites that ask for JSON and send no response
+// schema, against the sentence in their code that says why.
+// gatekit:fixture each site's own sentence for why its JSON reply has no schema. Expected data, checked to still exist.
+var declaredSchemaless = map[string]string{
+	"brief_ranking/rank": "carries no ResponseSchema: BoundToCandidates enforces",
+	"cert_judge/judge":   "It carries no ResponseSchema: its digest stamps every judged",
+}
+
+// checkSchemaDeclared holds a site whose request asks for JSON to send the
+// schema providers enforce at generation, or to say in its code why not.
+func checkSchemaDeclared(t *testing.T, key string, unschemed bool) {
+	t.Helper()
+	sentence, declared := declaredSchemaless[key]
+	switch {
+	case unschemed && !declared:
+		t.Errorf("site %s asks for JSON and sends no response schema: declare one from its reply struct, "+
+			"or say in its code why not and add that sentence to declaredSchemaless", key)
+	case declared && !unschemed:
+		t.Errorf("site %s is declared schemaless but every request now carries a schema; remove it from declaredSchemaless", key)
+	case declared && !declarationStillInTree(t, sentence):
+		t.Errorf("site %s is declared schemaless on the strength of %q, which is no longer in backend/", key, sentence)
+	}
+}
+
+func checkDeclaredSchemalessReached(t *testing.T, prompts []sitePrompt) {
+	t.Helper()
+	read := map[string]bool{}
+	for _, p := range prompts {
+		read[p.task+"/"+p.variant] = true
+	}
+	for key := range declaredSchemaless {
+		if !read[key] {
+			t.Errorf("declaredSchemaless names %s, which no corpus scenario reaches", key)
+		}
+	}
 }

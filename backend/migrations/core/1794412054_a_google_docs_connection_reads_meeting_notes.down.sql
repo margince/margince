@@ -24,4 +24,4 @@ ALTER TABLE capture_connection DROP CONSTRAINT capture_connection_provider_check
 
 ALTER TABLE capture_connection
     ADD CONSTRAINT capture_connection_provider_check
-    CHECK (provider IN ('gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox')) NOT VALID;
+    CHECK (provider IN ('gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'));

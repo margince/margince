@@ -4,13 +4,14 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
-import type { Receipt } from "../../lib/handled";
+import { handledForYouOptions, type Receipt } from "../../lib/handled";
 import {
   jsonResponse,
   render,
   stubApi,
   writes,
 } from "../../testing/brief.testkit";
+import { line, receipt } from "../../testing/magic.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
 import {
@@ -20,6 +21,7 @@ import {
 } from "./brief.doneforyou";
 
 type Bundle = components["schemas"]["MarginceChangeBundle"];
+type MagicReceipt = components["schemas"]["MagicReceipt"];
 
 afterEach(() => {
   cleanup();
@@ -65,6 +67,7 @@ function routes(
   receipts: Receipt[],
   bundles: Bundle[],
   undo?: (body: unknown) => Response,
+  magic?: MagicReceipt,
 ) {
   return stubApi({
     "GET /me": () =>
@@ -91,6 +94,7 @@ function routes(
         truncated: false,
       }),
     ...(undo ? { "POST /deal-corrections/undo": undo } : {}),
+    ...(magic ? { "GET /magic": () => jsonResponse(magic) } : {}),
   });
 }
 
@@ -102,7 +106,7 @@ it("shows five deals with their reasons, and every one in the review drawer", as
     six.map((n) => bundle(n, [auditId(n)])),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const preview = await screen.findByRole("list", {
     name: en["brief.done.dealsLabel"],
   });
@@ -143,7 +147,7 @@ it("reads what changed, why and the customer's words apart", async () => {
     [bundle(1, [auditId(1)]), bundle(2, [auditId(2)]), bundle(3, [auditId(3)])],
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const first = (await screen.findByRole("link", { name: "Deal 1" })).closest(
     "li",
   );
@@ -154,7 +158,7 @@ it("reads what changed, why and the customer's words apart", async () => {
   expect(within(first).getByText("We cancelled the project.")).toBeTruthy();
   // A closure says what happened under the deal's linked name, and that its
   // reason is unavailable.
-  // A closed card says where its deal ended up; opening it shows the steps.
+  // Opening the card shows its steps.
   const head = screen.getByRole("link", { name: "Deal 2" }).closest("summary");
   if (!head) throw new Error("no head for deal 2");
   await user.click(head);
@@ -174,8 +178,12 @@ it("keeps an older server's summary whole and claims no missing reason", async (
     [change(1, 0, { headline: undefined, reason: undefined })],
     [bundle(1, [auditId(1)])],
   );
-  render(<DoneForYou completed={null} />);
-  expect(await screen.findByText("Closed as lost — reason 1.0")).toBeTruthy();
+  render(<DoneForYou completed={() => null} />);
+  const head = (await screen.findByRole("link", { name: "Deal 1" })).closest(
+    "summary",
+  );
+  if (!head) throw new Error("no deal preview");
+  expect(screen.getByText('Closed "Deal 1" as lost — reason 1.0')).toBeTruthy();
   expect(screen.queryByText(en["brief.done.noReason"])).toBeNull();
 });
 
@@ -197,7 +205,7 @@ it("undoes exactly the changes a deal lists, never one that arrived since", asyn
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "Undo 2 changes" }),
   );
@@ -216,7 +224,7 @@ it("undoes exactly the changes a deal lists, never one that arrived since", asyn
 
 it("lists a deal the server counts even when no loaded page holds its changes", async () => {
   routes([], [bundle(1, [auditId(1, 0), auditId(1, 1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   expect(await screen.findByText("1 deal Margince changed")).toBeTruthy();
   const open = screen.getByRole("link", { name: "View 2 changes" });
   expect(open.getAttribute("href")).toContain(dealId(1));
@@ -245,7 +253,7 @@ it("reviews all by sending only the shown changes the server still allows", asyn
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -280,7 +288,7 @@ it("says the changes did not load and retries both reads when the count fails", 
     },
   });
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const retry = await screen.findByRole("button", { name: en["state.retry"] });
   // No partial list stands in for the one the server could not count.
   expect(screen.queryByText("reason 1.0")).toBeNull();
@@ -319,7 +327,7 @@ it("names each deal a review-all left partly undone, linked to it", async () => 
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -339,7 +347,7 @@ it("keeps the drawer's list and its Undo together until the reader asks for new 
   const bundles = [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])];
   routes(receipts, bundles);
   const user = userEvent.setup();
-  const { client } = render(<DoneForYou completed={null} />);
+  const { client } = render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -356,13 +364,13 @@ it("keeps the drawer's list and its Undo together until the reader asks for new 
   expect(await within(drawer).findByText("reason 3.0")).toBeTruthy();
 });
 
-it("opens the first deal and says where a closed one ended up", async () => {
+it("starts with closed deal cards and opens only the selected deal", async () => {
   routes(
     [change(1), change(2)],
     [bundle(1, [auditId(1)]), bundle(2, [auditId(2)])],
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const first = (await screen.findByRole("link", { name: "Deal 1" })).closest(
     "summary",
   );
@@ -370,10 +378,9 @@ it("opens the first deal and says where a closed one ended up", async () => {
     .getByRole("link", { name: "Deal 2" })
     .closest("summary");
   if (!first || !second) throw new Error("no deal heads");
-  expect(first.getAttribute("aria-expanded")).toBe("true");
+  expect(first.getAttribute("aria-expanded")).toBe("false");
   expect(second.getAttribute("aria-expanded")).toBe("false");
-  // A closed card carries its newest change on its head.
-  expect(within(second).getByText("Closed as lost")).toBeTruthy();
+  expect(within(second).queryByText("Closed as lost")).toBeNull();
   await user.click(second);
   expect(second.getAttribute("aria-expanded")).toBe("true");
   expect(first.getAttribute("aria-expanded")).toBe("false");
@@ -382,11 +389,14 @@ it("opens the first deal and says where a closed one ended up", async () => {
 
 it("says what a change moved without naming the deal it sits under", async () => {
   routes([change(1)], [bundle(1, [auditId(1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const card = (await screen.findByRole("link", { name: "Deal 1" })).closest(
     "li",
   );
   if (!card) throw new Error("no card for deal 1");
+  const head = card.querySelector("summary");
+  if (!head) throw new Error("no deal preview");
+  expect(within(head).queryByText("Closed as lost")).toBeNull();
   expect(within(card).getByText("Closed as lost")).toBeTruthy();
   expect(within(card).queryByText(/"Deal 1"/)).toBeNull();
 });
@@ -426,7 +436,7 @@ it("offers one Undo for every change on a deal and asks for no review", async ()
         truncated: false,
       }),
   });
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   expect(
     await screen.findByRole("button", { name: "Undo 2 changes" }),
   ).toBeTruthy();
@@ -452,7 +462,7 @@ it("undoes only the deals left ticked, and starts with every deal ticked", async
     undoneEach,
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 3 deals" }),
   );
@@ -518,7 +528,7 @@ it("still says what the last Undo of many did after a reload, until the reader c
       }),
   );
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(
     await screen.findByRole("button", { name: "See all 2 deals" }),
   );
@@ -533,7 +543,7 @@ it("still says what the last Undo of many did after a reload, until the reader c
 
   // The reload: deal 1 still waits, deal 2 is gone from the list.
   routes([change(1)], [bundle(1, [auditId(1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   await user.click(await screen.findByRole("button", { name: "See 1 deal" }));
   const drawer = await screen.findByRole("dialog");
   expect(within(drawer).getByText(/Undone on 1 deal\./)).toBeTruthy();
@@ -563,7 +573,7 @@ it("opens the list of all deals from the address, so Back from a deal reopens it
   );
   window.location.hash = `#/?${DONE_REVIEW_PARAM}=1`;
   const user = userEvent.setup();
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const drawer = await screen.findByRole("dialog", {
     name: "2 deals Margince changed",
   });
@@ -579,7 +589,7 @@ it("opens the list of all deals from the address, so Back from a deal reopens it
 
 it("links Change history to the Worklist's Change history panel", async () => {
   routes([change(1)], [bundle(1, [auditId(1)])]);
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   const link = await screen.findByRole("link", {
     name: en["brief.done.history"],
   });
@@ -588,4 +598,207 @@ it("links Change history to the Worklist's Change history panel", async () => {
   );
   expect(dials.get("queue")).toBe("1");
   expect(dials.get("queue_at")).toBe("history");
+});
+
+it("puts recent small changes below the heading even without changed deals", async () => {
+  stubApi({
+    "GET /magic": () =>
+      jsonResponse(
+        receipt({
+          done: [
+            line({
+              id: "old",
+              occurred_at: "2026-09-12T01:00:00Z",
+              summary: { key: "magic.action.create_contact" },
+            }),
+            line({
+              id: "new",
+              occurred_at: "2026-09-13T01:00:00Z",
+              summary: { key: "magic.action.create_activity" },
+            }),
+          ],
+        }),
+      ),
+  });
+  const { container } = render(
+    <DoneForYou completed={() => <span>Small changes card</span>} />,
+  );
+  const preview = await screen.findByText(
+    "Saved email or meeting · Created contact",
+  );
+  expect(preview.previousElementSibling).toBe(
+    container.querySelector(".brief-done-band"),
+  );
+  expect(preview.nextElementSibling?.textContent).toBe("Small changes card");
+});
+
+it("bounds the section preview to three distinct recent sentences", async () => {
+  stubApi({
+    "GET /magic": () =>
+      jsonResponse(
+        receipt({
+          done: [
+            line({
+              id: "1",
+              occurred_at: "2026-09-13T04:00:00Z",
+              summary: { key: "magic.action.create_activity" },
+            }),
+            line({
+              id: "2",
+              occurred_at: "2026-09-13T03:00:00Z",
+              summary: { key: "magic.action.create_activity" },
+            }),
+            line({
+              id: "3",
+              occurred_at: "2026-09-13T02:00:00Z",
+              summary: { key: "magic.action.create_contact" },
+            }),
+            line({
+              id: "4",
+              occurred_at: "2026-09-13T01:00:00Z",
+              summary: { key: "magic.action.archive_activity" },
+            }),
+            line({
+              id: "5",
+              occurred_at: "2026-09-12T01:00:00Z",
+              summary: { key: "magic.action.create_company" },
+            }),
+          ],
+        }),
+      ),
+  });
+  const { container } = render(<DoneForYou completed={() => null} />);
+  await screen.findByText(
+    "Saved email or meeting · Created contact · Archived email or meeting",
+  );
+  expect(
+    container.querySelector(".brief-done-preview")?.textContent,
+  ).not.toContain("company");
+});
+
+it("previews a changed deal directly after the heading", async () => {
+  routes([change(1)], [bundle(1, [auditId(1)])]);
+  const { container } = render(<DoneForYou completed={() => null} />);
+  await screen.findByText('Closed "Deal 1" as lost');
+  const preview = container.querySelector(".brief-done-preview");
+  expect(preview?.previousElementSibling).toBe(
+    container.querySelector(".brief-done-band"),
+  );
+  expect(container.querySelector("summary .brief-done-preview")).toBeNull();
+});
+
+it("does not preview a deal's receipt again as a small change", async () => {
+  routes(
+    [change(1)],
+    [bundle(1, [auditId(1)])],
+    undefined,
+    receipt({
+      done: [
+        line({
+          receipt_ids: [auditId(1)],
+          summary: { key: "magic.action.create_activity" },
+        }),
+      ],
+    }),
+  );
+  const { container } = render(<DoneForYou completed={() => null} />);
+  await screen.findByText('Closed "Deal 1" as lost');
+  expect(container.querySelector(".brief-done-preview")?.textContent).toBe(
+    'Closed "Deal 1" as lost',
+  );
+});
+
+it("keeps the preview aligned with cached deal cards when their refresh fails", async () => {
+  const fresh = change(1);
+  let failHandled = false;
+  stubApi({
+    "GET /deal-corrections/pending": () =>
+      jsonResponse({
+        bundles: [bundle(1, [auditId(1)])],
+        deals: 1,
+        base_currency: "EUR",
+      }),
+    "GET /worklist/handled": () =>
+      failHandled
+        ? jsonResponse({ title: "Unavailable" }, 503)
+        : jsonResponse({
+            as_of: "2026-09-13T08:00:00Z",
+            receipts: [fresh],
+            truncated: false,
+          }),
+    "GET /magic": () =>
+      jsonResponse(
+        receipt({
+          done: [
+            line({
+              receipt_ids: [fresh.id],
+              summary: { key: "magic.action.create_activity" },
+            }),
+          ],
+        }),
+      ),
+  });
+  const { client, container } = render(<DoneForYou completed={() => null} />);
+  await screen.findByText('Closed "Deal 1" as lost');
+  failHandled = true;
+  await client.invalidateQueries({ queryKey: handledForYouOptions.queryKey });
+  await waitFor(() =>
+    expect(client.getQueryState(handledForYouOptions.queryKey)?.status).toBe(
+      "error",
+    ),
+  );
+  expect(container.querySelector(".brief-done-preview")?.textContent).toBe(
+    'Closed "Deal 1" as lost',
+  );
+  expect(screen.getByRole("link", { name: "Deal 1" })).toBeTruthy();
+});
+
+it("does not show a confident preview when the changes summary fails", async () => {
+  stubApi({
+    "GET /deal-corrections/pending": () =>
+      jsonResponse({ title: "Unavailable" }, 503),
+    "GET /magic": () =>
+      jsonResponse(
+        receipt({
+          done: [line({ summary: { key: "magic.action.create_activity" } })],
+        }),
+      ),
+  });
+  const { container } = render(<DoneForYou completed={() => null} />);
+  await screen.findByRole("button", { name: "Retry" });
+  expect(container.querySelector(".brief-done-preview")).toBeNull();
+});
+
+it("orders and bounds the preview across deal and small-change sources", async () => {
+  routes(
+    [change(1, 0, { occurred_at: "2026-09-13T03:00:00Z" })],
+    [bundle(1, [auditId(1)])],
+    undefined,
+    receipt({
+      done: [
+        line({
+          id: "a",
+          occurred_at: "2026-09-13T04:00:00Z",
+          summary: { key: "magic.action.create_activity" },
+        }),
+        line({
+          id: "b",
+          occurred_at: "2026-09-13T02:00:00Z",
+          summary: { key: "magic.action.create_contact" },
+        }),
+        line({
+          id: "c",
+          occurred_at: "2026-09-13T01:00:00Z",
+          summary: { key: "magic.action.archive_activity" },
+        }),
+      ],
+    }),
+  );
+  const { container } = render(<DoneForYou completed={() => null} />);
+  await screen.findByText(
+    'Saved email or meeting · Closed "Deal 1" as lost · Created contact',
+  );
+  expect(
+    container.querySelector(".brief-done-preview")?.textContent,
+  ).not.toContain("Archived");
 });

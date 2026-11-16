@@ -44,7 +44,8 @@ To line is somebody else — a partner firm's project lead, or a shared inbox su
 the reader among the Cc recipients only is informs_us even when its text asks for something, because it asks them; it
 is asks_us only when the text names the copied reader as the one to act. A message that
 carries a calendar invitation is asks_us only when it also asks something a calendar reply cannot
-answer.
+answer. The invitation's own text asks nothing of that kind: the event details, an agenda, and the
+calendar's "Reply for" or RSVP lines are answered from the calendar.
 A message that is a reply to a calendar invitation (an attendee accepting, declining or proposing
 another time through their calendar) is informs_us unless its own words ask the recipient side
 something new: the calendar has already recorded the answer.
@@ -57,8 +58,9 @@ calendar.
 Some messages are shown with our own earlier message in the same thread, in a span marked
 context_for. Read it only to understand what the reply answers or leaves open; judge the reply's
 own words, never ours. A reply is asks_us when it leaves the recipient side something to do — a
-question to answer, a time to confirm, a point it defers or reserves. A reply that answers
-everything we asked and leaves nothing open is informs_us, however long it is.
+question to answer, a time to confirm, a point it defers or reserves. A reply that names a time
+in answer to our "when suits you?" still leaves the time to confirm, so it is asks_us. A reply that
+answers everything we asked and leaves nothing open is informs_us, however long it is.
 Judge only the sender's new words. Quoted earlier requests and signatures do not create a new
 obligation. Acknowledgements, returning a document, and "I will get back to you" are informs_us
 unless the new text separately asks the recipient to do something.

@@ -7,6 +7,7 @@ import type { FilterPreview, VocabularyField } from "../../lib/filterdata";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { FilterResults } from "./filterresults";
@@ -183,6 +184,11 @@ const DEAL_ROWS = [
 export const ReferencesByName: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+      }),
       "GET /users/names": () =>
         jsonResponse({ data: [{ id: "u-1", display_name: "Priya Shah" }] }),
       "GET /stages": () =>

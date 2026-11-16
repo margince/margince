@@ -75,9 +75,17 @@ function show(emails: Email[], phones: Phone[] = []) {
 }
 
 const addresses = () =>
-  screen
-    .queryAllByRole("link", { name: /@brandt\.example$/ })
-    .map((line) => line.textContent);
+  screen.queryAllByRole("link", { name: /@brandt\.example$/ });
+
+// The address lines in order, by accessible name: an address drawn in two
+// halves reads whole.
+function expectAddresses(want: readonly string[]) {
+  const lines = addresses();
+  expect(lines).toHaveLength(want.length);
+  for (const [i, name] of want.entries()) {
+    expect(lines[i]).toHaveAccessibleName(name);
+  }
+}
 
 describe("a contact's addresses and numbers in the About group", () => {
   it("lists every live address with its kind", async () => {
@@ -86,7 +94,7 @@ describe("a contact's addresses and numbers in the About group", () => {
       email("pe-2", "home@brandt.example", 1, { email_type: "personal" }),
     ]);
     await screen.findByText("home@brandt.example");
-    expect(addresses()).toEqual(["dana@brandt.example", "home@brandt.example"]);
+    expectAddresses(["dana@brandt.example", "home@brandt.example"]);
     expect(screen.getByText(en["field.emailPersonal"])).toBeInTheDocument();
   });
 
@@ -109,7 +117,7 @@ describe("a contact's addresses and numbers in the About group", () => {
       ),
     );
     await screen.findByText("a@brandt.example");
-    expect(addresses()).toEqual(["a@brandt.example", "b@brandt.example"]);
+    expectAddresses(["a@brandt.example", "b@brandt.example"]);
     await user.click(screen.getByRole("button", { name: "+2 more" }));
     expect(addresses()).toHaveLength(4);
     await user.click(

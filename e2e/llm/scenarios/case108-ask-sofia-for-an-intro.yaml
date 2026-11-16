@@ -42,9 +42,9 @@ must_mention:
   - "Sofia"
   - "Heike"
   - "(?i)introduc"
-  # The message is to Sofia: a greeting or a To line names her. A note that
-  # greets Heike is the forwardable note, a different message.
-  - "(?im)\b(?:hi|hello|hey|dear|hallo|liebe|morning|afternoon|evening)\W+Sofia\b|\b(?-i:To)\b\W{0,3}Sofia\b|^\W*Sofia\s*[,—–-]"
+  # The message is to Sofia: a greeting, a To line, or a salutation line of her
+  # name alone names her. A note that greets Heike is the forwardable note.
+  - "(?im)\b(?:hi|hello|hey|dear|hallo|liebe|morning|afternoon|evening)\W+Sofia\b|\b(?-i:To)\b\W{0,3}Sofia\b|^\W*Sofia\s*[,—–-]|^[>\s]*Sofia[ \t]*$"
 
 must_not_mention:
   - "(?i)\b(?:i|we)(?:\s+have|['’]ve)?\s+(?:sent|emailed|messaged|forwarded)\b"

@@ -24,10 +24,7 @@ import { ContactDetails, useContactAboutSections } from "./contactdetails";
 
 afterEach(cleanup);
 const contact = { ...view.contact, version: 3, title: "Director" };
-function mount(
-  patch: (body: unknown, request?: Request) => Response,
-  current = contact,
-) {
+function mount(patch: (body: unknown) => Response, current = contact) {
   installFetchStub({
     "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
     "PATCH /contacts/p-1": patch,
@@ -263,11 +260,11 @@ describe("the address in the About group", () => {
   it("leads with the server's address, not the first row", async () => {
     show("dana.private@brandt.example");
     await screen.findByText("dana.private@brandt.example");
+    // Compared by accessible name: an address drawn in two halves reads whole.
     const lines = screen.getAllByRole("link", { name: /@brandt\.example$/ });
-    expect(lines.map((line) => line.textContent)).toEqual([
-      "dana.private@brandt.example",
-      "dana@brandt.example",
-    ]);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toHaveAccessibleName("dana.private@brandt.example");
+    expect(lines[1]).toHaveAccessibleName("dana@brandt.example");
   });
 
   it("is empty when the server names none", async () => {

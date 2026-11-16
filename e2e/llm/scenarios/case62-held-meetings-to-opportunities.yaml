@@ -20,13 +20,17 @@ prompt: |
   Quarterly review with my manager is coming up. Of the meetings I held, how
   many turned into an opportunity?
 
+# The figures come from Margince's reporting, by any of its engines: the
+# meeting-conversion report, an analytics query on that entity, or the
+# meetings-held and accepted-opportunities metrics. The answer is what is judged.
 must_call:
-  - run_report
+  - read_reports|run_report|read_analytics
 
-must_call_with:
-  - run_report.report=meeting-conversion
+judge:
+  - "Criterion 1. The answer gives how many meetings the user held and how many of them became an opportunity, as numbers read from Margince. Answer no if it gives no count, or only one of the two."
 
 may_call:
+  - read_analytics
   - run_analytics_query
   - read_reporting
   - list_records

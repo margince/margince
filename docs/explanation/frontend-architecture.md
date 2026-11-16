@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -153,6 +153,14 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   The opening page and the rendered views use the same functions in
   `frontend/src/features/analytics/analytics.overview.questions.ts`.
   Sign-in forms, closed drawers and other `Analytics` sections load when opened.
+
+  `frontend/src/app/navigation-prefetch.ts` starts the first read of `Contacts`
+  or `Deals` when a pointer rests on the sidebar link, or focus lands on it.
+  It uses the same query options as the screen, so the screen finds that read
+  and does not ask again. It reads only for a current session
+  that grants the object, and only into an empty cache entry. It cancels the
+  read when the pointer or focus leaves the link before a click. When the
+  signed-in user or their grants change, it drops the entries it filled.
 
   The order of choice is: the user's own choice, then the languages the browser
   asks for, then the default. English with no setting is `en-GB`, never

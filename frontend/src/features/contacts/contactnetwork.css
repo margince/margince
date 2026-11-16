@@ -1,5 +1,5 @@
-/* The contact's network tab: the verdict, the readings under it, the working
-   grid, and the picture. Every colour is a token, so the tab follows the
+/* The contact's Relationships tab: the way in, the picture, and the
+   progress, each a chapter. Every colour is a token, so the tab follows the
    theme the rest of the page follows. */
 
 /* The tab is a size container: the details rail and the sidebar change how
@@ -172,26 +172,6 @@
 }
 .pn-evidence-receipts .pn-receipts {
   margin-top: 0;
-}
-
-/* The two-column working grid: the alternatives on the left, the handoff and
-   what moved on the right. One column below the fold breakpoint, because a
-   side column narrower than its content is a column nobody reads. */
-.pn-work-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-.pn-main-column,
-.pn-side-column {
-  display: grid;
-  gap: var(--space-4);
-  min-width: 0;
-}
-.pn-side-only .pn-side-column {
-  grid-template-columns: repeat(auto-fit, minmax(285px, 1fr));
-  align-items: start;
 }
 
 /* The route as a path from the introducer to the contact. The tie is a line
@@ -388,8 +368,8 @@
   white-space: nowrap;
 }
 
-/* The handoff measures its own column, which is half the tab when wide. */
-.pn-side-column {
+/* The handoff measures its own panel. */
+.pn-relay-panel {
   container: relay / inline-size;
 }
 
@@ -416,17 +396,8 @@
   }
 }
 
-/* Folds. 56rem is where the side column would drop under the 285px its
-   cards need; 46rem is where the verdict's plate would, and where a route row
+/* 46rem is where the verdict's plate folds under it, and where a route row
    can no longer hold its five columns on one line. */
-@container network (max-width: 56rem) {
-  .pn-work-grid {
-    grid-template-columns: 1fr;
-  }
-  .pn-side-only .pn-side-column {
-    grid-template-columns: 1fr;
-  }
-}
 @container network (max-width: 46rem) {
   .pn-verdict {
     grid-template-columns: 1fr;

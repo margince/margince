@@ -32,7 +32,7 @@ var rowProducers = map[string][]crmcontracts.WorklistItemSource{
 	"classifyDecay":             {crmcontracts.WorklistItemSourceRelationshipDecay},
 	"classifyDecision":          {crmcontracts.WorklistItemSourceApproval, crmcontracts.WorklistItemSourceDedupeCandidate, crmcontracts.WorklistItemSourceDealSuggestion, crmcontracts.WorklistItemSourceTagSuggestion},
 	"classifyBounce":            {crmcontracts.WorklistItemSourceBounce},
-	"classifySystem":            {crmcontracts.WorklistItemSourceCaptureHealth, crmcontracts.WorklistItemSourceAiWorkHealth, crmcontracts.WorklistItemSourceAutomationRun, crmcontracts.WorklistItemSourceNotice},
+	"classifySystem":            {crmcontracts.WorklistItemSourceCaptureHealth, crmcontracts.WorklistItemSourceBookingHealth, crmcontracts.WorklistItemSourceAiWorkHealth, crmcontracts.WorklistItemSourceAutomationRun, crmcontracts.WorklistItemSourceNotice},
 	"classifyUndelivered":       {crmcontracts.WorklistItemSourceUndelivered},
 	"classifyDomainQuestion":    {crmcontracts.WorklistItemSourceDomainQuestion},
 	"classifyLegalDeadline":     {crmcontracts.WorklistItemSourceDsr, crmcontracts.WorklistItemSourceNoticeCase},
@@ -103,7 +103,7 @@ func admissionCensus(files []*ast.File) []string {
 			faults = append(faults, name+" is registered but builds no row")
 		}
 		for _, source := range sources {
-			if _, ok := sourceOwnerAnswers[source]; !ok {
+			if _, ok := ownerAnswersOf(source); !ok {
 				faults = append(faults, name+" emits "+string(source)+", which has no admission policy")
 			}
 		}
@@ -188,6 +188,16 @@ func sneakyQueue(day crmcontracts.Attention) []ranked {
 	for name, src := range map[string]string{"producer": producer, "consumer": consumer} {
 		if faults := admissionCensus(packageFiles(t, src)); len(faults) == 0 {
 			t.Errorf("a planted unregistered %s passed the census", name)
+		}
+	}
+}
+
+// A system row's holder comes from its kind's owner answer. A kind that
+// declared two would leave the classifier guessing who holds a failure.
+func TestEverySystemKindDeclaresOneOwner(t *testing.T) {
+	for _, source := range rowProducers["classifySystem"] {
+		if owners := worklistKinds[source].owner; len(owners) != 1 {
+			t.Errorf("system kind %q declares owner answers %v, want exactly one", source, owners)
 		}
 	}
 }

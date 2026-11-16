@@ -180,11 +180,7 @@ func preflightProbes(cfg RunnerConfig, tasks []ai.Task, hooks *certifyHooks) []p
 	return probes
 }
 
-// preflightDecisions asks the decisions lane one question — the first decision
-// scenario of the first task it may answer — before the corpus: a key, slug or
-// endpoint the lane cannot serve fails here rather than after every LLM run
-// ahead of it was paid for. A task the lane may not be asked (local-only data)
-// makes no call, so the probe moves on to the next task.
+// Preflight rejects an unusable decision endpoint before paid corpus calls begin.
 func preflightDecisions(ctx context.Context, cfg RunnerConfig, byTask map[ai.Task][]Scenario, hooks *certifyHooks, log *slog.Logger) error {
 	lane := cfg.decisionLane()
 	if lane == nil {

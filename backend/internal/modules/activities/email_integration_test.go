@@ -101,6 +101,32 @@ type sendEnv struct {
 	other ids.UUID
 }
 
+// emptyDatabase deletes what earlier tests committed. Every test in this
+// package seeds its own workspace into one shared database. A read that counts
+// or pages over all of it would see every earlier test's rows.
+func emptyDatabase(t *testing.T) {
+	t.Helper()
+	ctx := context.Background()
+	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := owner.Close(ctx); err != nil {
+			t.Errorf("closing the reset connection: %v", err)
+		}
+	}()
+	if err := testdb.EnsureSchema(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+	if err := testdb.CapStatements(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+	if err := testdb.Reset(ctx, owner); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func setupSend(t *testing.T) *sendEnv {
 	t.Helper()
 	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
@@ -129,12 +155,7 @@ func setupSend(t *testing.T) *sendEnv {
 		t.Fatal(err)
 	}
 
-	// Every test in this package seeds its own workspace into ONE database, so
-	// the separation between them has to be real: reset before seeding, as
-	// compose/integration's harness does.
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
+	emptyDatabase(t)
 
 	e := &sendEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7()}
 	if _, err := owner.Exec(ctx,

@@ -6,11 +6,12 @@ import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 import {
+  chunkBudgets,
   entryChunks,
   initialEntries,
   preloadEntries,
 } from "./scripts/vite-entry-chunks.ts";
-import { serveMcpApps } from "./scripts/vite-inline-views.ts";
+import { buildRevision, serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import {
@@ -105,6 +106,9 @@ const analyticsPreparation = entryChunks(
   15,
 );
 const analytics = entryChunks("analytics", entries.analytics);
+// Home is the screen most loads open on, and bootstrap.ts fetches its chunk
+// early on Home. Ranked below startup and Analytics, it takes none of their modules.
+const home = entryChunks("home", entries.home, 5);
 
 // Classifying the suite reads every test file, so only a test run pays for it.
 const sourceScans = process.env.VITEST ? await compilerTests(frontendRoot) : [];
@@ -122,6 +126,7 @@ export default defineConfig({
             analyticsPreparation.group,
             startup.group,
             analytics.group,
+            home.group,
             {
               name: "shared",
               minShareCount: 2,
@@ -146,6 +151,9 @@ export default defineConfig({
     analyticsPreparation.plugin,
     startup.plugin,
     analytics.plugin,
+    home.plugin,
+    // Home's chunk is what a cold load on Home waits for.
+    chunkBudgets({ home: 820_000 }),
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.
@@ -167,9 +175,11 @@ export default defineConfig({
   // would compile every MARGINCE_* variable in the build environment into the
   // bundle, which is one careless deploy away from shipping a secret to every
   // browser. Empty is the local default, and empty disables the comparison.
+  // The revision only labels an unstamped build and never feeds the comparison.
   define: {
     __MARGINCE_RELEASE_VERSION__: JSON.stringify(release),
     __MARGINCE_CORE_VERSION__: JSON.stringify(coreRelease),
+    __MARGINCE_BUILD_REVISION__: JSON.stringify(buildRevision()),
   },
   resolve: {
     // An ARRAY rather than a record, because one entry must match a pattern:

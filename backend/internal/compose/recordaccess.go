@@ -236,7 +236,7 @@ func (r RecordAccessReads) judge(ctx context.Context, subject accessSubject, ps 
 		var readers []principal.Principal
 		var at []int
 		for i, refusal := range reads {
-			if out[i].canRead, err = admissionAnswer(refusal); err != nil {
+			if out[i].canRead, err = auth.Admitted(refusal); err != nil {
 				return err
 			}
 			if out[i].canRead {
@@ -248,27 +248,13 @@ func (r RecordAccessReads) judge(ctx context.Context, subject accessSubject, ps 
 			return err
 		}
 		for k, refusal := range changes {
-			if out[at[k]].canChange, err = admissionAnswer(refusal); err != nil {
+			if out[at[k]].canChange, err = auth.Admitted(refusal); err != nil {
 				return err
 			}
 		}
 		return nil
 	})
 	return out, err
-}
-
-// admissionAnswer reads an admission's refusal as "no" and anything else as a fault.
-func admissionAnswer(err error) (bool, error) {
-	switch {
-	case err == nil:
-		return true, nil
-	case errors.Is(err, apperrors.ErrNotFound),
-		errors.Is(err, apperrors.ErrPermissionDenied),
-		errors.Is(err, apperrors.ErrSeatTierInsufficient):
-		return false, nil
-	default:
-		return false, err
-	}
 }
 
 func optionalUUID(v *crmcontracts.Id) *ids.UUID {

@@ -53,6 +53,28 @@ func TestReusedPlansLastForTheCallAndTheSnapshotPlansAsBeforeAfterIt(t *testing.
 	})
 }
 
+func TestExplicitReuseOnAGenericSnapshotSendsNoModeSwitch(t *testing.T) {
+	ctx, pool := laneEnv(t)
+	ctx, meter := database.WithStatementMeter(ctx)
+	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
+		err := database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+			before := meter.Cost()
+			err := database.ReuseGenericPlansTx(ctx, tx, func() error { return nil })
+			if cost := meter.Cost().Minus(before); cost.Statements != 0 || cost.Exchanges != 0 {
+				t.Errorf("explicit reuse inside a generic scope cost %d statements over %d pgx calls, want none",
+					cost.Statements, cost.Exchanges)
+			}
+			if mode := planCacheMode(ctx, t, tx); mode != "force_generic_plan" {
+				t.Errorf("plan_cache_mode after the explicit call = %q, want force_generic_plan", mode)
+			}
+			return err
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
+
 func TestCustomPlanExceptionRestoresTheWholeReadMode(t *testing.T) {
 	ctx, pool := laneEnv(t)
 	onSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {

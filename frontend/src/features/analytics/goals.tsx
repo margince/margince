@@ -241,8 +241,9 @@ function ReadOnlyPlan({
   const t = useT();
   const [withdrawing, setWithdrawing] = useState(false);
   // Before anything is published the reader sees the draft; the state badge says so.
-  const months =
-    !plan.published && plan.draft ? plan.draft.months : plan.live_months;
+  const draft = plan.published ? undefined : plan.draft;
+  const months = draft ? draft.months : plan.live_months;
+  const proposed = (draft ?? plan.published)?.origin === "ai";
   return (
     <div className="goal-plan">
       <p className="t-caption goal-note">
@@ -251,6 +252,11 @@ function ReadOnlyPlan({
           : t("goals.readOnly")}
       </p>
       {plan.published && <YearSoFar plan={plan} />}
+      {proposed && (
+        <p className="goal-note">
+          <Badge tone="ai">{t("goals.proposedByAi")}</Badge>
+        </p>
+      )}
       <GoalBars months={months} />
       <GoalMonths months={months} currency={plan.currency} />
       {onChange && (

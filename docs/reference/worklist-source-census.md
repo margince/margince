@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/compose/attention backend/internal/compose/worklistsnap backend/internal/modules/activities/waiting.go backend/internal/modules/activities/waitingcards.go backend/internal/modules/activities/awaitingreply.go -->
+<!-- describes: backend/internal/compose/suggestionlanes backend/internal/compose/attention backend/internal/compose/worklistsnap backend/internal/modules/activities/waiting.go backend/internal/modules/activities/waitingcards.go backend/internal/modules/activities/awaitingreply.go -->
 # Worklist source census
 
 Every source `GET /v1/worklist` admits, with the store that reads it, the bound that cuts it, how it narrows to
@@ -28,11 +28,12 @@ The page counts two populations. `considered` is the rows left after step F, bef
 crowding; `summary`, `readings` and the considered half of `counts` and `reach` read it. `shown` is what is left
 after steps G and H and the page cut. No source count query feeds them, with two exceptions. `needs_you` carries
 the stores' own totals for approvals, duplicate pairs and suggestions (`decisionsToDepth` in `feed.go`). A
-category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, the task source's two
-windows (`backlog.go`).
+category's `total` uses the exact counts in `exactSources` (`totals.go`): approvals, deal and tag suggestions,
+the task source's two windows (`backlog.go`).
 
 Below the ranked rows, `backlogtail.go` continues each cut source it can from its own keyset, merged by one order
-(`backlogmerge.go`). Today those are the task, `customer_waiting`, `deal_at_risk` and `approval` sources.
+(`backlogmerge.go`). Today those are the task, `customer_waiting`, `deal_at_risk`, `approval`, `deal_suggestion`
+and `tag_suggestion` sources.
 
 ## Sources: store, bound and scope
 
@@ -71,8 +72,8 @@ cases, pairs, approvals and both suggestion kinds.
 "Order", "continue" and "count" ask whether the owning store can, in SQL today, order the admitted population,
 resume it after a position, and count it.
 
-Step F applies only to the sources in `doneInPlace` (`done.go`) and to `customer_waiting`. The others leave through
-a verb of their own: a task is completed, a decision is decided.
+Step F applies only to the kinds that set `done_in_place` in `backend/api/worklist-kinds.yaml`. The others leave
+through a verb of their own: a task is completed, a decision is decided.
 
 | Source | Steps that remove or merge its rows | Order | Continue | Count |
 |---|---|---|---|---|
@@ -87,8 +88,8 @@ a verb of their own: a task is completed, a decision is decided.
 | `approval` | A, C, G, H | Yes, newest staged first | Yes; continued below the ranked rows | Yes, `CountPending`; not on a team page, which judges by a roster the count does not share |
 | `dedupe_candidate` | A, C, G, H | Yes | Yes | No total; its cut is judged with `contact_case`'s against one count (see below) |
 | `contact_case` | A, C, F, G, H | Ranked in Go | Opaque cursor | No total; step F |
-| `deal_suggestion` | A, C, H | Yes | Yes | `CountOpenSuggestions` exists; no total until the source joins the tail (see below) |
-| `tag_suggestion` | A, C, H | Yes | No | `CountOpenTagSuggestions` exists; no total until the source joins the tail (see below) |
+| `deal_suggestion` | A, C, H | Yes, newest first | Yes; continued below the ranked rows | Yes, `CountOpenSuggestions` (see below) |
+| `tag_suggestion` | A, C, H | Yes, newest first | Yes; continued below the ranked rows | Yes, `CountOpenTagSuggestions` (see below) |
 | `relationship_decay` | A, C, D, H | Candidates only | No | No; step D and the lane's cut rank candidates in Go |
 | `introduction_request` | A, C, F, H | Yes | No | No; step F |
 | `domain_question` | A, C, F, G, H | Yes | Yes, `DomainQuestionsForOwner` | No; step F |
@@ -155,11 +156,13 @@ deal; real mail on deals makes it cost more, up to the waiting count's own 850 m
 5%, and about 100 ms warm is more than that. The category stays a floor when a sweep is cut, and scrolling reaches
 every deal.
 
-The deal and tag suggestion sources stay a floor until they join the tail. Their stores count them under the list's
-own predicate (`CountOpenSuggestions`, `CountOpenTagSuggestions`), and `needs_you` carries those counts. Their rows
-name no owner, offer no Done and are never folded (`batchKeyOf` groups neither), so the count matches every row a
-scope keeps. But the decision lane stops at `batchScanDepth` rows, and scrolling ends there. A total past that would
-name suggestions the list cannot reach.
+The deal and tag suggestion sources state exact totals. Their stores count them under the list's own predicate
+(`CountOpenSuggestions`, `CountOpenTagSuggestions`), and `needs_you` carries those counts. A deal suggestion's store
+narrows to the scope's owners, the tag lane is read only where a scope keeps unowned rows, and neither offers Done or
+is folded (`batchKeyOf` groups neither). So the count matches every row a scope keeps. The decision lane stops at
+`batchScanDepth` rows, and the tail goes on with each store's own keyset from the last suggestion the lane kept
+(`backlogsuggestion.go`), so scrolling reaches every suggestion counted. Unbound, a cut suggestion lane stays a
+floor.
 
 The other sources run steps in Go that a count would need:
 
@@ -180,9 +183,9 @@ Their categories stay a floor when their lane is cut, and scrolling ends at the 
 
 ## System sources
 
-`categoryOfSource` in `reach.go` files every source it does not name under `system` (`categorySystem` in
-`batches.go`). Ownership depends on the classifier. Among the rows `classifySystem` draws, `systemRowOwner` in
-`classifydelivery.go` makes `notice`, `capture_health` and `booking_health` the reader's and the rest unowned, so step C drops
+`backend/api/worklist-kinds.yaml` files these sources under `system`. Ownership depends on the classifier. Among the
+rows `classifySystem` draws, `systemRowOwner` in `classifydelivery.go` makes a kind whose catalog `owner` allows
+`the_reader` the reader's: `notice`, `capture_health` and `booking_health`. The rest are unowned, so step C drops
 those from `mine`. `bounce`, `undelivered` and `failed_approval` are the reader's. `dsr` and `notice_case` belong
 to their assignee (`classifylegal.go`).
 
@@ -208,9 +211,8 @@ No system source states an exact total. Each one's reason:
   count of it exists yet. The `system` category would state a total only when every other system source was read
   whole too.
 
-`categoryOfSource` also files `domain_question`, `awaiting_reply`, `meeting_follow_up` and `batch` under `system`,
-while their classifiers give the rows `decisions`, `tasks`, `meetings`, and `decisions` or `system`. `counts` and
-`sources_unavailable` for those sources therefore name the wrong category.
+A `batch` row takes its members' category, `decisions` or `system`. The catalog files `batch` under `system`, the
+category `counts` and `sources_unavailable` name when a fold reports itself short.
 
 ## Filter values
 
@@ -234,7 +236,7 @@ answers 422 for a filter from another view. The cursor binds the view through `a
 
 | Work | Read | Bound | Owner narrowing |
 |---|---|---|---|
-| Tasks due after today | `UpcomingForViewer` in `compose/attentiontaskseam.go` | `upcomingCap` = 6, within `upcomingHorizonDays` = 14 | The `task` arms |
+| Tasks due after today | `PlannedForViewer` in `compose/attentiontaskseam.go` | `upcomingCap` = 6, within `upcomingHorizonDays` = 14 | The `task` arms |
 | Tasks due later than that | Not read | None | None |
 | Undated tasks | Only in the due-now read, and only for `storekit.UndatedTaskSources()`; every other undated task is never read (`modules/activities/taskwindow.go`) | `plannedCap` = 12 | The `task` arms |
 | Weekly plan commitments | `compose/attentionplanseam.go` keeps only those due by end of today; undated and later ones are skipped | None | As `weekly_commitment` |

@@ -3,12 +3,12 @@
 
 package ai
 
-// A thinking floor on the Anthropic wire. Anthropic's per-model table decides
-// the shape: 4.6-4.8 take `thinking: {type: "adaptive"}` and think only when
-// asked; 4.5 and earlier take only `{type: "enabled", budget_tokens: N}`; 5.x
-// think by default at effort high, which meets every floor. `output_config.effort`
-// is never sent: it shapes the whole answer, not just the thinking, and its
-// default (high) is already the deepest a floor names.
+// Thinking on the Anthropic wire, shaped by Anthropic's per-model table. 4.6 to
+// 4.8 take `thinking: {type: "adaptive"}` and think only when asked. 4.5 and
+// earlier take only `{type: "enabled", budget_tokens: N}`. 5.x always think and
+// reject both shapes; `output_config.effort` sets their depth. That default is
+// medium on Opus 5.5 and Haiku 5.5, and high on the rest. A floor sends none,
+// since every floor is at or under each default; an admin's exact level is sent.
 
 import "strings"
 
@@ -16,8 +16,8 @@ type anthropicThinkingMode int
 
 const (
 	anthropicThinksUnknown anthropicThinkingMode = iota
-	// anthropicThinksByDefault is a model that thinks unasked, so no floor
-	// needs sending.
+	// anthropicThinksByDefault is a model that thinks unasked; its depth is
+	// output_config.effort, never a thinking block.
 	anthropicThinksByDefault
 	anthropicThinksAdaptive
 	anthropicThinksWithBudget
@@ -45,6 +45,7 @@ var anthropicModelPrefixes = []struct {
 	{"claude-3-7-sonnet", anthropicThinksWithBudget},
 	{"claude-opus-5", anthropicThinksByDefault},
 	{"claude-sonnet-5", anthropicThinksByDefault},
+	{"claude-haiku-5", anthropicThinksByDefault},
 	{"claude-fable-5", anthropicThinksByDefault},
 	{"claude-mythos-5", anthropicThinksByDefault},
 }
@@ -93,4 +94,17 @@ func anthropicThinkingFor(modelID, floor string, maxTokens, tools int) *anthropi
 		return &anthropicThinking{Type: "enabled", BudgetTokens: budget}
 	}
 	return nil
+}
+
+// anthropicEffortFor is the output_config.effort a request is sent, "" for
+// none: only an admin's exact level, and only to a model that thinks by
+// default. The wire has no minimal, so minimal asks for its lowest, low.
+func anthropicEffortFor(modelID, level string) string {
+	if level == "" || anthropicThinkingModeOf(modelID) != anthropicThinksByDefault {
+		return ""
+	}
+	if level == effortMinimal {
+		return effortLow
+	}
+	return level
 }

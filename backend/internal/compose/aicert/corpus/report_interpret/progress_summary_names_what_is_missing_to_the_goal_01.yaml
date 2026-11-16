@@ -1,0 +1,39 @@
+name: progress_summary_names_what_is_missing_to_the_goal
+task: report_interpret
+site: progress_summary
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+# A seller three weeks into the month has closed 60,000 of a 100,000 goal,
+# with 25,000 of open deals expected in the month. The summary says where the
+# month stands and names both what is missing and the open deals.
+fixture:
+  frame:
+    scope: Sam Okafor
+    period: month
+    window: "2026-10-01 to 2026-11-01"
+    currency: EUR
+    today: "2026-10-21"
+  cells:
+    - {label: "progress:goal", name: "Sales goal", value: "100000.00 EUR", unit: EUR, window: "2026-10-01 to 2026-11-01", coverage: ok}
+    - {label: "progress:closed", name: "Closed revenue", value: "60000.00 EUR", unit: EUR, window: "2026-10-01 to 2026-10-21", coverage: ok}
+    - {label: "progress:missing", name: "Still missing to the goal", value: "40000.00 EUR", unit: EUR, window: "2026-10-01 to 2026-11-01", coverage: ok}
+    - {label: "progress:completion", name: "Share of the goal reached", value: "60 percent", unit: percent, window: "2026-10-01 to 2026-10-21", coverage: ok}
+    - {label: "progress:planned", name: "Open deals expected to close in the period", value: "25000.00 EUR", unit: EUR, window: "2026-10-01 to 2026-11-01", coverage: ok}
+  candidate_deals: []
+  decisions: []
+expect:
+  outcome: accepted
+  answer:
+    cites: ["progress:closed", "progress:missing", "progress:planned"]
+    next_decision: none
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the summary says where the month stands against the goal and
+    what is still open, in the figures given. It must say that 60,000 is closed
+    and that 40,000 is still missing to the goal, and name the 25,000 of open
+    deals expected in the month. Saying or implying that the open deals close
+    the gap, or that the goal will or will not be reached, fails the scenario,
+    as does any figure the cells do not carry.

@@ -13,8 +13,6 @@ package contacts
 // all read it rather than answering again.
 
 import (
-	"context"
-
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -31,15 +29,7 @@ import (
 // imports a sibling, so each had spelled its own, and the spellings disagreed.
 const ReachableEmailOrder = contactaddress.ReachableOrder
 
-func attachContactEmails(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
-	rows, err := tx.Query(ctx,
-		`SELECT contact_id, id, email, email_type, is_primary, position, source, captured_by
-		 FROM contact_email WHERE contact_id = ANY($1) AND archived_at IS NULL`+
-			ReachableEmailOrder, contactIDs)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
+func attachContactEmails(rows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {
 	for rows.Next() {
 		var contactID, emailID ids.UUID
 		var e crmcontracts.ContactEmail

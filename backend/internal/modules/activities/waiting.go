@@ -371,23 +371,23 @@ func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) 
 	return domains, nil
 }
 
-// ownDomainSenderSQL is "this message came from one of our own domains" under
-// a caller's activity alias, with the placeholder holding Set's folded domains.
-// The waiting queue and the response reading share it so they agree on who is
-// waiting. It compares the sender's folded domain, never the address, so it
+// ownDomainSenderAtSQL is "this message came from one of our own domains" under
+// a caller's activity alias. domains names the placeholder that holds Set's
+// folded domains. The waiting queue, the response reading and
+// invitationNeverOwedSQL share it so they agree on who is a colleague. It compares the sender's folded domain, never the address, so it
 // agrees with the reply path's owndomain.Set.Covers. An unfolded row stays in
 // the queue as an outside sender.
 //
 // Held by: TestEveryOwnDomainComparisonInSQLReadsFoldedDomains
 // (backend/gates/owndomainpredicate_test.go)
-func ownDomainSenderSQL(alias string, domainArg int) string {
+func ownDomainSenderAtSQL(alias, domains string) string {
 	return fmt.Sprintf(`EXISTS (
 	         SELECT 1 FROM activity_participant ours
 	          WHERE ours.activity_id = %[1]s.id
 	            AND ours.role = 'from'
 	            AND EXISTS (
-	                  SELECT 1 FROM unnest($%[2]d::text[]) AS own(domain)
-	                   WHERE %[3]s))`, alias, domainArg, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
+	                  SELECT 1 FROM unnest(%[2]s::text[]) AS own(domain)
+	                   WHERE %[3]s))`, alias, domains, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
 }
 
 func scanWaitingReply(record pgx.Row) (WaitingReply, error) {

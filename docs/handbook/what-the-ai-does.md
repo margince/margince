@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/components/logactivity.polish.tsx backend/internal/compose/rewrite frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go -->
+<!-- describes: frontend/src/components/logactivity.polish.tsx backend/internal/compose/rewrite frontend/src/design-system/provenance.tsx frontend/src/design-system/readerrendering.tsx backend/internal/compose/readerrendering frontend/src/app/ai-activity.ts frontend/src/app/agentrail.tsx frontend/src/features/voice-knowledge/documentextraction.tsx backend/internal/modules/aiactivity backend/internal/modules/ai backend/internal/platform/providerhealthstore backend/internal/compose/projecthealthscan.go frontend/src/design-system/transcriptread.tsx backend/internal/compose/transcriptsummary -->
 # What the AI does, and what it does not
 
 What the AI makes for you, and how to read it. The rules that limit it (the
@@ -37,6 +37,12 @@ Yes. In **Log activity** and **Add task**, once you have typed a **Subject** or 
 
 **Undo** brings your own words back until you change the new ones. A saved entry with AI words shows **AI-assisted** in History. With no AI model connected, or on a record whose contact asked that their data not be processed, the button says why. A transcript is never changed.
 Also called: fix my wording, rewrite a note, clean up a task.
+
+### Does the AI write a summary of a meeting transcript?
+Yes. When you log a meeting with a transcript, or choose **Read transcript** on it, the AI writes a short summary onto the meeting. It lists the key points and the next steps, in the language the meeting was held in. Each point names the transcript lines it comes from.
+
+History shows the summary above the transcript, marked **AI-assisted**. The transcript is never changed. If a reading cannot write a summary, the meeting keeps the one it had, and the reading says "No summary was written this time."
+Also called: meeting summary, call summary, meeting notes.
 
 ### How do I get the AI to read a document for deal fields?
 To fill deal fields from a file, open the company's **Documents** tab and file the document on a deal with **Add document**. Choose **A deal**, not **This company**. Then choose **Show extracted fields** on that document, and **Read this file**.

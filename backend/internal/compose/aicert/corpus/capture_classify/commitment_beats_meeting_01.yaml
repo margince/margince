@@ -27,7 +27,7 @@ expect:
     the middle rather than at the floor — a model that answered "meeting" here
     read the mail correctly and applied the rule wrongly, which wants a different
     fix from a model that cannot read the mail.
-    "noise" scores lowest: it drops both an obligation and a scheduling request
+    "other" scores lowest: it drops both an obligation and a scheduling request
     from a single message.
     This is the only scenario in this site's corpus where the tie-break decides
     the answer, so it is the only place a model that ignores that sentence of the

@@ -35,6 +35,11 @@ export type EvidenceMarkSource = {
   provenance: Provenance;
   confidence?: ConfidenceLevel;
   snippet?: string | null;
+  // Where the claim was read when that is a record rather than a page, such as
+  // "From a meeting on 12 Nov 2026".
+  origin?: string | null;
+  // Opens the record the origin names; absent when this reader may not.
+  openOrigin?: () => void;
   sourceUrl?: string | null;
   at?: string | null;
 };
@@ -213,6 +218,24 @@ export function EvidenceMark({
               <blockquote className="evmark-snippet">
                 {source.snippet}
               </blockquote>
+            )}
+            {source.origin && (
+              <p className="evmark-source">
+                {source.openOrigin ? (
+                  <Button
+                    variant="link"
+                    align="start"
+                    onClick={() => {
+                      setOpen(false);
+                      source.openOrigin?.();
+                    }}
+                  >
+                    {source.origin}
+                  </Button>
+                ) : (
+                  source.origin
+                )}
+              </p>
             )}
             {source.sourceUrl && (
               <p className="evmark-source">{source.sourceUrl}</p>

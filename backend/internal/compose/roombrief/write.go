@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"regexp"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -18,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // Completer is the model seam: the summarize lane, or nil.
@@ -78,7 +81,23 @@ func BriefRequest(in Input, lang string) model.Request {
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
 		Subjects:       &model.Subjects{Rooms: []ids.UUID{in.Room}, Addresses: buyerAddresses(in)},
+		ResponseSchema: briefSchema(),
 	}
+}
+
+// briefSchema is the shape ParseBrief decodes, with each closed set read from
+// the tables the grounding filter keeps by.
+func briefSchema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("sentences", schema.Array(schema.Record(
+			schema.Field("text", schema.String()),
+			schema.Field("nature", schema.Enum(slices.Sorted(maps.Keys(knownNature))...)),
+			schema.Field("evidence", schema.Array(schema.Record(
+				schema.Field("entity_type", schema.Enum(citeParticipant, citeDocument, citeThread)),
+				schema.Field("entity_id", schema.String()),
+			))),
+		))),
+	))
 }
 
 func buyerAddresses(in Input) []string {

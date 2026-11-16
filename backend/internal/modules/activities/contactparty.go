@@ -3,7 +3,10 @@
 
 package activities
 
-import "github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+import (
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
+)
 
 // visiblePartyRolesSQL are the header and meeting roles a row can show a
 // contact in. A blind copy is not here: who was blind-copied is not disclosed
@@ -18,5 +21,5 @@ func ContactIsPartySQL(contact string) string {
 		 WHERE ap.activity_id = a.id AND ap.role IN ` + visiblePartyRolesSQL + `
 		   AND ap.response IS DISTINCT FROM 'declined'
 		   AND ` + relstrength.ParticipantNamesSQL(contact, "ap") + `
-		   AND NOT ` + unstatedContactSQL("ap") + `)`
+		   AND NOT ` + auth.ParticipantUnstatedSQL("ap") + `)`
 }

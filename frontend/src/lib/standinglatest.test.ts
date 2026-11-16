@@ -102,7 +102,7 @@ describe("latestWord", () => {
         kind: "email",
         occurred_at: "2026-08-12T10:00:00Z",
         body: "x",
-        capture_label: "noise",
+        capture_label: "other",
       }),
       row({
         id: "bulk",

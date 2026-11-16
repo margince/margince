@@ -65,12 +65,12 @@ func seedMailbox(ctx context.Context, t *testing.T, tx pgx.Tx, shape mailboxShap
 	t.Helper()
 	if _, err := tx.Exec(ctx, `
 	INSERT INTO contact (id, full_name, source, captured_by)
-	  SELECT gen_random_uuid(), 'Customer '||g, 'manual', 'human:seed' FROM generate_series(1, 400) g;
+	  SELECT md5('customer'||g)::uuid, 'Customer '||g, 'manual', 'human:seed' FROM generate_series(1, 400) g;
 	CREATE TEMP TABLE mailbox_customer AS SELECT id, row_number() OVER () n FROM contact WHERE full_name LIKE 'Customer %';
 	INSERT INTO contact_email (contact_id, email, is_primary, source, captured_by)
 	  SELECT id, 'c'||n||'@customers.example', true, 'manual', 'human:seed' FROM mailbox_customer;
 	CREATE TEMP TABLE mailbox_inbound AS
-	  SELECT gen_random_uuid() id, g, (1 + (g - 1) % 400)::int n,
+	  SELECT md5('inbound'||g)::uuid id, g, (1 + (g - 1) % 400)::int n,
 	         @at::timestamptz - (g * 37 % 364) * interval '1 day' - interval '1 hour' at_time
 	    FROM generate_series(1, 1500) g;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key, counterparty_email)
@@ -139,7 +139,7 @@ func checkHorizonPlan(t *testing.T, shape mailboxShape) {
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
-		ownDomainSenderSQL("inbound", 3),
+		"$3",
 		slowPercentile,
 		sampledMessages(4))
 	now := clocktest.Now(t)

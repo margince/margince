@@ -12,6 +12,8 @@ import (
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
+	"github.com/margince/margince/backend/internal/compose/meetingprofile"
+	"github.com/margince/margince/backend/internal/compose/transcriptaudience"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
@@ -49,6 +51,8 @@ func addDatabaseOnlySweepJobs(
 ) {
 	addDeclaredWorker[CapturedDealRefileArgs](reg, newCapturedDealRefileWorker(pool, topicBrain))
 	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
+	addDeclaredWorker[MeetingProfileRetractSweepArgs](reg, meetingProfileRetractWorker{meetingprofile.Sweep{Pool: pool}})
+	addDeclaredWorker[TranscriptAudienceSweepArgs](reg, transcriptAudienceWorker{transcriptaudience.Sweep{Pool: pool}})
 	addDeclaredWorker[InitiativeEnrolmentSweepArgs](reg, initiativeEnrolmentSweepWorker{initiativeenrolment.Sweep{Store: NewInitiativeStore(pool), Pool: pool}})
 	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, features: corefeatures.New(disabled)})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{
@@ -112,6 +116,36 @@ func (InitiativeEnrolmentSweepArgs) Kind() string { return "initiative_enrolment
 
 // FleetWide keeps tenant work inside the per-workspace sweep.
 func (InitiativeEnrolmentSweepArgs) FleetWide() {}
+
+// MeetingProfileRetractSweepArgs schedules one pass of meetingprofile.Sweep.
+type MeetingProfileRetractSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (MeetingProfileRetractSweepArgs) Kind() string { return "meeting_profile_retract_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (MeetingProfileRetractSweepArgs) FleetWide() {}
+
+type meetingProfileRetractWorker struct{ meetingprofile.Sweep }
+
+func (w meetingProfileRetractWorker) Work(ctx context.Context, _ *river.Job[MeetingProfileRetractSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+}
+
+// TranscriptAudienceSweepArgs schedules one pass of transcriptaudience.Sweep.
+type TranscriptAudienceSweepArgs struct{}
+
+// Kind keeps the persisted River job identity stable.
+func (TranscriptAudienceSweepArgs) Kind() string { return "transcript_audience_sweep" }
+
+// FleetWide keeps tenant work inside the per-workspace sweep.
+func (TranscriptAudienceSweepArgs) FleetWide() {}
+
+type transcriptAudienceWorker struct{ transcriptaudience.Sweep }
+
+func (w transcriptAudienceWorker) Work(ctx context.Context, _ *river.Job[TranscriptAudienceSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
+}
 
 // initiativeEnrolmentSweepWorker hands each workspace to initiativeenrolment.Sweep.
 type initiativeEnrolmentSweepWorker struct{ initiativeenrolment.Sweep }

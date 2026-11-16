@@ -321,23 +321,14 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	return p, nil
 }
 
-// attachContactChildren loads emails + phones + social for a page in
-// three queries, not 3N.
+// attachContactChildren attaches the same child facts to lists and record reads.
 func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontracts.Contact) error {
 	if len(contacts) == 0 {
 		return nil
 	}
-	// Whether each row is this caller's to change, one statement for the page.
-	// It is stamped HERE because this is the seam the list and the single read
-	// already share: a client is otherwise left inferring write access from the
-	// object grant alone, which says nothing about who owns the row.
-	if _, err := auth.StampWritable(ctx, tx, "contact", contacts,
+	if _, err := auth.StampRecordAffordances(ctx, tx, auth.ContactArchive, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Contact, may bool) { p.Writable = &may }); err != nil {
-		return err
-	}
-	if err := stampArchivable(ctx, tx, auth.ContactArchive, contacts,
-		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
+		func(p *crmcontracts.Contact, may bool) { p.Writable = &may },
 		func(p *crmcontracts.Contact, may bool) { p.Archivable = &may }); err != nil {
 		return err
 	}
@@ -350,35 +341,18 @@ func attachContactChildren(ctx context.Context, tx pgx.Tx, contacts []crmcontrac
 		idx[contacts[i].Id] = &contacts[i]
 		contactIDs[i] = ids.UUID(contacts[i].Id)
 	}
-	if err := attachContactEmails(ctx, tx, idx, contactIDs); err != nil {
-		return err
-	}
-	if err := attachContactPhones(ctx, tx, idx, contactIDs); err != nil {
-		return err
-	}
-	if err := attachContactSocial(ctx, tx, idx, contactIDs); err != nil {
+	if err := attachContactChannels(ctx, tx, idx, contactIDs); err != nil {
 		return err
 	}
 	if err := attachContactEmployers(ctx, tx, idx, contactIDs); err != nil {
 		return err
 	}
-	if err := storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
+	return storekit.AttachRowTags(ctx, tx, contactEntity, contacts,
 		func(p crmcontracts.Contact) ids.UUID { return ids.UUID(p.Id) },
-		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) }); err != nil {
-		return err
-	}
-	return attachContactReachability(ctx, tx, idx, contactIDs)
+		func(p *crmcontracts.Contact, tags []storekit.RowTag) { p.Tags = wireRowTags(tags) })
 }
 
-func attachContactPhones(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
-	phoneRows, err := tx.Query(ctx,
-		`SELECT contact_id, id, phone, phone_type, is_primary, position, source, captured_by
-		 FROM contact_phone WHERE contact_id = ANY($1) AND archived_at IS NULL
-		 ORDER BY position, created_at`, contactIDs)
-	if err != nil {
-		return err
-	}
-	defer phoneRows.Close()
+func attachContactPhones(phoneRows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {
 	for phoneRows.Next() {
 		var contactID, phoneID ids.UUID
 		var ph crmcontracts.ContactPhone
@@ -395,16 +369,7 @@ func attachContactPhones(ctx context.Context, tx pgx.Tx, idx map[openapi_types.U
 	return phoneRows.Err()
 }
 
-func attachContactSocial(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
-	// The wire keeps social as the (platform → handle) map; the relation
-	// is the stored form.
-	socialRows, err := tx.Query(ctx,
-		`SELECT contact_id, platform, handle FROM contact_social WHERE contact_id = ANY($1)
-		 ORDER BY platform`, contactIDs)
-	if err != nil {
-		return err
-	}
-	defer socialRows.Close()
+func attachContactSocial(socialRows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {
 	for socialRows.Next() {
 		var contactID ids.UUID
 		var platform, handle string
@@ -429,15 +394,7 @@ func attachContactSocial(ctx context.Context, tx pgx.Tx, idx map[openapi_types.U
 // one. A blocked identity is still a live row (archived_at IS NULL), so it
 // still appears here, with reachable=false — the record must keep showing
 // that a conversation exists even when a reply cannot currently be delivered.
-func attachContactReachability(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Contact, contactIDs []ids.UUID) error {
-	rows, err := tx.Query(ctx,
-		`SELECT contact_id, provider, blocked_at, created_at
-		 FROM contact_channel_identity WHERE contact_id = ANY($1) AND archived_at IS NULL
-		 ORDER BY provider, created_at`, contactIDs)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
+func attachContactReachability(rows pgx.Rows, idx map[openapi_types.UUID]*crmcontracts.Contact) error {
 	for rows.Next() {
 		var contactID ids.UUID
 		var provider string

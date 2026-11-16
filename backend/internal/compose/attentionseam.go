@@ -20,8 +20,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/completedchanges"
 	"github.com/margince/margince/backend/internal/compose/dealstatus"
 	"github.com/margince/margince/backend/internal/compose/magic"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -46,9 +48,11 @@ import (
 // surface reads, so the feed shows what the inbox shows.
 type attentionApprovals struct{ svc *approvals.Service }
 
-func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQuery) ([]crmcontracts.Approval, error) {
-	rows, _, err := a.svc.ListWire(ctx, approvalListInput(in))
-	return rows, err
+// ListWire's page is complete when the inbox has no row after it. The page and
+// CountPending judge the same filters, scope, decidability and expiry.
+func (a attentionApprovals) ListWire(ctx context.Context, in attention.ApprovalQuery) ([]crmcontracts.Approval, bool, error) {
+	rows, page, err := a.svc.ListWire(ctx, approvalListInput(in))
+	return rows, !page.HasMore, err
 }
 
 func approvalListInput(in attention.ApprovalQuery) approvals.ListInput {
@@ -209,6 +213,8 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		tail:   quietDealTail(pool, deals.QuietThresholdDays),
 		among:  quietDealsAmong(pool, deals.QuietThresholdDays), pool: pool, now: now,
 	}
+	// Each suggestion lane and its scroll tail read one store.
+	dealSuggestions, tagSuggestions := suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())}, suggestionlanes.Tags{Store: collections.NewStore(db)}
 	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: newContactsStore(db)},
@@ -247,6 +253,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		WithDone(attentionPins{pool: pool, store: activities.NewStore(db).WithClock(now)}).
 		WithWalks(worklistsnap.New(pool, now)).
 		WithTaskBacklog(attentionTasks{store: activities.NewStore(db), work: newInquiryWork(db)}).
+		WithHandledReceipts(completedchanges.Reader{Magic: newMagicService(pool, svc, now)}).
 		WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
 			return magic.ResolveWindow(ctx, magicBriefCutoff{engine: briefs.NewBriefEngine(pool, nil), now: now}, nil, asOf)
 		}).
@@ -262,13 +269,13 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		}).
 		WithDomainQuestions(attentionDomainQuestions{store: newContactsStore(db)}).
 		WithBookingHealth(newAttentionBookingHealth(pool, db)).
-		WithDealSuggestions(attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}).
-		WithTagSuggestions(attentionTagSuggestions{store: collections.NewStore(db)}).
+		WithDealSuggestions(dealSuggestions).WithDealSuggestionBacklog(dealSuggestions).
+		WithTagSuggestions(tagSuggestions).WithTagSuggestionBacklog(tagSuggestions).
 		WithDealFacts(attentionDealFacts{store: deals.NewStore(db, DealsInstallation())}).
 		WithContactTouch(attentionContactTouch{pool: pool}).
 		WithCompanyTouch(attentionCompanyTouch{pool: pool, now: now}).
 		WithContactEmployers(newContactsStore(db)).
-		WithMeetingOrganizers(activities.NewStore(db)).
+		WithMeetingOrganizers(activities.NewStore(db)).WithMeetingRooms(activities.NewStore(db)).
 		// Cached cards keep queue reads from starting model work.
 		WithDealMoves(attentionDealMoves{cards: cards}).
 		WithDealStandings(attentionDealStandings{cards: cards}).

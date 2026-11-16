@@ -11,7 +11,9 @@ import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
+import { useLatestSiteRead } from "./companydeepread";
 import { AddFactForm, useCompanyFacts } from "./companyfactspanel";
+import { emptyReason } from "./companyprofiletab";
 import {
   useCompanyEditGate,
   useIndustryOptions,
@@ -119,6 +121,7 @@ function ProfileInputRow({
   const t = useT();
   const profile = useCompanyProfileFields(company.id);
   const fields = profile.data ?? [];
+  const latestRead = useLatestSiteRead(company.id);
   const recorded = Boolean(
     fields.find((one) => one.field === field)?.value.trim(),
   );
@@ -132,7 +135,8 @@ function ProfileInputRow({
         fieldsLoaded={profile.isSuccess}
         field={field}
         label={t(labelFor(ROW_LABELS, input))}
-        placeholderKey="co.narrative.add"
+        placeholderKey={emptyReason(latestRead.data?.status)}
+        emptyKey={emptyReason(latestRead.data?.status)}
         canEdit={edit.canEdit}
         readOnlyReason={edit.reason}
         multiline

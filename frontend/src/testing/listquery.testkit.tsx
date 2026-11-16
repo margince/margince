@@ -21,11 +21,14 @@ import type { ListChip } from "../design-system/listsurface";
 import { LocaleProvider } from "../i18n";
 import { filtersStepName, labelled } from "./listview.names";
 import { openView, openViewStep, walkBack } from "./listview.testkit";
+import { meFixture } from "./mefixture";
 
 export function render(ui: ReactNode): RenderResult {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  // A list reads nothing until /me names its reader scope.
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -55,6 +58,7 @@ export function ListTableHarness({
   fetchPage: (
     query: ListQuery,
     cursor: string | null,
+    signal: AbortSignal,
   ) => Promise<ListPage<Row>>;
   chips?: readonly FilterSpec[];
   action?: ReactNode;

@@ -23,7 +23,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,6 +88,8 @@ type IssuePassportInput struct {
 	Scopes []string
 	TTL    *time.Duration
 	Areas  principal.WorkAreas
+	// App is set only by AuthenticateAppCaller, never from a request body.
+	App *AppCaller
 }
 
 // IssuedPassport carries the raw token exactly once.
@@ -221,11 +222,12 @@ func mintPassport(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportI
 	token := passportTokenPrefix + raw
 	out := IssuedPassport{Token: token, Scopes: in.Scopes}
 
+	appIssuer, appSubject := in.App.columns()
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas)
-		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7)
+		`INSERT INTO passport (on_behalf_of, granted_by, label, scopes, token_hash, expires_at, oauth_grant_id, work_areas, app_issuer, app_subject)
+		 VALUES ($1, $1, $2, $3, $4, now() + $5::interval, $6, $7, $8, $9)
 		 RETURNING id, expires_at`,
-		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas)).
+		id.UserID, in.Label, in.Scopes, hashToken(token), ttl.String(), grantID, areasColumn(in.Areas), appIssuer, appSubject).
 		Scan(&out.ID, &out.ExpiresAt); err != nil {
 		return IssuedPassport{}, err
 	}
@@ -283,24 +285,8 @@ func (s *Service) revokePassportTx(
 	if err != nil {
 		return err
 	}
-	// Another user's passport reads as absent, not forbidden —
-	// existence-hiding matches the row-scope convention.
-	//
-	// Only the CROSS-USER branch is gated. Revoking your own passport is
-	// self-authorized and always was: it needs no member-administration grant,
-	// and requiring one would take from every seat the ability to cut off an
-	// agent acting as them.
-	if onBehalfOf != id.UserID {
-		if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
-			return apperrors.ErrNotFound
-		}
-		// The same ceiling IssuePasswordLink carries, for a smaller reason.
-		// Revoking is denial rather than takeover — but a delegated holder who
-		// could cut off every agent acting for an administrator has reach over
-		// that administrator's work.
-		if err := refuseUnlessCallerOutranksTarget(ctx, tx, id, onBehalfOf, reachDenial); err != nil {
-			return apperrors.ErrNotFound
-		}
+	if err := mayManagePassport(ctx, tx, id, onBehalfOf); err != nil {
+		return err
 	}
 	if revokedAt != nil && grantID == nil {
 		return nil // idempotent: a locally minted passport has nothing beneath it

@@ -18,7 +18,7 @@ func TestEverySourceRespectsTheSelectedScope(t *testing.T) {
 	sources := everyReachSource(t)
 	shared := 0
 	for _, source := range sources {
-		if !sourceAnswersForTheActorOnly[source] {
+		if !answersForTheActorOnly(source) {
 			shared++
 		}
 	}
@@ -70,7 +70,7 @@ func TestEverySourceRespectsTheSelectedScope(t *testing.T) {
 // Store-owned scopes must supply admitted rows; this display cut cannot re-authorize
 // a meeting participant or another reader's mailbox. Real store tests cover admission.
 func admittedScopeFixture(source crmcontracts.WorklistItemSource, rows []ranked, scope string, owner ids.UUID, want []string) ([]ranked, []string) {
-	if sourceAnswersForTheActorOnly[source] {
+	if answersForTheActorOnly(source) {
 		if scope == scopeUnassigned || !owner.IsZero() {
 			return nil, nil
 		}

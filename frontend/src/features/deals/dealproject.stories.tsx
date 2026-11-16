@@ -6,6 +6,7 @@ import type { components } from "../../api/schema";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { DealProjectLine, StartDeliveryPrompt } from "./dealproject";
@@ -59,6 +60,10 @@ function deal(over: Partial<Deal>): Deal {
 
 function Line({ deal: subject }: Readonly<{ deal: Deal }>) {
   installFetchStub({
+    "GET /me": meRoute({
+      deal: ["read", "update"],
+      project: ["read", "create"],
+    }),
     "GET /projects/pr-1": () => jsonResponse(project),
   });
   return (
@@ -99,6 +104,10 @@ function Prompt({
   projects,
 }: Readonly<{ deal: Deal; projects: Project[] }>) {
   installFetchStub({
+    "GET /me": meRoute({
+      deal: ["read", "update"],
+      project: ["read", "create"],
+    }),
     "GET /projects": () =>
       jsonResponse({
         data: projects,

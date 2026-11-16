@@ -254,6 +254,7 @@ export function previewLabel(
     status: DEAL_STATUS_LABEL,
     phase: PHASE_LABEL,
     enrichment_depth: ENRICHMENT_DEPTH_LABELS,
+    promise_strength: { tentative: "approval.commitment.tentative" },
 
     consent_result: {
       granted: "approval.preview.consentGranted",

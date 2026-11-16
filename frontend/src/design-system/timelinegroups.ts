@@ -53,8 +53,10 @@ function dayOf(atIso: string): string {
 
 /**
  * groupChronology folds a newest-first entry list into groups, preserving that
- * order: a group takes the position of its newest member, so the reader's sense
- * of "what happened last" survives the grouping.
+ * order. A group takes the position of its newest member, so the reader's
+ * sense of "what happened last" survives the grouping. A thread holds only
+ * messages with nothing between them. Where another row falls between two of
+ * its messages, it splits there, and each part links to the next.
  *
  * `hasMore` says the underlying page was cut. It marks only the OLDEST group,
  * because that is the only one whose members could continue past the edge.
@@ -127,9 +129,40 @@ function joinNewsletterRun(
   return started;
 }
 
+function joinsPreviousPart(
+  kind: "thread" | "bulk",
+  existing: TimelineGroup | undefined,
+  previous: TimelineEntry | undefined,
+  wholeThreads: boolean,
+): boolean {
+  return (
+    existing !== undefined &&
+    (wholeThreads || kind !== "thread" || existing.entries.at(-1) === previous)
+  );
+}
+
+function shareThreadEntries(groups: TimelineGroup[]): void {
+  const threads = new Map<string, TimelineGroup[]>();
+  for (const group of groups) {
+    const key =
+      group.kind === "thread" ? group.entries[0]?.threadKey : undefined;
+    if (!key) continue;
+    const parts = threads.get(key) ?? [];
+    parts.push(group);
+    threads.set(key, parts);
+  }
+  for (const parts of threads.values()) {
+    if (parts.length < 2) continue;
+    const entries = parts.flatMap((part) => part.entries);
+    for (const part of parts) part.threadEntries = entries;
+  }
+}
+
 export function groupChronology(
   entries: readonly TimelineEntry[],
   hasMore = false,
+  // A list of conversations, not of events, keeps each thread whole.
+  { wholeThreads = false }: { wholeThreads?: boolean } = {},
 ): TimelineGroup[] {
   const bulk = bulkMembership(entries);
   const groups: TimelineGroup[] = [];
@@ -137,7 +170,7 @@ export function groupChronology(
   // The run of newsletters the list is in, until any other entry ends it.
   let newsletters: TimelineGroup | undefined;
 
-  for (const entry of entries) {
+  for (const [index, entry] of entries.entries()) {
     if (inboundBulk(entry)) {
       newsletters = joinNewsletterRun(newsletters, entry, groups);
       continue;
@@ -154,7 +187,15 @@ export function groupChronology(
       continue;
     }
     const existing = byKey.get(groupable.value);
-    if (existing) {
+    if (
+      existing &&
+      joinsPreviousPart(
+        groupable.kind,
+        existing,
+        entries[index - 1],
+        wholeThreads,
+      )
+    ) {
       existing.entries.push(entry);
       continue;
     }
@@ -166,16 +207,16 @@ export function groupChronology(
       entries: [entry],
       partial: false,
     };
+    if (existing && groupable.kind === "thread") {
+      existing.olderPart = group.id;
+      group.newerPart = existing.id;
+    }
     byKey.set(groupable.value, group);
     groups.push(group);
   }
 
-  // The cut runs under the page's OLDEST entry, and that entry need not sit in
-  // the last group: a group takes the position of its NEWEST member, so an
-  // interleaved thread can hold the oldest message while ranking above a
-  // single row that arrived after it. Marking the last group would offer to
-  // continue a conversation that is already complete and stay silent about the
-  // one that is actually cut.
+  shareThreadEntries(groups);
+  // Only the part touching the page edge may continue beyond the loaded rows.
   const oldest = entries.at(-1);
   if (hasMore && oldest !== undefined) {
     const cut = groups.find((group) => group.entries.includes(oldest));

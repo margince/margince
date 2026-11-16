@@ -32,7 +32,7 @@ import { type Candidate, searchByEntity } from "../lib/relationshipcandidates";
 import { KIND_LABELS } from "../lib/relationshipkinds";
 import { SEARCH_HIT_KIND_KEY } from "../lib/searchkinds";
 import type { CreateField } from "./create";
-import { entityNameQuery } from "./entityref.queries";
+import { companyReferenceQuery } from "./entityref.queries";
 import "../design-system/querystates.css";
 import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
@@ -125,10 +125,10 @@ async function withCompanyCaption(
 ): Promise<Candidate> {
   if (!candidate.companyId) return candidate;
   try {
-    const name = await client.fetchQuery(
-      entityNameQuery("company", candidate.companyId),
+    const reference = await client.fetchQuery(
+      companyReferenceQuery(candidate.companyId),
     );
-    return { ...candidate, detail: name ?? undefined };
+    return { ...candidate, detail: reference?.name ?? undefined };
   } catch {
     // Company captions must not withhold readable deal choices.
     return { ...candidate, detail: failedName };

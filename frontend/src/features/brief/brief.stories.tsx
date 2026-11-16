@@ -11,7 +11,6 @@ import {
   bundle,
   deals,
   decisionRow,
-  digest,
   firstWeek,
   lapsed,
   meetingRow,
@@ -50,7 +49,6 @@ import {
 } from "../../testing/worklist.receiptreview.fixtures";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { BriefScreen } from "./brief";
-import type { MorningDigest } from "./brief.queries";
 import { briefReady } from "./meetingbrief/fixtures";
 
 // Decisions share the ranked agenda. Their full proposal opens in the same
@@ -60,9 +58,6 @@ import { briefReady } from "./meetingbrief/fixtures";
 type Frame = {
   /** Proposals available to the agenda and its review drawers. */
   approvals: Approval[];
-  /** The nightly digest, or null for the 404 an installation answers before its
-   *  first run. */
-  digest?: MorningDigest | null;
   /** The week just gone, or null for the 404 a rep sees before their first
    *  full week. Its two null-narrative states are the ones worth a screenshot:
    *  a week nobody narrated, and a week a pass found unremarkable. */
@@ -96,7 +91,6 @@ const quietNight = {
 
 function brief({
   approvals,
-  digest: overnight = digest,
   weekly = narratedWeek,
   pipeline = () => report(pipelineRows),
   day,
@@ -141,8 +135,6 @@ function brief({
       "GET /weekly-reviews": () => jsonResponse(ARCHIVE),
       "GET /weekly-reviews/latest": () =>
         weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
-      "GET /digest": () =>
-        overnight ? jsonResponse(overnight) : jsonResponse(NOT_FOUND, 404),
       "GET /deals": () =>
         jsonResponse({ data: deals, page: { next_cursor: null } }),
       "GET /companies/company-nordwind": () =>
@@ -271,31 +263,6 @@ export const ExpiredDecision: Story = {
 };
 
 // ── The rail ────────────────────────────────────────────────────────────────
-
-// Before the first nightly run there is no digest, so the Overnight panel is
-// absent rather than a row of zeros: a fabricated count is worse than a missing
-// one, because a reader cannot tell it apart from a real one.
-export const DigestAbsent: Story = {
-  render: brief({ approvals: [...singles], digest: null }),
-};
-
-// Connector health outside Settings. A degraded source is said in Settings'
-// words with the way to fix it. A healthy one stays silent.
-export const ConnectorUnhealthy: Story = {
-  render: brief({
-    approvals: [...singles],
-    digest: {
-      ...digest,
-      connectors: [
-        {
-          provider: "gmail",
-          status: "reauth_required",
-          last_sync_error_class: "auth",
-        },
-      ],
-    },
-  }),
-};
 
 // One read refused while the other four load. The pipeline says its figure
 // could not be loaded, and the rest of the page is untouched.
@@ -545,7 +512,6 @@ function workingMorning(meetings: WorklistItem[]) {
           jsonResponse({ ...day, as_of: "2026-09-13T08:00:00Z" }),
         "GET /brief": () =>
           jsonResponse({ ...ranked, generated_at: "2026-09-13T05:30:00Z" }),
-        "GET /digest": () => jsonResponse({ title: "Not found" }, 404),
         "GET /magic": () => jsonResponse(quietNight),
         "GET /deal-corrections/pending": () => jsonResponse(noMarginceChanges),
         "GET /worklist/handled": () =>
@@ -574,9 +540,9 @@ function workingMorning(meetings: WorklistItem[]) {
 
 export const WorkingMorning: Story = { render: workingMorning([]) };
 
-// Two meetings ahead on the day the page is read. The rail's Your day draws a
-// Now stop at the reader's clock. The next meeting stands on its plate with
-// the way into its brief, and the one after follows.
+// Four external meetings ahead on the day the page is read. The rail lists them
+// by start, each naming its account and contacts, and none is cut at the bottom.
+// The next one says how soon it starts and offers the way into its brief.
 export const MorningWithMeetings: Story = {
   render: workingMorning([
     {
@@ -584,19 +550,53 @@ export const MorningWithMeetings: Story = {
       title: "Nordwind onboarding",
       with_contact: "01a00000-0000-7000-8000-000000000017",
       move: { action: "open_meeting_brief", activity_id: "meet-next" },
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000017",
+            full_name: "Ines Nordwind",
+          },
+        ],
+      },
     },
     {
       ...meetingRow("meet-later", true, "2026-09-13T12:00:00Z"),
       title: "Helio pricing call",
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000021",
+            full_name: "Tomas Helio",
+          },
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000022",
+            full_name: "Mia Sander",
+          },
+        ],
+        participants_more: 2,
+      },
+    },
+    {
+      ...meetingRow("meet-afternoon", false, "2026-09-13T14:30:00Z"),
+      title: "Quarterly review",
+      room: {
+        participants: [],
+        other_participants: [{ kind: "address", name: "cfo@weber.example" }],
+      },
+    },
+    {
+      ...meetingRow("meet-last", false, "2026-09-13T16:00:00Z"),
+      title: "Contract walk-through",
+      room: {
+        participants: [
+          {
+            contact_id: "01a00000-0000-7000-8000-000000000031",
+            full_name: "Lena Hartmann",
+          },
+        ],
+      },
     },
   ]),
-};
-
-export const DigestUnavailable: Story = {
-  render: brief({
-    approvals: [...singles],
-    extra: { "GET /digest": () => jsonResponse(NOT_FOUND, 501) },
-  }),
 };
 
 // ── The panes ───────────────────────────────────────────────────────────────

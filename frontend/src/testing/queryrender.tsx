@@ -1,15 +1,21 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { type RenderResult, render } from "@testing-library/react";
 import type { ReactNode } from "react";
+import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 
 // A screen under test with the two contexts every data screen reads. The query
 // client does not retry, so a stubbed failure shows at once. The locale is English.
 // A wrapper rather than a wrapped tree, so `rerender` keeps the providers.
-export function renderWithQueryClient(ui: ReactNode): RenderResult {
+export function renderWithQueryClient(
+  ui: ReactNode,
+  session?: components["schemas"]["MeResponse"],
+): RenderResult {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  // A screen that reads record lists waits for the session to name its reader.
+  if (session) client.setQueryData(["me"], session);
   return render(ui, {
     wrapper: ({ children }) => (
       <QueryClientProvider client={client}>

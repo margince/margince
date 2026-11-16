@@ -51,6 +51,22 @@ describe("a commitment proposal's card", () => {
   );
 });
 
+describe("a tentative commitment proposal's card", () => {
+  it.each(["en", "de", "vi"] as const)(
+    "says the promise is tentative (%s)",
+    (locale) => {
+      const strength: readonly [string, string] = [
+        translate(locale, "approval.commitment.strength"),
+        translate(locale, "approval.commitment.tentative"),
+      ];
+      expect(card(locale, { ...mailProposal, tentative: true })).toContainEqual(
+        strength,
+      );
+      expect(card(locale, mailProposal)).not.toContainEqual(strength);
+    },
+  );
+});
+
 describe("a commitment proposal with a ready preview", () => {
   const t = (
     key: Parameters<typeof translate>[1],

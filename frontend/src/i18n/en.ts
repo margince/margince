@@ -4,6 +4,9 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
+  "systemJob.meeting_profile":
+    "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
   "systemJob.task_completion": "Completing tasks after email",
   "homeRepair.reason.taskChanged":
@@ -2016,8 +2019,6 @@ export const en = {
   "aiAdmin.decisionSkip.unbound": "Decision model not used: none is bound.",
   "aiAdmin.decisionSkip.uncertified":
     "Decision model not used: not certified for this activity.",
-  "aiAdmin.decisionSkip.local_only":
-    "Decision model not used: this activity takes only a local decision provider.",
   "aiAdmin.inputRate": "Input {input} per 1M tokens",
   "aiAdmin.rates": "Input {input} · Output {output} per 1M tokens",
 
@@ -2091,9 +2092,7 @@ export const en = {
   "brief.schedule.connect": "Connect a calendar",
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
-  "brief.schedule.now": "Now",
-  "brief.schedule.freeUntil": "Free until {time}",
-  "brief.schedule.clearRest": "Nothing else booked today",
+  "brief.schedule.clearRest": "No more external meetings today",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -2311,6 +2310,7 @@ export const en = {
   "systemJob.deal_key_names": "Deal key fill-in",
   "systemJob.deal_room_link_request": "Deal Room link request",
   "systemJob.deal_room_timeline": "Deal Room timeline",
+  "systemJob.chat_links": "Chat channels",
   "systemJob.dedupe_recheck": "Duplicate queue re-check",
   "systemJob.deployment_secret_seal": "Secret sealing",
   "systemJob.domain_triage": "Website triage",
@@ -2357,6 +2357,7 @@ export const en = {
   "systemJob.owed_verdict": "Owed reply check",
   "systemJob.own_sent_mail_repair": "Sent mail correction",
   "systemJob.participant_backfill": "Mail participant fill-in",
+  "systemJob.reply_settled_stamp": "Reply status bookkeeping",
   "systemJob.past_activity_clock_refold": "Last activity date update",
   "systemJob.private_thread_strip": "Private thread removal",
   "systemJob.provider_recovery": "Enrichment provider recovery",
@@ -2774,6 +2775,7 @@ export const en = {
   "shell.help.releaseNotes": "Release notes",
   "shell.help.licenses": "Web app licenses",
   "shell.help.devBuild": "Development build",
+  "shell.help.devBuildRevision": "Development build · {revision}",
   "shell.shortcuts.anywhere": "Anywhere",
   "shell.shortcuts.search": "Open search",
   "shell.shortcuts.sidebar": "Show or hide sidebar",
@@ -3264,6 +3266,7 @@ export const en = {
   "rel.role": "Role",
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
+  "rel.former": "Former",
   "rel.current": "Current",
   "rel.endedOn": "Until {when}",
   "rel.remove": "Remove",
@@ -3350,6 +3353,7 @@ export const en = {
   // that has not run: both drew the same empty space before, and a reader
   // could not tell "nobody here" from a field still thinking.
   "picker.noMatch": "No match",
+  "select.filter": "Filter the list",
   "picker.results_one": "{count} result",
   "picker.results_other": "{count} results",
 
@@ -3836,6 +3840,8 @@ export const en = {
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View full thread",
   "timeline.group.mayContinue": "Earlier messages may exist",
+  "timeline.group.newerPart": "Later messages above",
+  "timeline.group.olderPart": "Earlier messages below",
   // A thread on the chronology is one card: the kind, the count and who was
   // on it over the subject, then each message with who wrote it and when.
   "timeline.group.kind": "Thread",
@@ -4174,6 +4180,7 @@ export const en = {
     "Some sections could not be loaded, so this page may be incomplete.",
   "evidence.explain": "Where “{value}” came from",
   "evidence.explainBeside": "{label}: where “{value}” came from",
+  "evidence.fromMeeting": "From a meeting on {date}",
   "evidence.fullHistory": "Full history",
   "co.section.unavailable":
     "Some data did not load, so this section may be incomplete.",
@@ -4200,6 +4207,24 @@ export const en = {
   "billing.saveChange": "Save change",
   "billing.versionUnresolved":
     "The billing contact could not be read back, so the change was not sent. Reload and retry.",
+  "payments.refresh": "Refresh",
+  "payments.title": "Customer payments",
+  "payments.none": "No overdue invoices.",
+  "payments.overdueAmount": "{amount} overdue",
+  "payments.invoices_one": "{count} invoice",
+  "payments.invoices_other": "{count} invoices",
+  "payments.customers_one": "{count} customer",
+  "payments.customers_other": "{count} customers",
+  "payments.oldest_one": "Oldest invoice 1 day overdue",
+  "payments.oldest_other": "Oldest invoice {days} days overdue",
+  "payments.viewInvoices": "View overdue invoices",
+  "payments.customer": "Customer",
+  "payments.openAmount": "Outstanding",
+  "payments.stale": "Invoice data may have changed since the last sync.",
+  "payments.syncFailed":
+    "The accounting sync failed. Amounts show the last successful sync.",
+  "payments.syncUnavailable":
+    "Invoice data is unavailable until the accounting sync succeeds.",
   "finance.title": "Finance",
   "finance.titleHistorical": "Finance · historical",
   "finance.none": "Nothing recorded.",
@@ -4860,6 +4885,11 @@ export const en = {
   "timeline.kind.extension": "Extension",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Content for participants only",
+  "timeline.chatSummary.badge": "AI summary",
+  "timeline.chatSummary.from": "From {provider}",
+  "timeline.chatSummary.meta_one": "{count} message, until {ended}",
+  "timeline.chatSummary.meta_other": "{count} messages, until {ended}",
+  "timeline.chatSummary.open": "Open in {provider}",
   "compose.deadRecipients":
     "Mail to {addresses} is bouncing: the last delivery was refused and none has succeeded since. Send anyway, or use another address.",
   "compose.threadShare": "Share with the company",
@@ -5116,6 +5146,14 @@ export const en = {
   "activity.detail.response.needsAction": "No answer",
   "meeting.attendeesMore_one": "and {count} more",
   "meeting.attendeesMore_other": "and {count} more",
+  "meeting.invitation.invited_one": "{count} invited",
+  "meeting.invitation.invited_other": "{count} invited",
+  "meeting.invitation.accepted_one": "{count} accepted",
+  "meeting.invitation.accepted_other": "{count} accepted",
+  "meeting.invitation.declined_one": "{count} declined",
+  "meeting.invitation.declined_other": "{count} declined",
+  "meeting.invitation.tentative_one": "{count} maybe",
+  "meeting.invitation.tentative_other": "{count} maybe",
   "activity.detail.guestsLeftOut_one": "and {count} more guest not listed",
   "activity.detail.guestsLeftOut_other": "and {count} more guests not listed",
   "activity.detail.colleagues": "Colleagues",
@@ -5177,8 +5215,10 @@ export const en = {
   "co.profileField.register_number": "Register number",
   "co.profileField.industry": "Industry",
   "co.profileField.history": "History",
-  "co.narrative.title": "How they buy",
+  "co.narrative.title": "How they sell and to whom",
   "co.narrative.add": "Add",
+  "co.narrative.notOnSite": "Not on their website",
+  "co.narrative.notReadYet": "Not read from their website yet",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Last exchange",
   "co.contacts.strength": "Relationship",
@@ -6816,12 +6856,6 @@ export const en = {
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
-  "brief.intro.waiting": "Waiting on you",
-  "brief.intro.meetings": "Meetings today",
-  "brief.intro.urgent": "Urgent",
-  "brief.intro.read_one": "Last nightly run: 1 email synced.",
-  "brief.intro.read_other": "Last nightly run: {count} emails synced.",
-  "brief.intro.skip": "Press any key or click to continue",
   // What the ORDER could not weigh, as against what scored low. A fragment
   // like the source lines it sits with, and it names no cause: the run says
   // which factor it lost, never why.
@@ -7023,7 +7057,7 @@ export const en = {
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.panel.schedule": "Your day",
+  "brief.panel.schedule": "External meetings",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -7209,6 +7243,11 @@ export const en = {
   "transcriptread.failedTitle": "Transcript could not be read",
   "transcriptread.failedFallback": "Nothing was staged.",
   "transcriptread.effectFailedTitle": "Accepted, but no task was created",
+  "transcriptread.summaryTitle": "Meeting summary",
+  "transcriptread.keyPoints": "Key points",
+  "transcriptread.nextSteps": "Next steps",
+  "transcriptread.summaryRefused":
+    "No summary was written this time. Read the transcript again to retry.",
 
   "create.cancel": "Cancel",
   "create.save": "Create",
@@ -7571,6 +7610,9 @@ export const en = {
   "log.kindTask": "Task",
   "log.kindMeeting": "Meeting",
   "log.kindCall": "Call",
+  "log.kindMessage": "Message",
+  "log.channel": "Chat app",
+  "log.channelPlaceholder": "Choose a chat app",
   "log.attendee": "Attendees",
   "log.otherAttendees": "Other attendees",
   "log.removeAttendee": "Remove {name}",
@@ -9866,6 +9908,8 @@ export const en = {
   "settings.passportLastUsedOn": "Last used {date}",
   "settings.passportExpiresOn": "Expires {date}",
   "settings.revokeNamed": "Revoke {name}",
+  "settings.allowAgain": "Allow again",
+  "settings.allowAgainNamed": "Allow {name} again",
   "settings.revokeConfirm":
     "The passport’s credential is invalidated immediately. The agent loses access on its next call.",
   "import.withheld":
@@ -10473,6 +10517,8 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.transcript_audience_sweep": "Meeting notes readers",
+  "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
   "jobs.kind.intro_expiry": "Introduction expiry",
   "jobs.kind.knowledge_ingest": "Document indexing",
@@ -10494,6 +10540,9 @@ export const en = {
   "jobs.kind.technical_enrich_company": "Company technical lookup",
   "jobs.kind.telegram_ingest": "Telegram message intake",
   "jobs.kind.telegram_poll": "Telegram message fetch",
+  "jobs.kind.chat_link_flush": "Chat channel posts",
+  "jobs.kind.chat_pull": "Chat channel summaries",
+  "jobs.kind.chat_pull_sweep": "Chat channel check",
   "jobs.kind.telegram_poll_sweep": "Telegram fetch scheduling",
   "jobs.kind.time_scan": "Time-based automation check",
   "jobs.kind.transcript_propose": "Transcript read",
@@ -11022,6 +11071,8 @@ export const en = {
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
     "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
+  "privacynotice.rights.howContact":
+    "To use any of these, contact us: {contact}",
   "privacynotice.right.access": "Ask for a copy of what we hold about you.",
   "privacynotice.right.rectification":
     "Ask us to correct anything that is wrong.",
@@ -11029,7 +11080,12 @@ export const en = {
   "privacynotice.right.restriction":
     "Ask us to stop using it while something is disputed.",
   "privacynotice.right.objection": "Object to how we use it.",
-  "privacynotice.right.complain": "Complain to your data protection authority.",
+  "privacynotice.right.portability":
+    "Ask for the data you gave us in a common machine-readable format, or have it sent to someone else.",
+  "privacynotice.right.withdrawConsent":
+    "Withdraw a consent you gave, at any time. This does not change what we did before.",
+  "privacynotice.right.complain":
+    "Complain to a data protection supervisory authority, for example in the country where you live or work.",
   "privacynotice.controller.title": "Who is responsible",
   "privacynotice.controller.contact": "Questions about your data: {contact}",
   "privacynotice.categories.title": "What we hold",
@@ -11067,6 +11123,10 @@ export const en = {
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
+  "privacynotice.retention.afterYears_one": "{count} year",
+  "privacynotice.retention.afterYears_other": "{count} years",
+  "privacynotice.retention.afterDays_one": "{count} day",
+  "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
     "{scope}: taken out of daily use after {days}.",
@@ -12137,6 +12197,85 @@ export const en = {
   "connectors.telegramReplaceCta": "Replace token",
   "connectors.telegramConnectedAs": "Connected as @{username}.",
   "connectors.telegramConnectFailed": "Bot not connected",
+
+  // The Dispact bot: the self-hosted team chat a deal or project links a
+  // private channel in. Words it shares with the Telegram bot stay on those keys.
+  "connectors.bot.provDispact": "Dispact",
+  "connectors.bot.dispactTitle": "Dispact bot",
+  "connectors.bot.dispactSub":
+    "One bot posts deal and project news into private channels of your team chat and reads what the team says there.",
+  "connectors.bot.dispactConnectCta": "Connect Dispact bot",
+  "connectors.bot.dispactEmptyNote":
+    "A connected bot lets each deal and project link to a private channel in your team chat.",
+  "connectors.bot.dispactDisconnectBody":
+    "This deletes the stored token. Margince stops posting to and reading from every linked channel; notes already filed stay in the CRM.",
+  "connectors.bot.dispactModalTitle": "Connect Dispact bot",
+  "connectors.bot.dispactTokenHint":
+    "The app token of the bot. It starts with gwapp_, is stored in the key vault and is never shown again.",
+  "connectors.bot.dispactAddress": "Chat address",
+  "connectors.bot.dispactAddressHint":
+    "The web address of your team chat, such as https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Events secret",
+  "connectors.bot.eventsSecretHint":
+    "Optional. Copy the events secret (whsec_…) from the Margince app page in your chat. With it, Margince reads a channel as soon as it has new messages and checks the rest hourly; without it, Margince checks every channel each minute.",
+  "connectors.bot.eventsSecretKeepHint":
+    "Leave empty to keep the events secret already saved.",
+
+  // The team chat card on a deal or project.
+  "channelLink.title": "Team chat",
+  "channelLink.none": "No channel yet",
+  "channelLink.noneSub":
+    "A private channel keeps the team up to date on this record.",
+  "channelLink.create": "Create a channel",
+  "channelLink.linkExisting": "Link an existing channel",
+  "channelLink.linkCta": "Link channel",
+  "channelLink.linkFailed": "Channel not linked",
+  "channelLink.channelField": "Channel name or link",
+  "channelLink.channelHint":
+    "Pick a private channel the bot is in. To link another one, add the bot to it in the chat first.",
+  "channelLink.summarize": "Summarize the talk so far (up to 5 summaries)",
+  "channelLink.verbosity": "What Margince posts",
+  "channelLink.verbosityHint":
+    "The card in the channel stays current at every level.",
+  "channelLink.verbosityFailed": "Setting not saved",
+  "channelLink.verbosity.everything": "Everything",
+  "channelLink.verbosity.important": "Important only",
+  "channelLink.verbosity.milestones": "Milestones only",
+  "channelLink.verbosity.silent": "Silent (card only)",
+  "channelLink.open": "Open {name} in the team chat",
+  "channelLink.copy": "Copy channel link",
+  "channelLink.copied": "Channel link copied",
+  "channelLink.copyRemedy": "Open the channel and copy its address there.",
+  "channelLink.notInChat_one": "{count} invited member has no chat account.",
+  "channelLink.notInChat_other":
+    "{count} invited members have no chat account.",
+  "channelLink.notAdded_one":
+    "{count} invited member was not added. Check the app’s audience in Dispact.",
+  "channelLink.notAdded_other":
+    "{count} invited members were not added. Check the app’s audience in Dispact.",
+  "channelLink.pausedBadge": "Paused",
+  "channelLink.paused": "Channel paused",
+  "channelLink.pausedBody":
+    "The channel was archived, or the bot lost access to it. Nothing is posted until you unlink it and link another channel.",
+  "channelLink.unlink": "Unlink",
+  "channelLink.unlinkNamed": "Unlink {name}",
+  "channelLink.unlinkTitle": "Unlink this channel?",
+  "channelLink.unlinkBody":
+    "Margince stops posting and reading. The channel and its messages stay in the chat.",
+  "channelLink.refused.botNotConnected":
+    "No chat bot is connected. An administrator connects one in Settings.",
+  "channelLink.refused.channelNotFound":
+    "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
+  "channelLink.refused.channelNotPrivate":
+    "This channel is public. Link a private channel instead.",
+  "channelLink.refused.botNotMember":
+    "The bot is not a member of this channel. Add it to the channel, then try again.",
+  "channelLink.refused.channelAlreadyLinked":
+    "This channel already belongs to another deal or project.",
+  "channelLink.refused.recordAlreadyLinked":
+    "This record already has a channel.",
+  "channelLink.refused.providerUnreachable":
+    "The chat could not be reached. Nothing was changed, so try again.",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
@@ -13288,7 +13427,9 @@ export const en = {
   // not do, no em dashes.
   "confirm.title": "Your details",
   "confirm.intro":
-    "Margince, an AI system, runs this CRM. Below is everything recorded about you. You can correct any of it, or request its removal.",
+    "Below is everything recorded about you. You can correct any of it, or request its removal.",
+  "confirm.introNamed":
+    "{controller} holds the details below about you. You can correct any of them, or request their removal.",
   "confirm.card.title": "Recorded details",
   "confirm.field.fullName": "Name",
   "confirm.field.title": "Job title",
@@ -13325,7 +13466,9 @@ export const en = {
   "confirm.done.body":
     "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
   "confirm.invalidLink":
-    "This link is no longer valid. It may have been used or may have expired.",
+    "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
+  "confirm.questionChanged":
+    "The question on this page changed after you opened it. Reload the page and answer again.",
   "prefs.lockedWhy": "Needed for something you requested, so it stays on.",
   "prefs.confirmationNeededWhy":
     "To switch this on, use the confirmation link in the email sent to you. You can switch it off here at any time.",
@@ -13861,7 +14004,7 @@ export const en = {
   "settings.part.integrations.contact": "Contact data",
   "settings.part.integrations.accounting": "Accounting",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Telegram bot",
+  "settings.part.integrations.telegram": "Chat bots",
   "settings.part.integrations.sharedMailboxes": "Shared mailboxes",
   "sharedMailboxes.title": "Shared mailboxes",
   "sharedMailboxes.intro":
@@ -15443,8 +15586,6 @@ export const en = {
     "Input too large for the decision model",
   "aicalls.reason.decision_uncertified":
     "Decision model not certified for this task",
-  "aicalls.reason.decision_local_only":
-    "Task is local-only and the decision model is not",
   "aicalls.reason.timeout": "The attempt before ran out of time",
   "aicalls.decisionAnswer": "answered {choice} at {confidence}",
   "aicalls.callsLabel": "Recent calls",
@@ -17478,6 +17619,9 @@ export const en = {
     "A file’s category, title, state, pinning or the file it replaces changes.",
   "webhooks.event.attachment.archived.label": "File archived",
   "webhooks.event.attachment.archived.when": "A file is archived off a record.",
+  "webhooks.event.attachment.restored.label": "File restored",
+  "webhooks.event.attachment.restored.when":
+    "An archived file is back on a record.",
   "webhooks.eventGroup.projects": "Projects",
   "webhooks.event.project.created.label": "Project created",
   "webhooks.event.project.created.when": "A project is opened on a company.",
@@ -17895,7 +18039,6 @@ export const en = {
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the
   // landmark list rather than by scrolling to it.
-  "contact.graph.sideColumn": "Introductions and changes",
   "contact.graph.recordWorksWith": "Record: works with {name}",
   "contact.graph.noEdge": "No recorded correspondence with {name}.",
   "contact.graph.withColleague": "with {name}",
@@ -17946,7 +18089,6 @@ export const en = {
   "contact.intro.lastYesterday": "Yesterday",
   "contact.intro.lastDays": "{days} days ago",
   "contact.intro.lastNever": "None in 90 days",
-  "contact.intro.stripWho": "Routes",
   "contact.intro.stripWhoMix": "{direct} direct · {indirect} via a contact",
   "contact.intro.stripWhoOwn": "Includes your own relationship",
   "contact.intro.otherRoutesTitle": "Other routes",
@@ -17964,14 +18106,37 @@ export const en = {
   "contact.intro.change.warmed": "Warmer",
   "contact.intro.change.cooled": "Cooler",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Intro request",
   "contact.intro.handoffNotStarted": "Not started",
   "contact.intro.handoffUnread": "Could not be read",
   "contact.intro.handoffOwner": "Next: {name}",
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
   "contact.intro.relayTitle": "Introduction status",
-  "contact.intro.stripLabel": "Network figures",
+  "contact.chapter.jump": "On this tab",
+  "contact.chapter.wayIn": "Way in",
+  "contact.chapter.whoAnswer":
+    "Who on your team and at their company corresponds with {name}, and how often.",
+  "contact.chapter.progress": "Progress",
+  "contact.chapter.routes_one": "{count} route",
+  "contact.chapter.routes_other": "{count} routes",
+  "contact.chapter.allDirect_one": "direct",
+  "contact.chapter.allDirect_other": "all direct",
+  "contact.chapter.allVia_one": "via a contact",
+  "contact.chapter.allVia_other": "all via a contact",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Intro request: {handoff}. Latest change: {change}.",
+  "contact.chapter.toCheck": "To check",
+  "contact.chapter.toCheckAnswer":
+    "What Margince read from their mail and pages. Confirm, correct or dismiss each one.",
+  "contact.chapter.sources": "Sources",
+  "contact.chapter.sourcesAnswer":
+    "What each source says. Nothing here overwrites what a colleague typed.",
+  "contact.chapter.recordKeeping": "Record keeping",
+  "contact.chapter.recordKeepingAnswer":
+    "The fields, permissions and settings kept on this contact.",
+  "contact.chapter.researchAction": "Research public sources",
   "contact.intro.mapTitle": "Who knows {name}",
   "contact.intro.stepRoute": "Choose route",
   "contact.intro.stepRoutePick": "select who to ask",
@@ -18112,7 +18277,7 @@ export const en = {
   "contact.intro.unavailable": "Not available",
   "contact.network.momentsTitle": "What changed",
   "contact.network.momentsSub":
-    "Changes in this relationship, from the messages.",
+    "Changes read from the messages, and earlier intro requests.",
   "contact.network.noMoments": "No recent changes in this relationship.",
   "contact.change.repliedAfterGap": "They replied after {days} quiet days.",
   "contact.change.wentQuiet": "No activity for {days} days.",
@@ -19547,6 +19712,7 @@ export const en = {
   "worklist.title.automation_run.failed": "{name} failed",
   "worklist.title.automation_run.blocked": "{name} was blocked",
   "worklist.title.meeting_outcome": "Record the outcome of {name}",
+  "worklist.title.meeting_outcome.read_only": "No outcome yet for {name}",
   "worklist.title.meeting_follow_up": "Follow up on {name}",
   "worklist.title.awaiting_reply": "No reply yet: {name}",
   "worklist.title.bounce": "Bounced: {name}",
@@ -19813,6 +19979,8 @@ export const en = {
     "A colleague asks you to introduce them to a contact. Accept or decline the request.",
   "worklist.ask.meeting_outcome":
     "This meeting is over and nothing records how it went. Record what came of it. If it did not take place, choose “Did not happen”, or cancel it through its calendar invitation.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Whoever organized this meeting records how it went, and you cannot change it. Remind them if it matters, then mark it done.",
   "worklist.ask.weekly_commitment":
     "You planned this for the week. Do the work, or move it in your weekly plan.",
   "worklist.ask.awaiting_reply":
@@ -20331,6 +20499,8 @@ export const en = {
   "worklist.verb.promiseSettleFailed":
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
+  "worklist.verb.meetingSkipNextStep": "Skip next step",
+  "worklist.verb.meetingNextStep": "What is the next step?",
   "worklist.verb.meetingHowDidItGo": "How did it go?",
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
@@ -20701,6 +20871,7 @@ export const en = {
   "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-compatible",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Built-in test provider",
@@ -20813,6 +20984,8 @@ export const en = {
   "lead.company.linkTitle": "Link this lead to {name}?",
   "lead.company.linkConfirm": "Link company",
   "lead.company.linkOpens": "The company name on this lead then opens {name}.",
+  "lead.company.addedOnQualify":
+    "No company linked yet. Qualifying links or creates it.",
   "lead.company.linkOnQualify":
     "No contact is created now. When you qualify this lead, it becomes a contact at {name}.",
   "lead.company.matchedByDomain": "Same website domain",
@@ -21016,6 +21189,8 @@ export const en = {
   "magic.action.approval_overnight": "Review proposal",
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
   "approval.commitment.noDueDay": "No day stated",
+  "approval.commitment.strength": "How firm",
+  "approval.commitment.tentative": "Tentative: they said they would try",
   "approval.commitment.promiseStatus": "Commitment status",
   "approval.commitment.notFulfilled":
     "Creating the task does not mark the commitment as fulfilled.",
@@ -21037,6 +21212,13 @@ export const en = {
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
   "magic.action.capture_connection_error": "{provider} could not be reached",
+  "activity.notes.connectHint":
+    "Notes are attached. Connect meeting notes to read them.",
+  "activity.notes.otherAccount":
+    "Notes are attached. Connect meeting notes with the same Google account as your calendar.",
+  "captureConcern.notesGrant": "Cannot read meeting notes",
+  "captureConcern.notesAccount":
+    "Meeting notes need the same Google account as the calendar",
   "captureConcern.reauth": "Reconnect required",
   "captureConcern.error": "Connection error",
   "captureConcern.failing": "Sync is failing",
@@ -21353,6 +21535,8 @@ export const en = {
   "aiServing.guide": "Routing guide ↗",
   "aiServing.blocked.decisions":
     "The decision model answers through OpenRouter’s decisions endpoint, which takes no routing block. Its timeout is set per task under AI tasks.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} serves the decision model itself, so host routing does not apply. Its timeout is set per task under AI tasks.",
   "aiServing.blocked.provider":
     "Host routing applies only to OpenRouter. {provider} serves this model itself. Thinking level and timeout are still set per task under AI tasks.",
   "aiServing.blocked.host":
@@ -21669,10 +21853,11 @@ export const en = {
   "aiTask.name.propose_roles": "Buying-role reading",
   "aiTask.name.rate_extract": "Exchange rate extraction",
   "aiTask.name.report_interpret": "Assessing a sales report",
-  "aiTask.name.report_setup": "Setting up a report from a description",
+  "aiTask.name.report_setup": "Proposing a report setup or sales goals",
   "aiTask.name.request_settlement":
     "Checking whether the reply answered the request",
   "aiTask.name.rewrite": "Rewriting",
+  "aiTask.name.chat_summary": "Chat channel summary",
   "aiTask.name.signal_extract": "Signal extraction",
   "aiTask.name.site_extract": "Website research",
   "aiTask.name.site_fact_extract": "Website fact extraction",
@@ -22329,7 +22514,11 @@ export const en = {
   "brief.done.noReason": "Reason unavailable",
   "brief.done.markedLost": "Marked lost",
   "brief.done.customerWrote": "The customer wrote:",
-  "magic.lane.doneOther": "Other updates",
+  "brief.done.small_one": "{count} small change",
+  "brief.done.small_other": "{count} small changes",
+  "brief.done.smallLabel": "Small changes, newest first",
+  "brief.done.why": "Why",
+  "brief.done.undoNote": "Undo",
   "changes.bulk.undone_one": "Undone on {count} deal.",
   "changes.bulk.undone_other": "Undone on {count} deals.",
   "changes.bulk.partly_one": "{count} deal was partly undone.",
@@ -22435,6 +22624,10 @@ export const en = {
   "progress.work.more": "Show more",
   "progress.plannedAhead": "Open pipeline, not won yet",
   "progress.rail": "Goal and definition",
+  "progress.summary": "Summary",
+  "progress.summary.refresh": "Refresh summary",
+  "progress.summary.writing": "Writing the summary",
+  "progress.summary.more": "Read the full summary",
   "progress.goalFor": "Goal for {period}",
   "progress.goalMonths": "Months with a goal",
   "progress.goalMonthsSet": "{set} of {needed}",
@@ -22480,6 +22673,16 @@ export const en = {
   "goals.status": "Status",
   "goals.yearly": "Yearly goal in {currency}",
   "goals.spread": "Spread equally",
+  "goals.propose": "Propose months",
+  "goals.propose.busy": "Reading the sales won so far",
+  "goals.propose.title": "Proposed: {total} for the year",
+  "goals.propose.review": "Nothing is saved until you save the draft.",
+  "goals.propose.apply": "Use these months",
+  "goals.propose.noModel":
+    "Proposing months needs an AI model that is set up. You can still enter the months by hand.",
+  "goals.propose.noHistory":
+    "{name} has no sales won in {year} or the year before to read a pattern from. Enter the months by hand.",
+  "goals.proposedByAi": "Proposed by Margince",
   "goals.monthsSum": "The months add up to {total}.",
   "goals.monthsMissing_one": "{count} month is not set.",
   "goals.monthsMissing_other": "{count} months are not set.",

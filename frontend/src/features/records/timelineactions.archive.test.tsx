@@ -11,6 +11,7 @@ import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
+import { contactDocuments } from "../../testing/contactdocuments";
 import { meFixture } from "../../testing/mefixture";
 import { TimelineActions } from "./timelineactions";
 
@@ -39,18 +40,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function show(activity: Activity) {
+function show(activity: Activity, docs?: ReturnType<typeof contactDocuments>) {
   const archives: Request[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
-      const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+      const url = new URL(request.url);
+      const contactList = docs?.answer(request.method, url);
+      if (contactList) return contactList;
+      const path = url.pathname.replace(/^\/v1/, "");
       if (path === "/me")
         return jsonResponse(
           meFixture({ allow: { activity: ["read", "update"] } }),
         );
       if (path === "/activities/note-1" && request.method === "DELETE") {
         archives.push(request.clone());
+        docs?.becomes(1);
         return jsonResponse(activity);
       }
       throw new Error(`Unexpected request: ${request.method} ${path}`);
@@ -64,6 +69,7 @@ function show(activity: Activity) {
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <ToastProvider>
+          {docs?.strip}
           <TimelineActions
             activity={activity}
             entityType="company"
@@ -132,5 +138,21 @@ describe("archiving from the History", () => {
       screen.getByText(en["activity.archiveCalendarManaged"]),
     ).toBeTruthy();
     expect(archives).toHaveLength(0);
+  });
+
+  it("takes the archived row's files out of a linked contact's Documents count", async () => {
+    const docs = contactDocuments(2);
+    show(NOTE, docs);
+    await docs.shows(2);
+    await openMenu();
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["activity.archive"] }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: en["activity.archive"],
+      }),
+    );
+    await docs.shows(1);
   });
 });

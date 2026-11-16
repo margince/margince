@@ -6,6 +6,10 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.transcript_audience":
+    "Terminnotizen erhalten die Lesenden des Termins",
+  "systemJob.meeting_profile":
+    "Entfernt Unternehmenswerte, deren Termin nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
   "systemJob.task_completion": "Aufgaben nach E-Mail erledigen",
   "homeRepair.reason.taskChanged":
@@ -1814,7 +1818,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.deliveryUnknown":
     "Der Server hat keine Einladung zurückgegeben. Frage bei der organisierenden Person nach, bevor du es erneut versuchst.",
   "scheduling.personalGuest":
-    "Diese Einladung richtet sich an die Person, die diesen Link erhalten hat. Für die Besprechung wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
+    "Diese Einladung richtet sich an die Person, die diesen Link erhalten hat. Für den Termin wird die von der organisierenden Person angegebene E-Mail-Adresse verwendet.",
   "scheduling.proposalGreeting": "Hallo,",
   "scheduling.proposalChoose":
     "Wähle hier eine Zeit oder finde einen anderen Termin:",
@@ -1932,7 +1936,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Kalender verbunden. Ein verbundenes Postfach bringt seinen Kalender nicht mit.",
   "scheduling.hostName": "Dein öffentlicher Name",
   "scheduling.subject": "Termintitel",
-  "scheduling.location": "Ort oder Besprechungslink",
+  "scheduling.location": "Ort oder Terminlink",
   "scheduling.duration": "Termindauer",
   "scheduling.noticeHelp":
     "24 Stunden bedeutet mindestens einen vollen Tag im Voraus.",
@@ -2105,8 +2109,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Entscheidungsmodell nicht genutzt: keines zugeordnet.",
   "aiAdmin.decisionSkip.uncertified":
     "Entscheidungsmodell nicht genutzt: für diese Aktivität nicht zertifiziert.",
-  "aiAdmin.decisionSkip.local_only":
-    "Entscheidungsmodell nicht genutzt: Diese Aktivität nutzt nur einen lokalen Anbieter für Entscheidungen.",
   "aiAdmin.inputRate": "Eingabe {input} pro Million Tokens",
   "aiAdmin.rates": "Eingabe {input} · Ausgabe {output} pro Million Tokens",
 
@@ -2181,9 +2183,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kalender verbinden",
   "brief.schedule.reconnect": "Kalender neu verbinden",
   "brief.schedule.nextAt": "Nächster Termin um {time}",
-  "brief.schedule.now": "Jetzt",
-  "brief.schedule.freeUntil": "Frei bis {time}",
-  "brief.schedule.clearRest": "Heute sonst nichts gebucht",
+  "brief.schedule.clearRest": "Heute keine externen Termine mehr",
   "brief.readings.riskPartial": "Nur bekannter Wert · nicht alles geprüft",
   "brief.readings.unpricedCount_one":
     "{count} Deal ohne Preis · nicht enthalten",
@@ -2398,6 +2398,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.deal_key_names": "Ergänzung von Deal-Schlüsseln",
   "systemJob.deal_room_link_request": "Link-Anfrage für den Deal Room",
   "systemJob.deal_room_timeline": "Verlauf im Deal Room",
+  "systemJob.chat_links": "Chat-Kanäle",
   "systemJob.dedupe_recheck": "Erneute Prüfung der Duplikat-Prüfliste",
   "systemJob.deployment_secret_seal": "Versiegelung von Geheimnissen",
   "systemJob.domain_triage": "Vorprüfung von Websites",
@@ -2446,6 +2447,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.owed_verdict": "Prüfung offener Antworten",
   "systemJob.own_sent_mail_repair": "Korrektur gesendeter E-Mails",
   "systemJob.participant_backfill": "Ergänzung der Teilnehmenden von E-Mails",
+  "systemJob.reply_settled_stamp": "Antwortstatus von E-Mails",
   "systemJob.past_activity_clock_refold":
     "Aktualisierung des Datums der letzten Aktivität",
   "systemJob.private_thread_strip": "Entfernen privater Threads",
@@ -2696,10 +2698,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.guests_added": "Gäste aus dem Kalender ergänzt",
   "history.field.guest_links_added": "Gäste aus dem Kalender verknüpft",
   "history.field.meeting_documents_added":
-    "Besprechungsnotizen aus dem Kalender verknüpft",
+    "Terminnotizen aus dem Kalender verknüpft",
   "history.field.guests_retired": "Gäste vom Kalender entfernt",
   "history.field.meeting_guests_removed":
-    "Gäste an ihre eigene Besprechung zurückgegeben",
+    "Gäste an ihren eigenen Termin zurückgegeben",
   "history.field.guest_answers_changed":
     "Antworten der Gäste aus dem Kalender aktualisiert",
   "history.field.guests_left_out": "Nicht aufgeführte Gäste",
@@ -2883,6 +2885,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.help.releaseNotes": "Versionshinweise",
   "shell.help.licenses": "Lizenzen der Web-App",
   "shell.help.devBuild": "Entwicklungs-Build",
+  "shell.help.devBuildRevision": "Entwicklungs-Build · {revision}",
   "shell.shortcuts.anywhere": "Überall",
   "shell.shortcuts.search": "Suche öffnen",
   "shell.shortcuts.sidebar": "Seitenleiste ein- oder ausblenden",
@@ -3359,6 +3362,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Rolle",
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
+  "rel.former": "Früher",
   "rel.current": "Aktuell",
   "rel.endedOn": "Bis {when}",
   "rel.remove": "Entfernen",
@@ -3425,6 +3429,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ref.notInRoster":
     "Aktuell zugewiesen (nicht mehr in der Liste der Nutzenden)",
   "picker.noMatch": "Kein Treffer",
+  "select.filter": "Liste filtern",
   "picker.results_one": "{count} Treffer",
   "picker.results_other": "{count} Treffer",
 
@@ -3896,6 +3901,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Vollständigen Thread anzeigen",
   "timeline.group.mayContinue": "Möglicherweise gibt es frühere Nachrichten",
+  "timeline.group.newerPart": "Spätere Nachrichten weiter oben",
+  "timeline.group.olderPart": "Frühere Nachrichten weiter unten",
   "timeline.group.kind": "Thread",
   "timeline.group.earlier_other": "{count} frühere Nachrichten anzeigen",
   "timeline.group.earlier_one": "{count} frühere Nachricht anzeigen",
@@ -4220,6 +4227,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Seite ist möglicherweise unvollständig, da einige Bereiche nicht geladen werden konnten.",
   "evidence.explain": "Herkunft von „{value}“",
   "evidence.explainBeside": "{label}: Herkunft von „{value}“",
+  "evidence.fromMeeting": "Aus einem Termin am {date}",
   "evidence.fullHistory": "Vollständiger Verlauf",
   "co.section.unavailable":
     "Dieser Bereich ist möglicherweise unvollständig, da einige Daten nicht geladen werden konnten.",
@@ -4247,6 +4255,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "billing.saveChange": "Änderung speichern",
   "billing.versionUnresolved":
     "Die Änderung wurde nicht gesendet, da der Rechnungskontakt nicht erneut gelesen werden konnte. Bitte lade die Seite neu und versuche es erneut.",
+  "payments.refresh": "Aktualisieren",
+  "payments.title": "Kundenzahlungen",
+  "payments.none": "Keine überfälligen Rechnungen.",
+  "payments.overdueAmount": "{amount} überfällig",
+  "payments.invoices_one": "{count} Rechnung",
+  "payments.invoices_other": "{count} Rechnungen",
+  "payments.customers_one": "{count} Kunde",
+  "payments.customers_other": "{count} Kunden",
+  "payments.oldest_one": "Älteste Rechnung seit 1 Tag überfällig",
+  "payments.oldest_other": "Älteste Rechnung seit {days} Tagen überfällig",
+  "payments.viewInvoices": "Überfällige Rechnungen ansehen",
+  "payments.customer": "Kunde",
+  "payments.openAmount": "Offener Betrag",
+  "payments.stale":
+    "Die Rechnungsdaten können sich seit der letzten Synchronisierung geändert haben.",
+  "payments.syncFailed":
+    "Die Synchronisierung der Buchhaltung ist fehlgeschlagen. Die Beträge stammen aus der letzten erfolgreichen Synchronisierung.",
+  "payments.syncUnavailable":
+    "Rechnungsdaten sind erst nach einer erfolgreichen Synchronisierung der Buchhaltung verfügbar.",
   "finance.title": "Finanzen",
   "finance.titleHistorical": "Finanzen · historisch",
   "finance.none": "Nichts erfasst.",
@@ -4912,6 +4939,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Erweiterung",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
+  "timeline.chatSummary.badge": "KI-Zusammenfassung",
+  "timeline.chatSummary.from": "Aus {provider}",
+  "timeline.chatSummary.meta_one": "{count} Nachricht, bis {ended}",
+  "timeline.chatSummary.meta_other": "{count} Nachrichten, bis {ended}",
+  "timeline.chatSummary.open": "In {provider} öffnen",
   "compose.deadRecipients":
     "E-Mails an {addresses} kommen nicht an: Die letzte Zustellung wurde abgelehnt, und seitdem war keine erfolgreich. Sende trotzdem oder verwende eine andere Adresse.",
   "compose.threadShare": "Mit dem Unternehmen teilen",
@@ -5165,6 +5197,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.needsAction": "Keine Antwort",
   "meeting.attendeesMore_one": "und {count} weiterer Gast",
   "meeting.attendeesMore_other": "und {count} weitere Gäste",
+  "meeting.invitation.invited_one": "{count} eingeladen",
+  "meeting.invitation.invited_other": "{count} eingeladen",
+  "meeting.invitation.accepted_one": "{count} zugesagt",
+  "meeting.invitation.accepted_other": "{count} zugesagt",
+  "meeting.invitation.declined_one": "{count} abgesagt",
+  "meeting.invitation.declined_other": "{count} abgesagt",
+  "meeting.invitation.tentative_one": "{count} vielleicht",
+  "meeting.invitation.tentative_other": "{count} vielleicht",
   "activity.detail.guestsLeftOut_one":
     "und {count} weiterer Gast, nicht aufgeführt",
   "activity.detail.guestsLeftOut_other":
@@ -5228,8 +5268,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.profileField.register_number": "Registernummer",
   "co.profileField.industry": "Branche",
   "co.profileField.history": "Geschichte",
-  "co.narrative.title": "Wie sie kaufen",
+  "co.narrative.title": "Wie und an wen sie verkaufen",
   "co.narrative.add": "Hinzufügen",
+  "co.narrative.notOnSite": "Nicht auf ihrer Website",
+  "co.narrative.notReadYet": "Website noch nicht analysiert",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Letzter Austausch",
   "co.contacts.strength": "Beziehung",
@@ -6833,13 +6875,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
   "brief.first.title": "Braucht dich",
-  "brief.intro.waiting": "Wartet auf dich",
-  "brief.intro.meetings": "Termine heute",
-  "brief.intro.urgent": "Dringend",
-  "brief.intro.read_one": "Letzter Nachtlauf: 1 E-Mail synchronisiert.",
-  "brief.intro.read_other":
-    "Letzter Nachtlauf: {count} E-Mails synchronisiert.",
-  "brief.intro.skip": "Beliebige Taste drücken oder klicken, um fortzufahren",
   "brief.order.withheld":
     "In dieser Reihenfolge nicht berücksichtigt: {factors}",
   "brief.factor.warmth": "Beziehungsnähe",
@@ -7021,8 +7056,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.agenda.leads_other": "{count} Leads",
   "brief.agenda.deals_at_risk_one": "{count} Deal mit Handlungsbedarf",
   "brief.agenda.deals_at_risk_other": "{count} Deals mit Handlungsbedarf",
-  "brief.agenda.meetings_one": "{count} Besprechung",
-  "brief.agenda.meetings_other": "{count} Besprechungen",
+  "brief.agenda.meetings_one": "{count} Termin",
+  "brief.agenda.meetings_other": "{count} Termine",
   "brief.agenda.tasks_one": "{count} Aufgabe",
   "brief.agenda.tasks_other": "{count} Aufgaben",
   "brief.agenda.decisions_one": "{count} Entscheidung",
@@ -7034,7 +7069,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
   "brief.panel.decisions": "Freigaben",
   "brief.rail.quietSchedule": "Nichts gebucht",
-  "brief.panel.schedule": "Dein Tag",
+  "brief.panel.schedule": "Externe Termine",
   "brief.readings.label": "Zahlen von heute",
   "brief.readings.floorTip":
     "Diese Zahl ist ein Mindestwert, da eine Quelle ihr Limit erreicht hat.",
@@ -7188,6 +7223,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "transcriptread.failedTitle": "Transkript konnte nicht gelesen werden",
   "transcriptread.failedFallback": "Es wurde nichts vorgemerkt.",
   "transcriptread.effectFailedTitle": "Angenommen, aber keine Aufgabe erstellt",
+  "transcriptread.summaryTitle": "Zusammenfassung des Termins",
+  "transcriptread.keyPoints": "Kernpunkte",
+  "transcriptread.nextSteps": "Nächste Schritte",
+  "transcriptread.summaryRefused":
+    "Diesmal wurde keine Zusammenfassung geschrieben. Lies das Transkript erneut, um es noch einmal zu versuchen.",
 
   "create.cancel": "Abbrechen",
   "create.save": "Erstellen",
@@ -7558,6 +7598,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.kindTask": "Aufgabe",
   "log.kindMeeting": "Termin",
   "log.kindCall": "Anruf",
+  "log.kindMessage": "Nachricht",
+  "log.channel": "Chat-App",
+  "log.channelPlaceholder": "Chat-App wählen",
   "log.transcriptLabel": "Transkript",
   "log.transcriptHint":
     "Füge ein Transkript eines Anrufs oder Termins ein. Vorhandene Sprecherangaben bleiben erhalten.",
@@ -8176,7 +8219,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
   "tasks.origin.analytics_decision":
-    "Aus einer Vertriebsbesprechung festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus der letzten Besprechung fest.",
+    "Aus einem Vertriebstermin festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus dem letzten Termin fest.",
   "tasks.origin.overnight_reconcile":
     "Erstellt aus einem Follow-up, das die nächtliche Prüfung vorgeschlagen hat.",
   "tasks.origin.commitment":
@@ -9861,6 +9904,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
   "settings.revokeNamed": "{name} widerrufen",
+  "settings.allowAgain": "Wieder zulassen",
+  "settings.allowAgainNamed": "{name} wieder zulassen",
   "settings.revokeConfirm":
     "Die Zugangsdaten des Passports werden sofort ungültig. Der Agent verliert beim nächsten Aufruf den Zugriff.",
   "import.withheld": "Nur Admins und Operations können Dateien importieren.",
@@ -10486,6 +10531,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.transcript_audience_sweep": "Lesende von Terminnotizen",
+  "jobs.kind.meeting_profile_retract_sweep": "Unternehmensfelder aus Terminen",
   "jobs.kind.initiative_enrolment_sweep":
     "Mitgliedschaftsdaten der Initiativen",
   "jobs.kind.intro_expiry": "Ablauf von Vorstellungen",
@@ -10508,6 +10555,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_company": "Technische Abfrage für Unternehmen",
   "jobs.kind.telegram_ingest": "Übernahme von Telegram-Nachrichten",
   "jobs.kind.telegram_poll": "Abruf von Telegram-Nachrichten",
+  "jobs.kind.chat_link_flush": "Beiträge in Chat-Kanälen",
+  "jobs.kind.chat_pull": "Zusammenfassungen aus Chat-Kanälen",
+  "jobs.kind.chat_pull_sweep": "Prüfung der Chat-Kanäle",
   "jobs.kind.telegram_poll_sweep": "Planung der Telegram-Abrufe",
   "jobs.kind.time_scan": "Prüfung zeitgesteuerter Automatisierungen",
   "jobs.kind.transcript_propose": "Lesen des Transkripts",
@@ -11044,6 +11094,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.rights.title": "Ihre Rechte an diesen Daten",
   "privacynotice.rights.how":
     "Um eines dieser Rechte zu nutzen, antworten Sie auf die Nachricht, die Sie hierher geführt hat, oder kontaktieren Sie uns über die Adresse auf unserer Website.",
+  "privacynotice.rights.howContact":
+    "Um eines dieser Rechte zu nutzen, wenden Sie sich an uns: {contact}",
   "privacynotice.right.access":
     "Bitten Sie uns um eine Kopie der Daten, die wir über Sie gespeichert haben.",
   "privacynotice.right.rectification":
@@ -11053,8 +11105,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bitten Sie uns, die Nutzung Ihrer Daten auszusetzen, solange etwas strittig ist.",
   "privacynotice.right.objection":
     "Widersprechen Sie der Nutzung Ihrer Daten durch uns.",
+  "privacynotice.right.portability":
+    "Verlangen Sie die Daten, die Sie uns gegeben haben, in einem gängigen maschinenlesbaren Format, oder lassen Sie sie an jemand anderen übermitteln.",
+  "privacynotice.right.withdrawConsent":
+    "Widerrufen Sie eine erteilte Einwilligung jederzeit. Das ändert nichts an dem, was wir vorher getan haben.",
   "privacynotice.right.complain":
-    "Reichen Sie eine Beschwerde bei der für Sie zuständigen Datenschutzbehörde ein.",
+    "Beschweren Sie sich bei einer Datenschutz-Aufsichtsbehörde, zum Beispiel in dem Land, in dem Sie leben oder arbeiten.",
   "privacynotice.controller.title": "Wer verantwortlich ist",
   "privacynotice.controller.contact": "Fragen zu Ihren Daten: {contact}",
   "privacynotice.categories.title": "Was wir speichern",
@@ -11096,6 +11152,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mitarbeitende, die mit unserem CRM arbeiten.",
   "privacynotice.recipient.serviceProviders":
     "Unternehmen, die unser CRM betreiben und seine E-Mails für uns zustellen. Ein Vertrag verpflichtet sie, Ihre Daten nur nach unseren Weisungen zu nutzen.",
+  "privacynotice.retention.afterYears_one": "{count} Jahr",
+  "privacynotice.retention.afterYears_other": "{count} Jahren",
+  "privacynotice.retention.afterDays_one": "{count} Tag",
+  "privacynotice.retention.afterDays_other": "{count} Tagen",
   "privacynotice.retention.title": "Wie lange wir die Daten speichern",
   "privacynotice.retention.archive":
     "{scope}: nach {days} aus der täglichen Nutzung genommen.",
@@ -11972,20 +12032,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.provGmail": "Gmail",
   "connectors.provGcal": "Google Kalender",
   "connectors.provGdocs": "Google Docs",
-  "connectors.cannotReadNotes": "Kann Besprechungsnotizen nicht lesen",
+  "connectors.cannotReadNotes": "Kann Terminnotizen nicht lesen",
   "connectors.reconnectToReadNotes":
-    "Neu verbinden, um Besprechungsnotizen zu lesen. Google hat keinen Zugriff auf die Notizdokumente erhalten.",
-  "connectors.bringsNotes": "Besprechungsnotizen",
-  "connectors.notes.name": "Besprechungsnotizen",
+    "Neu verbinden, um Terminnotizen zu lesen. Google hat keinen Zugriff auf die Notizdokumente erhalten.",
+  "connectors.bringsNotes": "Terminnotizen",
+  "connectors.notes.name": "Terminnotizen",
   "connectors.notes.desc":
     "Die Notizen und Transkripte, die Google Meet schreibt, werden aus Google Docs gelesen und am Termin abgelegt.",
-  "connectors.notes.connect": "Besprechungsnotizen verbinden",
-  "connectors.notes.stop": "Besprechungsnotizen nicht mehr lesen",
-  "connectors.notes.stopTitle": "Besprechungsnotizen nicht mehr lesen?",
+  "connectors.notes.connect": "Terminnotizen verbinden",
+  "connectors.notes.stop": "Terminnotizen nicht mehr lesen",
+  "connectors.notes.stopTitle": "Terminnotizen nicht mehr lesen?",
   "connectors.notes.stopBody":
     "Margince liest die Notizen von Google Meet nicht mehr. E-Mail und Kalender laufen weiter, und Notizen an Terminen bleiben erhalten.",
   "connectors.notes.otherAccount":
-    "Die Besprechungsnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinde die Besprechungsnotizen daher mit {calendar}.",
+    "Die Terminnotizen sind mit {notes} verbunden, der Kalender mit {calendar}. Notizen werden nur für Termine im Kalender desselben Kontos gelesen. Verbinde die Terminnotizen daher mit {calendar}.",
   "connectors.provGraph": "Outlook",
   "connectors.provGraphCal": "Outlook-Kalender",
   "connectors.provImap": "IMAP-Postfach",
@@ -12178,6 +12238,84 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramReplaceCta": "Token ersetzen",
   "connectors.telegramConnectedAs": "Verbunden als @{username}.",
   "connectors.telegramConnectFailed": "Bot nicht verbunden",
+
+  "connectors.bot.provDispact": "Dispact",
+  "connectors.bot.dispactTitle": "Dispact-Bot",
+  "connectors.bot.dispactSub":
+    "Ein Bot postet Neues zu Deals und Projekten in private Kanäle eures Team-Chats und liest, was das Team dort schreibt.",
+  "connectors.bot.dispactConnectCta": "Dispact-Bot verbinden",
+  "connectors.bot.dispactEmptyNote":
+    "Mit einem verbundenen Bot kann jeder Deal und jedes Projekt einen privaten Kanal im Team-Chat bekommen.",
+  "connectors.bot.dispactDisconnectBody":
+    "Das löscht den gespeicherten Token. Margince postet nicht mehr in verknüpfte Kanäle und liest dort nicht mehr mit; bereits abgelegte Notizen bleiben im CRM.",
+  "connectors.bot.dispactModalTitle": "Dispact-Bot verbinden",
+  "connectors.bot.dispactTokenHint":
+    "Der App-Token des Bots. Er beginnt mit gwapp_, wird im Schlüsseltresor gespeichert und nie wieder angezeigt.",
+  "connectors.bot.dispactAddress": "Chat-Adresse",
+  "connectors.bot.dispactAddressHint":
+    "Die Webadresse eures Team-Chats, etwa https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Ereignis-Schlüssel",
+  "connectors.bot.eventsSecretHint":
+    "Optional. Kopiert den Ereignis-Schlüssel (whsec_…) von der Seite der Margince-App in eurem Chat. Mit ihm liest Margince einen Kanal, sobald er neue Nachrichten hat, und prüft den Rest stündlich; ohne ihn prüft Margince jeden Kanal jede Minute.",
+  "connectors.bot.eventsSecretKeepHint":
+    "Leer lassen, um den gespeicherten Ereignis-Schlüssel zu behalten.",
+
+  "channelLink.title": "Team-Chat",
+  "channelLink.none": "Noch kein Kanal",
+  "channelLink.noneSub":
+    "Ein privater Kanal hält das Team zu diesem Datensatz auf dem Laufenden.",
+  "channelLink.create": "Kanal erstellen",
+  "channelLink.linkExisting": "Vorhandenen Kanal verknüpfen",
+  "channelLink.linkCta": "Kanal verknüpfen",
+  "channelLink.linkFailed": "Kanal nicht verknüpft",
+  "channelLink.channelField": "Kanalname oder Link",
+  "channelLink.channelHint":
+    "Wähle einen privaten Kanal, in dem der Bot ist. Für einen anderen Kanal füge den Bot dort zuerst im Chat hinzu.",
+  "channelLink.summarize":
+    "Bisherige Unterhaltung zusammenfassen (bis zu 5 Zusammenfassungen)",
+  "channelLink.verbosity": "Was Margince postet",
+  "channelLink.verbosityHint":
+    "Die Karte im Kanal bleibt auf jeder Stufe aktuell.",
+  "channelLink.verbosityFailed": "Einstellung nicht gespeichert",
+  "channelLink.verbosity.everything": "Alles",
+  "channelLink.verbosity.important": "Nur Wichtiges",
+  "channelLink.verbosity.milestones": "Nur Meilensteine",
+  "channelLink.verbosity.silent": "Still (nur die Karte)",
+  "channelLink.open": "{name} im Team-Chat öffnen",
+  "channelLink.copy": "Kanallink kopieren",
+  "channelLink.copied": "Kanallink kopiert",
+  "channelLink.copyRemedy": "Öffne den Kanal und kopiere dort seine Adresse.",
+  "channelLink.notInChat_one":
+    "{count} eingeladenes Mitglied hat kein Chat-Konto.",
+  "channelLink.notInChat_other":
+    "{count} eingeladene Mitglieder haben kein Chat-Konto.",
+  "channelLink.notAdded_one":
+    "{count} eingeladenes Mitglied wurde nicht hinzugefügt. Prüfe die Zielgruppe der App in Dispact.",
+  "channelLink.notAdded_other":
+    "{count} eingeladene Mitglieder wurden nicht hinzugefügt. Prüfe die Zielgruppe der App in Dispact.",
+  "channelLink.pausedBadge": "Pausiert",
+  "channelLink.paused": "Kanal pausiert",
+  "channelLink.pausedBody":
+    "Der Kanal wurde archiviert, oder der Bot hat den Zugriff verloren. Es wird nichts gepostet, bis du ihn trennst und einen anderen Kanal verknüpfst.",
+  "channelLink.unlink": "Trennen",
+  "channelLink.unlinkNamed": "{name} trennen",
+  "channelLink.unlinkTitle": "Diesen Kanal trennen?",
+  "channelLink.unlinkBody":
+    "Margince postet und liest dort nicht mehr. Der Kanal und seine Nachrichten bleiben im Chat.",
+  "channelLink.refused.botNotConnected":
+    "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
+  "channelLink.refused.channelNotFound":
+    "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
+  "channelLink.refused.channelNotPrivate":
+    "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
+  "channelLink.refused.botNotMember":
+    "Der Bot ist kein Mitglied dieses Kanals. Füge ihn dem Kanal hinzu und versuche es dann noch einmal.",
+  "channelLink.refused.channelAlreadyLinked":
+    "Dieser Kanal gehört schon zu einem anderen Deal oder Projekt.",
+  "channelLink.refused.recordAlreadyLinked":
+    "Dieser Datensatz hat schon einen Kanal.",
+  "channelLink.refused.providerUnreachable":
+    "Der Chat war nicht erreichbar. Es wurde nichts geändert, versuche es also noch einmal.",
 
   // Die Consumer-Mail-Liste des Workspace (CAP-PARAM-5).
   "consumerMail.title": "Freemail-Domains",
@@ -13312,7 +13450,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "prefs.alwaysOn": "Immer an",
   "confirm.title": "Ihre Angaben",
   "confirm.intro":
-    "Margince, ein KI-System, führt dieses CRM. Unten steht alles, was über Sie erfasst ist. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
+    "Unten steht alles, was über Sie erfasst ist. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
+  "confirm.introNamed":
+    "{controller} hat die folgenden Angaben über Sie gespeichert. Sie können jede Angabe korrigieren oder ihre Löschung beantragen.",
   "confirm.card.title": "Erfasste Angaben",
   "confirm.field.fullName": "Name",
   "confirm.field.title": "Jobtitel",
@@ -13350,7 +13490,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.done.body":
     "Ihre Antwort wurde erfasst. Änderungen gehen zur Übernahme an eine Person aus dem Team. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
-    "Dieser Link ist nicht mehr gültig. Der Link wurde möglicherweise bereits verwendet oder ist abgelaufen.",
+    "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
+  "confirm.questionChanged":
+    "Die Frage auf dieser Seite hat sich geändert, nachdem Sie sie geöffnet haben. Laden Sie die Seite neu und antworten Sie noch einmal.",
   "prefs.lockedWhy":
     "Dieser Zweck bleibt aktiviert, da er für einen von Ihnen angeforderten Vorgang benötigt wird.",
   "prefs.confirmationNeededWhy":
@@ -13421,7 +13563,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auto.group.inquiries": "Neue Anfragen",
   "auto.group.deals": "Deals",
   "auto.group.customers": "Kunden",
-  "auto.group.meetings": "Besprechungen",
+  "auto.group.meetings": "Termine",
   "auto.group.lists": "Listen",
   "auto.instances": "Eingerichtete Automatisierungen",
   "auto.instances.empty":
@@ -13905,7 +14047,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Kontaktdaten",
   "settings.part.integrations.accounting": "Buchhaltung",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Telegram-Bot",
+  "settings.part.integrations.telegram": "Chat-Bots",
   "settings.part.integrations.sharedMailboxes": "Gemeinsame Postfächer",
   "sharedMailboxes.title": "Gemeinsame Postfächer",
   "sharedMailboxes.intro":
@@ -15537,8 +15679,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eingabe zu groß für das Entscheidungsmodell",
   "aicalls.reason.decision_uncertified":
     "Entscheidungsmodell für diese Aufgabe nicht zertifiziert",
-  "aicalls.reason.decision_local_only":
-    "Aufgabe nur lokal, Entscheidungsmodell nicht lokal",
   "aicalls.reason.timeout":
     "Beim vorherigen Versuch wurde das Zeitlimit überschritten",
   "aicalls.decisionAnswer": "antwortete {choice} mit {confidence}",
@@ -15829,7 +15969,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.redirectCopiedFor": "URI für {purpose} kopiert",
   "oauthApp.redirect.mailbox_connect": "Postfach",
   "oauthApp.redirect.calendar_connect": "Kalender",
-  "oauthApp.redirect.documents_connect": "Besprechungsnotizen",
+  "oauthApp.redirect.documents_connect": "Terminnotizen",
   "oauthApp.redirect.sign_in": "Anmeldung",
   "oauthApp.redirect.extension_connect": "Verbinden",
   "oauthApp.redirectTitle": "Autorisierte Weiterleitungs-URIs",
@@ -17635,6 +17775,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.attachment.archived.label": "Datei archiviert",
   "webhooks.event.attachment.archived.when":
     "Eine Datei an einem Datensatz wird archiviert.",
+  "webhooks.event.attachment.restored.label": "Datei wiederhergestellt",
+  "webhooks.event.attachment.restored.when":
+    "Eine archivierte Datei ist wieder an einem Datensatz.",
   "webhooks.eventGroup.projects": "Projekte",
   "webhooks.event.project.created.label": "Projekt erstellt",
   "webhooks.event.project.created.when":
@@ -18082,7 +18225,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es konnte nicht gelesen werden, welche Teammitglieder in den Threads dieses Kontakts kein Postfach verbunden haben.",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
-  "contact.graph.sideColumn": "Vorstellungen und Veränderungen",
   "contact.graph.recordWorksWith": "Erfassen: arbeitet mit {name}",
   "contact.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "contact.graph.withColleague": "mit {name}",
@@ -18133,7 +18275,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.lastYesterday": "Gestern",
   "contact.intro.lastDays": "Vor {days} Tagen",
   "contact.intro.lastNever": "Keiner in 90 Tagen",
-  "contact.intro.stripWho": "Wege",
   "contact.intro.stripWhoMix":
     "{direct} direkt · {indirect} über einen Kontakt",
   "contact.intro.stripWhoOwn": "Inklusive deiner eigenen Beziehung",
@@ -18153,14 +18294,37 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.warmed": "Wärmer",
   "contact.intro.change.cooled": "Kühler",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Anfrage zur Vorstellung",
   "contact.intro.handoffNotStarted": "Nicht begonnen",
   "contact.intro.handoffUnread": "Nicht lesbar",
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
   "contact.intro.relayTitle": "Status der Vorstellung",
-  "contact.intro.stripLabel": "Netzwerk in Zahlen",
+  "contact.chapter.jump": "Auf diesem Tab",
+  "contact.chapter.wayIn": "Zugang",
+  "contact.chapter.whoAnswer":
+    "Wer aus deinem Team und aus dem Unternehmen mit {name} korrespondiert, und wie oft.",
+  "contact.chapter.progress": "Fortschritt",
+  "contact.chapter.routes_one": "{count} Weg",
+  "contact.chapter.routes_other": "{count} Wege",
+  "contact.chapter.allDirect_one": "direkt",
+  "contact.chapter.allDirect_other": "alle direkt",
+  "contact.chapter.allVia_one": "über einen Kontakt",
+  "contact.chapter.allVia_other": "alle über einen Kontakt",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Vorstellung: {handoff}. Letzte Änderung: {change}.",
+  "contact.chapter.toCheck": "Zu prüfen",
+  "contact.chapter.toCheckAnswer":
+    "Was Margince aus E-Mails und Seiten gelesen hat. Jeder Eintrag lässt sich bestätigen, korrigieren oder verwerfen.",
+  "contact.chapter.sources": "Quellen",
+  "contact.chapter.sourcesAnswer":
+    "Was jede Quelle sagt. Nichts hier überschreibt, was ein Teammitglied eingetragen hat.",
+  "contact.chapter.recordKeeping": "Datenpflege",
+  "contact.chapter.recordKeepingAnswer":
+    "Felder, Einwilligungen und Einstellungen zu diesem Kontakt.",
+  "contact.chapter.researchAction": "Öffentliche Quellen recherchieren",
   "contact.intro.mapTitle": "Wer {name} kennt",
   "contact.intro.stepRoute": "Weg wählen",
   "contact.intro.stepRoutePick": "auswählen, wen du fragst",
@@ -18306,7 +18470,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.unavailable": "Nicht verfügbar",
   "contact.network.momentsTitle": "Was sich geändert hat",
   "contact.network.momentsSub":
-    "Veränderungen in dieser Beziehung, aus den Nachrichten.",
+    "Veränderungen aus den Nachrichten und frühere Vorstellungen.",
   "contact.network.noMoments": "Keine neuen Veränderungen in dieser Beziehung.",
   "contact.change.repliedAfterGap":
     "Der Kontakt hat nach {days} ruhigen Tagen geantwortet.",
@@ -19772,6 +19936,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.title.automation_run.failed": "{name} ist fehlgeschlagen",
   "worklist.title.automation_run.blocked": "{name} wurde blockiert",
   "worklist.title.meeting_outcome": "Ergebnis von {name} festhalten",
+  "worklist.title.meeting_outcome.read_only": "Noch kein Ergebnis für {name}",
   "worklist.title.meeting_follow_up": "Bei {name} nachfassen",
   "worklist.title.awaiting_reply": "Noch keine Antwort: {name}",
   "worklist.title.bounce": "Unzustellbar: {name}",
@@ -20058,6 +20223,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Teammitglied bittet dich, es einem Kontakt vorzustellen. Nimm die Anfrage an oder lehne sie ab.",
   "worklist.ask.meeting_outcome":
     "Dieser Termin ist vorbei, und nichts hält fest, wie er gelaufen ist. Halte das Ergebnis fest. Fand er nicht statt, wähle „Hat nicht stattgefunden“ oder sag ihn über die Kalendereinladung ab.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Wer den Termin organisiert hat, hält fest, wie er gelaufen ist. Du kannst ihn nicht ändern. Erinnere bei Bedarf daran und markiere diese Erinnerung dann als erledigt.",
   "worklist.ask.weekly_commitment":
     "Du hast das für diese Woche geplant. Erledige es oder verschiebe es in deinem Wochenplan.",
   "worklist.ask.awaiting_reply":
@@ -20590,6 +20757,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Als eingehalten markiert",
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
+  "worklist.verb.meetingSkipNextStep": "Nächsten Schritt überspringen",
+  "worklist.verb.meetingNextStep": "Wie geht es weiter?",
   "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
@@ -20959,6 +21128,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.geminiVertex": "Gemini auf Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-kompatibel",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Integrierter Testanbieter",
@@ -21065,6 +21235,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkConfirm": "Unternehmen verknüpfen",
   "lead.company.linkOpens":
     "Der Unternehmensname dieses Leads öffnet dann {name}.",
+  "lead.company.addedOnQualify":
+    "Noch kein Unternehmen verknüpft. Beim Qualifizieren wird es verknüpft oder angelegt.",
   "lead.company.linkOnQualify":
     "Es wird noch kein Kontakt angelegt. Wenn du diesen Lead qualifizierst, wird er ein Kontakt bei {name}.",
   "lead.company.matchedByDomain": "Gleiche Website-Domain",
@@ -21275,6 +21447,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_overnight": "Vorschlag prüfen",
   "approval.commitment.proposalExpiresIn": "Vorschlag läuft in {countdown} ab",
   "approval.commitment.noDueDay": "Kein Tag genannt",
+  "approval.commitment.strength": "Wie verbindlich",
+  "approval.commitment.tentative": "Mit Vorbehalt: Es hieß, man versuche es",
   "approval.commitment.promiseStatus": "Stand der Zusage",
   "approval.commitment.notFulfilled":
     "Das Erstellen der Aufgabe markiert die Zusage nicht als erfüllt.",
@@ -21296,6 +21470,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",
+  "activity.notes.connectHint":
+    "Notizen sind angehängt. Verbinde Terminnotizen, um sie zu lesen.",
+  "activity.notes.otherAccount":
+    "Notizen sind angehängt. Verbinde Terminnotizen mit dem Google-Konto deines Kalenders.",
+  "captureConcern.notesGrant": "Terminnotizen können nicht gelesen werden",
+  "captureConcern.notesAccount":
+    "Terminnotizen benötigen dasselbe Google-Konto wie der Kalender",
   "captureConcern.reauth": "Erneute Verbindung erforderlich",
   "captureConcern.error": "Verbindungsfehler",
   "captureConcern.failing": "Synchronisierung schlägt fehl",
@@ -21359,7 +21540,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.acceptNeedsChoice":
     "Verfügbar, sobald unter Kalender ein Kalender für Buchungen gespeichert ist.",
   "scheduling.col.link": "Link",
-  "scheduling.offeredLengths": "Weitere Besprechungsdauern",
+  "scheduling.offeredLengths": "Weitere Termindauern",
   "scheduling.offeredLengthsHelp":
     "Minuten durch Kommas trennen, zum Beispiel 30, 45, 60. Die Standarddauer bleibt verfügbar.",
   "scheduling.col.length": "Dauer",
@@ -21622,6 +21803,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.guide": "Routing-Leitfaden ↗",
   "aiServing.blocked.decisions":
     "Das Entscheidungsmodell antwortet über den Entscheidungs-Endpunkt von OpenRouter, der keinen Routing-Block annimmt. Das Zeitlimit des Entscheidungsmodells wird pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} stellt das Entscheidungsmodell selbst bereit, daher gilt kein Host-Routing. Das Zeitlimit wird pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.blocked.provider":
     "Host-Routing gilt nur für OpenRouter. {provider} stellt dieses Modell selbst bereit. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.blocked.host":
@@ -21952,9 +22135,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.propose_roles": "Erkennung von Einkaufsrollen",
   "aiTask.name.rate_extract": "Erfassung von Wechselkursen",
   "aiTask.name.report_interpret": "Bewertung eines Vertriebsberichts",
-  "aiTask.name.report_setup": "Bericht aus einer Beschreibung einrichten",
+  "aiTask.name.report_setup":
+    "Berichtseinrichtung oder Umsatzziele vorschlagen",
   "aiTask.name.request_settlement": "Prüfung der Antwort auf das Anliegen",
   "aiTask.name.rewrite": "Umformulieren",
+  "aiTask.name.chat_summary": "Zusammenfassung eines Chat-Kanals",
   "aiTask.name.signal_extract": "Erkennung von Gesprächssignalen",
   "aiTask.name.site_extract": "Ausführliche Website-Auswertung",
   "aiTask.name.site_fact_extract": "Erfassung von Website-Fakten",
@@ -21963,7 +22148,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.summarize": "Datensatzzusammenfassung",
   "aiTask.name.tag_suggest": "Tag-Vorschläge",
   "aiTask.name.transcript": "Transkriptauswertung",
-  "aiTask.name.transcript_propose": "Erkennung von Besprechungsaufgaben",
+  "aiTask.name.transcript_propose": "Erkennung von Aufgaben aus Terminen",
   "aiTask.name.voice_build": "Erstellung der Voice DNA",
   "aiTask.name.weekly_learnings": "Erkenntnisse der letzten Woche",
   "aiTask.name.weekly_review": "Wöchentlicher Rückblick",
@@ -22227,7 +22412,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.assessment.refresh": "Einschätzung erneuern",
   "analytics.assessment.retry": "Erneut versuchen",
   "analytics.assessment.evidenceTitle": "Worauf die Einschätzung beruht",
-  "analytics.decisions.title": "Entscheidungen aus der letzten Besprechung",
+  "analytics.decisions.title": "Entscheidungen aus dem letzten Termin",
   "analytics.decisions.purpose":
     "Jede Entscheidung ist eine Aufgabe am Deal mit Verantwortlichem und Prüftermin. Abschließen hält die Arbeit fest, keinen Verkauf.",
   "analytics.decisions.record": "Entscheidung festhalten",
@@ -22637,7 +22822,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Grund nicht verfügbar",
   "brief.done.markedLost": "Als verloren markiert",
   "brief.done.customerWrote": "Der Kunde schrieb:",
-  "magic.lane.doneOther": "Weitere Änderungen",
+  "brief.done.small_one": "{count} kleine Änderung",
+  "brief.done.small_other": "{count} kleine Änderungen",
+  "brief.done.smallLabel": "Kleine Änderungen, neueste zuerst",
+  "brief.done.why": "Warum",
+  "brief.done.undoNote": "Rückgängig",
   "changes.bulk.undone_one": "Auf {count} Deal rückgängig gemacht.",
   "changes.bulk.undone_other": "Auf {count} Deals rückgängig gemacht.",
   "changes.bulk.partly_one": "{count} Deal wurde teilweise rückgängig gemacht.",
@@ -22747,6 +22936,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.work.more": "Mehr anzeigen",
   "progress.plannedAhead": "Offene Pipeline, noch nicht gewonnen",
   "progress.rail": "Ziel und Definition",
+  "progress.summary": "Zusammenfassung",
+  "progress.summary.refresh": "Zusammenfassung aktualisieren",
+  "progress.summary.writing": "Zusammenfassung wird geschrieben",
+  "progress.summary.more": "Ganze Zusammenfassung lesen",
   "progress.goalFor": "Ziel für {period}",
   "progress.goalMonths": "Monate mit Ziel",
   "progress.goalMonthsSet": "{set} von {needed}",
@@ -22792,6 +22985,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.status": "Status",
   "goals.yearly": "Jahresziel in {currency}",
   "goals.spread": "Gleich verteilen",
+  "goals.propose": "Monate vorschlagen",
+  "goals.propose.busy": "Bisher gewonnener Umsatz wird gelesen",
+  "goals.propose.title": "Vorschlag: {total} für das Jahr",
+  "goals.propose.review":
+    "Gespeichert wird erst, wenn du den Entwurf speicherst.",
+  "goals.propose.apply": "Diese Monate übernehmen",
+  "goals.propose.noModel":
+    "Ein Monatsvorschlag braucht ein eingerichtetes KI-Modell. Du kannst die Monate weiterhin von Hand eingeben.",
+  "goals.propose.noHistory":
+    "{name} hat in {year} und im Jahr davor keinen gewonnenen Umsatz, aus dem sich ein Muster lesen lässt. Gib die Monate von Hand ein.",
+  "goals.proposedByAi": "Von Margince vorgeschlagen",
   "goals.monthsSum": "Die Monate ergeben zusammen {total}.",
   "goals.monthsMissing_one": "{count} Monat ist nicht gesetzt.",
   "goals.monthsMissing_other": "{count} Monate sind nicht gesetzt.",

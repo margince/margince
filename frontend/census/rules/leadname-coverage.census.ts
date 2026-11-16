@@ -1,23 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// What a lead is called is one fact: its own name if it has one, else its
-// email address. `format/leadname.ts` answers it, mirroring `leadIdentityName`
-// in the contacts module.
-//
-// The spelling refused here, `lead.full_name ?? lead.email`, fires on null
-// alone. A lead with an empty `full_name` then renders blank, while the server
-// names the same lead by its address.
-//
-// The subject is derived: every `??` or `||` chain under `src/` that falls back
-// from a `full_name` to an `email` of the same record. Both operators count,
-// because a second author of one rule is the defect.
-//
-// Left out of scope:
-// - `full_name ?? ""` with no address behind it, which seeds a form field;
-// - `email ?? full_name`, which is the address-first rule;
-// - a name resolved through a variable or a helper, which needs the checker.
-
+// Null-only fallbacks leave unnamed leads blank and disagree with promotion.
+// Both fallback operators must use the shared feature owner.
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
@@ -130,8 +115,8 @@ export function fallbacksIn(fileName: string, text: string): string[] {
 // The files that own the rule, named one by one. A second helper beside
 // `leadname.ts` would otherwise pass the census.
 const LEAD_NAME_OWNERS: ReadonlySet<string> = new Set([
-  "src/format/leadname.ts",
-  "src/format/leadname.test.ts",
+  "src/features/leads/leadname.ts",
+  "src/features/leads/leadname.test.ts",
 ]);
 
 const judged = (file: CensusFile) =>
@@ -145,6 +130,6 @@ export const rule: CensusRule = {
   visit: (file) => (file.source ? fallbacksOf(file.source, file.rel) : []),
   advice:
     "A lead's name is worked out in one place: call leadName() from " +
-    "format/leadname.ts instead of spelling `full_name ?? email` again. " +
+    "features/leads/leadname.ts instead of spelling `full_name ?? email` again. " +
     "That fallback renders a lead with an empty name as blank.",
 };

@@ -55,6 +55,12 @@ func AnalyticsSchemaIn(ctx context.Context, tx pgx.Tx) (analyticsquery.Schema, m
 
 func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analyticsquery.Schema {
 	entities := map[string]analyticsquery.Entity{}
+	// The one recorded check: a role that reads no population is not offered
+	// the schema. Each population below is then asked unrecorded, so a role
+	// that reads only some of them still is.
+	if auth.RequireOneOf(ctx, analyticsPopulationChecks(specs)...) != nil {
+		return analyticsquery.Schema{Entities: entities, Version: schemaVersion(entities)}
+	}
 	for key, spec := range specs {
 		// The population's OWN read gate, applied at derivation. grantedSpec
 		// below narrows only the fields that read ANOTHER record type
@@ -62,7 +68,7 @@ func analyticsSchemaFrom(ctx context.Context, specs map[string]reportSpec) analy
 		// gate, and a derivation that skipped it would name populations —
 		// here, in the vocabulary document, and in the unknown-name refusal —
 		// to a seat that may not read a row of them.
-		if requireAnalyticsRead(ctx, spec.entity) != nil {
+		if _, err := auth.Unrecorded(ctx, string(spec.entity), principal.ActionRead); err != nil {
 			continue
 		}
 		granted := grantedSpec(ctx, spec)
@@ -237,6 +243,21 @@ func describeCurrencyBasis(out *strings.Builder, entity analyticsquery.Entity) {
 		}
 		out.WriteString("\n")
 	}
+}
+
+// analyticsPopulationChecks is the read check of each population specs name,
+// once each, in a fixed order so the recorded check reads the same every call.
+func analyticsPopulationChecks(specs map[string]reportSpec) []auth.Check {
+	var objects []string
+	for _, spec := range specs {
+		objects = append(objects, string(spec.entity))
+	}
+	slices.Sort(objects)
+	checks := make([]auth.Check, 0, len(objects))
+	for _, object := range slices.Compact(objects) {
+		checks = append(checks, auth.Check{Object: object, Actions: []principal.Action{principal.ActionRead}})
+	}
+	return checks
 }
 
 func requireAnalyticsRead(ctx context.Context, entity datasource.EntityType) error {

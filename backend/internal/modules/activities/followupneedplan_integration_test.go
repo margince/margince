@@ -35,17 +35,21 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Forty held meetings in the follow-up window, each with the rep and one
-	// customer who has a thousand mails on record.
+	// customer whose thousand mails predate every meeting. No later send can
+	// settle a meeting before its content gate is evaluated. The engaged lead
+	// makes this contact a customer under the production follow-up rule.
 	if _, err := tx.Exec(ctx, `
 	INSERT INTO contact (full_name, source, captured_by) VALUES ('Busy Customer', 'manual', 'human:seed');
+	INSERT INTO lead (full_name, status, from_contact_id, source, captured_by)
+	  SELECT 'Busy Customer Lead', 'engaged', id, 'manual', 'human:seed' FROM contact WHERE full_name = 'Busy Customer';
 	CREATE TEMP TABLE busy_mail AS
-	  SELECT gen_random_uuid() id, g, r.at - random() * 30 * interval '1 day' at_time FROM generate_series(1, 1000) g, busy_rep r;
+	  SELECT gen_random_uuid() id, g, r.at - interval '30 days' + g * interval '1 minute' at_time FROM generate_series(1, 1000) g, busy_rep r;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, thread_key)
 	  SELECT id, 'email', 'Mail '||g, at_time, 'outbound', 'manual', 'human:seed', 'busy'||g FROM busy_mail;
 	INSERT INTO activity_participant (activity_id, address, contact_id, role)
 	  SELECT m.id, 'busy@customers.example', c.id, 'to' FROM busy_mail m, contact c WHERE c.full_name = 'Busy Customer';
 	CREATE TEMP TABLE busy_meeting AS
-	  SELECT gen_random_uuid() id, g, r.at - interval '4 days' - random() * interval '12 days' at_time FROM generate_series(1, 40) g, busy_rep r;
+	  SELECT gen_random_uuid() id, g, r.at - interval '4 days' - g * interval '6 hours' at_time FROM generate_series(1, 40) g, busy_rep r;
 	INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by, meeting_status)
 	  SELECT id, 'meeting', 'Meeting '||g, at_time, 'outbound', 'manual', 'human:seed', 'held' FROM busy_meeting;
 	INSERT INTO activity_participant (activity_id, address, user_id, role)
@@ -54,19 +58,21 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 	  SELECT m.id, 'busy@customers.example', c.id, 'attendee' FROM busy_meeting m, contact c WHERE c.full_name = 'Busy Customer';
 	INSERT INTO activity_link (activity_id, entity_type, contact_id)
 	  SELECT m.id, 'contact', c.id FROM busy_meeting m, contact c WHERE c.full_name = 'Busy Customer';
-	ANALYZE`); err != nil {
+	ANALYZE activity, activity_participant, activity_link, lead, contact`); err != nil {
 		t.Fatalf("seeding the meetings: %v", err)
 	}
 	if _, err := tx.Exec(ctx, "SET LOCAL jit = off"); err != nil {
 		t.Fatal(err)
 	}
-	every := func(func(any) int) (string, error) { return scopeUnbounded, nil }
+	every := everyMeetingFollowUp
 	statement, args, err := meetingFollowUpsStatement(e.as(), asOf, 3, every, AwaitingReplyScanCap)
 	if err != nil {
 		t.Fatal(err)
 	}
 	var relations float64
-	if err := tx.QueryRow(ctx, `SELECT (SELECT count(*) FROM activity_link) + (SELECT count(*) FROM activity_participant)`).Scan(&relations); err != nil {
+	if err := tx.QueryRow(ctx, `WITH fixture AS (SELECT id FROM busy_mail UNION ALL SELECT id FROM busy_meeting)
+ SELECT (SELECT count(*) FROM activity_link WHERE activity_id IN (SELECT id FROM fixture))
+      + (SELECT count(*) FROM activity_participant WHERE activity_id IN (SELECT id FROM fixture))`).Scan(&relations); err != nil {
 		t.Fatal(err)
 	}
 	var raw string
@@ -75,7 +81,11 @@ func TestTheMeetingFollowUpReadsABusyContactsHistoryOnce(t *testing.T) {
 	}
 	var peak, gated, gatedByID float64
 	var peakStep planNode
-	decodePlan(t, raw).walk(func(n planNode) {
+	plan := decodePlan(t, raw)
+	if plan.ActualRows != 1 {
+		t.Fatalf("the latest held meeting must still need follow-up, got %.0f rows", plan.ActualRows)
+	}
+	plan.walk(func(n planNode) {
 		if n.SubplanName != "CTE "+followUpReadable {
 			return
 		}

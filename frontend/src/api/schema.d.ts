@@ -663,6 +663,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/passports/{id}/app-binding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Allow a chat app's user again after their passport was revoked.
+         * @description A revoked passport that a chat app (Dispact) minted keeps naming that app's user, so the
+         *     user stays refused. Releasing it lets the user's next call mint a fresh passport under the
+         *     same checks as a first call. The passport itself stays revoked. A user releases their own
+         *     passport; releasing another user's requires the admin role. Audited.
+         */
+        delete: operations["releasePassportAppBinding"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports/{id}/areas": {
         parameters: {
             query?: never;
@@ -2996,7 +3022,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * What this account needs, as the model last judged it for this reader.
+         * What this company needs, as the model last judged it for this reader.
          * @description The account scan is the model's reading of one account for one reader: what the
          *     exchanges and the pipeline say needs a contact, each finding citing the records it
          *     rests on and quoting the words it read. It is the same advice shape the 360's own
@@ -3016,7 +3042,7 @@ export interface paths {
         get: operations["getCompanyScan"];
         put?: never;
         /**
-         * Make sure this reader's scan of the account is current, reading it again only when the account changed.
+         * Make sure this reader's scan of the company is current, reading it again only when the company changed.
          * @description Opening an account page calls this once. It compares the account as this reader
          *     sees it now — a fingerprint over the composite read, the recent message words, the
          *     prompt and the routing — against the stored scan, and answers in one of three ways:
@@ -3097,7 +3123,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The standing account brief — what this account is, where it stands, and what changed.
+         * The standing company brief — what this company is, where it stands, and what changed.
          * @deprecated
          * @description A short written brief over the same records the 360 serves, cached and reused
          *     until its inputs change.
@@ -3124,7 +3150,7 @@ export interface paths {
         get: operations["getCompanyBrief"];
         put?: never;
         /**
-         * Regenerate this account's brief, ignoring the cached one.
+         * Regenerate this company's brief, ignoring the cached one.
          * @deprecated
          * @description The explicit refresh behind the brief card's "outdated — refresh". It reads and
          *     writes only the cached brief: no record field changes, and nothing is sent.
@@ -3194,7 +3220,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask one of the prepared questions about this account.
+         * Ask one of the prepared questions about this company.
          * @description The company view's "Ask Margince". The question is chosen from a fixed list, not
          *     typed: each prepared question names records the answer must be written from, so
          *     every sentence can be cited and checked. Free-text questions need retrieval that
@@ -3653,6 +3679,34 @@ export interface paths {
         };
         /** Relationship strength for a company (max over current employees). */
         get: operations["getCompanyStrength"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/customer-payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overdue customer invoices the reader may see.
+         * @description Requires finance and company read grants. Company row visibility, including
+         *     private capture rows and live record shares, is applied before totals,
+         *     counts, previews and pages. The payment read also requires company ownership,
+         *     a shared owner team, an explicit read share, or an all-rows grant;
+         *     workspace-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
+         *     Only the current accounting connection and its live customer links contribute.
+         *     Disputed invoices and former customers are excluded from collection prompts.
+         *     Amounts stay in their invoice currency; totals in different currencies stay separate.
+         *     Invoice pages are ordered by due date and invoice id, oldest first.
+         */
+        get: operations["getCustomerPayments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6087,7 +6141,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+         * The counts and breakdowns installed extensions add to Reports, answered for this caller.
          * @description Each count and breakdown an installed extension declares, run through the report engine for
          *     this caller. Row scope, field masks and the group floor apply as they do to a core report.
          *     Which extensions are installed is a fact of the binary, so the contract cannot list them;
@@ -7233,7 +7287,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Would this account-started message be allowed, and on what ground.
+         * Would a new message with no thread behind it be allowed, and on what ground.
          * @description The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
          *     with no anchor to derive a category from. It names its own `links`, exactly as the send
          *     it previews does.
@@ -10557,6 +10611,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/analytics/progress/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * A few written sentences on where one Progress reading stands against its sales goal and what is still open.
+         * @description The model reads the figures `GET /analytics/progress` answers for the same period and
+         *     scope, under the caller's own reach, and nothing else. Each sentence cites the figures it
+         *     rests on, and a sentence quoting a number none of them holds is dropped. The answer is kept
+         *     per reader until a figure moves. Without a model, or when the reply cannot be grounded, it
+         *     answers no sentences and `generated_by` says so, and Progress shows its figures alone.
+         */
+        post: operations["summarizeSalesProgress"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/analytics/sales-goals": {
         parameters: {
             query?: never;
@@ -10624,6 +10702,34 @@ export interface paths {
         post?: never;
         /** Discard the shared draft and keep the published goals. */
         delete: operations["discardSalesGoalDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/analytics/sales-goals/{owner_id}/{year}/proposed-months": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Twelve monthly goals proposed for one seller from their closed revenue. Nothing is saved.
+         * @description The model reads the seller's closed revenue by month for the plan year and the year before,
+         *     and the yearly goal when the request gives one. It answers twelve months and one or two
+         *     sentences on the pattern it followed. With a yearly goal the months add up to it exactly.
+         *     The reader reviews the months in the editor and saves them as a draft with origin `ai`.
+         *     Only a reader who may set this seller's goals may ask. Without a model it answers 409
+         *     `ai_not_configured`, and with no closed revenue in either year 409 `no_sales_history`.
+         */
+        post: operations["proposeSalesGoalMonths"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -11015,7 +11121,7 @@ export interface paths {
         /**
          * Disconnect a messaging channel (archives the binding and destroys the credential).
          * @description Archives the connection as `disconnected` — which is what stops ingress, since only a
-         *     live `connected` binding is polled — and destroys the sealed bot token. Already-captured
+         *     live `connected` binding is polled — and destroys the sealed bot token and events secret. Already-captured
          *     activities are retained: disconnecting stops capture, it does not erase history.
          */
         delete: operations["disconnectChannel"];
@@ -11034,6 +11140,164 @@ export interface paths {
          *     anything it has ever sent, and every message it received would be skipped silently.
          */
         patch: operations["replaceChannelToken"];
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The chat channel a deal or project is linked to, if any.
+         * @description `off` means no chat bot is connected, so nothing can be linked. `none` means the record has
+         *     no channel yet. `paused` means the channel was archived or deleted in the chat, or the bot
+         *     lost its access; nothing is posted until the link is replaced. A deal's channel is also its
+         *     project's, so a project reads the channel of its deal when it has none of its own.
+         */
+        get: operations["getChannelLink"];
+        put?: never;
+        /**
+         * Link a deal or project to a new or existing private chat channel.
+         * @description `create` makes a private channel named after the record and invites every live member who may
+         *     open the record, the record's owner and the member linking it first, at most 50. A member with
+         *     no chat account is counted in `not_in_chat`, and members over the 50 in `skipped_over_cap`.
+         *     `existing` takes a private channel the bot is already in, named by its slug or its link, and
+         *     changes nobody's membership.
+         *
+         *     Linking an existing channel requires `summarize_history`. When it is true, the talk so far
+         *     is read and up to five summaries are filed as notes; an agent must ask the user first. A
+         *     channel Margince creates has no history to summarise.
+         *
+         *     A deal and its project share one channel: linking a deal whose project has none links both.
+         */
+        post: operations["linkChannel"];
+        /**
+         * Stop syncing a record with its chat channel.
+         * @description Margince stops posting and reading. The channel and its messages stay in the chat, and the
+         *     notes already filed stay on the record. Linking the same channel again later files no
+         *     summary twice.
+         */
+        delete: operations["unlinkChannel"];
+        options?: never;
+        head?: never;
+        /**
+         * Choose how much Margince posts into a record's channel.
+         * @description `everything` posts every change, `important` (the default) the changes a team acts on,
+         *     `milestones` only stage, offer and contract steps, and `silent` posts nothing but keeps the
+         *     card current.
+         */
+        patch: operations["setChannelVerbosity"];
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The private channels this record can be linked to.
+         * @description The private, unarchived channels the bot is a member of that no live link holds, by name.
+         *     Only a member who may link this record reads it. A private channel the bot is not in is
+         *     never listed: the chat does not tell the bot it exists. A member of that channel adds the
+         *     bot to it first.
+         */
+        get: operations["listLinkableChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * File a summary of one message in a record's channel, or of its thread, as a note.
+         * @description Reads the message from the chat, has the AI write a short summary of it, and files that
+         *     summary as a note on the record, as the caller. The message text is not stored. Filing the
+         *     same message again returns the note already filed.
+         */
+        post: operations["fileChannelMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/integrations/dispact/manifest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The manifest that installs the Margince app in a Dispact team (admin).
+         * @description Read-only. Dispact reads `mcp.endpoint` to send each `@Margince` call to this
+         *     installation's `/mcp`, signed with a call token for the caller who asked. `events` is where
+         *     Dispact sends signed notices of new messages in a linked channel. Needs the right to
+         *     connect a chat bot (the `channel_connection` RBAC object).
+         */
+        get: operations["getDispactAppManifest"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/dispact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a signed notice of new talk in a linked Dispact channel (anonymous).
+         * @description Dispact posts here when a linked channel has new messages. The body is signed under
+         *     Standard Webhooks: `webhook-id`, `webhook-timestamp` (unix seconds) and
+         *     `webhook-signature` (`v1,<base64 HMAC-SHA256>` entries separated by spaces) over
+         *     `<id>.<timestamp>.<body>`, keyed by the events secret sealed on the connected bot.
+         *
+         *     A URL check (`type: url_verification`) is answered with its `challenge`. A message notice
+         *     queues one read of the bot's channels, and notices that arrive while that read waits add
+         *     nothing. `channel.archived` pauses the channel's link. A notice for a channel no live link
+         *     has is answered `200` and changes nothing. A `webhook-id` taken in the last 24 hours is
+         *     answered `200` `already_taken`, so Dispact stops retrying a notice whose answer it lost.
+         */
+        post: operations["receiveDispactChannelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/web-forms": {
@@ -14222,6 +14486,10 @@ export interface paths {
          *     `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
          *     source that FAILED is named there too. A day cannot read as clear while something
          *     that would have filled it never answered.
+         *
+         *     `If-None-Match` with the answer's `ETag` answers 304 when the bytes have not
+         *     changed. The answer is `private, no-cache`: only the reader's own browser keeps it,
+         *     and it asks again before each use.
          */
         get: operations["getWorklist"];
         put?: never;
@@ -16334,6 +16602,9 @@ export interface paths {
          *     - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
          *       model list, and `model_count` is its length.
          *     - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+         *     - `gemini_decision` is asked Google's model list, `/v1beta/models` on its endpoint's host:
+         *       Google answers a bad key with 400, so the decision request cannot tell it from a bad
+         *       body. It passes with no `model_count`.
          *     - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
          *       public, so listing it would pass any key. It passes with no `model_count`.
          *     - Any other decision endpoint is sent the decision request with an empty body. 401 or
@@ -16987,7 +17258,7 @@ export interface paths {
         get: operations["listDataSubjectRequests"];
         put?: never;
         /**
-         * Open a data-subject request (access/rectify/erasure). Admin-mediated; ties to retention and erasure.
+         * Open a data-subject request (access/rectify/erasure). subject_ref is the subject's contact id when they are a contact, else the email they wrote from; only a contact id can be fulfilled. Admin-mediated; ties to retention and erasure.
          * @description The server computes the deadline from `received_at` under the installation's
          *     jurisdiction (`GET /data-subject-requests/deadline` shows it before filing).
          *
@@ -17045,10 +17316,10 @@ export interface paths {
          *     reports that disclosure as unmeetable rather than inventing one, which is what makes an
          *     unconfigured installation visible instead of silently non-compliant.
          *
-         *     NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
-         *     from a jurisdiction's obligation to the words that meet it exists, but no step between
-         *     composing a body and handing it to a provider asks for them. The gap is recorded in
-         *     `backend/gates/messagingruleapplied_test.go`.
+         *     The legal name opens and heads every mail the installation sends as controller. The
+         *     particulars a jurisdiction requires are printed at the end of that mail, each under a label
+         *     in the mail's language, and at the end of a marketing mail a member sends. The particulars
+         *     themselves are printed as stated, in the language they were typed in.
          */
         get: operations["getControllerParticulars"];
         /**
@@ -19282,7 +19553,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Retire an account while preserving historical attribution.
+         * Retire a member while preserving historical attribution.
          * @description Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
          */
         post: operations["removeMember"];
@@ -19464,6 +19735,32 @@ export interface paths {
          *     Answers 404 for an id that is not a live service member, including one already archived.
          */
         post: operations["archiveServiceMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read names and archive state for a bounded set of records.
+         * @description Requires the selected record kind's read grant. A denied object is 403.
+         *     Missing and row-hidden ids are omitted without distinguishing them.
+         *     Includes readable archived records and the company anchor. Results are
+         *     unique and follow the first occurrence of each requested id. This is not
+         *     a page: there is no cursor or total. The input bound applies before deduplication.
+         *     Lead names fall back to email when the full name is blank. Company logos
+         *     use the same revision URL as the company detail read.
+         */
+        get: operations["readRecordReferences"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -23769,7 +24066,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Which accounts your imported network reaches.
+         * Which companies your imported network reaches.
          * @description The account-level payoff of importing an export, and the one answer the ghosts
          *     exist to give: for each company on file, how many of your connections work
          *     there, and how many of those are already contacts.
@@ -24400,7 +24697,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The agreements this account holds, newest first (CONTRACT-WIRE-1).
+         * The agreements this company holds, newest first (CONTRACT-WIRE-1).
          * @description Every contract anchored to this company, whatever its status.
          *
          *     `under_contract` on each row is a DERIVED reading computed from the dates
@@ -28168,6 +28465,8 @@ export interface components {
             credential_kind: "api_key" | "service_account";
             /** @description The provider whose prices this one's calls take for a model its own price sheet does not list: `gemini` for `gemini_vertex`, which serves the same models. A price written for this provider overrides it. Absent for a provider whose unpriced models stay unpriced. */
             priced_by?: string;
+            /** @description The other providers whose calls send this same key, such as `gemini_decision` on `gemini`. They have no row of their own, so each needs this key held. Absent when no other provider sends it. */
+            sent_by?: string[];
         };
         /** @description One vendor's answer to the stored credential. On a pass, `ok` is true, `key_confirmed` says whether the vendor checked the key, and `model_count` is present only when the test listed models. On a failure, `reason` names why, and never in the vendor's own words. */
         AiProviderKeyTestResult: {
@@ -28451,9 +28750,9 @@ export interface components {
          *     reaches no further than the task's own bindings.
          */
         AiDecisionsBinding: {
-            /** @description jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required). */
+            /** @description jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required) | gemini_decision (Google's Decisions API on the Gemini Developer API, keyed by the gemini provider's GEMINI_API_KEY; no EU hosting). */
             provider: string;
-            /** @description The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter. */
+            /** @description The decision model id, e.g. jev-1.13.0 on jev, typesafe/jev-1.13 on OpenRouter, or gemini-decision-1 on gemini_decision. */
             model: string;
             /**
              * @deprecated
@@ -28911,7 +29210,7 @@ export interface components {
             total: number;
         };
         /** @enum {string} */
-        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "backfill_failed" | "sync_stalled" | "capture_silent";
+        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "notes_grant_missing" | "notes_account_mismatch" | "backfill_failed" | "sync_stalled" | "capture_silent";
         DismissCaptureSilenceRequest: {
             /**
              * Format: date-time
@@ -30583,7 +30882,8 @@ export interface components {
                 classify?: {
                     commitments?: number;
                     meetings?: number;
-                    noise?: number;
+                    /** @description Neither a commitment nor a meeting; says nothing about importance. */
+                    other?: number;
                 };
             };
             connectors: {
@@ -31344,13 +31644,13 @@ export interface components {
              */
             impact: "unchanged" | "model_changed" | "decision_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
             budget_exempt: boolean;
-            /** @description The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider. */
+            /** @description The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor. */
             decision_first: boolean;
             /**
              * @description Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
              * @enum {string}
              */
-            decision_skip_reason?: "unbound" | "uncertified" | "local_only";
+            decision_skip_reason?: "unbound" | "uncertified";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
             /** @description The task declares a decision form, so a decision model may answer it first and its decision timeout applies. */
             decides?: boolean;
@@ -31680,7 +31980,7 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
+            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
             /**
              * @description What this attempt asked: a chat completion, an embedding, or a decision model.
@@ -31769,21 +32069,25 @@ export interface components {
             /** @description What a screen calls the task, as task_display_name on a call. Absent for a task with no name, which a screen shows by its key. */
             display_name?: string | null;
         };
-        /** @description One workspace-level messaging-channel binding. The bot token never appears in this shape — it lives sealed in the vault, and it is the only secret a binding holds. */
+        /** @description One workspace-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault. */
         ChannelConnection: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram";
-            /** @description The provider's own id for the bot — the key the binding is unique on. */
+            provider: "telegram" | "dispact";
+            /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
             channelLabel: string;
+            /** @description The web address of a self-hosted provider's install (Dispact). Absent for Telegram. */
+            address?: string;
             /**
              * @description Only `connected` is live, and it is the only state a connect can produce: a pull ingress makes no provider call after the write, so there is no half-connected state. `error` and `reauth_required` are where ingress parks a binding it can no longer poll (another consumer holds the bot's updates; the token was refused), and neither is polled again until an operator acts. `pending` is a value NO server produces: it is retained because the code generator disambiguates enum member names across the whole document, so dropping it renames unrelated generated constants in other schemas.
              * @enum {string}
              */
             status: "pending" | "connected" | "disconnected" | "error" | "reauth_required";
+            /** @description Whether a Dispact events secret is sealed for this connection, so signed notices of new messages are taken. The secret itself is never shown. */
+            readonly eventsSecretSet?: boolean;
             /** Format: int64 */
             version: number;
             /** Format: date-time */
@@ -31796,13 +32100,184 @@ export interface components {
         };
         ConnectChannelRequest: {
             /** @enum {string} */
-            provider: "telegram";
-            /** @description The BotFather token, `<bot id>:<secret>`. Sealed into the vault on arrival and never echoed back. */
+            provider: "telegram" | "dispact";
+            /** @description The bot token. For Telegram the BotFather token, `<bot id>:<secret>`; for Dispact the app token, `gwapp_…`. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
+            /** @description The chat's web address, such as `https://chat.example.com`. Required for Dispact, which every team hosts itself; refused for Telegram. */
+            address?: string;
+            /** @description The Dispact app's events secret, `whsec_…`, which signs each notice of a new message. Optional; without it Margince reads the channels every minute. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
+            eventsSecret?: string;
         };
         ReplaceChannelTokenRequest: {
-            /** @description The replacement BotFather token. Sealed into the vault on arrival and never echoed back. */
+            /** @description The replacement bot token. Sealed into the vault on arrival and never echoed back. */
             botToken: string;
+            /** @description A new Dispact events secret, `whsec_…`. Absent keeps the sealed one. Refused for Telegram. Sealed into the vault on arrival and never echoed back. */
+            eventsSecret?: string;
+        };
+        /** @description One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text. */
+        DispactChannelEvent: {
+            /** @enum {string} */
+            type: "url_verification" | "message.created" | "thread.replied" | "message.updated" | "channel.archived";
+            /** @description The value a URL check expects back. */
+            challenge?: string;
+            /** @description The Dispact team; it must be the connected bot's team. */
+            workspace_id?: string;
+            channel_slug?: string;
+            /** @description The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal. */
+            seq?: number;
+            message_id?: string;
+            event_id?: string;
+            /**
+             * Format: date-time
+             * @description When the burst's newest event happened.
+             */
+            ts?: string;
+        };
+        /** @description The answer to a taken notice. A URL check gets `challenge` alone. */
+        DispactChannelEventReceipt: {
+            challenge?: string;
+            /**
+             * @description `pull_queued`: the channel's history is read soon. `link_paused`: the archived channel's link is paused. `ignored`: no live link has this channel. `already_taken`: this `webhook-id` was taken in the last 24 hours, so nothing changes.
+             * @enum {string}
+             */
+            status?: "pull_queued" | "link_paused" | "ignored" | "already_taken";
+        };
+        /**
+         * @description The kind of record a chat channel is linked to.
+         * @enum {string}
+         */
+        ChannelLinkRecordType: "deal" | "project";
+        /**
+         * @description How much Margince posts into a linked channel.
+         * @enum {string}
+         */
+        ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
+        ChannelLinkState: {
+            /**
+             * @description `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
+             * @enum {string}
+             */
+            state: "off" | "none" | "linked" | "paused";
+            link?: components["schemas"]["ChannelLink"];
+            invites?: components["schemas"]["ChannelInvites"];
+        };
+        ChannelLink: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            provider: "dispact";
+            channel_slug: string;
+            channel_name: string;
+            /** @description The channel's address in the chat. */
+            channel_url: string;
+            verbosity: components["schemas"]["ChannelVerbosity"];
+            /** @enum {string} */
+            status: "active" | "channel_gone";
+            /** Format: uuid */
+            deal_id?: string | null;
+            /** Format: uuid */
+            project_id?: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        /** @description Who a newly created channel was opened to. */
+        ChannelInvites: {
+            /** @description Members added to the channel, or already in it. */
+            invited: number;
+            /** @description Members invited who have no active chat account. */
+            not_in_chat: number;
+            /** @description Members the chat would not add: outside the app's audience, or the add failed. */
+            not_added: number;
+            /** @description Members left out because a new channel invites at most 50. */
+            skipped_over_cap: number;
+        };
+        /** @description What Dispact needs to install the Margince app in a team, in the shape of Dispact's app manifest. */
+        DispactAppManifest: {
+            /** @enum {string} */
+            manifest_version: "1";
+            /** @enum {string} */
+            slug: "margince";
+            name: string;
+            description: string;
+            /** @description This installation's icon, `<public_base_url>/icon.svg`. */
+            icon_url: string;
+            publisher: components["schemas"]["DispactAppManifestPublisher"];
+            /** @description The release this installation runs, or `dev` for a build with none. */
+            version: string;
+            /** @description Empty. The app adds no screens to Dispact. */
+            surfaces: Record<string, never>;
+            bot: components["schemas"]["DispactAppManifestBot"];
+            /** @description The bot scopes the app asks for. */
+            scopes: string[];
+            security: components["schemas"]["DispactAppManifestSecurity"];
+            mcp: components["schemas"]["DispactAppManifestMcp"];
+            events: components["schemas"]["DispactAppManifestEvents"];
+        };
+        DispactAppManifestPublisher: {
+            name: string;
+            /** @description The address of the admin who asked for the manifest. */
+            email: string;
+        };
+        DispactAppManifestBot: {
+            display_name: string;
+        };
+        DispactAppManifestSecurity: {
+            /** @description Lifetime of the session token Dispact gives the app. */
+            token_ttl_seconds: number;
+        };
+        DispactAppManifestMcp: {
+            /** @description This installation's MCP address, `<public_base_url>/mcp`. */
+            endpoint: string;
+        };
+        DispactAppManifestEvents: {
+            /** @description Where Dispact sends signed notices, `<public_base_url>/v1/channel-events/dispact`. */
+            url: string;
+            /** @description The notice types the app subscribes to. */
+            types: string[];
+        };
+        LinkableChannels: {
+            channels: components["schemas"]["LinkableChannel"][];
+        };
+        LinkableChannel: {
+            /** @description The value a link request names the channel by. */
+            slug: string;
+            name: string;
+        };
+        LinkChannelRequest: {
+            /** @enum {string} */
+            mode: "create" | "existing";
+            /** @description For `existing`, the channel's slug or its link. */
+            channel?: string;
+            verbosity?: components["schemas"]["ChannelVerbosity"];
+            /** @description For `existing`, required. True files up to five summaries of the talk so far. */
+            summarize_history?: boolean;
+        };
+        SetChannelVerbosityRequest: {
+            verbosity: components["schemas"]["ChannelVerbosity"];
+        };
+        FileChannelMessageRequest: {
+            /**
+             * @description The message in the record's channel: its sequence number, `#slug:seq`, the chat's
+             *     `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+             */
+            message: string;
+            /** @description True files the message and the replies in its thread that follow it. */
+            thread?: boolean;
+        };
+        /**
+         * @description The chat talk a summary note was written from. The talk itself is not kept: open `url`
+         *     to read it in the chat.
+         */
+        ChatEpisode: {
+            /** @description How many messages the summary covers. */
+            message_count: number;
+            /**
+             * Format: date-time
+             * @description When the last of them was posted.
+             */
+            ended_at: string;
+            /** @description The first message in the chat. */
+            url: string;
         };
         /**
          * @description What the file's rows are, and therefore what the run creates.
@@ -34706,6 +35181,53 @@ export interface components {
         LinkFinanceSourceCustomerRequest: {
             /** Format: uuid */
             company_id: string;
+        };
+        CustomerPayments: {
+            state: components["schemas"]["FinanceSummaryState"];
+            /** @description Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined. */
+            access_scope: string;
+            provider?: string;
+            /** Format: date-time */
+            last_synced_at?: string;
+            /** @description Readable, live linked companies eligible for the payment overview. */
+            linked_companies: number;
+            invoice_count: number;
+            company_count: number;
+            /** @description Complete overdue totals for readable companies, each in its own currency. */
+            totals: components["schemas"]["CustomerPaymentTotal"][];
+            /** @description Up to three company and currency groups, oldest overdue invoice first. */
+            customers: components["schemas"]["CustomerPaymentCustomer"][];
+            data: components["schemas"]["CustomerPaymentInvoice"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        CustomerPaymentTotal: {
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+        };
+        CustomerPaymentCustomer: {
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+            invoice_count: number;
+            oldest_days: number;
+        };
+        CustomerPaymentInvoice: {
+            /** Format: uuid */
+            invoice_id: string;
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            number?: string | null;
+            currency: string;
+            /** Format: int64 */
+            open_minor: number;
+            /** Format: date */
+            due_at: string;
+            days_overdue: number;
         };
         /**
          * @description What the accounting mirror knows about one customer (ADR-0083).
@@ -39032,6 +39554,22 @@ export interface components {
             /** @description Ask the model again, whatever is kept. */
             refresh?: boolean;
         };
+        SalesProgressSummaryRequest: {
+            /** @enum {string} */
+            period: "month" | "year";
+            year: number;
+            /** @description Required with `period: month`. */
+            month?: number;
+            /**
+             * @description Absent reads the caller's own figures.
+             * @enum {string}
+             */
+            scope_kind?: "owner" | "team";
+            /** Format: uuid */
+            scope_id?: string;
+            /** @description Ask the model again, whatever is kept. */
+            refresh?: boolean;
+        };
         SalesAssessment: {
             /** @description The evaluation the assessment read. */
             evaluation_key: string;
@@ -39067,7 +39605,7 @@ export interface components {
             text: string;
         };
         SalesAssessmentCell: {
-            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`. */
+            /** @description `metric:<metric id>` or `point:<metric id>:<group key>`; a Progress summary names its own figures `progress:<figure>`. */
             id: string;
             label: string;
             /** @description Raw source quantity with its unit. */
@@ -40617,6 +41155,14 @@ export interface components {
             subject: string;
             /** Format: date-time */
             due_at: string | null;
+            /** @description True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time. */
+            due_has_time: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
+            /**
+             * Format: int64
+             * @description The task row's version, which a write to the task names.
+             */
+            version: number;
             /** Format: uuid */
             assignee_id: string | null;
             assignee_name: string | null;
@@ -41595,7 +42141,10 @@ export interface components {
             contact_id: string;
             /** Format: email */
             attendee_email: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.
+             */
             start: string;
             /** Format: date-time */
             end: string;
@@ -41804,6 +42353,14 @@ export interface components {
             contact_id?: string;
             response: components["schemas"]["MeetingResponse"];
         };
+        /** @description The calendar invitation mail of one meeting, folded onto it in History: how many were invited and how many answered each way. */
+        MeetingInvitationSummary: {
+            /** @description The colleagues and contacts on the meeting. */
+            invited: number;
+            accepted: number;
+            declined: number;
+            tentative: number;
+        };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
          *     **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
@@ -41897,6 +42454,8 @@ export interface components {
             readonly guests?: components["schemas"]["MeetingGuest"][];
             /** @description Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`. */
             readonly attendee_responses?: components["schemas"]["MeetingAttendeeResponse"][];
+            /** @description Meeting only, on a record's History read with `collapse_copies`: who a calendar meeting invited and how they answered. That read folds the event's invitation mail, updates, cancellations and answers onto the meeting instead of listing them as mail rows, when you may open both. Absent when `content_state` is `withheld`. */
+            readonly invitation?: components["schemas"]["MeetingInvitationSummary"];
             /** @description Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`. */
             readonly guests_left_out?: number;
             /**
@@ -41920,10 +42479,10 @@ export interface components {
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**
-             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
              * @enum {string|null}
              */
-            readonly capture_label?: null | "commitment" | "meeting" | "noise";
+            readonly capture_label?: null | "commitment" | "meeting" | "other";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
@@ -41954,6 +42513,11 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
+            /**
+             * @description A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+             * @enum {string}
+             */
+            readonly meeting_notes_connection?: "connect" | "notes_grant_missing" | "notes_account_mismatch";
             /**
              * @description Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
              * @enum {string|null}
@@ -42009,6 +42573,8 @@ export interface components {
             readonly created_by?: components["schemas"]["PrincipalAttribution"];
             /** @description What a website form sent, field by field, on the note it wrote (`source_system` `web_form`). `body` carries the same facts as text for search and for readers that draw text only; a surface that draws fields reads them here. Null on every other row, and on a form note written before the fields were kept. Withheld with the content, like `body`. */
             readonly web_form?: components["schemas"]["WebFormSubmission"] | null;
+            /** @description On a note summarising chat talk (`source_system` `dispact`), what talk it summarises. The note's subject and body are an AI summary. Absent on every other row. Withheld with the content, like `body`. */
+            readonly chat_episode?: components["schemas"]["ChatEpisode"];
             raw?: {
                 [key: string]: unknown;
             } | null;
@@ -42698,6 +43264,8 @@ export interface components {
             remind_intent?: components["schemas"]["IntentTime"];
             /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
             deal_filing?: components["schemas"]["ActivityDealFiling"];
+            /** @description Optional next step when marking a meeting held. Creates the task in the same transaction, with the meeting as its source and its links and audience inherited. Requires activity create authority. A meeting already held cannot add another task through this outcome write. */
+            follow_up_task?: components["schemas"]["ActivityFollowUpTask"];
             subject?: string | null;
             body?: string | null;
             /** Format: date-time */
@@ -47674,6 +48242,26 @@ export interface components {
              */
             origin: "manual" | "ai" | "adopted";
         };
+        SalesGoalProposalRequest: {
+            /**
+             * Format: int64
+             * @description The yearly goal the months must add up to, when the reader has set one.
+             */
+            yearly_total_minor?: number;
+        };
+        SalesGoalProposal: {
+            /** @description January to December, each an amount of zero or more in minor units of the plan currency. */
+            months: number[];
+            /**
+             * Format: int64
+             * @description What the twelve months add up to.
+             */
+            total_minor: number;
+            /** @description The pattern the proposal followed, in the reader's language, with no figure in it. */
+            reason: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            model_used?: string;
+        };
         SalesGoalPublishInput: {
             reason: string;
             /**
@@ -48068,6 +48656,17 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        RecordReference: {
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            archived: boolean;
+            /** @description Company logo URL; omitted for other kinds. */
+            logo?: string | null;
+        };
+        RecordReferenceListResponse: {
+            data: components["schemas"]["RecordReference"][];
         };
         /** @description A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them. */
         SeatName: {
@@ -50996,7 +51595,7 @@ export interface components {
          * @description AI task key from the task catalog, used to localize its display name.
          * @enum {string}
          */
-        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
+        AiTask: "account_scan" | "agent_loop" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "chat_summary" | "cert_judge" | "cold_start" | "corpus_ask" | "deal_health" | "deal_verdict" | "document_extract" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "owed_verdict" | "propose_roles" | "rate_extract" | "reader_rendering" | "report_interpret" | "report_setup" | "request_settlement" | "rewrite" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "tag_suggest" | "transcript" | "transcript_propose" | "voice_build" | "weekly_learnings" | "weekly_review";
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
@@ -51022,7 +51621,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "site_read" | "brief_ranking" | "capture_classify" | "capture_confidentiality_verdict" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "stage_evidence_extract" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review" | "weekly_learnings" | "propose_roles" | "owed_verdict" | "request_settlement" | "account_scan" | "tag_suggest" | "report_setup" | "report_interpret" | "reader_rendering" | "deal_verdict" | "rewrite" | "chat_summary";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -51634,8 +52233,20 @@ export interface components {
             field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
             value: string;
             /** @enum {string} */
-            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | "meeting";
             readonly captured_by: string;
+            /**
+             * Format: uuid
+             * @description With `source` `meeting`: the transcript or meeting notes the value was read from, when you may read them. Null for a reader the meeting's audience leaves out; they still see `source_occurred_at`. A meeting value stores no quote, so `evidence_snippet` is empty.
+             */
+            readonly source_activity_id?: string | null;
+            /**
+             * Format: date-time
+             * @description With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
+             */
+            readonly source_occurred_at?: string | null;
+            /** @description How precisely `source_occurred_at` is known; `day` for an all-day meeting. */
+            readonly source_occurred_precision?: components["schemas"]["OccurredPrecision"];
             evidence_snippet?: string | null;
             /** Format: uri */
             source_url?: string | null;
@@ -51725,7 +52336,7 @@ export interface components {
             key: string;
             value: string;
             /** @enum {string} */
-            source: "human" | "agent" | "site_read" | "connector" | "migration";
+            source: "human" | "agent" | "site_read" | "connector" | "migration" | "meeting";
             readonly captured_by: string;
             /** Format: uri */
             source_url?: string | null;
@@ -51792,7 +52403,7 @@ export interface components {
             classification: "new" | "machine_change" | "human_conflict" | "unchanged";
             current_value: string | null;
             /** @enum {string|null} */
-            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
+            current_source: "human" | "agent" | "site_read" | "connector" | "migration" | "technical_lookup" | "meeting" | null;
             proposed_value: string;
         };
         CompanySiteReadResolution: {
@@ -52120,6 +52731,29 @@ export interface components {
             finished_at?: string | null;
             /** Format: date-time */
             created_at: string;
+            /** @description The meeting's summary as this reading leaves it: the one this reading wrote, or the newest one an earlier reading wrote. Absent when no reading has written one. */
+            summary?: components["schemas"]["TranscriptSummary"];
+            /** @description True when this reading finished without writing a summary, because the summary failed the check that every point cites lines the transcript has. The meeting keeps `summary` as it was. */
+            summary_refused: boolean;
+        };
+        /** @description A short summary of one meeting, written by a model from its transcript and never by a member. A client marks it as AI-written. Each point cites the transcript lines it was read from; the transcript itself is unchanged. */
+        TranscriptSummary: {
+            /**
+             * Format: uuid
+             * @description The reading that wrote this summary.
+             */
+            read_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            /** @description What the meeting covered, in the language the meeting was held in. */
+            key_points: components["schemas"]["TranscriptSummaryPoint"][];
+            /** @description What the meeting agreed would happen next. Empty when it agreed nothing. */
+            next_steps: components["schemas"]["TranscriptSummaryPoint"][];
+        };
+        TranscriptSummaryPoint: {
+            text: string;
+            /** @description The 1-based transcript lines this point was read from. */
+            source_lines: number[];
         };
         /** @description One approval a transcript reading staged, and who it waits on. */
         TranscriptReadProposal: {
@@ -54134,6 +54768,11 @@ export interface components {
         CreateDataSubjectRequest: {
             /** @enum {string} */
             kind: "access" | "rectify" | "erasure" | "restriction";
+            /**
+             * @description The data subject: their contact id when they are a contact, else the identifier they
+             *     wrote from, such as an email. Only a contact id can be fulfilled; anything else waits
+             *     until somebody resolves it to a contact.
+             */
             subject_ref: string;
             /**
              * Format: date-time
@@ -54519,7 +55158,7 @@ export interface components {
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
-            rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
+            rights: ("access" | "rectification" | "erasure" | "restriction" | "portability" | "objection" | "withdraw_consent" | "complain_to_authority")[];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
         };
@@ -54528,6 +55167,8 @@ export interface components {
          *     rule the mail's disclosure lines use. A part the installation has not stated is absent.
          */
         PrivacyInformationController: {
+            /** @description The legal name alone, which every controller mail opens with. Absent when not stated. */
+            legal_name?: string;
             /** @description The legal name and postal address, as lines. Absent unless both are stated. */
             identity?: string;
             /** @description How to reach whoever answers questions about the data. */
@@ -54572,6 +55213,8 @@ export interface components {
             state: "unknown" | "granted" | "withdrawn";
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+            controller?: components["schemas"]["PrivacyInformationController"];
+            question?: components["schemas"]["ConfirmQuestion"];
         };
         /**
          * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
@@ -54599,6 +55242,23 @@ export interface components {
             provenance: components["schemas"]["ConfirmFieldOrigin"][];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+            controller?: components["schemas"]["PrivacyInformationController"];
+            question?: components["schemas"]["ConfirmQuestion"];
+        };
+        /**
+         * @description The question this link pinned, in the link's language and resolved with its purpose. The
+         *     page shows `ask` and offers `answers`, and sends `text` back unchanged as
+         *     `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+         */
+        ConfirmQuestion: {
+            /** @description The published version the link pinned. */
+            version: string;
+            /** @description The whole question as the proof records it: the ask, then each answer, one per line. */
+            text: string;
+            /** @description The sentence the reader answers. */
+            ask: string;
+            /** @description The labels of the answers the page offers, in order. */
+            answers: string[];
         };
         /** @description One line of where a held value came from, for the Art. 14 disclosure on the confirm page. */
         ConfirmFieldOrigin: {
@@ -56483,6 +57143,8 @@ export interface components {
             last_used_at?: string | null;
             /** Format: date-time */
             revoked_at?: string | null;
+            /** @description True while a chat app's user is bound to this passport. A revoked passport that is still bound refuses that user until it is released. */
+            app_bound?: boolean;
             /**
              * @description What this passport has used of its allowances in the window that is running. A
              *     connection's passports share one count, so a renewed credential keeps it. **Omitted**
@@ -58734,6 +59396,13 @@ export interface components {
              */
             as_of: string;
             /**
+             * @description True when this answer is Home's kept answer past its five-minute freshness,
+             *     served while the server reads it again. It still holds every access rule the
+             *     fresh read would apply. A client asks again a few seconds later for the fresh
+             *     answer. Absent or false means the answer is fresh.
+             */
+            served_stale?: boolean;
+            /**
              * @description Whose work this read answered for.
              * @enum {string}
              */
@@ -59013,6 +59682,10 @@ export interface components {
          *     the same admission every manager figure on this surface makes.
          */
         HandledForYou: {
+            /** @description The shared completed-change read reached a source bound; counts remain lower bounds. */
+            count_is_floor?: boolean;
+            /** @description Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened. */
+            sources_unavailable?: components["schemas"]["WorklistSourceUnavailable"][];
             /**
              * Format: date-time
              * @description The instant these were read at.
@@ -59094,6 +59767,8 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            /** @description The canonical completed change or group shared with Home, including receipt identities and count bounds. */
+            completed_change?: components["schemas"]["MagicLine"];
             system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**
@@ -59595,6 +60270,13 @@ export interface components {
              */
             review: number;
             /**
+             * Format: date-time
+             * @description When the nearest open task on a lead is due, over every task this read weighed.
+             *     Absent when no such task has a due time, or when the task lane was read to its
+             *     bound or could not be read, so an unseen task could be due sooner.
+             */
+            soonest_lead_due?: string;
+            /**
              * @description True when any source behind any figure here was read to its work bound, so
              *     every number above is a floor. Set once for the strip rather than per reading:
              *     the four are read as one row, and a reader who cannot trust one of them cannot
@@ -60044,6 +60726,12 @@ export interface components {
              *     attendees are all withheld both produce, and both mean the same thing here.
              */
             with_contact?: string;
+            /**
+             * @description Who is in a `meeting` row's room, as this reader may see them: the same room
+             *     `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+             *     reader may not read the meeting.
+             */
+            room?: components["schemas"]["WorklistMeetingRoom"];
             contact?: components["schemas"]["WorklistContactFacts"];
             /**
              * @description Everyone a `meeting_follow_up` row's follow-up goes to: the contacts the meeting
@@ -60986,6 +61674,22 @@ export interface components {
              *     reader cannot act on it and cannot tell it from a bug.
              */
             label?: string;
+        };
+        /**
+         * @description Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+         *     meeting today and the next one name their attendees by one rule.
+         */
+        WorklistMeetingRoom: {
+            /** @description The attendees who are contacts this reader may see, named first. */
+            participants: {
+                /** Format: uuid */
+                contact_id: string;
+                full_name: string;
+            }[];
+            /** @description The attendees who are not contacts, named after the contacts within the same eight. */
+            other_participants?: components["schemas"]["MeetingOtherParticipant"][];
+            /** @description How many more attendees this reader may see than the eight named. Absent when every attendee is named. */
+            participants_more?: number;
         };
         /**
          * @description The human behind the row — whom a reply would go to — and how the silence
@@ -62639,6 +63343,39 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    releasePassportAppBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user may be bound again. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+            /** @description The passport is still live (`code: passport_still_live`). Revoke it first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -66776,6 +67513,34 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getCustomerPayments: {
+        parameters: {
+            query?: {
+                /** @description Opaque continuation from this response's page.next_cursor. */
+                cursor?: string;
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scoped customer payment overview and one overdue invoice page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPayments"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -71378,7 +72143,7 @@ export interface operations {
                 waiting_reply?: boolean;
                 /** @description Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out. */
                 reminder_due?: boolean;
-                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. */
+                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. With `entity_type` and `entity_id`, a calendar invitation, update, cancellation or answer whose meeting is on the same page set is folded onto that meeting's `invitation`. */
                 collapse_copies?: boolean;
             };
             header?: never;
@@ -75043,9 +75808,12 @@ export interface operations {
                      */
                     marketing_choice?: "granted" | "withdrawn";
                     /**
-                     * @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a
-                     *     grant. Bounded because it is stored on the proof row and read back through the subject
-                     *     access export — the same bound is enforced server-side, and the two are one rule.'
+                     * @description The wording shown beside the choice. Required with a grant. Where the page carried a
+                     *     `question`, send its `text` unchanged: the proof records the served question, and a
+                     *     grant with other words is refused with 409 `version_skew`, because the page is older
+                     *     than the question the link pinned. Where the page carried none, this sentence is
+                     *     stored verbatim as proof. Bounded because it is stored on the proof row and read back
+                     *     through the subject access export.
                      */
                     marketing_wording?: string;
                 };
@@ -75067,6 +75835,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -79275,6 +80044,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    summarizeSalesProgress: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesProgressSummaryRequest"];
+            };
+        };
+        responses: {
+            /** @description The summary. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesAssessment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listSalesGoalSellers: {
         parameters: {
             query: {
@@ -79410,6 +80207,38 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    proposeSalesGoalMonths: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                owner_id: string;
+                year: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SalesGoalProposalRequest"];
+            };
+        };
+        responses: {
+            /** @description The proposal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SalesGoalProposal"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -80243,6 +81072,386 @@ export interface operations {
                 };
             };
             /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal a bot token in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getChannelLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The link state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    linkChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LinkChannelRequest"];
+            };
+        };
+        responses: {
+            /** @description The record is linked. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or the channel was not found (`code: channel_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No bot is connected (`code: channel_bot_not_connected`), the record already has a channel (`code: record_already_linked`), or the channel already belongs to another record (`code: channel_already_linked`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`); nothing was written. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unlinkChannel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unlinked. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or it has no channel (`code: channel_link_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    setChannelVerbosity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetChannelVerbosityRequest"];
+            };
+        };
+        responses: {
+            /** @description The link state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelLinkState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, or it has no channel (`code: channel_link_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listLinkableChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The channels, sorted by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkableChannels"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description No chat bot is connected (`code: channel_bot_not_connected`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    fileChannelMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FileChannelMessageRequest"];
+            };
+        };
+        responses: {
+            /** @description The note. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The record is not visible, it has no channel (`code: channel_link_not_found`), or the message is not in its channel (`code: channel_message_not_found`). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description No bot is connected (`code: channel_bot_not_connected`), no AI model is bound (`code: ai_not_configured`), or a note not written by the chat summary holds the message's key (`code: conflict`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The request is malformed, or the thread is longer than one filing reads (`code: channel_thread_too_long`); nothing was filed. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`), or the summary could not be written (`code: channel_summary_failed`); nothing was filed. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getDispactAppManifest: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The app manifest. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactAppManifest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description This deployment serves no chat channel links, or has no public base URL configured (`code: channel_links_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveDispactChannelEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DispactChannelEvent"];
+            };
+        };
+        responses: {
+            /** @description The notice was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                };
+            };
+            /** @description The signed body is not a notice: an unknown `type`, or a field its type needs is missing (`code: channel_event_malformed`). */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The notice is not signed by the connected bot: no Dispact bot with an events secret is connected, or the signature, the timestamp or the team does not match (`code: channel_event_rejected`). The answer is the same for each cause. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than a notice can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Dispact retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -84655,6 +85864,15 @@ export interface operations {
                  *     is still read and still reaches the queue. Nothing else on the page changes.
                  */
                 relationships?: "include" | "omit";
+                /**
+                 * @description How much of the ranked day the page carries. `queue` is the page of the queue
+                 *     and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+                 *     the day's meeting rows plus every row that comes due in the next five minutes,
+                 *     with no cursor and no rows below the cut. Focus, the
+                 *     summary, `counts[].considered`, `reach[].considered` and the readings are the
+                 *     same in both shapes; `shown` counts the rows this page carries.
+                 */
+                shape?: "queue" | "home";
             };
             header?: never;
             path?: never;
@@ -84665,11 +85883,26 @@ export interface operations {
             /** @description The ranked day. */
             200: {
                 headers: {
+                    /** @description A weak tag of the answer's bytes, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Worklist"];
                 };
+            };
+            /** @description The client already holds this answer. */
+            304: {
+                headers: {
+                    /** @description The tag the client holds, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -90022,6 +91255,11 @@ export interface operations {
                 "application/json": {
                     /** Format: uuid */
                     purpose_id: string;
+                    /**
+                     * @description The language of the mail and of the page its link opens. Absent means the
+                     *     installation's mail language.
+                     */
+                    language?: components["schemas"]["MailLanguage"];
                 };
             };
         };
@@ -91299,6 +92537,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    readRecordReferences: {
+        parameters: {
+            query: {
+                kind: "contact" | "company" | "lead" | "deal" | "project";
+                id: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The readable references, or an empty data array. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordReferenceListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

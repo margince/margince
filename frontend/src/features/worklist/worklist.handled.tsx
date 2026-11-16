@@ -22,6 +22,7 @@
 // panel here does: one shape, so a reader learns it once.
 
 import { useEffect, useState } from "react";
+import type { components } from "../../api/schema";
 import { BundleUndo } from "../../components/marginchanges";
 import { ReceiptDetail } from "../../components/receiptdetail";
 import { ReceiptsMore } from "../../components/receiptsmore";
@@ -31,7 +32,10 @@ import { Disclosure } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { useJumpTo } from "../../design-system/jumpbar";
 import { Panel, PanelBody } from "../../design-system/panel";
-import { SurfaceState } from "../../design-system/surfacestate";
+import {
+  type SectionState,
+  SurfaceState,
+} from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import {
@@ -69,7 +73,10 @@ export function HandledForYouPanel() {
   // called that `ready`, which drew a table's header row over no rows: three
   // column names and a silence, where the sentence saying nothing was done on
   // the reader's behalf is the whole answer.
-  const state = listReadState(handled, receipts);
+  const state = historyReadState(
+    listReadState(handled, receipts),
+    handled.data,
+  );
   const arrived = useArrivalJump(state !== "loading");
   // A day with nothing done draws no panel: the empty sentence sat beside the
   // queue's own on every quiet day. A failed read still shows, with its retry.
@@ -228,4 +235,18 @@ function ReceiptRecord({ receipt }: { readonly receipt: Receipt }) {
       {subject.label}
     </AppLink>
   );
+}
+
+function historyReadState(
+  base: SectionState,
+  data: components["schemas"]["HandledForYou"] | undefined,
+): SectionState {
+  if (base === "empty" && (data?.sources_unavailable?.length ?? 0) > 0)
+    return "unavailable";
+  if (
+    (base === "ready" || base === "empty") &&
+    (data?.count_is_floor || data?.truncated)
+  )
+    return "partial";
+  return base;
 }

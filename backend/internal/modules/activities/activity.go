@@ -74,8 +74,11 @@ type LogActivityInput struct {
 	// audienceOf gives the new activity the audience, members and parties of
 	// the activity it records. Nil leaves the audience it is born with.
 	audienceOf *ids.ActivityID
-	// recordsMeeting is the open meeting a transcript records (records_meeting_id).
+	// recordsMeeting is the meeting a transcript records (records_meeting_id).
 	recordsMeeting *ids.ActivityID
+	// Automatic notes can also record a meeting that already has its outcome.
+	keepRecordedOutcome     bool
+	recordedMeetingWritable bool
 	// invitedAssignee admits an invited colleague as the task's assignee. The
 	// HTTP create handler sets it for an assignee the caller NAMED, and
 	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
@@ -322,8 +325,17 @@ func (s *Store) logActivityAndReadTranscript(
 	if err := s.readTranscriptOnLanding(ctx, tx, out, created); err != nil {
 		return out, created, err
 	}
-	if in.recordsMeeting != nil && created {
-		if err := markRecordedMeetingHeld(ctx, tx, recorded, out, in); err != nil {
+	if created {
+		if err := s.askLeadsToQualifyTx(ctx, tx, out); err != nil {
+			return out, created, err
+		}
+	}
+	if in.recordsMeeting != nil && created && in.recordedMeetingWritable && owesOutcome(recorded) {
+		marked, err := markRecordedMeetingHeld(ctx, tx, recorded, out, in)
+		if err != nil {
+			return out, created, err
+		}
+		if err := s.askLeadsToQualifyTx(ctx, tx, marked); err != nil {
 			return out, created, err
 		}
 	}

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ReactNode } from "react";
+import { ChannelPanel } from "../../components/channelpanel";
 import { useMe } from "../../lib/session";
 import { PhaseHistoryCard } from "./projectphasehistory";
 import {
@@ -10,6 +11,7 @@ import {
   PROJECT_DEALS_ANCHOR,
 } from "./projectreadings";
 import {
+  type Commitment,
   CommitmentsCard,
   type Project360,
   ProjectContractsCard,
@@ -27,12 +29,15 @@ export function ProjectCards({
   onOpenTask,
   onOpenTasks,
   onOpenDocuments,
+  canEdit,
 }: Readonly<{
   view: Project360;
+  // Whether the reader may write this project, which linking its channel needs.
+  canEdit: boolean;
   // The deals card's verb, built by the page that may reach the deal flow.
   newDeal?: ReactNode;
   // The complete box of one open task, for a reader who may write tasks.
-  tick?: (activityId: string) => ReactNode;
+  tick?: (commitment: Commitment) => ReactNode;
   onOpenTask: (activityId: string) => void;
   onOpenTasks: () => void;
   onOpenDocuments: () => void;
@@ -58,6 +63,11 @@ export function ProjectCards({
         <div id={PROJECT_CONTRACTS_ANCHOR}>
           <ProjectContractsCard view={view} onOpenDocuments={onOpenDocuments} />
         </div>
+        <ChannelPanel
+          recordType="project"
+          recordId={view.project.id}
+          canEdit={canEdit}
+        />
         <PhaseHistoryCard view={view} />
       </div>
     </div>

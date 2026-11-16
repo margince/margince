@@ -1,0 +1,106 @@
+{
+  "task": "deal_health",
+  "provider": "gemini",
+  "served_model": "gemini-3.8-flash",
+  "env_class": "cloud_frontier",
+  "prompt_version": "p0b53510a64e56dde4051806896150def",
+  "corpus_version": "v1",
+  "verdict": "certified",
+  "runs": 9,
+  "passed": 9,
+  "reliability": 1,
+  "reported_accepted": 9,
+  "reported_wrong_answer": 0,
+  "reported_invalid": 0,
+  "reported_abstained": 0,
+  "certified_scope": "full_invocation",
+  "context_applied": false,
+  "context_scopes": null,
+  "judge_score_p50": 80,
+  "judge_score_min": 72,
+  "latency_p50": 3686,
+  "latency_p95": 4752,
+  "mean_tokens": 2568,
+  "mean_tokens_in": 2256,
+  "mean_tokens_out": 312,
+  "mean_cached_tokens": 0,
+  "mean_cache_write_tokens": 0,
+  "est_cost_microusd": 2862,
+  "judge_served_model": "claude-sonnet-5-5",
+  "judge_provider": "claude_cli",
+  "self_judged": false,
+  "served_identity_source": "response",
+  "thinking_level": "low",
+  "ran_at": "2026-11-16T02:09:57Z",
+  "scenarios": [
+    {
+      "scenario": "deal_status_offer_left_hanging",
+      "site": "deal_status",
+      "stamp": "65cf19feb85a8c1fef9c5b9ba840b598c352d5e6b157dcc2a10a912d9f90629b53e8ea0311a72b5aab0d35cf851de5148c5fc3808a4828fdb4c7698ce589c4a484f0f16d853fab80c752c7af71ea60cfd78c4cb55548856cd6c2626d706fb439",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        80,
+        80,
+        72
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_status_an_overdue_task_is_not_done_work",
+      "site": "deal_status",
+      "stamp": "818b6808812c9cba67e5e18f3c73cc6a117afde441459ca09c6aaf972bb12789517fb8488463e98a5089da4cc8be2a0e8f51835c95978e02aec25844be6e1c48609c0d4da04730ef9cee46c07f8f1fbbeebef1d0b2756bd8a2c45d0141bfa016",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        80,
+        90,
+        88
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    },
+    {
+      "scenario": "deal_status_says_nothing_is_wrong_when_nothing_is",
+      "site": "deal_status",
+      "stamp": "9539ccc4bca3d80343882cfcf5e83846a56cfc60bb0ae42940b8fe868fdffeabd761eeab9e16f06e1a6b731de221dd35de449de5001a409bf8e900d8b79fdca32522cb346e65b3319fcfb59610ccf28f0f2bff3e47d0457b4d45e698de5632eb",
+      "verdict": "certified",
+      "judge_band": "certified",
+      "runs": 3,
+      "passed": 3,
+      "judge_scores": [
+        80,
+        80,
+        80
+      ],
+      "bands": {
+        "certified_min": 70,
+        "degraded_min": 50,
+        "floor": 40
+      },
+      "reported_accepted": 3,
+      "reported_wrong_answer": 0,
+      "reported_invalid": 0,
+      "reported_abstained": 0
+    }
+  ]
+}

@@ -15,6 +15,8 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
+  "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
   "systemJob.task_completion": "Hoàn tất công việc sau email",
   "homeRepair.reason.taskChanged":
@@ -2050,8 +2052,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không dùng mô hình quyết định: chưa gán mô hình nào.",
   "aiAdmin.decisionSkip.uncertified":
     "Không dùng mô hình quyết định: chưa được chứng nhận cho hoạt động này.",
-  "aiAdmin.decisionSkip.local_only":
-    "Không dùng mô hình quyết định: hoạt động này chỉ nhận nhà cung cấp quyết định cục bộ.",
   "aiAdmin.inputRate": "Đầu vào {input} mỗi 1 triệu token",
   "aiAdmin.rates": "Đầu vào {input} · Đầu ra {output} mỗi 1 triệu token",
 
@@ -2124,9 +2124,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.connect": "Kết nối lịch",
   "brief.schedule.reconnect": "Kết nối lại lịch",
   "brief.schedule.nextAt": "Cuộc họp tiếp theo lúc {time}",
-  "brief.schedule.now": "Bây giờ",
-  "brief.schedule.freeUntil": "Rảnh đến {time}",
-  "brief.schedule.clearRest": "Hôm nay không còn lịch nào khác",
+  "brief.schedule.clearRest": "Hôm nay không còn cuộc họp bên ngoài nào",
   "brief.readings.riskPartial": "Chỉ tính deal đã có giá",
   "brief.readings.unpricedCount_one": "{count} deal chưa định giá · không tính",
   "brief.readings.unpricedCount_other":
@@ -2333,6 +2331,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.deal_key_names": "Bổ sung tên deal",
   "systemJob.deal_room_link_request": "Yêu cầu liên kết Deal Room",
   "systemJob.deal_room_timeline": "Lịch sử Deal Room",
+  "systemJob.chat_links": "Kênh chat",
   "systemJob.dedupe_recheck": "Kiểm tra lại hàng chờ trùng lặp",
   "systemJob.deployment_secret_seal": "Niêm phong thông tin bí mật",
   "systemJob.domain_triage": "Phân loại trang web",
@@ -2380,6 +2379,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.owed_verdict": "Kiểm tra thư cần trả lời",
   "systemJob.own_sent_mail_repair": "Sửa thư đã gửi",
   "systemJob.participant_backfill": "Bổ sung bên tham gia thư",
+  "systemJob.reply_settled_stamp": "Ghi nhận trạng thái trả lời thư",
   "systemJob.past_activity_clock_refold": "Cập nhật ngày hoạt động gần nhất",
   "systemJob.private_thread_strip": "Gỡ chuỗi thư riêng tư",
   "systemJob.provider_recovery": "Khôi phục nhà cung cấp bổ sung dữ liệu",
@@ -2795,6 +2795,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.help.releaseNotes": "Ghi chú phát hành",
   "shell.help.licenses": "Giấy phép ứng dụng web",
   "shell.help.devBuild": "Bản dựng phát triển",
+  "shell.help.devBuildRevision": "Bản dựng phát triển · {revision}",
   "shell.shortcuts.anywhere": "Mọi nơi",
   "shell.shortcuts.search": "Mở tìm kiếm",
   "shell.shortcuts.sidebar": "Hiện hoặc ẩn thanh bên",
@@ -3267,6 +3268,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.role": "Vai trò",
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
+  "rel.former": "Trước đây",
   "rel.current": "Hiện tại",
   "rel.endedOn": "Đến {when}",
   "rel.remove": "Gỡ",
@@ -3330,6 +3332,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ref.notInRoster":
     "Hiện đang được giao (không còn trong danh sách thành viên)",
   "picker.noMatch": "Không có kết quả phù hợp",
+  "select.filter": "Lọc danh sách",
   "picker.results_one": "{count} kết quả",
   "picker.results_other": "{count} kết quả",
 
@@ -3781,6 +3784,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.group.collapse": "Đóng",
   "timeline.group.openThread": "Xem toàn bộ chuỗi thư",
   "timeline.group.mayContinue": "Có thể còn tin nhắn trước đó",
+  "timeline.group.newerPart": "Tin nhắn sau ở phía trên",
+  "timeline.group.olderPart": "Tin nhắn trước ở phía dưới",
   "timeline.group.kind": "Chuỗi thư",
   "timeline.group.earlier_other": "Hiển thị {count} tin nhắn trước đó",
   "timeline.group.earlier_one": "Hiển thị {count} tin nhắn trước đó",
@@ -4101,6 +4106,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.partial": "Không thể tải một số phần, nên trang này có thể chưa đầy đủ.",
   "evidence.explain": "Nguồn của “{value}”",
   "evidence.explainBeside": "{label}: nguồn của “{value}”",
+  "evidence.fromMeeting": "Từ cuộc họp ngày {date}",
   "evidence.fullHistory": "Lịch sử đầy đủ",
   "co.section.unavailable":
     "Không thể tải một số dữ liệu, nên phần này có thể chưa đầy đủ.",
@@ -4127,6 +4133,25 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "billing.saveChange": "Lưu thay đổi",
   "billing.versionUnresolved":
     "Không thể đọc lại liên hệ thanh toán nên chưa gửi thay đổi. Tải lại trang rồi thử lại.",
+  "payments.refresh": "Làm mới",
+  "payments.title": "Thanh toán của khách hàng",
+  "payments.none": "Không có hóa đơn quá hạn.",
+  "payments.overdueAmount": "Quá hạn {amount}",
+  "payments.invoices_one": "{count} hóa đơn",
+  "payments.invoices_other": "{count} hóa đơn",
+  "payments.customers_one": "{count} khách hàng",
+  "payments.customers_other": "{count} khách hàng",
+  "payments.oldest_one": "Hóa đơn cũ nhất quá hạn 1 ngày",
+  "payments.oldest_other": "Hóa đơn cũ nhất quá hạn {days} ngày",
+  "payments.viewInvoices": "Xem hóa đơn quá hạn",
+  "payments.customer": "Khách hàng",
+  "payments.openAmount": "Chưa thanh toán",
+  "payments.stale":
+    "Dữ liệu hóa đơn có thể đã thay đổi kể từ lần đồng bộ gần nhất.",
+  "payments.syncFailed":
+    "Đồng bộ kế toán không thành công. Số tiền được lấy từ lần đồng bộ thành công gần nhất.",
+  "payments.syncUnavailable":
+    "Dữ liệu hóa đơn sẽ có sau khi đồng bộ kế toán thành công.",
   "finance.title": "Tài chính",
   "finance.titleHistorical": "Tài chính · lịch sử",
   "finance.none": "Chưa ghi nhận gì.",
@@ -4789,6 +4814,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Tiện ích mở rộng",
   "timeline.kind.signal": "Tín hiệu",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
+  "timeline.chatSummary.badge": "Tóm tắt AI",
+  "timeline.chatSummary.from": "Từ {provider}",
+  "timeline.chatSummary.meta_one": "{count} tin nhắn, đến {ended}",
+  "timeline.chatSummary.meta_other": "{count} tin nhắn, đến {ended}",
+  "timeline.chatSummary.open": "Mở trong {provider}",
   "compose.deadRecipients":
     "Thư gửi đến {addresses} đang bị trả lại: lần gửi gần nhất bị từ chối và từ đó chưa lần nào thành công. Vẫn gửi, hoặc dùng địa chỉ khác.",
   "compose.threadShare": "Chia sẻ với công ty",
@@ -5029,6 +5059,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "activity.detail.response.needsAction": "Chưa trả lời",
   "meeting.attendeesMore_one": "và {count} khách khác",
   "meeting.attendeesMore_other": "và {count} khách khác",
+  "meeting.invitation.invited_one": "{count} khách được mời",
+  "meeting.invitation.invited_other": "{count} khách được mời",
+  "meeting.invitation.accepted_one": "{count} chấp nhận",
+  "meeting.invitation.accepted_other": "{count} chấp nhận",
+  "meeting.invitation.declined_one": "{count} từ chối",
+  "meeting.invitation.declined_other": "{count} từ chối",
+  "meeting.invitation.tentative_one": "{count} có thể tham gia",
+  "meeting.invitation.tentative_other": "{count} có thể tham gia",
   "activity.detail.guestsLeftOut_one":
     "và {count} khách khác không được liệt kê",
   "activity.detail.guestsLeftOut_other":
@@ -5092,8 +5130,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.profileField.register_number": "Số đăng ký kinh doanh",
   "co.profileField.industry": "Ngành",
   "co.profileField.history": "Lịch sử",
-  "co.narrative.title": "Cách họ mua",
+  "co.narrative.title": "Cách họ bán hàng và bán cho ai",
   "co.narrative.add": "Thêm",
+  "co.narrative.notOnSite": "Không có trên trang web của họ",
+  "co.narrative.notReadYet": "Chưa đọc trang web của họ",
   "co.contacts.engagement": "Mức tương tác",
   "co.contacts.lastInteraction": "Trao đổi gần nhất",
   "co.contacts.strength": "Quan hệ",
@@ -6666,13 +6706,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
   "brief.first.title": "Cần bạn xử lý",
-  "brief.intro.waiting": "Đang chờ bạn",
-  "brief.intro.meetings": "Cuộc họp hôm nay",
-  "brief.intro.urgent": "Khẩn cấp",
-  "brief.intro.read_one": "Lần chạy ban đêm gần nhất: đã đồng bộ 1 email.",
-  "brief.intro.read_other":
-    "Lần chạy ban đêm gần nhất: đã đồng bộ {count} email.",
-  "brief.intro.skip": "Nhấn phím bất kỳ hoặc bấm để tiếp tục",
   "brief.order.withheld": "Thứ tự này chưa tính: {factors}",
   "brief.factor.warmth": "mức độ thân thiết của quan hệ",
   "brief.factor.unknown": "một yếu tố mà phiên bản này không thể gọi tên",
@@ -6865,7 +6898,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",
   "brief.panel.decisions": "Phê duyệt",
   "brief.rail.quietSchedule": "Không có lịch hẹn",
-  "brief.panel.schedule": "Ngày của bạn",
+  "brief.panel.schedule": "Cuộc họp bên ngoài",
   "brief.readings.label": "Số liệu hôm nay",
   "brief.readings.floorTip":
     "Một nguồn đã chạm giới hạn, nên con số này là mức tối thiểu.",
@@ -7018,6 +7051,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "transcriptread.failedFallback": "Chưa có đề xuất nào.",
   "transcriptread.effectFailedTitle":
     "Đã chấp nhận nhưng không thể tạo việc cần làm",
+  "transcriptread.summaryTitle": "Tóm tắt cuộc họp",
+  "transcriptread.keyPoints": "Ý chính",
+  "transcriptread.nextSteps": "Bước tiếp theo",
+  "transcriptread.summaryRefused":
+    "Lần này chưa viết được bản tóm tắt. Đọc lại bản chép lời để thử lại.",
 
   "create.cancel": "Hủy",
   "create.save": "Tạo",
@@ -7378,6 +7416,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.kindTask": "Việc cần làm",
   "log.kindMeeting": "Cuộc họp",
   "log.kindCall": "Cuộc gọi",
+  "log.kindMessage": "Tin nhắn",
+  "log.channel": "Ứng dụng chat",
+  "log.channelPlaceholder": "Chọn ứng dụng chat",
   "log.transcriptLabel": "Bản chép lời",
   "log.transcriptHint":
     "Dán bản chép lời cuộc gọi hoặc cuộc họp. Nhãn người nói được giữ nguyên nếu có.",
@@ -9594,6 +9635,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.passportLastUsedOn": "Dùng lần cuối {date}",
   "settings.passportExpiresOn": "Hết hạn {date}",
   "settings.revokeNamed": "Thu hồi {name}",
+  "settings.allowAgain": "Cho phép lại",
+  "settings.allowAgainNamed": "Cho phép lại {name}",
   "settings.revokeConfirm":
     "Thông tin xác thực của passport sẽ mất hiệu lực ngay. Agent sẽ mất quyền truy cập ở lần gọi tiếp theo.",
   "import.withheld":
@@ -10198,6 +10241,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ghi dữ liệu nhập",
   "jobs.kind.import_undo": "Hoàn tác lượt nhập",
   "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
+  "jobs.kind.transcript_audience_sweep": "Quyền xem ghi chú cuộc họp",
+  "jobs.kind.meeting_profile_retract_sweep": "Trường công ty từ cuộc họp",
   "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
   "jobs.kind.intro_expiry": "Hết hạn lời giới thiệu",
   "jobs.kind.knowledge_ingest": "Lập chỉ mục tài liệu",
@@ -10219,6 +10264,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.technical_enrich_company": "Tra cứu kỹ thuật công ty",
   "jobs.kind.telegram_ingest": "Tiếp nhận tin nhắn Telegram",
   "jobs.kind.telegram_poll": "Lấy tin nhắn Telegram",
+  "jobs.kind.chat_link_flush": "Đăng vào kênh chat",
+  "jobs.kind.chat_pull": "Tóm tắt kênh chat",
+  "jobs.kind.chat_pull_sweep": "Kiểm tra kênh chat",
   "jobs.kind.telegram_poll_sweep": "Lên lịch lấy tin nhắn Telegram",
   "jobs.kind.time_scan": "Kiểm tra tự động hóa theo thời gian",
   "jobs.kind.transcript_propose": "Đọc bản chép lời",
@@ -10747,6 +10795,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.rights.title": "Quyền của quý khách đối với thông tin này",
   "privacynotice.rights.how":
     "Để sử dụng bất kỳ quyền nào, vui lòng trả lời tin nhắn đã đưa quý khách đến đây, hoặc liên hệ qua địa chỉ trên trang web của chúng tôi.",
+  "privacynotice.rights.howContact":
+    "Để sử dụng bất kỳ quyền nào, vui lòng liên hệ: {contact}",
   "privacynotice.right.access":
     "Yêu cầu bản sao thông tin đang lưu về quý khách.",
   "privacynotice.right.rectification": "Yêu cầu sửa những thông tin chưa đúng.",
@@ -10754,8 +10804,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.right.restriction":
     "Yêu cầu ngừng sử dụng thông tin trong khi có nội dung đang tranh chấp.",
   "privacynotice.right.objection": "Phản đối cách sử dụng thông tin.",
+  "privacynotice.right.portability":
+    "Yêu cầu nhận dữ liệu quý khách đã cung cấp ở định dạng phổ biến, máy đọc được, hoặc chuyển dữ liệu đó cho bên khác.",
+  "privacynotice.right.withdrawConsent":
+    "Rút lại sự đồng ý đã cho bất cứ lúc nào. Việc này không thay đổi những gì chúng tôi đã làm trước đó.",
   "privacynotice.right.complain":
-    "Khiếu nại với cơ quan bảo vệ dữ liệu cá nhân của quý khách.",
+    "Khiếu nại với cơ quan có thẩm quyền về bảo vệ dữ liệu cá nhân, ví dụ tại quốc gia nơi quý khách sống hoặc làm việc.",
   "privacynotice.controller.title": "Đơn vị chịu trách nhiệm",
   "privacynotice.controller.contact": "Câu hỏi về dữ liệu: {contact}",
   "privacynotice.categories.title": "Thông tin đang lưu",
@@ -10798,6 +10852,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacynotice.recipient.colleagues": "Nhân viên của chúng tôi dùng CRM này.",
   "privacynotice.recipient.serviceProviders":
     "Các công ty vận hành CRM và gửi email thay mặt chúng tôi. Hợp đồng buộc họ chỉ dùng dữ liệu theo chỉ dẫn của chúng tôi.",
+  "privacynotice.retention.afterYears_one": "{count} năm",
+  "privacynotice.retention.afterYears_other": "{count} năm",
+  "privacynotice.retention.afterDays_one": "{count} ngày",
+  "privacynotice.retention.afterDays_other": "{count} ngày",
   "privacynotice.retention.title": "Thời gian lưu",
   "privacynotice.retention.archive":
     "{scope}: ngừng dùng hằng ngày sau {days}.",
@@ -11862,6 +11920,81 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "connectors.telegramReplaceCta": "Thay token",
   "connectors.telegramConnectedAs": "Đã kết nối với tên @{username}.",
   "connectors.telegramConnectFailed": "Không thể kết nối bot",
+
+  "connectors.bot.provDispact": "Dispact",
+  "connectors.bot.dispactTitle": "Bot Dispact",
+  "connectors.bot.dispactSub":
+    "Một bot đăng tin về giao dịch và dự án vào các kênh riêng tư trong chat nhóm, và đọc những gì nhóm trao đổi ở đó.",
+  "connectors.bot.dispactConnectCta": "Kết nối bot Dispact",
+  "connectors.bot.dispactEmptyNote":
+    "Khi đã kết nối bot, mỗi giao dịch và dự án có thể liên kết với một kênh riêng tư trong chat nhóm.",
+  "connectors.bot.dispactDisconnectBody":
+    "Thao tác này xóa token đã lưu. Margince ngừng đăng và đọc ở mọi kênh đã liên kết; các ghi chú đã lưu vẫn ở trong CRM.",
+  "connectors.bot.dispactModalTitle": "Kết nối bot Dispact",
+  "connectors.bot.dispactTokenHint":
+    "Token ứng dụng của bot. Token bắt đầu bằng gwapp_, được lưu trong kho khóa và sẽ không hiển thị lại.",
+  "connectors.bot.dispactAddress": "Địa chỉ chat",
+  "connectors.bot.dispactAddressHint":
+    "Địa chỉ web của chat nhóm, ví dụ https://chat.example.com.",
+  "connectors.bot.eventsSecret": "Khóa sự kiện",
+  "connectors.bot.eventsSecretHint":
+    "Không bắt buộc. Sao chép khóa sự kiện (whsec_…) từ trang ứng dụng Margince trong chat của bạn. Có khóa này, Margince đọc một kênh ngay khi kênh có tin nhắn mới và kiểm tra phần còn lại mỗi giờ; nếu không, Margince kiểm tra mọi kênh mỗi phút.",
+  "connectors.bot.eventsSecretKeepHint": "Để trống để giữ khóa sự kiện đã lưu.",
+
+  "channelLink.title": "Chat nhóm",
+  "channelLink.none": "Chưa có kênh",
+  "channelLink.noneSub":
+    "Một kênh riêng tư giúp cả nhóm nắm được tình hình của hồ sơ này.",
+  "channelLink.create": "Tạo kênh",
+  "channelLink.linkExisting": "Liên kết kênh có sẵn",
+  "channelLink.linkCta": "Liên kết kênh",
+  "channelLink.linkFailed": "Chưa liên kết được kênh",
+  "channelLink.channelField": "Tên hoặc liên kết của kênh",
+  "channelLink.channelHint":
+    "Chọn một kênh riêng tư có bot. Để liên kết kênh khác, hãy thêm bot vào kênh đó trong chat trước.",
+  "channelLink.summarize":
+    "Tóm tắt cuộc trao đổi đến nay (tối đa 5 bản tóm tắt)",
+  "channelLink.verbosity": "Margince đăng những gì",
+  "channelLink.verbosityHint": "Ở mọi mức, thẻ trong kênh luôn được cập nhật.",
+  "channelLink.verbosityFailed": "Chưa lưu được cài đặt",
+  "channelLink.verbosity.everything": "Mọi thứ",
+  "channelLink.verbosity.important": "Chỉ điều quan trọng",
+  "channelLink.verbosity.milestones": "Chỉ các mốc chính",
+  "channelLink.verbosity.silent": "Im lặng (chỉ thẻ)",
+  "channelLink.open": "Mở {name} trong chat nhóm",
+  "channelLink.copy": "Sao chép liên kết kênh",
+  "channelLink.copied": "Đã sao chép liên kết kênh",
+  "channelLink.copyRemedy": "Mở kênh và sao chép địa chỉ của kênh ở đó.",
+  "channelLink.notInChat_one":
+    "{count} thành viên được mời chưa có tài khoản chat.",
+  "channelLink.notInChat_other":
+    "{count} thành viên được mời chưa có tài khoản chat.",
+  "channelLink.notAdded_one":
+    "{count} thành viên được mời chưa được thêm vào. Kiểm tra phạm vi truy cập của ứng dụng trong Dispact.",
+  "channelLink.notAdded_other":
+    "{count} thành viên được mời chưa được thêm vào. Kiểm tra phạm vi truy cập của ứng dụng trong Dispact.",
+  "channelLink.pausedBadge": "Tạm dừng",
+  "channelLink.paused": "Kênh đang tạm dừng",
+  "channelLink.pausedBody":
+    "Kênh đã được lưu trữ, hoặc bot đã mất quyền truy cập. Margince không đăng gì cho đến khi bạn hủy liên kết và liên kết kênh khác.",
+  "channelLink.unlink": "Hủy liên kết",
+  "channelLink.unlinkNamed": "Hủy liên kết {name}",
+  "channelLink.unlinkTitle": "Hủy liên kết kênh này?",
+  "channelLink.unlinkBody":
+    "Margince ngừng đăng và đọc. Kênh và các tin nhắn của kênh vẫn ở trong chat.",
+  "channelLink.refused.botNotConnected":
+    "Chưa có bot chat nào được kết nối. Quản trị viên kết nối bot trong Cài đặt.",
+  "channelLink.refused.channelNotFound":
+    "Bot không ở trong kênh nào có tên này. Hãy thêm bot vào kênh trong chat, rồi thử lại.",
+  "channelLink.refused.channelNotPrivate":
+    "Kênh này là kênh công khai. Hãy liên kết một kênh riêng tư.",
+  "channelLink.refused.botNotMember":
+    "Bot chưa là thành viên của kênh này. Hãy thêm bot vào kênh rồi thử lại.",
+  "channelLink.refused.channelAlreadyLinked":
+    "Kênh này đã thuộc về một giao dịch hoặc dự án khác.",
+  "channelLink.refused.recordAlreadyLinked": "Hồ sơ này đã có kênh.",
+  "channelLink.refused.providerUnreachable":
+    "Không kết nối được tới chat. Chưa có gì thay đổi, hãy thử lại.",
 
   // The workspace's own consumer-mail list (CAP-PARAM-5): what the shipped
   // baseline missed, and what it got wrong. Admin-curated and shared, because
@@ -12961,7 +13094,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "prefs.alwaysOn": "Luôn bật",
   "confirm.title": "Thông tin của quý khách",
   "confirm.intro":
-    "Margince, một hệ thống AI, vận hành CRM này. Dưới đây là toàn bộ thông tin đã ghi nhận về quý khách. Quý khách có thể sửa bất kỳ thông tin nào, hoặc yêu cầu xóa.",
+    "Dưới đây là toàn bộ thông tin đã ghi nhận về quý khách. Quý khách có thể sửa bất kỳ thông tin nào, hoặc yêu cầu xóa.",
+  "confirm.introNamed":
+    "{controller} đang lưu các thông tin dưới đây về quý khách. Quý khách có thể sửa bất kỳ thông tin nào, hoặc yêu cầu xóa.",
   "confirm.card.title": "Thông tin đã ghi nhận",
   "confirm.field.fullName": "Họ tên",
   "confirm.field.title": "Chức danh",
@@ -12997,7 +13132,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "confirm.done.body":
     "Đã ghi nhận câu trả lời. Mọi thay đổi sẽ được chuyển cho một nhân viên ở đây áp dụng, và liên kết này giờ đã hết lượt dùng.",
   "confirm.invalidLink":
-    "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn.",
+    "Liên kết này không còn hiệu lực. Có thể liên kết đã được dùng hoặc đã hết hạn. Nếu quý khách vẫn cần hỗ trợ, vui lòng trả lời email đã đưa quý khách đến đây.",
+  "confirm.questionChanged":
+    "Câu hỏi trên trang này đã thay đổi sau khi quý khách mở trang. Vui lòng tải lại trang và trả lời lại.",
   "prefs.lockedWhy": "Cần thiết cho việc quý khách đã yêu cầu, nên vẫn bật.",
   "prefs.confirmationNeededWhy":
     "Để bật mục này, dùng liên kết xác nhận trong email đã gửi đến quý khách. Có thể tắt mục này ở đây bất cứ lúc nào.",
@@ -13535,7 +13672,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Dữ liệu liên hệ",
   "settings.part.integrations.accounting": "Kế toán",
   "settings.part.integrations.webhooks": "Webhook",
-  "settings.part.integrations.telegram": "Bot Telegram",
+  "settings.part.integrations.telegram": "Bot chat",
   "settings.part.integrations.sharedMailboxes": "Hộp thư dùng chung",
   "sharedMailboxes.title": "Hộp thư dùng chung",
   "sharedMailboxes.intro":
@@ -15132,8 +15269,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Dữ liệu đầu vào quá lớn với mô hình quyết định",
   "aicalls.reason.decision_uncertified":
     "Mô hình quyết định chưa được chứng nhận cho tác vụ này",
-  "aicalls.reason.decision_local_only":
-    "Tác vụ chỉ chạy cục bộ nhưng mô hình quyết định thì không",
   "aicalls.reason.timeout": "Lần thử trước đã hết thời gian",
   "aicalls.decisionAnswer": "đã trả lời {choice} với độ tin cậy {confidence}",
   "aicalls.callsLabel": "Lượt gọi gần đây",
@@ -17180,6 +17315,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.attachment.archived.label": "Đã chuyển tệp vào kho lưu trữ",
   "webhooks.event.attachment.archived.when":
     "Tệp của một hồ sơ được chuyển vào kho lưu trữ.",
+  "webhooks.event.attachment.restored.label": "Đã khôi phục tệp",
+  "webhooks.event.attachment.restored.when":
+    "Một tệp đã lưu trữ trở lại trên hồ sơ.",
   "webhooks.eventGroup.projects": "Dự án",
   "webhooks.event.project.created.label": "Đã tạo dự án",
   "webhooks.event.project.created.when": "Một dự án được mở cho một công ty.",
@@ -17610,7 +17748,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.network.captureGapsFailed":
     "Không đọc được những đồng nghiệp nào trong các cuộc trao đổi với liên hệ này chưa kết nối hộp thư.",
   "contact.graph.noDirect": "Chưa ai trong công ty trao đổi với liên hệ này.",
-  "contact.graph.sideColumn": "Giới thiệu và thay đổi",
   "contact.graph.recordWorksWith": "Theo hồ sơ: làm việc cùng {name}",
   "contact.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "contact.graph.withColleague": "với {name}",
@@ -17657,7 +17794,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.lastYesterday": "Hôm qua",
   "contact.intro.lastDays": "{days} ngày trước",
   "contact.intro.lastNever": "Không có trong 90 ngày",
-  "contact.intro.stripWho": "Hướng tiếp cận",
   "contact.intro.stripWhoMix":
     "{direct} trực tiếp · {indirect} qua một liên hệ",
   "contact.intro.stripWhoOwn": "Gồm cả quan hệ của chính bạn",
@@ -17676,14 +17812,37 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.change.warmed": "Ấm hơn",
   "contact.intro.change.cooled": "Nguội hơn",
   "contact.intro.change.buckets": "{from} → {to}",
-  "contact.intro.stripHandoff": "Yêu cầu giới thiệu",
   "contact.intro.handoffNotStarted": "Chưa bắt đầu",
   "contact.intro.handoffUnread": "Không đọc được",
   "contact.intro.handoffOwner": "Tiếp theo: {name}",
   "contact.intro.ownerColleague": "một đồng nghiệp",
   "contact.intro.ownerNobody": "không ai",
   "contact.intro.relayTitle": "Trạng thái giới thiệu",
-  "contact.intro.stripLabel": "Số liệu mạng lưới",
+  "contact.chapter.jump": "Trong thẻ này",
+  "contact.chapter.wayIn": "Cách tiếp cận",
+  "contact.chapter.whoAnswer":
+    "Ai trong nhóm của bạn và ở công ty đang trao đổi với {name}, và thường xuyên ra sao.",
+  "contact.chapter.progress": "Tiến độ",
+  "contact.chapter.routes_one": "{count} cách",
+  "contact.chapter.routes_other": "{count} cách",
+  "contact.chapter.allDirect_one": "trực tiếp",
+  "contact.chapter.allDirect_other": "trực tiếp",
+  "contact.chapter.allVia_one": "qua liên hệ",
+  "contact.chapter.allVia_other": "qua liên hệ",
+  "contact.chapter.wayInAnswer": "{routes}: {mix}.",
+  "contact.chapter.withDetail": "{value} ({detail})",
+  "contact.chapter.progressAnswer":
+    "Yêu cầu giới thiệu: {handoff}. Thay đổi gần nhất: {change}.",
+  "contact.chapter.toCheck": "Cần kiểm tra",
+  "contact.chapter.toCheckAnswer":
+    "Những gì Margince đọc được từ thư và trang của họ. Hãy xác nhận, sửa hoặc bỏ qua từng mục.",
+  "contact.chapter.sources": "Nguồn",
+  "contact.chapter.sourcesAnswer":
+    "Mỗi nguồn nói gì. Không có gì ở đây ghi đè lên dữ liệu đồng nghiệp đã nhập.",
+  "contact.chapter.recordKeeping": "Lưu trữ hồ sơ",
+  "contact.chapter.recordKeepingAnswer":
+    "Các trường, quyền liên lạc và thiết lập của liên hệ này.",
+  "contact.chapter.researchAction": "Tìm hiểu từ nguồn công khai",
   "contact.intro.mapTitle": "Ai quen {name}",
   "contact.intro.stepRoute": "Chọn hướng",
   "contact.intro.stepRoutePick": "chọn người để nhờ",
@@ -17821,7 +17980,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.declined": "Đã từ chối trước đó",
   "contact.intro.unavailable": "Không khả dụng",
   "contact.network.momentsTitle": "Những gì đã thay đổi",
-  "contact.network.momentsSub": "Thay đổi trong quan hệ này, lấy từ tin nhắn.",
+  "contact.network.momentsSub":
+    "Thay đổi lấy từ tin nhắn và các yêu cầu giới thiệu trước đây.",
   "contact.network.noMoments": "Chưa có thay đổi gần đây trong quan hệ này.",
   "contact.change.repliedAfterGap": "Họ đã trả lời sau {days} ngày im lặng.",
   "contact.change.wentQuiet": "Không có hoạt động trong {days} ngày.",
@@ -19273,6 +19433,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.title.automation_run.failed": "{name} bị lỗi",
   "worklist.title.automation_run.blocked": "{name} bị chặn",
   "worklist.title.meeting_outcome": "Ghi lại kết quả của {name}",
+  "worklist.title.meeting_outcome.read_only": "Chưa có kết quả cho {name}",
   "worklist.title.meeting_follow_up": "Liên hệ lại sau cuộc họp {name}",
   "worklist.title.awaiting_reply": "Chưa có phản hồi: {name}",
   "worklist.title.bounce": "Bị trả về: {name}",
@@ -19540,6 +19701,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Một đồng nghiệp nhờ bạn giới thiệu với một liên hệ. Chấp nhận hoặc từ chối yêu cầu.",
   "worklist.ask.meeting_outcome":
     "Cuộc họp này đã kết thúc và chưa có ghi nhận nào về kết quả. Ghi lại kết quả. Nếu cuộc họp không diễn ra, chọn “Không diễn ra”, hoặc hủy qua lời mời trên lịch.",
+  "worklist.ask.meeting_outcome.read_only":
+    "Người tổ chức cuộc họp sẽ ghi lại kết quả, và bạn không thể thay đổi cuộc họp này. Nhắc họ nếu cần, rồi đánh dấu là xong.",
   "worklist.ask.weekly_commitment":
     "Bạn đã lên kế hoạch việc này cho tuần. Làm xong, hoặc dời trong kế hoạch tuần.",
   "worklist.ask.awaiting_reply":
@@ -20065,6 +20228,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettled": "Đã đánh dấu hoàn thành",
   "worklist.verb.promiseSettleFailed":
     "Không thể đánh dấu cam kết là đã hoàn thành. Thử lại.",
+  "worklist.verb.meetingSkipNextStep": "Bỏ qua bước tiếp theo",
+  "worklist.verb.meetingNextStep": "Bước tiếp theo là gì?",
   "worklist.verb.meetingHowDidItGo": "Cuộc họp thế nào?",
   "worklist.verb.meetingAddNotes": "Thêm ghi chú",
   "worklist.verb.meetingUpdateTitle": "Cuộc họp",
@@ -20414,6 +20579,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.name.geminiVertex": "Gemini trên Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Tương thích Jev",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Nhà cung cấp thử nghiệm tích hợp",
@@ -20515,6 +20681,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.company.linkTitle": "Liên kết lead này với {name}?",
   "lead.company.linkConfirm": "Liên kết công ty",
   "lead.company.linkOpens": "Tên công ty trên lead này sẽ mở {name}.",
+  "lead.company.addedOnQualify":
+    "Chưa liên kết công ty. Xác nhận lead đủ điều kiện sẽ liên kết hoặc tạo hồ sơ công ty.",
   "lead.company.linkOnQualify":
     "Chưa có liên hệ nào được tạo. Khi bạn xác nhận lead này đủ điều kiện, lead sẽ trở thành liên hệ tại {name}.",
   "lead.company.matchedByDomain": "Cùng tên miền trang web",
@@ -20716,6 +20884,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.approval_overnight": "Xem xét đề xuất",
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
+  "approval.commitment.strength": "Mức chắc chắn",
+  "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":
     "Tạo công việc không có nghĩa là cam kết đã được thực hiện.",
@@ -20736,6 +20906,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.decided_kind": "Đã quyết định mà không hỏi: {kind}",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
+  "activity.notes.connectHint":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp để đọc.",
+  "activity.notes.otherAccount":
+    "Đã đính kèm ghi chú. Kết nối ghi chú cuộc họp bằng cùng tài khoản Google với lịch của bạn.",
+  "captureConcern.notesGrant": "Không thể đọc ghi chú cuộc họp",
+  "captureConcern.notesAccount":
+    "Ghi chú cuộc họp cần cùng tài khoản Google với lịch",
   "captureConcern.reauth": "Cần kết nối lại",
   "captureConcern.error": "Lỗi kết nối",
   "captureConcern.failing": "Đồng bộ gặp lỗi",
@@ -21049,6 +21226,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.guide": "Hướng dẫn định tuyến ↗",
   "aiServing.blocked.decisions":
     "Mô hình quyết định trả lời qua endpoint decisions của OpenRouter, endpoint này không nhận khối định tuyến. Thời gian chờ đặt theo từng tác vụ trong mục Tác vụ AI.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} tự phục vụ mô hình quyết định, nên định tuyến máy chủ không áp dụng. Thời gian chờ đặt theo từng tác vụ trong mục Tác vụ AI.",
   "aiServing.blocked.provider":
     "Định tuyến máy chủ chỉ áp dụng cho OpenRouter. {provider} tự phục vụ mô hình này. Mức suy nghĩ và thời gian chờ vẫn đặt theo từng tác vụ trong mục Tác vụ AI.",
   "aiServing.blocked.host":
@@ -21369,9 +21548,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.propose_roles": "Xác định vai trò mua hàng",
   "aiTask.name.rate_extract": "Trích xuất tỷ giá",
   "aiTask.name.report_interpret": "Đánh giá báo cáo bán hàng",
-  "aiTask.name.report_setup": "Thiết lập báo cáo từ mô tả",
+  "aiTask.name.report_setup":
+    "Đề xuất thiết lập báo cáo hoặc mục tiêu doanh số",
   "aiTask.name.request_settlement": "Kiểm tra yêu cầu đã được giải đáp",
   "aiTask.name.rewrite": "Viết lại",
+  "aiTask.name.chat_summary": "Tóm tắt kênh chat",
   "aiTask.name.signal_extract": "Trích xuất tín hiệu từ cuộc trao đổi",
   "aiTask.name.site_extract": "Phân tích chuyên sâu trang web",
   "aiTask.name.site_fact_extract": "Trích xuất thông tin từ trang web",
@@ -22034,7 +22215,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.done.noReason": "Không có lý do",
   "brief.done.markedLost": "Đã đánh dấu là mất",
   "brief.done.customerWrote": "Khách hàng đã viết:",
-  "magic.lane.doneOther": "Cập nhật khác",
+  "brief.done.small_one": "{count} thay đổi nhỏ",
+  "brief.done.small_other": "{count} thay đổi nhỏ",
+  "brief.done.smallLabel": "Thay đổi nhỏ, mới nhất trước",
+  "brief.done.why": "Lý do",
+  "brief.done.undoNote": "Hoàn tác",
   "changes.bulk.undone_one": "Đã hoàn tác trên {count} giao dịch.",
   "changes.bulk.undone_other": "Đã hoàn tác trên {count} giao dịch.",
   "changes.bulk.partly_one": "{count} giao dịch được hoàn tác một phần.",
@@ -22141,6 +22326,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "progress.work.more": "Xem thêm",
   "progress.plannedAhead": "Pipeline đang mở, chưa chốt",
   "progress.rail": "Mục tiêu và định nghĩa",
+  "progress.summary": "Tóm tắt",
+  "progress.summary.refresh": "Làm mới tóm tắt",
+  "progress.summary.writing": "Đang viết tóm tắt",
+  "progress.summary.more": "Đọc toàn bộ tóm tắt",
   "progress.goalFor": "Mục tiêu cho {period}",
   "progress.goalMonths": "Số tháng có mục tiêu",
   "progress.goalMonthsSet": "{set}/{needed}",
@@ -22186,6 +22375,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.status": "Trạng thái",
   "goals.yearly": "Mục tiêu năm ({currency})",
   "goals.spread": "Chia đều",
+  "goals.propose": "Đề xuất các tháng",
+  "goals.propose.busy": "Đang đọc doanh số đã chốt",
+  "goals.propose.title": "Đề xuất: {total} cho cả năm",
+  "goals.propose.review": "Chưa có gì được lưu cho đến khi bạn lưu bản nháp.",
+  "goals.propose.apply": "Dùng các tháng này",
+  "goals.propose.noModel":
+    "Đề xuất các tháng cần một mô hình AI đã được thiết lập. Bạn vẫn có thể tự nhập từng tháng.",
+  "goals.propose.noHistory":
+    "{name} chưa có doanh số đã chốt trong năm {year} hay năm trước đó để đọc ra quy luật. Hãy tự nhập từng tháng.",
+  "goals.proposedByAi": "Do Margince đề xuất",
   "goals.monthsSum": "Các tháng cộng lại là {total}.",
   "goals.monthsMissing_one": "{count} tháng chưa đặt.",
   "goals.monthsMissing_other": "{count} tháng chưa đặt.",

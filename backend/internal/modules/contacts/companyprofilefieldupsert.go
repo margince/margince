@@ -29,14 +29,14 @@ package contacts
 // company here has been overtaken by the archive mid-apply, and a stale write
 // silently declining is the same residue the column write leaves.
 const upsertCompanyProfileField = `
-	INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by)
-	SELECT $1, $2, $3, $4, $5, $6, $7, $8
+	INSERT INTO company_profile_field (company_id, field, value, evidence_snippet, source_url, confidence, source, captured_by, source_activity_id)
+	SELECT $1, $2, $3, $4, $5, $6, $7, $8, $10
 	  FROM company o
 	 WHERE o.id = $1 AND o.archived_at IS NULL
 	ON CONFLICT (company_id, field)
 	DO UPDATE SET value = EXCLUDED.value, evidence_snippet = EXCLUDED.evidence_snippet,
 	              source_url = EXCLUDED.source_url, confidence = EXCLUDED.confidence,
-	              source = EXCLUDED.source,
+	              source = EXCLUDED.source, source_activity_id = EXCLUDED.source_activity_id,
 	              captured_by = EXCLUDED.captured_by, captured_at = now()
 	WHERE $9 OR ` + companyProfileReplaceableSQL
 

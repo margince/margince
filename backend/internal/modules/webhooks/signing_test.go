@@ -123,3 +123,37 @@ func TestGenerateSecretIsPrefixedAndUnique(t *testing.T) {
 func encodeTestKey(s string) string {
 	return base64.StdEncoding.EncodeToString([]byte(s))
 }
+
+// Verify takes the spec's own example, also when it rides beside an entry
+// signed with another secret, and refuses a body that changed.
+func TestVerifyFindsTheOneMatchingEntry(t *testing.T) {
+	secret := "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"
+	id, ts, body := "msg_p5jXN8AQM9LWM0D4loKWxJek", int64(1614265330), []byte(`{"test": 2432232314}`)
+	const valid = "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE="
+	for _, tc := range []struct {
+		name, header string
+		body         []byte
+		want         bool
+	}{
+		{"one valid entry", valid, body, true},
+		{"a rotated secret's entry first", "v1,c29tZXRoaW5nIGVsc2U= " + valid, body, true},
+		{"a changed body", valid, []byte(`{"test": 1}`), false},
+		{"no entry", "", body, false},
+	} {
+		got, err := Verify(secret, id, ts, tc.body, tc.header)
+		if err != nil || got != tc.want {
+			t.Errorf("%s: Verify = %v, %v; want %v", tc.name, got, err, tc.want)
+		}
+	}
+}
+
+func TestCheckSecretWantsThePrefixAndBase64(t *testing.T) {
+	if err := CheckSecret("whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw"); err != nil {
+		t.Errorf("the spec's example secret was refused: %v", err)
+	}
+	for _, bad := range []string{"MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw", "whsec_", "whsec_not base64!"} {
+		if CheckSecret(bad) == nil {
+			t.Errorf("CheckSecret(%q) took a secret no signature can be made with", bad)
+		}
+	}
+}

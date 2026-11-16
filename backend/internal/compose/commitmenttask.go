@@ -70,6 +70,11 @@ type CommitmentTaskProposal struct {
 	// DoerID is the colleague the accepter hands the task to; empty keeps it
 	// with the accepter (approvals.DoerField).
 	DoerID string `json:"doer_id"`
+	// Tentative marks a promise read below the firm floor; the card says so.
+	Tentative bool `json:"tentative,omitempty"`
+	// FollowUpOf is the customer's watched claim this task chases. It is not
+	// the task's claim: deciding on the follow-up leaves the promise as it is.
+	FollowUpOf *ids.UUID `json:"follow_up_of,omitempty"`
 }
 
 // commitmentTask is what the writer needs to know about one promise.
@@ -449,9 +454,10 @@ func commitmentRecipientTarget(ctx context.Context, tx pgx.Tx, tasks *activities
 // promiseClosedReason tells the decider why an accepted promise wrote nothing.
 const promiseClosedReason = "This promise was settled or dismissed since the card was made, so there is nothing to accept."
 
-// commitmentStillOpenTx is stillowed.PromiseTx for one staged proposal.
+// commitmentStillOpenTx is stillowed.PromiseTx for one staged proposal and
+// the claim a follow-up chases.
 func commitmentStillOpenTx(ctx context.Context, tx pgx.Tx, claims *contacts.Store, proposal CommitmentTaskProposal) (bool, error) {
-	return stillowed.PromiseTx(ctx, tx, claims, commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs),
+	return stillowed.PromiseTx(ctx, tx, claims, commitmentClaimIDs(proposal.FollowUpOf, commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)),
 		proposal.SourceActivityID, proposal.Locator)
 }
 

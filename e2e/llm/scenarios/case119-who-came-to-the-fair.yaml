@@ -4,7 +4,7 @@
 # setup step so no other case counts them. Thirty is five past the filter
 # preview's first page of 25, so an answer built from one page leaves contacts
 # out. read_lists' preview pages with the cursor each page answers since
-# #10288; find_records pages too, and a larger limit reads all thirty at once.
+# its own cursor; find_records pages too, and a larger limit reads all thirty at once.
 # Every one of those is right, so no tool is pinned and the answer is scored.
 name: case119_who_came_to_the_fair
 criteria: [1]

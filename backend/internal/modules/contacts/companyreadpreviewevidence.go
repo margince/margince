@@ -24,6 +24,13 @@ func previewReadProfiles(ctx context.Context, tx pgx.Tx, id ids.CompanyID, field
 		if err := previewFieldsVisible(ctx, companyEntity, field.Field); err != nil {
 			return nil, err
 		}
+		if field.Field == fieldIndustry {
+			code, ok := ResolveIndustry(field.Value)
+			if !ok {
+				continue
+			}
+			field.Value = code
+		}
 		var before string
 		replaceable := true
 		err := tx.QueryRow(ctx, `SELECT value, `+companyProfileReplaceableSQL+` FROM company_profile_field WHERE company_id=@company AND field=@field`, pgx.NamedArgs{companyEntity: id, evidenceFieldKey: field.Field}).Scan(&before, &replaceable)

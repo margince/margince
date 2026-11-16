@@ -10,13 +10,12 @@ import { useUnsavedGuard } from "../../components/unsaved";
 import { EvidenceMark } from "../../design-system/evidencemark";
 import { FieldRow } from "../../design-system/fieldgrid";
 import { InlineText } from "../../design-system/inlinetext";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
-import { useViewerZone } from "../../lib/viewerzone";
 import { VatMark } from "./companyvatmark";
-import { derivedSource } from "./evidencesource";
+import { useDerivedSource } from "./evidencesource";
 import { profileFieldsKey } from "./evidenceverdict";
 
 type ProfileField = components["schemas"]["CompanyProfileField"];
@@ -64,6 +63,8 @@ type SidecarFieldProps = Readonly<{
   // individually, so it passes none and its rows read as they always have.
   icon?: ReactNode;
   placeholderKey: MessageKey;
+  // Why an empty field is empty, shown to a reader who cannot fill it.
+  emptyKey?: MessageKey;
   canEdit: boolean;
   readOnlyReason: string | undefined;
   multiline?: boolean;
@@ -80,14 +81,14 @@ export function SidecarFieldValue({
   labelKey,
   label: labelText,
   placeholderKey,
+  emptyKey,
   canEdit,
   readOnlyReason,
   multiline,
   guardDetails,
 }: SidecarFieldProps) {
   const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
+  const sourceOf = useDerivedSource();
   const queryClient = useQueryClient();
   const [dirty, setDirty] = useState(false);
   useUnsavedGuard(dirty, guardDetails ? "details" : undefined);
@@ -125,9 +126,7 @@ export function SidecarFieldValue({
   };
   // A value a machine read keeps its receipt. Absent for a value a human typed:
   // a mark with nothing behind it teaches the reader to stop opening them.
-  const source = current
-    ? derivedSource(current, locale, readerZone)
-    : undefined;
+  const source = current ? sourceOf(current) : undefined;
   return (
     <>
       {/* The value is the control that opens its edit, so the receipt is a
@@ -136,6 +135,7 @@ export function SidecarFieldValue({
         label={label}
         value={current?.value ?? ""}
         placeholder={t(placeholderKey)}
+        emptyText={emptyKey ? t(emptyKey) : undefined}
         multiline={multiline}
         canEdit={canEdit && fieldsLoaded}
         readOnlyReason={readOnlyReason}

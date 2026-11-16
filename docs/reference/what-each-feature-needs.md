@@ -33,6 +33,7 @@ in [Every setting](configuration.md#every-setting). The least a production insta
 | Gmail push | `gmail_pubsub_topic` on the worker, `gmail_push_token` on the api | worker, api | Capture polls the mailbox instead. |
 | Microsoft 365 mail and calendar | `graph_client_id`, `graph_client_secret`, `graph_tenant`, `connector_state_key`, `keyvault_root_key`, `public_base_url` | api connects, worker syncs | `/connectors/graph/*` answers 501. |
 | Microsoft 365 push | `graph_notification_url` on the worker, `graph_push_token` on the api | worker, api | Capture polls instead. |
+| Chat channels (Dispact) | `keyvault_root_key`, and `public_base_url` for the link back on each post | api connects and links, worker posts | Dispact cannot be connected, and a record's **Team chat** card says to connect it in Settings. |
 | Microsoft sign-in | `microsoft_signin_tenant`, or a `graph_tenant` that names one directory | api | The provider stays off, and the boot log says why. |
 | Password sign-in turned off | `auth.password.enabled: false` and a sign-in provider | api | With no provider, the api refuses to start. |
 

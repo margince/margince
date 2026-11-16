@@ -4,19 +4,16 @@
 import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
-import { providerName } from "../../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { approvalHref } from "../../lib/approvalhref";
 import { approvalKindLabel } from "../../lib/approvalkindlabel";
-import { runOutcomeWord, runReasonWords } from "../../lib/automationrun";
 import { ENTITY, isEntityKind } from "../../lib/entity";
-import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import type { MagicLane, MagicLine } from "../../lib/magic.queries";
+import { lineSentence } from "../../lib/magiccopy";
 import {
   magicByKey,
-  magicSentenceKey,
   magicUndoReasonKey,
   magicWhyKey,
 } from "../../lib/magickeys";
@@ -95,7 +92,6 @@ function MagicLineRow({
   byDay: boolean;
 }>) {
   const t = useT();
-  const sentence = magicSentenceKey(line.summary.key);
   const { locale } = useLocale();
   const detail = lineDetail(line, t, locale);
   return (
@@ -120,14 +116,7 @@ function MagicLineRow({
         </div>
       ) : (
         <p className="magic-line-text">
-          {sentence
-            ? t(sentence, readableValues(line.summary.values, t))
-            : t(
-                line.lane === "needs_you"
-                  ? "magic.approval.reviewChange"
-                  : "magic.undescribed",
-              )}{" "}
-          <LineSubject line={line} since={since} />{" "}
+          {lineSentence(line, t)} <LineSubject line={line} since={since} />{" "}
           {detail.length > 0 && (
             <span className="t-caption">
               {detail.map((part) => (
@@ -143,20 +132,26 @@ function MagicLineRow({
   );
 }
 
-// Unknown detail keys cannot supply a trustworthy explanation.
-function lineDetail(
-  line: MagicLine,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): string[] {
+/**
+ * Who acted, why, and what the reader should know before reaching for an
+ * undo. Unknown detail keys cannot supply a trustworthy explanation.
+ */
+export function lineNotes(line: MagicLine, t: Translator, locale: Locale) {
   const by = line.actor.label ? magicByKey(line.actor.label.key) : null;
   const why = line.reason ? magicWhyKey(line.reason.key) : null;
-  return [
-    by && t(by, line.actor.label?.values),
-    why && t(why, forecastReasonValues(line, locale)),
-    captureCoverage(line, t),
-    noWayBack(line, t),
-  ].filter((part): part is string => Boolean(part));
+  return {
+    by: by ? t(by, line.actor.label?.values) : null,
+    why: why ? t(why, forecastReasonValues(line, locale)) : null,
+    coverage: captureCoverage(line, t),
+    noWayBack: noWayBack(line, t),
+  };
+}
+
+function lineDetail(line: MagicLine, t: Translator, locale: Locale): string[] {
+  const notes = lineNotes(line, t, locale);
+  return [notes.by, notes.why, notes.coverage, notes.noWayBack].filter(
+    (part): part is string => Boolean(part),
+  );
 }
 
 function captureCoverage(line: MagicLine, t: Translator): string | null {
@@ -191,7 +186,7 @@ function forecastReasonValues(line: MagicLine, locale: Locale) {
 // Why a done change to one record cannot be put back, said rather than shown as
 // a greyed control. A line standing for many says it per record inside, and on
 // the other lanes nothing changed, so "nothing to put back" would be noise.
-function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
+function noWayBack(line: MagicLine, t: Translator): string | null {
   const entity = line.entity;
   if (line.lane !== "done" || (standsForMany(line) && entity)) {
     return null;
@@ -212,7 +207,7 @@ function noWayBack(line: MagicLine, t: ReturnType<typeof useT>): string | null {
  * A decision waiting has nothing to undo. Its control opens that decision in
  * the drawer over Home, where it is answered.
  */
-function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
+export function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
   if (line.lane === "needs_you") {
     return (
@@ -320,7 +315,7 @@ function manySummary({
  * interpolating a record's name into a translated clause is how a sentence
  * ends up ungrammatical in two of three languages.
  */
-function LineSubject({
+export function LineSubject({
   line,
   since,
 }: Readonly<{ line: MagicLine; since: string | undefined }>) {
@@ -419,31 +414,4 @@ function recordHref(line: MagicLine): string | undefined {
     return undefined;
   }
   return routeHash(ENTITY[entity.type].route(entity.id));
-}
-
-// A proposal's kind and a connector's provider arrive as codes, not words.
-function readableValues(
-  values: Readonly<Record<string, string>> | undefined,
-  t: Translator,
-): Record<string, string> | undefined {
-  if (!values) return values;
-  return {
-    ...values,
-    ...(values.kind && { kind: approvalKindLabel(values.kind, t) }),
-    ...(values.fields && { fields: fieldWords(values.fields, t) }),
-    ...(values.provider && { provider: providerName(values.provider, t) }),
-    ...(values.outcome && { outcome: runOutcomeWord(values.outcome, t) }),
-    ...(values.reason_code && {
-      reason: runReasonWords(values.reason_code, t),
-    }),
-  };
-}
-
-// The server names the changed fields by column, with spaces for underscores;
-// each is read as the record page names it.
-function fieldWords(fields: string, t: Translator): string {
-  return fields
-    .split(", ")
-    .map((field) => historyFieldLabel(field.replaceAll(" ", "_"), t))
-    .join(", ");
 }

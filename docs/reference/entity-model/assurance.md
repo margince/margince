@@ -213,14 +213,16 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 ## assurance_run
 
-16 columns · primary key `(id)` · referenced by 3 foreign keys
+18 columns · primary key `(id)` · referenced by 3 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `as_of` | `timestamp with time zone` | yes |  |
 | `digest` | `text` |  |  |
+| `eligible_deal_owners` | `uuid[]` |  |  |
 | `eligible_deals` | `integer`, default `0` | yes |  |
+| `eligible_signal_owners` | `uuid[]` |  |  |
 | `eligible_signals` | `integer`, default `0` | yes |  |
 | `outbox_inputs_tracked` | `boolean`, default `false` | yes |  |
 | `read_through_generation` | `bigint` |  |  |

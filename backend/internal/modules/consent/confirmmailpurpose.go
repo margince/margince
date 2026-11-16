@@ -24,13 +24,20 @@ func subscriptionPurposeLabel(ctx context.Context, tx pgx.Tx, id ids.PurposeID, 
 	if err != nil {
 		return "", err
 	}
+	return purposeName(key, label, words), nil
+}
+
+// purposeName is a purpose's name in one language. The three purposes the
+// product seeds take the catalog's name; any other keeps its operator's label.
+// The mail, the page heading and the recorded consent sentence all use it.
+func purposeName(key, label string, words mailcopy.Copy) string {
 	switch key {
 	case "business_correspondence":
-		return words.BusinessPurpose, nil
+		return words.BusinessPurpose
 	case "marketing_email":
-		return words.MarketingPurpose, nil
+		return words.MarketingPurpose
 	case "transactional":
-		return words.TransactionalPurpose, nil
+		return words.TransactionalPurpose
 	}
-	return label, nil
+	return label
 }

@@ -16,7 +16,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -27,29 +26,27 @@ import (
 // customer had nothing from the reader since. Each ended at least the
 // follow-up window before asOf, inside the lookback. SentAt is when it started.
 func (s *Store) MeetingsAwaitingFollowUp(ctx context.Context, asOf time.Time) ([]AwaitingReply, error) {
-	return s.readMeetingFollowUps(ctx, asOf, func(func(any) int) (string, error) { return scopeUnbounded, nil })
+	return s.readMeetingFollowUps(ctx, asOf, everyMeetingFollowUp)
 }
 
-// MeetingsStillAwaitingFollowUp answers which of these meetings the reader
-// still owes a follow-up, so a stored suggestion can be checked again.
-func (s *Store) MeetingsStillAwaitingFollowUp(ctx context.Context, asOf time.Time, meetingIDs []ids.UUID) (map[ids.UUID]bool, error) {
-	owed := make(map[ids.UUID]bool, len(meetingIDs))
-	if len(meetingIDs) == 0 {
-		return owed, nil
-	}
-	rows, err := s.readMeetingFollowUps(ctx, asOf, func(arg func(any) int) (string, error) {
-		return fmt.Sprintf(`a.id = ANY($%d)`, arg(meetingIDs)), nil
-	})
-	for _, row := range rows {
-		owed[row.ActivityID] = true
-	}
-	return owed, err
+// meetingNarrowing limits which meetings the follow-up read considers.
+// candidates runs before any per-meeting work, so it names only the meeting
+// under alias a. reported is checked on the reported row and may name its
+// recipient_set.
+type meetingNarrowing struct {
+	candidates, reported string
 }
 
-// readMeetingFollowUps runs the one follow-up query; narrow renders the extra
-// predicate on alias a that limits which meetings it considers.
+// narrowMeetings renders a meetingNarrowing, binding its values through arg.
+type narrowMeetings func(arg func(any) int) (meetingNarrowing, error)
+
+func everyMeetingFollowUp(func(any) int) (meetingNarrowing, error) {
+	return meetingNarrowing{candidates: scopeUnbounded, reported: scopeUnbounded}, nil
+}
+
+// readMeetingFollowUps runs the one follow-up query, narrowed by narrow.
 func (s *Store) readMeetingFollowUps(
-	ctx context.Context, asOf time.Time, narrow func(arg func(any) int) (string, error),
+	ctx context.Context, asOf time.Time, narrow narrowMeetings,
 ) ([]AwaitingReply, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
@@ -67,7 +64,7 @@ func (s *Store) readMeetingFollowUps(
 }
 
 func (s *Store) queryMeetingFollowUps(
-	ctx context.Context, tx pgx.Tx, asOf time.Time, windowDays int, narrow func(arg func(any) int) (string, error),
+	ctx context.Context, tx pgx.Tx, asOf time.Time, windowDays int, narrow narrowMeetings,
 ) ([]AwaitingReply, error) {
 	query, args, err := meetingFollowUpsStatement(ctx, asOf, windowDays, narrow, AwaitingReplyScanCap)
 	if err != nil {
@@ -206,7 +203,7 @@ func meetingHeldSQL(alias, now string) string {
 
 // meetingFollowUpsStatement is the follow-up read, newest first, holding at
 // most limit meetings; a limit of 0 holds none.
-func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), limit int) (string, []any, error) {
+func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow narrowMeetings, limit int) (string, []any, error) {
 	if limit < 0 {
 		return "", nil, fmt.Errorf("activities: a meeting follow-up page of %d meetings", limit)
 	}
@@ -215,11 +212,11 @@ func meetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays i
 
 // unpagedMeetingFollowUpsStatement is the same read without a page, for a
 // caller whose own narrowing bounds it.
-func unpagedMeetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error)) (string, []any, error) {
+func unpagedMeetingFollowUpsStatement(ctx context.Context, asOf time.Time, windowDays int, narrow narrowMeetings) (string, []any, error) {
 	return meetingFollowUpsPage(ctx, asOf, windowDays, narrow, "")
 }
 
-func meetingFollowUpsPage(ctx context.Context, asOf time.Time, windowDays int, narrow func(func(any) int) (string, error), page string) (string, []any, error) {
+func meetingFollowUpsPage(ctx context.Context, asOf time.Time, windowDays int, narrow narrowMeetings, page string) (string, []any, error) {
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	instant, reader, window := arg(asOf), arg(readerOrNobody(ctx)), arg(windowDays)
@@ -237,27 +234,27 @@ func meetingFollowUpsPage(ctx context.Context, asOf time.Time, windowDays int, n
 	}
 	at := fmt.Sprintf("$%d", instant)
 	held := meetingHeldSQL("a", at)
-	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held)
+	candidates := meetingCandidatesSQL(at, fmt.Sprintf("$%d", window), fmt.Sprintf("$%d", reader), held, narrowed.candidates)
 	return followUpStatement(candidates, g, fmt.Sprintf(meetingFollowUpsSQL,
 		instant, g.content, g.links, window, AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later", at), reader,
 		messageSnoozeLiftedSQL(at, g.back), g.customer, page,
-		held, maxActivityLinks, narrowed, occurredday.FromSQL("later", followUpFromSQL),
+		held, maxActivityLinks, narrowed.reported, occurredday.FromSQL("later", followUpFromSQL),
 	), meetingAttendeesSQL(addressable)), args, nil
 }
 
 // meetingCandidatesSQL is the meetings the lane may report: held, inside the
-// window, and the reader took part. The caller's narrowing stays out, since it
-// may name the attendees or an outer row. follow_from is where a later contact
-// starts to count.
-func meetingCandidatesSQL(asOf, window, reader, held string) string {
+// window, the reader took part, and the caller's candidates narrowing holds.
+// follow_from is where a later contact starts to count.
+func meetingCandidatesSQL(asOf, window, reader, held, narrowed string) string {
 	return `SELECT a.id, a.thread_key, a.kind, a.channel_provider, ` + followUpFromSQL + ` AS follow_from
 	  FROM activity a
 	 WHERE a.kind = 'meeting' AND a.archived_at IS NULL AND NOT ` + ImportedHistorySQL + `
 	   AND ` + held + `
 	   AND ` + meetingEndSQL + ` <= ` + asOf + `::timestamptz - make_interval(days => ` + window + `::int)
 	   AND ` + meetingEndSQL + fmt.Sprintf(` >= %s::timestamptz - make_interval(days => %s::int + %d)`, asOf, window, AwaitingReplyLookbackDays) + `
-	   AND ` + storekit.MeetingResponsibilitySQL("a", reader)
+	   AND ` + storekit.MeetingResponsibilitySQL("a", reader) + `
+	   AND ` + narrowed
 }
 
 // meetingNeedSQL names the activities the meeting statement reads: each

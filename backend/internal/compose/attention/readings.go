@@ -14,6 +14,7 @@ package attention
 
 import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -144,6 +145,7 @@ func readingsOf(
 			out.RevenueCurrency = &currency
 		}
 	}
+	out.SoonestLeadDue = soonestLeadDue(considered, bounds, unread)
 	// A lane that never answered makes every figure a floor just as surely as one
 	// that answered to its cap — more so, since nobody knows what it held. This
 	// arm is FIRST because it is the one a reader loses silently: a refused lane
@@ -164,6 +166,36 @@ func readingsOf(
 		}
 	}
 	return out
+}
+
+// soonestLeadDue is when the nearest task on a lead is due, over every task
+// weighed. A task lane read to its bound, or not read, may hold one due sooner,
+// so then there is no answer.
+func soonestLeadDue(
+	considered []ranked, bounds map[crmcontracts.WorklistItemSource]bool, unread []crmcontracts.WorklistSourceUnavailable,
+) *time.Time {
+	for source, bounded := range bounds {
+		if bounded && categoryOfSource(source) == crmcontracts.WorklistItemCategoryTasks {
+			return nil
+		}
+	}
+	for _, missing := range unread {
+		if categoryOfSource(crmcontracts.WorklistItemSource(missing.Source)) == crmcontracts.WorklistItemCategoryTasks {
+			return nil
+		}
+	}
+	var soonest *time.Time
+	for _, row := range considered {
+		task := row.item
+		if task.Source != sourceTask || task.Category != crmcontracts.WorklistItemCategoryTasks || task.Subject == nil ||
+			task.Subject.Type != crmcontracts.AttentionSubjectTypeLead || task.DueAt == nil {
+			continue
+		}
+		if soonest == nil || task.DueAt.Compare(*soonest) < 0 {
+			soonest = task.DueAt
+		}
+	}
+	return soonest
 }
 
 // hidesRows is whether any unread source is a lane. A side read that failed

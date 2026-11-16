@@ -6,6 +6,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../../lib/problem";
+import { meFixture } from "../../testing/mefixture";
 import {
   AnswerTable,
   type ExplainSource,
@@ -48,6 +49,8 @@ function stubServer(explanation: unknown = EXPLANATION): Asked[] {
         asked.push({ url, body });
         return jsonResponse(explanation);
       }
+      if (url.endsWith("/me"))
+        return jsonResponse(meFixture({ rowScope: "all" }));
       if (url.includes("/stages")) return jsonResponse(STAGES);
       if (url.includes("/users")) return jsonResponse(USERS);
       return jsonResponse({ data: [], page: { next_cursor: null } });

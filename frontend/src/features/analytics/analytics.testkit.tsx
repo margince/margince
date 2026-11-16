@@ -307,7 +307,7 @@ export function reportsStub(opts: ReportsStubOpts = {}) {
     );
     const reportingRoute = reportingStoryRoutes()[`${asked.method} ${path}`];
     return reportingRoute
-      ? reportingRoute(undefined)
+      ? reportingRoute(undefined, new URL(asked.url, "http://localhost"))
       : jsonResponse({ data: [], page: { next_cursor: null } });
   });
 }

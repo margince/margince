@@ -3,7 +3,12 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { browserZone } from "../format/timezone";
-import { activityRequestBody, freshDraft, NO_ATTENDEES } from "./activitybody";
+import {
+  activityRequestBody,
+  draftSaysSomething,
+  freshDraft,
+  NO_ATTENDEES,
+} from "./activitybody";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -169,3 +174,34 @@ it.each(["note", "task"] satisfies ("note" | "task")[])(
     expect(body).not.toHaveProperty("source_system");
   },
 );
+
+describe("a message's transport", () => {
+  const send = (kind: "message" | "note") =>
+    activityRequestBody(
+      { ...freshDraft("UTC", kind), channelProvider: "whatsapp", body: "Hi" },
+      "company",
+      "o1",
+      "UTC",
+      NO_ATTENDEES,
+    );
+
+  it("names the transport on a message, filed on the record like a note", () => {
+    expect(send("message")).toMatchObject({
+      kind: "message",
+      channel_provider: "whatsapp",
+      links: [{ entity_type: "company", entity_id: "o1" }],
+    });
+  });
+
+  it("leaves a carried transport off any other kind, which the server refuses", () => {
+    expect(send("note")).not.toHaveProperty("channel_provider");
+  });
+
+  it("counts a message's words as saying what happened, with no subject", () => {
+    const message = freshDraft("UTC", "message");
+    expect(draftSaysSomething({ ...message, body: "Asked for a quote" })).toBe(
+      true,
+    );
+    expect(draftSaysSomething({ ...message, body: "  " })).toBe(false);
+  });
+});

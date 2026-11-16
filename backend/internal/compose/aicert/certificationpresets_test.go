@@ -727,10 +727,8 @@ func TestABorrowedFirstRungGradeSaysWhereItWasMeasured(t *testing.T) {
 	}
 }
 
-// A local-only task on a cloud preset is graded from its record like any other
-// feature: the router serves it there while the local_only rule is undecided.
-func TestALocalOnlyTaskOnACloudPresetIsGradedFromItsRecord(t *testing.T) {
-	task := ai.LocalOnlyTasks()[0]
+func TestAVerdictTaskOnACloudPresetIsGradedFromItsRecord(t *testing.T) {
+	task := ai.TaskCaptureCounterpartyVerdict
 	binding := ai.ProviderConfig{Provider: "openai_compatible", Model: "vendor/m", BaseURL: "https://broker.example/api"}
 	tiers := map[ai.Tier]ai.ProviderConfig{}
 	for _, tier := range ai.TaskLadder(task) {

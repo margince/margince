@@ -63,7 +63,7 @@ func (e *Engine) AssembleFor(ctx context.Context, now time.Time) (Review, bool, 
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return Review{}, false, err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return Review{}, false, err
 	}

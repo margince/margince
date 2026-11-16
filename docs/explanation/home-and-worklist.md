@@ -1,11 +1,14 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/compose/attentionsnapshotseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/activities/followupsetting.go backend/internal/platform/settings/memo.go backend/internal/platform/database/txmemo.go backend/internal/platform/database/savepoint.go backend/internal/platform/database/degradableread.go backend/internal/compose/integration/worklistcost_integration_test.go backend/internal/platform/testdb/roundtrips.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
+<!-- describes: backend/internal/compose/suggestionlanes backend/internal/compose/magic/completed.go backend/internal/compose/completedchanges/reader.go backend/internal/platform/database/readadmission.go backend/internal/platform/database/db.go backend/internal/compose/dealstatus backend/internal/platform/database/storekit/leadengagement.go backend/internal/compose/leadworktasks.go backend/internal/compose/attention backend/internal/compose/attentionseam.go backend/internal/compose/attentionsnapshotseam.go backend/internal/compose/worklistmetrics.go backend/internal/platform/database/statementmeter.go backend/internal/platform/database/planreuse.go backend/internal/modules/activities/waitingsql.go backend/internal/modules/activities/replysettled.go backend/internal/modules/activities/followupsetting.go backend/internal/platform/settings/memo.go backend/internal/platform/database/txmemo.go backend/internal/platform/database/savepoint.go backend/internal/platform/database/degradableread.go backend/internal/compose/integration/worklistcost_integration_test.go backend/internal/platform/testdb/roundtrips.go backend/internal/modules/consent/noticecase.go backend/internal/compose/commitmentdispatch.go backend/internal/compose/commitmentsettle.go backend/internal/compose/weekly backend/internal/compose/weeklyjobs.go backend/internal/modules/deals/closedate.go backend/internal/modules/deals/changeacceptance.go frontend/src/features/brief/brief.queue.tsx backend/internal/compose/slipping.go backend/internal/compose/attentionriskseam.go backend/internal/modules/deals/deal_read.go backend/internal/modules/deals/atrisklist.go -->
 # Home and the Worklist: how the day is ranked
 
 Home has one ranking engine behind three views: the Worklist, the **Needs you** section on Home, and the
 weekly review. The server ranks every row once, by one fixed order of ranking steps. Focus is a
 cut of that same order, taken before the queue's filter and page limit, so no client can rank work on its
 own. Promises read from a conversation reach the queue through one dispatch rule.
+
+Home's completed changes and Worklist history use the same reader in `magic/completed.go`.
+It owns admission, grouping, order and receipt identity. History keeps missing-source and lower-bound counts across pages.
 
 The weekly job freezes
 each member's week and then each team's. A frozen week never changes, except that a team week with no
@@ -15,11 +18,27 @@ handbook pages `your-day.md` and `your-week.md`; this page holds the reasons and
 The code:
 
 - `backend/internal/compose/attention/`: the ranking (`rank.go`, `ranksteps.go`, `bands.go`), the classifiers (`classify*.go`) and Focus (`focus.go`).
+- `backend/api/worklist-kinds.yaml`: each Worklist kind's category, screen, owner answers, personal read and Done.
+  `backend/tools/gen-worklist` writes it into `attention/kinds_gen.go` and `frontend/src/lib/worklistkinds.gen.ts`.
 - `backend/internal/compose/commitmentdispatch.go` and `backend/internal/compose/commitmentsettle.go`: promises and the tasks they become.
 - `backend/internal/compose/weeklyjobs.go`, `weeklyteamjobs.go`, `weeklyenrichjobs.go` and `backend/internal/compose/weekly/`: the weekly review.
 - `backend/internal/modules/deals/closedate.go` and `closedatesweep.go`: the nightly close date repair; `changeacceptance.go`: **Accept**.
 - `backend/internal/modules/notices/store.go` and `backend/internal/modules/automation/handlers_event.go`: stage change notices.
 - `frontend/src/lib/router.tsx` and `frontend/src/features/brief/brief.queue.tsx`: old addresses.
+
+Home asks for the Worklist with `shape=home`. The read assembles and ranks the same lanes, and Focus,
+the summary, the counted candidates and the figures are the same as the queue's. It then carries only
+the day's meeting rows, which Home's schedule draws, and skips the page cut, the walk and the rows below
+the cut. The Worklist drawer reads the queue itself when it opens.
+
+Worklist snapshots and ranked search queries share the pool's read allowance in
+`database/readadmission.go`. They wait for that allowance before they use a connection.
+This leaves room for short transactions such as the signed-in user's profile.
+The wait ends when the caller leaves or the queue deadline expires.
+
+Joining a snapshot shares its allowance and keeps its isolation and access checks.
+A single-connection pool can still run one large read. Ordinary snapshots and writes use the pool directly.
+Statement costs, process metrics and the morning load test count admission wait apart from pool checkout.
 
 The Worklist assembles its lanes in one database snapshot and reuses plans for that read.
 The waiting queue binds its scan cap so its statement text stays stable across pages, and it keeps
@@ -27,6 +46,12 @@ named plans inside the snapshot. Outside that read, the waiting walk plans with 
 values so it can stop at the cap. The privacy notice queue uses a custom plan because its bound state list
 must be visible to the partial-index planner. The plan-mode scopes restore the mode they found
 before the next read.
+
+An inbound message keeps `reply_settled_at`: when a newer message on its thread, or our reply that
+reached its sender, settled it. The owed check reads it before its full clause, so a settled message
+skips the costly thread and answer reads. Only the `reply_settled_stamp` job writes it, through the
+same SQL the full clause uses. Triggers on `activity`, `activity_participant` and `contact_email`
+clear it when a write can change it, so a missing or cleared stamp only costs time.
 
 The stage metrics count database calls as well as statements, with a batch counted as one exchange.
 Internal plan lookups can cost another protocol round trip. The Worklist integration read holds a
@@ -167,8 +192,8 @@ every source in the tail is read to its end. A source that fails while the tail 
 The tail merges its sources by one order every store can sort by in SQL (`attention/backlogmerge.go`). Each row has
 a time: a task's due date, when a waiting customer's message came in, or a deal's expected close date. Rows go
 from the earliest time to the latest, and an undated task or deal goes last. A tie goes to the source's name, then to the store's own order. So the
-longest-standing work comes first, whichever source holds it. An approval has no time in this order, so approvals
-come after the dated rows.
+longest-standing work comes first, whichever source holds it. Approvals and suggestions have no time in this order,
+so they come after the dated rows.
 
 Each source reads a batch after where it stopped. A row is shown only once no source with more rows could still
 hold an earlier one. Each source then moves to the row after the last one it gave, and reads the rest again on the
@@ -179,7 +204,7 @@ when its own read finds nothing more, so completing tasks above never ends it. T
 time, day end and time zone. Every later page reads that same window, even once the day has changed. Its fingerprint
 names the tail's version, so a binary without the tail refuses the cursor instead of ending the walk early.
 
-Four sources are read on in the tail today:
+These sources are read on in the tail today:
 
 - Tasks (`WithTaskBacklog`, `compose/attentiontaskseam.go`). Its today window and its later window each have a
   count, taken on the first page only. A team page reads and counts the roster's tasks and nobody's in SQL, as its
@@ -193,6 +218,10 @@ Four sources are read on in the tail today:
   approval engine's inbox read, under the lane's own query and its check of who may decide, newest staged first. It starts
   just after the last approval the ranked rows hold (`approvalTailStart` in `attention/backlogapproval.go`), so no
   approval is skipped or served twice.
+- Deal and tag suggestions (`WithDealSuggestionBacklog` and `WithTagSuggestionBacklog`,
+  `compose/suggestionlanes/seam.go`). Each goes on with its store's own list, newest first, under the lane's
+  owners and visibility rule. Each starts just after the last suggestion of its kind the ranked rows hold
+  (`decisionTailStarts` in `attention/backlogsuggestion.go`).
 
 - Deals at risk (`WithRiskBacklog`, `compose/attentionriskseam.go`). The lane reads two sweeps of 50: quiet deals and
   deals past their close. The tail reads both as one predicate (`AtRiskWindow` in `modules/deals/atrisklist.go`),
@@ -213,7 +242,8 @@ because the follow-up rule reads `relstrength.WrittenByHumanSQL`.
 
 The approval engine counts approvals under the lane's own query, so a cut lane still states their exact total. The
 tail reaches every row it counts. A team page states no approval total, because the count does not judge by the
-team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions stay a floor until they join the tail.
+team's roster (`exactSources` in `attention/totals.go`). Deal and tag suggestions state their stores' counts the
+same way, in scopes that include them.
 
 The changed-since-brief link ends at the ranked snapshot its badge counts. It counts the rows
 left after grouping and Done, and each page keeps their changed flags. Without that filter, the

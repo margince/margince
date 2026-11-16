@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -146,84 +147,161 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	if len(contactIDs) == 0 {
 		return out, nil
 	}
+	unresolved, err := lastTouchesWithin(ctx, tx, contactIDs, opts, lastTouchWindow, out)
+	if err != nil || len(unresolved) == 0 {
+		return out, err
+	}
+	// The newest rows of a direction were all closed to the reader, and older
+	// ones exist: those contacts are judged on their whole history.
+	_, err = lastTouchesWithin(ctx, tx, unresolved, opts, 0, out)
+	return out, err
+}
+
+// lastTouchWindow is how many of a contact's newest rows per direction the
+// first pass judges. A row the reader cannot open is rare, so the newest
+// readable row is almost always among them, and the gate runs on few rows.
+const lastTouchWindow = 16
+
+// lastTouchesWithin answers the contacts into out. It judges only each
+// direction's newest window rows, or every row when window is 0; a tie at the
+// edge is in or out together. It returns the contacts whose window held no
+// readable row of a direction that has older rows, whose answer may lie back.
+func lastTouchesWithin(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, opts AssembleOptions, window int, out map[ids.ContactID]LastTouch) ([]ids.ContactID, error) {
+	query, args, err := lastTouchStatement(ctx, contactIDs, opts, window)
+	if err != nil {
+		return nil, err
+	}
+	var unresolved []ids.ContactID
+	// Inside a composed read it reuses its generic plan. It keys on the contacts
+	// and spells every kind as a literal, and it plans far slower than it runs.
+	err = database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
+		var err error
+		unresolved, err = scanLastTouches(ctx, tx, query, args, out)
+		return err
+	})
+	return unresolved, err
+}
+
+// lastTouchStatement is lastTouchesWithin's statement and its arguments.
+func lastTouchStatement(ctx context.Context, contactIDs []ids.ContactID, opts AssembleOptions, window int) (string, []any, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return "", nil, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	wantedPos := arg(contactIDs)
 	visible, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
 	if visible == "" {
 		visible = scopeAll
 	}
-	// One copy of the content gate for all directions. Postgres plans each
-	// copy, and the pooled connection keeps that memory.
-	readable, err := auth.ContentReadableActivitiesSQL(ctx, "SELECT reach.activity_id FROM reach", arg)
+	// One copy of the content gate for all directions, over the kept rows only.
+	readable, err := auth.ContentReadableActivitiesSQL(ctx, "SELECT kept.id FROM kept", arg)
 	if err != nil {
-		return nil, err
+		return "", nil, err
 	}
-	// The activities this contact is on, shared by both directions; the
-	// inbound arm adds authorship on top. Each walk starts from the contact's
-	// own reach, so its cost is that contact's activity, not every readable row.
-	reached := fmt.Sprintf(`FROM reach JOIN activity a ON a.id = reach.activity_id
-		WHERE reach.contact_id = c.id AND a.archived_at IS NULL AND a.id IN (SELECT id FROM readable_activity)%s%s`,
-		projectScope(opts, arg), auth.ReaderlessAudience(ctx, "a"))
 	asOf := "now()"
 	if !opts.AsOf.IsZero() {
 		asOf = fmt.Sprintf("$%d::timestamptz", arg(opts.AsOf))
 	}
 	humanClock := relstrength.ExternalActivityCountsSQL("a", asOf) + " AND " + relstrength.WrittenByHumanSQL("a")
-	inbound := relstrength.TheyWroteSQL("c.id", "a") + " AND " + humanClock
-	outbound := relstrength.WeWroteSQL("a") + " AND " + humanClock
-	exchange := relstrength.ContactExchangeSQL("a", "c.id", asOf)
-	// One newest row per direction carries its time and its precision together.
-	query := fmt.Sprintf(`
-		WITH reach AS MATERIALIZED (%[10]s), readable_activity AS MATERIALIZED (%[9]s)
-		SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
-		       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, ''),
-		       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, ''),
-		       inbound.touched_id, outbound.touched_id, live.touched_id
-		FROM contact c
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[2]s %[11]s) inbound ON true
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[5]s %[12]s) outbound ON true
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
-		                     %[1]s AND %[2]s AND NOT %[6]s %[11]s) live ON true
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
-		                     %[1]s AND %[7]s %[8]s) exchange ON true
-		LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
-		                     %[1]s AND %[7]s AND a.occurred_at < inbound.touched_at %[8]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
-		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, inbound, wantedPos, visible, outbound, activities.ImportedHistorySQL, exchange, newestRow, readable,
-		fmt.Sprintf(contactReach, wantedPos), newestTheirs, newestOurs)
-	// Inside a composed read it reuses its generic plan. It keys on the contacts
-	// and spells every kind as a literal, and it plans far slower than it runs.
-	err = database.ReuseGenericPlans(ctx, func(ctx context.Context) error {
-		return scanLastTouches(ctx, tx, query, args, out)
-	})
-	return out, err
+	inbound := relstrength.TheyWroteSQL("reach.contact_id", "a") + " AND " + humanClock
+	// Each direction is judged once per row; the walks below read the flags.
+	judged := fmt.Sprintf(`SELECT DISTINCT reach.contact_id, a.id, a.occurred_at,
+		coalesce(%[1]s, false) AS theirs, coalesce(%[2]s, false) AS ours,
+		coalesce(%[1]s AND NOT %[3]s, false) AS live, coalesce(%[4]s, false) AS exchanged
+		FROM reach JOIN activity a ON a.id = reach.activity_id
+		WHERE a.archived_at IS NULL%[5]s%[6]s`,
+		inbound, relstrength.WeWroteSQL("a")+" AND "+humanClock, activities.ImportedHistorySQL,
+		relstrength.ContactExchangeSQL("a", "reach.contact_id", asOf), projectScope(opts, arg), auth.ReaderlessAudience(ctx, "a"))
+	limit := "NULL::int"
+	if window > 0 {
+		limit = fmt.Sprintf("$%d::int", arg(window))
+	}
+	return fmt.Sprintf(lastTouchSQL, fmt.Sprintf(contactReach, wantedPos), judged, limit, readable,
+		wantedPos, visible, newestTheirs, newestOurs, newestRow), args, nil
 }
 
-func scanLastTouches(ctx context.Context, tx pgx.Tx, query string, args []any, out map[ids.ContactID]LastTouch) error {
+// lastTouchSQL ranks each contact's rows newest first per direction and keeps
+// a direction's first window rows. It gates those once and walks them for the
+// newest readable row of each direction. RANGE ranks a tie alike, so the kept
+// rows of a direction are always every row newer than some instant.
+const lastTouchSQL = `
+	WITH reach AS MATERIALIZED (%[1]s),
+	judged AS MATERIALIZED (%[2]s),
+	ranked AS MATERIALIZED (
+		SELECT judged.*,
+		       count(*) FILTER (WHERE theirs) OVER newer AS theirs_rank, count(*) FILTER (WHERE ours) OVER newer AS ours_rank,
+		       count(*) FILTER (WHERE live) OVER newer AS live_rank, count(*) FILTER (WHERE exchanged) OVER newer AS exchanged_rank
+		FROM judged
+		WINDOW newer AS (PARTITION BY contact_id ORDER BY occurred_at DESC RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)), -- occurred_at raw: an ordering of rows
+	kept AS MATERIALIZED (SELECT * FROM (
+		SELECT contact_id, id,
+		       theirs AND coalesce(theirs_rank <= %[3]s, true) AS theirs, ours AND coalesce(ours_rank <= %[3]s, true) AS ours,
+		       live AND coalesce(live_rank <= %[3]s, true) AS live, exchanged AND coalesce(exchanged_rank <= %[3]s, true) AS exchanged
+		FROM ranked) windowed WHERE theirs OR ours OR live OR exchanged),
+	beyond AS (
+		SELECT contact_id, bool_or(theirs AND theirs_rank > %[3]s) AS theirs, bool_or(ours AND ours_rank > %[3]s) AS ours,
+		       bool_or(live AND live_rank > %[3]s) AS live, bool_or(exchanged AND exchanged_rank > %[3]s) AS exchanged
+		FROM ranked GROUP BY contact_id),
+	readable_activity AS MATERIALIZED (%[4]s)
+	SELECT c.id, inbound.touched_at, outbound.touched_at, live.touched_at, exchange.touched_at, preceding.touched_at,
+	       coalesce(inbound.touched_precision, ''), coalesce(outbound.touched_precision, ''), coalesce(exchange.touched_precision, ''),
+	       coalesce(live.touched_precision, ''), coalesce(preceding.touched_precision, ''),
+	       inbound.touched_id, outbound.touched_id, live.touched_id,
+	       coalesce((inbound.touched_at IS NULL AND beyond.theirs) OR (outbound.touched_at IS NULL AND beyond.ours)
+	             OR (live.touched_at IS NULL AND beyond.live) OR (exchange.touched_at IS NULL AND beyond.exchanged)
+	             OR (preceding.touched_at IS NULL AND inbound.touched_at IS NOT NULL AND beyond.exchanged), false)
+	FROM contact c
+	LEFT JOIN beyond ON beyond.contact_id = c.id
+	LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
+	                     FROM kept JOIN activity a ON a.id = kept.id WHERE kept.contact_id = c.id AND kept.theirs
+	                      AND a.id IN (SELECT id FROM readable_activity) %[7]s) inbound ON true
+	LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
+	                     FROM kept JOIN activity a ON a.id = kept.id WHERE kept.contact_id = c.id AND kept.ours
+	                      AND a.id IN (SELECT id FROM readable_activity) %[8]s) outbound ON true
+	LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision, a.id AS touched_id
+	                     FROM kept JOIN activity a ON a.id = kept.id WHERE kept.contact_id = c.id AND kept.live
+	                      AND a.id IN (SELECT id FROM readable_activity) %[7]s) live ON true
+	LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+	                     FROM kept JOIN activity a ON a.id = kept.id WHERE kept.contact_id = c.id AND kept.exchanged
+	                      AND a.id IN (SELECT id FROM readable_activity) %[9]s) exchange ON true
+	LEFT JOIN LATERAL (SELECT a.occurred_at AS touched_at, a.occurred_precision AS touched_precision
+	                     FROM kept JOIN activity a ON a.id = kept.id WHERE kept.contact_id = c.id AND kept.exchanged
+	                      AND a.id IN (SELECT id FROM readable_activity)
+	                      AND a.occurred_at < inbound.touched_at %[9]s) preceding ON true -- occurred_at raw: the touch before the newest inbound, an ordering of rows
+	WHERE c.id = ANY($%[5]d) AND c.archived_at IS NULL AND (%[6]s)`
+
+func scanLastTouches(ctx context.Context, tx pgx.Tx, query string, args []any, out map[ids.ContactID]LastTouch) ([]ids.ContactID, error) {
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer rows.Close()
+	var unresolved []ids.ContactID
 	for rows.Next() {
 		var contactID ids.ContactID
 		var touch LastTouch
+		var further bool
 		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt,
 			&touch.ContactAt, &touch.PrecedingContactAt,
 			&touch.InboundPrecision, &touch.OutboundPrecision, &touch.ContactPrecision,
 			&touch.LiveInboundPrecision, &touch.PrecedingPrecision,
-			&touch.InboundID, &touch.OutboundID, &touch.LiveInboundID); err != nil {
-			return err
+			&touch.InboundID, &touch.OutboundID, &touch.LiveInboundID, &further); err != nil {
+			return nil, err
+		}
+		if further {
+			unresolved = append(unresolved, contactID)
+			continue
 		}
 		out[contactID] = touch
 	}
-	return rows.Err()
+	return unresolved, rows.Err()
 }
 
 // contactReach is contactReachesActivity for a set of contacts, each activity

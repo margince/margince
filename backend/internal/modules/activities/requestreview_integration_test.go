@@ -79,7 +79,7 @@ func TestAnotherReaderSeesCoverageWithoutReadingAPrivateReminder(t *testing.T) {
 
 func TestConflictingNoiseLabelStaysReviewableWithoutAutomaticAssignment(t *testing.T) {
 	e := setupLoad(t)
-	id := seedEmailRequest(t, e, "Please confirm the schedule", "noise", OwedVerdictAsksUs)
+	id := seedEmailRequest(t, e, "Please confirm the schedule", "other", OwedVerdictAsksUs)
 	store := storeKnowing(e)
 	at := requestInstant.Add(time.Hour)
 	if err := store.CaptureEmailRequests(asClassifier(e), at); err != nil {

@@ -114,11 +114,11 @@ type facts struct {
 	seats []Seat
 	now   time.Time
 	loc   *time.Location
-	// lang is the installation's base language, which the card is written in.
-	// A status card is filed on the deal and read by anyone who opens it, so it
-	// takes the shared language rather than the reader's — the same rule that
-	// separates a record from a piece of correspondence.
+	// lang is the installation's base language, which the model writes the
+	// card's summary in: one summary is shared by everyone who opens the deal.
 	lang string
+	// say words the Next box's fixed sentences for the reader; empty means lang.
+	say string
 }
 
 // Get returns the deal's status card, writing it when no current one is
@@ -193,69 +193,6 @@ func cardEvidence(card *crmcontracts.DealStatusCard) []briefevidence.Target {
 }
 
 // Card and timeline share the same scoped source read.
-func (s *Service) cardAndTimeline(
-	ctx context.Context, dealID ids.DealID, policy cardReadPolicy,
-) (crmcontracts.DealStatusCard, []crmcontracts.Activity, error) {
-	userID, err := actingUser(ctx)
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	// Gathered FIRST, and under the caller's row scope: a deal they cannot
-	// read refuses here, before any cache is consulted.
-	f, err := s.gather(ctx, dealID)
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	mv, err := assessMove(f, decideMove(f))
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.lang)
-	if err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
-	if verdict.serve {
-		card := verdict.card
-		card.MailCoverage = f.mailCoverage
-		if current, ok := unansweredInbound(f); ok {
-			card.RequestBasis = requestBasis(f, current, basisCurrentRequest)
-		}
-		if card.Next != nil {
-			next := *card.Next
-			next.Basis = mv.Basis
-			next.MailCoverage = f.mailCoverage
-			next.Recommendation, next.Arguments = mv.Recommendation, mv.Arguments
-			card.Next = &next
-		}
-		return card, factActivities(f), nil
-	}
-	card, laneFailed := s.write(ctx, f, mv, in, verdict.askModel && !policy.factsOnly && mayWriteTheCard(ctx))
-	if !mayWriteTheCard(ctx) {
-		return card, factActivities(f), nil
-	}
-	if laneFailed {
-		// The lane was wired and did not answer: a timeout, a budget, an
-		// unparseable reply. The reader gets the floor, which is a working
-		// card — but storing it under the CURRENT fingerprint would make one
-		// transient outage permanent, because a matching fingerprint is served
-		// without ever asking again. The card would stand until some unrelated
-		// fact moved.
-		return card, factActivities(f), nil
-	}
-	if err := s.save(ctx, userID, dealID, stored{
-		Access:      accessForCard(f, in, mv),
-		Fingerprint: fingerprint,
-		GeneratedAt: card.GeneratedAt,
-		GeneratedBy: card.GeneratedBy,
-		Card:        card,
-	}); err != nil {
-		return crmcontracts.DealStatusCard{}, nil, err
-	}
-	return card, factActivities(f), nil
-}
-
 // cacheVerdict says what to do with the stored card.
 type cacheVerdict struct {
 	// card is served as-is when serve is true: the facts have not moved.
@@ -373,7 +310,7 @@ func (s *Service) gatherSnapshot(ctx context.Context, dealID ids.DealID) (facts,
 	entityType := "deal"
 	limit := timelineWindow
 	timeline, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
-		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit, CollapseSeatCopies: true,
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit, CollapseSeatCopies: true, FactsOnly: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading the deal's timeline: %w", err)
@@ -385,14 +322,14 @@ func (s *Service) gatherSnapshot(ctx context.Context, dealID ids.DealID) (facts,
 	requestKind := string(crmcontracts.ActivityKindEmail)
 	f.currentRequests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
-		RequestCurrentAsOf: &f.now, Kind: &requestKind, ReadableOnly: true, CollapseSeatCopies: true,
+		RequestCurrentAsOf: &f.now, Kind: &requestKind, ReadableOnly: true, CollapseSeatCopies: true, FactsOnly: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading current requests: %w", err)
 	}
 	f.requests, _, err = s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
-		RequestReviewAsOf: &f.now, Kind: &requestKind, ReadableOnly: true, CollapseSeatCopies: true,
+		RequestReviewAsOf: &f.now, Kind: &requestKind, ReadableOnly: true, CollapseSeatCopies: true, FactsOnly: true,
 	})
 	if err != nil {
 		return facts{}, fmt.Errorf("deal status: reading outstanding requests: %w", err)
@@ -487,7 +424,7 @@ func (s *Service) gatherLastExchange(ctx context.Context, dealID ids.DealID, f *
 	entityType := "deal"
 	one := 1
 	contactRows, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
-		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &one, InteractionsAsOf: &f.now, CollapseSeatCopies: true,
+		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &one, InteractionsAsOf: &f.now, CollapseSeatCopies: true, FactsOnly: true,
 	})
 	if err != nil {
 		return fmt.Errorf("deal status: reading the last recorded exchange: %w", err)

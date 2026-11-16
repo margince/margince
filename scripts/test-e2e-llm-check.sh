@@ -118,6 +118,15 @@ case_is "a 401 from a tool the model called is a run that happened" 0 "" <<'JSON
 {"type":"result","subtype":"error","is_error":true,"result":"tool call failed: HTTP 401 Unauthorized"}
 JSONL
 
+# The model's own API failing mid-run, after tool calls, is a run that never
+# finished: the CLI reports "API Error:" as the terminal result, as it did for a
+# lane cut off by an upstream block. A tool refusal never reads that way.
+case_is "the model's API failing mid-run is a run that never finished" 1 "the model's API stopped answering mid-run" <<'JSONL'
+{"type":"system","subtype":"init","tools":["mcp__margince__list_records"]}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"mcp__margince__list_records","input":{}}]}}
+{"type":"result","subtype":"success","is_error":true,"result":"Failed to authenticate. API Error: 403 Attention Required! | Cloudflare"}
+JSONL
+
 # A number that merely CONTAINS a refusal code is not one. A bare substring
 # search finds 401 inside 4011, and reading that as "never reached" discards a
 # real finding and abandons the lane after it.
@@ -978,7 +987,7 @@ judges "$c44" case44 chases-the-wrong-deal 1 "the judge says NO to: Criterion 1.
 # deal nor Jonas, is the wrong target by another route.
 judges "$c44" case44 drafts-the-one-deal-by-hand 0 "!the judge says NO" "!never called"
 judges "$c44" case44 drafts-koerber-by-hand 1 "called draft_outbound carrying 'Körber'" "!the judge says NO"
-judges "$c44" case44 drafts-another-thread-by-hand 1 "never called draft_outbound carrying" "!the judge says NO"
+judges "$c44" case44 drafts-another-thread-by-hand 1 "called draft_outbound carrying" "!the judge says NO"
 
 # CASE 4 — no judge: criterion 6 is the advice to go through the owner, and the
 # pattern must take it by name or by pronoun after the name, and refuse an
@@ -1041,6 +1050,10 @@ judges "$c117" case117 reports-only-the-draft 0 "!the judge says NO"
 judges "$c117" case117 reports-the-draft-and-counts-the-rest 0 "!the judge says NO"
 judges "$c117" case117 reports-nothing-waiting-yet 0 "!the judge says NO"
 judges "$c117" case117 lists-the-whole-queue 1 "the judge says NO to: Criterion 2." "Brandst"
+
+c62="case62-held-meetings-to-opportunities.yaml"
+judges "$c62" case62 gives-both-counts 0 "!the judge says NO"
+judges "$c62" case62 gives-only-the-rate 1 "the judge says NO to: Criterion 1."
 judges "$c117" case117 describes-the-other-reviews 1 "the judge says NO to: Criterion 2."
 
 c118="case118-is-the-crane-job-at-risk.yaml"

@@ -106,7 +106,7 @@ export function stub(
   three60: unknown,
   status = 200,
   account: unknown = company,
-  finance: unknown = { company_id: "o-1", state: "no_connection" },
+  finance: unknown = NO_FINANCE,
   financeStatus = 200,
 ) {
   // The paths the page requested. A test proves the page did not refetch by
@@ -186,6 +186,7 @@ export function stub(
             {
               id: "pl-1",
               name: "Sales",
+              position: 0,
               is_default: true,
               stages: [
                 {
@@ -194,7 +195,7 @@ export function stub(
                   name: "Qualify",
                   position: 1,
                   semantic: "open",
-                  probability: 10,
+                  win_probability: 10,
                 },
               ],
             },
@@ -278,3 +279,5 @@ export function renderSuggestions(
     </>,
   );
 }
+
+const NO_FINANCE = { company_id: "o-1", state: "no_connection" };

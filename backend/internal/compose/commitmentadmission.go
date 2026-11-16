@@ -38,7 +38,7 @@ func (read commitmentRead) proposeLate() bool {
 // proposeLate adds the promise's own conditions to the evidence's: ours, from
 // the original source, not private mail, and not withheld on its meaning.
 func (c Commitment) proposeLate(read commitmentRead) bool {
-	return read.proposeLate() && c.Theirs == nil && c.PrivateTo == nil && c.AdmissionSourceID == nil && c.Meaning.withheldOutcome() == ""
+	return read.proposeLate() && c.Theirs == nil && c.PrivateTo == nil && c.AdmissionSourceID == nil && c.withheldOutcome() == ""
 }
 
 func (d *CommitmentDispatcher) admission(ctx context.Context, tx pgx.Tx, c Commitment) (commitmentRead, error) {
@@ -229,7 +229,7 @@ func originalMessageTime(payload []byte) time.Time {
 }
 
 func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason) (CommitmentOutcome, ids.UUID, error) {
-	if c.Meaning.withheldOutcome() != "" || c.NeedsConfirmation || c.AdmissionSourceID == nil || c.DueDate == "" || c.Confidence < CommitmentTaskConfidence {
+	if c.withheldOutcome() != "" || c.NeedsConfirmation || c.AdmissionSourceID == nil || c.DueDate == "" || c.Confidence < CommitmentTaskConfidence {
 		return CommitmentRemembered, ids.UUID{}, nil
 	}
 	if reason != activities.CommitmentCurrent {

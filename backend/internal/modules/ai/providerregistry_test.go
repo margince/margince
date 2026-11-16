@@ -21,7 +21,7 @@ func TestTheProviderListKeepsItsOrder(t *testing.T) {
 	if !slices.Equal(knownProviders, want) {
 		t.Fatalf("knownProviders = %v, want %v", knownProviders, want)
 	}
-	if got, want := DecisionProviders(), []string{providerJev, providerJevCompatible}; !slices.Equal(got, want) {
+	if got, want := DecisionProviders(), []string{providerJev, providerJevCompatible, providerGeminiDecision}; !slices.Equal(got, want) {
 		t.Fatalf("DecisionProviders() = %v, want %v", got, want)
 	}
 }
@@ -61,12 +61,14 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		providerOllama: egressOperatorEndpoint, providerVLLM: egressOperatorEndpoint,
 		providerOpenAICompatible: egressOperatorEndpoint,
 		providerJev:              egressPublicOnly, providerJevCompatible: egressOperatorEndpoint,
+		providerGeminiDecision: egressPublicOnly,
 	})
 	assertMap(t, "cloudKeyEnv", cloudKeyEnv, map[string]string{
 		providerAnthropic: "ANTHROPIC_API_KEY", providerOpenAI: "OPENAI_API_KEY",
 		providerGemini: "GEMINI_API_KEY", providerGeminiVertex: "GEMINI_VERTEX_SA_JSON",
 		providerOpenAICompatible: "OPENAI_COMPATIBLE_API_KEY",
 		providerJev:              "TYPESAFE_API_KEY", providerJevCompatible: "JEV_COMPATIBLE_API_KEY",
+		providerGeminiDecision: "GEMINI_API_KEY",
 	})
 	assertMap(t, "servedSource", servedSource, map[string]string{
 		providerAnthropic: servedIdentitySourceResponse, providerOllama: servedIdentitySourceResponse,
@@ -74,7 +76,7 @@ func TestEachProviderFactIsWhatTheTablesSaid(t *testing.T) {
 		providerOpenAI:           servedIdentitySourceResponse,
 		providerOpenAICompatible: servedIdentitySourceEcho, providerVLLM: servedIdentitySourceEcho,
 		ProviderFake: servedIdentitySourceResponse, providerJev: servedIdentitySourceResponse,
-		providerJevCompatible: servedIdentityPerReply,
+		providerJevCompatible: servedIdentityPerReply, providerGeminiDecision: servedIdentitySourceResponse,
 	})
 	assertMap(t, "localBaseURLDefaults", localBaseURLDefaults, map[string]string{
 		providerOllama: defaultOllamaBaseURL, providerVLLM: defaultVLLMBaseURL,

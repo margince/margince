@@ -24,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -37,25 +37,11 @@ import (
 // rather than in this string: the list renders the record beside the subject, so
 // putting the name in both spells it twice, and the copy in the text is the one
 // nothing keeps current.
-func bundleTaskSubject(lang textlang.Lang, findings int) string {
-	said := langcopy.For(string(lang))
+func bundleTaskSubject(findings int) *systemtext.Component {
 	if findings == 1 {
-		return said.Say(bundleTaskWords.One)
+		return systemtext.Sentence("assurance.inputs_one")
 	}
-	return fmt.Sprintf(said.Say(bundleTaskWords.Many), findings)
-}
-
-var bundleTaskWords = struct{ One, Many langcopy.Phrase }{
-	One: langcopy.Phrase{
-		En: "1 forecast input needs attention",
-		De: "1 Angabe zur Prognose muss geprüft werden",
-		Vi: "1 đầu vào dự báo cần xem lại",
-	},
-	Many: langcopy.Phrase{
-		En: "%d forecast inputs need attention",
-		De: "%d Angaben zur Prognose müssen geprüft werden",
-		Vi: "%d đầu vào dự báo cần xem lại",
-	},
+	return systemtext.Sentence("assurance.inputs_many", systemtext.Count(int64(findings)))
 }
 
 // bundleTaskLanguage is the assignee's own language, else the installation's,
@@ -202,8 +188,13 @@ func writeBundleTask(
 		if err != nil {
 			return err
 		}
-		line := bundleTaskSubject(lang, findings)
+		subject := bundleTaskSubject(findings)
+		line, err := subject.Render(lang)
+		if err != nil {
+			return err
+		}
 		in.Subject = &line
+		in.SystemText = &systemtext.Message{Version: 1, Subject: subject}
 		created, _, err := deps.activities.LogActivityTx(ctx, tx, in)
 		if err != nil {
 			return err

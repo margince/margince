@@ -28,7 +28,7 @@ func newForecastStore(db *database.DB) *forecasting.Store {
 // forecastSnapshotReadLens is forecastSnapshotLens for a snapshot read whole,
 // such as a movement or a call's baseline. A frozen total of a population is
 // that population's figure, so it meets the small-group floor as a live one
-// does.
+// does. The floor counts the seats behind the frozen rows and the members.
 func forecastSnapshotReadLens(
 	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, pipelineID *ids.UUID, rows []forecasting.Contribution,
 ) ([]forecasting.Contribution, error) {
@@ -36,7 +36,21 @@ func forecastSnapshotReadLens(
 	if err != nil {
 		return nil, err
 	}
-	if err := requireRequestedPopulationFloor(ctx, tx, requestedFromForecastScope(scope)); err != nil {
+	allowed, err := individualPerformance(ctx, tx)
+	if err != nil || allowed {
+		return readable, err
+	}
+	resolved, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope))
+	if err != nil {
+		return nil, err
+	}
+	owners := make([]ids.UUID, 0, len(rows))
+	for _, row := range rows {
+		if owner, err := ids.Parse(row.Owner); err == nil {
+			owners = append(owners, owner)
+		}
+	}
+	if err := requireFlooredTotals(ctx, tx, resolved, [][]ids.UUID{owners}); err != nil {
 		return nil, err
 	}
 	return readable, nil

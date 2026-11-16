@@ -256,7 +256,7 @@ func (s *Store) waitingStatement(
 	arg func(any) int,
 ) (string, error) {
 	instant := arg(asOf)
-	content, err := auth.ActivityContentClause(ctx, "a", arg)
+	content, err := auth.ActivityMessageContentClause(ctx, "a", arg)
 	if err != nil {
 		return "", err
 	}
@@ -328,7 +328,7 @@ func (s *Store) waitingStatement(
 		arg(relax.reader),
 		responsibility,
 		notSales, unlinked,
-		colleague, ownDomainSenderSQL("a", arg(ownDomains)),
+		colleague, fmt.Sprintf("$%d", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(relax.reader))),
 		informsUs,

@@ -48,6 +48,18 @@ func TestOnlyGooglesNotesAndTranscriptsOnAMeetCallCount(t *testing.T) {
 	}
 }
 
+// A Vietnamese-language account titles the notes "... – Ghi chú của Gemini" and
+// writes the transcript as a tab of that same Doc, so the notes Doc is all there is.
+func TestVietnameseGeminiNotesCount(t *testing.T) {
+	t.Parallel()
+	notes := Document{FileID: "1vietNotes012345", Title: "Cuộc họp bắt đầu lúc 2026/11/16 01:13 GMT+07:00 – Ghi chú của Gemini", MimeType: docType}
+	got := NotesDocuments(inHouse(Event{GoogleMeet: true, Documents: []Document{notes}}), notesOwner)
+	want := []capture.MeetingDocument{{FileID: notes.FileID, Title: notes.Title, Kind: capture.MeetingDocumentNotes}}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("documents = %+v, want %+v", got, want)
+	}
+}
+
 // One meeting writes a bounded number of rows, whatever its attachment list says.
 func TestAMeetingRecordsABoundedNumberOfDocuments(t *testing.T) {
 	t.Parallel()

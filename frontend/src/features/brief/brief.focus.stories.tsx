@@ -471,7 +471,9 @@ export const RecordedNextStepGap: Story = {
   play: async ({ canvasElement }) => {
     const card = await focusedCard(canvasElement);
     await waitFor(() =>
-      expect(card.getByText(en["worklist.because.no_next_step"])).toBeVisible(),
+      expect(
+        card.getByText(en["worklist.ask.brief.no_next_step"]),
+      ).toBeVisible(),
     );
     await expect(
       card.getByRole("link", { name: en["deal.openDeal"] }),
@@ -513,4 +515,37 @@ export const LongTaskTitlePhoneDark: Story = {
   ...LongTaskTitlePhone,
   tags: ["uat-phone"],
   globals: { theme: "dark" },
+};
+
+/**
+ * A colleague's meeting the reader attended but may not change. The card is a
+ * reminder that no outcome is recorded, says why, and offers Done.
+ */
+export const AMeetingTheReaderMayOnlyRead: Story = {
+  render: panel([
+    {
+      ...taskRow("held-demo", "Second demo for the document system"),
+      source: "meeting_outcome",
+      category: "meetings",
+      consequence: "data_drifts",
+      occurred_at: "2026-09-03T07:00:00Z",
+      because: [{ kind: "outcome_unrecorded" }, { kind: "read_only" }],
+      actions: [],
+      dispositions: ["handled"],
+    },
+    ...aDay(),
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = await focusedCard(canvasElement);
+    await expect(
+      await card.findByText(
+        "No outcome yet for Second demo for the document system",
+      ),
+    ).toBeTruthy();
+    await expect(
+      card.getByRole("button", {
+        name: en["worklist.disposition.verb.handled"],
+      }),
+    ).toBeTruthy();
+  },
 };

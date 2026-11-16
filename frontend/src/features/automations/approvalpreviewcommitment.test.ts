@@ -73,3 +73,22 @@ it.each([true, false])(
     );
   },
 );
+
+it.each(LOCALES)("says a tentative promise is tentative in %s", (locale) => {
+  const rows = commercialPreviewDisplay(
+    {
+      ...preview,
+      details: [
+        {
+          field: "promise_strength",
+          value: { kind: "text", text: "tentative" },
+        },
+      ],
+    },
+    (key, params) => translate(locale, key, params),
+  );
+  expect(rows.find((row) => row.field === "detail_0")).toMatchObject({
+    label: translate(locale, "approval.commitment.strength"),
+    value: translate(locale, "approval.commitment.tentative"),
+  });
+});

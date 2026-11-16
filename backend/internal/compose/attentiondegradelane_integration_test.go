@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -98,22 +99,25 @@ func TestAStuckWaitingLaneIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *test
 	}
 }
 
-// stuckSuggestions is the real suggestion reader whose count first stalls on
-// the page's snapshot, as the visibility clause did over production's evidence.
+// stuckSuggestions is the real suggestion reader whose list first stalls on
+// the page's snapshot, as the visibility clause the list and count share can.
+// The list always runs; the count runs only when the page is not complete.
 type stuckSuggestions struct {
-	attentionDealSuggestions
+	attention.DealSuggestions
 	pool *pgxpool.Pool
 }
 
-func (s stuckSuggestions) CountOpen(ctx context.Context, owners *storekit.OwnerSet) (int, error) {
+func (s stuckSuggestions) OpenSuggestions(
+	ctx context.Context, owners *storekit.OwnerSet, limit int,
+) ([]crmcontracts.DealSuggestion, bool, error) {
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `SELECT pg_sleep(30)`)
 		return err
 	})
 	if err != nil {
-		return 0, err
+		return nil, false, err
 	}
-	return s.attentionDealSuggestions.CountOpen(ctx, owners)
+	return s.DealSuggestions.OpenSuggestions(ctx, owners, limit)
 }
 
 func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *testing.T) {
@@ -123,8 +127,8 @@ func TestAStuckSuggestionReadIsNamedUnavailableAndTheRestOfTheDayStillLoads(t *t
 	db := InstallationDB(e.Pool)
 	svc := newAttentionService(e.Pool, approvals.NewService(e.DB()), time.Now).
 		WithDealSuggestions(stuckSuggestions{
-			store: deals.NewStore(db, DealsInstallation()),
-			pool:  e.Pool,
+			DealSuggestions: suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())},
+			pool:            e.Pool,
 		}).
 		WithSnapshots(shortLaneBudget{attentionSnapshots{pool: e.Pool}})
 

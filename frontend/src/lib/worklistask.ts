@@ -5,7 +5,7 @@ import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type CalendarChange, guestLabel } from "./calendarchange";
 import { labelFor } from "./labelfor";
-import { partyName } from "./worklistcopyreasons";
+import { mayOnlyRead, partyName } from "./worklistcopyreasons";
 import type { WorklistItem } from "./worklisttypes";
 
 // What a row asks of its reader, one sentence per source. A row's reasons say
@@ -134,6 +134,9 @@ export function askKey(item: WorklistItem): MessageKey {
   )
     return "worklist.ask.capture_health.calendar";
   if (item.source === "brief_item") return briefAskKey(item);
+  // The organizer answers it; an attendee who cannot change it is reminded.
+  if (item.source === "meeting_outcome" && mayOnlyRead(item))
+    return "worklist.ask.meeting_outcome.read_only";
   return labelFor(ASK_BY_SOURCE, item.source);
 }
 

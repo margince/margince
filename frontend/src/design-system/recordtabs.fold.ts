@@ -91,7 +91,8 @@ function foldKey<Option extends string>(
     const { paddingInlineStart, paddingInlineEnd } = getComputedStyle(tab);
     const missing = Math.max(
       0,
-      parseFloat(paddingInlineEnd) - parseFloat(paddingInlineStart) || 0,
+      Number.parseFloat(paddingInlineEnd) -
+        Number.parseFloat(paddingInlineStart) || 0,
     );
     inset = Math.max(inset, missing);
     widths.set(tab.dataset.tab ?? "", tab.offsetWidth + missing);

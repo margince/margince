@@ -16,6 +16,7 @@ import { afterEach, expect, test } from "vitest";
 import { LocaleProvider } from "../../../i18n";
 import { de } from "../../../i18n/de";
 import { en } from "../../../i18n/en";
+import { meFixture } from "../../../testing/mefixture";
 import { CompanyContactsList } from "./contacts";
 import { contactsFixture, stubContacts } from "./contacts.fixtures";
 
@@ -30,6 +31,7 @@ function render(ui: ReactNode, locale: "en" | "de" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>{ui}</LocaleProvider>

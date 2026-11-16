@@ -66,6 +66,8 @@ type Verifier struct {
 	matchIdentity func(Claims) error
 	client        *http.Client
 	now           func() time.Time
+	// skew is how far exp and iat may be off this clock.
+	skew time.Duration
 	// coalesced reports a caller JOINING an in-flight refresh rather than
 	// starting one. A seam for the reason `now` is one: the decision is made
 	// under the mutex and is gone before anything outside can look, so a test
@@ -121,6 +123,7 @@ func New(jwksURL string, checkIssuer, matchIdentity func(Claims) error) *Verifie
 		matchIdentity: matchIdentity,
 		client:        &http.Client{Timeout: jwksFetchTimeout},
 		now:           time.Now,
+		skew:          oidcSkew,
 	}
 }
 
@@ -156,6 +159,13 @@ func (v *Verifier) WithHTTPClient(c *http.Client) *Verifier {
 	return v
 }
 
+// SetSkew replaces how far exp and iat may be off the clock, for an issuer
+// whose tokens live seconds rather than an hour.
+func (v *Verifier) SetSkew(skew time.Duration) *Verifier {
+	v.skew = skew
+	return v
+}
+
 // SetClock replaces the clock that judges exp and iat.
 func (v *Verifier) SetClock(now func() time.Time) *Verifier {
 	v.now = now
@@ -169,13 +179,13 @@ type oidcHeader struct {
 
 // Claims are the ID token fields a sign-in or push check reads.
 type Claims struct {
-	Iss           string `json:"iss"`
-	Aud           string `json:"aud"`
-	Sub           string `json:"sub"`
-	Email         string `json:"email"`
-	EmailVerified bool   `json:"email_verified"`
-	Exp           int64  `json:"exp"`
-	Iat           int64  `json:"iat"`
+	Iss           string   `json:"iss"`
+	Aud           Audience `json:"aud"`
+	Sub           string   `json:"sub"`
+	Email         string   `json:"email"`
+	EmailVerified bool     `json:"email_verified"`
+	Exp           int64    `json:"exp"`
+	Iat           int64    `json:"iat"`
 	// Tid is the Microsoft directory the account belongs to. Google issues no
 	// such claim; for Microsoft it is what says WHICH tenant vouched for the
 	// email, and the issuer is derived from it, so the two are read together.
@@ -194,6 +204,11 @@ type Claims struct {
 	// Picture is the standard `picture` claim. Only the Google adapter hands it
 	// on: Microsoft sends no picture URL, and a URL from anywhere else is not fetched.
 	Picture string `json:"picture"`
+	// Jti, WorkspaceID and DisplayName are what a Dispact call token adds: the
+	// token's one-use id, the Dispact team, and the caller's name there.
+	Jti         string `json:"jti"`
+	WorkspaceID string `json:"workspace_id"`
+	DisplayName string `json:"display_name"`
 }
 
 // Verify returns the decoded claims only for a well-formed, correctly-signed
@@ -260,13 +275,13 @@ func (v *Verifier) checkClaims(c Claims, matchIdentity func(Claims) error) error
 		return err
 	}
 	now := v.now()
-	if c.Exp == 0 || now.After(time.Unix(c.Exp, 0).Add(oidcSkew)) {
+	if c.Exp == 0 || now.After(time.Unix(c.Exp, 0).Add(v.skew)) {
 		return fmt.Errorf("%w: expired", ErrRejected)
 	}
 	if c.Iat == 0 {
 		return fmt.Errorf("%w: missing iat", ErrRejected)
 	}
-	if now.Add(oidcSkew).Before(time.Unix(c.Iat, 0)) {
+	if now.Add(v.skew).Before(time.Unix(c.Iat, 0)) {
 		return fmt.Errorf("%w: issued in the future", ErrRejected)
 	}
 	return matchIdentity(c)

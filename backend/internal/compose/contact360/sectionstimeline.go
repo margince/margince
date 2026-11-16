@@ -266,18 +266,24 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	candidates := fmt.Sprintf(`a.archived_at IS NULL AND %s AND (%s)%s %s`,
 		fmt.Sprintf(contactReachesActivity, bind(contactPos)), scope, projectScope(opts, arg), extra)
 	// The recent timeline shows one row per email, as the company timeline does.
-	from, trailing, collapse := "activity a", "", order == byRecency
+	from, trailing, collapse, gatedOnce := "activity a", "", order == byRecency, ""
 	if collapse {
+		gatedOnce, candidates = foldedCandidates(candidates)
 		from = activities.SeatCopyFrom(ctx, candidates, contentArm, arg)
 		contentArm, trailing, candidates = activities.SeatCopyReadable, activities.SeatCopyColumns, "TRUE"
 	}
+	if !collapse {
+		from = activities.BoundActivityPage(from, candidates, " ORDER BY "+string(order), sectionCap+1)
+		candidates = "TRUE"
+	}
+	from, contentArm = activities.ActivityContentFrom(from, contentArm)
 	// The SELECT list and its scan are the activities module's, so there is no
 	// list here to fall behind that one.
 	columns, err := activities.ActivityProjection(ctx, contentArm, arg)
 	if err != nil {
 		return nil, false, err
 	}
-	query := fmt.Sprintf(`SELECT %s%s FROM %s WHERE %s ORDER BY %s LIMIT %d`,
+	query := gatedOnce + fmt.Sprintf(`SELECT %s%s FROM %s WHERE %s ORDER BY %s LIMIT %d`,
 		columns, trailing, from, candidates, order, sectionCap+1)
 	out, hasMore, err := readSection(ctx, tx, sectionQuery{query, args, collapse}, opts.activityColumns, s.now())
 	if err != nil {
@@ -438,4 +444,14 @@ func (s *Service) baselineFor(ctx context.Context, tx pgx.Tx, contactID ids.Cont
 		return time.Time{}, false, err
 	}
 	return at, true, nil
+}
+
+// foldedCandidates gates the contact's activities once, in a CTE, and folds a
+// meeting's invitation mail onto it as History does. The fold tests membership
+// in that set, so the statement carries the content gate once. It folds only
+// behind a meeting every reader may open, so no readable mail hides behind one.
+func foldedCandidates(candidates string) (with, folded string) {
+	gated := "a.id IN (SELECT id FROM contact_candidates)"
+	return `WITH contact_candidates AS MATERIALIZED (SELECT a.id FROM activity a WHERE ` + candidates + `) `,
+		gated + " AND " + activities.InvitationFoldSQL(gated, auth.WorkspaceAudienceSQL("a")+" AND a.restricted_at IS NULL")
 }

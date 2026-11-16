@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -83,7 +84,11 @@ func listRelationshipsInTx(ctx context.Context, tx pgx.Tx, in ListRelationshipsI
 // binding each value through arg.
 func relationshipListWhere(ctx context.Context, in ListRelationshipsInput, arg func(any) int) ([]string, error) {
 	where := []string{"true"}
-	if in.Kind != nil {
+	// A known kind is spelled, so a generic plan keeps the partial indexes on
+	// kind. Any other value is bound, and matches no row.
+	if in.Kind != nil && crmcontracts.RelationshipKind(*in.Kind).Valid() {
+		where = append(where, "r.kind = "+storekit.TextLiterals(*in.Kind))
+	} else if in.Kind != nil {
 		where = append(where, storekit.SQLf("r.kind = $%d", arg(*in.Kind)))
 	}
 	if in.ContactID != nil {

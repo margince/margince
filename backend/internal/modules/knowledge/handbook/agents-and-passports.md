@@ -105,6 +105,10 @@ Also called: work areas, limit an agent to sales, keep an agent out of admin set
 
 ### How do I revoke an agent's access?
 To stop an agent, open **Settings → AI assistants**. For a passport, open **For developers**, then the **…** menu on its row, and choose **Revoke**: "The passport’s credential is invalidated immediately. The agent loses access on its next call."
+
+A passport the Dispact chat made for you keeps that chat user out after you revoke it. To let them in
+again, show the revoked passports and choose **Allow again** on its row. Their next call gets a new
+passport.
 For a connected AI tool, open the **…** menu on its row under **Your connections** and choose **Disconnect**, which ends the whole connection. Turning off a user revokes all their passports at once.
 
 A disconnected tool then leaves the list. The link below it that counts the disconnected tools shows them again.

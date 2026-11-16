@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/compose/project360"
 	"github.com/margince/margince/backend/internal/compose/readerrendering"
+	"github.com/margince/margince/backend/internal/compose/recordreferences"
 	"github.com/margince/margince/backend/internal/compose/roombrief"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -34,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -65,6 +67,8 @@ import (
 type (
 	authHandlers            = identity.Handlers
 	channelHandlers         = capture.ChannelHandlers
+	chatLinkHandlers        = chatlinks.Handlers
+	chatEventHandlers       = chatlinks.EventHandlers
 	traceHandlers           = capture.TraceHandlers
 	pipelineTraceHandlers   = pipelinetrace.Handlers
 	contactsHandlers        = contacts.Handlers
@@ -85,6 +89,7 @@ type (
 	customfieldsHandlers    = customfields.Handlers
 	webhooksHandlers        = webhooks.Handlers
 	webFormsHandlers        = webforms.Handlers
+	recordReferenceHandlers = recordreferences.Handlers
 	company360Handlers      = company360.Handlers
 	erasureReturnHandlers   = erasurereturn.Handlers
 	contact360Handlers      = contact360.Handlers

@@ -24,7 +24,7 @@ measured is listed as not measured. The budgets are the published claim; a
 record is evidence about one machine on one day.
 
 Re-measure with ` + "`make bench-perf`" + `, ` + "`make bench-record`" + `,
-` + "`make bench-capture`" + `, ` + "`make bench-daily`" + ` (each needs ` + "`make db-up`" + `) or
+` + "`make bench-ai`" + `, ` + "`make bench-coldstart`" + `, ` + "`make bench-capture`" + `, ` + "`make bench-daily`" + ` (each needs ` + "`make db-up`" + `) or
 ` + "`make bench-mobile`" + `. Each writes its own record and re-renders this page.
 ` + "`make bench-perf-check`" + ` and ` + "`make bench-mobile-check`" + ` measure
 without recording. The weekly scheduled job records the SMB tier of
@@ -255,8 +255,13 @@ func dailyNotes(m measurement) string {
 	if m.Status422 > 0 {
 		notes = append(notes, fmt.Sprintf("%d refused as too broad (422)", m.Status422))
 	}
+	if m.AdmissionWaitMs > 0 {
+		notes = append(notes, fmt.Sprintf("read admission wait %s in all, %s process maximum, %d process peak waiters",
+			millis(m.AdmissionWaitMs), millis(m.AdmissionWaitMaxMs), m.AdmissionPeakWaiters))
+	}
+
 	if m.Acquires > 0 {
-		notes = append(notes, fmt.Sprintf("pool wait %s in all, %s at most, over %d acquires on a pool of %d",
+		notes = append(notes, fmt.Sprintf("pool wait %s in all, %s worst half-second mean, over %d acquires on a pool of %d",
 			millis(m.PoolWaitMs), millis(m.PoolWaitMaxMs), m.Acquires, m.PoolSize))
 	}
 	return strings.Join(notes, "; ")

@@ -6,7 +6,11 @@ import {
   type QueryKey,
 } from "@tanstack/react-query";
 import { ENTITY_NAME_KEY } from "../components/entityref.queries";
-import { isRecordRead, isTimelineRead } from "../lib/activitykeys";
+import {
+  isRecordRead,
+  isTimelineRead,
+  isTranscriptReadingRead,
+} from "../lib/activitykeys";
 import {
   ConnectivityError,
   connectivityNow,
@@ -65,7 +69,8 @@ export function liveOnReturn(query: {
   return (
     (isLiveRead(query.queryKey) ||
       isInstallationRead(query.queryKey) ||
-      isTimelineRead(query.queryKey)) &&
+      isTimelineRead(query.queryKey) ||
+      isTranscriptReadingRead(query.queryKey)) &&
     "always"
   );
 }
@@ -231,6 +236,14 @@ function refreshRecordHistory(client: QueryClient): void {
   });
 }
 
+// A transcript's reading shows words drawn from it. An erasure deletes the
+// reading on the server, so any successful write re-reads the mounted ones.
+function refreshTranscriptReadings(client: QueryClient): void {
+  client.invalidateQueries({
+    predicate: (query) => isTranscriptReadingRead(query.queryKey),
+  });
+}
+
 // Who can see a record changes with a share, a visibility or owner change, or
 // a role or team edit, and each of those is a different write. Invalidated for
 // every successful mutation for the reason the two above are.
@@ -302,6 +315,7 @@ export function createQueryClient(): QueryClient {
         refreshNamedReferences(client);
         refreshRecordHistory(client);
         refreshRecordAccess(client);
+        refreshTranscriptReadings(client);
         // A write can revoke the facts a mounted message relies on.
         client
           .cancelQueries({ queryKey: SEND_PERMISSION_KEY })

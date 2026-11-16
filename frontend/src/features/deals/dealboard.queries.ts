@@ -4,12 +4,13 @@
 import {
   type QueryClient,
   type QueryKey,
+  queryOptions,
   type UseQueryResult,
   useQueries,
   useQueryClient,
 } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
-import { CLOSE_DAY_DIAL } from "../../lib/dealranges";
+import { CLOSE_DAY_DIAL, type DayRange } from "../../lib/dealranges";
 import {
   type DealFilters,
   type DealListPage,
@@ -19,6 +20,7 @@ import {
   readDealPage,
   useCloseDay,
 } from "../../lib/deals.queries";
+import { useHealthScope } from "../../lib/healthscope";
 
 type Deal = components["schemas"]["Deal"];
 
@@ -133,6 +135,42 @@ function stageColumnRead(
   };
 }
 
+function stageColumnKey(
+  readerScope: string,
+  f: DealFilters,
+  closeDay: DayRange | undefined,
+  stageId: string,
+) {
+  return ["deals", "stage-column", readerScope, f, closeDay, stageId] as const;
+}
+
+/**
+ * One stage column's cache entry and read for the reader `readerScope` names
+ * (`healthScope(me)`). The board mounts it per stage, and a navigation prefetch
+ * warms the first column with the same key and walk.
+ */
+export function stageColumnOptions(
+  readerScope: string,
+  f: DealFilters,
+  closeDay: DayRange | undefined,
+  stageId: string,
+) {
+  return queryOptions({
+    queryKey: stageColumnKey(readerScope, f, closeDay, stageId),
+    queryFn: ({ client, queryKey, signal }) =>
+      readStageColumn(
+        client,
+        queryKey,
+        {
+          ...dealsQueryParams({ ...f, closeDay }),
+          limit: STAGE_COLUMN_LIMIT,
+          stage_id: stageId,
+        },
+        signal,
+      ),
+  });
+}
+
 // Not one walk over every stage: a later column would head a count over no cards.
 // Not useInfiniteQuery: useQueries takes no infinite query.
 // A column shows, and re-reads, the pages its cache entry holds.
@@ -143,34 +181,15 @@ export function useStageColumns(
 ) {
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   const client = useQueryClient();
+  // A column holds the rows one reader scope may see; none is read before /me names it.
+  const readerScope = useHealthScope() ?? "";
   const readStages = f.filters.stage_id
     ? stageIds.filter((stageId) => stageId === f.filters.stage_id)
     : stageIds;
-  const keyOf = (stageId: string) =>
-    ["deals", "stage-column", f, closeDay, stageId] as const;
   const queries = useQueries({
     queries: readStages.map((stageId) => ({
-      queryKey: keyOf(stageId),
-      enabled,
-      queryFn: ({
-        client,
-        queryKey,
-        signal,
-      }: {
-        client: QueryClient;
-        queryKey: QueryKey;
-        signal: AbortSignal;
-      }) =>
-        readStageColumn(
-          client,
-          queryKey,
-          {
-            ...dealsQueryParams({ ...f, closeDay }),
-            limit: STAGE_COLUMN_LIMIT,
-            stage_id: stageId,
-          },
-          signal,
-        ),
+      ...stageColumnOptions(readerScope, f, closeDay, stageId),
+      enabled: enabled && readerScope !== "",
     })),
   });
   const columns = new Map<string, StageColumnRead>();
@@ -180,7 +199,11 @@ export function useStageColumns(
     columns.set(
       stageId,
       stageColumnRead(query, () =>
-        askForMore(client, keyOf(stageId), () => query.refetch()),
+        askForMore(
+          client,
+          stageColumnKey(readerScope, f, closeDay, stageId),
+          () => query.refetch(),
+        ),
       ),
     );
   });

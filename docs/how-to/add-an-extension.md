@@ -520,7 +520,8 @@ A row belongs to a subject when one of its links names the subject. Erasure and 
 needs one of the other three.
 
 The merge check refuses to merge away a record that a link names. Declare the same column in the unit's
-`Reach` field, and the merge moves it to the record that stays instead. `fixtures/extensions/crm-hello`
+`Reach` field, and the merge moves it to the record that stays instead. The merge writes an audit row for
+each row it moves, so a table in `Reach` needs a `uuid` column named `id`. `fixtures/extensions/crm-hello`
 declares its note table in both.
 
 A table with no `Links` and no `Personal` columns declares that it holds no personal data. A table with
@@ -856,7 +857,7 @@ argument. The list members endpoint has no such parameter. It takes `entity_id`,
 
 ## Declare a report count or breakdown
 
-A unit can add a number to Reports and Home. A count says how many live records a population holds. A breakdown splits
+A unit can add a number to Reports. A count says how many live records a population holds. A breakdown splits
 that count by one field.
 
 ```go

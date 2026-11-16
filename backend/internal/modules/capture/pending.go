@@ -339,6 +339,9 @@ func (s *PendingStore) ResolveAs(
 	if err := storekit.LockSeatAddressChecks(ctx, tx, p.Email); err != nil {
 		return false, err
 	}
+	if err := lockSenderDecisionTx(ctx, tx, p.OwnerID, p.Email); err != nil {
+		return false, err
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE capture_pending_counterparty
 		   SET status = $2, disposition_reason = NULLIF($3, ''),

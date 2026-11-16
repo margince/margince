@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "080ec4617990fa0a2364b0339ec4e13e4a017fa4e3f7c0e7141f9b632758c544"
+const JobContractHash = "6e0c882bde4744e362430fdcfeb28ab999edf42e21e017f22b3accd551d439d1"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -316,6 +316,40 @@ var specs = map[string]Spec{
 		FanOutTo:   "captured_deal_refile",
 		OptsOwner:  OptsCaller,
 		Cadence:    Cadence{Fixed: 1 * time.Hour},
+	},
+	"chat_link_flush": {
+		Kind:         "chat_link_flush",
+		GoType:       "ChatLinkFlushArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"ChannelVault"}},
+		Args:         []ArgField{{Name: "LinkID"}, {Name: "Workspace"}},
+	},
+	"chat_pull": {
+		Kind:         "chat_pull",
+		GoType:       "ChatPullArgs",
+		Role:         Worker,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 10 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsArgs,
+		Registration: Registration{When: []string{"ChannelVault"}},
+		Args:         []ArgField{{Name: "ConnectionID"}, {Name: "Workspace"}},
+	},
+	"chat_pull_sweep": {
+		Kind:         "chat_pull_sweep",
+		GoType:       "ChatPullSweepArgs",
+		Role:         Dispatcher,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit:   FanOutConnection,
+		FanOutTo:     "chat_pull",
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Minute},
+		Registration: Registration{When: []string{"ChannelVault"}},
 	},
 	"check_company_vat": {
 		Kind:         "check_company_vat",
@@ -762,6 +796,16 @@ var specs = map[string]Spec{
 		Cadence:      Cadence{Fixed: 15 * time.Second},
 		Registration: Registration{When: []string{"GmailRegistry"}},
 	},
+	"meeting_profile_retract_sweep": {
+		Kind:      "meeting_profile_retract_sweep",
+		GoType:    "MeetingProfileRetractSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
 	"notification_digest": {
 		Kind:      "notification_digest",
 		GoType:    "NotificationDigestArgs",
@@ -875,6 +919,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsArgs,
 		Registration: Registration{When: []string{"ProviderRuns.Registry", "ProviderRuns.Vault"}},
 		Args:         []ArgField{{Name: "RunID"}, {Name: "Workspace"}},
+	},
+	"reply_settled_stamp": {
+		Kind:      "reply_settled_stamp",
+		GoType:    "ReplySettledStampArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Minute},
 	},
 	"report_schedule_sweep": {
 		Kind:      "report_schedule_sweep",
@@ -1022,6 +1076,16 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Setting: "installation.time_scan_interval_seconds"},
+	},
+	"transcript_audience_sweep": {
+		Kind:      "transcript_audience_sweep",
+		GoType:    "TranscriptAudienceSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 15 * time.Minute},
 	},
 	"transcript_propose": {
 		Kind:         "transcript_propose",

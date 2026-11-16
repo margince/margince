@@ -41,7 +41,7 @@ it("offers a change's Undo and asks for no review of it", async () => {
     [`GET /deals/${change.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
   expect(screen.queryByText(/review/i)).toBeNull();
   expect(writes(calls)).toEqual([]);
@@ -80,7 +80,7 @@ it("draws no group at all when Margince changed nothing", async () => {
         receipts: [],
       }),
   });
-  const { container, client } = render(<DoneForYou completed={null} />);
+  const { container, client } = render(<DoneForYou completed={() => null} />);
   // It draws nothing while loading too. So every empty answer, the receipts,
   // Margince's changes, the done lane and the viewer, has to come back before
   // "nothing" means anything.
@@ -118,11 +118,13 @@ it("dates a change from today by its hour and an older one by its day", async ()
     [`GET /deals/${today.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });
-  const { container } = render(<DoneForYou completed={null} />);
+  const { container } = render(<DoneForYou completed={() => null} />);
   await screen.findByRole("list", { name: en["brief.done.dealsLabel"] });
   const zone = browserZone();
   expect(
-    [...container.querySelectorAll("time")].map((time) => time.textContent),
+    [...container.querySelectorAll(".brief-done-change time")].map(
+      (time) => time.textContent,
+    ),
   ).toEqual([
     formatTimeOfDay(today.occurred_at, "en", zone),
     formatDayMonth(older.occurred_at, "en", zone),
@@ -167,7 +169,7 @@ it("keeps an undo-only applied change visible until it is reversed", async () =>
     [`GET /deals/${change.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });
-  render(<DoneForYou completed={null} />);
+  render(<DoneForYou completed={() => null} />);
   expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
 });
 

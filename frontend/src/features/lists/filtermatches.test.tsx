@@ -12,6 +12,7 @@ import { type Group, newGroup, newLeaf } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { FilterOutcome } from "./filtermatches";
@@ -36,6 +37,12 @@ const VOCABULARY: FilterVocabulary = {
 /** The outcome under a filter the server answers with no match at all. */
 function nothingMatches(tree: Group) {
   installFetchStub({
+    "GET /me": meRoute({
+      contact: ["read"],
+      company: ["read"],
+      deal: ["read"],
+      lead: ["read"],
+    }),
     "POST /filters/preview": () =>
       jsonResponse({
         resource: "contact",
@@ -59,6 +66,12 @@ function nothingMatches(tree: Group) {
 describe("a filter over an extension's kind", () => {
   it("heads each column with the label the kind declares", async () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       "GET /record-kinds": () =>
         jsonResponse({
           data: [
@@ -160,6 +173,12 @@ describe("export while the filter changes", () => {
   it("waits for the new filter's rows before it offers the file", async () => {
     const answers: Array<() => void> = [];
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
       "POST /filters/preview": () =>
         new Promise<Response>((resolve) => {
           answers.push(() =>

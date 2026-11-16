@@ -360,9 +360,9 @@ func confirmConsentLines(line writeLine) {
 		"Bitte bestätigen Sie Ihr Abonnement",
 		"Vui lòng xác nhận đăng ký của quý khách")
 	line(func(c *Copy) *string { return &c.ConfirmConsentBody },
-		"Confirm this subscription only if you want to receive these messages. We will send messages for this purpose only after you confirm. You can withdraw your choice later.",
-		"Bestätigen Sie das Abonnement nur, wenn Sie diese Nachrichten erhalten möchten. Erst danach senden wir Ihnen Nachrichten zu diesem Zweck. Sie können Ihre Einwilligung später widerrufen.",
-		"Chỉ xác nhận đăng ký nếu muốn nhận các thư này. Thư cho mục đích này chỉ được gửi sau khi quý khách xác nhận. Quý khách có thể rút lại sự đồng ý sau đó.")
+		"Confirm this subscription only if you want to receive these messages. We will send messages for this purpose only after you confirm. You can withdraw your consent at any time with the unsubscribe link in each of these messages.",
+		"Bestätigen Sie das Abonnement nur, wenn Sie diese Nachrichten erhalten möchten. Erst danach senden wir Ihnen Nachrichten zu diesem Zweck. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder dieser Nachrichten widerrufen.",
+		"Chỉ xác nhận đăng ký nếu muốn nhận các thư này. Thư cho mục đích này chỉ được gửi sau khi quý khách xác nhận. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào bằng liên kết hủy đăng ký trong mỗi thư này.")
 	line(func(c *Copy) *string { return &c.ConfirmPersonal },
 		"This link is for your use only.",
 		"Dieser Link ist nur für Sie bestimmt.",
@@ -374,7 +374,7 @@ func confirmConsentLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmRecordIgnore },
 		"Reviewing your details is optional. Leaving this email unanswered does not subscribe you to anything.",
 		"Die Prüfung Ihrer Daten ist freiwillig. Wenn Sie nichts tun, abonnieren Sie keine Nachrichten.",
-		"Việc kiểm tra thông tin là tùy chọn. Không trả lời email này không đăng ký quý khách nhận bất kỳ nội dung nào.")
+		"Việc kiểm tra thông tin là tùy chọn. Nếu quý khách không trả lời, quý khách sẽ không được đăng ký nhận nội dung nào.")
 	line(func(c *Copy) *string { return &c.ConfirmConsentIgnore },
 		"If you do not want this subscription, you can ignore this email. Without your confirmation, the subscription will not be activated.",
 		"Wenn Sie diese Nachrichten nicht abonnieren möchten, können Sie diese E-Mail ignorieren. Ohne Ihre Bestätigung wird das Abonnement nicht aktiviert.",

@@ -10,6 +10,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { LeadCompany } from "./leadcompany";
+import "./leads.css";
 
 // The offer to link the company the server matched, with the rule that matched it.
 
@@ -78,4 +79,23 @@ export const MatchedByName: Story = {
       matched_by: "name",
     },
   }),
+};
+
+export const NoRecordYet: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": () =>
+        jsonResponse(
+          meFixture({
+            roles: ["rep"],
+            allow: { lead: ["read", "update"], company: ["read"] },
+          }),
+        ),
+    });
+    return (
+      <StoryProviders>
+        <LeadCompany lead={{ ...lead, company_match: undefined }} nameShown />
+      </StoryProviders>
+    );
+  },
 };

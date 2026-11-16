@@ -1,10 +1,8 @@
 {
   "verb": "run_analytics_query",
   "checks": [
-    "activity.read",
+    "activity.read,deal.read,lead.read,project.read",
     "deal.read",
-    "installation_settings.read",
-    "lead.read",
-    "project.read"
+    "installation_settings.read"
   ]
 }

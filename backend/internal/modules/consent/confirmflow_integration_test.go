@@ -531,7 +531,7 @@ func TestEachConfirmLinkAnswersInItsOwnShape(t *testing.T) {
 
 	// The env's DOI purpose. A consent link only exists for a purpose that is
 	// confirmed by double opt-in — there is nothing for a mailed link to ask
-	consentLink, err := e.store.IssueConsentLink(e.ctx, e.contact, e.doiNews, "")
+	consentLink, err := e.store.IssueConsentLink(e.ctx, e.contact, e.doiNews, "", "")
 	if err != nil {
 		t.Fatalf("mint a consent link: %v", err)
 	}

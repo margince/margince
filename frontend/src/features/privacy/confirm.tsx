@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import {
   Button,
   Card,
@@ -13,21 +14,21 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import {
-  explainPublicError,
-  LinkInvalidError,
-  RateLimitedError,
-} from "../settings/preferences";
+import { LinkInvalidError, RateLimitedError } from "../settings/preferences";
 import {
   CORRECTABLE,
   type CorrectableField,
   FIELD_LABELS,
 } from "./confirmfields";
 import { PrivacyNotice } from "./confirmprivacy";
+import { ControllerCard } from "./confirmprivacyparts";
 import { RequestReceipts, type RightsCaseReceipt } from "./confirmreceipts";
-import { SubscriptionConfirm } from "./confirmsubscription";
-import { useMailLanguage, usePublicLocale } from "./publiclocale";
-import "../settings/preferences.css";
+import {
+  explainConfirmError,
+  SubscriptionConfirm,
+} from "./confirmsubscription";
+import { useMailLanguage } from "./publiclocale";
+import { PublicPage } from "./publicpage";
 import "./confirm.css";
 
 // The public, anonymous confirm-your-details page: what a contact lands on from
@@ -44,17 +45,30 @@ import "./confirm.css";
 
 export function ConfirmDetailsScreen({ token }: Readonly<{ token?: string }>) {
   const t = useT();
-  // The link names its mail's language, so an expired link that the server
-  // answers with nothing still speaks it.
-  usePublicLocale();
   if (!token) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <EmptyState>{t("confirm.invalidLink")}</EmptyState>
-      </div>
+      </PublicPage>
     );
   }
   return <ConfirmDetailsBody token={token} />;
+}
+
+// The question the server served for this link: the sentence, the two
+// answers, and the whole text it records, which the page sends back. A link
+// that pinned none falls back to this build's own sentence.
+function marketingQuestion(
+  t: ReturnType<typeof useT>,
+  served: components["schemas"]["ConfirmQuestion"] | undefined,
+) {
+  const ask = served?.ask ?? t("confirm.marketing.ask");
+  return {
+    ask,
+    yes: served?.answers[0] ?? t("confirm.marketing.yes"),
+    no: served?.answers[1] ?? t("confirm.marketing.no"),
+    text: served?.text ?? ask,
+  };
 }
 
 function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
@@ -101,17 +115,13 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
 
   const card = details.data;
 
-  // The sentence shown beside the choice IS the sentence stored as proof, so it
-  // is read once here and passed to the submit. Re-deriving it at submit time
-  // is how the two drift.
-  const marketingWording = t("confirm.marketing.ask");
-
   // Narrowed BEFORE any record field is read, including here. A subscription
   // body carries no correctable field at all, and indexing it by `full_name` is
   // the same mistake the discriminator exists to stop. The typechecker says so
   // now that the union is honest, which is how this one was found — it ran on
   // both bodies before, silently.
   const record = card?.kind === "record_confirmation" ? card : undefined;
+  const question = marketingQuestion(t, record?.question);
 
   const corrections = useMemo(() => {
     if (!record) {
@@ -170,16 +180,16 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
 
   if (details.isPending) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Skeleton width="100%" />
-      </div>
+      </PublicPage>
     );
   }
   if (details.error || !card) {
     return (
-      <div className="pref-page">
-        <EmptyState>{explainPublicError(details.error, t)}</EmptyState>
-      </div>
+      <PublicPage>
+        <EmptyState>{explainConfirmError(details.error, t)}</EmptyState>
+      </PublicPage>
     );
   }
   // THE DISCRIMINATOR, ASKED BEFORE ANY RECORD FIELD IS READ.
@@ -205,7 +215,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
   }
   if (done) {
     return (
-      <div className="pref-page">
+      <PublicPage>
         <Card>
           <Heading size="xlarge" className="t-h2">
             {t("confirm.done.title")}
@@ -213,16 +223,23 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
           <p className="t-body">{t("confirm.done.body")}</p>
           <RequestReceipts receipts={receipts} />
         </Card>
-      </div>
+      </PublicPage>
     );
   }
 
+  const controllerName = card.controller?.legal_name;
   return (
-    <div className="pref-page">
+    <PublicPage>
       <Heading size="xlarge" className="t-h2">
         {t("confirm.title")}
       </Heading>
-      <p className="t-body confirm-intro">{t("confirm.intro")}</p>
+      <p className="t-body confirm-intro">
+        {controllerName
+          ? t("confirm.introNamed", { controller: controllerName })
+          : t("confirm.intro")}
+      </p>
+
+      <ControllerCard controller={card.controller} />
 
       <Card>
         <Heading size="large" className="t-h3">
@@ -258,14 +275,14 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
           {t("confirm.marketing.title")}
         </Heading>
         <p className="t-body">{t("confirm.marketing.optional")}</p>
-        <p className="t-body">{marketingWording}</p>
+        <p className="t-body">{question.ask}</p>
         <div className="confirm-choices">
           <Button
             variant={marketing === "granted" ? "primary" : "ghost"}
             aria-pressed={marketing === "granted"}
             onClick={() => setMarketing("granted")}
           >
-            {t("confirm.marketing.yes")}
+            {question.yes}
           </Button>
           <button
             type="button"
@@ -273,7 +290,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
             aria-pressed={marketing === "withdrawn"}
             onClick={() => setMarketing("withdrawn")}
           >
-            {t("confirm.marketing.no")}
+            {question.no}
           </button>
         </div>
       </Card>
@@ -301,7 +318,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
       </details>
 
       {submit.error && (
-        <ErrorLine>{explainPublicError(submit.error, t)}</ErrorLine>
+        <ErrorLine>{explainConfirmError(submit.error, t)}</ErrorLine>
       )}
 
       <div className="confirm-actions">
@@ -314,7 +331,7 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
               erasure,
               marketing,
               token,
-              wording: marketingWording,
+              wording: question.text,
             })
           }
         >
@@ -329,6 +346,6 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
           {erasure ? t("confirm.erasure.staged") : t("confirm.erasure.ask")}
         </button>
       </div>
-    </div>
+    </PublicPage>
   );
 }

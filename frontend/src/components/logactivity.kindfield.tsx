@@ -13,10 +13,12 @@ type Kind = ActivityDraft["kind"];
 export function ActivityKindField({
   value,
   offersTask,
+  offersMessage,
   onChange,
 }: Readonly<{
   value: Kind;
   offersTask: boolean;
+  offersMessage: boolean;
   onChange: (kind: Kind) => void;
 }>) {
   const t = useT();
@@ -32,6 +34,9 @@ export function ActivityKindField({
               : []),
             { value: "call", label: t("log.kindCall") },
             { value: "meeting", label: t("log.kindMeeting") },
+            ...(offersMessage
+              ? [{ value: "message", label: t("log.kindMessage") }]
+              : []),
           ]}
           value={value}
           // The clamp narrows the type and validates nothing. The Select only

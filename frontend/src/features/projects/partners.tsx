@@ -46,12 +46,14 @@ export { PartnerTab } from "./partners.form";
 async function fetchPartnersPage(
   query: ListQuery,
   cursor: string | null,
+  signal?: AbortSignal,
 ): Promise<ListPage<Partner>> {
   const kind = query.filters.partner_kind ?? query.filters.partner_role ?? "";
   const meaning = query.filters.stage_meaning ?? "";
   const cert = query.filters.cert_status ?? "";
   const data = unwrap(
     await api.GET("/partners", {
+      signal,
       params: {
         query: {
           cursor: cursor || undefined,

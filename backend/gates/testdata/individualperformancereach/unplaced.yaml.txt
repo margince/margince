@@ -1,0 +1,10 @@
+paths:
+  /analytics/reports:
+    get:
+      operationId: getPlacedReport
+  /analytics/brand-new:
+    get:
+      operationId: getBrandNew
+  /contacts:
+    get:
+      operationId: listContacts

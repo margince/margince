@@ -226,7 +226,7 @@ func TestReplaceTokenClearsTheIncomingWebhookAndRestartsTheCursor(t *testing.T) 
 	// The outgoing bot has been polled for a while.
 	f.setPollOffset(t, conn.ID, 900500)
 
-	if err := f.store.ReplaceToken(f.ctx, conn.ID, replacementToken); err != nil {
+	if err := f.store.ReplaceToken(f.ctx, conn.ID, replacementToken, ""); err != nil {
 		t.Fatalf("ReplaceToken: %v", err)
 	}
 
@@ -290,10 +290,10 @@ func TestAStaleReplacementCannotOverwriteTheWinner(t *testing.T) {
 	// Fires while replacement A is inside deleteWebhook — after A read the row,
 	// before A repoints it, which is the only window in which A can go stale.
 	api.onNextDeleteWebhook(func(string) {
-		errB = f.store.ReplaceToken(f.ctx, conn.ID, tokenB)
+		errB = f.store.ReplaceToken(f.ctx, conn.ID, tokenB, "")
 	})
 
-	errA := f.store.ReplaceToken(f.ctx, conn.ID, tokenA)
+	errA := f.store.ReplaceToken(f.ctx, conn.ID, tokenA, "")
 
 	if errB != nil {
 		t.Fatalf("the replacement that ran inside the window: %v, want it to complete and own the connection", errB)
@@ -354,7 +354,7 @@ func TestADisconnectInsideAReplacementsWindowLeavesNoOrphanedCredential(t *testi
 		errDisconnect = f.store.Disconnect(f.ctx, conn.ID)
 	})
 
-	errReplace := f.store.ReplaceToken(f.ctx, conn.ID, replacementToken)
+	errReplace := f.store.ReplaceToken(f.ctx, conn.ID, replacementToken, "")
 
 	if errDisconnect != nil {
 		t.Fatalf("the disconnect that ran inside the window: %v, want it to complete — the operator withdrew the binding they were shown", errDisconnect)

@@ -37,6 +37,7 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   type AttachmentParent,
@@ -68,6 +69,9 @@ export type ChosenFile = Readonly<{
   byteSize?: number | null;
 }>;
 
+const recordFilesKey = (entityType: RelinkKind, entityId: string) =>
+  ["attachments", entityType, entityId, "compose"] as const;
+
 /**
  * The record's library, for the shelf to offer.
  *
@@ -82,7 +86,7 @@ export function useRecordFiles(
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: ["attachments", entityType, entityId, "compose"],
+    queryKey: recordFilesKey(entityType, entityId),
     queryFn: async () => {
       return unwrap(
         await api.GET("/attachments", {
@@ -278,8 +282,8 @@ function AttachPicker({
   };
 
   // An upload files the bytes on the record and then attaches what came back.
-  // The two are one act to the reader and two writes underneath, which is why
-  // the record's own file list is re-asked: the Documents tab behind this drawer
+  // The two are one act to the reader and two writes underneath.
+  // So the record's lists are re-asked: the Documents tab behind this drawer
   // is now out of date about a file this rep just added.
   const upload = useMutation({
     mutationFn: async (picked: File) => {
@@ -289,9 +293,16 @@ function AttachPicker({
     onMutate: () => setFailed(null),
     onError: (error) => setFailed(problemMessageOf(error, t)),
     onSuccess: (stored) => {
-      void queryClient.invalidateQueries({
-        queryKey: ["attachments", entityType, entityId],
-      });
+      for (const queryKey of [
+        recordFilesKey(entityType, entityId),
+        ...fileListKeys({
+          entityType,
+          entityId,
+          companyId: stored?.company_id,
+        }),
+      ]) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
       // The bytes are stored either way; what can be missing is the metadata,
       // and an id is exactly what attaching needs. Reported rather than
       // swallowed: the file IS on the record, and telling the rep it failed

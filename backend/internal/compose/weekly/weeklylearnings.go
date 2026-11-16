@@ -57,7 +57,7 @@ func (e *Engine) RecordLearnings(
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return false, err
 	}
-	userID, err := reviewUser(ctx)
+	userID, err := auth.OwnSeat(ctx)
 	if err != nil {
 		return false, err
 	}

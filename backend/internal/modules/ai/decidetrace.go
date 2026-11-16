@@ -79,7 +79,7 @@ func (r *Router) buildDecisionPayload(ctx context.Context, dreq decision.Request
 	reqDoc, err := json.Marshal(struct {
 		State     string                          `json:"state"`
 		Questions map[string]decisionWireQuestion `json:"questions"`
-	}{budget.take(string(dreq.State)), decisionToWire(dreq).Questions})
+	}{budget.take(string(dreq.State)), wireQuestions(dreq)})
 	if err != nil {
 		return nil, fmt.Errorf("ai: marshal decision capture request: %w", err)
 	}

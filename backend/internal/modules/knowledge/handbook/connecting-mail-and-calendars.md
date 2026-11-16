@@ -64,12 +64,19 @@ Margince can read the notes and transcripts Google Meet writes. You connect this
 
 Margince may then open a Google Doc by its address, and nothing else in your Drive. It cannot list or search your files. It reads only the notes and transcripts Google Meet adds to a meeting in your calendar.
 
-Once Google adds the notes to a meeting, Margince puts their text on the meeting as a transcript. It then suggests the tasks it finds in it. Each document is read once. Margince reads notes only for meetings of the last 14 days that someone at your company set up. Everyone who can see the meeting can see its transcript. A document taken off the meeting is not read.
+Once Google adds the notes to a meeting, Margince puts their text on the meeting as a transcript. It marks a meeting that still waits for an outcome as held, and suggests the tasks it finds in the transcript. An outcome already recorded stays as it is.
+
+Each document is read once. Margince also does this for notes it already read. Margince reads notes only for meetings of the last 14 days that someone at your company set up. Everyone who can see the meeting can see its transcript. A document taken off the meeting is not read.
 
 Connect meeting notes with the same Google account as your calendar. Notes are read only for meetings in that account's calendar, and the row says so when the two accounts differ.
 
 If you untick the permission on the Google screen, the row says **Cannot read meeting notes** and the account offers **Reconnect**. The same happens when Google later refuses it.
+
 To stop it, choose **Stop reading meeting notes** in the row. Mail and calendar keep running, and notes already on a meeting stay. Disconnecting the whole account stops it too.
+
+A meeting with notes waiting to be read offers **Connect meeting notes** in its **Files** panel.
+It says when your Google accounts differ. The message leaves once the transcript lands or the reading window ends.
+
 Also called: Google Docs, Meet transcripts, Gemini notes, meeting minutes.
 
 ### Who a meeting from your calendar shows

@@ -20,6 +20,7 @@ import { formatDayMonth, formatNumber } from "../../format/format";
 import { formatTimeRange } from "../../format/meetingtime";
 import { useLocale, useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
+import { fileListKeys } from "../../lib/attachmentkeys";
 import { proposalEmailBody } from "../../lib/booking-proposal-message";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -110,10 +111,17 @@ export function WaitingSection({
         }),
       );
     },
-    onSuccess: async (_done, { contactId }) => {
+    onSuccess: async (_done, { proposalId, contactId }) => {
       withdrawn.current = true;
       setWithdrawing(null);
-      await refreshContactMeetings(client, contactId);
+      // A withdrawn proposal is an archived activity, and its files go with it.
+      await Promise.all([
+        refreshContactMeetings(client, contactId),
+        ...fileListKeys(
+          { entityType: "activity", entityId: proposalId },
+          "removed",
+        ).map((queryKey) => client.invalidateQueries({ queryKey })),
+      ]);
     },
   });
   const rows = proposals.data ?? [];

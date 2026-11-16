@@ -69,6 +69,10 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/rewrite/service.go",
 		"the record the words on screen are written on, which every rewrite names; the rep's words are the request",
 	},
+	"internal/compose/chatsync/summary.go:summarise": {
+		"internal/compose/chatsync/summary.go",
+		"the deal or project whose linked channel's talk is the request",
+	},
 	"internal/compose/transcriptpropose.go:ask": {
 		"internal/compose/transcriptproposerun.go",
 		"the meeting whose transcript IS the request — the case this citation was built for",
@@ -164,6 +168,7 @@ var namesNoSubject = gatekit.Waive(map[string]string{
 	"internal/compose/fxrefresh.go:extract":                     "a published exchange-rate page. No record, and no personal data to erase",
 	"internal/compose/salesassessmentservice.go:write":          "a report's measured figures over a population, which is many records by construction, and no_payload keeps the call out of capture",
 	"internal/compose/reportsetupservice.go:ProposeSetup":       "a description the reader typed and the catalog they may choose from; no record is read, so there is none to cite",
+	"internal/compose/goalproposal/service.go:propose":          "monthly sums of one seller's closed revenue, which is many deals by construction; the text carries no name, id or address",
 	"internal/compose/filterproposal.go:ProposeFilter":          "a sentence the reader typed and the workspace's filter vocabulary; no record is read, so there is none to cite",
 	"internal/compose/sitereaddebug.go:CompleteValidated":       "a recording WRAPPER rather than a site: it forwards the caller's context unchanged, so whatever subject the caller named travels through it",
 	"internal/compose/sitereaddebug.go:debugTriage":             "the operator debug lane, run against a URL before any record is chosen",

@@ -133,10 +133,10 @@ func TestStartSignsTheConsentMarkerOnlyWhenAsked(t *testing.T) {
 // app's client id says nothing about who may sign in here, whoever issued it.
 func TestTheAudienceCheckRefusesAnotherAppsToken(t *testing.T) {
 	match := audienceIs("cid")
-	if err := match(oidctoken.Claims{Aud: "cid"}); err != nil {
+	if err := match(oidctoken.Claims{Aud: oidctoken.Audience{"cid"}}); err != nil {
 		t.Fatalf("match(correct aud) = %v, want nil", err)
 	}
-	if err := match(oidctoken.Claims{Aud: "someone-elses-client"}); err == nil {
+	if err := match(oidctoken.Claims{Aud: oidctoken.Audience{"someone-elses-client"}}); err == nil {
 		t.Fatal("expected a mismatch to be rejected")
 	}
 	if err := match(oidctoken.Claims{}); err == nil {

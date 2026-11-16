@@ -242,7 +242,7 @@ func (s *Store) waitingHorizonStatement(ctx context.Context, tx pgx.Tx, asOf tim
 		scopeUnbounded,
 		liveRecord(openDealPredicate, "d"),
 		liveRecord(workingLeadPredicate, "ld"),
-		ownDomainSenderSQL("inbound", arg(ownDomains)),
+		fmt.Sprintf("$%d", arg(ownDomains)),
 		slowPercentile,
 		sampleClause(sample, arg))
 	return query, args, nil
@@ -258,7 +258,7 @@ func sampleClause(sample int, arg func(any) int) string {
 }
 
 // sampledMessages keeps the first messages firstResponseSQL judges by a hash of
-// their id, after every filter. limit is the placeholder of the sample size.
+// their id, before response-time invitation eligibility. limit binds the sample size.
 func sampledMessages(limit int) string {
 	return fmt.Sprintf(`ORDER BY md5(inbound.id::text) LIMIT $%d`, limit)
 }

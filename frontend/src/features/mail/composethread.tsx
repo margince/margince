@@ -174,7 +174,7 @@ export function useRecentConversations(
   // anchor a reply to a mailing nobody wrote back to. Threads and single
   // messages are the ways in; the bulk groups are left where the History tab
   // draws them.
-  const conversations = groupChronology(entries)
+  const conversations = groupChronology(entries, false, { wholeThreads: true })
     .filter((group) => group.kind !== "bulk" && group.kind !== "newsletters")
     .flatMap((group): Conversation[] => {
       // The newest member: continuing a conversation means answering its last
