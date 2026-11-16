@@ -18833,8 +18833,7 @@ export interface paths {
          *     every opt-out receipt sent or queued to them. Nothing here ages out; all three are kept
          *     until the contact is erased.
          *
-         *     An archived contact is answered too. Times are UTC. Agents read the same facts through
-         *     `get_contact_consent` and `list_contact_stops`.
+         *     An archived contact is answered too. Times are UTC.
          */
         get: operations["exportContactOptOutRecords"];
         put?: never;

@@ -27897,9 +27897,8 @@ paths:
     get:
       tags: [Compliance]
       operationId: exportContactOptOutRecords
-      security: [ { cookieAuth: [] } ]
-      x-agent-access: human-only
-      x-human-only-reason: covered
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: export_contact_optout_records, router: read_details, action: contact_optout_records, tier: auto_execute, scope: read, served_by: route }
       summary: Export this contact's registrations, refusals and opt-out receipts for an inspection.
       description: |
         The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email to keep for at
@@ -27908,8 +27907,7 @@ paths:
         every opt-out receipt sent or queued to them. Nothing here ages out; all three are kept
         until the contact is erased.
 
-        An archived contact is answered too. Times are UTC. Agents read the same facts through
-        `get_contact_consent` and `list_contact_stops`.
+        An archived contact is answered too. Times are UTC.
       responses:
         '200':
           description: The records, newest first in each list.
