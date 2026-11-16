@@ -236,8 +236,10 @@ func TestAMissedReceiptShowsInSystemHealth(t *testing.T) {
 	owingReceipts()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Refusing Contact",
-		"emails": []AnyMap{{"email": "refusing@example.test", "is_primary": true}}})
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Refusing Contact",
+		"emails": []AnyMap{{"email": "refusing@example.test", "is_primary": true}},
+	})
 	if _, err := e.Owner.Exec(t.Context(), `UPDATE contact SET address_country = upper($2) WHERE id = $1`,
 		contact, string(receiptCountry)); err != nil {
 		t.Fatal(err)

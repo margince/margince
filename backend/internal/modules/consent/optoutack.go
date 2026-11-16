@@ -167,25 +167,34 @@ func keepRefusalTx(
 	ctx context.Context, tx pgx.Tx, sub subject, stopID ids.UUID, times RefusalTimes, keep time.Duration,
 ) (*time.Time, error) {
 	if keep <= 0 {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a nil end is the absence of a retention floor, which the receipt reads as none
 	}
 	kept := times.StoppedAt.Add(keep)
 	if !stopID.IsZero() {
-		if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
+		var err error
+		if kept, err = stampRefusalFloorTx(ctx, tx, sub, stopID, kept); err != nil {
 			return nil, err
-		}
-		tag, err := tx.Exec(ctx, `UPDATE communication_suppression SET kept_until = $2 WHERE id = $1 AND kept_until IS NULL`, stopID, kept)
-		if err != nil {
-			return nil, fmt.Errorf("consent: keeping the refusal for its retention floor: %w", err)
-		}
-		// A stop recorded again keeps the floor it already has; the receipt carries that one.
-		if tag.RowsAffected() == 0 {
-			if err := tx.QueryRow(ctx, `SELECT kept_until FROM communication_suppression WHERE id = $1`, stopID).Scan(&kept); err != nil {
-				return nil, fmt.Errorf("consent: reading the refusal's retention floor: %w", err)
-			}
 		}
 	}
 	return &kept, nil
+}
+
+// stampRefusalFloorTx sets the stop's retention floor to kept, and answers the
+// floor the stop carries. A stop recorded again keeps the floor it already has.
+func stampRefusalFloorTx(ctx context.Context, tx pgx.Tx, sub subject, stopID ids.UUID, kept time.Time) (time.Time, error) {
+	if err := storekit.LockSubjectsStopAddresses(ctx, tx, sub.id); err != nil {
+		return time.Time{}, err
+	}
+	tag, err := tx.Exec(ctx, `UPDATE communication_suppression SET kept_until = $2 WHERE id = $1 AND kept_until IS NULL`, stopID, kept)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("consent: keeping the refusal for its retention floor: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		if err := tx.QueryRow(ctx, `SELECT kept_until FROM communication_suppression WHERE id = $1`, stopID).Scan(&kept); err != nil {
+			return time.Time{}, fmt.Errorf("consent: reading the refusal's retention floor: %w", err)
+		}
+	}
+	return kept, nil
 }
 
 // receiptOwedTx asks the stopping subject's own country's rules whether this
