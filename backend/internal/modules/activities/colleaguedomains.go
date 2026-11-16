@@ -12,8 +12,9 @@ import (
 )
 
 // ColleagueDomainsReader reads the workspace's own email domains in the
-// caller's transaction. Compose binds capture's ColleagueDomainsTx here and
-// behind OwnDomains.Domains. A compose integration test holds the two to one list:
+// caller's transaction. Compose binds capture's ungated reader here, because
+// the reads that use it gate their own rows, and the gated one behind
+// OwnDomains.Domains. A compose integration test holds the two to one list:
 // TestTheBadgeAndTheWorklistReadOneOwnDomainListThroughTheProductionWiring.
 type ColleagueDomainsReader func(ctx context.Context, tx pgx.Tx) ([]string, error)
 
