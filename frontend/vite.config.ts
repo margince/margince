@@ -11,7 +11,7 @@ import {
   initialEntries,
   preloadEntries,
 } from "./scripts/vite-entry-chunks.ts";
-import { serveMcpApps } from "./scripts/vite-inline-views.ts";
+import { buildRevision, serveMcpApps } from "./scripts/vite-inline-views.ts";
 import { thirdPartyNotices } from "./scripts/vite-licenses.ts";
 import { pwa } from "./scripts/vite-pwa.ts";
 import { CostSequencer, compilerTests } from "./scripts/vitest-shards.ts";
@@ -171,9 +171,11 @@ export default defineConfig({
   // would compile every MARGINCE_* variable in the build environment into the
   // bundle, which is one careless deploy away from shipping a secret to every
   // browser. Empty is the local default, and empty disables the comparison.
+  // The revision only labels an unstamped build and never feeds the comparison.
   define: {
     __MARGINCE_RELEASE_VERSION__: JSON.stringify(release),
     __MARGINCE_CORE_VERSION__: JSON.stringify(coreRelease),
+    __MARGINCE_BUILD_REVISION__: JSON.stringify(buildRevision()),
   },
   resolve: {
     // An ARRAY rather than a record, because one entry must match a pattern:
