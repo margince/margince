@@ -151,6 +151,7 @@ and time. What to pull out of a page, and what to look for, stays with the calle
 Checks or builds the schema once and resets only the data for the integration lanes (`EnsureSchema`, `Reset`).
 A declared lane clone must match the binary’s migration ledger and hold no test rows. It refuses to start before any schema drop if these checks fail. For a ledger that differs, run `make test-db-up` in that worktree, then run the lane again. Other errors name the template or migration fix.
 The `integrationmigrateonce_test.go` gate makes tests use it.
+`New` gives a test its own copy of the migrated template (`MARGINCE_TEST_TEMPLATE`), and `For` answers that copy to a helper or subtest. The copy is dropped when the test ends, so the test needs no reset and no cleanup of its rows.
 - **Use it when:** you write the setup of a test that runs on a real Postgres.
 
 ---

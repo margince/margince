@@ -206,6 +206,26 @@ func TestDropDBTerminatesLingeringSessions(t *testing.T) {
 	}
 }
 
+func TestDropDBDropsTheTestCopiesNamedAfterIt(t *testing.T) {
+	maint, base, _ := testDSNs(t)
+	name := base + "_verbs_package"
+	leaked, unrelated := name+"_4242_7", name+"_keep"
+	for _, db := range []string{name, leaked, unrelated} {
+		t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", db) })
+		mustMigrate(t, "recreate-db", "--dsn", maint, "--name", db)
+	}
+
+	out := mustMigrate(t, "drop-db", "--dsn", maint, "--name", name)
+	if !strings.Contains(out, "dropped leaked test copy "+leaked) {
+		t.Errorf("drop-db printed %q, want it to name the leaked copy %s", out, leaked)
+	}
+	for db, want := range map[string]string{leaked: "false\n", unrelated: "true\n"} {
+		if got := mustMigrate(t, "db-exists", "--dsn", maint, "--name", db); got != want {
+			t.Errorf("db-exists %s after drop-db %s printed %q, want %q", db, name, got, want)
+		}
+	}
+}
+
 func TestDBExistsPrintsTheLiteralAnswerTheLaneParses(t *testing.T) {
 	// ensure_template string-compares this stdout — it is a wire contract
 	// between the binary and scripts/lib-testdb.sh, not cosmetics.

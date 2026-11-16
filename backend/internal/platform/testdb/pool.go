@@ -138,7 +138,7 @@ func poolParams() (map[string]string, error) {
 // XX000 "cache lookup failed for type N", so it opens an OwnPool or its own
 // connection instead.
 func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
-	if !schemaReady.Load() {
+	if !schemaReady.Load() && !onCopy(dsn) {
 		return nil, ErrSchemaNotReady
 	}
 	poolsMu.Lock()
@@ -156,6 +156,32 @@ func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	}
 	pools[dsn] = pool
 	return pool, nil
+}
+
+// onCopy reports whether dsn names a test's own database, which is at head
+// from the moment New copies it.
+func onCopy(dsn string) bool {
+	name, err := databaseName(dsn)
+	return err == nil && isCopy(name)
+}
+
+// closePoolsOn closes and forgets every shared pool on the database name. A
+// pool something still holds is closed in the background: Close waits for the
+// holder, and AssertPoolsQuiesced has already named it.
+func closePoolsOn(name string) {
+	poolsMu.Lock()
+	defer poolsMu.Unlock()
+	for dsn, pool := range pools {
+		if on, err := databaseName(dsn); err != nil || on != name {
+			continue
+		}
+		delete(pools, dsn)
+		if pool.Stat().AcquiredConns() > 0 {
+			go pool.Close()
+			continue
+		}
+		pool.Close()
+	}
 }
 
 // OwnPool opens a pool the CALLER owns and closes, tuned by the same lane

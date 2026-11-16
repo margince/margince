@@ -67,6 +67,7 @@ echo "test-integration-one: backend $rel ${RUN:+(-run $RUN) }(db=$db)"
     && MARGINCE_ENV=dev \
        MARGINCE_SQL_CENSUS_DIR="$census" \
        MARGINCE_TEST_CLONE_DB="$db" \
+       MARGINCE_TEST_TEMPLATE="$TEMPLATE_NAME" \
        MARGINCE_TEST_DSN="$(owner_clone_dsn "$db")" \
        MARGINCE_TEST_APP_DSN="$(app_clone_dsn "$db")" \
        MARGINCE_TEST_BLOBSTORE_BUCKET="$(bucket_for one)" \
