@@ -29,7 +29,7 @@ import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
 import { useAiHealth } from "./ai-health";
 import { useProviderKeys } from "./ai-provider-key-hooks";
-import { unkeyedProviders } from "./ai-provider-keys";
+import { unkeyedProviders } from "./ai-key-rows";
 import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";
 import { type Lane, TiersTable } from "./ai-routing-lane";

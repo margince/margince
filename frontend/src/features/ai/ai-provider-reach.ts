@@ -4,7 +4,7 @@
 import type { components } from "../../api/schema";
 import { type AvailableModels, useAvailableModels } from "../../lib/ai-models";
 import { boundProviders, type RoutingRead } from "../../lib/ai-routing-query";
-import { keyRowFor } from "./ai-provider-keys";
+import { keyRowFor } from "./ai-key-rows";
 
 // Which providers a binding editor may offer, and which of them still lack the
 // key a call needs.
