@@ -322,6 +322,7 @@ func TestAMeetingValueGoesOnceNobodyFromItsCompanyIsOnTheMeeting(t *testing.T) {
 	for name, change := range map[string]string{
 		"speaker taken off": `DELETE FROM activity_participant WHERE activity_id = $1 AND contact_id = $2`,
 		"speaker left":      `UPDATE relationship SET archived_at = now() WHERE contact_id = $2 AND kind = 'employment' AND $1::uuid IS NOT NULL`,
+		"speaker only bcc":  `UPDATE activity_participant SET role = 'bcc' WHERE activity_id = $1 AND contact_id = $2`,
 	} {
 		m := newMeeting(t, "workspace")
 		company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)

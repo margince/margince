@@ -5,6 +5,7 @@ package auth
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -35,4 +36,24 @@ func ParticipantStandsSQL(participant, act string) string {
 	        WHERE made.entity_type = 'activity' AND made.entity_id = %[2]s.id AND made.action = 'create'
 	          AND made.actor_type = '%[4]s' AND made.on_behalf_of = %[1]s.user_id))`,
 		p, a, ConnectorSeatSQL(act), principal.PrincipalConnector)
+}
+
+// ParticipantUnstatedSQL is true of a participant row, aliased `alias`, that
+// records a linked contact the message's stated headers do not name. The row
+// stays as relationship evidence, so a reader listing who the message was
+// from or to excludes it. A message that states no header address has only its
+// linked contacts to name, and keeps them all. An archived address still
+// counts: archiving it later does not unsay the header it was named on.
+func ParticipantUnstatedSQL(alias string) string {
+	return strings.ReplaceAll(`(ap.contact_id IS NOT NULL AND ap.user_id IS NULL
+		AND ap.address IS NULL AND ap.channel_user_id IS NULL
+		AND EXISTS (
+		    SELECT 1 FROM activity_participant hdr
+		     WHERE hdr.activity_id = ap.activity_id AND hdr.address IS NOT NULL
+		       AND hdr.role IN ('from', 'to', 'cc', 'bcc'))
+		AND NOT EXISTS (
+		    SELECT 1 FROM activity_participant stated
+		      JOIN contact_email e ON e.email = lower(stated.address)
+		     WHERE stated.activity_id = ap.activity_id AND stated.role = ap.role
+		       AND e.contact_id = ap.contact_id))`, "ap.", alias+".")
 }

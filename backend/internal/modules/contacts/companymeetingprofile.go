@@ -34,11 +34,14 @@ const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at
 	AND cardinality(t.redacted_fields) = 0`
 
 // meetingCompanyPresentSQL holds while transcript t still has a participant
-// whose current primary employer is the company of field alias. A reading
-// writes only to the employer of a participant who spoke.
+// who could speak for the company of field alias: a stated, standing party in a
+// role a reading attributes, whose current primary employer it is. The reading
+// reads its speakers through activities.PartiesOf under the same tests.
 func meetingCompanyPresentSQL(field string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant p JOIN relationship rel ON rel.contact_id = p.contact_id
-		WHERE p.activity_id = t.id AND rel.company_id = ` + field + `.company_id AND rel.kind = 'employment'
+		WHERE p.activity_id = t.id AND p.role IN ('from', 'to', 'cc', 'organizer', 'attendee')
+		  AND NOT ` + auth.ParticipantUnstatedSQL("p") + ` AND ` + auth.ParticipantStandsSQL("p", "t") + `
+		  AND rel.company_id = ` + field + `.company_id AND rel.kind = 'employment'
 		  AND rel.archived_at IS NULL AND ` + employment.CurrentPrimarySQL("rel") + `)`
 }
 
@@ -49,10 +52,10 @@ func meetingFieldStandsSQL(field string) string {
 }
 
 // RetractStaleMeetingProfilesTx removes up to limit company fields whose
-// transcript may no longer fill them: narrowed, restricted, archived or
-// redacted since, or with nobody from the company on it any more. One
-// statement tests and deletes, so a transcript that qualifies again meanwhile
-// keeps its fields. It returns how many it removed. It sweeps every
+// transcript may no longer fill them. It was narrowed, restricted, archived or
+// redacted since, or nobody from the company is on it any more. One statement
+// tests and deletes, so a transcript that qualifies again meanwhile keeps its
+// fields. It returns how many it removed. It sweeps every
 // company and so is the system's alone: no caller's write right covers that.
 func RetractStaleMeetingProfilesTx(ctx context.Context, tx pgx.Tx, limit int) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
