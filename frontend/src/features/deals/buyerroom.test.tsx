@@ -339,6 +339,11 @@ describe("BuyerRoomScreen", () => {
     // hand-installed mock would stay on URL for every later test in this file.
     vi.spyOn(URL, "createObjectURL").mockImplementation(createObjectURL);
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
+    // happy-dom follows the anchor's blob URL, which leaves the window on
+    // about:blank for every later case in this file.
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(
+      () => undefined,
+    );
     stubRoom({
       // BYTES, never a Blob. This file runs in jsdom, so `Blob` is jsdom's
       // while `Response` is Node's own — and undici builds a response body by

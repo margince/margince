@@ -128,7 +128,7 @@ func (s *Store) recordAdmittedTx(
 	// Here rather than at each door, so no door that records a withdrawal can
 	// leave out the receipt a refusal of advertising owes.
 	if ConsentState(in.NewState) == StateWithdrawn && !reassertion {
-		if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purpose.class); err != nil {
+		if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purpose.class, capturedAt); err != nil {
 			return State{}, err
 		}
 	}

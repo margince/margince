@@ -44,6 +44,7 @@ const FROM_OFFER: DealProduct[] = [
 function show(refusedReasonId?: string) {
   renderWithQueryClient(
     <DealProductsCard
+      canWrite
       dealId={DEAL}
       currency="EUR"
       typedAmount={null}

@@ -113,7 +113,7 @@ func TestReadAdmissionReleasesFailedReadsAndHonorsTheFinalPoolSize(t *testing.T)
 	for _, tc := range []struct {
 		connections int32
 		capacity    int64
-	}{{1, 1}, {2, 1}, {4, 2}, {16, 4}} {
+	}{{1, 1}, {2, 1}, {4, 2}, {16, 3}} {
 		t.Run(fmt.Sprint(tc.connections), func(t *testing.T) {
 			pool := readAdmissionPool(t, tc.connections)
 			refused := errors.New("read failed")
@@ -184,14 +184,62 @@ func TestAdmissionIsIndependentOfTracersAndCopiedPoolConfigurations(t *testing.T
 	if admissionOf(small) == admissionOf(large) {
 		t.Fatal("independent pools share admission")
 	}
-	if !admissionOf(large).slots.TryAcquire(4) {
+	if !admissionOf(large).slots.TryAcquire(DefaultReadConcurrency) {
 		t.Fatal("copied config retained the smaller pool's capacity")
 	}
-	defer admissionOf(large).slots.Release(4)
+	defer admissionOf(large).slots.Release(DefaultReadConcurrency)
 	db := BindTo(small, ids.From[ids.WorkspaceKind](ids.NewV7())).WithReadAdmission().Bounded(time.Second)
 	if err := db.Read(t.Context(), func(ctx context.Context, _ pgx.Tx) error {
 		return WithReadAdmission(ctx, small, func(context.Context) error { return nil })
 	}); err != nil {
 		t.Fatalf("nested read or custom tracer failed: %v", err)
 	}
+}
+
+func TestReadAdmissionUsesTheConfiguredLimitAndRefusesLiveChanges(t *testing.T) {
+	for _, limit := range []int{1, 3, 5, 100} {
+		t.Run(fmt.Sprint(limit), func(t *testing.T) {
+			pool := readAdmissionPool(t, 16)
+			if err := ConfigureReadAdmission(pool, limit); err != nil {
+				t.Fatal(err)
+			}
+			admission := admissionOf(pool)
+			capacity := int64(min(limit, 8))
+			if !admission.slots.TryAcquire(capacity) {
+				t.Fatal("configured capacity is unavailable")
+			}
+			defer admission.slots.Release(capacity)
+			if admission.slots.TryAcquire(1) {
+				admission.slots.Release(1)
+				t.Fatal("admitted beyond the configured or pool limit")
+			}
+			if err := ConfigureReadAdmission(pool, limit+1); err == nil {
+				t.Fatal("replaced live admission")
+			}
+		})
+	}
+	pool := readAdmissionPool(t, 16)
+	if err := ConfigureReadAdmission(pool, 0); err == nil {
+		t.Fatal("accepted a zero read allowance")
+	}
+}
+
+func TestReadAdmissionCannotReplaceALazyAllowanceWithAHeldPermit(t *testing.T) {
+	pool := readAdmissionPool(t, 16)
+	admission := admissionOf(pool)
+	if err := WithReadAdmission(t.Context(), pool, func(context.Context) error {
+		if err := ConfigureReadAdmission(pool, 1); err == nil {
+			t.Fatal("replaced an allowance with a held permit")
+		}
+		if admissionOf(pool) != admission {
+			t.Fatal("changed the permit's owner")
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if !admission.slots.TryAcquire(DefaultReadConcurrency) {
+		t.Fatal("the held permit did not return to its original allowance")
+	}
+	admission.slots.Release(DefaultReadConcurrency)
 }

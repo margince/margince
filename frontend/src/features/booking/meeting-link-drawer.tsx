@@ -1,19 +1,10 @@
-import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
-
-export { ReplaceAddressConfirm } from "./meeting-link-actions";
-
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, type Ref, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
-import {
-  Button,
-  Field,
-  SegmentedControl,
-  TextInput,
-} from "../../design-system/atoms";
+import { Button, Field, TextInput } from "../../design-system/atoms";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import {
   DrawerBody,
@@ -24,6 +15,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { ProviderMark } from "../../design-system/provider-mark";
+import { Select, type SelectOption } from "../../design-system/select";
 import {
   type PluralTranslator,
   type Translator,
@@ -39,7 +31,10 @@ import {
 import { useConnectors } from "../../lib/connectors";
 import { usePatchSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { BookingAliasField } from "./booking-alias";
+import { HoursSummary, ReplaceAddressConfirm } from "./meeting-link-actions";
 import "./meeting-cards.css";
+
+export { ReplaceAddressConfirm } from "./meeting-link-actions";
 
 type Profile = components["schemas"]["SchedulingProfile"];
 
@@ -317,13 +312,21 @@ function LinkForm({
           </Field>
         )}
         {profile.slug && <BookingAliasField profile={profile} />}
-        <SegmentedControl
-          label={t("scheduling.col.length")}
-          options={LENGTHS}
-          value={draft.length}
-          labels={lengthLabels(t, plural)}
-          onChange={(length) => update({ length })}
-        />
+        <Field label={t("scheduling.col.length")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={lengthOptions(t, plural)}
+              value={draft.length}
+              onChange={(next) => {
+                const length = LENGTHS.find((preset) => preset === next);
+                if (length !== undefined) {
+                  update({ length });
+                }
+              }}
+            />
+          )}
+        </Field>
         {draft.length === "other" ? (
           <Field
             label={t("scheduling.lengthMinutes")}
@@ -389,20 +392,17 @@ function LinkForm({
   );
 }
 
-function lengthLabels(
+function lengthOptions(
   t: Translator,
   plural: PluralTranslator,
-): Record<Length, string> {
-  const minutes = (count: string) =>
-    plural("scheduling.minutes", Number(count), { count });
-  return {
-    "15": minutes("15"),
-    "30": minutes("30"),
-    "45": minutes("45"),
-    "60": minutes("60"),
-    "90": minutes("90"),
-    other: t("scheduling.lengthOther"),
-  };
+): SelectOption[] {
+  return LENGTHS.map((length) => ({
+    value: length,
+    label:
+      length === "other"
+        ? t("scheduling.lengthOther")
+        : plural("scheduling.minutes", Number(length), { count: length }),
+  }));
 }
 
 function VideoChoice({

@@ -49,8 +49,8 @@ export const TaskSourceUnavailable: Story = {
   },
 };
 
-// The meetings slot over a calendar that could not count: a word where the
-// zero would be, and a door to where the calendar connects.
+// The meetings slot with no calendar: Margince's own zero, and a door to
+// where a calendar connects.
 export const MeetingsCalendarNotConnected: Story = {
   args: { day: { ...readingsDay({}, [], []), calendar: "not_connected" } },
 };

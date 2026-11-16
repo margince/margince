@@ -87,6 +87,9 @@ func (s *RetentionService) anonymizeContact(ctx context.Context, tx pgx.Tx, id i
 	if err := storekit.LockSubjectsStopAddresses(ctx, tx, id); err != nil {
 		return err
 	}
+	if err := refuseIfOptOutKeptNow(ctx, tx, "contact_id", id); err != nil {
+		return err
+	}
 	return anonymizeContactRecord(ctx, tx, id, s.eraser)
 }
 
@@ -101,20 +104,23 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 		// mistaken for a completed action.
 		return fmt.Errorf("retention: no executor for %s", pair)
 	}
+	var err error
 	if executor == nil {
-		return s.eraser.EraseContact(ctx, id, "retention")
-	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := executor(s, ctx, tx, id); err != nil {
-			// The floor changed under a pass already selected: the row is kept
-			// and nothing is audited as done to it.
-			if errors.Is(err, errKeptByFloor) {
-				return nil
+		err = s.eraser.eraseContactForRetention(ctx, id)
+	} else {
+		err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+			if err := executor(s, ctx, tx, id); err != nil {
+				return err
 			}
-			return err
-		}
-		return auditRetentionAction(ctx, tx, pol, pol.ObjectType, id)
-	})
+			return auditRetentionAction(ctx, tx, pol, pol.ObjectType, id)
+		})
+	}
+	// The floor changed under a pass already selected: the row is kept and
+	// nothing is audited as done to it.
+	if errors.Is(err, errKeptByFloor) {
+		return nil
+	}
+	return err
 }
 
 // auditRetentionAction records that a policy acted on one record. It audits
