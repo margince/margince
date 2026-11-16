@@ -66,6 +66,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // offerDraftAgentID is the system actor AddStagedOfferLines' audit row
@@ -116,6 +117,22 @@ type offerLineCandidate struct {
 	SourceID               string `json:"source_id"`
 	ConversationPriceMinor *int64 `json:"conversation_price_minor,omitempty"`
 	ProductID              string `json:"product_id,omitempty"`
+}
+
+// offerDraftSchema is offerLineCandidate's shape. A field the prompt lets the
+// model omit is null here, which decodes to the same absent value.
+func offerDraftSchema() json.RawMessage {
+	return schema.Must(schema.Record(
+		schema.Field("lines", schema.Array(schema.Record(
+			schema.Field("description", schema.String()),
+			schema.Field("quantity", schema.String()),
+			schema.Field("tax_rate", schema.String()),
+			schema.Field("evidence_snippet", schema.String()),
+			schema.Field("source_id", schema.String()),
+			schema.Field("conversation_price_minor", schema.Optional(schema.Integer())),
+			schema.Field("product_id", schema.Optional(schema.String())),
+		))),
+	))
 }
 
 // offerDraftShapeValid is the §5.2 retry pipeline's schema-validity
@@ -316,6 +333,7 @@ func offerDraftRequest(dealContext []dealContextItem, catalog []crmcontracts.Pro
 		}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: offerDraftSchema(),
 	}
 }
 

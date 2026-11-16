@@ -177,6 +177,9 @@ type sitePrompt struct {
 	requests int
 	// shape is what this site does with untrusted items.
 	shape isolation
+	// unschemed is how many of the case's requests ask for JSON in their
+	// instruction and carry no response schema to hold the model to it.
+	unschemed int
 	// decisions holds the DISTINCT decision questions the site's decision form
 	// asked across its scenarios, for the same reason systems holds every
 	// distinct instruction: a question that varied by scenario and was shown
@@ -357,7 +360,11 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 	}
 	var systems []string
 	seen := map[string]bool{}
+	unschemed := 0
 	for _, req := range recorder.Requests {
+		if asksForJSON(req) && len(req.ResponseSchema) == 0 {
+			unschemed++
+		}
 		canonical := promptfence.Canonicalize(req.System, req.System)
 		if seen[canonical] {
 			continue
@@ -377,6 +384,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		schema:    canonicalSchema(first.ResponseSchema),
 		spans:     spans,
 		requests:  len(recorder.Requests),
+		unschemed: unschemed,
 		decisions: decisionQuestionsOf(prepared),
 	}, refused, nil
 }
