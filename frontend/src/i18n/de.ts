@@ -6,6 +6,7 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.transcript_audience": "Besprechungsnotizen erhalten die Leser des Termins",
   "systemJob.meeting_profile":
     "Entfernt Unternehmenswerte, deren Besprechung nicht mehr alle lesen dürfen",
   "systemJob.optout_receipt": "Fehlende Abmeldebestätigungen melden",
@@ -10530,6 +10531,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.transcript_audience_sweep": "Leser von Besprechungsnotizen",
   "jobs.kind.meeting_profile_retract_sweep":
     "Unternehmensfelder aus Besprechungen",
   "jobs.kind.initiative_enrolment_sweep":
@@ -17774,6 +17776,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.attachment.archived.label": "Datei archiviert",
   "webhooks.event.attachment.archived.when":
     "Eine Datei an einem Datensatz wird archiviert.",
+  "webhooks.event.attachment.restored.label": "Datei wiederhergestellt",
+  "webhooks.event.attachment.restored.when": "Eine archivierte Datei ist wieder an einem Datensatz.",
   "webhooks.eventGroup.projects": "Projekte",
   "webhooks.event.project.created.label": "Projekt erstellt",
   "webhooks.event.project.created.when":

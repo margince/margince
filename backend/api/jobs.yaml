@@ -946,6 +946,20 @@ kinds:
       speaking for a meeting its readers lost within the hour; database-only,
       and bounded per workspace pass.
 
+  transcript_audience_sweep:
+    role: worker
+    fleet: true
+    go_type: TranscriptAudienceSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Gives each meeting transcript the readers its meeting has now. A guest
+      added to or taken off the meeting by calendar sync or any other writer
+      reaches the transcript within a quarter hour; an audience set by hand
+      reaches it at once. Database-only, and bounded per workspace pass.
+
   initiative_enrolment_sweep:
     role: worker
     fleet: true
