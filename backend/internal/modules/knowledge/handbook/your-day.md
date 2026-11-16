@@ -164,8 +164,8 @@ Each item names its record and shows the facts that call for action. A badge say
   is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it
   could not finish and what needs restoring.
-- **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **Your day** and **Numbers**.
-- **Your day** is a line through today. **Now** sits at your clock and says "Free until" the next meeting, or "Nothing else booked today". The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
+- **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **External meetings** and **Numbers**.
+- **External meetings** lists today's meetings with someone from outside your company, by start time. A meeting among colleagues is not on it. Each row names the account and the contacts you meet, each a link to their record. The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home.
 
 Also called: morning brief, daily brief, today, priorities, top cards.
 

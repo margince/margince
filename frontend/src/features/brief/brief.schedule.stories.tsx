@@ -12,9 +12,9 @@ import {
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { SchedulePanel } from "./brief.schedule";
 
-// Your day, the rail's line through today: a Now stop, the meetings around it,
-// and on a clear day the stop saying so. A read in flight and a read that
-// failed are facts about the request, so they keep the box and claim nothing.
+// External meetings, the rail's list of today's meetings with somebody from
+// outside, each saying who it is with. A read in flight and a read that failed
+// are facts about the request, so they keep the box and claim nothing.
 //
 // Read each story in both themes with the toolbar's Theme control. Every colour
 // here is a `color-mix()` of a canonical token. So a surface can be correct in
@@ -49,12 +49,18 @@ function panel(node: React.ReactNode) {
   };
 }
 
-/** A meeting whose row names whose page its brief is read on. */
+/** A meeting whose row names whose page its brief is read on, and who it is with. */
 function withBrief(item: WorklistItem): WorklistItem {
   return {
     ...item,
     with_contact: "c-1",
     move: { action: "open_meeting_brief", activity_id: item.id },
+    contact: {
+      id: "c-1",
+      label: "Anna Weber",
+      employer: { company_id: "co-1", company_name: "Weber GmbH" },
+    },
+    room: { participants: [{ contact_id: "c-1", full_name: "Anna Weber" }] },
   };
 }
 
@@ -63,6 +69,21 @@ const BOOKED = readingsDay({}, [
   withBrief(meetingRow("m2", true, "2026-08-21T13:00:00Z")),
   taskRow("t1", "Call Alice back"),
 ]);
+
+/** The last of `rows` ends inside the panel, so nothing is cut at its edge. */
+async function expectNoRowClipped(canvasElement: HTMLElement) {
+  const panel = canvasElement.querySelector(".rail-schedule");
+  const rows = canvasElement.querySelectorAll(".rail-schedule-row");
+  const last = rows.item(rows.length - 1);
+  await expect(panel).not.toBeNull();
+  await expect(last).not.toBeNull();
+  await expect(last.getBoundingClientRect().bottom).toBeLessThanOrEqual(
+    (panel as HTMLElement).getBoundingClientRect().bottom,
+  );
+  await expect((panel as HTMLElement).scrollHeight).toBe(
+    (panel as HTMLElement).clientHeight,
+  );
+}
 
 const CLEAR = readingsDay({}, []);
 
@@ -77,10 +98,10 @@ type Story = StoryObj;
 
 // ── Today's schedule ────────────────────────────────────────────────────────
 
-// A meeting the queue carries, at the hour it starts. The time is `due_at`:
-// `occurred_at` is when something HAPPENED, which a meeting still ahead of the
-// reader has no answer for. The badge rides WITH the title, so a meeting whose
-// name wraps keeps its warning attached to it.
+// Two external meetings at the hours they start, each naming the account and
+// the contact. The time is `due_at`: `occurred_at` is when something HAPPENED,
+// which a meeting still ahead of the reader has no answer for. The next one
+// adds how soon it starts and its brief, and otherwise looks like the other.
 export const Schedule: Story = {
   render: panel(
     <SchedulePanel
@@ -90,10 +111,11 @@ export const Schedule: Story = {
       onPrepareMeeting={() => undefined}
     />,
   ),
+  play: ({ canvasElement }) => expectNoRowClipped(canvasElement),
 };
 
-// Mid-morning: the first meeting is under way, so the Now stop sits between
-// the two. The second is the next one, with how soon it starts.
+// Mid-morning: the first meeting is under way and the second is the next one,
+// with how soon it starts.
 export const ScheduleMidDay: Story = {
   render: panel(
     <SchedulePanel
@@ -128,8 +150,11 @@ export const ScheduleDateOnlyMeeting: Story = {
   },
 };
 
-// Nothing booked: the Now stop says the rest of the day is clear, so the box
-// never leaves the rail.
+// Nothing external booked: the panel says so, so the box never leaves the rail.
+// A day of meetings among colleagues reads the same, because the server's
+// meetings lane sends only meetings with somebody from outside on them. An
+// internal call and a colleague's booking through the reader's page never
+// arrive as rows.
 export const ScheduleClearDay: Story = {
   render: panel(
     <SchedulePanel
@@ -139,6 +164,66 @@ export const ScheduleClearDay: Story = {
       onPrepareMeeting={() => undefined}
     />,
   ),
+};
+
+// More contacts than the row names: the account, the first names as links, an
+// outside address, and how many more there are.
+export const MoreNamesThanFit: Story = {
+  render: panel(
+    <SchedulePanel
+      day={readingsDay({}, [
+        {
+          ...withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+          room: {
+            participants: [
+              { contact_id: "c-1", full_name: "Anna Weber" },
+              { contact_id: "c-2", full_name: "Charlotte Nguyen" },
+              { contact_id: "c-3", full_name: "Lena Hartmann" },
+            ],
+            other_participants: [
+              { kind: "colleague", name: "Rita Rep" },
+              { kind: "address", name: "procurement@weber.example" },
+            ],
+            participants_more: 4,
+          },
+        },
+      ])}
+      state="ready"
+      now={NOW}
+    />,
+  ),
+  play: async ({ canvasElement }) => {
+    const who = canvasElement.querySelector(".rail-schedule-attendees");
+    await expect(who?.textContent).toContain("Weber GmbH · Anna Weber");
+    // A colleague is on every meeting here, so the row leaves them out.
+    await expect(who?.textContent).not.toContain("Rita Rep");
+  },
+};
+
+// A full day: every row keeps the same look, and the last one, badge and all,
+// ends inside the panel.
+export const LongList: Story = {
+  render: panel(
+    <SchedulePanel
+      day={readingsDay(
+        {},
+        [
+          "2026-08-21T07:30:00Z",
+          "2026-08-21T09:00:00Z",
+          "2026-08-21T10:30:00Z",
+          "2026-08-21T12:00:00Z",
+          "2026-08-21T14:00:00Z",
+          "2026-08-21T16:30:00Z",
+        ].map((at, index) =>
+          withBrief(meetingRow(`m${index}`, index % 2 === 0, at)),
+        ),
+      )}
+      state="ready"
+      now={NOW}
+      onPrepareMeeting={() => undefined}
+    />,
+  ),
+  play: ({ canvasElement }) => expectNoRowClipped(canvasElement),
 };
 
 // A meeting booked further out, which the CRM holds whatever the calendar

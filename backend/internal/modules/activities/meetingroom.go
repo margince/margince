@@ -11,7 +11,6 @@ package activities
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -222,33 +221,72 @@ func (r MeetingRoom) MoreCount() *int {
 // MeetingRoom answers the room of one meeting this reader may read. found is
 // false for a meeting they may not read, so the answer cannot confirm one exists.
 func (s *Store) MeetingRoom(ctx context.Context, meetingID ids.UUID) (room MeetingRoom, found bool, err error) {
+	rooms, err := s.MeetingRooms(ctx, []ids.UUID{meetingID})
+	room, found = rooms[meetingID]
+	return room, found, err
+}
+
+// MeetingRooms answers the room of each meeting this reader may read, in one
+// statement. A meeting they may not read is absent from the answer.
+func (s *Store) MeetingRooms(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]MeetingRoom, error) {
 	if err := auth.Require(ctx, linkEntityActivity, principal.ActionRead); err != nil {
-		return MeetingRoom{}, false, err
+		return nil, err
+	}
+	rooms := make(map[ids.UUID]MeetingRoom, len(meetingIDs))
+	if len(meetingIDs) == 0 {
+		return rooms, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	meeting := arg(meetingID)
+	meetings := arg(meetingIDs)
 	scope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
-		return MeetingRoom{}, false, err
+		return nil, err
 	}
 	columns, err := MeetingRoomColumns(ctx, arg)
 	if err != nil {
-		return MeetingRoom{}, false, err
+		return nil, err
 	}
-	var dealID *ids.UUID
-	var attendees []byte
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, fmt.Sprintf(`SELECT %s FROM activity a
-			WHERE a.id = $%d AND %s AND %s`, columns, meeting, activityLive, orUnbounded(scope)),
-			args...).Scan(&dealID, &attendees)
+		rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT a.id, %s FROM activity a
+			WHERE a.id = ANY($%d) AND %s AND %s`, columns, meetings, activityLive, orUnbounded(scope)), args...)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.UUID
+			var dealID *ids.UUID
+			var attendees []byte
+			if err := rows.Scan(&id, &dealID, &attendees); err != nil {
+				return err
+			}
+			room, err := ScanMeetingRoom(dealID, attendees)
+			if err != nil {
+				return err
+			}
+			rooms[id] = room
+		}
+		return rows.Err()
 	})
-	if errors.Is(err, pgx.ErrNoRows) {
-		return MeetingRoom{}, false, nil
-	}
 	if err != nil {
-		return MeetingRoom{}, false, fmt.Errorf("activities: reading the meeting's room: %w", err)
+		return nil, fmt.Errorf("activities: reading the meetings' rooms: %w", err)
 	}
-	room, err = ScanMeetingRoom(dealID, attendees)
-	return room, err == nil, err
+	return rooms, nil
+}
+
+// WorklistMeetingRooms answers MeetingRooms in the shape a Worklist meeting row
+// carries.
+func (s *Store) WorklistMeetingRooms(ctx context.Context, meetingIDs []ids.UUID) (map[ids.UUID]crmcontracts.WorklistMeetingRoom, error) {
+	rooms, err := s.MeetingRooms(ctx, meetingIDs)
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[ids.UUID]crmcontracts.WorklistMeetingRoom, len(rooms))
+	for id, room := range rooms {
+		out[id] = crmcontracts.WorklistMeetingRoom{
+			Participants: room.Attendees, OtherParticipants: room.OtherParticipants(), ParticipantsMore: room.MoreCount(),
+		}
+	}
+	return out, nil
 }
