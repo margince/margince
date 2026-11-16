@@ -22,6 +22,7 @@ import {
   MEANING_LABELS,
   PARTNER_KINDS,
   PARTNER_STAGE_MEANINGS,
+  partnerKindsLabel,
   partnerStageLabel,
   usePartnerStages,
 } from "../../lib/partnerstages.queries";
@@ -133,17 +134,22 @@ export function PartnersScreen() {
                   ))}
                 </CellStrip>
               ) : null,
+            phone: "caption",
+            folded: (partner: Partner) =>
+              partnerKindsLabel(partner.partner_kinds, t) || null,
           },
           {
             key: "cert",
             header: t("partner.certStatus"),
             cell: (partner: Partner) =>
               t(labelFor(CERT_LABELS, partner.cert_status)),
+            phone: "caption",
           },
           {
             key: "stage",
             header: t("partner.stage"),
             cell: (partner: Partner) => partnerStageLabel(partner, t),
+            phone: "end",
           },
         ]}
         rowKey={(partner) => partner.company_id}

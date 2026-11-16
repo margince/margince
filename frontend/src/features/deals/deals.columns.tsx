@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { toBoardDeal } from "../../components/boarddeal";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
 import { EntityRef, type OwnerNaming } from "../../components/entityref";
@@ -108,10 +109,10 @@ export function boardDealCount(
  * inside one is invalid markup, and the second route would go where the first
  * one already goes.
  */
-function CompanyCell({
-  deal,
-  field,
-}: Readonly<{ deal: Deal; field: "company_id" | "partner_company_id" }>) {
+function companyCell(
+  deal: Deal,
+  field: "company_id" | "partner_company_id",
+): ReactNode {
   if (deal.masked_fields?.includes(field)) {
     return <FieldGuard mode="masked" />;
   }
@@ -125,10 +126,7 @@ function CompanyCell({
 // The amount's three readings, in one place because both the list and the
 // board draw them. Withheld is not empty: reading a refused amount as an
 // unpriced deal is the defect this cell exists to prevent.
-function AmountCell({
-  deal,
-  locale,
-}: Readonly<{ deal: Deal; locale: Locale }>) {
+function amountCell(deal: Deal, locale: Locale): ReactNode {
   if (deal.masked_fields?.includes("amount_minor")) {
     return <FieldGuard mode="masked" />;
   }
@@ -174,7 +172,8 @@ export function dealColumns(
       key: "company",
       header: t("create.relatedCompany"),
       sort: "company_id",
-      cell: (deal) => <CompanyCell deal={deal} field="company_id" />,
+      cell: (deal) => companyCell(deal, "company_id"),
+      phone: "caption",
     },
     {
       // Which partner brought the deal, when one did. Optional: a workspace
@@ -184,7 +183,7 @@ export function dealColumns(
       key: "partner",
       header: t("deal.partnerCompany"),
       sort: "partner_company_id",
-      cell: (deal) => <CompanyCell deal={deal} field="partner_company_id" />,
+      cell: (deal) => companyCell(deal, "partner_company_id"),
     },
     {
       key: "stage",
@@ -195,13 +194,15 @@ export function dealColumns(
       sort: "stage_id",
       cell: (deal) =>
         deal.stage_id ? (stageName.get(deal.stage_id) ?? "") : "",
+      phone: "caption",
     },
     {
       key: "amount",
       header: t("deals.amount"),
       numeric: true,
       sort: "amount_minor",
-      cell: (deal) => <AmountCell deal={deal} locale={locale} />,
+      cell: (deal) => amountCell(deal, locale),
+      phone: "end",
     },
     {
       // The deal's own probability where one is set, else its stage's: the
@@ -221,6 +222,7 @@ export function dealColumns(
       header: t("deals.close"),
       holds: "date",
       sort: "close_day",
+      phone: "caption",
       cell: (deal) => {
         const day = closeDayOf(deal);
         return day ? formatDate(day, locale, recordZone) : null;

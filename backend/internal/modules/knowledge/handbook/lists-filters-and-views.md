@@ -145,7 +145,7 @@ Filters and search still work on the board. When every match of a search is in a
 Also called: kanban, pipeline view, list view, card view.
 
 ### How do I hide columns or make the table more compact?
-To choose columns or row size in a Margince list, press **View** → **Columns**, or press **View** and then **Compact**.
+To choose columns or row size in a Margince list, press **View** → **Columns**, or press **View** and then **Compact**. On record lists with two-line rows on a phone, **Columns** is offered on a computer only. See [What does a list show on a phone?](what-margince-is.md#what-does-a-list-show-on-a-phone).
 1. Under **Columns**, untick a column to hide it. The name column always stays. On **Filters and views**, every field of the record type is here. Only the first six start ticked.
 2. Press **View**, then **Compact**, to turn smaller rows On or Off.
 3. Drag the side of a column heading to make it wider or narrower. To move a column, drag the handle beside its name under **Columns**. With the keyboard, press ↑ or ↓ on the handle.
