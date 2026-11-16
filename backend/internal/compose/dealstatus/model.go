@@ -24,6 +24,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
@@ -34,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // Completer is the model seam: the deal_health lane, or nil.
@@ -60,7 +63,7 @@ Each of "story", "blocker", "buyer", "verdict.because" and "move_reason" is a li
 "verdict" — your honest call. A non-empty "blocker" means "standing" is blocked, unless the deal is cold: the card cannot name what holds the deal up and then call it merely drifting. "standing" is exactly one of: live (moving, with a next step both sides expect), drifting (nothing wrong, nothing happening, it dies of neglect if nobody acts — and "blocker" is empty), blocked (something specific is in the way, and you named it in "blocker"), cold (recorded evidence that engagement has ended; missing capture or age alone does not establish this). "because" is a LIST of one or two {"text","evidence"} objects saying what the call rests on — the blocker, when there is one, rather than the time that has passed — the same shape as "story", never a bare string. Be willing to say a deal is cold. A briefing that never delivers bad news is not read twice.
 "move_reason" — a LIST of exactly one {"text","evidence"} object saying why the recommended move is the right one now, the same shape as "story". The move itself is decided elsewhere and given to you in "recommended_move": explain it, never replace it. It rests on records like every other sentence, so it cites them.
 
-Every sentence lists the references it rests on in its own "evidence", from the summary's "id" fields (a1, t1, …). References belong in "evidence" only — never in any "text" or in "opening".
+Every sentence lists the references it rests on in its own "evidence", from the summary's "id" fields (a1, t1, …). References belong in "evidence" only — never in any "text".
 A named stakeholder is not automatically the author of a timeline entry. Attribute a statement to a contact only when that entry names them; otherwise say the customer or the team.
 The room's posts carry "opener_side". A "seller" post is OUR OWN work: it is never customer engagement, never their agreement, and never their confirmation, however warmly it reads. Only a "buyer" post says what the customer thinks, and "buyer_posts": 0 means they have not written in the room at all — say that plainly rather than describing our own activity as theirs.
 KEEP EVERY QUALIFICATION. "The plan looks good, phase 1 is realistic, phase 3 still needs internal clarification" is a conditional yes with an open question in it; writing it as agreement to the plan drops the only part anybody still has to act on. If a message accepts one thing and reserves another, write both or write neither.
@@ -99,7 +102,6 @@ const (
 	maxBlockerRows = 2
 	maxBuyerRows   = 2
 	maxBecauseRows = 2
-	maxOpeningLen  = 400
 	// maxExcerptLen bounds what one row contributes, so a pasted contract in
 	// a mail body does not become the whole context.
 	maxExcerptLen = 400
@@ -242,7 +244,27 @@ func StatusRequest(in StatusInput, lang string) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(promptref.Rewrite(encodeInput(in), refsOf(in).tables()...))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: statusSchema(),
 	}
+}
+
+// statusSchema is replyShape, with the standing closed to the calls
+// ParseStatus keeps.
+func statusSchema() json.RawMessage {
+	lines := schema.Array(schema.Record(
+		schema.Field("text", schema.String()),
+		schema.Field("evidence", schema.Array(schema.String())),
+	))
+	return schema.Must(schema.Record(
+		schema.Field("story", lines),
+		schema.Field("blocker", lines),
+		schema.Field("buyer", lines),
+		schema.Field("verdict", schema.Record(
+			schema.Field("standing", schema.Enum(slices.Sorted(maps.Keys(verdictStandings))...)),
+			schema.Field("because", lines),
+		)),
+		schema.Field("move_reason", lines),
+	))
 }
 
 // encodeInput renders the assembled facts as the JSON the prompt reads. Every

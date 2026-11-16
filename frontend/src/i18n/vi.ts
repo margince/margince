@@ -2797,6 +2797,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.help.releaseNotes": "Ghi chú phát hành",
   "shell.help.licenses": "Giấy phép ứng dụng web",
   "shell.help.devBuild": "Bản dựng phát triển",
+  "shell.help.devBuildRevision": "Bản dựng phát triển · {revision}",
   "shell.shortcuts.anywhere": "Mọi nơi",
   "shell.shortcuts.search": "Mở tìm kiếm",
   "shell.shortcuts.sidebar": "Hiện hoặc ẩn thanh bên",

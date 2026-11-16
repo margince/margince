@@ -2887,6 +2887,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.help.releaseNotes": "Versionshinweise",
   "shell.help.licenses": "Lizenzen der Web-App",
   "shell.help.devBuild": "Entwicklungs-Build",
+  "shell.help.devBuildRevision": "Entwicklungs-Build · {revision}",
   "shell.shortcuts.anywhere": "Überall",
   "shell.shortcuts.search": "Suche öffnen",
   "shell.shortcuts.sidebar": "Seitenleiste ein- oder ausblenden",

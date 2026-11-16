@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // The one question every case here asks: can a claim reach a rep that rests on
@@ -273,4 +274,24 @@ func citationKindsFromCatalog(t *testing.T) []string {
 		t.Fatalf("read %d kinds from the CHECK; the pattern no longer matches its shape", len(kinds))
 	}
 	return kinds
+}
+
+// The request sends the shape Parse reads, and that shape admits a reply Parse keeps.
+func TestTheRequestSendsTheShapeItsParserReads(t *testing.T) {
+	in := weekWithThree()
+	req := Request(in, "en")
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the request carries no response schema, so a decoder may write any shape")
+	}
+	d1 := `{"type":"deal","id":"d1"}`
+	good := reply(learning(KindWorked, "Reaching the sponsor early won Nordwind.", d1))
+	if _, err := Parse(good, in); err != nil {
+		t.Fatalf("the parser refused the well-formed reply the schema is checked against: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, good); err != nil {
+		t.Errorf("the schema refuses a reply the parser keeps: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, reply(learning("hunch", "x", d1))); err == nil {
+		t.Error("the schema admits a kind Parse refuses")
+	}
 }
