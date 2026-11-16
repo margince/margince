@@ -228,7 +228,7 @@ Also called: hand over a deal, change deal owner, transfer an opportunity.
 
 ### Can I edit a closed or archived deal?
 A won or lost deal in Margince can still be edited: only its **Stage** ladder and its **Probability** are locked until you reopen it. Changing a closed deal's value or currency fixes its exchange rate again.
-An archived deal cannot be edited: "This deal is archived and takes no changes." Without edit rights you see "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights."
+An archived deal cannot be edited: "This deal is archived and takes no changes." Without edit rights you see "You can log activity and add tasks. Changing this deal needs its owner to share it."
 Also called: change a won deal, fix a lost deal.
 
 ### How do I add a contact to a deal?

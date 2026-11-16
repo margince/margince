@@ -6471,7 +6471,7 @@ export const en = {
     "Archiving removes this deal from open deals. You can bring it back from its history.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
-    "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.",
+    "You can log activity and add tasks. Changing this deal needs its owner to share it.",
   "deal.closedTakesNoStage":
     "This deal is closed. Reopen it to move it to another stage.",
   "deal.reopen": "Reopen",
@@ -17951,11 +17951,12 @@ export const en = {
   "consent.redirectsTo": "Margince will send the authorization back to {host}.",
   "consent.redirectsToLoopback":
     "That is an address on this computer, and this connection cannot prove which program is listening on it.",
-  "consent.scopeNote.read": "sees what you can see",
-  "consent.scopeNote.draft": "prepares messages for your review",
-  "consent.scopeNote.write": "creates, edits and archives records as you",
-  "consent.scopeNote.send": "sends messages as you, without asking first",
-  "consent.scopeNote.enrich": "runs AI work and buys contact data",
+  "consent.scopeNote.read": "Sees what you can see",
+  "consent.scopeNote.draft": "Prepares messages for your review",
+  "consent.scopeNote.write": "Creates, edits and archives records as you",
+  "consent.scopeNote.send": "Sends messages as you, without asking first",
+  "consent.scopeNote.enrich": "Runs AI work and buys contact data",
+  "consent.scopesLegend": "What it may do",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",
   "consent.preset.label": "Assistant permissions",

@@ -42,6 +42,24 @@ export function partition(
   return slices.map((slice) => slice.files);
 }
 
+/**
+ * The test order inside each file. `seed` (TEST_SHUFFLE_SEED, the run number
+ * in CI) shuffles the tests with it; unset, they run in source order. The files
+ * keep the sequencer's order, so the shards split the same files as before.
+ */
+export function shuffledTests(seed: string | undefined): {
+  shuffle?: { files: false; tests: true };
+  seed?: number;
+} {
+  if (seed === undefined || seed === "") return {};
+  if (!/^\d+$/.test(seed)) {
+    throw new Error(
+      `TEST_SHUFFLE_SEED must be a whole number, got "${seed}"`,
+    );
+  }
+  return { shuffle: { files: false, tests: true }, seed: Number(seed) };
+}
+
 // The cost model loads the TypeScript compiler, so it is imported only once a
 // test run asks for it. A `vite build` reading this config never pays for it.
 async function costsOf(
