@@ -6,7 +6,7 @@
     "sites_best_stale": 16,
     "sites_absent": 0,
     "scenarios": 329,
-    "records": 397,
+    "records": 400,
     "bindings": 18,
     "self_judged_records": 0
   },
@@ -32241,8 +32241,8 @@
           "runs": 96,
           "passed": 96,
           "reliability": 1,
-          "latency_p50_ms": 3501,
-          "latency_p95_ms": 6006,
+          "latency_p50_ms": 3673,
+          "latency_p95_ms": 5110,
           "reported": {
             "accepted": 96,
             "wrong_answer": 0,
@@ -35213,6 +35213,67 @@
   ],
   "unclaimed_records": [],
   "decisions": [
+    {
+      "task": "capture_confidentiality_verdict",
+      "site": "thread",
+      "binding": {
+        "provider": "gemini_decision",
+        "model": "gemini-decision-1",
+        "env": "cloud_frontier"
+      },
+      "state": "current",
+      "verdict": "certified",
+      "serves": true,
+      "runs": 288,
+      "kept": 243,
+      "kept_wrong": 0,
+      "fallback_rate": 0.15625,
+      "fallback_by_reason": {
+        "below_floor": 45
+      },
+      "served_pass_rate": 1,
+      "stale_reason": ""
+    },
+    {
+      "task": "capture_counterparty_verdict",
+      "site": "verdict",
+      "binding": {
+        "provider": "gemini_decision",
+        "model": "gemini-decision-1",
+        "env": "cloud_frontier"
+      },
+      "state": "current",
+      "verdict": "certified",
+      "serves": true,
+      "runs": 147,
+      "kept": 144,
+      "kept_wrong": 0,
+      "fallback_rate": 0.02040816326530612,
+      "fallback_by_reason": {
+        "below_floor": 3
+      },
+      "served_pass_rate": 1,
+      "stale_reason": ""
+    },
+    {
+      "task": "site_triage",
+      "site": "triage",
+      "binding": {
+        "provider": "gemini_decision",
+        "model": "gemini-decision-1",
+        "env": "cloud_frontier"
+      },
+      "state": "current",
+      "verdict": "certified",
+      "serves": true,
+      "runs": 15,
+      "kept": 15,
+      "kept_wrong": 0,
+      "fallback_rate": 0,
+      "fallback_by_reason": {},
+      "served_pass_rate": 1,
+      "stale_reason": ""
+    },
     {
       "task": "site_triage",
       "site": "triage",

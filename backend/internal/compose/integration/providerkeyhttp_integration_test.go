@@ -17,6 +17,7 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
@@ -79,10 +80,11 @@ func TestTheListSaysWhichVendorsAreConfigured(t *testing.T) {
 
 	var before struct {
 		Providers []struct {
-			Provider   string  `json:"provider"`
-			Configured bool    `json:"configured"`
-			EnvVar     string  `json:"env_var"`
-			PricedBy   *string `json:"priced_by"`
+			Provider   string    `json:"provider"`
+			Configured bool      `json:"configured"`
+			EnvVar     string    `json:"env_var"`
+			PricedBy   *string   `json:"priced_by"`
+			SentBy     *[]string `json:"sent_by"`
 		} `json:"providers"`
 	}
 	if code := e.Call(t, "GET", "/v1/ai/provider-keys", nil, nil, &before); code != 200 {
@@ -102,6 +104,16 @@ func TestTheListSaysWhichVendorsAreConfigured(t *testing.T) {
 	}
 	if !sawVertex {
 		t.Error("gemini_vertex is not listed, so its priced_by was never read")
+	}
+	// gemini_decision sends the gemini key and has no row, so the gemini row
+	// names it; no other row lends its key.
+	for _, p := range before.Providers {
+		switch {
+		case p.Provider == "gemini" && (p.SentBy == nil || !slices.Equal(*p.SentBy, []string{"gemini_decision"})):
+			t.Errorf("gemini sent_by = %v, want [gemini_decision]", p.SentBy)
+		case p.Provider != "gemini" && p.SentBy != nil:
+			t.Errorf("%s sent_by = %v, want it omitted", p.Provider, *p.SentBy)
+		}
 	}
 	// An installation that has configured nothing is exactly the one that needs
 	// the screen, so every servable vendor is listed.

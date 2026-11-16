@@ -210,6 +210,9 @@ export const history: ListHistoryEntry[] = [
     occurred_at: "2026-09-20T09:30:00Z",
     actor: "human:00000000-0000-4000-8000-000000000001",
     actor_name: "Lena Vogt",
+    entity_type: "company",
+    entity_id: "01a0f000-0000-7000-8000-000000000006",
+    entity_name: "Würth",
     reason: "chosen",
     note: "Signed the quote for the launch deck",
   },
@@ -224,6 +227,7 @@ export const liveHistory: ListHistoryEntry[] = [
     actor: "system:list-checker",
     entity_type: "company",
     entity_id: MEMBER_ID,
+    entity_name: "MiTek",
     reason: "filter_changed",
     definition_version: 3,
   },
@@ -234,8 +238,52 @@ export const liveHistory: ListHistoryEntry[] = [
     actor: "system:list-checker",
     entity_type: "company",
     entity_id: "01a0f000-0000-7000-8000-000000000005",
+    entity_name: "Krones",
     reason: "evaluated",
     definition_version: 2,
+  },
+];
+
+/**
+ * A Live List's own changes: made, then renamed and refiltered by its steward,
+ * and a record an agent put on it.
+ */
+export const revisionHistory: ListHistoryEntry[] = [
+  {
+    id: "01a0f000-0000-7000-8000-000000000015",
+    kind: "member_added",
+    occurred_at: "2026-09-27T10:00:00Z",
+    actor: "agent:01a0f000-0000-7000-8000-0000000000aa",
+    entity_type: "company",
+    entity_id: MEMBER_ID,
+    entity_name: "MiTek",
+    reason: "chosen",
+  },
+  {
+    id: "01a0f000-0000-7000-8000-000000000016",
+    kind: "revised",
+    occurred_at: "2026-09-26T14:00:00Z",
+    actor: "human:00000000-0000-4000-8000-000000000001",
+    actor_name: "Lena Vogt",
+    version: 2,
+    name: "Quiet German manufacturers",
+    previous_name: "Quiet manufacturers",
+    definition: liveList.definition,
+    previous_definition: {
+      field: "industry",
+      op: "eq",
+      value: "Manufacturing",
+    },
+    changes: ["name", "filter"],
+  },
+  {
+    id: "01a0f000-0000-7000-8000-000000000017",
+    kind: "revised",
+    occurred_at: "2026-09-25T09:00:00Z",
+    actor: "human:00000000-0000-4000-8000-000000000001",
+    actor_name: "Lena Vogt",
+    version: 1,
+    name: "Quiet manufacturers",
   },
 ];
 

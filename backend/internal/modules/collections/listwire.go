@@ -329,8 +329,9 @@ func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
 func wireHistory(e HistoryEntry, names map[string]string) crmcontracts.ListHistoryEntry {
 	out := crmcontracts.ListHistoryEntry{
 		Id: openapi_types.UUID(e.ID), Kind: crmcontracts.ListHistoryEntryKind(e.Kind),
-		OccurredAt: e.OccurredAt, Actor: e.Actor, EntityType: e.EntityType, Note: e.Note,
+		OccurredAt: e.OccurredAt, Actor: e.Actor, EntityType: e.EntityType, EntityName: e.EntityName, Note: e.Note,
 		DefinitionVersion: e.DefinitionVersion, Version: e.Version, Name: e.Name, Sharing: e.Sharing,
+		PreviousName: e.PreviousName,
 	}
 	if name, ok := names[e.Actor]; ok {
 		out.ActorName = &name
@@ -345,6 +346,16 @@ func wireHistory(e HistoryEntry, names map[string]string) crmcontracts.ListHisto
 	}
 	if e.Definition != nil {
 		out.Definition = &e.Definition
+	}
+	if e.PreviousDefinition != nil {
+		out.PreviousDefinition = &e.PreviousDefinition
+	}
+	if e.Changes != nil {
+		changes := make([]crmcontracts.ListHistoryEntryChanges, 0, len(e.Changes))
+		for _, change := range e.Changes {
+			changes = append(changes, crmcontracts.ListHistoryEntryChanges(change))
+		}
+		out.Changes = &changes
 	}
 	return out
 }

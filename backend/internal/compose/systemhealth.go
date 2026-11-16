@@ -187,6 +187,7 @@ func (s Server) healthReads() []healthRead {
 		{"intake", healthReadObject, s.intakeSummary},
 		{"recovery", healthReadObject, s.recoverySummary},
 		{"automatic", healthReadObject, s.automaticSummary},
+		{"receipts", healthReadObject, s.receiptsSummary},
 		{healthSearchID, "embedding_reindex", s.searchSummary},
 		{"updates", healthDataTasks, s.updatesSummary},
 		{"providers", "ai_diagnostics", s.providersSummary},

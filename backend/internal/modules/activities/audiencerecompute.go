@@ -386,9 +386,12 @@ func writeDerivedAudienceTx(
 	// human narrowing are one kind of event to everything downstream — which is
 	// what lets the retraction of derived data have exactly one trigger.
 	audience := crmcontracts.PublicEventActivityChangedFieldsAudience(derived)
-	return storekit.EmitEvent(ctx, tx, auditID, activityID.UUID, crmcontracts.PublicEventActivityUpdated{
+	if err := storekit.EmitEvent(ctx, tx, auditID, activityID.UUID, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: crmcontracts.PublicEventActivityChangedFields{Audience: &audience},
-	})
+	}); err != nil {
+		return err
+	}
+	return keepTranscriptReadersTx(ctx, tx, activityID)
 }
 
 func deref(s *string) string {

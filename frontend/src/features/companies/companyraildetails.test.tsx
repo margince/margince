@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { type OpenSource, OpenSourceProvider } from "../../lib/opensource";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyRail } from "./companyrail";
 
@@ -146,14 +147,16 @@ function profileField(
   };
 }
 
-function renderGrid(company: Company) {
+function renderGrid(company: Company, openSource: OpenSource = vi.fn()) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <CompanyRail company={company} loading={false} />
+        <OpenSourceProvider openSource={openSource}>
+          <CompanyRail company={company} loading={false} />
+        </OpenSourceProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -305,6 +308,28 @@ describe("the legal identity a contact can state", () => {
     // The registered address is on the Profile tab, so the column stays the
     // design's three groups however much the crawl found.
     expect(screen.queryByText("Kaiserdamm 1, 14057 Berlin")).toBeNull();
+  });
+
+  it("opens the meeting a value was read from, from its evidence mark", async () => {
+    const meetingId = "0190a7f2-0000-7000-8000-00000000a001";
+    const openSource = vi.fn();
+    stub([
+      {
+        ...profileField("register_vat", "DE811907980"),
+        source: "meeting",
+        captured_by: "system:meeting-profile",
+        source_activity_id: meetingId,
+        source_occurred_at: "2026-11-12T09:00:00Z",
+      },
+    ]);
+    renderGrid(COMPANY, openSource);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /came from/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^From a meeting on/ }),
+    );
+    expect(openSource).toHaveBeenCalledWith(meetingId);
   });
 
   it("states a typed VAT number through the profile-field correction", async () => {

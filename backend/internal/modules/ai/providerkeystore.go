@@ -39,6 +39,8 @@ type ProviderKeyStatus struct {
 	// PricedBy is the provider whose prices this one's unpriced models take,
 	// so its sheet can show them; empty for one that borrows none.
 	PricedBy string
+	// SentBy is the other providers that send this slot's key.
+	SentBy []string
 }
 
 // Usable reports whether this vendor can be called: a key is held, the adapter
@@ -121,6 +123,7 @@ func (s *ProviderKeyStore) List(ctx context.Context) ([]ProviderKeyStatus, error
 			Optional:       keyIsOptional(provider),
 			CredentialKind: credentialKindFor(provider),
 			PricedBy:       pricedByFor(provider),
+			SentBy:         keyBorrowers(provider),
 		})
 	}
 	return out, nil

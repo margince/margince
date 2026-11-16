@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/corereach"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/sweepreach"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -143,6 +144,8 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 	withUnitNoteTable(t)
 	src, tgt := seedMergePair(t, e, "Same id")
 	e.WsExec(t, `INSERT INTO ext.ext_reachtest_note (record_type, record_id, body) VALUES ('company', $1, 'a'), ('contact', $1, 'b')`, src)
+	const movedAudits = `SELECT count(*) FROM audit_log a JOIN ext.ext_reachtest_note n ON n.id = a.entity_id
+		WHERE a.entity_type = 'ext_reachtest_note' AND n.record_type = $1 AND a.before->>'record_id' = $2`
 
 	if _, err := e.Contacts.MergeCompany(e.Admin(), src, tgt, nil); err != nil {
 		t.Fatalf("merge: %v", err)
@@ -160,6 +163,12 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 	} {
 		if n := e.WsCount(t, naming, c.kind, c.record); n != c.want {
 			t.Errorf("%d %s-kind unit notes name %s, want %d", n, c.kind, c.record, c.want)
+		}
+	}
+	// Only the company-kind row moved, so only it records the move.
+	for kind, want := range map[string]int{"company": 1, "contact": 0} {
+		if n := e.WsCount(t, movedAudits, kind, src.String()); n != want {
+			t.Errorf("the %s-kind unit note has %d move audit row(s), want %d", kind, n, want)
 		}
 	}
 }
@@ -181,6 +190,14 @@ func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 			t.Errorf("company %s holds %d unit notes, want %d", company, n, want)
 		}
 	}
+	// The moved row's own history names the survivor; the bystander has none.
+	for company, want := range map[ids.UUID]int{tgt.UUID: 1, bystander: 0} {
+		if n := e.WsCount(t, `SELECT count(*) FROM audit_log a JOIN ext.ext_reachtest_note n ON n.id = a.entity_id
+			WHERE a.entity_type = 'ext_reachtest_note' AND a.action = 'update' AND n.company_id = $1
+			  AND a.before->>'company_id' = $2 AND a.after->>'company_id' = n.company_id::text`, company, src.String()); n != want {
+			t.Errorf("the unit note now on %s has %d move audit row(s), want %d", company, n, want)
+		}
+	}
 }
 
 // The declared relink runs in the caller's transaction, so a merge that rolls
@@ -194,7 +211,7 @@ func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 	abort := errors.New("abort the merge")
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		if err := sweepreach.Relink(ctx, tx, reach.Company, src.UUID, tgt.UUID); err != nil {
+		if _, err := sweepreach.Relink(ctx, tx, reach.Company, src.UUID, tgt.UUID); err != nil {
 			return err
 		}
 		return abort
@@ -240,5 +257,30 @@ func TestTheBootRefusesAUnitReachingATableItDoesNotOwn(t *testing.T) {
 	}}, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "not one of its own") {
 		t.Fatalf("RegisterExtensions() = %v, want the foreign table refused", err)
+	}
+}
+
+// AuditEach writes one audit row per id past its statement chunk, each by the
+// bound actor with the shared images.
+func TestAuditEachWritesOneRowPerIDAcrossChunks(t *testing.T) {
+	e := Setup(t)
+	moved := make([]ids.UUID, 1001)
+	for i := range moved {
+		moved[i] = ids.NewV7()
+	}
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return storekit.AuditEach(e.Admin(), tx, "update", "ext_reachtest_note", moved,
+			map[string]any{"company_id": "from"}, map[string]any{"company_id": "to"})
+	})
+	if err != nil {
+		t.Fatalf("AuditEach: %v", err)
+	}
+	// Every moved id has one row of its own, by the admin, with both images.
+	if n := e.WsCount(t, `SELECT count(*) FROM unnest($1::uuid[]) m(id)
+		WHERE (SELECT count(*) FROM audit_log a WHERE a.entity_id = m.id AND a.action = 'update'
+		         AND a.entity_type = 'ext_reachtest_note' AND a.actor_id = $2
+		         AND a.before->>'company_id' = 'from' AND a.after->>'company_id' = 'to') = 1`,
+		moved, "human:"+e.AdminUser.String()); n != len(moved) {
+		t.Errorf("%d of %d moved rows have exactly one audit row of their own", n, len(moved))
 	}
 }

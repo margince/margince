@@ -23,6 +23,7 @@ const effects: Readonly<Record<string, MessageKey>> = {
   updates_review: "health.effect.updates",
   recovery_unverified: "health.effect.recovery",
   automatic_routing: "health.effect.automatic",
+  receipts_missed: "health.effect.receipts",
   read_failed: "health.effect.readFailed",
 };
 

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -246,7 +247,7 @@ func contactScopes(pkg SARPackage) []string {
 	if len(pkg.Activities) > 0 {
 		scopes = append(scopes, "activity")
 	}
-	if slices.ContainsFunc(pkg.Activities, func(row map[string]any) bool { return row["source_system"] == "transcript" }) {
+	if slices.ContainsFunc(pkg.Activities, func(row map[string]any) bool { return row["source_system"] == meetingoutcome.TranscriptSourceSystem }) {
 		scopes = append(scopes, "activity/transcript")
 	}
 	if len(pkg.RawCapture) > 0 {

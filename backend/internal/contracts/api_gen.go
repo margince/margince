@@ -16762,6 +16762,33 @@ func (e ListFilterOperand) Valid() bool {
 	}
 }
 
+// Defines values for ListHistoryEntryChanges.
+const (
+	ListHistoryEntryChangesFilter  ListHistoryEntryChanges = "filter"
+	ListHistoryEntryChangesName    ListHistoryEntryChanges = "name"
+	ListHistoryEntryChangesPurpose ListHistoryEntryChanges = "purpose"
+	ListHistoryEntryChangesSharing ListHistoryEntryChanges = "sharing"
+	ListHistoryEntryChangesSteward ListHistoryEntryChanges = "steward"
+)
+
+// Valid indicates whether the value is a known member of the ListHistoryEntryChanges enum.
+func (e ListHistoryEntryChanges) Valid() bool {
+	switch e {
+	case ListHistoryEntryChangesFilter:
+		return true
+	case ListHistoryEntryChangesName:
+		return true
+	case ListHistoryEntryChangesPurpose:
+		return true
+	case ListHistoryEntryChangesSharing:
+		return true
+	case ListHistoryEntryChangesSteward:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListHistoryEntryKind.
 const (
 	ListHistoryEntryKindMemberAdded   ListHistoryEntryKind = "member_added"
@@ -34114,10 +34141,10 @@ type AiDecisionsBinding struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	BaseUrl *string `json:"base_url,omitempty"`
 
-	// Model The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.
+	// Model The decision model id, e.g. jev-1.13.0 on jev, typesafe/jev-1.13 on OpenRouter, or gemini-decision-1 on gemini_decision.
 	Model string `json:"model"`
 
-	// Provider jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required).
+	// Provider jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY is sent when held and never required) | gemini_decision (Google's Decisions API on the Gemini Developer API, keyed by the gemini provider's GEMINI_API_KEY; no EU hosting).
 	Provider string `json:"provider"`
 }
 
@@ -34700,6 +34727,9 @@ type AiProviderKeyStatus struct {
 
 	// Provider The routing name of the vendor, the same string a binding uses.
 	Provider string `json:"provider"`
+
+	// SentBy The other providers whose calls send this same key, such as `gemini_decision` on `gemini`. They have no row of their own, so each needs this key held. Absent when no other provider sends it.
+	SentBy *[]string `json:"sent_by,omitempty"`
 
 	// Usable Whether this vendor can be called as the installation stands: a key is held, the adapter calls without one, or it takes no key. The daily price sync reads this same answer to decide which vendors it prices.
 	Usable bool `json:"usable"`
@@ -55367,15 +55397,24 @@ type ListFiltersVocabulary struct {
 
 // ListHistoryEntry defines model for ListHistoryEntry.
 type ListHistoryEntry struct {
-	Actor      string                  `json:"actor"`
-	ActorName  *string                 `json:"actor_name,omitempty"`
-	Definition *map[string]interface{} `json:"definition,omitempty"`
+	// Actor The principal behind the change (`human:<uuid>`, `agent:<id>`, `connector:<name>` or `system:<job>`), so a machine write is named as the machine it was.
+	Actor string `json:"actor"`
+
+	// ActorName Display name of a human actor; null for any other.
+	ActorName *string `json:"actor_name,omitempty"`
+
+	// Changes What a revision changed against the version before it; empty when it changed none of these. Null on a membership change and when no earlier version is kept, which on version 1 means the list was made.
+	Changes    *[]ListHistoryEntryChanges `json:"changes,omitempty"`
+	Definition *map[string]interface{}    `json:"definition,omitempty"`
 
 	// DefinitionVersion For an observed change, the list version whose filter it was seen under.
 	DefinitionVersion *int64              `json:"definition_version,omitempty"`
 	EntityId          *openapi_types.UUID `json:"entity_id,omitempty"`
-	EntityType        *string             `json:"entity_type,omitempty"`
-	Id                openapi_types.UUID  `json:"id"`
+
+	// EntityName What the record that joined or left is called now. Null on a revision and for a record type with no name. A change about a record the reader cannot see is not in the history.
+	EntityName *string            `json:"entity_name,omitempty"`
+	EntityType *string            `json:"entity_type,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
 
 	// Kind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
 	Kind       ListHistoryEntryKind `json:"kind"`
@@ -55383,11 +55422,20 @@ type ListHistoryEntry struct {
 	Note       *string              `json:"note,omitempty"`
 	OccurredAt time.Time            `json:"occurred_at"`
 
+	// PreviousDefinition The filter before a revision, so a reader sees it beside `definition`.
+	PreviousDefinition *map[string]interface{} `json:"previous_definition,omitempty"`
+
+	// PreviousName The name before a revision.
+	PreviousName *string `json:"previous_name,omitempty"`
+
 	// Reason `filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.
 	Reason  *ListHistoryEntryReason `json:"reason,omitempty"`
 	Sharing *string                 `json:"sharing,omitempty"`
 	Version *int64                  `json:"version,omitempty"`
 }
+
+// ListHistoryEntryChanges defines model for ListHistoryEntry.Changes.
+type ListHistoryEntryChanges string
 
 // ListHistoryEntryKind `member_entered` and `member_left` are a Live List's observed changes, stamped with the check that saw them.
 type ListHistoryEntryKind string
@@ -58206,6 +58254,60 @@ type OperationSettings struct {
 
 	// WebhookRetryIntervalSeconds How often failed webhook deliveries are retried, in seconds. Default 30.
 	WebhookRetryIntervalSeconds int `json:"webhook_retry_interval_seconds" maximum:"3600" minimum:"10"`
+}
+
+// OptOutReceiptRecord defines model for OptOutReceiptRecord.
+type OptOutReceiptRecord struct {
+	// Body The plain-text body. Null once an erasure removed it.
+	Body *string `json:"body,omitempty"`
+
+	// MessageId The receipt's Message-ID. One refusal has one.
+	MessageId string     `json:"message_id"`
+	QueuedAt  time.Time  `json:"queued_at"`
+	SentAt    *time.Time `json:"sent_at,omitempty"`
+
+	// Status The delivery's state, such as `queued`, `sent` or `parked`.
+	Status string `json:"status"`
+
+	// Subject Null once an erasure removed it.
+	Subject *string `json:"subject,omitempty"`
+
+	// TemplateVersion The version of the receipt wording it carries.
+	TemplateVersion int `json:"template_version"`
+}
+
+// OptOutRecordStop defines model for OptOutRecordStop.
+type OptOutRecordStop struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Kind `subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`.
+	Kind string `json:"kind"`
+
+	// PurposeKey The one purpose a narrow stop binds.
+	PurposeKey *string `json:"purpose_key,omitempty"`
+
+	// ReceivedAt When the refusal reached the controller.
+	ReceivedAt time.Time `json:"received_at"`
+
+	// RevokedAt When the stop was lifted. Null while it stands.
+	RevokedAt *time.Time `json:"revoked_at,omitempty"`
+
+	// StoppedAt When sending stopped.
+	StoppedAt time.Time `json:"stopped_at"`
+}
+
+// OptOutRecords One contact's registrations, refusals and opt-out receipts, as kept for an inspection.
+type OptOutRecords struct {
+	// ConsentEvents Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`.
+	ConsentEvents []ConsentEvent     `json:"consent_events"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+	GeneratedAt   time.Time          `json:"generated_at"`
+
+	// Receipts Every opt-out receipt filed under the contact.
+	Receipts []OptOutReceiptRecord `json:"receipts"`
+
+	// Stops Every stop recorded on the contact, lifted ones included.
+	Stops []OptOutRecordStop `json:"stops"`
 }
 
 // OptionTranslations Each picklist option's name in further UI languages, keyed by the option as stored. The
@@ -71942,6 +72044,11 @@ type WorklistItem struct {
 	// RequestCheck On a reminder taken from a customer's request, why Margince cannot tell whether the request was answered. Absent on every other row.
 	RequestCheck *TaskRequestCheck `json:"request_check,omitempty"`
 
+	// Room Who is in a `meeting` row's room, as this reader may see them: the same room
+	// `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+	// reader may not read the meeting.
+	Room *WorklistMeetingRoom `json:"room,omitempty"`
+
 	// RunReasonCode On an `automation_run` item: why the firing stopped, in the code set of
 	// AutomationRun.reason_code, rendered in the reader's language. `detail` keeps the
 	// engine's English sentence.
@@ -72109,6 +72216,22 @@ type WorklistMayBeDone struct {
 
 	// WrotePrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 	WrotePrecision OccurredPrecision `json:"wrote_precision"`
+}
+
+// WorklistMeetingRoom Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+// meeting today and the next one name their attendees by one rule.
+type WorklistMeetingRoom struct {
+	// OtherParticipants The attendees who are not contacts, named after the contacts within the same eight.
+	OtherParticipants *[]MeetingOtherParticipant `json:"other_participants,omitempty"`
+
+	// Participants The attendees who are contacts this reader may see, named first.
+	Participants []struct {
+		ContactId openapi_types.UUID `json:"contact_id"`
+		FullName  string             `json:"full_name"`
+	} `json:"participants"`
+
+	// ParticipantsMore How many more attendees this reader may see than the eight named. Absent when every attendee is named.
+	ParticipantsMore *int `json:"participants_more,omitempty" minimum:"1"`
 }
 
 // WorklistMove The next step this row suggests, and what it would act on.
@@ -75913,6 +76036,12 @@ type SuppressContactJSONBody struct {
 	// Reason What the contact was told, in their words. Stored because a suppression somebody
 	// later asks to lift is only reviewable if the record says why it was made.
 	Reason *string `json:"reason,omitempty"`
+
+	// ReceivedAt When the refusal reached you: the arrival time of the mail that said so, or the
+	// time of the call. Never the time you record it. Left out, it is the time of
+	// recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+	// so a later time than now is refused.
+	ReceivedAt *time.Time `json:"received_at,omitempty"`
 }
 
 // SuppressContactJSONBodyKind defines parameters for SuppressContact.
@@ -97075,6 +97204,9 @@ type ServerInterface interface {
 	// Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
 	// (GET /contacts/{id}/consent/mail-preview)
 	PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams)
+	// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+	// (GET /contacts/{id}/consent/optout-records)
+	ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id)
 	// Mail this contact the Art. 14 disclosure, which asks them for nothing.
 	// (POST /contacts/{id}/consent/privacy-notice)
 	SendPrivacyNotice(w http.ResponseWriter, r *http.Request, id Id)
@@ -101599,6 +101731,12 @@ func (_ Unimplemented) GetContactConsentGuard(w http.ResponseWriter, r *http.Req
 // Show the exact mail `confirm-request` or `privacy-notice` would send, without sending it.
 // (GET /contacts/{id}/consent/mail-preview)
 func (_ Unimplemented) PreviewControllerMail(w http.ResponseWriter, r *http.Request, id Id, params PreviewControllerMailParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Export this contact's registrations, refusals and opt-out receipts for an inspection.
+// (GET /contacts/{id}/consent/optout-records)
+func (_ Unimplemented) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -124415,6 +124553,40 @@ func (siw *ServerInterfaceWrapper) PreviewControllerMail(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PreviewControllerMail(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ExportContactOptOutRecords operation middleware
+func (siw *ServerInterfaceWrapper) ExportContactOptOutRecords(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ExportContactOptOutRecords(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -155517,6 +155689,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts/{id}/consent/mail-preview", wrapper.PreviewControllerMail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/consent/optout-records", wrapper.ExportContactOptOutRecords)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/consent/privacy-notice", wrapper.SendPrivacyNotice)

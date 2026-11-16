@@ -18,11 +18,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// The two fixtures: decision_jev_response.json is one real answer from
+// The fixtures: decision_jev_response.json is one real answer from
 // OpenRouter's decisions endpoint, captured 2026-09-25 with only its id
 // replaced. decision_selfhosted_response.json is CONSTRUCTED, shaped from the
 // 2026-09-24 observation of a self-hosted server's (Laya's) /v1/systemone: Jev's fields plus
 // answer_confidence, action and routing, output_tokens 0 and no cost.
+// decision_gemini_response.json is CONSTRUCTED from Google's documented shape.
 
 var triageQuestion = decision.Request{
 	Model: "typesafe/jev-1.13",
@@ -35,15 +36,15 @@ var triageQuestion = decision.Request{
 
 // recordedDecision is what the test server saw of one request.
 type recordedDecision struct {
-	path, auth string
-	body       map[string]json.RawMessage
+	path, auth, googleKey string
+	body                  map[string]json.RawMessage
 }
 
 func decisionServer(t *testing.T, status int, body []byte) (*httptest.Server, *recordedDecision) {
 	t.Helper()
 	seen := &recordedDecision{}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		seen.path, seen.auth = r.URL.Path, r.Header.Get("Authorization")
+		seen.path, seen.auth, seen.googleKey = r.URL.Path, r.Header.Get("Authorization"), r.Header.Get("x-goog-api-key")
 		raw, err := io.ReadAll(r.Body)
 		if err != nil || json.Unmarshal(raw, &seen.body) != nil {
 			t.Errorf("the request body is not JSON: %s (%v)", raw, err)
@@ -118,6 +119,44 @@ func TestTheDecisionWireDecodesASelfHostedServerAndSendsNoKeyItDoesNotHold(t *te
 	}
 	if seen.path != "/v1/systemone" || seen.auth != "" {
 		t.Errorf("posted to %q with Authorization %q; a keyless adapter sends none", seen.path, seen.auth)
+	}
+}
+
+// Google's dialect: the state goes as `input` text and the key in Google's
+// header. Its answer names no model, so the reply leaves the served model
+// empty and the trace grades it as the configured one.
+func TestTheDecisionWireSpeaksGooglesDialect(t *testing.T) {
+	srv, seen := decisionServer(t, http.StatusOK, fixture(t, "decision_gemini_response.json"))
+	lane := DecisionsConfig{Provider: providerGeminiDecision, Model: geminiDecisionModel, BaseURL: srv.URL + "/v1beta/decisions"}
+	client, err := selectDeciderOn(lane, cloudKeyFor(providerGeminiDecision, "g-key"), srv.Client())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ask := triageQuestion
+	ask.Model = geminiDecisionModel
+	got, err := client.Decide(context.Background(), ask)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if kind := got.Answers["kind"]; kind.Choice != "company" || kind.Confidence != 0.9945 || kind.Probabilities["parked"] != 0.0027 {
+		t.Errorf("answer = %+v", kind)
+	}
+	if got.InputTokens != 163 || got.ServedModel != "" || got.ServedProvider != "" {
+		t.Errorf("response = %+v, want 163 input tokens and no served identity", got)
+	}
+	if served, source := servedIdentity(providerGeminiDecision, geminiDecisionModel, got.ServedModel); served != geminiDecisionModel ||
+		source != servedIdentitySourceConfigured {
+		t.Errorf("served identity = %q (%s), want the configured model", served, source)
+	}
+	if seen.path != "/v1beta/decisions" || seen.googleKey != "g-key" || seen.auth != "" {
+		t.Errorf("posted to %q with x-goog-api-key %q and Authorization %q", seen.path, seen.googleKey, seen.auth)
+	}
+	var input string
+	if err := json.Unmarshal(seen.body["input"], &input); err != nil || input != string(triageQuestion.State) {
+		t.Errorf("input = %s (%v), want the state as text", seen.body["input"], err)
+	}
+	if _, sent := seen.body["state"]; sent || string(seen.body["model"]) != `"gemini-decision-1"` || seen.body["questions"] == nil {
+		t.Errorf("body = %v, want model, input and questions only", seen.body)
 	}
 }
 
