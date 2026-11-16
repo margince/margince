@@ -81428,6 +81428,12 @@ components:
             A client MUST NOT draw a way into the brief without it. Absent means there is
             no page to read this brief on, which an internal meeting and a meeting whose
             attendees are all withheld both produce, and both mean the same thing here.
+        room:
+          allOf: [{ $ref: '#/components/schemas/WorklistMeetingRoom' }]
+          description: |
+            Who is in a `meeting` row's room, as this reader may see them: the same room
+            `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+            reader may not read the meeting.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
         recipients:
@@ -82607,6 +82613,33 @@ components:
             A client then names the group by its kind alone and NEVER falls back to
             `cause`, because an identity on screen is worse than a vaguer sentence: the
             reader cannot act on it and cannot tell it from a bug.
+
+    WorklistMeetingRoom:
+      type: object
+      description: |
+        Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+        meeting today and the next one name their attendees by one rule.
+      required: [participants]
+      properties:
+        participants:
+          type: array
+          description: The attendees who are contacts this reader may see, named first.
+          maxItems: 8
+          items:
+            type: object
+            required: [contact_id, full_name]
+            properties:
+              contact_id: { type: string, format: uuid }
+              full_name: { type: string }
+        other_participants:
+          type: array
+          description: The attendees who are not contacts, named after the contacts within the same eight.
+          maxItems: 8
+          items: { $ref: '#/components/schemas/MeetingOtherParticipant' }
+        participants_more:
+          type: integer
+          minimum: 1
+          description: How many more attendees this reader may see than the eight named. Absent when every attendee is named.
 
     WorklistContactFacts:
       type: object
