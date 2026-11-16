@@ -294,12 +294,23 @@ export const LongTitleAndAttendees: Story = {
   ),
 };
 
-// No calendar connected: the zero measured nothing, so the panel stays, leads
-// to where one connects, and still names the meeting booked by hand.
+// No calendar connected: the panel says its meetings are Margince's own, leads
+// to where a calendar connects, and names the next meeting booked in Margince.
 export const CalendarNotConnected: Story = {
   render: panel(
     <SchedulePanel
       day={{ ...CLEAR, calendar: "not_connected", next_meeting: NEXT_MEETING }}
+      state="ready"
+    />,
+  ),
+};
+
+// No calendar connected on a day with a meeting logged in Margince: the same
+// sentence heads today's rows.
+export const CalendarNotConnectedWithMeeting: Story = {
+  render: panel(
+    <SchedulePanel
+      day={{ ...BOOKED, calendar: "not_connected" }}
       state="ready"
     />,
   ),

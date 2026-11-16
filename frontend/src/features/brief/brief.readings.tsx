@@ -284,7 +284,7 @@ export function BriefReadingsStrip({ day }: Readonly<{ day: Worklist }>) {
           })}
           unavailable={t("brief.readings.unavailable.meetings")}
           lane="meetings"
-          standIn={calendarStandIn(calendar, t)}
+          standIn={calendarStandIn(calendar, locale, t)}
         />
         <LaneReading
           scope={day.scope}

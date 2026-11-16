@@ -2086,7 +2086,7 @@ export const en = {
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
   "brief.schedule.notConnected":
-    "No calendar is connected, so today’s meetings cannot be shown.",
+    "No calendar connected. Showing meetings booked, logged or imported in Margince.",
   "brief.schedule.unreadable":
     "Your calendar is not syncing, so today’s meetings cannot be shown.",
   "brief.schedule.connect": "Connect a calendar",
@@ -7088,9 +7088,8 @@ export const en = {
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "Prep not checked",
   "brief.readings.prepared": "All prepared",
-  "brief.readings.calendarNotConnected": "Not connected",
   "brief.readings.calendarNotConnectedWhy":
-    "Connect your calendar to count meetings.",
+    "Connect your calendar to count its meetings too.",
   "brief.readings.calendarUnreadable": "Not syncing",
   "brief.readings.calendarUnreadableWhy":
     "Reconnect your calendar to count meetings.",

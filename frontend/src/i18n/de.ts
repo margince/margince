@@ -2177,7 +2177,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.more":
     "Lade weitere Agenda-Einträge, um die übrigen Termine zu sehen.",
   "brief.schedule.notConnected":
-    "Die heutigen Termine können nicht angezeigt werden, da kein Kalender verbunden ist.",
+    "Kein Kalender verbunden. Angezeigt werden Termine, die in Margince gebucht, erfasst oder importiert wurden.",
   "brief.schedule.unreadable":
     "Die heutigen Termine können nicht angezeigt werden, da dein Kalender nicht synchronisiert ist.",
   "brief.schedule.connect": "Kalender verbinden",
@@ -7088,9 +7088,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.readings.needsPrep_other": "{count} brauchen Vorbereitung",
   "brief.readings.prepUnknown": "Vorbereitung nicht geprüft",
   "brief.readings.prepared": "Alle vorbereitet",
-  "brief.readings.calendarNotConnected": "Nicht verbunden",
   "brief.readings.calendarNotConnectedWhy":
-    "Verbinde deinen Kalender, um Termine zu zählen.",
+    "Verbinde deinen Kalender, um auch seine Termine zu zählen.",
   "brief.readings.calendarUnreadable": "Synchronisiert nicht",
   "brief.readings.calendarUnreadableWhy":
     "Verbinde deinen Kalender neu, um Termine zu zählen.",
