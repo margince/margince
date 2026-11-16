@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -124,6 +125,10 @@ export const NothingPicked: Story = {
     for (const box of canvas.getAllByRole("checkbox")) {
       await userEvent.click(box);
     }
+    await expect(canvas.getByText(en["consent.pickOne"])).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: en["consent.approve"] }),
+    ).toBeDisabled();
   },
 };
 

@@ -30,7 +30,7 @@
 }
 
 /* The container also wears `auth-actions`, so at phone width the buttons are
-   the sign-in surface's own; from 701px they go back to a right-aligned row. */
+   the sign-in surface's own; from 701px they sit in a right-aligned row. */
 .oauthconsent-form .oauthconsent-actions {
   margin-top: 0;
 }

@@ -158,7 +158,7 @@
   flex: 0 0 auto;
 }
 .auth-task-in {
-  /* §6.2: 380 minimum, 400 preferred, 440 maximum. */
+  /* §6.2 sets the sign-in measure; a form with sections of its own widens it. */
   width: 100%;
   min-width: 0;
   max-width: var(--authMeasure);
@@ -629,6 +629,11 @@
   top: var(--authPadBlock);
   left: var(--authPadInline);
 }
+/* With no Core above it, a form taller than the window starts its heading where
+   the name sits in the corner. */
+.auth-surface-coreless {
+  padding-top: calc(var(--authPadBlock) * 2 + var(--space-6));
+}
 @media (max-width: 560px) {
   /* Smaller, and tighter to the corner, on a phone: the Core sits at the top
      of the column there, and the name must stay clear of its halo. */
@@ -639,8 +644,6 @@
   .auth-wordmark img {
     width: 112px;
   }
-  /* With no Core above it, a form taller than a phone starts its heading where
-     the name sits in the corner. */
   .auth-surface-coreless {
     padding-top: calc(var(--authPadBlock) * 2);
   }

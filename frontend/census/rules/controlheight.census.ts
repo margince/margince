@@ -134,8 +134,8 @@ export const ACCEPTED = new Map<string, string>([
   ],
   [
     ".oauthconsent-form .oauthconsent-actions .btn",
-    "the consent screen's CTAs: 48px at phone width from the sign-in rule, " +
-      "the coarse-pointer 44px floor in the row from 701px",
+    "the consent screen's row of CTAs from 701px stands at --controlHeight " +
+      "for a mouse and takes the coarse-pointer 44px floor",
   ],
   [
     ".segmented button",

@@ -3703,6 +3703,7 @@ test.describe("Authorize access on the sign-in surface", () => {
       scope: "read",
       code_challenge: "x",
       code_challenge_method: "S256",
+      resource: "https://margince.example/mcp",
       state: "s",
       ...extra,
     }).toString()}`;
@@ -3755,6 +3756,21 @@ test.describe("Authorize access on the sign-in surface", () => {
     };
     expect(wide.deny?.x).toBeLessThan(wide.authorize?.x ?? 0);
     expect(wide.deny?.y).toBe(wide.authorize?.y);
+    const contentEnd = await page
+      .locator(".oauthconsent-pane")
+      .evaluate((pane) => {
+        const style = getComputedStyle(pane);
+        return (
+          pane.getBoundingClientRect().right -
+          Number.parseFloat(style.borderRightWidth) -
+          Number.parseFloat(style.paddingRight)
+        );
+      });
+    expect(
+      Math.abs(
+        (wide.authorize?.x ?? 0) + (wide.authorize?.width ?? 0) - contentEnd,
+      ),
+    ).toBeLessThanOrEqual(1);
 
     await page.setViewportSize({ width: 390, height: 844 });
     const phone = {
@@ -3763,6 +3779,21 @@ test.describe("Authorize access on the sign-in surface", () => {
     };
     expect(phone.deny?.y).toBeLessThan(phone.authorize?.y ?? 0);
     expect(phone.authorize?.width).toBe(phone.deny?.width);
+  });
+
+  test("the wordmark stays clear of the pane at a tablet width", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 700, height: 800 });
+    await page.goto(consentAddress({ consent: "nonce" }));
+    await expect(
+      page.getByRole("button", { name: de["consent.approve"], exact: true }),
+    ).toBeVisible();
+    const mark = await page.locator(".auth-wordmark").boundingBox();
+    const pane = await page.locator(".oauthconsent-pane").boundingBox();
+    expect(pane?.y ?? 0).toBeGreaterThanOrEqual(
+      (mark?.y ?? Number.POSITIVE_INFINITY) + (mark?.height ?? 0),
+    );
   });
 
   for (const error of ["invalid_request", "method_off", "stale_consent"]) {

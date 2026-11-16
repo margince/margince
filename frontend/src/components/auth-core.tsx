@@ -109,7 +109,7 @@ export function AuthExperience({
   // A form with sections of its own, which the sign-in measure would wrap
   // line by line.
   wide?: boolean;
-  // Off where the screen's own form needs the height the Core would take.
+  // Off where a signed-in reader is asked for a decision rather than a sign-in.
   core?: boolean;
 }>) {
   // The entry choreography belongs to the page load, not to this mount: every
