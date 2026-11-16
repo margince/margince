@@ -19,6 +19,7 @@ const testPassportLabel = "test agent"
 // characters. A locally minted passport must refuse what the schema forbids,
 // and a label that is given but blank.
 func TestAPassportIsRefusedAnAmbiguousScopeListABlankOrAnOverlongLabel(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "passport-admission")
 	human := e.admin
 

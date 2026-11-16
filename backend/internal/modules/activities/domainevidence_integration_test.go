@@ -35,6 +35,7 @@ func assertParticipantEvidence(ctx context.Context, tx pgx.Tx, activity ids.Acti
 }
 
 func TestParticipantEvidenceFollowsRealCorrectionsAndArchiveRollback(t *testing.T) {
+	t.Parallel()
 	store, ctx, id, original := domainEvidenceActivity(t)
 	check := func(at time.Time, visible bool, version int64) {
 		t.Helper()
@@ -128,6 +129,7 @@ func domainEvidenceActivity(t *testing.T) (*Store, context.Context, ids.Activity
 }
 
 func TestParticipantEvidenceSerializesWithConcurrentParentCorrections(t *testing.T) {
+	t.Parallel()
 	for _, childFirst := range []bool{true, false} {
 		t.Run(fmt.Sprintf("child-first=%v", childFirst), func(t *testing.T) {
 			store, ctx, id, original := domainEvidenceActivity(t)
@@ -190,6 +192,7 @@ func waitForEvidenceBlock(ctx context.Context, tx pgx.Tx, done chan error) error
 }
 
 func TestParticipantEvidenceDirectParentUpdatesPreserveTheSnapshot(t *testing.T) {
+	t.Parallel()
 	// Direct SQL isolates the trigger protocol from lifecycle row locks.
 	const correction = `UPDATE activity SET occurred_at=@at WHERE id=@activity`
 	for _, childFirst := range []bool{true, false} {
@@ -235,6 +238,7 @@ func TestParticipantEvidenceDirectParentUpdatesPreserveTheSnapshot(t *testing.T)
 }
 
 func TestEvidenceBackfillsLockParentsBeforeExistingChildren(t *testing.T) {
+	t.Parallel()
 	folds := map[string]func(context.Context, pgx.Tx, ids.UUID, int) ([]ids.UUID, int, error){
 		"evidence": FoldParticipantEvidenceTx, "address": FoldParticipantDomainsTx,
 	}
@@ -301,6 +305,7 @@ func TestEvidenceBackfillsLockParentsBeforeExistingChildren(t *testing.T) {
 }
 
 func TestAnUnrelatedParentUpdateKeepsItsNonKeyLock(t *testing.T) {
+	t.Parallel()
 	store, ctx, id, original := domainEvidenceActivity(t)
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()

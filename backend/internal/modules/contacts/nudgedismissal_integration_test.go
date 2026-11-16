@@ -83,6 +83,7 @@ func dismissedNow(
 
 // The whole point: a contact the rep put down is off their lane.
 func TestADismissedContactIsOffTheReadersLane(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 
@@ -101,6 +102,7 @@ func TestADismissedContactIsOffTheReadersLane(t *testing.T) {
 // simply not returned. A job would put a contact's return at the mercy of when
 // that job last ran, which is not the moment the rep picked.
 func TestADismissedContactReturnsWhenItsMomentPasses(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 
@@ -126,6 +128,7 @@ func TestADismissedContactReturnsWhenItsMomentPasses(t *testing.T) {
 // own morning, and taking that contact off a colleague's lane would remove work
 // from a queue whose owner never made the call.
 func TestADismissalBindsOnlyTheReaderWhoMadeIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 
@@ -141,6 +144,7 @@ func TestADismissalBindsOnlyTheReaderWhoMadeIt(t *testing.T) {
 // Restoring puts them back, and does so now rather than at the moment the
 // dismissal named.
 func TestRestoringPutsTheContactBackImmediately(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), contact, 30); err != nil {
@@ -159,6 +163,7 @@ func TestRestoringPutsTheContactBackImmediately(t *testing.T) {
 // Restoring somebody nobody dismissed is the same success: the reader's goal
 // state already holds.
 func TestRestoringAContactNobodyDismissedSucceeds(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 
@@ -170,6 +175,7 @@ func TestRestoringAContactNobodyDismissedSucceeds(t *testing.T) {
 // Dismissing again replaces the moment. A rep who set somebody aside for a week
 // and then wants a month is saying one thing, not colliding with themselves.
 func TestDismissingAgainReplacesTheMoment(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), contact, 3); err != nil {
@@ -192,6 +198,7 @@ func TestDismissingAgainReplacesTheMoment(t *testing.T) {
 // asking for a year has made a mistake, and quietly storing a quarter hands
 // them a moment they will read as the one they asked for.
 func TestASpanOutsideTheRangeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 
@@ -215,6 +222,7 @@ func TestASpanOutsideTheRangeIsRefused(t *testing.T) {
 // leave nobody able to say what it replaced — a rep who quietly extended a
 // week to a quarter would look the same as one who set the contact aside once.
 func TestARedismissalNamesTheDeadlineItReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), contact, 3); err != nil {
@@ -295,6 +303,7 @@ func latestContactAuditPair(t *testing.T, e *dedupeEnv, contact ids.ContactID) (
 // wonders whether a row was meant to apply. A row that expired before it was
 // written is one nobody can act on and nobody can see.
 func TestTheDatabaseRefusesADismissalThatHasAlreadyLapsed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 
@@ -321,6 +330,7 @@ func TestTheDatabaseRefusesADismissalThatHasAlreadyLapsed(t *testing.T) {
 
 // The write shape: domain row, audit row and outbox row in ONE transaction.
 func TestADismissalWritesTheAuditAndTheAnnouncement(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 
@@ -347,6 +357,7 @@ func TestADismissalWritesTheAuditAndTheAnnouncement(t *testing.T) {
 // The undo is itself a decision, carried rather than left to be inferred from a
 // row going quiet.
 func TestARestoreIsAnnouncedRatherThanInferred(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), contact, 14); err != nil {
@@ -385,6 +396,7 @@ func TestARestoreIsAnnouncedRatherThanInferred(t *testing.T) {
 // was already back on the lane, nothing a reader can see changed, and an event
 // would report a decision nobody made.
 func TestRestoringALapsedDismissalAnnouncesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	contact := aContact(t, e)
 	if err := e.store.DismissRelationshipNudge(e.as(), contact, 1); err != nil {

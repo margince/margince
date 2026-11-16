@@ -8,7 +8,6 @@ package capture
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
@@ -22,12 +21,13 @@ import (
 )
 
 func TestWorkerCacheReportsHistoryPreparationCost(t *testing.T) {
+	t.Parallel()
 	costs := make(map[int]database.StatementCost)
 	for _, capacity := range []int{64, 128, 256, 512} {
 		t.Run(fmt.Sprintf("cache-%d", capacity), func(t *testing.T) {
 			e := integration.SetupSearch(t)
 			seedCaptureRole(t, e)
-			cfg, err := database.WorkerPoolConfig(os.Getenv("MARGINCE_TEST_APP_DSN"), compose.WorkerQueueConcurrency(), 8, capacity)
+			cfg, err := database.WorkerPoolConfig(testdb.For(t).AppDSN, compose.WorkerQueueConcurrency(), 8, capacity)
 			if err != nil {
 				t.Fatal(err)
 			}

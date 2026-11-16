@@ -15,6 +15,7 @@ import (
 // checked in Go. Both must read one subject the same way, or a fixture is
 // certified against mail the evidence read would never offer.
 func TestNormalizedMatchesTheAnswerCheck(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	for _, subject := range []string{
 		"Invoice", "Re: Invoice", "AW: RE:  Invoice", "antw:Invoice", "Fwd: Invoice",

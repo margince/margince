@@ -20,6 +20,8 @@ import (
 // one file per verb, to the answer. The roles come from the database and the tools from the registry,
 // so neither is a second list. A cell holds what the gate says, not what the seed
 // document claims.
+//
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 	recorded := newToolCheckRecorder()
 	d := toolRoleApp(t, "tool-role-matrix", compose.WithToolChecksRecordedForTest(recorded.note))
@@ -104,6 +106,8 @@ func TestTheToolRoleMatrixIsPublished(t *testing.T) {
 // that may create tags and may not update deals. One lacks two checks only
 // some paths of a tool ask: a company create, and the installation settings
 // read. The last member holds rep and ops, whose grants merge to the widest.
+//
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestToolsListAgreesWithTheGateForAnOperatorsRoles(t *testing.T) {
 	recorded := newToolCheckRecorder()
 	d := toolRoleApp(t, "tool-role-listing", compose.WithToolChecksRecordedForTest(recorded.note))

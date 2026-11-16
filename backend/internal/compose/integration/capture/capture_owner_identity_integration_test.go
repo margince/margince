@@ -56,6 +56,7 @@ func seatContext(e *integration.SearchEnv, user ids.UUID) context.Context {
 }
 
 func TestMailAmongTheOwnersOwnAddressesLeavesNoRow(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -80,6 +81,7 @@ func TestMailAmongTheOwnersOwnAddressesLeavesNoRow(t *testing.T) {
 }
 
 func TestAnOwnersAliasCopiedOnACustomerThreadStillCapturesTheCustomer(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -101,6 +103,7 @@ func TestAnOwnersAliasCopiedOnACustomerThreadStillCapturesTheCustomer(t *testing
 }
 
 func TestAnOwnersOwnDomainCoversTheAddressesOnIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	// A domain claim, not an address claim: a founder reads several addresses
@@ -116,6 +119,7 @@ func TestAnOwnersOwnDomainCoversTheAddressesOnIt(t *testing.T) {
 }
 
 func TestAColleaguesIdentityIsNotMine(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	// Rep3 claims the address; Rep1 is the seat whose mailbox syncs. One seat's
@@ -159,6 +163,7 @@ func TestMailWithAColleaguesPrivateAddressIsStoredNotDroppedAsInternal(t *testin
 }
 
 func TestWithdrawingAnIdentityJudgesTheAddressLikeAnyOther(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -186,6 +191,7 @@ func TestWithdrawingAnIdentityJudgesTheAddressLikeAnyOther(t *testing.T) {
 }
 
 func TestAnotherSeatsIdentityIsNotListedOrRemovable(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -211,6 +217,7 @@ func TestAnotherSeatsIdentityIsNotListedOrRemovable(t *testing.T) {
 // owner identity is always one contact's, and its whole purpose is keeping a
 // private address out of the CRM — the trail must not put it back in.
 func TestTheAuditTrailNamesNoDeclaredAddress(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -248,6 +255,7 @@ func TestTheAuditTrailNamesNoDeclaredAddress(t *testing.T) {
 // The drop gate cannot answer this one: it refuses a message whose every party
 // is internal, and this message has a customer on it.
 func TestAThreadTheOwnerWroteFromAnAliasIsAboutTheCustomer(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -282,6 +290,7 @@ func TestAThreadTheOwnerWroteFromAnAliasIsAboutTheCustomer(t *testing.T) {
 // and the gates above keep an alias from having one. What this prevents is a
 // durable falsehood about the exchange.
 func TestTheOwnersOwnAliasIsNeverTheOtherEndOfTheirMessage(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -316,6 +325,7 @@ func TestTheOwnersOwnAliasIsNeverTheOtherEndOfTheirMessage(t *testing.T) {
 // by claiming the alias and asserting the ladder never reaches the owner: with
 // the primary address absent from the set, standInSubject picks it.
 func TestTheConnectedMailboxsOwnAddressIsNeverTheLaddersSubject(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)
@@ -345,6 +355,7 @@ func TestTheConnectedMailboxsOwnAddressIsNeverTheLaddersSubject(t *testing.T) {
 // it afterwards, and the seat's own address becomes a contact through exactly
 // the door the claim was made to close.
 func TestDeclaringAnIdentitySettlesTheOpenQuestionsAboutIt(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 
@@ -378,6 +389,7 @@ func TestDeclaringAnIdentitySettlesTheOpenQuestionsAboutIt(t *testing.T) {
 // owner-scoped, and one seat claiming an address must not answer another seat's
 // pending decision about it.
 func TestAClaimSettlesNoColleaguesOpenQuestion(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 
@@ -411,6 +423,7 @@ func TestAClaimSettlesNoColleaguesOpenQuestion(t *testing.T) {
 // then stood in as a counterparty to itself, which is how a founder's own
 // address became a contact in his own workspace.
 func TestTheSeatsLoginAddressIsNeverACounterparty(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 
@@ -454,6 +467,7 @@ func TestTheSeatsLoginAddressIsNeverACounterparty(t *testing.T) {
 // prompt's silence safe. If the ladder ever stopped correcting, this fails and
 // the prompt would need the owner's identities in it.
 func TestTheVerdictIsNeverAskedAboutTheOwnersOwnAddress(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, ownerAlias)

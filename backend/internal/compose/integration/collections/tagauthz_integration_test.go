@@ -30,6 +30,7 @@ import (
 )
 
 func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
@@ -94,6 +95,7 @@ func TestATagWriteOnAForeignOwnedRecordIsRefused(t *testing.T) {
 // workspace-wide (tableclass.go) so this is the only shape of not-found a tag
 // write can still produce.
 func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
@@ -132,6 +134,7 @@ func TestATagWriteOnAnArchivedRecordIsRefused(t *testing.T) {
 // ownerless row; now nobody below RowScopeAll can, matching every other
 // mutation on the same table.
 func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
@@ -178,6 +181,7 @@ func TestATagWriteOnAnOwnerlessRecordIsRefusedBelowRowScopeAll(t *testing.T) {
 // then turns away — which still ends in a refusal, but only after
 // resolving the tag name the pre-flight exists to gate ahead of.
 func TestEnsureTaggableRefusesTheSameForeignOwnedRecordApplyDoes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 
@@ -198,6 +202,7 @@ func TestEnsureTaggableRefusesTheSameForeignOwnedRecordApplyDoes(t *testing.T) {
 // the two: nothing on screen would show the tag landing on a record its
 // approver could not otherwise touch.
 func TestTheImportersTagWriteRefusesAForeignOwnedRecordToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	tags := collectionsmod.NewStore(e.DB())
 

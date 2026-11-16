@@ -60,6 +60,7 @@ func (f bookingFixture) booking(links ...ActivityLinkInput) BookMeetingInput {
 }
 
 func TestABookingQueuesOneInvitationForEveryAttendee(t *testing.T) {
+	t.Parallel()
 	f := setupBooking(t)
 	contact := f.contactWithEmail(t, "guest@example.test")
 	f.calendar.contacts = map[string]ids.UUID{"guest@example.test": contact}
@@ -111,6 +112,7 @@ func TestABookingQueuesOneInvitationForEveryAttendee(t *testing.T) {
 }
 
 func TestABookingNeedsAnInvitee(t *testing.T) {
+	t.Parallel()
 	f := setupBooking(t)
 	deal := f.booking(ActivityLinkInput{EntityType: linkEntityDeal, EntityID: ids.NewV7()})
 	deal.AttendeeEmails = []string{"nobody@example.test"}
@@ -173,6 +175,7 @@ func (f bookingFixture) lastAppointment(t *testing.T) connector.CalendarAppointm
 // A lead attendee's row is an address row, read without the lead's scope, so
 // it carries no name even when the roster offers one.
 func TestALeadAttendeeRowCarriesNoName(t *testing.T) {
+	t.Parallel()
 	f := setupBooking(t)
 	contact := f.contactWithEmail(t, "guest@example.test")
 	f.calendar.leads = map[string]ids.UUID{"lead@example.test": ids.NewV7()}

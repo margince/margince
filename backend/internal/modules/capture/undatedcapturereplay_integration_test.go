@@ -20,6 +20,7 @@ import (
 // A mail the provider sent without a timestamp lands no later than the
 // database's now(). A replay keeps the time it landed with.
 func TestAnUndatedCaptureKeepsItsTimeOnReplay(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	ws, _ := principal.WorkspaceID(ctx)
 	sink := capture.NewSink(db)

@@ -17,6 +17,7 @@ import (
 // An agent's card fills a blank and replaces no answer. A phone someone removed
 // is a blank, and a live one is an answer.
 func TestAnAgentsCardFillsAPhoneOnlyWhereNoLiveOneIsHeld(t *testing.T) {
+	t.Parallel()
 	const held, onCard = "+493011111111", "+493022222222"
 	for name, tc := range map[string]struct {
 		archive bool
@@ -56,6 +57,7 @@ func TestAnAgentsCardFillsAPhoneOnlyWhereNoLiveOneIsHeld(t *testing.T) {
 // An agent's card fills an empty address and leaves a held one, even one a card
 // wrote, which a user's next card may still move.
 func TestAnAgentsCardFillsAnAddressOnlyWhereNoneIsHeld(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	const blankEmail, heldEmail = "blank.address@split.example.test", "held.address@split.example.test"
 	blank := importCard(t, e, "BEGIN:VCARD\nFN:Bea Blank\nEMAIL:"+blankEmail+"\nEND:VCARD\n")

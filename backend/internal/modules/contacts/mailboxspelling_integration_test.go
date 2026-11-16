@@ -21,6 +21,7 @@ import (
 )
 
 func TestTheOtherSpellingOfAHeldMailboxIsRefused(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, held, offered string }{
 		{"punycode after Unicode", "anna@bücher.example", "anna@xn--bcher-kva.example"},
 		{"Unicode after punycode", "anna@xn--bcher-kva.example", "ANNA@BÜCHER.EXAMPLE"},
@@ -69,6 +70,7 @@ func TestTheOtherSpellingOfAHeldMailboxIsRefused(t *testing.T) {
 // Mail from the other spelling files onto the contact that holds the mailbox
 // rather than minting a second one.
 func TestMailFromTheOtherSpellingLandsOnTheSameContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "anna@xn--bcher-kva.example", "Anna Brandt", "xn--bcher-kva.example"))
@@ -87,6 +89,7 @@ func TestMailFromTheOtherSpellingLandsOnTheSameContact(t *testing.T) {
 // An address erased under one spelling of its domain stays erased under the
 // other, so the punycode twin cannot bring the contact back.
 func TestAnAddressErasedInUnicodeStaysDeadInPunycode(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -117,6 +120,7 @@ func legacySpelling(ctx context.Context, t *testing.T, e *dedupeEnv, statement s
 // Where each spelling already has its own contact, mail to a spelling lands on
 // the contact holding that spelling, not on whichever is older.
 func TestMailToEachSpellingLandsOnItsOwnContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const unicode, puny = "anna@bücher.example", "anna@xn--bcher-kva.example"
@@ -155,6 +159,7 @@ func TestMailToEachSpellingLandsOnItsOwnContact(t *testing.T) {
 
 // The same for leads: a door files on the lead holding the spelling it saw.
 func TestALeadHoldingTheTypedSpellingIsTheOneFiledOn(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const unicode, puny = "jonas@bücher.example", "jonas@xn--bcher-kva.example"
@@ -176,6 +181,7 @@ func TestALeadHoldingTheTypedSpellingIsTheOneFiledOn(t *testing.T) {
 // A booking from the other spelling reuses the contact instead of failing on
 // a duplicate address.
 func TestABookingFromTheOtherSpellingReusesTheContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	held, err := e.store.CreateContact(ctx, CreateContactInput{

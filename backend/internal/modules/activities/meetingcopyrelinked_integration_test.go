@@ -20,6 +20,7 @@ import (
 // A meeting copy's guest a member relinked reaches the survivor still marked,
 // so no calendar roster on the survivor retires the member's link.
 func TestAFoldedCopyCarriesAGuestsRelinkMark(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 	meeting := func() ids.UUID {

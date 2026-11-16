@@ -139,6 +139,7 @@ type relstrengthResult struct {
 }
 
 func TestStrengthAsOfExcludesWhatHadNotHappenedYet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Now().UTC()
 	contact := e.seedVisibleContact(t, "Cold Contact")
@@ -172,6 +173,7 @@ func TestStrengthAsOfExcludesWhatHadNotHappenedYet(t *testing.T) {
 }
 
 func TestStrengthAsOfIgnoresInteractionsAfterTheInstantAsked(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Now().UTC()
 	contact := e.seedVisibleContact(t, "Recent Contact")
@@ -194,6 +196,7 @@ func TestStrengthAsOfIgnoresInteractionsAfterTheInstantAsked(t *testing.T) {
 }
 
 func TestAnInteractionDatedAfterNowIsNotTheLatestTouch(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
 	contact := e.seedVisibleContact(t, "Scheduled Contact")
@@ -219,6 +222,7 @@ func TestAnInteractionDatedAfterNowIsNotTheLatestTouch(t *testing.T) {
 // The single-contact fold and the change fold bound at the same clock as the
 // batch fold. An interaction dated at now has happened and counts.
 func TestSingleContactAndChangeFoldsBoundAtNow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
 	contact := e.seedVisibleContact(t, "Single Fold Contact")
@@ -261,6 +265,7 @@ func TestSingleContactAndChangeFoldsBoundAtNow(t *testing.T) {
 // A day entry counts by its date. At 09:00 UTC a day email dated today has
 // happened, though it is stored at noon. A day meeting dated today has not.
 func TestADayInteractionCountsByItsDate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)
 	anchor := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)

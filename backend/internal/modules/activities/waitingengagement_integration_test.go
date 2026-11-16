@@ -143,6 +143,7 @@ func present(t *testing.T, s *Store, e *loadEnv, activity ids.UUID) (WaitingRepl
 
 // A colleague writing is not a customer waiting.
 func TestAMessageFromOurOwnDomainIsNotAWaitingCustomer(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	colleague := e.waitingFromToRep(t, "Outstanding invoices", "eric@ourco.test", contact)
@@ -161,6 +162,7 @@ func TestAMessageFromOurOwnDomainIsNotAWaitingCustomer(t *testing.T) {
 
 // A departmental host is still our own house.
 func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	sub := e.waitingFromToRep(t, "From the Berlin office", "ops@mail.ourco.test", contact)
@@ -180,6 +182,7 @@ func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
 // domain. So every spelling of an address at it is a colleague here, as on the
 // reply path, and a lookalike is a customer.
 func TestEverySpellingOfAnInternationalOwnDomainIsAColleague(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	own := owndomain.New([]string{"bücher.example"})
@@ -217,6 +220,7 @@ func TestEverySpellingOfAnInternationalOwnDomainIsAColleague(t *testing.T) {
 // who trimmed it right would have their message silently dropped from every
 // rep's queue. The domain is read after the LAST at-sign for that reason.
 func TestASenderCannotHideBehindOurDomainInTheirLocalPart(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	quoted := e.waitingFromToRep(t, "Suppress me", `"x@ourco.test"@evil.test`, contact)
@@ -238,6 +242,7 @@ func TestASenderCannotHideBehindOurDomainInTheirLocalPart(t *testing.T) {
 // across the whole workspace with nothing on any page to say why. The suffix is
 // compared with right() so an entry can only ever match itself.
 func TestAnOwnDomainIsNeverReadAsAPattern(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	// A SUBDOMAIN, because that is the branch a pattern can reach: the equality
@@ -258,6 +263,7 @@ func TestAnOwnDomainIsNeverReadAsAPattern(t *testing.T) {
 // string equals no domain — but a blank row in the list must not be able to
 // empty the queue, so it is refused explicitly.
 func TestABlankOwnDomainMatchesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	// A subdomain again: a blank entry makes the suffix comparison ask whether
@@ -277,6 +283,7 @@ func TestABlankOwnDomainMatchesNothing(t *testing.T) {
 // its own must not guess. A queue with colleagues in it is visible; a queue that
 // dropped a customer whose domain resembles ours is not.
 func TestWithNoOwnDomainsNobodyIsExcluded(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	colleague := e.waitingFromToRep(t, "Outstanding invoices", "eric@ourco.test", contact)
@@ -292,6 +299,7 @@ func TestWithNoOwnDomainsNobodyIsExcluded(t *testing.T) {
 // This is the whole shape of the rule. If it ever becomes an exclusion, this
 // test fails — which is what it is for.
 func TestAnUnengagedThreadIsReportedNotHidden(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	cold := e.waitingFromToRep(t, "Cold approach", "stranger@customer.test", contact)
@@ -308,6 +316,7 @@ func TestAnUnengagedThreadIsReportedNotHidden(t *testing.T) {
 
 // An earlier outbound on the same thread is what engagement means.
 func TestAnEarlierOutboundOnTheThreadIsEngagement(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFromToRep(t, "Re: the proposal", "buyer@customer.test", contact)
@@ -339,6 +348,7 @@ func TestAnEarlierOutboundOnTheThreadIsEngagement(t *testing.T) {
 // must not happen, because a scheduled send would then take the customer out of
 // the band before anybody answered them.
 func TestALaterOutboundIsNotEngagement(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFromToRep(t, "Still waiting", "buyer@customer.test", contact)
@@ -375,6 +385,7 @@ func TestALaterOutboundIsNotEngagement(t *testing.T) {
 // message, so a participant row with this reader's user_id is present on mail
 // addressed entirely to somebody else. Only the HEADER says who was written to.
 func TestAMessageWrittenOnlyToAColleagueIsAddressedElsewhere(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Connect me with your team", "buyer@customer.test", contact)
@@ -398,6 +409,7 @@ func TestAMessageWrittenOnlyToAColleagueIsAddressedElsewhere(t *testing.T) {
 // against a rule that answers "not yours" to everything, which would demote
 // every genuine waiting customer.
 func TestAMessageNamingTheReaderIsNotAddressedElsewhere(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", contact)
@@ -416,6 +428,7 @@ func TestAMessageNamingTheReaderIsNotAddressedElsewhere(t *testing.T) {
 
 // A message with no header recipients names no seat, so it is nobody's wait.
 func TestAMessageNamingNoRecipientIsNobodysWait(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "No headers here", "buyer@customer.test", contact)
@@ -432,6 +445,7 @@ func TestAMessageNamingNoRecipientIsNobodysWait(t *testing.T) {
 
 // An unknown recipient address names no seat, so the message is not team work.
 func TestAnUnresolvedRecipientIsNotTeamWork(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", contact)

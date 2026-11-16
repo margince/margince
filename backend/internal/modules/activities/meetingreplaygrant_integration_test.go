@@ -8,9 +8,10 @@ package activities
 import (
 	"context"
 	"errors"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -41,6 +42,7 @@ func createOnlyCtx(e *sendEnv) context.Context {
 // create grant alone is refused the same way, and the row keeps its status.
 // A replay that moves nothing still answers with the row.
 func TestAReplayThatMovesAMeetingNeedsTheUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	start := clocktest.Now(t).Add(-48 * time.Hour)
 	first := deliverMeeting(t, e, "evt-grant-1", "Northgate review", start,

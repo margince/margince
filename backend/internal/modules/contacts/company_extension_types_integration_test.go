@@ -53,6 +53,7 @@ func wantFieldError(t *testing.T, err error, field, code string) {
 	}
 }
 
+//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestADeclaredExtensionTypeLandsInItsOwnFieldAndNotCoreList(t *testing.T) {
 	declareAcmeTypes(t)
 	e := setupDedupe(t)
@@ -88,6 +89,7 @@ func TestADeclaredExtensionTypeLandsInItsOwnFieldAndNotCoreList(t *testing.T) {
 	}
 }
 
+//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestAnExtensionTypeNoUnitDeclaredIsRefused(t *testing.T) {
 	declareAcmeTypes(t)
 	e := setupDedupe(t)
@@ -110,6 +112,7 @@ func TestAnExtensionTypeNoUnitDeclaredIsRefused(t *testing.T) {
 	}
 }
 
+//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestACoreListStillRefusesAnExtensionValue(t *testing.T) {
 	declareAcmeTypes(t)
 	e := setupDedupe(t)
@@ -121,6 +124,7 @@ func TestACoreListStillRefusesAnExtensionValue(t *testing.T) {
 	wantFieldError(t, err, "relationship_types", "invalid_enum")
 }
 
+//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestEachSetIsReplacedWithoutTouchingTheOther(t *testing.T) {
 	declareAcmeTypes(t)
 	e := setupDedupe(t)
@@ -149,6 +153,7 @@ func TestEachSetIsReplacedWithoutTouchingTheOther(t *testing.T) {
 	}
 }
 
+//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T) {
 	declareAcmeTypes(t)
 	e := setupDedupe(t)
@@ -172,6 +177,7 @@ func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T
 	}
 }
 
+//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestPartnerStillNeedsItsRowWhenAnExtensionTypeIsSet(t *testing.T) {
 	declareAcmeTypes(t)
 	e := setupDedupe(t)
@@ -193,6 +199,7 @@ func TestPartnerStillNeedsItsRowWhenAnExtensionTypeIsSet(t *testing.T) {
 	wantFieldError(t, err, "relationship_types", "partner_row_exists")
 }
 
+//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestTheExtensionRelationshipTypeFilterTakesAnExtensionValue(t *testing.T) {
 	declareAcmeTypes(t)
 	e := setupDedupe(t)

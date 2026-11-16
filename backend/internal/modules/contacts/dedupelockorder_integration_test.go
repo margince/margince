@@ -148,6 +148,7 @@ func assertNoDeadlock(t *testing.T, who string, err error) {
 // A create waits first, then an edit giving another contact the same address.
 // The create commits, and the edit is refused the claimed address.
 func TestAnEditAndACreateOfOneAddressNeverDeadlock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	edited := ids.From[ids.ContactKind](e.plainContact(ctx, t, "Xavier Edit", "xavier@elsewhere.test"))
@@ -184,6 +185,7 @@ func TestAnEditAndACreateOfOneAddressNeverDeadlock(t *testing.T) {
 // Capture lands mail on an exact incumbent while an edit gives that incumbent
 // a second address under the same base. Both complete.
 func TestCaptureOnAnIncumbentAndAnEditOfItNeverDeadlock(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := ids.From[ids.ContactKind](e.plainContact(ctx, t, "Ab", "ab@example.com"))

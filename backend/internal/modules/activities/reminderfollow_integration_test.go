@@ -28,6 +28,7 @@ func hasTime(a crmcontracts.Activity) bool { return a.DueHasTime != nil && *a.Du
 // reminder the writer names stays its own, and a task with a day alone gets
 // none.
 func TestATaskWithATimeRemindsAtThatTimeThroughEveryDoor(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	callback := time.Date(clocktest.Now(t).Year()+1, 3, 2, 14, 0, 0, 0, time.UTC)
@@ -103,6 +104,7 @@ func TestATaskWithATimeRemindsAtThatTimeThroughEveryDoor(t *testing.T) {
 // The flag vouches for due_at's time of day, so it is refused without one and
 // on anything but a task.
 func TestATimeOfDayNeedsADueDateOnATask(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	_, _, err := store.LogActivity(ctx, LogActivityInput{Kind: "task", Subject: new("Call back"), Source: "manual", DueHasTime: true})
@@ -125,6 +127,7 @@ func TestATimeOfDayNeedsADueDateOnATask(t *testing.T) {
 // time ends a reminder that sat on the old time; a reminder the patch names
 // is kept; and an older client that sends due_at alone moves the task to a day.
 func TestAReminderFollowsTheTaskTime(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil)
 	callback := time.Date(clocktest.Now(t).Year()+1, 10, 27, 14, 0, 0, 0, time.UTC)

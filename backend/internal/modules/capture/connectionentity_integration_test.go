@@ -96,6 +96,7 @@ func expectMailboxEntity(t *testing.T, f mailboxScopeEnv, id, want ids.UUID) {
 }
 
 func TestAMailboxKeepsItsCompanyWhenAnotherAccountIsAdded(t *testing.T) {
+	t.Parallel()
 	withMailboxScope(t, func(f mailboxScopeEnv) {
 		id := entityMailbox(t, f, "first@example.test")
 		expectMailboxEntity(t, f, id, f.first)
@@ -159,6 +160,7 @@ func mailboxThread(t *testing.T, f mailboxScopeEnv) ids.UUID {
 }
 
 func TestBackfilledMailKeepsTheMailboxCompanyAfterItsOwnerMoves(t *testing.T) {
+	t.Parallel()
 	withMailboxScope(t, func(f mailboxScopeEnv) {
 		connection := entityMailbox(t, f, "first@example.test")
 		if _, err := f.tx.Exec(f.ctx, `UPDATE capture_connection SET legal_entity_id=@entity WHERE id=@id`,
@@ -179,6 +181,7 @@ func TestBackfilledMailKeepsTheMailboxCompanyAfterItsOwnerMoves(t *testing.T) {
 }
 
 func TestAMessageDeliveredByMailboxesOfOneCompanyStaysScoped(t *testing.T) {
+	t.Parallel()
 	withMailboxScope(t, func(f mailboxScopeEnv) {
 		connection := entityMailbox(t, f, "first@example.test")
 		second := entityMailbox(t, f, "second@example.test")

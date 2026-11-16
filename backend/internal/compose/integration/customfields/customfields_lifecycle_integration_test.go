@@ -28,6 +28,7 @@ func renameTo(label string) customfieldsmod.FieldPatch {
 }
 
 func TestCustomFieldRename_LabelOnly_ColumnIdentityStable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -66,6 +67,7 @@ func TestCustomFieldRename_LabelOnly_ColumnIdentityStable(t *testing.T) {
 }
 
 func TestCustomFieldRename_ToALabelAnotherFieldHolds_IsRefusedAsAConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -95,6 +97,7 @@ func TestCustomFieldRename_ToALabelAnotherFieldHolds_IsRefusedAsAConflict(t *tes
 }
 
 func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -130,6 +133,7 @@ func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testin
 }
 
 func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
@@ -280,6 +284,7 @@ func TestCustomFieldRename_OntoARetiredFieldsName_IsAllowedButOntoALiveOneIsRefu
 }
 
 func TestCustomFieldSetOptions_RegeneratesTheCheck(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -316,6 +321,7 @@ func TestCustomFieldSetOptions_RegeneratesTheCheck(t *testing.T) {
 }
 
 func TestCustomFieldSetOptions_Refusals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -365,6 +371,7 @@ func TestCustomFieldSetOptions_Refusals(t *testing.T) {
 }
 
 func TestCustomFieldList_IncludesRetiredByDefault_AndPagesKeyset(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -427,6 +434,7 @@ func TestCustomFieldList_IncludesRetiredByDefault_AndPagesKeyset(t *testing.T) {
 }
 
 func TestCustomFieldRBAC_ReadGrantCannotChangeSchema(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	admin := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)

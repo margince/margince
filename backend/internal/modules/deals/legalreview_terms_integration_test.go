@@ -52,6 +52,7 @@ func approvedDealWithOffer(t *testing.T, e *reviewEnv) (ids.DealID, ids.OfferID,
 }
 
 func TestAnApprovalLapsesWhenAnyTermOfTheOfferChanges(t *testing.T) {
+	t.Parallel()
 	for name, edit := range map[string]func(*reviewEnv, ids.OfferID, ids.UUID) error{
 		"terms text": func(e *reviewEnv, offer ids.OfferID, _ ids.UUID) error {
 			text := "Payment within 90 days."
@@ -95,6 +96,7 @@ func TestAnApprovalLapsesWhenAnyTermOfTheOfferChanges(t *testing.T) {
 
 // Sending the approved offer changes no term, so the approval stands.
 func TestSendingTheApprovedOfferKeepsTheApproval(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, offer, _, toID := approvedDealWithOffer(t, e)
 	if _, err := e.store.SendOffer(e.offerCtx(), offer, nil); err != nil {
@@ -107,6 +109,7 @@ func TestSendingTheApprovedOfferKeepsTheApproval(t *testing.T) {
 
 // No offer at approval and one added since are different terms.
 func TestAnOfferAddedAfterTheApprovalLapsesIt(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	e.answer(t, e.request(t, dealID, nil), ReviewApproved)
@@ -126,6 +129,7 @@ func TestAnOfferAddedAfterTheApprovalLapsesIt(t *testing.T) {
 // Once the approved offer is accepted, a second offer sent to the buyer binds
 // too. Legal has not read it.
 func TestASecondBindingOfferLapsesTheApproval(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	first := e.seedOffer(t, dealID, "Implementation")
@@ -148,6 +152,7 @@ func TestASecondBindingOfferLapsesTheApproval(t *testing.T) {
 
 // Re-addressing the approved offer to another company changes who is bound.
 func TestReaddressingTheApprovedOfferLapsesIt(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, offer, _, toID := approvedDealWithOffer(t, e)
 	other := ids.NewV7()
@@ -182,6 +187,7 @@ func (e *reviewEnv) seedOffer(t *testing.T, dealID ids.DealID, description strin
 // The pack shows what the approval binds to: the intro, each line's billing
 // term, and every other offer the buyer holds.
 func TestThePackShowsEveryTermTheApprovalBindsTo(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	intro, description, price, tax := "Dear buyer,", "Support", int64(100_000), "19.00"

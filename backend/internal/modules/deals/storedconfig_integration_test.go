@@ -14,6 +14,7 @@ import (
 // Legal review switched off at boot releases the gate over a saved row that
 // keeps it on.
 func TestABootSetLegalReviewOffReleasesTheGate(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	configtest.Bind(t, configtest.StoredOver(t, e.pool, ConfigSettings(), "MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=false"))

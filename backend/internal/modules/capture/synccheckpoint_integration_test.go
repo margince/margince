@@ -64,6 +64,7 @@ func readConnectionRow(ctx context.Context, t *testing.T, db interface {
 // A checkpoint stores the cursor and nothing else: the first sync's anchor
 // stays held and no success is recorded until the round closes.
 func TestACheckpointStoresTheCursorButNotASuccess(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	reg.SetClock(func() time.Time { return time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC) })
@@ -87,6 +88,7 @@ func TestACheckpointStoresTheCursorButNotASuccess(t *testing.T) {
 // A sync whose connection moved on mid-round stops at its last checkpoint. It
 // returns no error, overwrites nothing and records no failure.
 func TestASupersededCheckpointStopsTheSyncQuietly(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	reg.SetClock(func() time.Time { return time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC) })
@@ -145,6 +147,7 @@ func (c *interruptedFirstSync) SyncFrom(
 // A first sync resumed from its checkpoint reads from the anchor it held, for
 // as long as that anchor binds.
 func TestAResumedFirstSyncReadsFromItsHeldAnchor(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 	reg.SetClock(func() time.Time { return at })
@@ -171,6 +174,7 @@ func TestAResumedFirstSyncReadsFromItsHeldAnchor(t *testing.T) {
 // anchor. Its round is dropped, the period nobody read is recorded, and the
 // sync starts again from its own window.
 func TestALapsedCheckpointedFirstSyncRecordsWhatNobodyRead(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)

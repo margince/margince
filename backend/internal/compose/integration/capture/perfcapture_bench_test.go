@@ -58,6 +58,7 @@ const captureBenchSamples = 20
 const renderNotBlockedTimeout = 5 * time.Second
 
 func TestCaptureToTimelineLatencyBudget(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 
 	assertTimelineRenderIsNotBlockedByCapture(t, env.e)

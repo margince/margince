@@ -21,6 +21,7 @@ import (
 // A display name that is the plain join of the parts follows a change to them.
 // One somebody typed differently, or one the update itself changes, stays.
 func TestChangingANamePartUpdatesOnlyAPlainJoinedDisplayName(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name         string
 		storedFull   string
@@ -102,6 +103,7 @@ func TestAnImportedPartJoiningPastTheBoundIsRefused(t *testing.T) {
 // A rename made through the parts is re-checked for duplicates as a full_name
 // edit is.
 func TestRenamingThroughTheNamePartsQueuesThePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.plainContact(ctx, t, "Gerhard Sahner", "info@gerhard-sahner.test")
@@ -132,6 +134,7 @@ func TestRenamingThroughTheNamePartsQueuesThePair(t *testing.T) {
 // A colleague types a display name and commits while the parts edit waits on the
 // row. The edit decides on that name, so the join never overwrites it.
 func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{

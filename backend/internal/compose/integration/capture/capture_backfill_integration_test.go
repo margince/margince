@@ -104,6 +104,7 @@ func readBackfillRow(t *testing.T, e *integration.SearchEnv, id ids.UUID) (statu
 }
 
 func TestBackfillLifecycle(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	prov := &pagedConnector{messages: 25, pageSize: 10}
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
@@ -263,6 +264,7 @@ func TestBackfillLifecycle(t *testing.T) {
 // the two pre-commit failure edges: an unreadable committed cursor (parse
 // error) and a readable cursor the provider then rejects (page error).
 func TestBackfillStepFaultsAreTerminal(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&pagedConnector{messages: 25, pageSize: 10})
@@ -341,6 +343,7 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 // out, and until the user finds that, every retry answers 409 backfill_running.
 // So the run and the job that claims it commit together or not at all.
 func TestStartBackfillRollsBackWhenTheJobCannotBeScheduled(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(&pagedConnector{messages: 25, pageSize: 10})

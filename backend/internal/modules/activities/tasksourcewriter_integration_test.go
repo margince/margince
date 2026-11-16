@@ -16,6 +16,7 @@ import (
 )
 
 func TestTheRealTaskWriterKeepsManualAgentAndRegisteredWork(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	human := e.as(principal.RowScopeAll)
 	agent := e.asAgent(principal.RowScopeAll)

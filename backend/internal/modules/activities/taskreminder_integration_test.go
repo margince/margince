@@ -75,6 +75,7 @@ func asArchiver(e *sendEnv) context.Context {
 
 // The SQL writer of the rule, held to the same table the Go writer is.
 func TestTheReminderClauseAnswersTheCaseTable(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := pinStore(e)
@@ -104,6 +105,7 @@ func TestTheReminderClauseAnswersTheCaseTable(t *testing.T) {
 // The list filter is the reader's own due reminders: the same set, judged by
 // the store's own clock, and none of a colleague's.
 func TestTheReminderFilterListsTheReadersOwnDueReminders(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	asOf := reminderInstant(t)

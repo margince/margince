@@ -20,6 +20,7 @@ import (
 )
 
 func TestThePersonalReadAnswersTheCallersOwnWindow(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, _ := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -53,6 +54,7 @@ func TestThePersonalReadAnswersTheCallersOwnWindow(t *testing.T) {
 }
 
 func TestTheWorkspaceReadAnswersOnlySharedChannels(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, _ := traceReadWorkspace(t)
 	member, manager := ids.NewV7(), ids.NewV7()
 	seedTrace(memberContext(ctx, ws, member), t, db, member, "http-personal", 0)
@@ -80,6 +82,7 @@ func TestTheWorkspaceReadAnswersOnlySharedChannels(t *testing.T) {
 }
 
 func TestTheWorkspaceReadRefusesASeatWithoutTheGrantOverHTTP(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, _ := traceReadWorkspace(t)
 	handlers := capture.NewTraceHandlers(capture.NewTraceStore(db), false, nil)
 

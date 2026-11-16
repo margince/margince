@@ -20,6 +20,7 @@ import (
 )
 
 func TestPromotingALeadKeepsItsInquiryOpenOnTheContact(t *testing.T) {
+	t.Parallel()
 	f := setupInquiryRecipient(t)
 	engine := compose.NewWorkflowEngine(f.e.DB())
 	if err := engine.HandleEvent(t.Context(), f.event); err != nil {

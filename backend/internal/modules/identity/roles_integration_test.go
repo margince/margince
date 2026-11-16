@@ -42,6 +42,8 @@ func registerExtObject(t *testing.T) {
 // authorization gate consults — then reports it for a member holding the role.
 // Anything less than the full chain would pass while the screen still said "you
 // do not hold access".
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestGrantingAnExtensionObjectReachesTheMemberEffectivePermissions(t *testing.T) {
 	e := setupRevocationEnv(t, "role-grant-ext")
 	registerExtObject(t)
@@ -82,6 +84,8 @@ func TestGrantingAnExtensionObjectReachesTheMemberEffectivePermissions(t *testin
 // The targeted write must not disturb the rest of the document. A
 // parse-and-rewrite would pass every assertion about the edited object and
 // silently drop the row_scope and every grant this installation cannot name.
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestSettingOneGrantLeavesTheRestOfTheDocumentIntact(t *testing.T) {
 	e := setupRevocationEnv(t, "role-grant-intact")
 	registerExtObject(t)
@@ -131,6 +135,8 @@ func TestSettingOneGrantLeavesTheRestOfTheDocumentIntact(t *testing.T) {
 // A permission change with no audit trail is the failure mode this feature is
 // most dangerous without: the row names the actor, the role, and both images of
 // the one object that moved.
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestSettingAGrantWritesAnAuditRowNamingTheActorAndBothImages(t *testing.T) {
 	e := setupRevocationEnv(t, "role-grant-audit")
 	registerExtObject(t)
@@ -185,6 +191,7 @@ func TestSettingAGrantWritesAnAuditRowNamingTheActorAndBothImages(t *testing.T) 
 // the grant map populated. A seat without role_admin is refused before any row
 // is read.
 func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "role-list")
 	ctx := e.wsCtx(e.admin)
 	custom := e.customRole(t, "Account managers", "rep", nil)
@@ -228,6 +235,8 @@ func TestListRolesReturnsEverySeededRoleAndRefusesANonAdmin(t *testing.T) {
 }
 
 // The three refusals, each proving nothing was written.
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestSetRoleObjectGrantRefusesANonAdminAnUnknownRoleAndAnUnknownObject(t *testing.T) {
 	e := setupRevocationEnv(t, "role-grant-refusals")
 	registerExtObject(t)
@@ -272,6 +281,8 @@ func TestSetRoleObjectGrantRefusesANonAdminAnUnknownRoleAndAnUnknownObject(t *te
 // could ever hold an extension grant. Nothing in this codebase treats a seeded
 // document as immutable — the RBAC backfill migrations write into these very
 // rows, guarding each statement so an operator's edit survives.
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestASystemRoleGrantIsEditable(t *testing.T) {
 	e := setupRevocationEnv(t, "role-grant-system")
 	registerExtObject(t)
@@ -311,6 +322,8 @@ func TestASystemRoleGrantIsEditable(t *testing.T) {
 // version check the second write would carry a whole document that still says
 // the revoked verb is granted, and the revoke would vanish with nothing to say
 // it ever happened.
+//
+//testdb:serial registers into the process-wide RBAC object registry
 func TestASecondAdminWritingFromAStaleReadIsRefusedRatherThanClobbering(t *testing.T) {
 	e := setupRevocationEnv(t, "role-grant-skew")
 	registerExtObject(t)

@@ -25,6 +25,7 @@ import (
 )
 
 func TestAShortlistMembershipDeliveryNamesNoList(t *testing.T) {
+	t.Parallel()
 	cipher, err := webhooks.NewCipher(bytes.Repeat([]byte{0x5a}, webhooks.WebhookKeyBytes))
 	if err != nil {
 		t.Fatal(err)

@@ -45,6 +45,7 @@ func (f fixture) countFor(ctx context.Context, t *testing.T, field, op string, v
 }
 
 func TestAMaskedStandardFieldSelectsNothingEitherWay(t *testing.T) {
+	t.Parallel()
 	f := setupFixture(t)
 	target, err := f.contacts.CreateContact(f.ctx, contactsmod.CreateContactInput{
 		FullName: "Masked Mira", Source: "manual",

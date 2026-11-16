@@ -44,6 +44,7 @@ func agentOfAdmin(e *integration.Env) context.Context {
 }
 
 func TestAnAgentCannotAddAReaderToATeamThatReadsASharedMailbox(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := readerTeamService(t, e)
 	before := teamMembersOf(t, e.Team1)
@@ -60,6 +61,7 @@ func TestAnAgentCannotAddAReaderToATeamThatReadsASharedMailbox(t *testing.T) {
 // agentOfAdmin is the admin's own agent, acting on their passport.
 
 func TestAnAgentIsRefusedEvenWhenTheTeamsSharedMailboxIsDisconnected(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := readerTeamService(t, e)
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
@@ -73,6 +75,7 @@ func TestAnAgentIsRefusedEvenWhenTheTeamsSharedMailboxIsDisconnected(t *testing.
 }
 
 func TestAnAdminAddingAReaderIsAuditedWithTheMailboxTheyCanNowRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := readerTeamService(t, e)
 	if err := service.SetTeamMember(e.Admin(), adminIdentity(e), e.Team1, e.Rep3, true); err != nil {
@@ -90,6 +93,7 @@ func TestAnAdminAddingAReaderIsAuditedWithTheMailboxTheyCanNowRead(t *testing.T)
 }
 
 func TestATeamThatReadsASharedMailboxCannotBeArchived(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	service := readerTeamService(t, e)
 	archived := true

@@ -19,6 +19,7 @@ import (
 // Capture stamps once whether a sending system sent a received mail, from the
 // sender's own address, so every reader asks the stored answer.
 func TestCaptureMarksMailASendingSystemSent(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "acme.com")
 	ws, _ := principal.WorkspaceID(ctx)
 	seat := seedSeat(ctx, t, db, "rep@acme.com", "active")

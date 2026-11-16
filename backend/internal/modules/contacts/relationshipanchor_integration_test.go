@@ -25,7 +25,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -68,13 +67,9 @@ type edgeAnchorEnv struct {
 
 func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, ownerDSN)
+	conn, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -83,13 +78,6 @@ func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// Verify the empty clone before seeding or opening an application pool.
-	if err := testdb.EnsureSchema(ctx, conn); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, conn); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &edgeAnchorEnv{
 		owner: conn, ws: ids.NewV7(), me: ids.NewV7(), them: ids.NewV7(),
@@ -152,7 +140,7 @@ func setupEdgeAnchor(t *testing.T) *edgeAnchorEnv {
 		t.Fatal(err)
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,6 +202,7 @@ func (e *edgeAnchorEnv) liveAndPrimary(t *testing.T, id ids.UUID) (live, primary
 // by a 404 from a scope miss, by a shape refusal, or by the surface being
 // broken, and none of those is the gate under test.
 func TestCreatingAnEdgeTakesTheAnchorsRowAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 	me := e.as(e.me)
 
@@ -265,6 +254,7 @@ func TestCreatingAnEdgeTakesTheAnchorsRowAuthority(t *testing.T) {
 // the sharper of the two: it demotes the incumbent primary employer as a side
 // effect, so an ungated patch rewrites who the CRM says somebody works for.
 func TestPatchingAndArchivingAnEdgeTakeTheAnchorsRowAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 	me := e.as(e.me)
 	edge := e.seedEdge(t, CreateRelationshipInput{
@@ -321,6 +311,7 @@ func (e *edgeAnchorEnv) seedEdgeAsMe(me context.Context, t *testing.T) relations
 // caller cannot SEE at all still answers not-found, because 403 on an invisible
 // record says the record is there.
 func TestAnAnchorTheCallerCannotSeeStillAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 
 	_, err := e.store.CreateRelationship(e.as(e.me), CreateRelationshipInput{
@@ -339,6 +330,7 @@ func TestAnAnchorTheCallerCannotSeeStillAnswersNotFound(t *testing.T) {
 // The stakeholder role stays inside the contract's list when an edge is
 // re-roled through the generic route, as it does when the edge is made.
 func TestPatchingAProjectStakeholderEdgeToAnOffListRoleIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupEdgeAnchor(t)
 	me := e.as(e.me)
 	project := ids.New[ids.ProjectKind]()

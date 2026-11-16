@@ -14,6 +14,7 @@ import (
 )
 
 func TestDeltaThenBackfillKeepsTheFirstKnownArrival(t *testing.T) {
+	t.Parallel()
 	mailbox := capturetest.NewMailbox(t, "graph", owner)
 	received := time.Date(2025, 3, 4, 5, 6, 7, 0, time.UTC)
 	api := &fakeAPI{email: owner, deltaIDs: []string{"dated", "unknown"}, listIDs: []string{"dated", "unknown"}, receivedAt: map[string]time.Time{"dated": received}, raws: map[string][]byte{"dated": rawMsg("dated@test.example", "sender@test.example"), "unknown": rawMsg("unknown@test.example", "sender@test.example")}}

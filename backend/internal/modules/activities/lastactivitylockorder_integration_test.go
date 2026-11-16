@@ -41,6 +41,7 @@ import (
 // the rows are written to one page in the order the statements ran, so reading
 // them back by ctid reads them back in the order the locks were taken.
 func TestLinksAreInsertedInOneOrderWhateverTheCallerNamed(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 
@@ -87,6 +88,7 @@ func TestLinksAreInsertedInOneOrderWhateverTheCallerNamed(t *testing.T) {
 // function's source would assert the shape of the code rather than what it
 // does.
 func TestTheRefreshLocksItsWholeReachedSetInOneOrder(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := context.Background()
 

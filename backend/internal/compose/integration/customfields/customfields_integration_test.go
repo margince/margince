@@ -65,6 +65,7 @@ func dateSpec(label string) customfieldsmod.FieldSpec {
 }
 
 func TestCustomFieldCreate_ColumnCatalogAndAuditLandTogether(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
@@ -104,6 +105,7 @@ func TestCustomFieldCreate_ColumnCatalogAndAuditLandTogether(t *testing.T) {
 // whole transaction, physical column included, must roll back. Postgres
 // DDL is transactional; this is the real proof, not a mock.
 func TestCustomFieldCreate_AtomicRollback_OnCatalogConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
@@ -137,24 +139,16 @@ func TestCustomFieldCreate_AtomicRollback_OnCatalogConflict(t *testing.T) {
 // into. The refusal matters either way: an ALTER that discovers this itself
 // fails mid-transaction, taking the audit write with it.
 func TestCustomFieldCreate_UnclaimedColumnAnswersColumnTaken(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 
-	// Added directly, so no catalog row claims it. The integration harness
-	// resets rows between tests and keeps the schema, so this one drops its
-	// own column rather than leaving every later test in the package facing a
-	// name it never added.
+	// Added directly, so no catalog row claims it.
 	if _, err := owner.Exec(context.Background(),
 		`ALTER TABLE deal ADD COLUMN cf_renewal_date date`); err != nil {
 		t.Fatalf("planting the unclaimed column: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`ALTER TABLE deal DROP COLUMN cf_renewal_date`); err != nil {
-			t.Errorf("dropping the unclaimed column: %v", err)
-		}
-	})
 
 	_, err := svc.Create(e.As(e.Rep1, nil, integration.CustomFieldAdminPerms), dateSpec("Renewal date"))
 	if _, ok := errors.AsType[*customfieldsmod.ColumnTakenError](err); !ok {
@@ -169,6 +163,7 @@ func TestCustomFieldCreate_UnclaimedColumnAnswersColumnTaken(t *testing.T) {
 }
 
 func TestCustomFieldCreate_RefusalsWriteNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
@@ -205,6 +200,7 @@ func TestCustomFieldCreate_RefusalsWriteNothing(t *testing.T) {
 // Postgres's own server-side lock wait, not a test sleep, and the retry
 // after the blocker releases proves the answer means what it says.
 func TestCustomFieldCreate_BusyTableAnswersRetryableConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -243,6 +239,7 @@ func TestCustomFieldCreate_BusyTableAnswersRetryableConflict(t *testing.T) {
 // same 55P03 answer on the second DDL path: the CHECK regeneration's
 // ALTER hits the same bounded lock wait when a reader holds the table.
 func TestCustomFieldSetOptions_BusyTableAnswersRetryableConflict(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
@@ -277,6 +274,7 @@ func TestCustomFieldSetOptions_BusyTableAnswersRetryableConflict(t *testing.T) {
 }
 
 func TestCustomFieldCreate_UnwiredSchemaPool_Answers501Sentinel(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := customfieldsmod.NewService(e.Pool, nil)
 	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)

@@ -21,6 +21,7 @@ import (
 // A caller who may not read the installation's settings writes shared prose in
 // English. Whoever calls, choosing the language requires no grant of the call.
 func TestTheBaseLanguageIsNoRequirementOfTheCall(t *testing.T) {
+	t.Parallel()
 	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:no-settings", PassportID: ids.NewV7(), OnBehalfOf: ids.NewV7(),
 	})

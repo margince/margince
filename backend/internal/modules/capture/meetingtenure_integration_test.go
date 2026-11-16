@@ -20,7 +20,6 @@ package capture
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -41,21 +40,14 @@ const recycledAddress = "first.last@company.example"
 // asks this question.
 func meetingTenureEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if appDSN == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	owner := ownerConn(t)
 	ctx := context.Background()
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	ws := ids.NewV7()
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,6 +121,7 @@ func archiveAddressAt(ctx context.Context, tx pgx.Tx, address string, ago time.D
 }
 
 func TestAMeetingBeforeAnAddressChangedHandsIsNotEvidenceAboutItsNewHolder(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 
 	var met bool
@@ -155,6 +148,7 @@ func TestAMeetingBeforeAnAddressChangedHandsIsNotEvidenceAboutItsNewHolder(t *te
 }
 
 func TestAMeetingAfterAnAddressChangedHandsIsEvidence(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 
 	var met bool
@@ -182,6 +176,7 @@ func TestAMeetingAfterAnAddressChangedHandsIsEvidence(t *testing.T) {
 // pass the case above and silently end the only path by which a guest with no
 // record yet becomes a contact.
 func TestAMeetingWithAnAddressThatNeverChangedHandsIsStillEvidence(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 
 	var met bool
@@ -205,6 +200,7 @@ func TestAMeetingWithAnAddressThatNeverChangedHandsIsStillEvidence(t *testing.T)
 // in the diary mints no contact and lifts no suppression; the same meeting
 // counts once it is over.
 func TestAMeetingStillInTheDiaryIsNotEvidenceUntilItsTimePasses(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 
 	for name, tc := range map[string]struct {
@@ -235,6 +231,7 @@ func TestAMeetingStillInTheDiaryIsNotEvidenceUntilItsTimePasses(t *testing.T) {
 // A captured meeting known only by today's date has not taken place until the
 // date ends. Yesterday's has.
 func TestADayMeetingDatedTodayIsNotEvidenceUntilItsDateEnds(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 
 	for name, tc := range map[string]struct {
@@ -267,6 +264,7 @@ func TestADayMeetingDatedTodayIsNotEvidenceUntilItsDateEnds(t *testing.T) {
 // contact, and stops being evidence once relinked_at marks it as the member's.
 // The columns set here are the ones the activities relink writes.
 func TestARelinkedGuestIsNoEvidenceOfMeetingTheContactItNowNames(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 
 	// Each case seeds its own meeting, guest and contact under a fresh name.

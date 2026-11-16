@@ -18,6 +18,7 @@ import (
 )
 
 func TestAcceptingHistoricalOwnRequestRecordsDurableAdoption(t *testing.T) {
+	t.Parallel()
 	for _, retired := range []bool{false, true} {
 		t.Run(map[bool]string{false: "live", true: "retired"}[retired], func(t *testing.T) {
 			e := setupLoad(t)
@@ -63,6 +64,7 @@ func TestAcceptingHistoricalOwnRequestRecordsDurableAdoption(t *testing.T) {
 }
 
 func TestRequestReplayCannotAdoptWithdrawnOrReassignedWork(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	source := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
@@ -97,6 +99,7 @@ func TestRequestReplayCannotAdoptWithdrawnOrReassignedWork(t *testing.T) {
 }
 
 func TestTwoRecipientsCannotBothAdoptTheSameAutomaticRequest(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	source, _, err := store.LogActivity(asClassifier(e), LogActivityInput{Kind: "email", Source: "test", Subject: new("Please choose who replies"), Direction: new("inbound"), OccurredAt: &requestInstant, EmailTo: []string{"rep-" + e.rep.String() + "@load.test", "rep-" + e.other.String() + "@load.test"}})

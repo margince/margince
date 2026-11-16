@@ -94,6 +94,7 @@ func (e *privacyEnv) canReadCompany(t *testing.T, id ids.CompanyID, user ids.UUI
 // TestAWorkspaceCompanyCanBeMadePrivate is the direction that did not exist
 // for a company at all.
 func TestAWorkspaceCompanyCanBeMadePrivate(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureCompany(t, "workspace")
 	if !e.canReadCompany(t, published, e.teammate, principal.RowScopeTeam) {
@@ -116,6 +117,7 @@ func TestAWorkspaceCompanyCanBeMadePrivate(t *testing.T) {
 // TestACapturedCompanyCanBePublished is the door the product was missing: the
 // owner of a capture-private company publishing it themselves.
 func TestACapturedCompanyCanBePublished(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	captured := e.captureCompany(t, "owner")
 	if e.canReadCompany(t, captured, e.teammate, principal.RowScopeTeam) {
@@ -145,6 +147,7 @@ func TestACapturedCompanyCanBePublished(t *testing.T) {
 // whose company it becomes is a decision, not a side effect of pressing a
 // button.
 func TestNarrowingACompanyKeepsItsOwnOwner(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureCompany(t, "workspace")
 
@@ -174,6 +177,7 @@ func TestNarrowingACompanyKeepsItsOwnOwner(t *testing.T) {
 // that would repair it. Refused by field, not by constraint name: the caller
 // is told which field to supply.
 func TestNarrowingAnUnownedCompanyIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	unowned := e.seedCompany(t)
 	id := ids.ID[ids.CompanyKind]{UUID: unowned}
@@ -209,6 +213,7 @@ func TestNarrowingAnUnownedCompanyIsRefused(t *testing.T) {
 // racing caller would have carried — the row as it looked while still public —
 // and must refuse it now that the stored row says otherwise.
 func TestAStaleCompanyVisibilityWriteIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureCompany(t, "workspace")
 	ctx := e.as(e.owner, principal.RowScopeOwn)
@@ -254,6 +259,7 @@ func TestAStaleCompanyVisibilityWriteIsRefused(t *testing.T) {
 // answers NOT FOUND rather than a permission error — existence stays hidden.
 // Neither a teammate nor an admin can publish somebody else's private company.
 func TestCapturePrivacyStillHidesACompanyFromTheNewDoor(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	captured := e.captureCompany(t, "owner")
 
@@ -294,6 +300,7 @@ func TestCapturePrivacyStillHidesACompanyFromTheNewDoor(t *testing.T) {
 // conflict would tell a caller who can no longer read the row that it is still
 // there.
 func TestAuthorizationIsRecheckedUnderTheRowLock(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	published := e.captureCompany(t, "workspace")
 	colleague := e.as(e.teammate, principal.RowScopeTeam)

@@ -54,6 +54,7 @@ type censusTransport struct {
 }
 
 func TestEveryCredentialModelIsBornWithAReader(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()
@@ -109,8 +110,7 @@ func TestEveryCredentialModelIsBornWithAReader(t *testing.T) {
 	}
 }
 
-// registerCensusTransport puts one transport in the registry and takes it, and
-// everything filed on it, away afterwards.
+// registerCensusTransport puts one transport in the registry.
 func registerCensusTransport(t *testing.T, owner *pgx.Conn, provider, model string) {
 	t.Helper()
 	if _, err := owner.Exec(context.Background(),
@@ -118,19 +118,6 @@ func registerCensusTransport(t *testing.T, owner *pgx.Conn, provider, model stri
 		 VALUES ($1, 'unit', $1, $2, true)`, provider, model); err != nil {
 		t.Fatalf("registering the %s transport: %v", model, err)
 	}
-	t.Cleanup(func() {
-		// In dependency order: the registry row is the foreign-key parent of
-		// every message filed on it.
-		for _, statement := range []string{
-			`DELETE FROM capture_import WHERE activity_id IN (SELECT id FROM activity WHERE channel_provider = $1)`,
-			`DELETE FROM activity WHERE channel_provider = $1`,
-			`DELETE FROM channel_provider WHERE provider = $1`,
-		} {
-			if _, err := owner.Exec(context.Background(), statement, provider); err != nil {
-				t.Errorf("cleaning up after %s (%s): %v", provider, statement, err)
-			}
-		}
-	})
 }
 
 // lowerTheFloor turns workspace mail sharing off through the real settings

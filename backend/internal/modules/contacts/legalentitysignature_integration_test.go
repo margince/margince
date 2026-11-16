@@ -102,6 +102,7 @@ func (e signingEnv) signatureOf(t *testing.T, user ids.UUID) SenderSignature {
 }
 
 func TestEachSenderSignsWithTheirEntitysTemplateLogoAndImprint(t *testing.T) {
+	t.Parallel()
 	e := setupSigning(t, true)
 	for _, tc := range []struct {
 		name   string
@@ -126,6 +127,7 @@ func TestEachSenderSignsWithTheirEntitysTemplateLogoAndImprint(t *testing.T) {
 }
 
 func TestTheSettingsTabSaysAnEntityTemplateSigns(t *testing.T) {
+	t.Parallel()
 	e := setupSigning(t, false)
 	for sender, want := range map[ids.UUID]bool{e.defaultSender: false, e.viennaSender: true, e.grazSender: false} {
 		got, err := e.store.GetMyEmailSignature(e.as(sender))
@@ -139,6 +141,7 @@ func TestTheSettingsTabSaysAnEntityTemplateSigns(t *testing.T) {
 }
 
 func TestTheDefaultEntitySignsWithTheWorkspaceTemplate(t *testing.T) {
+	t.Parallel()
 	e := setupSigning(t, true)
 	admin := actingAs(e.promoteConsentEnv, "admin", entityAdmin)
 	_, err := e.store.UpdateLegalEntity(admin, defaultEntity(t, e.promoteConsentEnv),

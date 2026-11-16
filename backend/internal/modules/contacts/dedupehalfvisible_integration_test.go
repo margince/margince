@@ -94,6 +94,7 @@ func halfVisibleArms() []halfVisibleArm {
 }
 
 func TestDedupeQueueHidesAPairTheCallerCanOnlyHalfSee(t *testing.T) {
+	t.Parallel()
 	for _, arm := range halfVisibleArms() {
 		// The pair is stored canonically, lower id left (DH-DDL-1), and ids
 		// are time-ordered — so hiding the record created first always probes
@@ -121,6 +122,7 @@ func TestDedupeQueueHidesAPairTheCallerCanOnlyHalfSee(t *testing.T) {
 // Run over the same arms and both slots as the list. The total is a separate
 // column of the statement, and it must obey the same clause.
 func TestTheOpenCountHidesAPairTheCallerCanOnlyHalfSee(t *testing.T) {
+	t.Parallel()
 	for _, arm := range halfVisibleArms() {
 		for _, hide := range []string{"first-created", "second-created"} {
 			t.Run(arm.entityType+"/"+hide, func(t *testing.T) {
@@ -214,6 +216,7 @@ func halfVisiblePairStaysHidden(t *testing.T, arm halfVisibleArm, hide string) {
 // answers 404 first, the probe under test never runs, and the test passes
 // against a store that has no write gate at all.
 func TestDedupeDispositionNeedsWriteAuthorityOverBothRecords(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	_, _ = seedContactPair(ctx, t, e, "Ada Byron", "ada@authority.test", "Adah Byron", "adah@authority.test", "authority.test")

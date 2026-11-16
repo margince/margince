@@ -57,6 +57,7 @@ func (e *promiseEnv) seedLinkedNote(t *testing.T, contactOwner ids.UUID) (activi
 // The flag on the single read and on the list is the update path's answer.
 // A rep with own scope is told a colleague's activity is read-only.
 func TestActivityReadsSayWhetherTheCallerMayChangeIt(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	mine := e.seedLinkedNote(t, e.rep)
 	theirs := e.seedLinkedNote(t, e.other)
@@ -76,8 +77,6 @@ func TestActivityReadsSayWhetherTheCallerMayChangeIt(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Other tests in the package share the workspace, so only the two seeded
-	// rows are judged.
 	seen := 0
 	for _, a := range listed {
 		id := ids.UUID(a.Id)
@@ -103,6 +102,7 @@ func TestActivityReadsSayWhetherTheCallerMayChangeIt(t *testing.T) {
 // A seat without the activity:update grant is told nothing is writable, even
 // on an activity it authored.
 func TestActivityReadsAreReadOnlyWithoutTheUpdateGrant(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	mine := e.seedLinkedNote(t, e.rep)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -118,6 +118,7 @@ func TestActivityReadsAreReadOnlyWithoutTheUpdateGrant(t *testing.T) {
 // A read seat holding the update grant on its own activity is still told
 // read-only, the answer the mutation admission gives.
 func TestActivityReadsAreReadOnlyOnAReadSeat(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	mine := e.seedLinkedNote(t, e.rep)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))

@@ -24,6 +24,7 @@ import (
 )
 
 func TestACapturedMailLeavesTheHomeFenceWhereItWas(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	steps := []struct {

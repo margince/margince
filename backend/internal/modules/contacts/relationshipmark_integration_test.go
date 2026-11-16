@@ -28,6 +28,7 @@ func (e *dedupeEnv) markColumns(ctx context.Context, t *testing.T, id ids.Contac
 }
 
 func TestAHumanSetsAndClearsTheMarkAndTheSetterFollowsIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -66,6 +67,7 @@ func TestAHumanSetsAndClearsTheMarkAndTheSetterFollowsIt(t *testing.T) {
 }
 
 func TestAnUnknownMarkIsRefusedBeforeTheDatabaseSeesIt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Pat Doe", Source: "manual"})

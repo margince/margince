@@ -74,6 +74,7 @@ func asLegacyWriter(e *loadEnv) context.Context {
 // answer then reopens the reminder the pass completed. A second run finds
 // nothing left to do.
 func TestARevalidatedLegacyVerdictIsJudgedAgainOnce(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := legacySettled(asSettler(e), t, e, "Legacy settled")
 	previewAt := requestInstant.Add(72 * time.Hour)
@@ -103,6 +104,7 @@ func TestARevalidatedLegacyVerdictIsJudgedAgainOnce(t *testing.T) {
 }
 
 func TestLegacyVerdictsWithoutProofOrWithHumanWorkAreKept(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	unknown := legacySettled(asLegacyWriter(e), t, e, "Unknown writer")
 	human := legacySettled(asSettler(e), t, e, "Human kept")
@@ -125,6 +127,7 @@ func TestLegacyVerdictsWithoutProofOrWithHumanWorkAreKept(t *testing.T) {
 }
 
 func TestARevalidationIsRefusedWhenTheVerdictChangedSinceReview(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := legacySettled(asSettler(e), t, e, "Changed since review")
 	previewAt := requestInstant.Add(72 * time.Hour)
@@ -142,6 +145,7 @@ func TestARevalidationIsRefusedWhenTheVerdictChangedSinceReview(t *testing.T) {
 // An unsure answer from the repeated judgement is no evidence that work is
 // owed. The reminder the pass closed stays closed.
 func TestAnUnsureRevalidationReopensNothing(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := legacySettled(asSettler(e), t, e, "Unsure again")
 	previewAt := requestInstant.Add(72 * time.Hour)
@@ -158,6 +162,7 @@ func TestAnUnsureRevalidationReopensNothing(t *testing.T) {
 // not marked for it. A held request names nothing about itself. Neither stops
 // the rest of the page.
 func TestUnjudgeableAndHeldLegacyVerdictsDoNotBreakThePage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	valid := legacySettled(asSettler(e), t, e, "Still judgeable")
 	orphaned := legacySettled(asSettler(e), t, e, "Answer archived")
@@ -186,6 +191,7 @@ func TestUnjudgeableAndHeldLegacyVerdictsDoNotBreakThePage(t *testing.T) {
 // A verdict judged again between the listing and the activation is reported
 // as changed, not as an error that aborts the review.
 func TestAVerdictJudgedSinceListingIsReportedChanged(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := legacySettled(asSettler(e), t, e, "Judged meanwhile")
 	previewAt := requestInstant.Add(72 * time.Hour)

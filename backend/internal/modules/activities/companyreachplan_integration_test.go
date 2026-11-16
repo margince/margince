@@ -21,6 +21,7 @@ import (
 )
 
 func TestTheAccountReachWalkNeverScansEveryActivity(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	ctx := context.Background()
 	tx, err := e.owner.Begin(ctx)

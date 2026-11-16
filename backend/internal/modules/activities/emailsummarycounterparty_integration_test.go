@@ -16,6 +16,7 @@ import (
 // viewer does. That is the recipients of a sent message and the sender of a
 // received one. The Worklist's follow-up rows read this page.
 func TestAPageOfEmailRowsNamesTheFarSideAsTheViewerDoes(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)

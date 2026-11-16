@@ -20,6 +20,7 @@ import (
 const companyPageBody = `https://www.linkedin.com/company/acme`
 
 func TestQuickCaptureWithACompanyPageIsRefusedOnProfileURL(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	h := Handlers{store: e.store}
 	rec := httptest.NewRecorder()
@@ -33,6 +34,7 @@ func TestQuickCaptureWithACompanyPageIsRefusedOnProfileURL(t *testing.T) {
 }
 
 func TestPatchingAContactToACompanyPageIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	id := e.plainContact(ctx, t, "Sam Example", "sam@example.com")
@@ -53,6 +55,7 @@ func TestPatchingAContactToACompanyPageIsRefused(t *testing.T) {
 }
 
 func TestACompanyCreatedOverTheWireKeepsItsLinkedInPage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	h := Handlers{store: e.store}
 	create := func(linkedin string) *httptest.ResponseRecorder {

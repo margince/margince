@@ -15,6 +15,7 @@ import (
 )
 
 func TestReaderLanguageIsTheCallersChoiceElseTheInstallationsBase(t *testing.T) {
+	t.Parallel()
 	svc, ctx, _ := seatChoosingALanguage(t)
 	read := func(readCtx context.Context) string {
 		var got string
@@ -41,6 +42,7 @@ func TestReaderLanguageIsTheCallersChoiceElseTheInstallationsBase(t *testing.T) 
 }
 
 func TestTheReaderLanguageForAPromptIsTheCallersChoiceElseTheInstallationsBase(t *testing.T) {
+	t.Parallel()
 	svc, ctx, _ := seatChoosingALanguage(t)
 	if got := ReaderLanguageForPrompt(ctx, svc.db.Pool()); got != "en" {
 		t.Fatalf("a member who never chose reads the base language en, got %q", got)
@@ -53,6 +55,7 @@ func TestTheReaderLanguageForAPromptIsTheCallersChoiceElseTheInstallationsBase(t
 }
 
 func TestASignedInMembersChosenLanguageRidesTheirPrincipal(t *testing.T) {
+	t.Parallel()
 	ctx := withHumanPrincipal(context.Background(), Identity{Locale: "vi"})
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Locale != "vi" {

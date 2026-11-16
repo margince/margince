@@ -19,6 +19,7 @@ import (
 // A capture without a usable timestamp is dated by the database and by this
 // process together. A failed read is an error, never the app's clock alone.
 func TestAnUndatedCaptureIsDatedByBothClocksOrNotAtAll(t *testing.T) {
+	t.Parallel()
 	provided := time.Date(2026, 3, 14, 9, 0, 0, 0, time.UTC)
 	tx := clockShiftedTx(t, 0)
 	if got, err := settledOccurredAt(context.Background(), tx, provided); err != nil || !got.Equal(provided) {

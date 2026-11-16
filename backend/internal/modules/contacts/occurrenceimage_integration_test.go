@@ -78,6 +78,7 @@ func wantImageList(t *testing.T, image map[string]any, key string, want ...strin
 // but WHICH claims arrived is what the arrival has to record, and the keys are
 // safe to name where the values never are.
 func TestAProviderClaimArrivalRecordsWhichClaimsArrived(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -125,6 +126,7 @@ func (e *dedupeEnv) seedProviderRun(ctx context.Context, t *testing.T, tx pgx.Tx
 // moved — but WHICH fields a human accepted is what the acceptance has to
 // record, and those names are the set the table's own constraint closes.
 func TestAnAcceptedResearchClaimRecordsWhichFieldsItFilled(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,

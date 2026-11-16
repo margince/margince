@@ -7,11 +7,6 @@ package activities
 
 // Which rows a hiding rule is holding back — the half the counts could not
 // answer.
-//
-// Asserted by ID rather than by length, for the reason the counts next door are
-// asserted as differences: the lane template is shared across this package's
-// tests, so a message another test seeded is in the database too and a length
-// would pass or fail on which tests ran.
 
 import (
 	"errors"
@@ -43,6 +38,7 @@ func holds(rows []WaitingReply, id ids.UUID) bool {
 // The row behind the figure. A reader who sees "1 set aside" can now ask which
 // one, and gets the message they set aside rather than the whole queue.
 func TestTheSetAsideRuleNamesTheRowItHeldBack(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -68,6 +64,7 @@ func TestTheSetAsideRuleNamesTheRowItHeldBack(t *testing.T) {
 // A thread judged not-sales is hidden from the whole workspace and never lifts,
 // which makes it the rule most worth being able to inspect.
 func TestTheNotSalesRuleNamesTheRowItHeldBack(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -94,6 +91,7 @@ func TestTheNotSalesRuleNamesTheRowItHeldBack(t *testing.T) {
 // another, or the list repeats the failure the separate figures exist to avoid
 // — a reader could not tell which rule to look at.
 func TestARowHeldBackByOneRuleIsNotListedUnderAnother(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -112,6 +110,7 @@ func TestARowHeldBackByOneRuleIsNotListedUnderAnother(t *testing.T) {
 // A queue hiding nothing lists nothing. Without this the assertions above would
 // be satisfied by a read that returned every row for every rule.
 func TestARuleHidingNothingListsNothingOfThisTestsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
@@ -132,6 +131,7 @@ func TestARuleHidingNothingListsNothingOfThisTestsOwn(t *testing.T) {
 // that rule" and "there is no such rule" are different answers, and returning
 // the first for the second lets a typo read as a clean queue.
 func TestAnUnknownRuleIsRefusedRatherThanAnsweredEmpty(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 
 	_, err := hiddenStore(e).HiddenWaitingRows(e.as(), time.Now(), HiddenRule("no_such_rule"))

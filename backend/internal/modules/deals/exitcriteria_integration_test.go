@@ -70,6 +70,7 @@ func addCriterion(t *testing.T, e *configEnv, stageID ids.StageID, key string) c
 // exactly one thing. The index is what holds it; this proves the store answers
 // in the caller's vocabulary rather than letting a 23505 surface as a 500.
 func TestACriterionKeyIsUniqueWithinItsStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	addCriterion(t, e, stageID, "buyer_confirmed")
@@ -194,6 +195,7 @@ func TestEditingACriterionNeverChangesItsKey(t *testing.T) {
 // them. No CHECK can see the stage row from the criterion, so the store owns
 // this and this test is what holds it.
 func TestATerminalStageCarriesNoExitCriteria(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	for _, semantic := range []StageSemantic{SemanticWon, SemanticLost} {
 		stageID := openStage(t, e, semantic)
@@ -212,6 +214,7 @@ func TestATerminalStageCarriesNoExitCriteria(t *testing.T) {
 // id, so a reader opening an older deal must still see what the stage asked
 // for at the time — deleting it would make that history unreadable.
 func TestArchivingACriterionKeepsItReadableAndFreesItsKey(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stageID := openStage(t, e, SemanticOpen)
@@ -248,6 +251,7 @@ func TestArchivingACriterionKeepsItReadableAndFreesItsKey(t *testing.T) {
 // The survivors close the gap, so the editor never draws a hole and a later
 // insert cannot collide with a position the archive left behind.
 func TestArchivingACriterionClosesTheGapItLeft(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stageID := openStage(t, e, SemanticOpen)
@@ -274,6 +278,7 @@ func TestArchivingACriterionClosesTheGapItLeft(t *testing.T) {
 // A reader who may only look is refused, and told so rather than shown a 404
 // that hides whether the stage exists.
 func TestOnlyAPipelineAdminEditsExitCriteria(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	criterion := addCriterion(t, e, stageID, "buyer_confirmed")
@@ -314,6 +319,7 @@ func TestOnlyAPipelineAdminEditsExitCriteria(t *testing.T) {
 // Every criterion write is a fact the trail carries and the bus announces, so
 // a subscriber watching stage shape sees the criteria change like any other.
 func TestCreatingACriterionAuditsAndAnnouncesTheStage(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	stageID := openStage(t, e, SemanticOpen)
 	criterion := addCriterion(t, e, stageID, "buyer_confirmed")
@@ -346,6 +352,7 @@ func TestCreatingACriterionAuditsAndAnnouncesTheStage(t *testing.T) {
 // is decorative: two editors both send If-Match: 1 and the second silently
 // overwrites the first. stage and pipeline carry the same trigger.
 func TestEditingACriterionAdvancesTheVersionItIsPinnedOn(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stageID := openStage(t, e, SemanticOpen)
@@ -377,6 +384,7 @@ func TestEditingACriterionAdvancesTheVersionItIsPinnedOn(t *testing.T) {
 // while it still carries criteria, which is the same invariant and the one
 // that made the contract's empty-list promise false.
 func TestAStageCannotCloseWhileItStillAsksForCriteria(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stageID := openStage(t, e, SemanticOpen)
@@ -402,6 +410,7 @@ func TestAStageCannotCloseWhileItStillAsksForCriteria(t *testing.T) {
 // Archiving a stage keeps its criteria READABLE — that is the whole reason
 // they are archived rather than deleted, because evidence cites them.
 func TestAnArchivedStagesCriteriaAreStillReadable(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stageID := openStage(t, e, SemanticOpen)
@@ -446,6 +455,7 @@ func TestAnArchivedStagesCriteriaAreStillReadable(t *testing.T) {
 // which is precisely why nothing else notices, and why this is a refusal at the
 // flip rather than an assertion somewhere downstream.
 func TestAStageCannotCloseWhileOpenDealsAreStillInIt(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stageID := openStage(t, e, SemanticOpen)
@@ -487,6 +497,7 @@ func TestAStageCannotCloseWhileOpenDealsAreStillInIt(t *testing.T) {
 // cannot make it unevidenced. Without this case the guard could tighten to
 // refuse every flip and still pass the test above.
 func TestAStageHoldingOnlyDecidedDealsStillCloses(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stageID := openStage(t, e, SemanticOpen)
@@ -597,6 +608,7 @@ func (e *configEnv) asDealArchiver() context.Context {
 // lost or open while the deals in it stayed won, so the same deal read won from
 // its own status and lost from the stage it sits in.
 func TestAStageHoldingDecidedDealsCannotChangeWhatItMeans(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name            string
 		decided, wanted StageSemantic
@@ -642,6 +654,7 @@ func TestAStageHoldingDecidedDealsCannotChangeWhatItMeans(t *testing.T) {
 // An empty stage is free to change: the guard is about the deals in it, not
 // about the stage having once been terminal.
 func TestAnEmptyTerminalStageCanChangeWhatItMeans(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.as()
 	stage := e.seedStage(ctx, t, "Negotiation empty", 60)

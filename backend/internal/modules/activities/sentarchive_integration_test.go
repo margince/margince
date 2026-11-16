@@ -53,6 +53,7 @@ func assertTheSenderCannotArchive(t *testing.T, e *sendEnv, store *Store, id ids
 }
 
 func TestASenderCannotArchiveAnEmailTheySentBeforeOrAfterItsEchoMerges(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := e.store(stubUnsubscribeLinker{})
 	sent, err := store.SendEmail(e.as(principal.RowScopeAll), FromActivity(e.seedAnchor(t, "", "")),
@@ -85,6 +86,7 @@ func TestASenderCannotArchiveAnEmailTheySentBeforeOrAfterItsEchoMerges(t *testin
 }
 
 func TestASenderCannotArchiveAChannelMessageTheySent(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedChannelAnchor(t)
 	contact := e.linkContact(t, anchor, "Telegram Buyer")

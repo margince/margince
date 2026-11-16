@@ -117,6 +117,7 @@ func awaitedAs(ctx context.Context, t *testing.T, s *Store, activity ids.UUID) b
 }
 
 func TestAnUnansweredMessageToACustomerIsAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	due, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
@@ -133,6 +134,7 @@ func TestAnUnansweredMessageToACustomerIsAFollowUp(t *testing.T) {
 // An account in set-up or live is one we deliver for. Unanswered mail to it is
 // owed a follow-up, and mail to an account that is over is not.
 func TestUnansweredMailToAnAccountWeDeliverForIsAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	for stage, want := range map[string]bool{"onboarding": true, "live": true, "former_customer": false} {
@@ -146,6 +148,7 @@ func TestUnansweredMailToAnAccountWeDeliverForIsAFollowUp(t *testing.T) {
 // Without the company arm the statement carries no lifecycle list. A reader
 // who may not read companies still gets an answer rather than an error.
 func TestAReaderWhoMayNotReadCompaniesLearnsNoStageFromAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	sent, _ := e.sentTo(t, e.customerAt(t, "live"), "", 3*24*time.Hour)
@@ -157,6 +160,7 @@ func TestAReaderWhoMayNotReadCompaniesLearnsNoStageFromAFollowUp(t *testing.T) {
 // A newer message to the same contact settles the older one: the newer one
 // is the follow-up the reader is now waiting on.
 func TestAReplyOrACallSettlesTheFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 
@@ -193,6 +197,7 @@ func TestAReplyOrACallSettlesTheFollowUp(t *testing.T) {
 // passed, whether or not anyone reported it held. One still to come, a
 // canceled one and a no-show settle nothing.
 func TestAMeetingInTouchSinceSettlesTheFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 
@@ -218,6 +223,7 @@ func TestAMeetingInTouchSinceSettlesTheFollowUp(t *testing.T) {
 }
 
 func TestOnlyTheReadersOwnMailToACustomerIsAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 
@@ -240,6 +246,7 @@ func TestOnlyTheReadersOwnMailToACustomerIsAFollowUp(t *testing.T) {
 
 // Mail logged by hand names the sender's address rather than the seat.
 func TestAMessageLoggedFromTheReadersAddressIsAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	logged, _ := e.sentTo(t, e.customerAt(t, "customer"), readerAddress, 3*24*time.Hour)
@@ -251,6 +258,7 @@ func TestAMessageLoggedFromTheReadersAddressIsAFollowUp(t *testing.T) {
 // Whether a deal is open is the deal's business: a reader who may not read
 // deals is not told one through a reminder.
 func TestTheCustomerTestReadsOnlyRecordKindsTheReaderMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	contact, pipeline, stage, deal := e.buyer(t), ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -273,6 +281,7 @@ func TestTheCustomerTestReadsOnlyRecordKindsTheReaderMayRead(t *testing.T) {
 // A thread key is a header the sender chose. A stranger's message carrying
 // it must not settle a reminder about somebody else.
 func TestAStrangerOnTheThreadDoesNotSettleTheFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	customer := e.customerAt(t, "customer")
@@ -287,6 +296,7 @@ func TestAStrangerOnTheThreadDoesNotSettleTheFollowUp(t *testing.T) {
 // An import brings history that may sit inside the lookback. Nobody left a
 // message unanswered in this CRM, so no reminder is about it.
 func TestAnImportedMessageIsNotAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	customer := e.customerAt(t, "customer")
@@ -304,6 +314,7 @@ func TestAnImportedMessageIsNotAFollowUp(t *testing.T) {
 
 // A day email logged by hand can be awaiting a reply, and its time is a date.
 func TestAFollowUpCarriesTheRealPrecisionOfItsMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	dayEmail, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
@@ -329,6 +340,7 @@ func TestAFollowUpCarriesTheRealPrecisionOfItsMessage(t *testing.T) {
 // An imported inbound message is history, so neither the badge nor the lane
 // asks for a reply to it.
 func TestAnImportedInboundIsNeverOwedAReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -361,6 +373,7 @@ func TestAnImportedInboundIsNeverOwedAReply(t *testing.T) {
 // invitation we sent is on neither; a plain unanswered mail is on both until
 // the customer answers on its thread.
 func TestTheFollowUpLaneAndTheBadgeAgreeOnASentMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	customer := e.customerAt(t, "customer")
@@ -431,6 +444,7 @@ func (e *loadEnv) addressedSeats(colleagueAddress string, shared ...string) *Sto
 // A colleague's mail that names the reader on To or CC is the colleague's to
 // follow up, never the reader's.
 func TestAColleaguesMailToTheReaderIsTheColleaguesFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	colleagueAddress := "colleague-" + e.other.String() + "@ourco.test"
 	s := e.addressedSeats(colleagueAddress)
@@ -451,6 +465,7 @@ func TestAColleaguesMailToTheReaderIsTheColleaguesFollowUp(t *testing.T) {
 // A mail captured from a colleague's send names that colleague in
 // sent_by_colleague and From. It is their follow-up, not the copied mailbox's.
 func TestAMailSentByAColleagueIsTheirFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	colleagueAddress := "colleague-" + e.other.String() + "@ourco.test"
 	s := e.addressedSeats(colleagueAddress)
@@ -468,6 +483,7 @@ func TestAMailSentByAColleagueIsTheirFollowUp(t *testing.T) {
 // Two seats that both list one mailbox address each read a mail logged from it
 // as their own: each seat's own address list decides.
 func TestASharedMailboxAddressIsEachListingSeatsFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	shared := "shared-" + e.rep.String() + "@ourco.test"
 	s := e.addressedSeats("colleague-"+e.other.String()+"@ourco.test", shared)
@@ -483,6 +499,7 @@ func TestASharedMailboxAddressIsEachListingSeatsFollowUp(t *testing.T) {
 // Off the thread only the contact since decides. At one stored instant their message is news our mail
 // did not answer, unless a date on either side makes our mail its answer.
 func TestATieOffTheThreadIsContactSinceOnlyBetweenTwoInstants(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	now := clocktest.Now(t)

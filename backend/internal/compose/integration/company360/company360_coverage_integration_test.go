@@ -21,6 +21,7 @@ import (
 // reader cannot tell the two apart — so an account with more contacts than any
 // page carries must still count all of them.
 func TestCoverageCountsTheWholeAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)
@@ -67,6 +68,7 @@ func TestCoverageCountsTheWholeAccount(t *testing.T) {
 // name. Following up again is a decision the reader makes, not a route the page
 // recommends, and naming the least-cold contact would dress one up as the other.
 func TestCoverageNamesNoWayInWhenNobodyHasAnswered(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)
@@ -94,6 +96,7 @@ func TestCoverageNamesNoWayInWhenNobodyHasAnswered(t *testing.T) {
 
 // A missing champion is reported only when the committee could be read whole.
 func TestCoverageReportsAChampionGapOnACompleteCommittee(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -156,6 +159,7 @@ func TestCoverageReadsAHeldRoleInAnyCase(t *testing.T) {
 // An account the caller cannot see answers not-found, so this read does not
 // become the way to learn that a company exists.
 func TestCoverageHidesAnAccountItCannotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -172,6 +176,7 @@ func TestCoverageHidesAnAccountItCannotRead(t *testing.T) {
 // COMPLETE answer rather than a refused one — there is no deal to hold a
 // committee, which is different from being unable to look.
 func TestCoverageSeparatesNoDealFromNoAccess(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -209,6 +214,7 @@ func TestCoverageSeparatesNoDealFromNoAccess(t *testing.T) {
 // to survive, and it is why the count is read separately rather than taken
 // from len(seats).
 func TestCoverageReportsNoGapWhenASeatIsUnlisted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -250,6 +256,7 @@ func TestCoverageReportsNoGapWhenASeatIsUnlisted(t *testing.T) {
 // deal names and the committee on them, because the read reached for
 // scopeClause and never for the object grant behind it.
 func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -289,6 +296,7 @@ func TestCoverageWithholdsDealsFromAReaderWithoutTheGrant(t *testing.T) {
 // contacts section uses. A second route ranking would let the map and the roster
 // disagree about which colleague to ask.
 func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)
@@ -331,6 +339,7 @@ func TestCoverageSeatsCarryTheirRoutes(t *testing.T) {
 // every agent write in this tree carries — so the card can say which part of
 // the committee is the product's reading and which a colleague asserted.
 func TestCoverageMarksASeatTheProductRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -376,6 +385,7 @@ func TestCoverageMarksASeatTheProductRead(t *testing.T) {
 // on THIS deal could be marked as the product's reading because of an
 // unrelated deal somewhere else.
 func TestCoverageMarksPerDealRatherThanPerContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)

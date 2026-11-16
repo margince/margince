@@ -37,6 +37,7 @@ func leadOnMeeting(t *testing.T, e *integration.SearchEnv, email string, meeting
 // capture writer then asks the lead's owner to qualify the lead, once per sync
 // run or more. A lead nobody owns on the same meeting gets no task.
 func TestMeetingNotesMarkingALeadMeetingHeldAskTheOwnerToQualify(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnvAt(t, clocktest.Now(t))
 	e := env.e
 	meeting, _, _ := meetingWithNotes(t, env)

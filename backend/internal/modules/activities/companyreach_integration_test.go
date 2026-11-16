@@ -17,6 +17,7 @@ import (
 )
 
 func TestTheAccountReachAdmitsEachArmWithinItsBounds(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	account, elsewhere := ids.NewV7(), ids.NewV7()
 	for _, company := range []ids.UUID{account, elsewhere} {

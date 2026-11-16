@@ -17,6 +17,7 @@ import (
 // A run whose seed search fails still completes, with only a log line to say so.
 // So each shipped agent must reach the model carrying a record its seed query names.
 func TestEachShippedAgentReachesTheModelSeeded(t *testing.T) {
+	t.Parallel()
 	for _, spec := range runner.Catalog() {
 		t.Run(spec.Name, func(t *testing.T) {
 			alternatives := strings.Split(spec.SeedQuery, " or ")

@@ -47,6 +47,7 @@ func nameOrNull(s *string) string {
 }
 
 func TestEnsureCounterpartyStoresAParsedName(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -64,6 +65,7 @@ func TestEnsureCounterpartyStoresAParsedName(t *testing.T) {
 }
 
 func TestEnsureCounterpartyLeavesSplitNamesNullWhenItCannotTell(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -89,6 +91,7 @@ func TestEnsureCounterpartyLeavesSplitNamesNullWhenItCannotTell(t *testing.T) {
 }
 
 func TestEnsureCounterpartyFillsASplitNameItLearnsLater(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -125,6 +128,7 @@ func TestEnsureCounterpartyFillsASplitNameItLearnsLater(t *testing.T) {
 // finds them: the old rule moved full_name only where it still equalled one of
 // the two parts exactly, and left every one of these on screen.
 func TestALearnedNameReplacesAnAddressBookLabel(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const addr = "bjoern@label.test"
@@ -157,6 +161,7 @@ func TestALearnedNameReplacesAnAddressBookLabel(t *testing.T) {
 // the guard reads the audit row that door writes. A test that edited the row
 // directly would leave no audit trail and pass whatever the guard did.
 func TestALearnedNameLeavesAHandEditedDisplayNameAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const addr = "edited@label.test"
@@ -191,6 +196,7 @@ func TestALearnedNameLeavesAHandEditedDisplayNameAlone(t *testing.T) {
 // The guard: an automatic fill may only ever ADD. A name a human typed is the
 // authority on that contact, and no later header may rewrite it.
 func TestEnsureCounterpartyNeverOverwritesANameAHumanSet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -230,6 +236,7 @@ func TestEnsureCounterpartyNeverOverwritesANameAHumanSet(t *testing.T) {
 // columns and leaves full_name reading "Lars" reports success and changes
 // nothing visible.
 func TestFillingASplitNameAlsoFixesTheDisplayedName(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const addr = "lars@displayed.test"

@@ -18,6 +18,7 @@ import (
 )
 
 func TestACustomFieldCreateWithoutASourceIsRefused(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	for label, stated := range map[string]integration.AnyMap{
 		"absent": {}, "empty": {"source": ""}, "spaces": {"source": "   "},

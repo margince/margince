@@ -35,6 +35,7 @@ func legalNameSiteReadOffer() *SiteReadOffer {
 // OfferedTo the offer arrived with: the server, not the conversation, says
 // whom Margince asked.
 func TestAnOfferIsStampedToTheHumanItWasMadeTo(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	readID := startOnboardingRead(ctx, t, e)
@@ -66,6 +67,7 @@ func TestAnOfferIsStampedToTheHumanItWasMadeTo(t *testing.T) {
 // Another human's conversation holds no offer for this one: a yes grants only
 // what Margince offered to whoever is saying it.
 func TestAnotherHumansOfferDoesNotStandForTheCaller(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	readID := startOnboardingRead(e.as(), t, e)
 	if err := e.store.ReplaceSiteReadOffer(e.as(), readID, legalNameSiteReadOffer(), nil); err != nil {
@@ -81,6 +83,7 @@ func TestAnotherHumansOfferDoesNotStandForTheCaller(t *testing.T) {
 // accepted; clearing a slot that is already empty changes nothing and writes
 // nothing.
 func TestClearingTheSlotNamesTheAcceptedOfferAndAnEmptySlotStaysQuiet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	readID := startOnboardingRead(ctx, t, e)
@@ -115,6 +118,7 @@ func TestClearingTheSlotNamesTheAcceptedOfferAndAnEmptySlotStaysQuiet(t *testing
 // A read the caller cannot address as an onboarding read answers not-found on
 // both sides of the slot, so its existence stays hidden.
 func TestTheOfferSlotIsNotFoundOffAnOnboardingRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyRead, _, err := e.store.StartSiteRead(ctx, seedCompanyForRead(ctx, t, e), "https://voltaq.test", "human:"+e.rep.String())
@@ -136,6 +140,7 @@ func TestTheOfferSlotIsNotFoundOffAnOnboardingRead(t *testing.T) {
 // A slot holding something that is not an offer is reported as unreadable,
 // never read as an empty slot a yes could then write over unnoticed.
 func TestAnUnreadableSlotIsAnErrorNotAnEmptySlot(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	readID := startOnboardingRead(ctx, t, e)

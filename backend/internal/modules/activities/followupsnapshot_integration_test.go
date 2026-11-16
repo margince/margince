@@ -23,8 +23,8 @@ import (
 )
 
 func TestFollowUpSourcesShareOnlyTheirOwnTransactionsWindow(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	e.restoreFollowUpWindow(t)
 	cfg := configtest.StoredOver(t, e.pool, ConfigSettings())
 	configtest.Bind(t, cfg)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -72,8 +72,8 @@ func TestFollowUpSourcesShareOnlyTheirOwnTransactionsWindow(t *testing.T) {
 }
 
 func TestFollowUpMemoFollowsSettingWritesAndSavepointRollback(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
-	e.restoreFollowUpWindow(t)
 	settingsStore, cfg := configtest.StoredOverWith(t, e.pool, nil, ConfigSettings())
 	configtest.Bind(t, cfg)
 	admin := e.settingsAdmin(true)

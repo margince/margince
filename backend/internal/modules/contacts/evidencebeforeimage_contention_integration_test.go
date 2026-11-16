@@ -87,6 +87,7 @@ func sidecarRowID(ctx context.Context, t *testing.T, e *dedupeEnv, query string,
 
 // A fact correction records the value it replaced, not the one it was shown.
 func TestACorrectedFactsBeforeImageIsTheRowTheCorrectionReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -132,6 +133,7 @@ func TestACorrectedFactsBeforeImageIsTheRowTheCorrectionReplaced(t *testing.T) {
 // value key, so each resolves its row its own way and each has to lock before
 // it reads.
 func TestACorrectedProfileFieldsBeforeImageIsTheRowTheCorrectionReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)

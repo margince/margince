@@ -83,6 +83,7 @@ func aboutOf(ctx context.Context, t *testing.T, e *promiseEnv, taskID ids.UUID) 
 }
 
 func TestAPromiseNamesALinkedDealOnlyToASeatThatMayReadDeals(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	taskID, contactID, dealID := e.seedDealTask(t)
 
@@ -101,6 +102,7 @@ func TestAPromiseNamesALinkedDealOnlyToASeatThatMayReadDeals(t *testing.T) {
 }
 
 func TestAnActivityReadListsALinkedDealOnlyToASeatThatMayReadDeals(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	taskID, contactID, dealID := e.seedDealTask(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))

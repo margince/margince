@@ -24,6 +24,7 @@ import (
 )
 
 func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	contactID := e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Inbox Sender', 'manual', 'human:x')`)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))

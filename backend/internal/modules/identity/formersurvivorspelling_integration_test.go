@@ -24,6 +24,7 @@ import (
 //
 // Read without an order, the answer was whichever root came back first.
 func TestTheSurvivorSpelledAsTypedWinsAMergedLineage(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "former-survivor-spelling")
 	ctx := context.Background()
 	const unicodeAddress = "gone@bücher.example"

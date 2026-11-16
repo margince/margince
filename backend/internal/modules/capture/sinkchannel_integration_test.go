@@ -66,6 +66,7 @@ func (m refusingMailEnsurer) EnsureCounterpartyTx(_ context.Context, _ pgx.Tx, i
 }
 
 func TestChannelRecordSkipsEveryMailDomainGate(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()

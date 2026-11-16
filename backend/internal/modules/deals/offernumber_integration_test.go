@@ -33,6 +33,7 @@ func offerNumberDeal(t *testing.T, e *seamEnv) ids.DealID {
 // A snapshot taken before the mint's lock reads a stale highest number, so the
 // mint refuses one rather than risk issuing a number twice.
 func TestAnOfferIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	deal := offerNumberDeal(t, e)
 	input := CreateOfferInput{Currency: "EUR", Source: "manual"}
@@ -53,6 +54,7 @@ func TestAnOfferIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
 // A revision reads the highest revision after its lock too, so it refuses a
 // stale snapshot the same way.
 func TestAnOfferRevisionIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	deal := offerNumberDeal(t, e)
 	description, price, tax := "Implementation", int64(500_000), "19.00"
@@ -84,6 +86,7 @@ func TestAnOfferRevisionIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
 // A number the mint could not have issued is refused by the database itself.
 // The mint would not see it, and would reissue the number after it.
 func TestAnOfferNumberInAnotherShapeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	deal := offerNumberDeal(t, e)
 

@@ -11,12 +11,12 @@ package contacts
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,7 +43,7 @@ func (e *promoteConsentEnv) withCompanyGrants() context.Context {
 func beginOn(t *testing.T) (pgx.Tx, int) {
 	t.Helper()
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	conn, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,6 +68,7 @@ func beginOn(t *testing.T) (pgx.Tx, int) {
 // A company merge's stand-in holds the company and next wants the lead. A
 // promotion that took the company after its lead would close a cycle with it.
 func TestAPromotionTakesALinkThatLandedBeforeItsLeadLockCompanyFirst(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	as := e.withCompanyGrants()

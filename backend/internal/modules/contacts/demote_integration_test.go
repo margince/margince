@@ -38,6 +38,7 @@ func (e *promoteConsentEnv) contactState(t *testing.T, id ids.UUID) (archived bo
 // A promotion that CREATED the contact unwinds fully: the lead is back at
 // work, the contact it minted is archived, and the lineage is gone both ways.
 func TestDemoteReversesAPromotionThatCreatedTheContact(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "fresh@example.test")
 	contact, merged, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
@@ -78,6 +79,7 @@ func TestDemoteReversesAPromotionThatCreatedTheContact(t *testing.T) {
 // A promotion merged into an incumbent is not undone. Restoring its lead would
 // leave both records live, so nothing moves.
 func TestDemoteOfAMergeIntoAnExistingContactIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const shared = "known@example.test"
 	existing, err := e.store.CreateContact(e.ctx, CreateContactInput{
@@ -129,6 +131,7 @@ func (e *promoteConsentEnv) requirePromoted(t *testing.T, lead ids.LeadID) {
 // A contact merge repoints the promotion outcome to its survivor. Archiving
 // that survivor would destroy merged history, so the demotion is refused.
 func TestDemoteOfAMergeSurvivorIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	// Owned by the rep who also owns the duplicate, so the merge carries no
 	// former owner's access.
@@ -165,6 +168,7 @@ func TestDemoteOfAMergeSurvivorIsRefused(t *testing.T) {
 // The hard block: a contact who is a stakeholder on a live deal keeps their
 // commercial state. Nothing moves, and the refusal names the rule.
 func TestDemoteRefusesWhenTheContactIsOnALiveDeal(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "buyer@example.test")
 	contact, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"})
@@ -210,6 +214,7 @@ func TestDemoteRefusesWhenTheContactIsOnALiveDeal(t *testing.T) {
 // The preview runs the promotion's own ladder without writing, so it names
 // the outcome the promotion will take — and leaves no trace of having asked.
 func TestPromotePreviewNamesTheOutcomeWithoutWriting(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const shared = "known@example.test"
 	existing, err := e.store.CreateContact(e.ctx, CreateContactInput{
@@ -305,6 +310,7 @@ func (e *promoteConsentEnv) asStranger() context.Context {
 // "never promoted" — which is the promotion state of somebody else's record,
 // one call at a time. The assertion is that they are the SAME refusal.
 func TestDemoteTellsAStrangerNothingAboutALeadTheyCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	promoted := e.seedLead(t, "reachable@example.test")
 	if _, _, err := e.store.PromoteLead(e.ctx, promoted, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
@@ -342,6 +348,7 @@ func TestDemoteTellsAStrangerNothingAboutALeadTheyCannotSee(t *testing.T) {
 // A rep who may work leads and create contacts — the grants promotion itself
 // runs under — can also undo a promotion, without holding contact.delete.
 func TestDemoteNeedsNoArchiveGrantToUndoACreatedContact(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	rep := e.withGrants(map[string]principal.ObjectGrant{
 		"lead":         {Create: true, Read: true, Update: true, Delete: true},
@@ -369,6 +376,7 @@ func TestDemoteNeedsNoArchiveGrantToUndoACreatedContact(t *testing.T) {
 // A contact that another lead has joined no longer belongs only to the first
 // promotion, so the first lead's demotion is refused.
 func TestDemoteOfAContactAnotherLeadPromotedIntoIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const shared = "twice@example.test"
 	first := e.seedLead(t, shared)
@@ -395,6 +403,7 @@ func TestDemoteOfAContactAnotherLeadPromotedIntoIsRefused(t *testing.T) {
 // the lead's: a role that may work leads but not read contacts is told the
 // outcome (merge) and nothing about who.
 func TestPromotePreviewWithholdsTheContactWithoutTheContactReadGrant(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const shared = "known@example.test"
 	if _, err := e.store.CreateContact(e.ctx, CreateContactInput{
@@ -431,6 +440,7 @@ func TestPromotePreviewWithholdsTheContactWithoutTheContactReadGrant(t *testing.
 // auto-execute writes can commit inside it. Unpinned, the demotion reverses a
 // promotion the approval was no longer describing.
 func TestDemoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "demotepin@example.test")
 	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
@@ -466,6 +476,7 @@ func TestDemoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
 // No pin attaches no precondition, so the REST caller and an agent whose
 // approval carried no version spell the call the same way.
 func TestDemoteWithNoPinIsUnconditioned(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "demoteunpinned@example.test")
 	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
@@ -487,6 +498,7 @@ func TestDemoteWithNoPinIsUnconditioned(t *testing.T) {
 // the promotion mints a contact from lead fields a concurrent edit may have
 // changed since the human approved — content nobody released.
 func TestPromoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "promotepin@example.test")
 
@@ -517,6 +529,7 @@ func TestPromoteRefusesAVersionThePinNoLongerNames(t *testing.T) {
 // demoting it back onto the ladder is then the same duplicate-email collision
 // create and update answer.
 func TestDemoteOfALeadWhoseEmailALiveLeadNowHoldsIsADuplicate(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "promoted-then-taken@example.test")
 	if _, _, err := e.store.PromoteLead(e.ctx, lead, PromoteLeadInput{Trigger: "human_qualify"}); err != nil {

@@ -49,6 +49,7 @@ func expireWithdrawals(t *testing.T, env captureEnv) {
 }
 
 func TestARestoredIdentityComesBackAsItWas(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -74,6 +75,7 @@ func TestARestoredIdentityComesBackAsItWas(t *testing.T) {
 }
 
 func TestOnlyTheSeatThatWithdrewCanRestore(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -85,6 +87,7 @@ func TestOnlyTheSeatThatWithdrewCanRestore(t *testing.T) {
 }
 
 func TestARestoreOfAnAddressDeclaredAgainConflicts(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -101,6 +104,7 @@ func TestARestoreOfAnAddressDeclaredAgainConflicts(t *testing.T) {
 }
 
 func TestARestoreAfterALaterWithdrawalHasMovedOn(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -117,6 +121,7 @@ func TestARestoreAfterALaterWithdrawalHasMovedOn(t *testing.T) {
 }
 
 func TestAWithdrawalPastItsUndoIsPurged(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -135,6 +140,7 @@ func TestAWithdrawalPastItsUndoIsPurged(t *testing.T) {
 }
 
 func TestAWithdrawnLearnedAliasIsNotLearnedAgain(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	store := capturemod.NewOwnerIdentityStore(e.DB())
@@ -178,6 +184,7 @@ func learnAlias(t *testing.T, env captureEnv, store *capturemod.OwnerIdentitySto
 const refusedAliases = `SELECT count(*) FROM capture_alias_refused WHERE value = '` + forwardingAlias + `'`
 
 func TestUndoingTheWithdrawalOfALearnedAliasLiftsItsRefusal(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	store := capturemod.NewOwnerIdentityStore(env.e.DB())
 	seat := seatContext(env.e, env.e.Rep1)
@@ -196,6 +203,7 @@ func TestUndoingTheWithdrawalOfALearnedAliasLiftsItsRefusal(t *testing.T) {
 // A typed address restored after its own removal says nothing about the
 // learned alias the seat refused earlier, so the refusal stays.
 func TestRestoringATypedAddressKeepsALearnedAliasRefused(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	store := capturemod.NewOwnerIdentityStore(env.e.DB())
 	seat := seatContext(env.e, env.e.Rep1)

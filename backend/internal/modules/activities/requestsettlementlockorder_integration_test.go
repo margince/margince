@@ -52,6 +52,7 @@ func writeOutside(e *loadEnv, statement string, args ...any) error {
 // caught only by those old keys. The same write on an unrelated contact does
 // not wait.
 func TestRemovingOrMovingAnAnswersConversationWaitsForTheVerdict(t *testing.T) {
+	t.Parallel()
 	writes := map[string]string{
 		"the sender's address is deleted":             `DELETE FROM contact_email WHERE contact_id = $1`,
 		"the sender's address moves to a contact":     `UPDATE contact_email SET contact_id = $2 WHERE contact_id = $1`,
@@ -115,6 +116,7 @@ func writeOutsideBounded(e *loadEnv, statement string, args ...any) error {
 // the verdict over the evidence it changed is dropped. The audience table
 // lock stops the edit after its row lock.
 func TestAnEditHoldingItsAnswerAndAVerdictStartedThenBothFinish(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Edit and verdict", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Here is the report.", requestInstant.Add(time.Hour))

@@ -77,6 +77,7 @@ func linkFederatedIdentityRow(t *testing.T, conn *pgx.Conn, userID ids.UserID, s
 }
 
 func TestResolveFederatedUserPrefersLinkedSubjectOverEmail(t *testing.T) {
+	t.Parallel()
 	svc, conn, userID, email := seedSSOEnv(t, "sso-subject-first")
 	linkFederatedIdentityRow(t, conn, userID, "sub-1")
 
@@ -99,6 +100,7 @@ func TestResolveFederatedUserPrefersLinkedSubjectOverEmail(t *testing.T) {
 }
 
 func TestResolveFederatedUserFallsBackToEmailOnFirstLink(t *testing.T) {
+	t.Parallel()
 	svc, _, userID, email := seedSSOEnv(t, "sso-email-fallback")
 
 	var resolved ids.UserID
@@ -120,6 +122,7 @@ func TestResolveFederatedUserFallsBackToEmailOnFirstLink(t *testing.T) {
 }
 
 func TestResolveFederatedUserRefusesUnknownEmail(t *testing.T) {
+	t.Parallel()
 	svc, _, _, _ := seedSSOEnv(t, "sso-unknown-email")
 
 	err := svc.db.Tx(context.Background(), func(tx pgx.Tx) error {
@@ -137,6 +140,7 @@ func TestResolveFederatedUserRefusesUnknownEmail(t *testing.T) {
 // login once the user behind it is no longer live, not resolved straight
 // from federated_identity with no LiveMemberSQL check at all.
 func TestResolveFederatedUserRefusesADeactivatedLinkedSubject(t *testing.T) {
+	t.Parallel()
 	svc, conn, userID, email := seedSSOEnv(t, "sso-deactivated-linked")
 	linkFederatedIdentityRow(t, conn, userID, "sub-1")
 	if _, err := conn.Exec(context.Background(),
@@ -166,6 +170,7 @@ func TestResolveFederatedUserRefusesADeactivatedLinkedSubject(t *testing.T) {
 // a future path ever activated an account without setting a credential. The
 // fixture below sets the status explicitly so it keeps testing THIS gate.
 func TestResolveFederatedUserRefusesAnUnactivatedInvite(t *testing.T) {
+	t.Parallel()
 	svc, conn, _, _ := seedSSOEnv(t, "sso-unactivated-invite")
 	invitedEmail := "invited-never-activated@example.com"
 	if _, err := conn.Exec(context.Background(),
@@ -192,6 +197,7 @@ func TestResolveFederatedUserRefusesAnUnactivatedInvite(t *testing.T) {
 // pins, and they stay: a resident runner will land under that flag and must not
 // become a sign-in.
 func TestResolveFederatedUserRefusesTheAgentSeat(t *testing.T) {
+	t.Parallel()
 	svc, conn, _, _ := seedSSOEnv(t, "sso-agent-seat")
 	agentEmail := "agent@sso-agent-seat.gradion.local"
 	seedAgentIdentity(t, conn, agentEmail)
@@ -213,6 +219,7 @@ func TestResolveFederatedUserRefusesTheAgentSeat(t *testing.T) {
 // must transfer the subject rather than tripping
 // federated_identity_provider_subject_key underneath the caller.
 func TestLinkFederatedIdentityTransfersAStaleSubjectFromANonLiveUser(t *testing.T) {
+	t.Parallel()
 	svc, conn, liveUserID, liveEmail := seedSSOEnv(t, "sso-stale-subject-transfer")
 
 	staleUserID := ids.New[ids.UserKind]()
@@ -251,6 +258,7 @@ func TestLinkFederatedIdentityTransfersAStaleSubjectFromANonLiveUser(t *testing.
 }
 
 func TestLoginViaFederatedIdentityRelinksOnSubjectChange(t *testing.T) {
+	t.Parallel()
 	svc, conn, userID, email := seedSSOEnv(t, "sso-relink")
 	linkFederatedIdentityRow(t, conn, userID, "sub-old")
 
@@ -278,6 +286,7 @@ func TestLoginViaFederatedIdentityRelinksOnSubjectChange(t *testing.T) {
 // no real Google, so only those three collaborators are faked.
 
 func TestOIDCSignInFullRoundTrip(t *testing.T) {
+	t.Parallel()
 	svc, _, userID, email := seedSSOEnv(t, "sso-full-round-trip")
 
 	h := Handlers{svc: svc}.WithOIDCProviders(
@@ -325,6 +334,7 @@ func TestOIDCSignInFullRoundTrip(t *testing.T) {
 }
 
 func TestOIDCSignInFullRoundTripRefusesUnknownEmail(t *testing.T) {
+	t.Parallel()
 	svc, _, _, _ := seedSSOEnv(t, "sso-round-trip-unknown-email")
 
 	h := Handlers{svc: svc}.WithOIDCProviders(
@@ -356,6 +366,7 @@ func TestOIDCSignInFullRoundTripRefusesUnknownEmail(t *testing.T) {
 // A sign-in started from the OAuth consent screen lands back on that screen,
 // on the SPA's origin. Every other sign-in lands on the post-login page.
 func TestOIDCSignInLandsOnTheConsentScreenOnlyWhenTheStateSaysSo(t *testing.T) {
+	t.Parallel()
 	svc, _, _, email := seedSSOEnv(t, "sso-consent-landing")
 	for _, tc := range []struct {
 		name            string

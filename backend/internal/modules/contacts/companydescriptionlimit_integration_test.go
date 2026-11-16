@@ -17,6 +17,7 @@ import (
 )
 
 func TestACompanyDescriptionPastTheLimitIsRefusedNamingTheField(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	atTheLimit := strings.Repeat("x", CompanyDescriptionMax)

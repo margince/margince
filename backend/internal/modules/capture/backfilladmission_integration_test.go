@@ -72,6 +72,7 @@ func admissionRunWith(t *testing.T, provider connector.Connector) (context.Conte
 }
 
 func TestIndependentRegistriesShareOneInstallationImportBudget(t *testing.T) {
+	t.Parallel()
 	for _, limit := range []int{1, 2} {
 		t.Run(fmt.Sprintf("limit_%d", limit), func(t *testing.T) {
 			ctx, first, firstID := admissionRun(t)
@@ -139,6 +140,7 @@ func TestIndependentRegistriesShareOneInstallationImportBudget(t *testing.T) {
 }
 
 func TestARefusedAdmissionEnqueueRollsBackThePromotion(t *testing.T) {
+	t.Parallel()
 	ctx, reg, id := admissionRun(t)
 	refusal := errors.New("queue unavailable")
 	queue := &recordedBackfillQueue{generations: map[ids.UUID]int64{}, refused: refusal}
@@ -181,6 +183,7 @@ func (p *rateLimitedHistory) BackfillPage(context.Context, connector.Auth, time.
 }
 
 func TestHoldAndLowerLimitPreserveTheQueuedRunsRetryDeadline(t *testing.T) {
+	t.Parallel()
 	ctx, registry, firstID := admissionRun(t)
 	registry.WithBackfillAdmission(2, false)
 	provider := &rateLimitedHistory{}
@@ -265,6 +268,7 @@ func TestHoldAndLowerLimitPreserveTheQueuedRunsRetryDeadline(t *testing.T) {
 }
 
 func TestOneRefusedAdmissionDoesNotBlockTheNextImport(t *testing.T) {
+	t.Parallel()
 	ctx, reg, firstID := admissionRun(t)
 	_, _, secondID := admissionRun(t)
 	owner, _ := setupCaptureDB(t)
@@ -303,6 +307,7 @@ func TestOneRefusedAdmissionDoesNotBlockTheNextImport(t *testing.T) {
 }
 
 func TestMailboxBackoffYieldsItsSlotButSharedBackoffKeepsIt(t *testing.T) {
+	t.Parallel()
 	for _, mailbox := range []bool{true, false} {
 		t.Run(fmt.Sprint(mailbox), func(t *testing.T) {
 			ctx, reg, firstID := admissionRun(t)
@@ -344,6 +349,7 @@ func TestMailboxBackoffYieldsItsSlotButSharedBackoffKeepsIt(t *testing.T) {
 }
 
 func TestARefusedSuccessorLeavesTheCurrentExecutionRetryable(t *testing.T) {
+	t.Parallel()
 	ctx, reg, id := admissionRunWith(t, &rateLimitedHistory{name: "gmail"})
 	queue := &recordedBackfillQueue{generations: map[ids.UUID]int64{}}
 	if err := reg.DispatchBackfills(ctx, queue.scheduler(), false); err != nil {
@@ -386,6 +392,7 @@ func (p *blockedHistory) BackfillPage(ctx context.Context, _ connector.Auth, _ t
 }
 
 func TestLoweringAdmissionWaitsForTheActivePagesLocks(t *testing.T) {
+	t.Parallel()
 	ctx, first, _ := admissionRun(t)
 	provider := &blockedHistory{name: "gmail", entered: make(chan struct{}), release: make(chan struct{})}
 	otherCtx, second, id := admissionRunWith(t, provider)
@@ -439,6 +446,7 @@ func TestLoweringAdmissionWaitsForTheActivePagesLocks(t *testing.T) {
 }
 
 func TestAnEnrichmentReservationIsRefundedAfterItsPageLosesOwnership(t *testing.T) {
+	t.Parallel()
 	ctx, _, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	store := capture.NewAutoEnrichStore(database.BindTo(pool, ws))

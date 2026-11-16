@@ -48,6 +48,7 @@ func readRecordTags(t *testing.T, e *apptest.AppEnv, entityType, id string) (rec
 // One route, three types: the panel that draws them is one component, and a
 // per-type block on each record response would be three copies that drift.
 func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Cross Type")
 
@@ -106,6 +107,7 @@ func TestRecordTagsAnswersForAllThreeAdvertisedTypes(t *testing.T) {
 
 // The assignment says WHO, which is the half the panel shows beside the word.
 func TestRecordTagsNamesWhoAppliedTheTag(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Applied By Someone")
 	contact := createContactWithTag(t, e, "Tagged", tag)
@@ -136,6 +138,7 @@ func TestRecordTagsNamesWhoAppliedTheTag(t *testing.T) {
 // vocabulary has to be distinguishable from one looking at a record with no
 // tags, because "no tags" is a claim about the record they cannot make.
 func TestRecordTagsWithheldIsNotTheSameAsEmpty(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Hidden Word")
 	tagged := createContactWithTag(t, e, "Has A Tag", tag)
@@ -189,6 +192,7 @@ func revokeTagRead(t *testing.T, e *apptest.AppEnv) {
 // does not un-tag a history that was true — and rides marked so the panel can
 // mute it rather than hide it.
 func TestRecordTagsCarriesArchivedWordsMarked(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	tag := createTag(t, e, "Retired Word")
 	contact := createContactWithTag(t, e, "Tagged Before Retirement", tag)
@@ -213,6 +217,7 @@ func TestRecordTagsCarriesArchivedWordsMarked(t *testing.T) {
 // The advertised types only. `taggable` admits project too, and answering for
 // it here would ship a surface no screen offers.
 func TestRecordTagsRefusesATypeItDoesNotServe(t *testing.T) {
+	t.Parallel()
 	e := tagEnv(t)
 	var problem integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/records/project/"+ids.NewV7().String()+"/tags", nil, nil, &problem); status != http.StatusUnprocessableEntity {

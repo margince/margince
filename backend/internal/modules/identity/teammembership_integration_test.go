@@ -29,6 +29,7 @@ import (
 )
 
 func TestATeammateSharesALiveTeamAndAStrangerDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "team-membership")
 	ctx := context.Background()
 
@@ -76,6 +77,7 @@ func TestATeammateSharesALiveTeamAndAStrangerDoesNot(t *testing.T) {
 // memberships survive the archive so a restore brings them back, which is
 // exactly why this needs asserting rather than assuming.
 func TestAnArchivedTeamMakesNobodyTeammates(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "team-membership-archived")
 	ctx := context.Background()
 
@@ -122,6 +124,7 @@ func TestAnArchivedTeamMakesNobodyTeammates(t *testing.T) {
 // a departed contact's queue, and the other puts a coaching notice in an inbox
 // nobody will ever read.
 func TestADeactivatedColleagueIsNoLongerATeammate(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "team-membership-deactivated")
 	ctx := context.Background()
 
@@ -175,6 +178,7 @@ func TestADeactivatedColleagueIsNoLongerATeammate(t *testing.T) {
 // path as any other ask, and refusing them their own queue would be a bug the
 // two-contact cases above cannot see.
 func TestACallerIsTheirOwnTeammate(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "team-membership-self")
 
 	// No team anywhere: the answer must not depend on membership rows existing.
@@ -193,6 +197,7 @@ func TestACallerIsTheirOwnTeammate(t *testing.T) {
 // are not teammates — where the truth is that the asker has no place on it. The
 // refusal keeps an agent seat or a background pass from probing the chart.
 func TestACallerWithNoHumanBehindItIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "team-membership-nonhuman")
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws.UUID)
 

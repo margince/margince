@@ -31,6 +31,7 @@ import (
 // next call after revocation, asserted on the hosted MCP transport.
 
 func TestAnApprovedCallRedeemsOnceByItsApprovalID(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 
 	code := o.authorize(t, url.Values{"scope": {"read enrich"}})
@@ -79,6 +80,7 @@ func TestAnApprovedCallRedeemsOnceByItsApprovalID(t *testing.T) {
 }
 
 func TestHostedMCPTransportSharesTheGovernedSurface(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	code := o.authorize(t, nil)
 	_, body := o.exchange(t, url.Values{"code": {code}})

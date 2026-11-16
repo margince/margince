@@ -37,6 +37,7 @@ func reportRow(t *testing.T, fields []VCardField, field string) VCardField {
 }
 
 func TestACardWithAWorkNumberAndNoMobileReportsTheMobileAsNotInTheCard(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -70,6 +71,7 @@ func TestACardWithAWorkNumberAndNoMobileReportsTheMobileAsNotInTheCard(t *testin
 }
 
 func TestAMatchedCardThatReplacesATitleReportsItReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	typed := "Chief Financial Officer"
@@ -119,6 +121,7 @@ func TestAMatchedCardThatReplacesATitleReportsItReplaced(t *testing.T) {
 // A correction on the ledger needs the verdict module's ruling, so a store
 // built without that reader refuses the card rather than guessing.
 func TestACardOverACorrectionNeedsTheVerdictReader(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -145,6 +148,7 @@ func TestACardOverACorrectionNeedsTheVerdictReader(t *testing.T) {
 }
 
 func TestACardWithTwoWorkNumbersReportsBoth(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -171,6 +175,7 @@ func TestACardWithTwoWorkNumbersReportsBoth(t *testing.T) {
 }
 
 func TestAPhotoProposalAndAReviewCarryNoFieldReport(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.CreateContact(ctx, CreateContactInput{

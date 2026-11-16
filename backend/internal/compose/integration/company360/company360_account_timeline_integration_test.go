@@ -115,6 +115,7 @@ func containsActivity(got []ids.UUID, want ids.UUID) bool {
 // timeline list and the company view's own section — which must agree,
 // because the section is that list.
 func TestAccountTimelineReachesMailThroughItsContactsAndDeals(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -201,6 +202,7 @@ func TestAccountTimelineReachesMailThroughItsContactsAndDeals(t *testing.T) {
 // employee's meeting is not this account's, and neither is one whose only
 // attendee works somewhere else.
 func TestAccountTimelineReachesAMeetingThroughSomebodyInTheRoom(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 
@@ -246,6 +248,7 @@ func TestAccountTimelineReachesAMeetingThroughSomebodyInTheRoom(t *testing.T) {
 // not hand a rep an item whose only link is a contact they cannot open — here
 // a colleague's capture-private contact.
 func TestTheAccountWalkDoesNotWidenTheCallersReadScope(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 
@@ -281,6 +284,7 @@ func TestTheAccountWalkDoesNotWidenTheCallersReadScope(t *testing.T) {
 // an activity reachable through TWO arms at once — the case a join would
 // duplicate and a duplicate is what shifts a keyset page boundary.
 func TestAccountTimelinePagesWithoutDuplicatesOrOmissions(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 
@@ -340,6 +344,7 @@ func TestAccountTimelinePagesWithoutDuplicatesOrOmissions(t *testing.T) {
 // only through a contact is on the page, so it is new here too — a rep told
 // "0 new" above three unread emails would stop trusting the marker.
 func TestSinceLastVisitCountsMailRolledUpThroughAContact(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -382,6 +387,7 @@ func TestSinceLastVisitCountsMailRolledUpThroughAContact(t *testing.T) {
 // would collapse the only distinction that matters — an account we mailed a
 // fortnight ago with no reply reads identically to one that just wrote to us.
 func TestLastTouchSeparatesWhoWroteLastAndWalksTheSameThreeLinks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)
@@ -418,6 +424,7 @@ func TestLastTouchSeparatesWhoWroteLastAndWalksTheSameThreeLinks(t *testing.T) {
 // heard from them" distinct from "we never looked". Null is the account's
 // answer; an absent section would be the caller's.
 func TestLastTouchIsNullRatherThanZeroWhenNothingWasCaptured(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	owner := integration.OwnerConn(t)
 	svc := company360Service(e)

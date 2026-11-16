@@ -161,6 +161,7 @@ func (s *scenario) seedCompanyActivity(
 // this test did. The prose reaches a caller through read_record, so that is
 // where it is asserted.
 func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	c := s.seedContradiction(t)
 
@@ -252,6 +253,7 @@ func (s *scenario) activityBody(t *testing.T, activity ids.UUID) string {
 // A tool that dated the first item and left the rest bare would pass a
 // single-record check while leaving most of a history undated.
 func TestCase6EveryEventCarriesItsOwnDate(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	c := s.seedContradiction(t)
 
@@ -290,6 +292,7 @@ func TestCase6EveryEventCarriesItsOwnDate(t *testing.T) {
 // back. That second half is the criterion — "everything relevant reaches the
 // caller" is about the evidence, not about the names.
 func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
+	t.Parallel()
 	s := boot(t, scopesRead)
 	first := s.seedContradiction(t)
 	more := s.seedTwoMorePastCases(t)

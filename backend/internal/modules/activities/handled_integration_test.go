@@ -46,6 +46,7 @@ func handledFixture(t *testing.T, e *loadEnv, subject string) (contact, message 
 }
 
 func TestMarkingAMessageDoneTakesItOffItsReadersListOnly(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	_, message := handledFixture(t, e, "Answered on the phone")
 	rep, colleague := e.asSeat(e.rep), e.asSeat(e.other)
@@ -82,6 +83,7 @@ func TestMarkingAMessageDoneTakesItOffItsReadersListOnly(t *testing.T) {
 // The customer's next message is new work. Nothing has to wake the old state:
 // the new message is its own row and nobody has marked it.
 func TestADoneMessageComesBackWhenTheCustomerWritesAgain(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact, message := handledFixture(t, e, "Handled in the meeting")
 	rep := e.asSeat(e.rep)
@@ -107,6 +109,7 @@ func TestADoneMessageComesBackWhenTheCustomerWritesAgain(t *testing.T) {
 // Done is a disposition, so it counts in Disposed. It is never a reply, so the
 // answered count and the median do not move.
 func TestMarkingDoneCountsAsPutDownAndNotAsAReply(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	_, message := handledFixture(t, e, "Settled another way")
 	from, to := window()
@@ -135,6 +138,7 @@ func TestMarkingDoneCountsAsPutDownAndNotAsAReply(t *testing.T) {
 // The table's shape check: Done waits on nothing, so a reopen condition on it
 // is refused.
 func TestADoneStateCarriesNoReopenCondition(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	_, message := handledFixture(t, e, "Shape check")
 	if _, err := e.owner.Exec(context.Background(),
@@ -169,6 +173,7 @@ func handledTrail(t *testing.T, e *loadEnv, message ids.UUID) (audited, announce
 // carried is replaced, whatever it waited on. A lifted reply or meeting snooze
 // would otherwise bring that request back the moment the card is done.
 func TestDoneOnTheCardReplacesAnEarlierRequestsSnooze(t *testing.T) {
+	t.Parallel()
 	for _, reopen := range []string{"reply", "meeting"} {
 		t.Run(reopen, func(t *testing.T) {
 			e := setupLoad(t)
@@ -205,6 +210,7 @@ func TestDoneOnTheCardReplacesAnEarlierRequestsSnooze(t *testing.T) {
 // waiting for theirs. A meeting or a note is refused with the fault threadOf
 // gives, and nothing is stored.
 func TestDoneIsRefusedOnAnythingButAMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	meeting, note := ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
@@ -227,6 +233,7 @@ func TestDoneIsRefusedOnAnythingButAMessage(t *testing.T) {
 // the reader's own newest message to the contact, which the contact page's
 // waiting card rests on. It lands in the state the Worklist's Done writes.
 func TestDoneTakesOurOwnWaitingMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	sent, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 24*time.Hour)
 	if err := handledStore(e).MarkMessageHandled(e.asSeat(e.rep), ids.From[ids.ActivityKind](sent)); err != nil {
@@ -247,6 +254,7 @@ func TestDoneTakesOurOwnWaitingMessage(t *testing.T) {
 // and nothing is stored. That is a colleague's message, one we wrote again
 // after, and one the contact has answered.
 func TestDoneRefusesASentMessageNoWaitingCardRestsOn(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	colleagues := e.customerAt(t, "customer")
 	theirs, _ := e.sentTo(t, colleagues, "", 24*time.Hour)
@@ -283,6 +291,7 @@ func readerStateRows(t *testing.T, e *loadEnv, activity ids.UUID) int {
 // Disposed counts only a customer's inbound message, whatever audit rows other
 // activities carry.
 func TestDisposedCountsOnlyInboundMessages(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	meeting := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
@@ -307,6 +316,7 @@ func TestDisposedCountsOnlyInboundMessages(t *testing.T) {
 // An agent marks a message done for its user, and the message leaves that user's
 // list. Passportless work has no list and is refused.
 func TestAnAgentMarksAMessageDoneOnItsUsersList(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	_, message := handledFixture(t, e, "Answered by the agent")
 	rep := e.asSeat(e.rep)

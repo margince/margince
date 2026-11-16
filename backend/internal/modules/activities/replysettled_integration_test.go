@@ -87,6 +87,7 @@ func (e *loadEnv) stampOf(t *testing.T, message ids.UUID) (stamp *time.Time, ver
 // The stamp only lets the owed check stop early. At every instant, a message is
 // owed when and only when it was before the stamp existed.
 func TestTheSettledStampNeverChangesWhatIsOwed(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	buyer := "buyer-" + ids.NewV7().String() + "@customer.test"
 	now := clocktest.Now(t)
@@ -145,6 +146,7 @@ func TestTheSettledStampNeverChangesWhatIsOwed(t *testing.T) {
 // earliest message written on it, and a thread whose messages all came later
 // keeps its stamp.
 func TestOneStatementClearsEachThreadFromItsOwnEarliestMessage(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	buyer := "buyer-" + ids.NewV7().String() + "@customer.test"
 	now := clocktest.Now(t)

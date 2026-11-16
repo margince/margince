@@ -41,6 +41,7 @@ func (o *oauthEnv) userIDByEmail(t *testing.T, email string) string {
 // closed at deactivation, not merely re-checked at redemption, so a code
 // minted before it and redeemed after a later reactivation still fails.
 func TestAPendingConsentDoesNotSurviveItsHumansDeactivation(t *testing.T) {
+	t.Parallel()
 	o := setupOAuth(t)
 	code := o.authorize(t, url.Values{"scope": {"read"}})
 	o.DescribeCompany(t)

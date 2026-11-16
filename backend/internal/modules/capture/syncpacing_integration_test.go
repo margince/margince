@@ -105,6 +105,7 @@ func pacedWithin(ctx context.Context, t *testing.T, provider string, low, high t
 // not re-swept hot, near enough that a provider recovering within the hour is
 // picked up without an operator.
 func TestARefusedSyncPacesTheRetryOnTheLadder(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	reg.Register(refusingConnector{})
 
@@ -117,6 +118,7 @@ func TestARefusedSyncPacesTheRetryOnTheLadder(t *testing.T) {
 // A healthy sync paces the next one at the interval an admin set, read when
 // the sync records itself — so a change reaches the very next sync.
 func TestAHealthySyncPacesTheNextOneAtTheConfiguredInterval(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, ws := newCaptureRegistryFixture(t)
 	// Distinctive on purpose: the default is two minutes, so an interval that
 	// never reached the write would still land inside any bound wide enough to
@@ -134,6 +136,7 @@ func TestAHealthySyncPacesTheNextOneAtTheConfiguredInterval(t *testing.T) {
 // process running behind the database under-honoured the very number the
 // provider asked for, silently.
 func TestARateLimitedSyncHonoursTheProvidersRetryAfter(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	reg.Register(rateLimitedConnector{retryAfter: 3 * time.Hour})
 
@@ -146,9 +149,7 @@ func TestARateLimitedSyncHonoursTheProvidersRetryAfter(t *testing.T) {
 }
 
 // setMailSyncSeconds saves the mail-sync interval the way an admin does,
-// through the capture settings store, and saves the default back when the test
-// ends: the setting is installation-wide and the package's other tests pace at
-// the default.
+// through the capture settings store.
 func setMailSyncSeconds(ctx context.Context, t *testing.T, ws ids.WorkspaceID, seconds int) {
 	t.Helper()
 	_, pool := setupCaptureDB(t)
@@ -170,9 +171,4 @@ func setMailSyncSeconds(ctx context.Context, t *testing.T, ws ids.WorkspaceID, s
 	if err := save(ctx, seconds); err != nil {
 		t.Fatalf("saving the mail sync interval: %v", err)
 	}
-	t.Cleanup(func() {
-		if err := save(context.Background(), capture.DefaultMailSyncIntervalSeconds); err != nil {
-			t.Errorf("restoring the mail sync interval: %v", err)
-		}
-	})
 }

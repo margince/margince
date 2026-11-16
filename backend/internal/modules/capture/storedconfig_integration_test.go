@@ -48,6 +48,7 @@ func captureAdmin(ctx context.Context, ws ids.WorkspaceID) context.Context {
 // the process binding, and the settings store refuses any other value. Not
 // parallel: the binding is the process's own.
 func TestABootSetSyncIntervalPacesTheSyncAndRefusesAChange(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	store, cfg := captureSettingsStore(t, pool, "MARGINCE_CAPTURE_MAIL_SYNC_INTERVAL_SECONDS=1800")
@@ -76,6 +77,7 @@ func TestABootSetSyncIntervalPacesTheSyncAndRefusesAChange(t *testing.T) {
 // store refuses a different one. With no boot source the pass reads what an
 // admin saved. Not parallel: the binding is the process's own.
 func TestTheConfidentialityPassReadsTheBootSetCapBeforeASavedOne(t *testing.T) {
+	t.Parallel()
 	ctx, _, _, ws := newCaptureRegistryFixture(t)
 	_, pool := setupCaptureDB(t)
 	threads := capture.NewThreadVerdictStore(database.BindTo(pool, ws))

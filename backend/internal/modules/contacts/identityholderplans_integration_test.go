@@ -20,6 +20,7 @@ import (
 )
 
 func TestIdentityHolderPlansReadOnlyTheRequestedMailboxes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	var wanted ids.ContactID
@@ -35,7 +36,7 @@ func TestIdentityHolderPlansReadOnlyTheRequestedMailboxes(t *testing.T) {
 			wantedLead = ids.From[ids.LeadKind](ids.UUID(lead.Id))
 		}
 	}
-	// Planner statistics survive resets; measure the population this fixture seeded.
+	// Measure the population this fixture seeded.
 	analyzeAsOwner(t, "contact_email", "contact", "lead")
 	config := e.store.db.Pool().Config()
 	config.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeCacheStatement
@@ -141,6 +142,7 @@ func identityMailPlanIsBounded(node mailboxPlanNode, matches, leads int) bool {
 }
 
 func TestIdentityHoldersKeepBothLanesAndExcludeArchivedContacts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	const profile = "https://www.linkedin.com/in/shared-holder"
@@ -184,6 +186,7 @@ func TestIdentityHoldersKeepBothLanesAndExcludeArchivedContacts(t *testing.T) {
 }
 
 func TestIdentityHoldersFoldDomainsWithoutRoutingGmailReviewPairs(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	international := ids.From[ids.ContactKind](e.plainContact(ctx, t, "Domain Holder", "pat@xn--bcher-kva.example"))

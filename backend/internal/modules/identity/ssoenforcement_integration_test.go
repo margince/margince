@@ -35,6 +35,7 @@ func sessionCount(t *testing.T, e *revocationEnv, userID ids.UserID) int {
 }
 
 func TestEnforcedSSORefusesANonAdminPasswordLogin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sso-enforced")
 	enforceSSO(e)
 
@@ -54,6 +55,7 @@ func TestEnforcedSSORefusesANonAdminPasswordLogin(t *testing.T) {
 }
 
 func TestEnforcedSSOKeepsAdminPasswordLoginAsBreakGlass(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sso-breakglass")
 	enforceSSO(e)
 
@@ -67,6 +69,7 @@ func TestEnforcedSSOKeepsAdminPasswordLoginAsBreakGlass(t *testing.T) {
 }
 
 func TestEnforcedSSOStillRefusesAWrongPasswordNeutrally(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sso-wrongpw")
 	enforceSSO(e)
 
@@ -79,6 +82,7 @@ func TestEnforcedSSOStillRefusesAWrongPasswordNeutrally(t *testing.T) {
 }
 
 func TestSSONotEnforcedLetsAMemberLogInWithPassword(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "sso-off")
 	// requireSSO left nil: an installation that never set the policy behaves
 	// exactly as before.

@@ -18,6 +18,7 @@ import (
 )
 
 func TestTaskIntentSurvivesAnUnrelatedEditAndClearsWithTheDeadline(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil)

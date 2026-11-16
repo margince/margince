@@ -75,6 +75,7 @@ func allocationOf(t *testing.T, products []crmcontracts.DealProduct, id ids.Prod
 // lines' net before tax, in the offer's currency, with the product's kind.
 // A line without a product allocates nothing.
 func TestAcceptingAnOfferAllocatesTheDealsProducts(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	ctx := e.productCtx()
@@ -159,6 +160,7 @@ func TestAnAcceptThatOnlySwapsProductsAuditsTheDeal(t *testing.T) {
 // A manual set replaces the offer's allocations and a later accepted offer
 // leaves it alone: the human's answer outlives the document's.
 func TestAManualProductSetOutlivesTheNextAcceptedOffer(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	ctx := e.productCtx()
@@ -200,6 +202,7 @@ func TestAManualProductSetOutlivesTheNextAcceptedOffer(t *testing.T) {
 // A set that adds up to more than the deal is refused, and clearing the set
 // hands the products back to the accepted offer.
 func TestAProductSetStaysInsideTheDealAndClearsBackToTheOffer(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	ctx := e.productCtx()
@@ -235,6 +238,7 @@ func TestAProductSetStaysInsideTheDealAndClearsBackToTheOffer(t *testing.T) {
 // holds the set it read, so it is refused instead of dropping the first.
 // Neither save moves the deal's version, so an open deal form stays valid.
 func TestASecondProductSaveFromAStaleReadIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	ctx := e.productCtx()
@@ -293,6 +297,7 @@ func wantStaleTagRefused(t *testing.T, e *reviewEnv, dealID ids.DealID, staleTag
 // An accepted offer rewrites the deal's offer rows, so an editor that read
 // the set before the accept cannot save over the accept's products.
 func TestAnAcceptedOfferInvalidatesAnEarlierProductRead(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	ctx := e.productCtx()
@@ -318,6 +323,7 @@ func TestAnAcceptedOfferInvalidatesAnEarlierProductRead(t *testing.T) {
 // estimate mode, an editor that read the hand-set split before the lines
 // cannot save over what the lines left.
 func TestLinePricingInvalidatesAnEarlierProductRead(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	suite := seedKindProduct(t, e, "Suite", "software")

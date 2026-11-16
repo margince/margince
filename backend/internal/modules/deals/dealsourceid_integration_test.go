@@ -33,6 +33,7 @@ func createSourcedDeal(ctx context.Context, t *testing.T, e *configEnv, name, sy
 }
 
 func TestADealIsFoundByItsIDInTheOutsideSystem(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.asDealWriter()
 	system := freshSystem()
@@ -55,6 +56,7 @@ func TestADealIsFoundByItsIDInTheOutsideSystem(t *testing.T) {
 }
 
 func TestTheSameOutsideIDCannotNameTwoDeals(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	ctx := e.asDealWriter()
 	system := freshSystem()
@@ -72,6 +74,7 @@ func TestTheSameOutsideIDCannotNameTwoDeals(t *testing.T) {
 // A deal is an identity table: every seat holding deal:read reads every deal,
 // so the lookup's boundary is the object grant and not row scope.
 func TestTheOutsideIDLookupOfDealsFollowsTheDealReadGrant(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	system := freshSystem()
 	if err := createSourcedDeal(e.asDealWriter(), t, e, "Renewal 2027", system, "D-1"); err != nil {

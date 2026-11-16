@@ -28,6 +28,7 @@ import (
 )
 
 func TestConnectRefusesAGrantFromADeactivatedHuman(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedShippedRoles(t, e)
 	holdOnlyRole(t, e, e.Rep1, "rep")

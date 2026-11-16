@@ -19,6 +19,7 @@ import (
 // A received message whose capture recorded no sender participant still shows
 // who sent it: on a received message the counterparty is the sender.
 func TestAReceivedMessageAlwaysNamesItsSender(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	id := seedEmailRequest(t, e, "Please send the report", "commitment", OwedVerdictAsksUs)
 	// An older capture dropped a sender address the seat held, leaving no row.
@@ -37,6 +38,7 @@ func TestAReceivedMessageAlwaysNamesItsSender(t *testing.T) {
 // seats they resolved to. The envelope folds the two statements of one human
 // back into one line, and leaves a bare address nobody resolved standing.
 func TestTheEnvelopeNamesEachPartyOnce(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -82,6 +84,7 @@ func TestTheEnvelopeNamesEachPartyOnce(t *testing.T) {
 // A sender writing from their SECOND address still folds: the contact row
 // borrows the address the message stated, not their primary one.
 func TestTheFoldRecognisesASecondaryAddress(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by)
@@ -110,6 +113,7 @@ func TestTheFoldRecognisesASecondaryAddress(t *testing.T) {
 // A contact the logger linked but no header names keeps its participant row as
 // evidence of the conversation, and the envelope does not list them.
 func TestTheEnvelopeListsOnlyThePartiesTheHeadersName(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	sender, from := e.mailContact(t, "sender", "workspace")
 	firstCc, firstCcAddress := e.mailContact(t, "first-cc", "workspace")
@@ -146,6 +150,7 @@ func TestTheEnvelopeListsOnlyThePartiesTheHeadersName(t *testing.T) {
 // A logged email that states no header knows its parties only through the
 // contacts linked to it, so those contacts are its envelope.
 func TestALoggedEmailWithNoHeadersListsItsLinkedContacts(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	contact, _ := e.mailContact(t, "linked", "workspace")
 	subject, direction := "hello", "inbound"
@@ -169,6 +174,7 @@ func TestALoggedEmailWithNoHeadersListsItsLinkedContacts(t *testing.T) {
 // A promise in a sent email is made to whom the headers address. A contact
 // the logger linked but no header names is not a recipient of it.
 func TestASentMessageIsAddressedOnlyToTheContactsItsHeadersName(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	named, namedAddress := e.mailContact(t, "named", "workspace")
 	unstated, _ := e.mailContact(t, "unstated", "workspace")
@@ -198,6 +204,7 @@ func TestASentMessageIsAddressedOnlyToTheContactsItsHeadersName(t *testing.T) {
 // A contact the headers named stays a party after the address they were named
 // at is archived: the header said what it said when the mail was logged.
 func TestAnArchivedAddressStillNamesItsContactOnTheHeader(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	named, namedAddress := e.mailContact(t, "named", "workspace")
 	subject, direction := "the offer", "outbound"

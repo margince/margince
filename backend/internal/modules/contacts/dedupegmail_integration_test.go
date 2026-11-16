@@ -19,6 +19,7 @@ import (
 )
 
 func TestAGmailSpellingOfOneMailboxIsAReviewPair(t *testing.T) {
+	t.Parallel()
 	cases := []struct{ name, incumbent, candidate string }{
 		{"gmail beside gmail", "ab@gmail.com", "a.b@gmail.com"},
 		{"gmail beside googlemail", "a.b@gmail.com", "ab@googlemail.com"},
@@ -46,6 +47,7 @@ func TestAGmailSpellingOfOneMailboxIsAReviewPair(t *testing.T) {
 }
 
 func TestADottedAddressAtAnotherHostIsNoVariant(t *testing.T) {
+	t.Parallel()
 	for incumbent, candidate := range map[string]string{
 		"ab@example.com": "a.b@example.com", "ab@outlook.com": "a.b@outlook.com", "ab@mail.gmail.com": "a.b@mail.gmail.com",
 	} {
@@ -64,6 +66,7 @@ func TestADottedAddressAtAnotherHostIsNoVariant(t *testing.T) {
 }
 
 func TestAGmailSpellingNeverAnswersARoutingCaller(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.plainContact(ctx, t, "Ab", "ab@gmail.com")
@@ -74,6 +77,7 @@ func TestAGmailSpellingNeverAnswersARoutingCaller(t *testing.T) {
 }
 
 func TestCapturingAGmailSpellingCreatesAContactAndFilesOnePair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent := e.plainContact(ctx, t, "Ab", "ab@gmail.com")
@@ -95,6 +99,7 @@ func TestCapturingAGmailSpellingCreatesAContactAndFilesOnePair(t *testing.T) {
 // that spells the expression differently builds an index the lane never reads.
 // Sequential scans are off, so a small table cannot make one look cheap.
 func TestTheAddressVariantLaneReadsTheMailboxBaseIndex(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.execAs(ctx, t, `

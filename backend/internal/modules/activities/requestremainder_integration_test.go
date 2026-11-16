@@ -27,6 +27,7 @@ func settlementRow(t *testing.T, e *loadEnv, request ids.UUID) (verdict string, 
 // question. A remaining text that is our question is work for them, so it must
 // never retitle our reminder; a quote of their own ask does.
 func TestOnlyAQuoteOfTheirRequestRetitlesTheReminder(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		remaining, wantSubject string
 		wantRemaining          bool
@@ -70,6 +71,7 @@ func TestOnlyAQuoteOfTheirRequestRetitlesTheReminder(t *testing.T) {
 // reminder it retitled can be retitled once more. A settled verdict from the
 // same time is not judged again for this rule.
 func TestAStillOwedVerdictFromAnOlderRuleIsJudgedAgain(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		verdict, remaining string
 		offered            bool

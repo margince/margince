@@ -58,6 +58,7 @@ func seedRoleDeal(t *testing.T, e *integration.Env) (company, deal ids.UUID) {
 // A deal with no company has no contacts to read, so no model is asked and the answer
 // is the empty one.
 func TestADealWithNoCompanyHasNobodyToPropose(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	pipeline, openStage, _ := integration.DealFixture(t, e)
 	deal := e.SeedDeal(t, "No account yet", pipeline, openStage, nil)
@@ -95,6 +96,7 @@ func wrote(t *testing.T, e *integration.Env, contact, company ids.UUID, subject,
 // A role read out of a contact's own sentence becomes a real seat, marked as
 // the product's reading and carrying the words it was read from.
 func TestAReadRoleBecomesASeatTheCommitteeMarks(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -152,6 +154,7 @@ func TestAReadRoleBecomesASeatTheCommitteeMarks(t *testing.T) {
 // of them answers this one. TestOnlyWhatAContactWroteIsOfferedAsTheirEvidence
 // is what pins the read.
 func TestOneContactCannotAssignARoleToAnother(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -193,6 +196,7 @@ func TestOneContactCannotAssignARoleToAnother(t *testing.T) {
 // A seat somebody typed is a human's answer to this question, and the reading
 // may only fill a hole.
 func TestAReadRoleNeverOverwritesASeatAContactTyped(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -235,6 +239,7 @@ func TestAReadRoleNeverOverwritesASeatAContactTyped(t *testing.T) {
 // with a bare name and title is the title-only reading the contract forbids,
 // and it is the one shape a model is most likely to answer wrongly.
 func TestAContactWithNoWordsNeverReachesThePrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -265,6 +270,7 @@ func TestAContactWithNoWordsNeverReachesThePrompt(t *testing.T) {
 // A closed deal has no committee left to propose for, and a deal outside the
 // caller's scope must not be distinguishable from one that does not exist.
 func TestProposingRolesOnAnUnreachableDealIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -291,6 +297,7 @@ var _ company360svc.Completer = (*scriptedLane)(nil)
 // still the principal. Without that, a rep who can merely READ a colleague's
 // deal seats a stakeholder they could not add through the ordinary endpoint.
 func TestAReaderOfSomebodyElsesDealCannotSeatThroughTheReading(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -324,6 +331,7 @@ func TestAReaderOfSomebodyElsesDealCannotSeatThroughTheReading(t *testing.T) {
 // quotable as evidence about the other: the quote is genuine, so nothing
 // downstream can catch it.
 func TestEvidenceFromAnotherDealDoesNotReachThePrompt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -357,6 +365,7 @@ func TestEvidenceFromAnotherDealDoesNotReachThePrompt(t *testing.T) {
 // "nobody here has said anything about who buys", which is a claim about the
 // account rather than about their permissions.
 func TestWithoutTheActivityGrantTheReadingIsRefusedNotEmptied(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -415,6 +424,7 @@ func seatsOn(t *testing.T, deal ids.UUID) int {
 // words invites exactly the confusion the gate then has to catch, and a model
 // asked a leading question answers it.
 func TestOnlyWhatAContactWroteIsOfferedAsTheirEvidence(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -483,6 +493,7 @@ func blockFor(t *testing.T, prompt, mine, theirs string) string {
 // Confirm becomes a button that reports success and changes nothing — the mark
 // stays, the reader presses it again, and nothing they do ever takes.
 func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -541,6 +552,7 @@ func TestConfirmingAReadRoleClearsTheMarkWithoutChangingIt(t *testing.T) {
 // row the scan returned last — so Confirm on one patched the other, changing a
 // role the reader was not looking at or colliding with the uniqueness index.
 func TestASeatCardAddressesItsOwnRowWhenAContactHoldsTwoRoles(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -592,6 +604,7 @@ func TestASeatCardAddressesItsOwnRowWhenAContactHoldsTwoRoles(t *testing.T) {
 // which the rep then sends to a colleague believing it says what they asked
 // for. An ABSENT deal_id is the account-wide case, and only that.
 func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -631,6 +644,7 @@ func ptrDeal(id ids.UUID) *ids.DealID {
 // And the same caller, asking for no deal in particular, gets their draft. Without
 // this the refusal above would pass against an endpoint that refuses everybody.
 func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -669,6 +683,7 @@ func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
 // wrote a letter asking its own sender for a favour, at the workspace's model
 // budget, and the reader had a route the whole time.
 func TestAnIntroRequestRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -698,6 +713,7 @@ func TestAnIntroRequestRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
 // unavailable, not a server fault: the 503 the client has copy for, since a
 // buying role can be typed onto the committee by hand.
 func TestARoleReadingTheModelWithheldIsTheAssistantBeingUnavailable(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company, deal := seedRoleDeal(t, e)
 	buyer := e.SeedContact(t, "Ute Sommer", nil)

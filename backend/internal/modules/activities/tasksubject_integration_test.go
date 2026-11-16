@@ -29,6 +29,7 @@ func loggedTask(ctx context.Context, t *testing.T, e *sendEnv, subject string) c
 }
 
 func TestATaskSubjectIsStoredTrimmed(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	activity := loggedTask(e.as(principal.RowScopeAll), t, e, "  Call the buyer \n")
 	if activity.Subject == nil || *activity.Subject != "Call the buyer" {
@@ -37,6 +38,7 @@ func TestATaskSubjectIsStoredTrimmed(t *testing.T) {
 }
 
 func TestABlankSubjectPatchOnATaskIsRefusedAndAPaddedOneIsTrimmed(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	task := loggedTask(ctx, t, e, "Call the buyer")
@@ -60,6 +62,7 @@ func TestABlankSubjectPatchOnATaskIsRefusedAndAPaddedOneIsTrimmed(t *testing.T) 
 }
 
 func TestABlankSubjectPatchOnANoteKeepsItsBehaviour(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	note := loggedNote(ctx, t, e)
@@ -72,6 +75,7 @@ func TestABlankSubjectPatchOnANoteKeepsItsBehaviour(t *testing.T) {
 }
 
 func TestAPatchThatEmptiesANotesLastContentIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	note := loggedNote(ctx, t, e)
@@ -94,6 +98,7 @@ func TestAPatchThatEmptiesANotesLastContentIsRefused(t *testing.T) {
 }
 
 func TestTheStoreRefusesAnEmptyNoteWhicheverDoorBuiltIt(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	for _, kind := range []string{"note", "call"} {

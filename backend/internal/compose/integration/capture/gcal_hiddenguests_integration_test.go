@@ -17,6 +17,7 @@ import (
 // event proves it internal, so it is captured. The same event with the full
 // list shown, all colleagues, stays out.
 func TestAColleaguesMeetingWithAHiddenGuestListIsCaptured(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	held := captureNow.AddDate(0, 0, -16)
 

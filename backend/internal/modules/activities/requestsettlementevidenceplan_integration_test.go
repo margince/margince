@@ -17,6 +17,7 @@ import (
 // With sequential scans priced out, a predicate no index serves becomes a full
 // primary-key walk: an index scan with no index condition.
 func TestSettlementEvidenceReadsEachActivityByItsID(t *testing.T) {
+	t.Parallel()
 	plan := explainWithoutSeqScans(t, "",
 		`SELECT (`+settlementEvidenceSQL(true)+`) FROM activity a WHERE a.id = $2`,
 		clocktest.Now(t), ids.NewV7())

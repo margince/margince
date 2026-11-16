@@ -72,6 +72,7 @@ func offerCount(t *testing.T, e *reviewEnv, dealID ids.DealID) int {
 // quantity or the negotiated price moves both, and the catalogue keeps its
 // own price.
 func TestBananasPriceTheDealWithoutAnOffer(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -115,6 +116,7 @@ func TestBananasPriceTheDealWithoutAnOffer(t *testing.T) {
 // Two products and a second banana line at another price: the deal is the
 // sum, and each product row sums only its own lines.
 func TestRepeatedProductLinesSumIntoOneProductRow(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -147,6 +149,7 @@ func TestRepeatedProductLinesSumIntoOneProductRow(t *testing.T) {
 // A custom item without a price leaves the deal's value open: no amount, no
 // zero, and the known part beside it.
 func TestAnUnpricedItemLeavesTheDealValueOpen(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -173,6 +176,7 @@ func TestAnUnpricedItemLeavesTheDealValueOpen(t *testing.T) {
 // Two sellers editing from one revision: the first wins and the second is
 // told to reload, so neither change is lost silently.
 func TestASecondEditFromTheSameRevisionIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -189,6 +193,7 @@ func TestASecondEditFromTheSameRevisionIsRefused(t *testing.T) {
 // list. A deal that holds a typed value takes its first line only when the
 // request says the lines replace it.
 func TestLinesOwnTheDealsValue(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -219,6 +224,7 @@ func TestLinesOwnTheDealsValue(t *testing.T) {
 // A product priced in another currency needs a price of the deal's currency;
 // none is converted.
 func TestAProductInAnotherCurrencyNeedsATypedPrice(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	dollars := seedPricedProduct(t, e, "Imported bananas", 250, "USD")
@@ -235,6 +241,7 @@ func TestAProductInAnotherCurrencyNeedsATypedPrice(t *testing.T) {
 // Removing the last line leaves the deal unpriced in lines mode, even with
 // an accepted offer on it: nothing fills the value back in.
 func TestRemovingTheLastLineLeavesTheDealUnpriced(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	bananas := seedPricedProduct(t, e, "Bananas", 200, "EUR")
@@ -279,6 +286,7 @@ func lineEvidenceDescription(evidence map[string]any, side string) string {
 // Every line write records the line as it stood on either side, so a change
 // that moves no total still says what changed.
 func TestALineWriteAuditsTheLineOnBothSides(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	state, err := e.store.AddDealLine(e.productCtx(), dealID, AddDealLineInput{

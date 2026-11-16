@@ -29,6 +29,7 @@ import (
 )
 
 func TestOneMembersLadderIsNotReachableByAnother(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	mine, theirs := ids.NewV7(), ids.NewV7()
 
@@ -50,6 +51,7 @@ func TestOneMembersLadderIsNotReachableByAnother(t *testing.T) {
 }
 
 func TestTheSharedChannelGrantWidensToNullOwnersAndNothingElse(t *testing.T) {
+	t.Parallel()
 	ctx, db := traceWorkspace(t)
 	member := ids.NewV7()
 
@@ -78,6 +80,7 @@ func TestTheSharedChannelGrantWidensToNullOwnersAndNothingElse(t *testing.T) {
 }
 
 func TestALadderCarriesEveryRungIncludingTheOnesTheWindowHides(t *testing.T) {
+	t.Parallel()
 	// The window read filters to funnel stages; this read must not. A rung the
 	// window hides is exactly what a member opens the drawer to see.
 	ctx, db := traceWorkspace(t)
@@ -111,6 +114,7 @@ func TestALadderCarriesEveryRungIncludingTheOnesTheWindowHides(t *testing.T) {
 }
 
 func TestOneMessageToTwoColleaguesKeepsTheirRungsApart(t *testing.T) {
+	t.Parallel()
 	// One email addressed to two colleagues is two trace rows under the SAME
 	// natural key with different owners — the routine case, which is why
 	// user_id is in the unique index at all.
@@ -165,6 +169,7 @@ func myTraceID(ctx context.Context, t *testing.T, db *database.DB, sourceID stri
 }
 
 func TestAnInvocationWithNoMemberReadsNoLadder(t *testing.T) {
+	t.Parallel()
 	// A job tick has no member. Answering "the caller's own rows" for a caller
 	// with no id would be answering for whoever owns a NULL-owner row.
 	ctx, db := traceWorkspace(t)

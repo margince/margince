@@ -57,6 +57,7 @@ func ownDomainWorkspace(t *testing.T) (context.Context, *database.DB) {
 }
 
 func TestReaderAddressesBatchesTheLiveSeatRead(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	user := ids.NewV7()
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
@@ -102,6 +103,7 @@ func TestReaderAddressesBatchesTheLiveSeatRead(t *testing.T) {
 // An administrator adding a domain IS the human vouching for it, so it takes
 // effect without a second confirmation — and it is what makes the drop fire.
 func TestAnAdministratorsDomainIsVerifiedAndSuppressesMail(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	store := capture.NewOwnDomainStore(db)
 
@@ -131,6 +133,7 @@ func TestAnAdministratorsDomainIsVerifiedAndSuppressesMail(t *testing.T) {
 // Adding a domain a mailbox already contributed confirms it rather than failing
 // — that is the whole point of the candidate row.
 func TestAddingACandidateDomainConfirmsIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
@@ -160,6 +163,7 @@ func TestAddingACandidateDomainConfirmsIt(t *testing.T) {
 
 // Removing a domain stops the drop from the next message on.
 func TestRemovingADomainLetsItsMailBeCapturedAgain(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	store := capture.NewOwnDomainStore(db)
 	if _, err := store.Add(ctx, "acme.com"); err != nil {
@@ -187,6 +191,7 @@ func TestRemovingADomainLetsItsMailBeCapturedAgain(t *testing.T) {
 // those domains are in force but are changed on the company page, so offering
 // them as removable rows would promise an action this surface cannot perform.
 func TestTheListSeparatesTheCompanysOwnClaimFromTheRegistry(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	seedAnchorDomain(ctx, t, db, "ourcompany.example")
 	store := capture.NewOwnDomainStore(db)
@@ -212,6 +217,7 @@ func TestTheListSeparatesTheCompanysOwnClaimFromTheRegistry(t *testing.T) {
 // to remove it. The check is the drop itself: a listed candidate's mail is kept,
 // and the mail of a verified row or a hidden candidate is skipped.
 func TestTheListShowsOnlyCandidatesCaptureStillKeeps(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	seedAnchorDomain(ctx, t, db, "ourcompany.example")
 	store := capture.NewOwnDomainStore(db)
@@ -290,6 +296,7 @@ func seedAnchorDomain(ctx context.Context, t *testing.T, db *database.DB, domain
 // set decides whether mail is stored, so folding a mistyped value into
 // something that silently matches nothing would be the worse failure.
 func TestAValueThatIsNotADomainIsRefused(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	store := capture.NewOwnDomainStore(db)
 
@@ -315,6 +322,7 @@ func TestAValueThatIsNotADomainIsRefused(t *testing.T) {
 // control, so it is asserted against a rep-shaped grant rather than a principal
 // holding nothing at all.
 func TestARepReadsTheDomainsAndCannotChangeThem(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	ws, _ := principal.WorkspaceID(ctx)
 	rep := principal.WithActor(principal.WithWorkspaceID(context.Background(), ws),
@@ -357,6 +365,7 @@ func TestARepReadsTheDomainsAndCannotChangeThem(t *testing.T) {
 // and a removal names it in `before` and leaves `after` unset. A predicate that
 // accepted either would pass for a row that recorded the wrong direction.
 func TestBothWritesLeaveAnAuditRowNamingTheDomain(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	store := capture.NewOwnDomainStore(db)
 
@@ -430,6 +439,7 @@ func assertOwnDomainAudited(ctx context.Context, t *testing.T, db *database.DB, 
 // administrator's and the company's own — and off nothing when none is
 // registered. A mailbox-seeded candidate that nobody vouched for is not one.
 func TestColleaguesAreTheTrustedDomainsAndNothingElse(t *testing.T) {
+	t.Parallel()
 	ctx, db := ownDomainWorkspace(t)
 	store := capture.NewOwnDomainStore(db)
 

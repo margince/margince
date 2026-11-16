@@ -27,6 +27,7 @@ import (
 // naming anybody twice. The contact waiting on a reply is seeded LAST so that a
 // read which paged in id order would bury them on the final page.
 func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)
@@ -86,6 +87,7 @@ func TestContactPageWalksTheWholeAccountInRankedOrder(t *testing.T) {
 // Answered needs BOTH directions with ours last: an inbound alone is the
 // waiting case, and a fixture that stopped there would prove the old rule.
 func TestContactPageNarrowsByEngagement(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)
@@ -149,6 +151,7 @@ func TestContactPageNarrowsByEngagement(t *testing.T) {
 
 // A search matches the name or the title, and drops everyone else.
 func TestContactPageSearchesNameAndTitle(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -192,6 +195,7 @@ func TestContactPageSearchesNameAndTitle(t *testing.T) {
 // names a position that order never had: the page would resume from the wrong
 // place and skip contacts silently. Refusing is the only honest answer.
 func TestContactPageRefusesACursorFromAnotherOrder(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -225,6 +229,7 @@ func TestContactPageRefusesACursorFromAnotherOrder(t *testing.T) {
 // asserts the list is behind it rather than re-proving the row scope that read
 // already owns.
 func TestContactPageHidesAnAccountItCannotRead(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 
@@ -243,6 +248,7 @@ func TestContactPageHidesAnAccountItCannotRead(t *testing.T) {
 // that started paging without naming a sort and then named the one it was
 // already using was refused for a difference it could not see.
 func TestContactPageTreatsAnOmittedSortAsRecommended(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -275,6 +281,7 @@ func TestContactPageTreatsAnOmittedSortAsRecommended(t *testing.T) {
 // answers the second press with a 422 on a control the reader was invited to
 // press. Both spellings are declared, and both have to sort.
 func TestContactPageSortsEachColumnBothWays(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	svc := company360Service(e)
@@ -330,6 +337,7 @@ func TestContactPageSortsEachColumnBothWays(t *testing.T) {
 // called, so a nil Completer here is an assertion rather than an omission — if
 // the gate moved below the draft, this panics instead of passing.
 func TestTheIntroDraftIsRefusedWithoutTheContactGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Brandt GmbH", nil)
@@ -365,6 +373,7 @@ func TestTheIntroDraftIsRefusedWithoutTheContactGrant(t *testing.T) {
 // the draft needs a model lane, and what this has to hold is that the gate
 // above admits a granted caller rather than refusing everyone.
 func TestTheIntroDraftAdmitsASeatHoldingTheContactGrant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	svc := company360Service(e)
 	company := e.SeedCompany(t, "Brandt GmbH", nil)

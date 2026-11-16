@@ -18,6 +18,7 @@ import (
 )
 
 func TestACompanyLogoKeyWithoutAnOriginIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedLogoCompany(ctx, t, e, "Ostsee Werft AG", "ostsee.test")
@@ -68,6 +69,7 @@ func TestACompanyLogoKeyWithoutAnOriginIsRefused(t *testing.T) {
 // Both halves together are accepted, which is what the constraint is for: it
 // refuses a missing origin, not a logo.
 func TestACompanyLogoWithItsOriginIsAccepted(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedLogoCompany(ctx, t, e, "Nordsee Werft AG", "nordsee.test")

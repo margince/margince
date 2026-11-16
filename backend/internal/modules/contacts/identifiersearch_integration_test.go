@@ -99,6 +99,7 @@ func holds(list []ids.UUID, want ids.UUID) bool {
 }
 
 func TestAContactIsFoundByTheAddressARepPastedIn(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	judith := e.seedContact(t, "Judith Andresen", "judith@judithandresen.example")
 	other := e.seedContact(t, "Someone Else", "someone@elsewhere.example")
@@ -125,6 +126,7 @@ func TestAContactIsFoundByTheAddressARepPastedIn(t *testing.T) {
 }
 
 func TestAnAccountIsFoundByItsDomainAndByAnAddressAtIt(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	account := e.seedAccount(t, "BERATUNG JUDITH ANDRESEN", "judithandresen.example")
 	other := e.seedAccount(t, "Somebody Else GmbH", "elsewhere.example")
@@ -148,6 +150,7 @@ func TestAnAccountIsFoundByItsDomainAndByAnAddressAtIt(t *testing.T) {
 }
 
 func TestAnArchivedAddressDoesNotSurfaceItsContact(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	contact := e.seedContact(t, "Moved On", "old@former.example")
 	ctx := e.as(e.owner, principal.RowScopeAll)
@@ -167,6 +170,7 @@ func TestAnArchivedAddressDoesNotSurfaceItsContact(t *testing.T) {
 }
 
 func TestTheIdentifierArmDoesNotWidenRowScope(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	// A captured contact is the owner's alone until somebody promotes it.
 	hidden := e.captureContact(t, "owner")
@@ -229,6 +233,7 @@ func (e *privacyEnv) findLeads(t *testing.T, q string) []ids.UUID {
 }
 
 func TestAFragmentOfAnAddressFindsItsContact(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	anna := e.seedContact(t, "Zz Qq", "anna.weber@example.com")
 	underscore := e.seedContact(t, "Yy Rr", "a_b@example.com")
@@ -259,6 +264,7 @@ func TestAFragmentOfAnAddressFindsItsContact(t *testing.T) {
 }
 
 func TestAFragmentOfADomainFindsItsCompany(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	account := e.seedAccount(t, "Qq Zz Holding", "example.com")
 	if got := e.findAccounts(t, "exam"); !holds(got, account.UUID) {
@@ -270,6 +276,7 @@ func TestAFragmentOfADomainFindsItsCompany(t *testing.T) {
 }
 
 func TestAFragmentOfAnAddressFindsItsLead(t *testing.T) {
+	t.Parallel()
 	e := setupCapturePrivacy(t)
 	lead := e.seedLead(t, "Zz Qq", "lead.one@example.com")
 	other := e.seedLead(t, "Yy Rr", "someone@elsewhere.example")

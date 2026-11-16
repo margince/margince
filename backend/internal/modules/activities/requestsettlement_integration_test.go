@@ -60,9 +60,7 @@ func replyToCounterparty(t *testing.T, e *loadEnv, request ids.UUID, counterpart
 }
 
 // repliedIDs is the candidate set as ids, for assertions that ask whether one
-// particular request is in it. By id rather than by count: the lane's template
-// is shared across this package's tests, so another test's request is present
-// too and a count would pass or fail on which tests ran.
+// particular request is in it.
 func repliedIDs(t *testing.T, e *loadEnv, asOf time.Time) map[ids.UUID]RepliedRequest {
 	t.Helper()
 	rows, err := storeKnowing(e).RepliedRequests(asClassifier(e), asOf, 64)
@@ -109,6 +107,7 @@ func taskFor(t *testing.T, e *loadEnv, request ids.UUID) (id ids.UUID, subject s
 // miss exactly this, and would have looked correct in every test written the
 // other way round.
 func TestAReplySentBeforeTheVerdictStillOffersTheRequest(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Kurzes Gespräch", "meeting", OwedVerdictAsksUs)
 	replyTo(t, e, request, "Passt. Bis zum 30ten.", requestInstant.Add(time.Hour))
@@ -124,6 +123,7 @@ func TestAReplySentBeforeTheVerdictStillOffersTheRequest(t *testing.T) {
 // per conversation, and a thread with no reply on it has nothing to read: what
 // our words did is not a question until there are words.
 func TestAnUnansweredRequestIsNeverOffered(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Unanswered ask", "commitment", OwedVerdictAsksUs)
 
@@ -137,6 +137,7 @@ func TestAnUnansweredRequestIsNeverOffered(t *testing.T) {
 // reason — without it a queued mail would take a request out of the queue
 // before anybody had answered it.
 func TestAFutureDatedReplyDoesNotOfferTheRequest(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Scheduled answer", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "This goes out tomorrow.", requestInstant.Add(72*time.Hour))
@@ -151,6 +152,7 @@ func TestAFutureDatedReplyDoesNotOfferTheRequest(t *testing.T) {
 // conversation every hour forever; without the second it never revisits a
 // conversation that has moved on.
 func TestAJudgedThreadReturnsOnlyWhenSomebodyWritesAgain(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Watermark", "commitment", OwedVerdictAsksUs)
@@ -183,6 +185,7 @@ func TestAJudgedThreadReturnsOnlyWhenSomebodyWritesAgain(t *testing.T) {
 // surface reads: requestUnsettledSQL already treats a done task as settled, so
 // the waiting lane and the email move clear with no further change.
 func TestSettledCompletesTheReminderAndClearsTheRequest(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Answered ask", "commitment", OwedVerdictAsksUs)
@@ -215,6 +218,7 @@ func TestSettledCompletesTheReminderAndClearsTheRequest(t *testing.T) {
 // still_owed sharpens a MACHINE-filed, undated reminder, so the task says what
 // is actually owed rather than the mail's subject line.
 func TestStillOwedRetitlesTheMachinesOwnUndatedReminder(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Preis für die zweite Charge", "commitment", OwedVerdictAsksUs)
@@ -251,6 +255,7 @@ func TestStillOwedRetitlesTheMachinesOwnUndatedReminder(t *testing.T) {
 // somebody agreed to, and captured_by plus an absent due date is what tells the
 // two apart — never the subject, which a human accepting a request keeps.
 func TestStillOwedLeavesAHumansOwnDeadlineAlone(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Dated by hand", "commitment", OwedVerdictAsksUs)
@@ -296,6 +301,7 @@ func TestStillOwedLeavesAHumansOwnDeadlineAlone(t *testing.T) {
 // the request stays owed exactly as it was — and it advances the watermark, so
 // the same conversation is not re-read until somebody writes again.
 func TestUnsureRecordsTheQuestionAndChangesNothingElse(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Ambiguous", "commitment", OwedVerdictAsksUs)
@@ -327,6 +333,7 @@ func TestUnsureRecordsTheQuestionAndChangesNothingElse(t *testing.T) {
 // verdict touches no task, so the settlement row is the whole write, and it
 // must not commit without its outbox row.
 func TestEverySettlementWriteLeavesOneEventPerAuditRow(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Judged twice", "commitment", OwedVerdictAsksUs)
@@ -374,6 +381,7 @@ func settlementAudits(t *testing.T, e *loadEnv, request ids.UUID, column string)
 // this the queue and the task list disagree: a reopened reminder sits on a
 // request every other reader reports as settled.
 func TestAReopenedReminderOutranksASettledVerdict(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Reopened", "commitment", OwedVerdictAsksUs)
@@ -438,6 +446,7 @@ func TestAReopenedReminderOutranksASettledVerdict(t *testing.T) {
 // The reply here is attested to the real customer, which is the only thing that
 // distinguishes it: the thread key, kind and provider all match the forgery.
 func TestAForgedThreadIsNotSettledByOurReplyToSomebodyElse(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	forged := seedEmailRequestWithCounterparty(t, e, "Forged thread", "commitment",
 		OwedVerdictAsksUs, "stranger@elsewhere.test")
@@ -457,6 +466,7 @@ func TestAForgedThreadIsNotSettledByOurReplyToSomebodyElse(t *testing.T) {
 // sent_by_colleague is written by capture alone, a module this package cannot
 // call, so the fixture stamps it on a row the real writer logged.
 func TestAColleaguesCopiedReplyOffersTheRequest(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Answered by a colleague", "commitment", OwedVerdictAsksUs)
 	var key string
@@ -487,6 +497,7 @@ func TestAColleaguesCopiedReplyOffersTheRequest(t *testing.T) {
 // bind to it without reading the column a second time. A candidate that lost it
 // would make that read unbindable, and an unbindable read is the whole defect.
 func TestACandidateNamesTheCorrespondentItWasWith(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Named correspondent", "commitment", OwedVerdictAsksUs)
 	replyTo(t, e, request, "On its way.", requestInstant.Add(time.Hour))
@@ -505,6 +516,7 @@ func TestACandidateNamesTheCorrespondentItWasWith(t *testing.T) {
 // ages out of daily work whether or not it is judged, the current one is what
 // a rep is looking at.
 func TestASettlementPassJudgesTheNewestRequestFirst(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	old := seedEmailRequest(t, e, "Old ask from the import", "commitment", OwedVerdictAsksUs)
 	e.exec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, old, requestInstant.AddDate(0, 0, -120))
@@ -521,6 +533,7 @@ func TestASettlementPassJudgesTheNewestRequestFirst(t *testing.T) {
 // one: the order follows the answer, so a request a human still holds is not
 // starved behind newer asks.
 func TestAFreshReplyToAnOldRequestIsJudgedFirst(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	old := seedEmailRequest(t, e, "Old ask a rep still holds", "commitment", OwedVerdictAsksUs)
 	e.exec(t, `UPDATE activity SET occurred_at = $2 WHERE id = $1`, old, requestInstant.AddDate(0, 0, -120))
@@ -536,6 +549,7 @@ func TestAFreshReplyToAnOldRequestIsJudgedFirst(t *testing.T) {
 // Two replies sent in the same instant are ordered by which was written last,
 // not by which request is newer.
 func TestRepliesSentTogetherAreJudgedLatestReplyFirst(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	earlierAsk := seedEmailRequest(t, e, "Earlier ask", "commitment", OwedVerdictAsksUs)
 	laterAsk := seedEmailRequest(t, e, "Later ask", "commitment", OwedVerdictAsksUs)

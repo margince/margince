@@ -117,6 +117,7 @@ func (e *cimdEnv) client(t *testing.T, clientID string) (name, via string, redir
 // what makes a connection revocable — a CIMD client with no row would be a
 // connection its human can see the passport for and never the client.
 func TestAValidatedDocumentBecomesAnOrdinaryClientRow(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-row")
 	clientID := e.docs.URL + "/client.json"
 
@@ -143,6 +144,7 @@ func TestAValidatedDocumentBecomesAnOrdinaryClientRow(t *testing.T) {
 // outbound request whose rate the client sets, which is the thing the TTL floor
 // exists to bound.
 func TestAFreshDocumentIsNotFetchedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-cache")
 	clientID := e.docs.URL + "/client.json"
 	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
@@ -166,6 +168,7 @@ func TestAFreshDocumentIsNotFetchedAgain(t *testing.T) {
 // direction of the same property: a client that rotates its redirect list must
 // not be held to the old one forever.
 func TestAStaleDocumentIsRefetchedAndItsNewContentWins(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-stale")
 	clientID := e.docs.URL + "/client.json"
 	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
@@ -206,6 +209,7 @@ func (e *cimdEnv) expire(t *testing.T, clientID string) {
 // a client an admin switched off keep this server making outbound requests on
 // its behalf — the switch has to stop the traffic, not only the authorization.
 func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-disabled")
 	clientID := e.docs.URL + "/client.json"
 	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
@@ -236,6 +240,7 @@ func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
 // conflict clause is what holds this: without it, anyone who could serve a
 // document at a registered client's id could rewrite its redirect list.
 func TestADocumentCannotTakeOverARegisteredClient(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-takeover")
 	clientID := e.docs.URL + "/client.json"
 	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
@@ -266,6 +271,7 @@ func TestADocumentCannotTakeOverARegisteredClient(t *testing.T) {
 // which is how the authorize path tells "resolve this from the table" from
 // "this failed".
 func TestAnOpaqueClientIDIsNotResolvedAsADocument(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-opaque")
 
 	err := e.svc.resolveCIMDClient(e.ctx, "s6BhdRkqt3", DefaultUnusedDynamicClientCap)
@@ -279,6 +285,7 @@ func TestAnOpaqueClientIDIsNotResolvedAsADocument(t *testing.T) {
 // would be a client this installation believes in on the strength of a document
 // it rejected.
 func TestARefusedDocumentLeavesNoRow(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-refused")
 	clientID := e.docs.URL + "/client.json"
 	e.body = func(string) string {

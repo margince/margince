@@ -54,6 +54,7 @@ func messageCode(err error) string {
 }
 
 func TestAcceptingAPartnersFirstLeadActivatesIt(t *testing.T) {
+	t.Parallel()
 	pinLeadAuditClock(t)
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
@@ -92,6 +93,7 @@ func TestAcceptingAPartnersFirstLeadActivatesIt(t *testing.T) {
 }
 
 func TestALeadIsAcceptedOnlyForALivePartner(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asStageAdmin(e, stageAdminGrants())
 	name := "Unreferred"
@@ -126,6 +128,7 @@ func TestALeadIsAcceptedOnlyForALivePartner(t *testing.T) {
 }
 
 func TestOnlyAPartnerManagerAcceptsAPartnerLead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	admin := asStageAdmin(e, stageAdminGrants())
 	// Private to its owner, so a colleague cannot see it.
@@ -179,6 +182,7 @@ func TestOnlyAPartnerManagerAcceptsAPartnerLead(t *testing.T) {
 }
 
 func TestASeatThatCannotWriteThePartnerCompanyAcceptsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	admin := asStageAdmin(e, stageAdminGrants())
 	// Owned by the admin and readable by everyone: the colleague sees it and,

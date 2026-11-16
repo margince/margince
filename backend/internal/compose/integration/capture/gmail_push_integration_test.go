@@ -49,6 +49,7 @@ func pushBody(t *testing.T, email string) []byte {
 }
 
 func TestGmailPushWebhookRoutesToTheConnection(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	const mailbox = "push-owner@ws.example"
 

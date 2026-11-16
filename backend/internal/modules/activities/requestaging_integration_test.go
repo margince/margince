@@ -52,6 +52,7 @@ func (e *loadEnv) waitingAt(ctx context.Context, t *testing.T, asOf time.Time) m
 // A classified request ages out like any other wait, and so does one only the
 // system filed a reminder for; one a human took stays.
 func TestOnlyAHumanKeepsARequestPastTheHorizon(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	colleague := e.asSeat(e.other)
 	reminded := seedEmailRequest(t, e, "Please confirm the date", "meeting", OwedVerdictAsksUs)
@@ -80,6 +81,7 @@ func TestOnlyAHumanKeepsARequestPastTheHorizon(t *testing.T) {
 // Mail on an open deal ages out too: the deal's own risk lane speaks for a
 // silent deal, so the reply queue need not hold its history forever.
 func TestMailOnAnOpenDealAgesOut(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
@@ -97,6 +99,7 @@ func TestMailOnAnOpenDealAgesOut(t *testing.T) {
 
 // The reminder the pass filed retires with its request; one a human worked stays.
 func TestAnAgedSystemReminderRetiresAndAWorkedOneStays(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	untouched := seedEmailRequest(t, e, "Please send slots", "meeting", OwedVerdictAsksUs)
@@ -168,6 +171,7 @@ func assertCurrentHeldRequest(t *testing.T, e *loadEnv, task ids.UUID) {
 // A reminder its assignee pinned holds its request past the horizon. The aged
 // pass leaves it open, and it stays the assignee's task, not a colleague's wait.
 func TestAPinnedReminderHoldsItsRequestPastTheHorizon(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	id := seedEmailRequest(t, e, "Please send the pricing", "commitment", OwedVerdictAsksUs)

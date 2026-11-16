@@ -31,6 +31,7 @@ func (a changingHeldMailAuthority) SendableMailbox(ctx context.Context, _ ids.UU
 }
 
 func TestAResumeCannotSendWordingFromBeforeAConcurrentEdit(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true})

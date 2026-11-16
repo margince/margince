@@ -37,6 +37,7 @@ func agentOfSeat(seat context.Context, t *testing.T) context.Context {
 // An agent changes its user's own mailbox settings on a real connection, then
 // disconnects it. A passportless agent, which is automatic work, is refused.
 func TestAnAgentSetsAndDisconnectsItsUsersMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	seat := seatContext(env.e, env.e.Rep1)
 	agent := agentOfSeat(seat, t)
@@ -84,6 +85,7 @@ func TestAnAgentSetsAndDisconnectsItsUsersMailbox(t *testing.T) {
 // and the list carries no credential. Automatic work with no passport is
 // refused.
 func TestAnAgentListsItsUsersConnectionsAndNoCredential(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	seat := seatContext(env.e, env.e.Rep1)
 	agent := agentOfSeat(seat, t)

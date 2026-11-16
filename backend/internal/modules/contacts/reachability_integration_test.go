@@ -40,6 +40,7 @@ func (e *dedupeEnv) channelIdentityTimestamps(ctx context.Context, t *testing.T,
 }
 
 func TestContactReadReportsTelegramReachability(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Telegram Contact", nil, nil)
@@ -72,6 +73,7 @@ func TestContactReadReportsTelegramReachability(t *testing.T) {
 }
 
 func TestBlockedIdentityReportsUnreachableButKeepsTheIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Blocked Telegram Contact", nil, nil)
@@ -105,6 +107,7 @@ func TestBlockedIdentityReportsUnreachableButKeepsTheIdentity(t *testing.T) {
 // The SEND side of the same fact: the reply path asks where a contact can be
 // reached, and gets only accounts a message could actually arrive at.
 func TestReachableChannelIdentitiesOmitsABlockedAccountAndReturnsEveryLiveOne(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Two Account Contact", nil, nil)
@@ -146,6 +149,7 @@ func TestReachableChannelIdentitiesOmitsABlockedAccountAndReturnsEveryLiveOne(t 
 // empty list, never an error. Reported as a fault it would reach the rep as a
 // server problem instead of "this contact has not messaged you".
 func TestReachableChannelIdentitiesAnswersEmptyForAContactWithNoBinding(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contact := e.seedContact(ctx, t, "Mail Only Contact", nil, nil)

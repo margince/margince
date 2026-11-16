@@ -67,6 +67,7 @@ func fillLinkedinFromSite(ctx context.Context, t *testing.T, e *dedupeEnv, compa
 }
 
 func TestALandedLinkedinFillReachesTheSocialSlot(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,
@@ -87,6 +88,7 @@ func TestALandedLinkedinFillReachesTheSocialSlot(t *testing.T) {
 }
 
 func TestAFillNeverReplacesAHandleAlreadyOnTheRecord(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,
@@ -113,6 +115,7 @@ func TestAFillNeverReplacesAHandleAlreadyOnTheRecord(t *testing.T) {
 }
 
 func TestAValueThatIsNotAProfileLinkStaysEvidenceOnly(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,
@@ -135,6 +138,7 @@ func TestAValueThatIsNotAProfileLinkStaysEvidenceOnly(t *testing.T) {
 // whether the slot was empty or already held somebody's statement, so a reader
 // asking when this contact gained its profile link had nothing to read.
 func TestAFilledSlotIsNamedInAnAuditRowOfItsOwn(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, companyID := e.seedEmployedContact(ctx, t,

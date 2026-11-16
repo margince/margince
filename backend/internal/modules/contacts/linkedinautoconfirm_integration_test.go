@@ -32,6 +32,7 @@ import (
 )
 
 func TestAnAutomaticEmailConfirmPerformsTheWholeWrite(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	dana := e.seedVisibleContact(t, "Dana Buyer")
 	e.seedEmail(t, dana, "dana@acme.test")
@@ -52,6 +53,7 @@ func TestAnAutomaticEmailConfirmPerformsTheWholeWrite(t *testing.T) {
 }
 
 func TestAnAutomaticExactNameConfirmPerformsTheWholeWrite(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	andreas := e.seedVisibleContact(t, "Andreas Müller")
@@ -76,6 +78,7 @@ func TestAnAutomaticExactNameConfirmPerformsTheWholeWrite(t *testing.T) {
 // edits a contact, so its matches can only ever be suggestions. Anything else
 // would let a grant that may not edit a contact cause a contact edit.
 func TestAReadOnlyCallerConfirmsNothingAndEditsNoContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 
@@ -119,6 +122,7 @@ func TestAReadOnlyCallerConfirmsNothingAndEditsNoContact(t *testing.T) {
 // would guess which connection is really that contact. Neither confirms, and
 // each stays a suggestion a human can judge.
 func TestTwoGhostsOntoOneContactBothStaySuggestions(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	andreas := e.seedVisibleContact(t, "Andreas Müller")
@@ -157,6 +161,7 @@ func TestTwoGhostsOntoOneContactBothStaySuggestions(t *testing.T) {
 // that same contact is withheld — the in-pass form of the guard the name SELECT
 // applies to confirms from earlier passes.
 func TestAContactTheAddressTierConfirmsIsNotAlsoNameSuggested(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	carla := e.seedVisibleContact(t, "Carla Stein")
@@ -200,6 +205,7 @@ func TestAContactTheAddressTierConfirmsIsNotAlsoNameSuggested(t *testing.T) {
 // against a contact is not confirmed onto them again — it would double-count the
 // colleague's reach into that contact's account.
 func TestAnAddressIsNotConfirmedOntoAContactAlreadyMet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	dana := e.seedVisibleContact(t, "Dana Buyer")
 	e.seedEmail(t, dana, "dana@acme.test")
@@ -235,6 +241,7 @@ func TestAnAddressIsNotConfirmedOntoAContactAlreadyMet(t *testing.T) {
 // confirmable, and only the write's own recheck stops the second. Exactly one
 // confirms and the write shape lands exactly once; the other stays unmatched.
 func TestTwoAddressesForOneContactConfirmOnlyOnce(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	dana := e.seedVisibleContact(t, "Dana Buyer")
 	e.seedEmail(t, dana, "dana@acme.test")
@@ -316,6 +323,7 @@ func assertConfirmWroteEverything(t *testing.T, e *dedupeEnv, contact ids.Contac
 // contact must not cost the pass, or one colleague-owned candidate would strand
 // the whole upload behind a 403.
 func TestAnOwnScopedCallerConfirmsOwnContactsAndOnlySuggestsColleagues(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	company := e.seedAcmeCompany(t)
 	// One pair per tier on the caller's own contacts…

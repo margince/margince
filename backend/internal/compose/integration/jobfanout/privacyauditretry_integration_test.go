@@ -22,6 +22,7 @@ import (
 )
 
 func TestRetentionJobPersistsItsAuditCursorAndRevisitsAReleasedHold(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	integration.ApplyRiverSchema(t)
 	contact := e.SeedContact(t, "Subject with an earlier erasure", nil)

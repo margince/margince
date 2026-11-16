@@ -67,6 +67,7 @@ func (e *promoteConsentEnv) countEvents(t *testing.T, eventType string, entity i
 // The scan marks a breached lead exactly once: a second pass finds nothing,
 // and a lead answered before its deadline is never a breach.
 func TestSLAScanEscalatesEachBreachOnce(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC()
@@ -150,6 +151,7 @@ func TestAWebsiteFormEnquiryStartsTheFirstResponseClock(t *testing.T) {
 // The derived state and the list filter agree: an overdue lead reads
 // breached on its own row AND is what sla_state=breached lists.
 func TestSLAStateReadsAndFiltersAlike(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC()
@@ -182,6 +184,7 @@ func TestSLAStateReadsAndFiltersAlike(t *testing.T) {
 }
 
 func TestDefaultLeadQueueOrdersSLAThenScoreDeterministically(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC().Truncate(time.Second)
@@ -232,6 +235,7 @@ func TestDefaultLeadQueueOrdersSLAThenScoreDeterministically(t *testing.T) {
 }
 
 func TestLeadQuickFindIncludesExactEmailAndLinkedIn(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	now := time.Now().UTC()
 	emailLead := e.seedLeadCreatedAt(t, "find-me@example.test", now)
@@ -263,6 +267,7 @@ func TestLeadQuickFindIncludesExactEmailAndLinkedIn(t *testing.T) {
 // up — they inherit a breach earned while the row was nobody's. That is the
 // state a website read leaves behind, which is why it matters now.
 func TestTakingOnAnUnownedLeadStartsItsResponseClock(t *testing.T) {
+	t.Parallel()
 	now := pinLeadAuditClock(t)
 	e := setupPromoteConsent(t)
 	id := ids.NewV7()
@@ -330,6 +335,7 @@ func (e *promoteConsentEnv) arrivalOwner(t *testing.T, id ids.UUID) *ids.UUID {
 // how a rep actually picks a lead up, handing them a deadline measured from the
 // day a crawler found the name.
 func TestClaimingAnUnownedLeadStartsItsResponseClock(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	id := ids.NewV7()
 	weekAgo := time.Now().UTC().Add(-7 * 24 * time.Hour)
@@ -373,6 +379,7 @@ func TestClaimingAnUnownedLeadStartsItsResponseClock(t *testing.T) {
 // UNOWNED INBOUND lead must breach too, because that is the row the configured
 // intake seat answers for and the row an ownership narrowing drops in silence.
 func TestALeadNobodyAskedForIsNotEscalatedForAFirstResponse(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	id := ids.NewV7()
@@ -424,6 +431,7 @@ func TestALeadNobodyAskedForIsNotEscalatedForAFirstResponse(t *testing.T) {
 // make that fresh promise unbreachable, and the rep who took the lead on could
 // go quiet for a month with nobody told.
 func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	e.nameIntakeSeat(t, e.user)
@@ -466,6 +474,7 @@ func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
 // once and a later status change does not move it. Disqualifying an
 // unanswered lead is an explicit disposition and stamps it too.
 func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := pinLeadAuditClock(t)
@@ -566,6 +575,7 @@ func TestAReplyOnTheLeadOutlivesAMovedStatus(t *testing.T) {
 // after one from 10:00. The FIRST response is the earliest, so the later
 // delivery moves the stamp back, and a later reply never moves it forward.
 func TestFirstResponseKeepsTheEarliestReplyWhateverTheDeliveryOrder(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	// Truncated to what timestamptz actually stores. Postgres keeps
 	// microseconds and Go carries nanoseconds, so an untruncated stamp comes
@@ -636,6 +646,7 @@ func (e *promoteConsentEnv) seedLeadTouchFrom(t *testing.T, lead ids.LeadID, kin
 // review. Every activity below is committed WITHOUT running the subscriber,
 // which is the window this reproduces.
 func TestTheScanReadsTheActivitiesRatherThanTheProjection(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	started := time.Now().UTC().Add(-DefaultFirstResponseTarget - time.Hour)
@@ -696,6 +707,7 @@ func TestTheScanReadsTheActivitiesRatherThanTheProjection(t *testing.T) {
 // "answered" for everything would pass the test above while switching the
 // whole target off.
 func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
+	t.Parallel()
 	now := pinLeadAuditClock(t)
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
@@ -730,6 +742,7 @@ func TestTheScanStillBreachesALeadNobodyAnswered(t *testing.T) {
 // A reply AFTER the deadline is not an answer in time, and must not rescue the
 // lead from a breach it has already earned.
 func TestALateReplyDoesNotRescueTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	lead := e.seedLeadCreatedAt(t, "late@sla.test", time.Now().UTC().Add(-DefaultFirstResponseTarget-time.Hour))
@@ -798,6 +811,7 @@ func (e *promoteConsentEnv) breachTargetOf(t *testing.T, lead ids.LeadID) *strin
 // nobody at all: the task went out assigned to no one and no notice was
 // addressed. The configured intake seat answers for it.
 func TestAnOwnerlessBreachReachesTheConfiguredIntakeSeat(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC()
@@ -827,6 +841,7 @@ func TestAnOwnerlessBreachReachesTheConfiguredIntakeSeat(t *testing.T) {
 // A configured seat that has since been suspended is the same silence as no
 // seat at all, wearing a configuration that looks correct.
 func TestAnIntakeSeatThatCannotWorkIsTreatedAsUnset(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := time.Now().UTC()
@@ -886,6 +901,7 @@ func (e *promoteConsentEnv) nameIntakeSeat(t *testing.T, seat ids.UUID) {
 // access and no lead grant would receive a task naming a record they cannot
 // open — useless to them, and a disclosure nobody authorised.
 func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 
 	// A live seat with no role assignment at all: assignable, and blind to
@@ -918,6 +934,7 @@ func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
 // first response is stamped with the module clock, floored at created_at.
 // A clock that already reads later is kept as it is.
 func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
+	t.Parallel()
 	created := time.Date(2099, time.January, 1, 9, 0, 0, 0, time.UTC)
 	for _, tc := range []struct {
 		name  string
@@ -975,6 +992,7 @@ func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
 // An activity's occurred_at is caller-supplied and may predate the lead it
 // answers; the recorded first response is floored at created_at too.
 func TestABackdatedResponseIsRecordedAtTheLeadsCreation(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	created := time.Date(2099, time.January, 1, 9, 0, 0, 0, time.UTC)
 	lead := e.seedLeadCreatedAt(t, "backdated@example.test", created)

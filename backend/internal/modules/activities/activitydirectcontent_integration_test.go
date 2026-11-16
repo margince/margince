@@ -110,6 +110,7 @@ func directContentColleague(ctx context.Context, t *testing.T, e *sendEnv) conte
 }
 
 func TestDirectContentSQLDistinguishesWriterNullsFromWithholding(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(nil).WithClock(func() time.Time { return epoch })
@@ -183,6 +184,7 @@ func TestDirectContentSQLDistinguishesWriterNullsFromWithholding(t *testing.T) {
 }
 
 func TestDirectContentRetainsReadableRowsAfterTheCursorCloses(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil).WithClock(func() time.Time { return epoch })
 	want := map[ids.UUID]crmcontracts.Activity{}
@@ -217,6 +219,7 @@ func TestDirectContentRetainsReadableRowsAfterTheCursorCloses(t *testing.T) {
 }
 
 func TestDirectContentDoesNotDecodeAnInvalidWithheldMap(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil).WithClock(func() time.Time { return epoch })
 	written, _, err := store.LogActivity(ctx, LogActivityInput{Kind: "note", Subject: new("Legacy raw shape"), Body: new("Readable body"), Raw: new(map[string]any{"original": true}), Source: "manual"})
@@ -241,6 +244,7 @@ func TestDirectContentDoesNotDecodeAnInvalidWithheldMap(t *testing.T) {
 }
 
 func TestDirectContentKeepsActualAudienceAndArchiveReads(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil).WithClock(func() time.Time { return epoch })
 	written, _, err := store.LogActivity(ctx, LogActivityInput{
@@ -280,6 +284,7 @@ func TestDirectContentKeepsActualAudienceAndArchiveReads(t *testing.T) {
 }
 
 func TestDirectContentEmailSummaryKeepsMultipleReadableRows(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil).WithClock(func() time.Time { return epoch })
 	var activityIDs []ids.UUID
@@ -342,6 +347,7 @@ func TestDirectContentEmailSummaryKeepsMultipleReadableRows(t *testing.T) {
 }
 
 func TestDirectContentOrdinaryAndCollapsedPagesKeepRowsCursorsAndCount(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx, store := e.as(principal.RowScopeAll), e.store(nil).WithClock(func() time.Time { return epoch })
 	var activityIDs []ids.ActivityID

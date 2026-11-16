@@ -118,6 +118,7 @@ func activityBodyCount(t *testing.T, e *integration.Env, body string) int {
 // be able to commit the activity after it: the row would outlive the erasure
 // that certified it gone, permanently beyond every lane that could remove it.
 func TestTheSinkRefusesARecordNamingAnErasedChannelAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Erased Subject", nil)
 	seedChannelIdentity(t, e, contact, "20301", "erased")
@@ -142,6 +143,7 @@ func TestTheSinkRefusesARecordNamingAnErasedChannelAccount(t *testing.T) {
 // probe and its write, and the activity lands anyway. Holding the lock for the
 // whole call proves Upsert waits for it.
 func TestTheSinkWaitsForAnErasureHoldingTheRecordsAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Live Subject", nil)
 	seedChannelIdentity(t, e, contact, "20302", "live")
@@ -175,6 +177,7 @@ func TestTheSinkWaitsForAnErasureHoldingTheRecordsAccount(t *testing.T) {
 // ACCOUNT, so an erasure of somebody else never delays this capture — and the
 // failure above is the lock, not the bounded pool.
 func TestTheSinkIsUnaffectedByALockOnAnotherAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Live Subject", nil)
 	seedChannelIdentity(t, e, contact, "20303", "live")
@@ -214,6 +217,7 @@ func TestTheSinkIsUnaffectedByALockOnAnotherAccount(t *testing.T) {
 // declaration would feed an unvouched-for key to the resolution ladder, which is
 // how one human silently becomes bound to another's record.
 func TestTheSinkRefusesAnUndeclaredCorroboratingAddress(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	rec := inboundChannelRecord("20304", "undeclared merge key")
@@ -238,6 +242,7 @@ func TestTheSinkRefusesAnUndeclaredCorroboratingAddress(t *testing.T) {
 // This test builds exactly that state: a Sink with no channel ensurer wired
 // never writes the link at all, which is the same row the race produces.
 func TestAnErasureReachesAChannelActivityWithNoContactLink(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Orphaned Subject", nil)
 	seedChannelIdentity(t, e, contact, "20401", "orphaned")
@@ -272,6 +277,7 @@ func TestAnErasureReachesAChannelActivityWithNoContactLink(t *testing.T) {
 // row — would redact other contacts's timelines. This pins that erasing one
 // subject touches only their own account's rows.
 func TestAnErasureLeavesAnotherAccountsChannelActivityUntouched(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	erased := e.SeedContact(t, "Erased Subject", nil)
 	seedChannelIdentity(t, e, erased, "20501", "erased")
@@ -315,6 +321,7 @@ func TestAnErasureLeavesAnotherAccountsChannelActivityUntouched(t *testing.T) {
 // under a commercial-correspondence floor is wrong, that is a product and legal
 // question for the spec, not a change to make here.
 func TestARecentChannelMessageIsShieldedFromErasureByTheStatutoryFloor(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Recent Subject", nil)
 	seedChannelIdentity(t, e, contact, "20601", "recent")
@@ -344,6 +351,7 @@ func TestARecentChannelMessageIsShieldedFromErasureByTheStatutoryFloor(t *testin
 // a provider-less identity would lock and probe a key space the eraser never
 // touches — the erasure gate would pass while an erasure was mid-purge.
 func TestTheSinkRefusesHalfAChannelIdentity(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 
 	rec := inboundChannelRecord("20305", "half an identity")

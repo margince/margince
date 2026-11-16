@@ -178,6 +178,7 @@ func assertRefusalLeaksNothing(t *testing.T, detail, mustName string) {
 // verb carries none to check, because x-agent-access: human-only requests no
 // agent authority at all.
 func TestAHumanOnlyExtensionOperationIsRefusedForAnAgentPrincipal(t *testing.T) {
+	t.Parallel()
 	e := bootWithDemoExt(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Demo Ext Human-Only", "demoext@fable.test", "Admin")
 
@@ -200,6 +201,7 @@ func TestAHumanOnlyExtensionOperationIsRefusedForAnAgentPrincipal(t *testing.T) 
 // passport's scopes — Registry.Offered excludes every HumanOnly spec for a
 // PrincipalAgent caller before it ever reaches tools/list.
 func TestAHumanOnlyExtensionToolIsAbsentFromAnAgentsToolsList(t *testing.T) {
+	t.Parallel()
 	e := bootWithDemoExt(t, compose.WithMCPConnector())
 	apptest.BootstrapWorkspaceSession(t, e, "Demo Ext Tool List", "demoext-list@fable.test", "Admin")
 
@@ -217,6 +219,7 @@ func TestAHumanOnlyExtensionToolIsAbsentFromAnAgentsToolsList(t *testing.T) {
 // session on the same route is unaffected: RequireHuman admits human/
 // system/connector principals unchanged into the handler below.
 func TestAHumanOnlyExtensionOperationStillWorksForAHuman(t *testing.T) {
+	t.Parallel()
 	e := bootWithDemoExt(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Demo Ext Human Works", "demoext-human@fable.test", "Admin")
 	grantDemoExtEndpointToAdmin(t, e)

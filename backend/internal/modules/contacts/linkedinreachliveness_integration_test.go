@@ -28,6 +28,7 @@ import (
 )
 
 func TestReachCountsOnlyColleaguesWhoStillWorkHere(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company := e.seedAcmeCompany(t)

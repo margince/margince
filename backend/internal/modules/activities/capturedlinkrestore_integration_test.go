@@ -19,6 +19,7 @@ import (
 // A link the calendar lists again comes back as the same file. A subscriber
 // counting uploads sees it archived, then restored, and never created twice.
 func TestARelistedMeetingDocumentIsAnnouncedAsRestoredNotCreated(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	meeting := e.seedAnchor(t, "", "")
 	ctx := principal.WithCorrelationID(

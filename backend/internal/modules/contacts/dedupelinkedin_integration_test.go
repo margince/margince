@@ -23,6 +23,7 @@ import (
 // The Go key and the SQL expression must give one answer. Otherwise the lane
 // compares a key no handle is indexed under.
 func TestTheLinkedInProfileKeyAgreesInGoAndSQL(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, raw := range []string{
@@ -86,6 +87,7 @@ func (e *dedupeEnv) openLinkedInPairs(ctx context.Context, t *testing.T, a, b id
 }
 
 func TestTwoContactsHoldingOneLinkedInProfileAreAReviewPair(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	sam := e.createWithLinkedIn(ctx, t, "Sam Example", "sam@example.com", "https://www.linkedin.com/in/sam-example")
@@ -127,6 +129,7 @@ func TestTwoContactsHoldingOneLinkedInProfileAreAReviewPair(t *testing.T) {
 // Two contacts that already shared a profile before the lane existed reach the
 // queue through the duplicate scan, which writes no handle of its own.
 func TestTheDuplicateScanPairsContactsAlreadySharingALinkedInProfile(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	first := e.createWithLinkedIn(ctx, t, "Kim Example", "kim@example.com", "")
@@ -151,6 +154,7 @@ func TestTheDuplicateScanPairsContactsAlreadySharingALinkedInProfile(t *testing.
 // One profile has more holders than one pass files. Each later pass reaches
 // the pairs the first left out, until every pair is on the queue.
 func TestTheScanReachesEveryPairOfAProfileHeldPastTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	holders := make([]ids.ContactID, 7)
@@ -190,6 +194,7 @@ func TestTheScanReachesEveryPairOfAProfileHeldPastTheCap(t *testing.T) {
 // A pair filed on a shared phone that now holds only on LinkedIn stays. The
 // queue shows the shared profile as its evidence, not an empty address pair.
 func TestAPhonePairThatHoldsOnLinkedInShowsTheProfile(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	left := e.seedContact(ctx, t, "Ola Berg", []string{"ola@phone.example"}, []string{"+49305550111"})

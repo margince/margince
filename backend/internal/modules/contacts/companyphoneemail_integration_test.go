@@ -20,6 +20,7 @@ import (
 )
 
 func TestACompanysPhoneAndEmailRoundTripThroughCreateAndUpdate(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	phone, email := "+49 30 1234567", "Info@Switchboard.example"
@@ -70,6 +71,7 @@ func TestACompanysPhoneAndEmailRoundTripThroughCreateAndUpdate(t *testing.T) {
 
 // A site read fills an empty number, and leaves a typed address as it is.
 func TestASiteReadFillsAnEmptyCompanyPhoneAndLeavesATypedEmail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	typed := "sales@typed.example"

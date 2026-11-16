@@ -20,6 +20,7 @@ import (
 // given. Only a confident "about" files the mail, marked relevant by the
 // classifier, and the project follows the deal only then.
 func TestASuggestedDealIsFiledOnlyOnAConfidentAnswer(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name       string
 		verdict    string
@@ -86,6 +87,7 @@ func TestADeclinedTopicCheckIsNotAskedAgain(t *testing.T) {
 // With no model, capture files nothing on a suggestion. The refile pass files
 // the mail once a model answers.
 func TestASuggestedDealWaitsForAModel(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -103,6 +105,7 @@ func TestASuggestedDealWaitsForAModel(t *testing.T) {
 // A stakeholder's deal and a meeting are suggestions too: the model is asked
 // before either is filed.
 func TestAStakeholderDealAndAMeetingAreChecked(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -124,6 +127,7 @@ func TestAStakeholderDealAndAMeetingAreChecked(t *testing.T) {
 // The project and a proven thread are explicit evidence: the model is never
 // asked about a mail they file.
 func TestExplicitEvidenceFilesWithoutTheModel(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -145,6 +149,7 @@ func TestExplicitEvidenceFilesWithoutTheModel(t *testing.T) {
 // Several open deals: a confident pick files the mail and asks nobody, a
 // confident "none" files nothing and asks nobody, and doubt asks the colleague.
 func TestAnAmbiguousMailIsCheckedBeforeAnyoneIsAsked(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name  string
 		pick  func(deal string) (string, float64)

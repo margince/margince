@@ -49,6 +49,7 @@ func (e *dedupeEnv) hideInteraction(t *testing.T, id ids.ActivityID, change stri
 // there are. Each contact's fold counts its own interactions, in both windows,
 // and never an archived one or one held to its participants.
 func TestTheChangeFoldReadsACandidateSetInOneStatement(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }
@@ -132,6 +133,7 @@ func sameChangeInputs(got, want relstrength.ChangeInputs) bool {
 // relstrength's rule, which admits only what the contact sent, so the reply
 // raises the count without raising their inbound.
 func TestAColleaguesReplyOnTheirThreadIsNotTheContactWriting(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	now := time.Date(2026, time.March, 10, 12, 0, 0, 0, time.UTC)
 	day := func(ago int) time.Time { return now.AddDate(0, 0, -ago) }

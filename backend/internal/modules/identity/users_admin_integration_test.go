@@ -38,6 +38,7 @@ import (
 // The seeded member holds no grant, so it stands for every caller who may read
 // the roster and may not administer it.
 func TestRosterReadDisclosesRoleKeysOnlyToAMemberAdministrator(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "roster-role-keys")
 
 	member, err := e.svc.ListUsers(e.wsCtx(e.member), ListUsersInput{})
@@ -98,6 +99,7 @@ func TestRosterReadDisclosesRoleKeysOnlyToAMemberAdministrator(t *testing.T) {
 // exists because exactly that had already happened (0055 added 'invited' while
 // the refusal still said "this member is suspended").
 func TestReactivateRefusalNamesEveryStateItCanBeReachedFrom(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reactivate-states")
 
 	var check string
@@ -133,6 +135,7 @@ func TestReactivateRefusalNamesEveryStateItCanBeReachedFrom(t *testing.T) {
 }
 
 func TestInviteUserCreatesInvitedMemberWithRoleTokenAndEvent(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-user")
 
 	userID, rawToken, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -224,6 +227,7 @@ func TestInviteUserCreatesInvitedMemberWithRoleTokenAndEvent(t *testing.T) {
 // passwordLink call inside it — only runs on that path: the service layer
 // mints the token but never sends the mail.
 func TestInviteUserHandlerEmailsTheSetPasswordLink(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-mail")
 	mail := &capturedMail{}
 	h := NewHandlers(e.svc).WithPasswordReset(mail).WithPasswordLinkBase("https://crm.example.test")
@@ -254,6 +258,7 @@ func TestInviteUserHandlerEmailsTheSetPasswordLink(t *testing.T) {
 }
 
 func TestReactivateUserRestoresActiveAndEmits(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reactivate-user")
 
 	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin, DeactivateUserInput{UserID: e.member.UserID}); err != nil {
@@ -298,6 +303,7 @@ func TestReactivateUserRestoresActiveAndEmits(t *testing.T) {
 // one must not both succeed (that would zero out admins). The per-workspace
 // advisory lock serializes them, so exactly one is refused.
 func TestConcurrentLastAdminDeactivationsKeepOneAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "admin-race")
 
 	// Promote the member to admin — now the workspace has exactly two admins.
@@ -346,6 +352,7 @@ func seedAgentSeatIn(t *testing.T, e *revocationEnv) (ids.UserID, string) {
 }
 
 func TestTheAgentSeatCannotBeGivenARole(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-role")
 	seat, _ := seedAgentSeatIn(t, e)
 
@@ -373,6 +380,7 @@ func TestTheAgentSeatCannotBeGivenARole(t *testing.T) {
 // seat while no product path existed can hold exactly this row already, and a
 // refusal added afterwards reaches no grant that has already happened.
 func TestTheAgentSeatIsNotTheOtherAdminWhoCouldRecoverTheCompany(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-lockout")
 	seat, _ := seedAgentSeatIn(t, e)
 	if _, err := e.owner.Exec(context.Background(),
@@ -396,6 +404,7 @@ func TestTheAgentSeatIsNotTheOtherAdminWhoCouldRecoverTheCompany(t *testing.T) {
 // state — it carries the audit row and the event every other status change in
 // this module commits.
 func TestRedeemingAnInvitationActivatesTheMemberAndEmitsIt(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-activation")
 
 	userID, rawToken, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -455,6 +464,7 @@ func TestRedeemingAnInvitationActivatesTheMemberAndEmitsIt(t *testing.T) {
 // account is unenterable by any route: it has no password, so the self-service
 // reset refuses it, and the admin-issued link is the only way back.
 func TestAnExpiredInvitationIsRecoveredByAnAdminIssuedLink(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-expired-recovery")
 
 	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -488,6 +498,7 @@ func TestAnExpiredInvitationIsRecoveredByAnAdminIssuedLink(t *testing.T) {
 // InviteUser puts a member on teams at invite time, so an admin correcting that
 // choice before redemption must not be refused.
 func TestAnInvitedMemberJoinsATeam(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-team-join")
 
 	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -509,6 +520,7 @@ func TestAnInvitedMemberJoinsATeam(t *testing.T) {
 // them to active would restate the falsehood this status exists to remove: the
 // row still has no credential and still signs in nowhere.
 func TestReactivatingAMemberWhoNeverSetAPasswordReturnsThemToInvited(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reactivate-unredeemed")
 
 	userID, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -538,6 +550,7 @@ func TestReactivatingAMemberWhoNeverSetAPasswordReturnsThemToInvited(t *testing.
 // another administrator, and let an operator deactivate the last one who could
 // actually enter — with no way back in.
 func TestAnInvitedAdminIsNotAnotherActiveAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invited-admin-not-a-guard")
 
 	if _, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
@@ -577,6 +590,7 @@ func TestAnInvitedAdminIsNotAnotherActiveAdmin(t *testing.T) {
 // would leave extension dispatch unable to find the seat it requires, on a row
 // nobody can redeem.
 func TestReactivatingTheAgentSeatRestoresItToActive(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "reactivate-agent-seat")
 
 	agentID, _ := seedAgentSeatIn(t, e)
@@ -607,6 +621,7 @@ func TestReactivatingTheAgentSeatRestoresItToActive(t *testing.T) {
 // in the direction that matters: a consumer handling team.changed correctly and
 // unaware of the exception is stale, with nothing to tell it so.
 func TestAnInviteNamingTeamsAnnouncesEachMembership(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "invite-teams")
 	ctx := e.wsCtx(e.admin)
 
@@ -670,6 +685,7 @@ func TestAnInviteNamingTeamsAnnouncesEachMembership(t *testing.T) {
 // former member's grants readable, and a 404 would make that impossible — the
 // defect is the tense, not the data.
 func TestTheAccessReadSaysWhetherTheMemberCanStillSignIn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "access-status")
 	ctx := e.wsCtx(e.admin)
 

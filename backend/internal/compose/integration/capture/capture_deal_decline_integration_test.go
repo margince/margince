@@ -72,6 +72,7 @@ func asColleague(w dealWorld, kind principal.PrincipalType, objects map[string]p
 // marked unrelated, and the project comes off. A live capture and the repair
 // change neither.
 func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -124,6 +125,7 @@ func TestADeclinedDealStaysOffForCaptureAndTheRepair(t *testing.T) {
 // mail better, the refile pass still leaves it alone. A colleague judged it,
 // so only a colleague's relink moves it.
 func TestADeclinedMailIsNotMovedToAnotherDealByItself(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -147,6 +149,7 @@ func TestADeclinedMailIsNotMovedToAnotherDealByItself(t *testing.T) {
 // those deals later becomes the company's only open deal, nothing files the
 // conversation on it.
 func TestNoneOfThemDeclinesEveryOfferedDealAndClosesTheQuestion(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
@@ -186,6 +189,7 @@ func TestNoneOfThemDeclinesEveryOfferedDealAndClosesTheQuestion(t *testing.T) {
 // off too, as a member's does, and the audit row names the agent. An agent
 // that cannot read projects keeps the link and says so.
 func TestADeclineAnswersByTheCallersAccess(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)

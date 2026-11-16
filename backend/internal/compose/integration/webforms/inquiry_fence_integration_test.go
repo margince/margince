@@ -28,6 +28,7 @@ import (
 )
 
 func TestAHandlingCutoverRefusesAnIntakeWithoutAcknowledgingOrLosingIt(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	id, err := ids.Parse(form.ID)
@@ -170,6 +171,7 @@ func intakesInTheFenceWait() int {
 }
 
 func TestLegacyLeadHandlersWaitForTheAcceptedWebsiteNote(t *testing.T) {
+	t.Parallel()
 	e := setupFormsApp(t)
 	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
 	for _, key := range []string{"route_lead", "assign_lead_owner"} {

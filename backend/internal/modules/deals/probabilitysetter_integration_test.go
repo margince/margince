@@ -52,6 +52,7 @@ func setterOf(t *testing.T, e *configEnv, deal ids.DealID) (string, string) {
 }
 
 func TestADealNamesTheColleagueWhoSetItsProbability(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, next := seedOwnedDeal(t, e)
 	if id, _ := setterOf(t, e, deal); id != "" {
@@ -89,6 +90,7 @@ func TestADealNamesTheColleagueWhoSetItsProbability(t *testing.T) {
 }
 
 func TestOnlyAHumanReaderIsToldWhoSetTheProbability(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	colleagueCtx, colleague := e.asColleague(t)
@@ -117,6 +119,7 @@ func TestOnlyAHumanReaderIsToldWhoSetTheProbability(t *testing.T) {
 }
 
 func TestAnArchivedSetterIsNotNamed(t *testing.T) {
+	t.Parallel()
 	e := setupConfigEnv(t)
 	deal, _, _ := seedOwnedDeal(t, e)
 	colleagueCtx, colleague := e.asColleague(t)

@@ -135,6 +135,7 @@ func seedRecord(ctx context.Context, t *testing.T, db *database.DB,
 }
 
 func TestAVerdictReachesEveryMessageFromThatSender(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -175,6 +176,7 @@ func TestAVerdictReachesEveryMessageFromThatSender(t *testing.T) {
 // The mail row is the control: it must still carry the verdict, or the guard
 // would be suppressing the ledger rather than scoping it.
 func TestACapturedChannelRecordInheritsNoMailVerdict(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -206,6 +208,7 @@ func TestACapturedChannelRecordInheritsNoMailVerdict(t *testing.T) {
 // leaves these messages claiming to wait for an answer they already have, for
 // as long as the window keeps them.
 func TestAnAddressNamedChannelMessageCarriesItsOwnVerdict(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -242,6 +245,7 @@ func TestAnAddressNamedChannelMessageCarriesItsOwnVerdict(t *testing.T) {
 // judged verdict, so a read that reached only the judged statuses would look
 // correct here and report nothing in production.
 func TestAnAddressNamedChannelSuppressionCarriesItsOwnDisposition(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -302,6 +306,7 @@ func entriesByConnector(ctx context.Context, t *testing.T, store *capture.TraceS
 // The comment on the join used to credit a workspace predicate for keeping
 // these apart. There is no workspace column on either table, so nothing did.
 func TestOneMembersDispositionDoesNotAnswerAnothersTrace(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me, colleague := ids.NewV7(), ids.NewV7()
 	const sender = "shared.sender@client.io"

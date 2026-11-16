@@ -81,6 +81,7 @@ func (e *sendEnv) accountStore() *Store {
 // the timeline row it leaves behind is filed under the company it was
 // started from rather than under nothing.
 func TestAnAccountStartedSendFilesItselfOnTheRecordItWasStartedFrom(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	stager := &recordingStager{}
@@ -107,6 +108,7 @@ func TestAnAccountStartedSendFilesItselfOnTheRecordItWasStartedFrom(t *testing.T
 // identity — the key capture derives when it reads that root back out of
 // the mailbox, which is what lets a reply to this message join this thread.
 func TestAnAccountStartedSendRootsAFreshThreadAtItsOwnIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	stager := &recordingStager{}
@@ -135,6 +137,7 @@ func TestAnAccountStartedSendRootsAFreshThreadAtItsOwnIdentity(t *testing.T) {
 // already read, so the row-scope probe at insert is the only thing standing
 // between a guessed UUID and a message filed on someone else's company.
 func TestAnAccountStartedSendRefusesALinkTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	stager := &recordingStager{}
 	// A well-formed id for a company that exists in no workspace this caller
@@ -157,6 +160,7 @@ func TestAnAccountStartedSendRefusesALinkTheCallerCannotSee(t *testing.T) {
 // who named a company they cannot see whether strangers had consented — and
 // would answer 409 where the row-scope verdict is 404.
 func TestAnUnreadableLinkRefusesBeforeTheConsentGateAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	stager := &recordingStager{}
 	gate := &countingConsentGate{}
@@ -180,6 +184,7 @@ func TestAnUnreadableLinkRefusesBeforeTheConsentGateAnswers(t *testing.T) {
 // resolve to "no anchor" — which is exactly the silent new conversation
 // ADR-0087 rejects making the anchor merely optional to avoid.
 func TestASendWithNoOriginRefusesRatherThanStartingAConversation(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	stager := &recordingStager{}
 
@@ -199,6 +204,7 @@ func TestASendWithNoOriginRefusesRatherThanStartingAConversation(t *testing.T) {
 // that has to hold on the new origin too, or an account-started send
 // becomes a way to learn a stranger's consent state.
 func TestAnAccountStartedSendRefusesOnAuthorizationBeforeConsentAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	gate := &countingConsentGate{}
@@ -218,6 +224,7 @@ func TestAnAccountStartedSendRefusesOnAuthorizationBeforeConsentAnswers(t *testi
 // belongs to nobody on file is the caller's to fix — and the refusal has to
 // say WHICH address, or the composer cannot offer the fix.
 func TestAnAccountStartedSendNamesTheAddressThatIsNotOnFile(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	stager := &recordingStager{}
@@ -252,6 +259,7 @@ func TestAnAccountStartedSendNamesTheAddressThatIsNotOnFile(t *testing.T) {
 // test names the cc'd address specifically so a future change that stopped
 // merging would fail here rather than quietly ship a cc-shaped hole.
 func TestAnAccountStartedSendRefusesAnUnresolvableCcAddress(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	stager := &recordingStager{}
@@ -280,6 +288,7 @@ func TestAnAccountStartedSendRefusesAnUnresolvableCcAddress(t *testing.T) {
 // captured, so refusing them would block answering mail the product itself
 // put on the timeline. The directory must not be consulted there at all.
 func TestAReplyDoesNotRequireItsAddressesToBeOnFile(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	directory := &countingRecipients{}
@@ -299,6 +308,7 @@ func TestAReplyDoesNotRequireItsAddressesToBeOnFile(t *testing.T) {
 // rather than mail an address it never resolved — the same fail-closed rule
 // the consent gate and the delivery stager follow.
 func TestAnAccountStartedSendRefusesWithNoRecipientDirectoryWired(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	stager := &recordingStager{}
@@ -359,6 +369,7 @@ func (g *countingConsentGate) RequireGrantedForEmails(context.Context, []string,
 // violation — a 500 at the very end of the send, and for an agent's approved
 // retry a 500 that had already consumed the human's one-shot approval.
 func TestARepeatedLinkIsFiledOnceRatherThanRaisingAUniqueViolation(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	stager := &recordingStager{}
@@ -383,6 +394,7 @@ func TestARepeatedLinkIsFiledOnceRatherThanRaisingAUniqueViolation(t *testing.T)
 // an agent's — the tool surface refuses the same count earlier so that no
 // approval is minted for a call this would reject.
 func TestASendFiledUnderMoreRecordsThanTheBoundIsRefusedBeforeItProbesAnything(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	stager := &recordingStager{}
 	links := make([]ActivityLinkInput, maxActivityLinks+1)
@@ -409,6 +421,7 @@ func TestASendFiledUnderMoreRecordsThanTheBoundIsRefusedBeforeItProbesAnything(t
 // booking — which reaches the timeline through the same insert and never passes
 // probeLinkTargets — meets it too.
 func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	company := e.seedCompany(t)
 	links := make([]ActivityLinkInput, maxActivityLinks+1)
@@ -436,6 +449,7 @@ func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 // no link to X. The project's timeline was missing the outbound half until the
 // customer answered and a subject tag brought their reply back.
 func TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	inherited := e.linkContact(t, anchor, "Mara Vogt")
@@ -472,6 +486,7 @@ func TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames(t
 // tell a caller who guessed a UUID whether strangers had consented, and would
 // answer 409 where the row-scope verdict is 404.
 func TestAReplyRefusesAnAddedLinkTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -498,6 +513,7 @@ func TestAReplyRefusesAnAddedLinkTheCallerCannotSee(t *testing.T) {
 // what they expect. It is not an error, and it is not a second link — the
 // activity_link unique constraint would refuse the write.
 func TestAReplyNamingALinkItsAnchorAlreadyCarriesFilesItOnce(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	inherited := e.linkContact(t, anchor, "Mara Vogt")
@@ -531,6 +547,7 @@ func TestAReplyNamingALinkItsAnchorAlreadyCarriesFilesItOnce(t *testing.T) {
 // after the consent gate had answered, after the message was prepared, and on a
 // scheduled send days after the caller could have shortened anything.
 func TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	for i := range maxActivityLinks {

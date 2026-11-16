@@ -90,6 +90,7 @@ func seedTracedActivityOwnedBy(ctx context.Context, t *testing.T, db *database.D
 }
 
 func TestAnActivityTheReaderCannotSeeIsListedWithoutItsLink(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	memberCtx := memberContext(ctx, ws, me)
@@ -110,6 +111,7 @@ func TestAnActivityTheReaderCannotSeeIsListedWithoutItsLink(t *testing.T) {
 }
 
 func TestAnActivityTheReaderCanSeeKeepsItsLink(t *testing.T) {
+	t.Parallel()
 	ctx, ws, db, store := traceReadWorkspace(t)
 	me := ids.NewV7()
 	// The contact is owned by the READER, so an own-scoped reader reaches the

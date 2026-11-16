@@ -99,6 +99,7 @@ func heldMeetingsOnDeal(t *testing.T, e *sendEnv, deal ids.UUID) int {
 }
 
 func TestATranscriptOfABookedMeetingMarksThatMeetingHeldAndCountsOnce(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
@@ -139,6 +140,7 @@ func TestATranscriptOfABookedMeetingMarksThatMeetingHeldAndCountsOnce(t *testing
 }
 
 func TestATranscriptCannotRecordAMeetingThatAlreadyHasItsOutcome(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
 	held := string(crmcontracts.ActivityMeetingStatusHeld)
@@ -157,6 +159,7 @@ func TestATranscriptCannotRecordAMeetingThatAlreadyHasItsOutcome(t *testing.T) {
 // A transcript's next step follows from the meeting it records, as the typed
 // notes' does, so the week counts that meeting as having one.
 func TestATranscriptsFollowUpCitesTheMeetingItRecords(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
@@ -178,6 +181,7 @@ func TestATranscriptsFollowUpCitesTheMeetingItRecords(t *testing.T) {
 // The target meeting is admitted as any write to it is: unseen is not found,
 // seen but not the caller's to change is refused.
 func TestATranscriptRecordsOnlyAMeetingTheCallerMayChange(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	links := fmt.Sprintf(`[{"entity_type": "contact", "entity_id": %q}]`, customer)
@@ -203,6 +207,7 @@ func TestATranscriptRecordsOnlyAMeetingTheCallerMayChange(t *testing.T) {
 // A meeting filed on a lead files its transcript there too, so the reading's
 // proposals land on the lead.
 func TestATranscriptOfALeadsMeetingIsFiledOnTheLead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	lead := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `INSERT INTO lead (id, full_name, status, source, captured_by, owner_id)
@@ -242,6 +247,7 @@ func TestATranscriptOfALeadsMeetingIsFiledOnTheLead(t *testing.T) {
 // A retried transcript create states the same source identity. It replays the
 // stored transcript, though its meeting no longer owes an outcome.
 func TestARetriedTranscriptOfAMeetingReplaysTheStoredTranscript(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	customer := seedCustomer(t, e)
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)

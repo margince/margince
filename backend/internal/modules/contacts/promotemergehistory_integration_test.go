@@ -16,6 +16,7 @@ import (
 )
 
 func TestAPromotionMergedIntoAContactIsToldOnTheContact(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	email := "lena@history.example"
 	lead := e.seedLead(t, email)

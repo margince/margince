@@ -32,6 +32,7 @@ import (
 )
 
 func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	companyID := ids.NewV7()
 	// A captured, domain-named company (name_source='domain') with a live primary
@@ -154,6 +155,7 @@ func TestCaptureAutoEnrichSweepTriggersADeepReadForACapturedCompany(t *testing.T
 // the call site capturedomaintriage_integration_test.go's own header comment
 // names as untestable without an ambient River client this runner now supplies.
 func TestCaptureAutoEnrichSweepQueuesDomainTriageAtHousekeepingPriorityToo(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	const domain = "unjudged.example"
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

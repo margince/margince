@@ -82,6 +82,7 @@ func (f *authAssertingFake) Normalize(context.Context, connector.RawRecord) ([]c
 func (f *authAssertingFake) HealthCheck(context.Context, connector.Auth) error { return nil }
 
 func TestConnectSealsCredentialInVaultNotOnTheRow(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
 	registry := newTestCaptureRegistry(e, vault)
@@ -120,6 +121,7 @@ func TestConnectSealsCredentialInVaultNotOnTheRow(t *testing.T) {
 }
 
 func TestSyncResolvesCredentialFromVault(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
 	registry := newTestCaptureRegistry(e, vault)
@@ -143,6 +145,7 @@ func TestSyncResolvesCredentialFromVault(t *testing.T) {
 // memory fake does, plus surface a wrong-root-key decrypt as an error (not
 // absence) without leaking the plaintext.
 func TestLocalVaultIsolationAndWrongKeyOnRealPostgres(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
 	ctx := context.Background()
@@ -230,6 +233,7 @@ func systemLogDetails(t *testing.T, e *integration.SearchEnv, action string) []m
 // from being a coin flip: exactly one relocation is possible, so exactly one
 // ledger row is the answer either way.
 func TestTwoBootsRelocateOneCredentialOnce(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
 	first := newTestCaptureRegistry(e, vault)
@@ -274,6 +278,7 @@ func TestTwoBootsRelocateOneCredentialOnce(t *testing.T) {
 }
 
 func TestBackfillMigratesLegacyAuthRowOntoTheVault(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	vault := newTestKeyvault(t, e)
 	registry := newTestCaptureRegistry(e, vault)

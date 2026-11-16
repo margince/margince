@@ -51,6 +51,7 @@ func groundedDraft(t *testing.T, e *sendEnv, store *Store, extra ...MailDraftAnc
 }
 
 func TestAnAgentsDraftIsServedWhileEveryRecordItRestsOnIsVisible(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := draftStore(e)
 	saved, _ := groundedDraft(t, e, store)
@@ -65,6 +66,7 @@ func TestAnAgentsDraftIsServedWhileEveryRecordItRestsOnIsVisible(t *testing.T) {
 }
 
 func TestAnAgentsDraftRestingOnAnArchivedConversationIsDiscardedOnRead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := draftStore(e)
 	saved, conversation := groundedDraft(t, e, store)
@@ -84,6 +86,7 @@ func TestAnAgentsDraftRestingOnAnArchivedConversationIsDiscardedOnRead(t *testin
 }
 
 func TestAnAgentsDraftRestingOnARecordItsReaderHoldsNoGrantForIsDiscardedOnRead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := draftStore(e)
 	project := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeProject, ID: e.seedProject(t, "ERP")}
@@ -100,6 +103,7 @@ func TestAnAgentsDraftRestingOnARecordItsReaderHoldsNoGrantForIsDiscardedOnRead(
 }
 
 func TestTheHumansEditKeepsWhatTheAgentsDraftWasWrittenFrom(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	store := draftStore(e)
 	saved, conversation := groundedDraft(t, e, store)
@@ -123,6 +127,7 @@ func TestTheHumansEditKeepsWhatTheAgentsDraftWasWrittenFrom(t *testing.T) {
 // A save through the route names no grounding, so the agent's draft keeps resting on
 // what it was written from. One made on a stale version is refused and moves nothing.
 func TestARouteSaveKeepsAnAgentsGroundingAndHonoursTheVersion(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Buyer")}
 	ground := MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeContact, ID: e.seedContact(t, "Ground")}

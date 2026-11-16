@@ -22,6 +22,7 @@ import (
 )
 
 func TestThreadColumnsReachTheWire(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "msg-1", "thread-A")
@@ -64,6 +65,7 @@ func TestThreadColumnsReachTheWire(t *testing.T) {
 // the colleague who held it from this column. A meeting scanned without it
 // leaves the spine unable to say who was in the room.
 func TestHostUserIDReachesTheWireOnAMeeting(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	id := ids.New[ids.ActivityKind]()
@@ -94,6 +96,7 @@ func TestHostUserIDReachesTheWireOnAMeeting(t *testing.T) {
 }
 
 func TestThreadKeyFilterReturnsOneConversation(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	e.seedAnchor(t, "msg-a1", "thread-A")

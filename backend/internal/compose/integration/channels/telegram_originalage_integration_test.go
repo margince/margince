@@ -26,6 +26,7 @@ import (
 )
 
 func TestAChannelOriginalAgesOutOnItsOwnClock(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 6101, messageID: 61, senderID: 776101, username: "aged", firstName: "Ada", text: "an old message"}
 	c.ingestOne(t, u, compose.JobRunnerConfig{})
@@ -41,6 +42,7 @@ func TestAChannelOriginalAgesOutOnItsOwnClock(t *testing.T) {
 }
 
 func TestAShieldedChannelMessageKeepsItsOriginal(t *testing.T) {
+	t.Parallel()
 	c := setupTelegramConnected(t)
 	u := telegramUpdate{updateID: 6102, messageID: 62, senderID: 776102, username: "held", firstName: "Hal", text: "the signed order"}
 	c.ingestOne(t, u, compose.JobRunnerConfig{})

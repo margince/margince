@@ -22,6 +22,7 @@ import (
 )
 
 func TestAwaitingOutcomeCarriesTheUnsettledMeetingsAndNoOthers(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	booked, captured := ids.NewV7(), ids.NewV7()
 	held, noShow, canceled := ids.NewV7(), ids.NewV7(), ids.NewV7()
@@ -73,6 +74,7 @@ func TestAwaitingOutcomeCarriesTheUnsettledMeetingsAndNoOthers(t *testing.T) {
 // ones, and only the second half of that assertion would catch it. This says
 // the difference is the flag rather than the fixture.
 func TestWithoutTheDialEveryMeetingIsCarried(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	booked, held := ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
@@ -99,6 +101,7 @@ func TestWithoutTheDialEveryMeetingIsCarried(t *testing.T) {
 // A customer follow-up is owed for a meeting with a customer: one linked to a
 // contact, company or lead. An internal stand-up owes none.
 func TestOnlyACustomerMeetingOwesAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	standUp, customer, contact := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
@@ -134,6 +137,7 @@ func TestOnlyACustomerMeetingOwesAFollowUp(t *testing.T) {
 // they owe a customer follow-up on, and must not appear because of a link they
 // cannot see.
 func TestAHiddenCustomerLinkMakesNoFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupPromises(t)
 	meeting, private := ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, host_user_id, source, captured_by)

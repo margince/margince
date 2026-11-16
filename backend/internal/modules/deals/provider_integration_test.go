@@ -147,6 +147,7 @@ func (e *seamEnv) refusesASecondArchive(t *testing.T, ref datasource.EntityRef) 
 }
 
 func TestTheSeamCarriesADealFromCreateToItsNextStage(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	_, from, to := twoStagePipeline(t, e.configEnv)
 	semantic, pipelineID, err := e.provider.StageSemantic(e.passport(), from.UUID)
@@ -176,6 +177,7 @@ func TestTheSeamCarriesADealFromCreateToItsNextStage(t *testing.T) {
 }
 
 func TestTheSeamCarriesAProductFromCreateToArchive(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	product := e.create(t, datasource.EntityProduct,
 		`{"name":"Support seat","currency":"EUR","unit_price_minor":4900,"billing_model":"one_time"}`)
@@ -201,6 +203,7 @@ func TestTheSeamCarriesAProductFromCreateToArchive(t *testing.T) {
 }
 
 func TestTheSeamCarriesAnOfferTemplateFromCreateToArchive(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	template := e.create(t, datasource.EntityOfferTemplate,
 		`{"name":"Standard","locale":"en-GB","is_default":true,"layout":{"footer":"v1"}}`)
@@ -224,6 +227,7 @@ func TestTheSeamCarriesAnOfferTemplateFromCreateToArchive(t *testing.T) {
 }
 
 func TestTheSeamCarriesAnOfferAndItsLines(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	dealID, _, _ := twoStagePipeline(t, e.configEnv)
 	offer := e.create(t, datasource.EntityOffer, `{"deal_id":"`+dealID.String()+`","currency":"EUR",
@@ -263,6 +267,7 @@ func TestTheSeamCarriesAnOfferAndItsLines(t *testing.T) {
 // An offer list is anchored on its deal, so a deal that does not exist answers
 // not found rather than an empty page.
 func TestAnOfferListOnAnUnknownDealAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	_, _, _, err := e.provider.SearchEntity(e.passport(), datasource.EntityOffer, nil, 10, nil,
 		map[string]string{"deal_id": ids.NewV7().String()})
@@ -272,6 +277,7 @@ func TestAnOfferListOnAnUnknownDealAnswersNotFound(t *testing.T) {
 }
 
 func TestTheSeamAnswersNotFoundForARecordThatIsNotThere(t *testing.T) {
+	t.Parallel()
 	e := setupSeamEnv(t)
 	for _, typ := range []datasource.EntityType{
 		datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,

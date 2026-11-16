@@ -113,6 +113,7 @@ func scanFor(e *integration.Env, lane companyscan.Completer, queued *[]companysc
 }
 
 func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	message := seedInboundAsk(t, e, company.UUID, "workspace", company360Clock)
@@ -201,6 +202,7 @@ func TestTheScanReadsTheAccountForTheReaderAndTheReaderCanPutAFindingOff(t *test
 // that cites it anyway is refused whole. The account settles with no finding
 // rather than with a quote the reader may not read.
 func TestAMessageOutsideTheReadersAudienceIsNeverQuoted(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Nordlicht", &e.Rep1))
 	hidden := seedInboundAsk(t, e, company.UUID, "selected", company360Clock)

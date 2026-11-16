@@ -54,6 +54,7 @@ func doneTrail(t *testing.T, e *loadEnv, row WorklistRowRef) int {
 // The two follow-up rows keep their Done on the activity, so their own lanes
 // leave them out. One Undo for the batch puts both back.
 func TestDoneTakesFollowUpsOffTheListAndUndoPutsThemBack(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	sent, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
@@ -87,6 +88,7 @@ func TestDoneTakesFollowUpsOffTheListAndUndoPutsThemBack(t *testing.T) {
 // A follow-up row names the activity it stands for, and a batch naming any
 // other kind is refused whole, so nothing of it is stored.
 func TestDoneOnAFollowUpRowRefusesAnotherKindOfActivity(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	sent, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
@@ -111,6 +113,7 @@ func TestDoneOnAFollowUpRowRefusesAnotherKindOfActivity(t *testing.T) {
 // Any other row is kept in the reader's own Done set with its moment, audited,
 // and taken back by Undo; a second Undo changes nothing.
 func TestDoneOnAnyOtherRowIsTheReadersOwnAndUndoable(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := handledStore(e)
 	rep := e.followUpReader()
@@ -160,6 +163,7 @@ func TestDoneOnAnyOtherRowIsTheReadersOwnAndUndoable(t *testing.T) {
 // A source the queue does not produce, and a caller with no human behind it,
 // are refused before anything is written.
 func TestDoneRefusesAnUnknownLaneAndAnAgent(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := handledStore(e)
 	junk := []WorklistRowRef{{Source: "made_up", RowID: "x"}}
@@ -195,6 +199,7 @@ func TestDoneRefusesARowIdNoRowCouldCarry(t *testing.T) {
 // Undo of a Done takes back the Done alone. A snooze the reader set after it
 // stays, so a late Undo cannot bring back what they put off.
 func TestUndoOfDoneLeavesALaterSnooze(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	sent, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
@@ -222,6 +227,7 @@ func TestUndoOfDoneLeavesALaterSnooze(t *testing.T) {
 // A row named twice, or a message already done, writes nothing more: one
 // audit row and one event in all.
 func TestDoneTwiceOnOneMessageWritesItOnce(t *testing.T) {
+	t.Parallel()
 	e := setupLoad(t)
 	_, message := handledFixture(t, e, "Answered on the phone")
 	row := WorklistRowRef{Source: "customer_waiting", RowID: message.String()}

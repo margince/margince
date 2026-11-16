@@ -26,6 +26,7 @@ import (
 )
 
 func TestTheSeededRolesReachTheRowScopeTheyClaim(t *testing.T) {
+	t.Parallel()
 	svc, _, _ := seatChoosingALanguage(t)
 
 	for _, want := range []struct {

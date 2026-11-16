@@ -45,6 +45,7 @@ func bootstrapRawCaptureWorkspace(t *testing.T) context.Context {
 // design's "a replay refreshes, never duplicates" rule. Collapsing this into
 // DO NOTHING would silently keep serving a stale provider payload forever.
 func TestInsertRawCaptureTxIsIdempotentOnUpdateID(t *testing.T) {
+	t.Parallel()
 	ctx := bootstrapRawCaptureWorkspace(t)
 	_, pool := setupCaptureDB(t)
 
@@ -110,6 +111,7 @@ func TestInsertRawCaptureTxIsIdempotentOnUpdateID(t *testing.T) {
 // its own transaction, rolling back the caller's would still leave the raw
 // row behind.
 func TestInsertRawCaptureTxJoinsTheCallersTransaction(t *testing.T) {
+	t.Parallel()
 	ctx := bootstrapRawCaptureWorkspace(t)
 	_, pool := setupCaptureDB(t)
 

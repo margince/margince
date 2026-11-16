@@ -20,6 +20,7 @@ import (
 // The sink masks what every connector stores, not only what the mail mapper
 // built: a chat message lands with its PIN masked too.
 func TestTheSinkMasksCredentialsInEveryCapturedRecord(t *testing.T) {
+	t.Parallel()
 	owner, pool := setupCaptureDB(t)
 	ctx := context.Background()
 	ws := ids.NewV7()

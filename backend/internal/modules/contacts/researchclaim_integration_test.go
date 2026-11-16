@@ -92,6 +92,7 @@ func claimRowsFor(ctx context.Context, t *testing.T, e *dedupeEnv, contactID ids
 // separate assertions because a row stored under the wrong key is invisible to
 // the lookup while still being a row.
 func TestSavingAResearchClaimWritesEachColumnTheValueItWasGiven(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -131,6 +132,7 @@ func TestSavingAResearchClaimWritesEachColumnTheValueItWasGiven(t *testing.T) {
 // DO UPDATE arm, which the accept drawer reaches whenever a reader revisits a
 // field they have already chosen.
 func TestAcceptingASecondClaimAboutOneFieldReplacesTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -177,6 +179,7 @@ func TestAcceptingASecondClaimAboutOneFieldReplacesTheFirst(t *testing.T) {
 // record with nothing recording who decided it, on a table whose whole purpose
 // is to make a fact traceable.
 func TestOneAcceptanceWritesEveryClaimAndTheWriteShape(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -259,6 +262,7 @@ func acceptanceLedger(ctx context.Context, t *testing.T, e *dedupeEnv, contactID
 // A claim missing any of its three evidence parts is refused, and the table is
 // left empty — a partial claim is not stored in a weaker form.
 func TestAResearchClaimMissingItsEvidenceIsRefusedAndStoresNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -285,6 +289,7 @@ func TestAResearchClaimMissingItsEvidenceIsRefusedAndStoresNothing(t *testing.T)
 // whose second choice was rejected must not find their first one saved, since
 // they would have no way to tell which half of their decision took effect.
 func TestAnUnknownFieldTakesTheWholeAcceptanceDown(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -305,6 +310,7 @@ func TestAnUnknownFieldTakesTheWholeAcceptanceDown(t *testing.T) {
 // somebody else archives the record, so the guard is the write's and not the
 // screen's.
 func TestAnArchivedContactTakesNoResearchClaim(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -331,6 +337,7 @@ func TestAnArchivedContactTakesNoResearchClaim(t *testing.T) {
 // this caller PASSES it — they can open the record — so the write arm refuses
 // in the open rather than hiding a row already shown to them.
 func TestARepWhoMayOnlyReadAContactCannotAcceptClaimsOnThem(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -358,6 +365,7 @@ func TestARepWhoMayOnlyReadAContactCannotAcceptClaimsOnThem(t *testing.T) {
 // divergence is a conflict clause on one table against a conflict clause on the
 // other, and neither exists anywhere a unit test could see.
 func TestTwoClaimsForOneFieldLeaveTheSlotAndTheEvidenceAgreeing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,
@@ -401,6 +409,7 @@ func TestTwoClaimsForOneFieldLeaveTheSlotAndTheEvidenceAgreeing(t *testing.T) {
 // An accepted claim is somebody's word for a value, and automatic work with no
 // passport acts for nobody.
 func TestPassportlessAutomaticWorkCannotAcceptAClaim(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	human := e.as()
 	p, ok := principal.Actor(human)
@@ -418,6 +427,7 @@ func TestPassportlessAutomaticWorkCannotAcceptAClaim(t *testing.T) {
 }
 
 func TestAnAgentsAcceptedClaimDoesNotOverwriteAHumansValue(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	human := e.as()
 	p, ok := principal.Actor(human)

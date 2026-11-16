@@ -68,6 +68,7 @@ func liveTypesOf(ctx context.Context, t *testing.T, e *dedupeEnv, companyID ids.
 }
 
 func TestCompanyStartsAtUnknownRatherThanClaimingToBeAProspect(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -88,6 +89,7 @@ func TestCompanyStartsAtUnknownRatherThanClaimingToBeAProspect(t *testing.T) {
 }
 
 func TestUpdateCompanyRelationshipTypesReplaceSet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -137,6 +139,7 @@ func TestUpdateCompanyRelationshipTypesReplaceSet(t *testing.T) {
 }
 
 func TestRelationshipTypesRefuseAValueOutsideTheVocabulary(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -159,6 +162,7 @@ func TestRelationshipTypesRefuseAValueOutsideTheVocabulary(t *testing.T) {
 }
 
 func TestPartnerPromotionWritesTheTypeAndThePatchCannotTakeItAway(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -192,6 +196,7 @@ func TestPartnerPromotionWritesTheTypeAndThePatchCannotTakeItAway(t *testing.T) 
 }
 
 func TestNamingAnAccountAPartnerWithoutAProgrammeIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -214,6 +219,7 @@ func TestNamingAnAccountAPartnerWithoutAProgrammeIsRefused(t *testing.T) {
 }
 
 func TestArchivingAnAccountRetiresItsRelationshipTypes(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{

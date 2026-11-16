@@ -41,6 +41,7 @@ func (e *promoteConsentEnv) releasedPromotion(t *testing.T, lead ids.LeadID, in 
 // An approval released while the lead's domain was blocked must not create the
 // company the lifted block now allows. The write refuses it under the lead lock.
 func TestAReleasedPromotionWhoseCompanyDecisionMovedWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	const domain = "pinned-works.test"
 	lead := e.seedLead(t, "pat@"+domain)

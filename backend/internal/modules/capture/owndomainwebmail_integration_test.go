@@ -70,6 +70,7 @@ func settingsAdmin(ctx context.Context, t *testing.T, db *database.DB) context.C
 }
 
 func TestWebmailClaimedByTheAnchorCompanyIsNotOneOfOurDomains(t *testing.T) {
+	t.Parallel()
 	trusted := trustedDomainsOf(t, "margince.test", "gmail.com")
 
 	if trusted.Covers("somebody@gmail.com") {
@@ -85,6 +86,7 @@ func TestWebmailClaimedByTheAnchorCompanyIsNotOneOfOurDomains(t *testing.T) {
 // An administrator keeps a domain the baseline calls consumer mail by filing a
 // `never` entry. That entry has to win here too.
 func TestAnAdministratorsNeverEntryKeepsTheDomainOurs(t *testing.T) {
+	t.Parallel()
 	ctx, db := bootstrapInternalMailWorkspace(t, "gmail.com")
 	// Written through the store an operator writes through, which normalizes
 	// the domain to the registrable form the matcher keys on.

@@ -17,6 +17,7 @@ import (
 )
 
 func TestFailedAttemptsDoNotAdvanceSuccessfulMailCoverage(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	recovered := true
 	reg.Register(haltingConnector{recovered: &recovered})
@@ -72,6 +73,7 @@ func (c lifecycleSync) Sync(context.Context, connector.Auth, connector.Cursor, c
 }
 
 func TestSupersededSyncDoesNotWriteSuccessOrFailureOntoANewGrant(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name       string
 		disconnect bool

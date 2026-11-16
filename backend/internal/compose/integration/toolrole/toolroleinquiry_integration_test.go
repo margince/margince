@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestInquiryPreviewRequiresPermissionToCreateTheWorkItPlans(t *testing.T) {
 	recorded := newToolCheckRecorder()
 	const slug = "inquiry-preview-authority"
@@ -158,6 +159,7 @@ func inquiryAssignmentArgs(p *recordPool, apply bool) map[string]any {
 	return args
 }
 
+//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestSelectedWebsiteInquiryToolUsesTheSavedPausedPolicy(t *testing.T) {
 	d := toolRoleApp(t, "selected-website-inquiry")
 	pool := &recordPool{fresh: map[string][]string{}, facts: map[string]map[string]string{}}

@@ -77,6 +77,7 @@ func readConnectionSyncState(t *testing.T, e *integration.SearchEnv, connID ids.
 }
 
 func TestASyncDisconnectedMidFlightCommitsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
@@ -114,6 +115,7 @@ func TestASyncDisconnectedMidFlightCommitsNothing(t *testing.T) {
 }
 
 func TestABackfillPageDisconnectedMidFlightCommitsNothing(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))

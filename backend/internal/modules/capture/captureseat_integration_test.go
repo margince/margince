@@ -18,6 +18,7 @@ import (
 // nor erased: an invited one and a departed one count. A retired seat leaves
 // mail classification, and keeps the meetings it attended.
 func TestRetiredSeatsLeaveNewMailClassificationButKeepCalendarAttendance(t *testing.T) {
+	t.Parallel()
 	ctx, pool := meetingTenureEnv(t)
 	for _, seatCase := range []struct {
 		name, status string

@@ -58,6 +58,7 @@ func (e *dedupeEnv) lifecycleOf(ctx context.Context, t *testing.T, id ids.Compan
 }
 
 func TestAUserWalksAnAccountFromOpportunityThroughLiveToCustomer(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	id := e.companyAtStage(ctx, t, "Walk GmbH", "opportunity")
@@ -84,6 +85,7 @@ func TestAUserWalksAnAccountFromOpportunityThroughLiveToCustomer(t *testing.T) {
 }
 
 func TestNoAgentAutomationOrConnectorSetsAnAccountLive(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	id := e.companyAtStage(e.as(), t, "Not Yet Live GmbH", "onboarding")
 	for _, kind := range []principal.PrincipalType{principal.PrincipalAgent, principal.PrincipalSystem, principal.PrincipalConnector} {
@@ -105,6 +107,7 @@ func TestNoAgentAutomationOrConnectorSetsAnAccountLive(t *testing.T) {
 }
 
 func TestAnApprovedProposalNeverMovesAnAccountLive(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	id := e.companyAtStage(e.as(), t, "Proposed GmbH", "onboarding")
 	ctx := principal.SystemActing(e.as(), "approval-executor")
@@ -119,6 +122,7 @@ func TestAnApprovedProposalNeverMovesAnAccountLive(t *testing.T) {
 }
 
 func TestSettingLiveKeepsTheRowAndObjectGates(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	id := e.companyAtStage(e.as(), t, "Gated GmbH", "onboarding")
 	live := "live"
@@ -151,6 +155,7 @@ func TestSettingLiveKeepsTheRowAndObjectGates(t *testing.T) {
 }
 
 func TestTheLifecycleFilterReachesOnboardingAndLive(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	want := map[string]ids.CompanyID{

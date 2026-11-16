@@ -31,6 +31,7 @@ import (
 )
 
 func TestEveryGeocodeStatementRunsAgainstTheRealSchema(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -108,6 +109,7 @@ func readGeocode(t *testing.T, e *dedupeEnv, companyID ids.CompanyID) (status st
 // and without this pass within_radius answers from an empty set while looking
 // like a query that works.
 func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -178,6 +180,7 @@ func TestTheSweepFindsCompaniesNoWriteWillEverReach(t *testing.T) {
 // company was asked, so the sweep leaves it to the copy rather than spending a
 // lookup on it again.
 func TestTheSweepLeavesAPointTheCopyHasNotMovedYet(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -208,6 +211,7 @@ func TestTheSweepLeavesAPointTheCopyHasNotMovedYet(t *testing.T) {
 // an edit form opened before the answer still saves. An address edit still
 // marks the point stale in its own transaction.
 func TestAGeocodeAnswerLeavesAnOpenEditFormSaveable(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{
@@ -248,6 +252,7 @@ func TestAGeocodeAnswerLeavesAnOpenEditFormSaveable(t *testing.T) {
 // sweep it sits that way forever, invisible to within_radius and to anyone
 // looking for a reason.
 func TestAStaleCompanyWithNoJobComingIsSwept(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -303,6 +308,7 @@ func TestAStaleCompanyWithNoJobComingIsSwept(t *testing.T) {
 // Sweeping only never-asked rows left them orphaned, because a failure whose
 // backoff has expired has no River job left to carry it either.
 func TestAFailedLookupIsAskedAgainOnceItsBackoffExpires(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

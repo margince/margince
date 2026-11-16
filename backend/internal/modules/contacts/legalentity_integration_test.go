@@ -54,28 +54,8 @@ func defaultEntity(t *testing.T, e *promoteConsentEnv) ids.LegalEntityID {
 	return id
 }
 
-// The test reset deletes the entities a test described. It returns the default
-// to its seeded state, so no test here depends on the order the suite ran in.
-func TestTheResetLeavesOnlyTheSeededDefault(t *testing.T) {
-	e := setupPromoteConsent(t)
-	describeEntity(t, e)
-	if _, err := e.owner.Exec(context.Background(), `UPDATE legal_entity SET country = 'de' WHERE is_default`); err != nil {
-		t.Fatalf("set the default's country: %v", err)
-	}
-	e = setupPromoteConsent(t)
-	var rows int
-	var country *string
-	if err := e.owner.QueryRow(context.Background(),
-		`SELECT (SELECT count(*) FROM legal_entity), (SELECT country FROM legal_entity WHERE is_default)`).
-		Scan(&rows, &country); err != nil {
-		t.Fatalf("read the entities after a reset: %v", err)
-	}
-	if rows != 1 || country != nil {
-		t.Errorf("after a reset: %d entities and default country %v, want the seeded default alone", rows, country)
-	}
-}
-
 func TestNoEntityTakesTheCompanysName(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	if _, err := e.store.WithInstallationRenamer(ignoreInstallationName).SaveCompany(admin,
@@ -96,6 +76,7 @@ func TestNoEntityTakesTheCompanysName(t *testing.T) {
 }
 
 func TestArchiveRefusesAStaleVersion(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	vienna := describeEntity(t, e)
@@ -121,6 +102,7 @@ func describeEntity(t *testing.T, e *promoteConsentEnv) LegalEntity {
 }
 
 func TestTheMigrationLeavesOneDefaultEntityThatCannotBeRetired(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	ctx := context.Background()
 	var count int
@@ -147,6 +129,7 @@ func TestTheMigrationLeavesOneDefaultEntityThatCannotBeRetired(t *testing.T) {
 }
 
 func TestAnEntityNeedsItsRequiredFieldsAndCleanValues(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	for name, tc := range map[string]struct {
@@ -192,6 +175,7 @@ func TestAnEntityNeedsItsRequiredFieldsAndCleanValues(t *testing.T) {
 }
 
 func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	user := ids.From[ids.UserKind](e.user)
@@ -253,6 +237,7 @@ func TestAUserWorksForTheDefaultEntityUntilAssigned(t *testing.T) {
 }
 
 func TestARepReadsTheEntitiesAndChangesNone(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	h := Handlers{store: e.store}
 	rep := actingAs(e, "rep", entityRep)
@@ -280,6 +265,7 @@ func TestARepReadsTheEntitiesAndChangesNone(t *testing.T) {
 }
 
 func TestEveryEntityWriteCommitsItsAuditAndItsEvent(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	vienna := describeEntity(t, e)
@@ -340,6 +326,7 @@ func assertAuditAndEvent(t *testing.T, e *promoteConsentEnv, entity ids.UUID, ac
 }
 
 func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	admin := actingAs(e, "admin", entityAdmin)
 	if _, err := e.store.WithInstallationRenamer(ignoreInstallationName).SaveCompany(admin, SaveCompanyInput{DisplayName: "Acme", Fields: map[string]*string{

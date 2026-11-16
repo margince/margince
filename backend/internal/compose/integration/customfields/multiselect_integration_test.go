@@ -14,6 +14,7 @@ import (
 )
 
 func TestMultiselectPreservesChoicesAndRefusesUnknownOnes(t *testing.T) {
+	t.Parallel()
 	e := schemaWiredEnv(t)
 	status, field, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "company", "label": "Capabilities", "type": "multiselect", "options": []string{"Fit, scope", "C++", "Other"}, "source": "manual",

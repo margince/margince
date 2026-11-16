@@ -15,6 +15,7 @@ import (
 // The contact and company lists search through the filters their list builds,
 // identifier arm included, so the plan is the one production runs.
 func TestEachQuickFindReadsItsTrigramIndex(t *testing.T) {
+	t.Parallel()
 	for _, list := range []struct {
 		table   string
 		filters listFilters

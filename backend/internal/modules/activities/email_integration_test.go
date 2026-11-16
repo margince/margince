@@ -13,7 +13,6 @@ package activities
 
 import (
 	"context"
-	"os"
 	"strings"
 	"testing"
 
@@ -101,41 +100,11 @@ type sendEnv struct {
 	other ids.UUID
 }
 
-// emptyDatabase deletes what earlier tests committed. Every test in this
-// package seeds its own workspace into one shared database. A read that counts
-// or pages over all of it would see every earlier test's rows.
-func emptyDatabase(t *testing.T) {
-	t.Helper()
-	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		if err := owner.Close(ctx); err != nil {
-			t.Errorf("closing the reset connection: %v", err)
-		}
-	}()
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.CapStatements(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func setupSend(t *testing.T) *sendEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,18 +113,9 @@ func setupSend(t *testing.T) *sendEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	if err := testdb.CapStatements(ctx, owner); err != nil {
 		t.Fatal(err)
 	}
-
-	emptyDatabase(t)
 
 	e := &sendEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7()}
 	if _, err := owner.Exec(ctx,
@@ -169,14 +129,12 @@ func setupSend(t *testing.T) *sendEnv {
 		}
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 	e.pool = pool
 	return e
@@ -335,6 +293,7 @@ func soloSendInput(purpose string) SendEmailInput {
 // copy of the sent message. Bracketed, or filed under a different system, the
 // two never collide and every outbound email lands on the timeline twice.
 func TestSendEmailStampsTheUnbracketedMessageIDAsTheSourceKey(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -379,6 +338,7 @@ func TestSendEmailStampsTheUnbracketedMessageIDAsTheSourceKey(t *testing.T) {
 // time stays unwritten, and reply detection — which joins an inbound reply
 // against outbound activities on thread_key — never fires for this mail.
 func TestSendEmailStampsTheThreadKeyFromTheAnchor(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "parent@buyer.test", "root@buyer.test")
 	stager := &recordingStager{}
@@ -416,6 +376,7 @@ func TestSendEmailStampsTheThreadKeyFromTheAnchor(t *testing.T) {
 // answers. The recipient's reply then keys the same conversation, which is all
 // the join needs.
 func TestSendEmailThreadsAnAnchorThatHasAKeyButNoMessageIdentity(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "root@buyer.test")
 	stager := &recordingStager{}
@@ -443,6 +404,7 @@ func TestSendEmailThreadsAnAnchorThatHasAKeyButNoMessageIdentity(t *testing.T) {
 // these two columns, so a send that leaves them unset makes a prospect the CRM
 // emailed a stranger when they reply.
 func TestSendEmailRecordsTheOutboundCorrespondenceEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
@@ -471,6 +433,7 @@ func TestSendEmailRecordsTheOutboundCorrespondenceEvidence(t *testing.T) {
 // References, and the message is its own thread root — which is exactly the
 // key mailmap derives for a root message read back from the mailbox.
 func TestSendEmailWithoutAnchorContextRootsANewThread(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}

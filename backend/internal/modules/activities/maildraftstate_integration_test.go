@@ -18,6 +18,7 @@ import (
 )
 
 func TestMailDraftHTTPKeepsEditorState(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -77,6 +78,7 @@ func TestMailDraftHTTPKeepsEditorState(t *testing.T) {
 }
 
 func TestOversizedEditorMetadataDoesNotLoseTheMessage(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -92,6 +94,7 @@ func TestOversizedEditorMetadataDoesNotLoseTheMessage(t *testing.T) {
 }
 
 func TestAnOlderWriterCannotLeaveEditorStateOnDifferentWords(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := replyAnchor(e.seedAnchor(t, "", ""))
@@ -121,6 +124,7 @@ func TestAnOlderWriterCannotLeaveEditorStateOnDifferentWords(t *testing.T) {
 // reload drafts in it again. A code the product does not write is dropped, and
 // the words still save.
 func TestMailDraftHTTPKeepsTheChosenDraftLanguage(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	h := Handlers{store: draftStore(e)}

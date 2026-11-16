@@ -50,6 +50,7 @@ func claimInput(company string) InstallationBootstrap {
 }
 
 func TestClaimCreatesTheCompanyAndSpendsTheToken(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -78,6 +79,7 @@ func TestClaimCreatesTheCompanyAndSpendsTheToken(t *testing.T) {
 }
 
 func TestClaimIsAttributedToTheAdminItCreates(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -110,6 +112,7 @@ func TestClaimIsAttributedToTheAdminItCreates(t *testing.T) {
 }
 
 func TestConfiguredBootstrapStaysASystemEvent(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 	_, created, _, err := svc.BootstrapInstallation(ctx, func() (InstallationBootstrap, error) {
@@ -133,6 +136,7 @@ func TestConfiguredBootstrapStaysASystemEvent(t *testing.T) {
 }
 
 func TestAWrongTokenIsRefusedAndLeavesTheInstallationClaimable(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -163,6 +167,7 @@ func TestAWrongTokenIsRefusedAndLeavesTheInstallationClaimable(t *testing.T) {
 // the service permits: minting against a live installation is refused outright,
 // and provisioning retires whatever was outstanding. Both are the point.
 func TestClaimingAProvisionedInstallationIsRefused(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -187,6 +192,7 @@ func TestClaimingAProvisionedInstallationIsRefused(t *testing.T) {
 }
 
 func TestASecondTokenIsNotMintedWhileOneIsOutstanding(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -208,6 +214,7 @@ func TestASecondTokenIsNotMintedWhileOneIsOutstanding(t *testing.T) {
 // trusted. Both are one query in a lane that already has Postgres.
 
 func TestOnlyTheHashOfTheSetupTokenIsStored(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -231,6 +238,7 @@ func TestOnlyTheHashOfTheSetupTokenIsStored(t *testing.T) {
 }
 
 func TestTheDatabaseRefusesASecondOutstandingToken(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -250,6 +258,7 @@ func TestTheDatabaseRefusesASecondOutstandingToken(t *testing.T) {
 }
 
 func TestAConfiguredBootstrapRetiresAnOutstandingToken(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 
@@ -277,6 +286,7 @@ func TestAConfiguredBootstrapRetiresAnOutstandingToken(t *testing.T) {
 // too. Without it `"admin_password": ""` mints a loginable root account — an
 // absent JSON key decodes to exactly that.
 func TestAClaimCannotSetAnEmptyOrShortAdminPassword(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name     string
 		password string
@@ -318,6 +328,7 @@ func TestAClaimCannotSetAnEmptyOrShortAdminPassword(t *testing.T) {
 // the operator was holding, and before this the only evidence was a boot log
 // line on whichever process happened to run it.
 func TestTheSetupTokenLifecycleIsRecorded(t *testing.T) {
+	t.Parallel()
 	svc := newSetupService(t)
 	ctx := context.Background()
 

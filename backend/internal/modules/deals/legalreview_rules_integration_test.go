@@ -62,6 +62,7 @@ func (e *reviewEnv) addLegalCriterion(t *testing.T, stage ids.StageID, required 
 
 // A gate added to a stage the deal already left still holds its next move.
 func TestAGateAddedBehindADealHoldsItsNextMove(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, first, _, third := threeStagesBehind(t, e)
 	e.addLegalCriterion(t, first, true)
@@ -70,6 +71,7 @@ func TestAGateAddedBehindADealHoldsItsNextMove(t *testing.T) {
 
 // An optional criterion made required behind the deal holds it too.
 func TestACriterionMadeRequiredBehindADealHoldsIt(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, first, _, third := threeStagesBehind(t, e)
 	criterion := e.addLegalCriterion(t, first, false)
@@ -112,6 +114,7 @@ func laterStage(t *testing.T, e *reviewEnv, pipelineID ids.PipelineID) ids.Stage
 
 // A gated stage reordered behind the deal holds its next move.
 func TestAGatedStageReorderedBehindADealHoldsIt(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, first, second, third := threeStagesBehind(t, e)
 	e.addLegalCriterion(t, third, true)
@@ -129,6 +132,7 @@ func TestAGatedStageReorderedBehindADealHoldsIt(t *testing.T) {
 // Switched off, a deal passes the gate; switched on again, its next move
 // needs an approval of its terms like any other. A request left open stays open.
 func TestSwitchingLegalReviewOffAndOnAgain(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, second, third := threeStagesBehind(t, e)
 	e.addLegalCriterion(t, second, true)
@@ -158,6 +162,7 @@ func TestSwitchingLegalReviewOffAndOnAgain(t *testing.T) {
 // Ops holds installation_settings.update for the wiring it runs; whether
 // deals wait for legal is an admin's call.
 func TestOnlyAnAdminSwitchesLegalReview(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	store := configtest.StoredOver(t, e.pool, ConfigSettings())
 	ops := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
@@ -186,6 +191,7 @@ func withRole(ctx context.Context, role string) context.Context {
 // Two decisions on one review: the row lock lets one through and the second
 // finds it decided. Two requests on one deal: one is opened, the other 409s.
 func TestConcurrentDecisionsAndRequestsSettleOnce(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	var wg sync.WaitGroup
@@ -236,6 +242,7 @@ func newestReviewID(e *reviewEnv, dealID ids.DealID) (ids.UUID, error) {
 // A change to the deal's amount is still in flight when the advance starts.
 // The advance waits on the deal row, then decides on the new amount.
 func TestAnAdvanceWaitsForAnAmountChangeInFlight(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	e.answer(t, e.request(t, dealID, nil), ReviewApproved)
@@ -287,6 +294,7 @@ func waitForALockWaiter(t *testing.T, e *configEnv) {
 // A reviewer who may see less than the requester reads less of the pack. Not
 // the money their field masks hide, and not a company they cannot see.
 func TestThePackShowsAReviewerOnlyWhatTheyMayRead(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	company := ids.NewV7()
@@ -342,6 +350,7 @@ func TestThePackShowsAReviewerOnlyWhatTheyMayRead(t *testing.T) {
 // The offer follows the reader's offer.read, and its money the deal's mask:
 // the offer's total is the deal's amount by another name.
 func TestThePackShowsTheOfferOnlyToAnOfferReaderAndItsMoneyUnderTheMask(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	description, price, tax := "Implementation", int64(500_000), "19.00"
@@ -378,6 +387,7 @@ func TestThePackShowsTheOfferOnlyToAnOfferReaderAndItsMoneyUnderTheMask(t *testi
 // A lost deal reopened past the gate passes it as surely as a forward step,
 // so the reopen needs the approval a step would.
 func TestALostDealReopenedPastTheGateNeedsLegal(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, contract := threeStageDeal(t, e)
 	var pipelineID ids.PipelineID
@@ -397,6 +407,7 @@ func TestALostDealReopenedPastTheGateNeedsLegal(t *testing.T) {
 // The autopilot and other passes run as the system principal. The gate holds
 // it like any seat, because it asks about the deal, not the caller.
 func TestTheSystemPrincipalIsHeldByTheGate(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	system := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws),
@@ -408,6 +419,7 @@ func TestTheSystemPrincipalIsHeldByTheGate(t *testing.T) {
 // Withdrawing a later request leaves the deal with no standing approval: the
 // newest review decides, and an older approval does not come back.
 func TestAWithdrawnLaterRequestDoesNotReviveAnOlderApproval(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, toID := gatedDeal(t, e)
 	e.answer(t, e.request(t, dealID, nil), ReviewApproved)
@@ -421,6 +433,7 @@ func TestAWithdrawnLaterRequestDoesNotReviveAnOlderApproval(t *testing.T) {
 // A reader whose role masks the amount gets the queue in close-date order.
 // The cursor names a row and carries no figure of it.
 func TestTheQueueDoesNotSortOrPageByAMaskedValue(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	_, stageID, _ := twoStagePipeline(t, e.configEnv)
 	soon, later := clocktest.Now(t).AddDate(0, 1, 0), clocktest.Now(t).AddDate(0, 3, 0)
@@ -454,6 +467,7 @@ func TestTheQueueDoesNotSortOrPageByAMaskedValue(t *testing.T) {
 // Ops holds pipeline.update. Each config change that weakens a legal gate is
 // the admin's, as the switch is. Ops is refused, an admin is not.
 func TestOnlyAnAdminWeakensALegalGate(t *testing.T) {
+	t.Parallel()
 	ops := func(e *reviewEnv) context.Context {
 		return withRole(humanWith(e.ws, e.admin, map[string]principal.ObjectGrant{
 			"pipeline": {Create: true, Read: true, Update: true, Delete: true},
@@ -517,6 +531,7 @@ func stageOrder(t *testing.T, e *reviewEnv, pipeline ids.PipelineID) []ids.UUID 
 
 // The deal's owner is no second pair of eyes on their own deal.
 func TestTheDealsOwnerCannotAnswerItsReview(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	// Set in place: the owner write hands pending proposals on through the
@@ -535,6 +550,7 @@ func TestTheDealsOwnerCannotAnswerItsReview(t *testing.T) {
 // The queue has two halves; any other status is the caller's mistake, not
 // the open queue.
 func TestTheQueueRefusesAStatusItDoesNotHave(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	_, _, err := e.store.ListLegalReviewQueue(e.asReviewer(principal.ObjectGrant{Read: true}), "pending", nil, nil)
 	var parse *values.ParseError
@@ -546,6 +562,7 @@ func TestTheQueueRefusesAStatusItDoesNotHave(t *testing.T) {
 // The pack keeps ids, never names. Anonymising the company or the owner
 // reaches the pack, because it reads their names at each open.
 func TestThePackHoldsNoNameAnErasureCouldMiss(t *testing.T) {
+	t.Parallel()
 	e := setupReviewEnv(t)
 	dealID, _, _ := gatedDeal(t, e)
 	company := ids.NewV7()

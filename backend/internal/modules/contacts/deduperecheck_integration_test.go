@@ -114,6 +114,7 @@ func (e *dedupeEnv) recheck(t *testing.T) DedupeRecheckResult {
 }
 
 func TestTheRecheckClosesAContactPairTheRuleNoLongerFilesAndKeepsTheRest(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	stale := e.fileOldRulePair(ctx, t, entityContact,
@@ -148,6 +149,7 @@ func TestTheRecheckClosesAContactPairTheRuleNoLongerFilesAndKeepsTheRest(t *test
 }
 
 func TestTheRecheckLeavesAPairSomeoneDecided(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	id := e.fileOldRulePair(ctx, t, entityContact,
@@ -166,6 +168,7 @@ func TestTheRecheckLeavesAPairSomeoneDecided(t *testing.T) {
 }
 
 func TestFilingAClosedPairAgainReopensTheSameRow(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	left := e.plainContact(ctx, t, "Alex Johnson", "alex.johnson@refile.test")
@@ -201,6 +204,7 @@ func (e *dedupeEnv) plainCompany(ctx context.Context, t *testing.T, name string)
 }
 
 func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	lead := func(name, email string) ids.UUID { return e.plainLead(ctx, t, name, email) }
@@ -239,6 +243,7 @@ func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
 // A contact or lead end archived after filing cannot be scored, so the pass
 // leaves the pair for a reviewer instead of guessing.
 func TestTheRecheckKeepsAPairWithAnArchivedEnd(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := asArchiver(e)
 	// v7 ids sort by creation, so the first record created is the pair's left end.
@@ -276,6 +281,7 @@ func TestTheRecheckKeepsAPairWithAnArchivedEnd(t *testing.T) {
 }
 
 func TestOnlyTheSystemRunsTheRecheck(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	if _, err := e.store.RecheckOpenDedupeCandidates(e.as()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a member ran the re-check: err = %v, want ErrPermissionDenied", err)

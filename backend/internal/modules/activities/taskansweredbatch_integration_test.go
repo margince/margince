@@ -82,6 +82,7 @@ func (f storedAnswerFixture) run(t *testing.T, limit int) int {
 }
 
 func TestStoredMailClosesTheTasksItAnsweredOnce(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	colleague := ids.NewV7()
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Colleague')`, colleague, "colleague-"+colleague.String()+"@resolve.test")

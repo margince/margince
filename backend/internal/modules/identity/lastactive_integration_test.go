@@ -63,6 +63,7 @@ func signedOutAt(t *testing.T, e *revocationEnv) time.Time {
 }
 
 func TestAMemberAdministratorSeesWhenEachMemberWasLastActive(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "last-active")
 	last := signedOutAt(t, e)
 	fresh := e.seat(t, "fresh", "rep")
@@ -88,6 +89,7 @@ func TestAMemberAdministratorSeesWhenEachMemberWasLastActive(t *testing.T) {
 }
 
 func TestAColleagueWhoMayNotManageMembersNeverSeesTheirActivity(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "last-active-rep")
 	signedOutAt(t, e)
 
@@ -105,6 +107,7 @@ func TestAColleagueWhoMayNotManageMembersNeverSeesTheirActivity(t *testing.T) {
 // A delegated administrator sees what ListUserSessions would show them: a
 // member they outrank, and never an admin.
 func TestADelegatedAdministratorSeesNoAdminsActivity(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "last-active-delegate")
 	last := signedOutAt(t, e)
 	delegate := e.seat(t, "delegate", e.customRole(t, "Member admin", "rep",
@@ -129,6 +132,7 @@ func TestADelegatedAdministratorSeesNoAdminsActivity(t *testing.T) {
 // A delegate with a write verb and no read gets the member without the activity, as
 // ListUserSessions refuses them. Adding read shows it.
 func TestAWriteOnlyDelegateNeverSeesAMembersActivity(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "last-active-write-only")
 	last := signedOutAt(t, e)
 	deleter := deleteOnlyMemberAdmin(t, e)

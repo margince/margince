@@ -62,6 +62,7 @@ func profileFieldSource(
 // The case the product could not do: a contact states a fact about a company
 // whose site never published it.
 func TestARepCanStateAProfileFieldTheMachineNeverProposed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := bareCompany(ctx, t, e)
@@ -97,6 +98,7 @@ func TestARepCanStateAProfileFieldTheMachineNeverProposed(t *testing.T) {
 // it is right"; there is nothing to read, and a row invented to be agreed with
 // would record a human verdict on a value nobody ever proposed.
 func TestConfirmingAProfileFieldNobodyProposedIsStillNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := bareCompany(ctx, t, e)
@@ -125,6 +127,7 @@ func TestConfirmingAProfileFieldNobodyProposedIsStillNotFound(t *testing.T) {
 // SAME transaction, so a correction that rolls back leaves no job asking about
 // a number the record does not hold.
 func TestStatingAVatNumberQueuesItsConsultation(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := bareCompany(ctx, t, e)
@@ -162,6 +165,7 @@ func TestStatingAVatNumberQueuesItsConsultation(t *testing.T) {
 // user who granted the agent, recording a human verification of a value that
 // human never saw. Correcting an EXISTING claim stays open to an agent.
 func TestAnAgentCannotOriginateAClaimNobodyProposed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	companyID := bareCompany(e.as(), t, e)
 
@@ -189,6 +193,7 @@ func TestAnAgentCannotOriginateAClaimNobodyProposed(t *testing.T) {
 // agent correcting a claim a crawl already made is the ordinary case this
 // endpoint exists for, and it must keep working.
 func TestAnAgentStillCorrectsAClaimThatAlreadyExists(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -208,6 +213,7 @@ func TestAnAgentStillCorrectsAClaimThatAlreadyExists(t *testing.T) {
 // state nobody ever wrote — and "what did it say before I changed it" then
 // answers with something the system invented.
 func TestAStatedClaimIsAuditedAsACreationWithNoBeforeImage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := bareCompany(ctx, t, e)
@@ -249,6 +255,7 @@ func TestAStatedClaimIsAuditedAsACreationWithNoBeforeImage(t *testing.T) {
 // The correction of an existing claim keeps its before-image: that is the half
 // the audit trail already had, and a fix to the create path must not cost it.
 func TestCorrectingAnExistingClaimStillRecordsWhatItSaidBefore(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := evidenceCompany(ctx, t, e)
@@ -291,6 +298,7 @@ func TestCorrectingAnExistingClaimStillRecordsWhatItSaidBefore(t *testing.T) {
 // not reached here. The clause says why it stays; this says why the test does
 // not prove it, rather than reading like it does.
 func TestRepsStatingTheSameFieldAtOnceAllSucceed(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := bareCompany(ctx, t, e)
@@ -328,6 +336,7 @@ func TestRepsStatingTheSameFieldAtOnceAllSucceed(t *testing.T) {
 // The registry address is the other field a contact can now state, and it must
 // NOT reach the six address columns: those describe where the company operates.
 func TestStatingTheRegisteredAddressLeavesTheOperatingAddressAlone(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := bareCompany(ctx, t, e)

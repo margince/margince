@@ -19,6 +19,7 @@ import (
 )
 
 func TestTheColumnsRefuseAnOutsideIDWithNoSystemOrPastTheCap(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	seedLogoCompany(ctx, t, e, "Voltaq Systems GmbH", "voltaq.test")
@@ -53,6 +54,7 @@ var addsSourceID = regexp.MustCompile(`(?m)^ALTER TABLE (\w+)\s+ADD COLUMN sourc
 // unique index. The deal and project tables are covered here, because a row to
 // break their checks needs records this package does not seed.
 func TestEveryTableGivenAnOutsideIDKeepsItsValidatedChecksAndIndex(t *testing.T) {
+	t.Parallel()
 	files, err := filepath.Glob("../../../migrations/core/*_a_record_keeps_its_id_in_the_system_it_came_from.up.sql")
 	if err != nil || len(files) != 1 {
 		t.Fatalf("finding the migration that added source_id: %v, %d files", err, len(files))

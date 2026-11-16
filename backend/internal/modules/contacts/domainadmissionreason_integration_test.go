@@ -52,6 +52,7 @@ func (e *dedupeEnv) listedByDomain(ctx context.Context, t *testing.T) map[string
 }
 
 func TestEveryListedReasonTravelsAsACode(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -148,6 +149,7 @@ func TestEveryListedReasonTravelsAsACode(t *testing.T) {
 // A company captured from mail is owner-private, so a colleague gets neither its
 // id nor its name.
 func TestAListedCompanyNameIsWithheldWithItsID(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	if _, err := e.store.SetDomainAdmission(ctx, "named.example", DomainSuppressed, "Not a customer"); err != nil {
@@ -172,6 +174,7 @@ func TestAListedCompanyNameIsWithheldWithItsID(t *testing.T) {
 // The open question a name twin leaves reaches its decider with the same
 // sentence the operator's list gives it.
 func TestANameTwinQuestionTellsItsOwnerWhy(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@twin.example", "", "twin.example")
@@ -219,6 +222,7 @@ func (e *dedupeEnv) settleOnPrivateCompany(ctx context.Context, t *testing.T, do
 // A colleague may decide a domain or re-ask its question without learning which
 // private company it sits on: each write answers with the company withheld.
 func TestADecisionAnswersWithoutACompanyTheCallerMayNotOpen(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriage(ctx, t, "hello@decided.example", "", "decided.example")

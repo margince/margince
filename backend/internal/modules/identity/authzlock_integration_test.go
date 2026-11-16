@@ -63,6 +63,7 @@ func waitForABlockedBackend(t *testing.T, tx pgx.Tx, kind string) {
 }
 
 func TestEveryAuthorizationChangeWaitsForTheLock(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "authz-lock")
 	ctx := e.wsCtx(e.admin)
 	custom := e.customRole(t, "Seasonal", "rep", nil)
@@ -136,6 +137,7 @@ func TestEveryAuthorizationChangeWaitsForTheLock(t *testing.T) {
 // link's check reads, so the link is refused rather than issued against the
 // narrower role that stood when the request arrived.
 func TestALinkWaitingOnTheLockSeesTheRoleWidenedMeanwhile(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "authz-toctou")
 	delegate := e.seat(t, "delegate", e.customRole(t, "Member admin", "rep", map[string]storedGrant{objectUserAdmin: fullGrant}))
 	targetRole := e.customRole(t, "Plain rep", "rep", nil)
@@ -181,6 +183,7 @@ func (e *revocationEnv) agentOf(user Identity) context.Context {
 // is an administrator to that change, so the agent limit refuses it. The check
 // sits after the lock the promotion holds, and so reads the promotion.
 func TestAnAgentWaitingOnTheLockSeesAColleaguePromotedMeanwhile(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-toctou")
 	ctx := e.wsCtx(e.admin)
 	team, err := e.svc.CreateTeam(ctx, e.admin, "Waiting")
@@ -212,6 +215,7 @@ func TestAnAgentWaitingOnTheLockSeesAColleaguePromotedMeanwhile(t *testing.T) {
 // A handover admits on the member's locked row, so a promotion holding that row
 // is read once it commits. A check before the lock would read the old role.
 func TestAnAgentHandoverWaitingOnTheMemberSeesThePromotion(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-handover-toctou")
 	target := e.seat(t, "target", "rep")
 
@@ -245,6 +249,7 @@ func TestAnAgentHandoverWaitingOnTheMemberSeesThePromotion(t *testing.T) {
 // A delegated act that takes no lock of its own still waits for a promotion. So
 // an admin-backed agent cannot act on a colleague promoted meanwhile.
 func TestAnAgentActingWithoutTheLockStillSeesAPromotion(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-session-toctou")
 	target := e.seat(t, "target", "rep")
 	held := e.holdAuthorization(t)
@@ -268,6 +273,7 @@ func TestAnAgentActingWithoutTheLockStillSeesAPromotion(t *testing.T) {
 }
 
 func TestAnAgentEditingAMemberNobodyHoldsAnswersNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-edit-unknown")
 	err := e.svc.UpdateMember(e.agentOf(e.admin), e.admin, ids.From[ids.UserKind](ids.NewV7()), MemberEdit{Name: "Nobody", Email: "nobody@example.test"})
 	if !errors.Is(err, apperrors.ErrNotFound) {
@@ -278,6 +284,7 @@ func TestAnAgentEditingAMemberNobodyHoldsAnswersNotFound(t *testing.T) {
 // A preview is what a confirmation is staged from, so the agent limits hold here
 // as they hold when the removal runs.
 func TestAnAgentCannotPreviewARemovalItCouldNotRun(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-retire-preview")
 	agent := e.agentOf(e.admin)
 	admin := e.seat(t, "second-admin", "admin")
@@ -319,6 +326,7 @@ func (c *countingTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.
 // The agent's team check reads a whole team at once, so a large team does not
 // hold the transaction for a round trip per member.
 func TestAnAgentsTeamCheckDoesNotGrowWithTheTeam(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "agent-team-batch")
 	ctx := e.wsCtx(e.admin)
 	team, err := e.svc.CreateTeam(ctx, e.admin, "Large")
@@ -377,6 +385,7 @@ func (e *revocationEnv) dealCloser(t *testing.T) (string, Identity) {
 // A role edit that starts after a write read its owner's authority waits until
 // that write commits. So the write never lands on a grant already taken away.
 func TestARoleEditWaitsForTheWriteAnAuthorityReadAdmitted(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "authority-hold")
 	ctx := e.wsCtx(e.admin)
 	role, owner := e.dealCloser(t)
@@ -420,6 +429,7 @@ func TestARoleEditWaitsForTheWriteAnAuthorityReadAdmitted(t *testing.T) {
 // An authority read that starts while a role edit is open waits for the edit,
 // and reads the narrowed grant.
 func TestAnAuthorityReadWaitsForARoleEditInProgress(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "authority-wait")
 	ctx := e.wsCtx(e.admin)
 	role, owner := e.dealCloser(t)
@@ -473,6 +483,7 @@ func TestAnAuthorityReadWaitsForARoleEditInProgress(t *testing.T) {
 // open. A write that only names the member in a foreign key goes on beside it.
 // So a write that locked a record first cannot wait on the hold.
 func TestAnAuthorityHoldLetsAWriteNameTheMember(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "authority-reference")
 	ctx := e.wsCtx(e.admin)
 	_, member := e.dealCloser(t)
@@ -492,6 +503,7 @@ func TestAnAuthorityHoldLetsAWriteNameTheMember(t *testing.T) {
 
 // An archived member has no row left to hold, so the hold answers not found.
 func TestAnAuthorityHoldOnAnArchivedMemberIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "authority-archived")
 	ctx := e.wsCtx(e.admin)
 	_, member := e.dealCloser(t)

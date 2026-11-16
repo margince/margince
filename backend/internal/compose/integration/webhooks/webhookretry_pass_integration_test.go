@@ -36,10 +36,6 @@ import (
 // A RESTRICTIVE row-level policy is the fault seam, not the trigger the other
 // fan-out suites use: the only failure this pass can suffer is its due SCAN
 // failing, and no trigger fires on a SELECT.
-//
-// It is dropped in cleanup — the integration lane resets rows between tests but
-// keeps the schema, so a surviving policy would blind every later suite that
-// reads a delivery.
 func failDueScans(t *testing.T, owner *pgx.Conn) {
 	t.Helper()
 	ctx := context.Background()
@@ -51,16 +47,6 @@ func failDueScans(t *testing.T, owner *pgx.Conn) {
 		END $$`); err != nil {
 		t.Fatalf("creating the fault-injection function: %v", err)
 	}
-	// Registered before the policy is armed, not after both: a failure to arm
-	// would otherwise leave the function behind, which is the leak this
-	// helper's whole cleanup exists to prevent. Cleanups run LIFO, so the
-	// policy below still drops first.
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP FUNCTION webhook_due_scan_fault()`); err != nil {
-			t.Errorf("dropping the fault-injection function: %v", err)
-		}
-	})
 	// The injector arms row security ITSELF, for this table and this test only:
 	// a fault injector owning its mechanism keeps this test about the sweep.
 	// ENABLE without FORCE is deliberate: the app role the sweep runs as is not
@@ -69,12 +55,6 @@ func failDueScans(t *testing.T, owner *pgx.Conn) {
 	if _, err := owner.Exec(ctx, `ALTER TABLE webhook_delivery ENABLE ROW LEVEL SECURITY`); err != nil {
 		t.Fatalf("arming row security for the fault injection: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`ALTER TABLE webhook_delivery DISABLE ROW LEVEL SECURITY`); err != nil {
-			t.Errorf("disarming row security after the fault injection: %v", err)
-		}
-	})
 	// A permissive policy admitting everything, because a RESTRICTIVE one only
 	// narrows what some permissive policy already admitted: with row security
 	// on and nothing permissive present the default is deny-all, the scan reads
@@ -84,24 +64,12 @@ func failDueScans(t *testing.T, owner *pgx.Conn) {
 		CREATE POLICY webhook_delivery_scan_all ON webhook_delivery USING (true)`); err != nil {
 		t.Fatalf("arming the permissive base policy: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP POLICY webhook_delivery_scan_all ON webhook_delivery`); err != nil {
-			t.Errorf("dropping the permissive base policy: %v", err)
-		}
-	})
 	if _, err := owner.Exec(ctx, `
 		CREATE POLICY webhook_delivery_scan_fault ON webhook_delivery
 		AS RESTRICTIVE FOR SELECT
 		USING (webhook_due_scan_fault())`); err != nil {
 		t.Fatalf("arming the fault-injection policy: %v", err)
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DROP POLICY webhook_delivery_scan_fault ON webhook_delivery`); err != nil {
-			t.Errorf("dropping the fault-injection policy: %v", err)
-		}
-	})
 }
 
 // parkOneDelivery registers a subscription against a receiver that is down and
@@ -116,6 +84,7 @@ func parkOneDelivery(t *testing.T, we *webhookEnv, deliverer *webhooks.Deliverer
 }
 
 func TestWebhookRetryReportsASweepWhoseDueScanFailed(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	owner := integration.OwnerConn(t)
 
@@ -164,6 +133,7 @@ func TestWebhookRetryReportsASweepWhoseDueScanFailed(t *testing.T) {
 // indistinguishable from a pass that found nothing due, and what it hides is
 // every parked delivery never being re-attempted again.
 func TestWebhookRetryRecordsAFailedPassAsAFailedRow(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	owner := integration.OwnerConn(t)
 
@@ -209,6 +179,7 @@ func TestWebhookRetryRecordsAFailedPassAsAFailedRow(t *testing.T) {
 // cadence far shorter than that setting's own default is what River is scheduling
 // on.
 func TestWebhookRetryDispatchRepeatsOnItsConfiguredInterval(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	now := time.Now().UTC()
 	rcv := newReceiver(t, http.StatusInternalServerError)

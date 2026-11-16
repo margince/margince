@@ -28,6 +28,7 @@ import (
 )
 
 func TestTwoMeetingRecapRulesStageOneDraftAfterNotesAndHeld(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")
 	rbac, err := identity.NewService(e.Pool).EffectiveRBAC(e.Admin(), e.WS, e.AdminUser)

@@ -45,6 +45,7 @@ func readerCtx(e *integration.SearchEnv, user ids.UUID) context.Context {
 }
 
 func TestAReplyNamesTheMailboxThatTookDelivery(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	// The ticket's own shape: a workspace-shared conversation a colleague can
@@ -76,6 +77,7 @@ func TestAReplyNamesTheMailboxThatTookDelivery(t *testing.T) {
 }
 
 func TestEveryImportingMailboxIsNamedOnce(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	syncSecond := secondMailbox(t, e, e.Rep3)
@@ -105,6 +107,7 @@ func TestEveryImportingMailboxIsNamedOnce(t *testing.T) {
 // A hand-logged activity was typed by somebody rather than delivered to
 // anybody, so there is no mailbox to name and the empty answer is the true one.
 func TestAHandLoggedMessageNamesNoMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e := env.e
 
@@ -138,6 +141,7 @@ func TestAHandLoggedMessageNamesNoMailbox(t *testing.T) {
 // row exists. It must name a seat this workspace still holds, and answer empty
 // rather than erroring when the stored text is not a seat at all.
 func TestTheProvenanceStampIsReadOnlyWhenNoImportRowStands(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	sync(t, customerMail("mailbox-legacy@acme.example"))
@@ -195,6 +199,7 @@ func TestTheProvenanceStampIsReadOnlyWhenNoImportRowStands(t *testing.T) {
 // answered only to a caller who may read that correspondence. A held message
 // the reader can merely discover must refuse here exactly as its body does.
 func TestAWithheldMessageRefusesToNameItsMailbox(t *testing.T) {
+	t.Parallel()
 	env := newCaptureEnv(t)
 	e, sync := env.e, env.sync
 	setMailSharing(t, e, false)

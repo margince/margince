@@ -24,6 +24,7 @@ import (
 // The newest read wins, so a retry supersedes the attempt before it rather than
 // the page reporting whichever row the database happened to return first.
 func TestLatestSiteReadAnswersTheNewestAttempt(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyForRead(ctx, t, e)
@@ -58,6 +59,7 @@ func TestLatestSiteReadAnswersTheNewestAttempt(t *testing.T) {
 // status has to survive the read rather than being smoothed into something that
 // looks like an account nobody tried to enrich.
 func TestLatestSiteReadCarriesAFailedStatus(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyForRead(ctx, t, e)
@@ -83,6 +85,7 @@ func TestLatestSiteReadCarriesAFailedStatus(t *testing.T) {
 // Never read and read-but-empty are different answers, and the page renders
 // them differently: one offers a first crawl, the other reports a failure.
 func TestLatestSiteReadIsNotFoundWhenNothingWasEverRead(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	companyID := seedCompanyForRead(ctx, t, e)
@@ -96,6 +99,7 @@ func TestLatestSiteReadIsNotFoundWhenNothingWasEverRead(t *testing.T) {
 // was never read: the existence of a crawl is itself information about a record
 // they were not granted.
 func TestLatestSiteReadHidesAnAccountTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

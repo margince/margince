@@ -109,6 +109,7 @@ func putWatch(ctx context.Context, t *testing.T, id ids.UUID) {
 // A reconnect of the same account keeps the handle, so a re-consent does not
 // cost the mailbox its push registration.
 func TestReconnectingTheSameAccountKeepsTheStoredWatchHandle(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	reg.Register(renewalConnector{label: "same@example.test"})
 
@@ -138,6 +139,7 @@ func TestReconnectingTheSameAccountKeepsTheStoredWatchHandle(t *testing.T) {
 // the withdrawn credential. The row's status cannot show that; the generation
 // can.
 func TestARenewalThatRacedADisconnectWritesNothing(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	var hook func()
 	reg.Register(renewalConnector{label: "first@example.test", duringRenewal: &hook})

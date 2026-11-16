@@ -22,6 +22,7 @@ import (
 )
 
 func TestAPersonalConnectionIsNoSharedMailboxToAnyEndpoint(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	personal := s.connectRepMailbox(t).String()
@@ -47,6 +48,7 @@ func TestAPersonalConnectionIsNoSharedMailboxToAnyEndpoint(t *testing.T) {
 }
 
 func TestAConnectThatCannotOpenItsTransactionLeavesNoSealedCredential(t *testing.T) {
+	t.Parallel()
 	s := newSharedMailboxSuite(t)
 	e := s.e
 	unbound := database.Bind(e.Pool, func(context.Context) (ids.WorkspaceID, error) {

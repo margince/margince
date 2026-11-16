@@ -58,6 +58,7 @@ func parkDealDelivery(t *testing.T, we *webhookEnv, deliverer *webhooks.Delivere
 }
 
 func TestTheRetryJobReattemptsADueDelivery(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	subID := parkDealDelivery(t, we, newTestDeliverer(we, &now, unresolvableClient()))
@@ -84,6 +85,7 @@ func TestTheRetryJobReattemptsADueDelivery(t *testing.T) {
 }
 
 func TestAnUnreachableReceiverIsDeadLetteredOnSchedule(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	deliverer := newTestDeliverer(we, &now, unresolvableClient())
@@ -113,6 +115,7 @@ func TestAnUnreachableReceiverIsDeadLetteredOnSchedule(t *testing.T) {
 }
 
 func TestADeliveryWhoseAccessCannotBeRecheckedEndsDeadLetteredWithItsReason(t *testing.T) {
+	t.Parallel()
 	we := setupWebhooks(t)
 	rcv := newReceiver(t, http.StatusInternalServerError)
 	now := time.Now().UTC().Truncate(time.Microsecond)

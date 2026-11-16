@@ -22,6 +22,7 @@ func ignoreInstallationName(context.Context, pgx.Tx, string) error { return nil 
 // A store composed without the renamer refuses a human renaming the anchor,
 // and the rename rolls back rather than leaving the installation name behind.
 func TestAnUnwiredStoreRefusesToRenameTheAnchor(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	unwired := NewStore(env.store.db)
 
@@ -46,6 +47,7 @@ func TestAnUnwiredStoreRefusesToRenameTheAnchor(t *testing.T) {
 }
 
 func TestAnAgentsCompanySaveIsNeverStampedAsAHumanConfirmation(t *testing.T) {
+	t.Parallel()
 	env := newAnchorEnv(t)
 	actor, ok := principal.Actor(env.ctx)
 	if !ok {

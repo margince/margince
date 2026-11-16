@@ -83,6 +83,7 @@ func companyUpdateEvents(t *testing.T, e *dedupeEnv, id ids.CompanyID) (audits, 
 }
 
 func TestTheAddressRepairSplitsAnOldLineOnceWithAnAuditAndAnEvent(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	legacy := legacyAddressCompany(t, e, "legacy", legacyAddress)
@@ -112,6 +113,7 @@ func TestTheAddressRepairSplitsAnOldLineOnceWithAnAuditAndAnEvent(t *testing.T) 
 }
 
 func TestTheAddressRepairLeavesAnAddressSomebodyTypedOnTheRecord(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	retyped := legacyAddressCompany(t, e, "retyped", legacyAddress)
@@ -147,6 +149,7 @@ func TestTheAddressRepairLeavesAnAddressSomebodyTypedOnTheRecord(t *testing.T) {
 }
 
 func TestTheAddressRepairNeverReplacesAStoredPart(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contradicted := legacyAddressCompany(t, e, "contradicted", legacyAddress)
@@ -186,6 +189,7 @@ func TestTheAddressRepairNeverReplacesAStoredPart(t *testing.T) {
 }
 
 func TestTheAddressRepairEstimateCountsWhatTheWalkInspects(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, host := range []string{"one", "two", "three"} {
@@ -209,6 +213,7 @@ func TestTheAddressRepairEstimateCountsWhatTheWalkInspects(t *testing.T) {
 }
 
 func TestACardsAddressLandsInItsParts(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	cards, err := ParseVCards(strings.NewReader("BEGIN:VCARD\nFN:Parts Contact\nEMAIL:parts@split.example.test\nADR;TYPE=WORK:;;Example Street 4;Example City;;12345;Germany\nEND:VCARD\n"))

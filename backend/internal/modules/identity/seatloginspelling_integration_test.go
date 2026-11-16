@@ -20,6 +20,7 @@ import (
 // same domain, and the other way about. The login is one address however it is
 // typed, which is what storekit.SeatLoginIsSQL answers for every seat match.
 func TestASeatSignsInWithEitherSpellingOfItsDomain(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-login-spelling")
 	ctx := context.Background()
 	const unicodeAddress = "rep@bücher.example"
@@ -61,6 +62,7 @@ func TestASeatSignsInWithEitherSpellingOfItsDomain(t *testing.T) {
 // Until it reaches a seat, the raw arm of the comparison is the only one that
 // can answer for it.
 func TestASeatWithNoFoldedDomainStillSignsIn(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-login-unfolded")
 	ctx := context.Background()
 	const stored = "altrep@bücher.example"
@@ -93,6 +95,7 @@ func TestASeatWithNoFoldedDomainStillSignsIn(t *testing.T) {
 // the login's unique index reads the raw spelling. The folded comparison then
 // matches both, and the seat spelled as typed is the one that signs in.
 func TestTheSeatSpelledAsTypedWinsAnAmbiguousLogin(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-login-ambiguous")
 	ctx := context.Background()
 	const unicodeAddress = "amb@bücher.example"
@@ -139,6 +142,7 @@ func TestTheSeatSpelledAsTypedWinsAnAmbiguousLogin(t *testing.T) {
 // twin. The twin holds the other spelling of the same login. The two name one mailbox,
 // so the disabled seat's link is not a way into the live one.
 func TestADisabledSeatsLinkDoesNotSignInItsOtherSpelling(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-login-federated")
 	ctx := context.Background()
 	const unicodeAddress = "fed@bücher.example"

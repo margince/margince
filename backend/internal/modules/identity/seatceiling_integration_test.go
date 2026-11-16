@@ -68,6 +68,7 @@ func inviteOneMore(t *testing.T, e *revocationEnv, who string) error {
 }
 
 func TestSeatCeilingRefusesAnInviteWhenEveryLicensedSeatIsInUse(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-ceiling-full")
 	used := seatsInUse(t, e)
 	licenseFor(t, e, licensedSeats(used))
@@ -96,6 +97,7 @@ func TestSeatCeilingRefusesAnInviteWhenEveryLicensedSeatIsInUse(t *testing.T) {
 // test: an off-by-one either refuses the seat the license paid for or hands out
 // one it did not.
 func TestSeatCeilingAdmitsTheLastLicensedSeatAndRefusesTheNext(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-ceiling-last")
 	used := seatsInUse(t, e)
 	licenseFor(t, e, licensedSeats(used+1))
@@ -114,6 +116,7 @@ func TestSeatCeilingAdmitsTheLastLicensedSeatAndRefusesTheNext(t *testing.T) {
 // Withdrawn access frees a seat. An admin who suspends somebody to make room —
 // which is what an admin at the ceiling will do — has to actually get the room.
 func TestSeatCeilingCountsNeitherASuspendedNorADeactivatedSeat(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name     string
 		withdraw func(t *testing.T, e *revocationEnv)
@@ -163,6 +166,7 @@ func TestSeatCeilingCountsNeitherASuspendedNorADeactivatedSeat(t *testing.T) {
 // ceiling an invite does. Nothing here demotes or evicts the member: they stay
 // deactivated until the installation has a seat for them (P7).
 func TestSeatCeilingRefusesReactivatingAFullSeatIntoAFullInstallation(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-ceiling-reactivate")
 	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin,
 		DeactivateUserInput{UserID: e.member.UserID}); err != nil {
@@ -193,6 +197,7 @@ func TestSeatCeilingRefusesReactivatingAFullSeatIntoAFullInstallation(t *testing
 // A read seat is unlimited and never metered (A62/ADR-0047), so returning one
 // to active asks the full-seat ceiling nothing.
 func TestSeatCeilingDoesNotHoldAReadSeatToTheFullSeatGrant(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-ceiling-read")
 	if _, err := e.owner.Exec(context.Background(),
 		`UPDATE app_user SET seat_type = 'read' WHERE id = $1`, e.member.UserID); err != nil {
@@ -220,6 +225,7 @@ func TestSeatCeilingDoesNotHoldAReadSeatToTheFullSeatGrant(t *testing.T) {
 // the entitlement screen, it is being refused the last contact they are entitled
 // to, which is what the second half asserts.
 func TestSeatCeilingDoesNotMeterAnAgentAgainstTheLicence(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-ceiling-agent")
 	before := seatsInUse(t, e)
 
@@ -248,6 +254,7 @@ func TestSeatCeilingDoesNotMeterAnAgentAgainstTheLicence(t *testing.T) {
 // number to hold anybody to. Both reach identity as the same answer, and a
 // service nobody wired is the third spelling of it.
 func TestSeatCeilingAdmitsEverySeatWhenNothingCapsThem(t *testing.T) {
+	t.Parallel()
 	for name, ceiling := range map[string]SeatCeiling{
 		"a license that caps no seats": func() (int, bool) { return 0, false },
 		"no license posture wired":     nil,
@@ -267,6 +274,7 @@ func TestSeatCeilingAdmitsEverySeatWhenNothingCapsThem(t *testing.T) {
 // A service member is a virtual seat. Declaring one at the ceiling is admitted
 // and leaves the count alone, so a feed never costs a licensed seat.
 func TestAServiceMemberTakesNoLicensedSeat(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "seat-ceiling-service")
 	used := seatsInUse(t, e)
 	licenseFor(t, e, licensedSeats(used))

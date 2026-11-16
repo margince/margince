@@ -17,6 +17,7 @@ import (
 )
 
 func TestPreviewEvidenceReferencesRespectRecordAccessAndOmitTransientSubjects(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	id := ids.NewV7()
 	privateID := ids.NewV7()

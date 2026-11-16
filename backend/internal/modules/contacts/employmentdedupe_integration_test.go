@@ -46,6 +46,7 @@ func employ(t *testing.T, e *dedupeEnv, contact ids.ContactID, company ids.Compa
 // duplicate check runs. Giving it the employer of a same-name contact files the
 // pair when the edge is written.
 func TestEmploymentEdgeFilesTheSameEmployerTwin(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	acme := mustEmployer(t, e, "Acme Robotics GmbH")
@@ -67,6 +68,7 @@ func TestEmploymentEdgeFilesTheSameEmployerTwin(t *testing.T) {
 }
 
 func TestEmploymentEdgeAtAnotherEmployerFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	onFile := mustContact(t, e, "Marlene Wiesinger")
@@ -81,6 +83,7 @@ func TestEmploymentEdgeAtAnotherEmployerFilesNothing(t *testing.T) {
 }
 
 func TestEmploymentEdgeForADifferentNameAtTheSameEmployerFilesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	acme := mustEmployer(t, e, "Acme Robotics GmbH")
@@ -97,6 +100,7 @@ func TestEmploymentEdgeForADifferentNameAtTheSameEmployerFilesNothing(t *testing
 // Making an existing employment the current primary is the other way a contact
 // gets its employer.
 func TestPromotingAnEmploymentToCurrentPrimaryFilesTheTwin(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	acme := mustEmployer(t, e, "Acme Robotics GmbH")
@@ -125,6 +129,7 @@ func TestPromotingAnEmploymentToCurrentPrimaryFilesTheTwin(t *testing.T) {
 }
 
 func TestEmploymentEdgeNotesOnlyThePairItFiled(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	acme := mustEmployer(t, e, "Acme Robotics GmbH")
 	onFile := mustContact(t, e, "Marlene Wiesinger")
@@ -152,6 +157,7 @@ func TestEmploymentEdgeNotesOnlyThePairItFiled(t *testing.T) {
 // Two similar-name contacts at different employers are no pair until a company
 // merge puts them at one employer.
 func TestMergingCompaniesFilesTheTwinsItBringsTogether(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor := mustEmployer(t, e, "Acme Robotics GmbH")
@@ -177,6 +183,7 @@ func TestMergingCompaniesFilesTheTwinsItBringsTogether(t *testing.T) {
 // Duplicate scoring reads only the current primary employer, so an ended or a
 // non-primary employment moved by a merge files nothing.
 func TestMergingCompaniesDoesNotRecheckContactsWhoseCurrentEmployerStays(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	survivor := mustEmployer(t, e, "Acme Robotics GmbH")

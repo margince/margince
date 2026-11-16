@@ -20,6 +20,7 @@ import (
 // Nobody can shorten a card's text before it lands. So a value past the column
 // limit is cut, and the card still applies.
 func TestACardValuePastTheLimitLandsCut(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	incumbent, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -43,6 +44,7 @@ func TestACardValuePastTheLimitLandsCut(t *testing.T) {
 // A researcher can shorten their own claim, so one past the limit is refused
 // with the column and its limit rather than cut.
 func TestAResearchClaimPastTheLimitIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 	contactID, _ := e.seedEmployedContact(ctx, t,

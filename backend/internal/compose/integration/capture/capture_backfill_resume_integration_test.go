@@ -50,6 +50,7 @@ func failRunAfterOnePage(t *testing.T, e *integration.SearchEnv) (*capturemod.Re
 }
 
 func TestAStartAfterAFailedRunContinuesItFromWhereItStopped(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, runID := failRunAfterOnePage(t, e)
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -80,6 +81,7 @@ func TestAStartAfterAFailedRunContinuesItFromWhereItStopped(t *testing.T) {
 }
 
 func TestStartingOverReadsTheWindowAgainInANewRun(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, failed := failRunAfterOnePage(t, e)
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
@@ -97,6 +99,7 @@ func TestStartingOverReadsTheWindowAgainInANewRun(t *testing.T) {
 }
 
 func TestAnInternalPageFaultIsRetriedInsteadOfEndingTheRun(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{errors.New("capture: a fault of our own")})
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -118,6 +121,7 @@ func TestAnInternalPageFaultIsRetriedInsteadOfEndingTheRun(t *testing.T) {
 }
 
 func TestARejectedPageTokenWalksTheWindowAgain(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry, runID := startFlakyBackfill(t, e, []error{nil, connector.ErrCursorGone, nil, connector.ErrCursorGone})
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -161,6 +165,7 @@ func (f failingMessagesConnector) BackfillPage(ctx context.Context, auth connect
 }
 
 func TestARunCountsTheMessagesItCouldNotCapture(t *testing.T) {
+	t.Parallel()
 	e := integration.SetupSearch(t)
 	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
 	registry.Register(failingMessagesConnector{&pagedConnector{messages: 25, pageSize: 10}})

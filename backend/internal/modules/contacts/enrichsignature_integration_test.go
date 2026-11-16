@@ -197,6 +197,7 @@ func (e *dedupeEnv) seedOwnerScopedCandidate(
 // record, so the flat test left every unjudged contact permanently ineligible
 // whatever the pass budget said. In the audited import that was 777 of 814.
 func TestSignatureCandidatesMineAnOwnerScopedContactsOwnMail(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -222,6 +223,7 @@ func TestSignatureCandidatesMineAnOwnerScopedContactsOwnMail(t *testing.T) {
 // of the owner path are otherwise satisfied — so what this pins is the
 // visibility requirement alone. Seeded owner-scoped, it would be a candidate.
 func TestSignatureCandidatesStillSkipLimitedMailForAWorkspaceContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -253,6 +255,7 @@ func TestSignatureCandidatesStillSkipLimitedMailForAWorkspaceContact(t *testing.
 // that compared against the caller would quietly enrich one seat's contacts and
 // starve everybody else's.
 func TestSignatureCandidatesMineAContactOwnedByAnyColleague(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -283,6 +286,7 @@ func contains(names []string, want string) bool {
 }
 
 func TestSignatureCandidatesSkipASwitchedOffMailbox(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -312,6 +316,7 @@ func TestSignatureCandidatesSkipASwitchedOffMailbox(t *testing.T) {
 // A mailbox that never chose follows the workspace, in both directions — which
 // is what makes the null a third state rather than a missing value.
 func TestSignatureCandidatesFollowTheWorkspaceWhenAMailboxHasNotChosen(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -340,6 +345,7 @@ func TestSignatureCandidatesFollowTheWorkspaceWhenAMailboxHasNotChosen(t *testin
 // matches no connection row. It follows the workspace, which is the answer it
 // had before the switch existed.
 func TestSignatureCandidatesTreatUnboundMailAsTheWorkspaceDefault(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -371,6 +377,7 @@ func TestSignatureCandidatesTreatUnboundMailAsTheWorkspaceDefault(t *testing.T) 
 // contacts below sit behind the same willing mailbox, and only the audience of
 // the mail they were last written from differs.
 func TestSignatureCandidatesSkipALimitedMessage(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -409,6 +416,7 @@ func TestSignatureCandidatesSkipALimitedMessage(t *testing.T) {
 // because the disagreement is between the two statements rather than inside
 // either one.
 func TestApplySignatureFieldsLandOwnerScopedMailTheCandidateQueryOffers(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -445,6 +453,7 @@ func TestApplySignatureFieldsLandOwnerScopedMailTheCandidateQueryOffers(t *testi
 // carrying both proves neither on its own — this one carries ONLY the
 // participant stamp, and its sibling above carries only the capture_import row.
 func TestSignatureCandidatesMineMailTheOwnerIsStampedOnWithoutImporting(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -510,6 +519,7 @@ func TestSignatureCandidatesMineMailTheOwnerIsStampedOnWithoutImporting(t *testi
 // owner-scoped contact with open mail is the ORDINARY case, and a single share
 // silently made their open mail unminable.
 func TestSignatureCandidatesMineWorkspaceMailForASharedOwnerScopedContact(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -549,6 +559,7 @@ func TestSignatureCandidatesMineWorkspaceMailForASharedOwnerScopedContact(t *tes
 // which is the same republishing the workspace arm exists to prevent, reached
 // by a different door.
 func TestSignatureMiningStopsWhenAnOwnerScopedContactIsShared(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -600,6 +611,7 @@ func TestSignatureMiningStopsWhenAnOwnerScopedContactIsShared(t *testing.T) {
 // after the narrowing stays readable for good. That is the one outcome no later
 // correction reaches, which is why the test is at the write.
 func TestApplySignatureFieldsSkipsASourceLimitedWhileTheModelRan(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	ctx := e.as()
 

@@ -62,9 +62,7 @@ func newFakeTelegram() *fakeTelegram {
 	return &fakeTelegram{bots: map[string]telegram.Bot{}}
 }
 
-// nextBotID hands out a bot id unique within the test binary, so that a test
-// asserting something about ITS bot is never answered by a row another test
-// left behind — these suites share one database.
+// nextBotID hands out a bot id unique within the test binary.
 var nextBotID atomic.Int64
 
 // withNewBot registers a fresh bot Telegram accepts and returns its token and

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,7 +41,7 @@ type stageNoticeFixture struct {
 func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stageNoticeFixture {
 	t.Helper()
 	e := integration.Setup(t)
-	conn, err := pgx.Connect(context.Background(), os.Getenv("MARGINCE_TEST_DSN"))
+	conn, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,6 +87,7 @@ func newStageNoticeFixture(t *testing.T, fromName, toName, dealName string) stag
 }
 
 func TestStageNoticeRecoversItsExactMoveAndLeavesUnlinkedNoticesAlone(t *testing.T) {
+	t.Parallel()
 	f := newStageNoticeFixture(t, "Qualified", "Proposal", "Fleet renewal")
 	conn, ctx, human, actor, event := f.conn, f.ctx, f.human, f.actor, f.event
 	// Rewind only the fields old event writers did not record. The causation
@@ -188,6 +190,7 @@ func (f stageNoticeFixture) repair(t *testing.T) {
 }
 
 func TestStageNoticeRepairHandlesUnnamedDealsAndUnboundedStageNames(t *testing.T) {
+	t.Parallel()
 	for _, names := range []struct{ label, from, to string }{
 		{"ordinary names", "Qualified", "Proposal"},
 		{"long unicode names", strings.Repeat("商", 1100), strings.Repeat("機", 1100)},

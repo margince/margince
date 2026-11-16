@@ -19,7 +19,6 @@ package activities
 
 import (
 	"context"
-	"os"
 	"testing"
 	"time"
 
@@ -41,14 +40,9 @@ type recencyEnv struct {
 
 func setupRecency(t *testing.T) *recencyEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,10 +51,6 @@ func setupRecency(t *testing.T) *recencyEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	emptyDatabase(t)
 	e := &recencyEnv{owner: owner, ws: ids.NewV7(), rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -70,7 +60,7 @@ func setupRecency(t *testing.T) *recencyEnv {
 		e.rep, "rep-"+e.rep.String()+"@recency.test"); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,6 +148,7 @@ func (e *recencyEnv) logAgainstDeal(t *testing.T, deal ids.UUID, subject, origin
 // differing only in origin. A human note moves the clock; a system review note
 // does not, because nobody did anything.
 func TestRemediationWorkDoesNotRefreshTheDealClock(t *testing.T) {
+	t.Parallel()
 	e := setupRecency(t)
 	quietSince := time.Now().Add(-90 * 24 * time.Hour).Truncate(time.Second)
 

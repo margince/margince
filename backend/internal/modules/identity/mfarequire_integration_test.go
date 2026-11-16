@@ -62,6 +62,7 @@ func TestAStoredRequireMFAConfinesAFactorlessPasswordSession(t *testing.T) {
 }
 
 func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "require-mfa")
 	e.withVault()
 	e.requireMFAOn()
@@ -104,6 +105,7 @@ func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
 }
 
 func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
+	t.Parallel()
 	// The posture the composition root leaves when a vault exists but the
 	// challenge-signing key is short or absent: the identity service gets NO
 	// vault (compose couples the two), and everything MFA must then degrade to
@@ -147,6 +149,7 @@ func TestAVaultlessServiceNeverChallengesConfinesOrEnrols(t *testing.T) {
 // A password session is confined while the member holds no factor. Once they
 // hold one, the password path asks for it.
 func TestRequireMFATrustsTheProviderAndAsksThePasswordPath(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "require-mfa-paths")
 	e.withVault()
 	e.requireMFAOn()
@@ -215,6 +218,7 @@ func TestRequireMFATrustsTheProviderAndAsksThePasswordPath(t *testing.T) {
 }
 
 func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "require-mfa-off")
 	e.withVault()
 	// admissionSettings left nil: no enforcement, and no per-request enrolment check.
@@ -232,6 +236,7 @@ func TestRequireMFAOffLeavesTheMemberUnconfined(t *testing.T) {
 }
 
 func TestProviderSessionsAreExemptFromPasswordMFAConfinement(t *testing.T) {
+	t.Parallel()
 	for _, provider := range []string{"google", "microsoft"} {
 		t.Run(provider, func(t *testing.T) {
 			e := setupRevocationEnv(t, "provider-mfa-"+provider)
@@ -265,6 +270,7 @@ func TestProviderSessionsAreExemptFromPasswordMFAConfinement(t *testing.T) {
 }
 
 func TestASessionWithoutSignInProvenanceKeepsThePasswordMFARule(t *testing.T) {
+	t.Parallel()
 	e := setupRevocationEnv(t, "legacy-session-mfa")
 	e.withVault()
 	e.requireMFAOn()

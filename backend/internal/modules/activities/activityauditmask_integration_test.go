@@ -84,6 +84,7 @@ func editBody(ctx context.Context, t *testing.T, e *sendEnv, id ids.UUID, body s
 }
 
 func TestAnEditThatRemovesAPasswordRecordsTheReplacedTextMasked(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	id := loggedActivity(ctx, t, e, "note", callNotes+"\n"+maskableLine)
@@ -103,6 +104,7 @@ func TestAnEditThatRemovesAPasswordRecordsTheReplacedTextMasked(t *testing.T) {
 }
 
 func TestANoteKeepsThePasswordItsMemberTypedAndItsAuditDoesNot(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	id := loggedActivity(ctx, t, e, "note", callNotes)
@@ -122,6 +124,7 @@ func TestANoteKeepsThePasswordItsMemberTypedAndItsAuditDoesNot(t *testing.T) {
 }
 
 func TestAnEditToAMailStoresItsPasswordMasked(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	id := loggedActivity(ctx, t, e, "email", callNotes)
@@ -147,6 +150,7 @@ func TestAnEditToAMailStoresItsPasswordMasked(t *testing.T) {
 // A mail edit that only resends the masked text the row holds changes nothing,
 // so it writes no audit row.
 func TestResendingAMailsPasswordChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	id := loggedActivity(ctx, t, e, "email", callNotes)
@@ -174,6 +178,7 @@ func TestResendingAMailsPasswordChangesNothing(t *testing.T) {
 // Every writer of these record types reaches audit_log through storekit, so
 // the row is written here through it directly, with the text in every column.
 func TestEveryColumnOfAMailTextAuditRowIsStoredMasked(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	for _, entityType := range []string{"activity", "scheduled_send", "mail_draft"} {
@@ -195,6 +200,7 @@ func TestEveryColumnOfAMailTextAuditRowIsStoredMasked(t *testing.T) {
 // A mail or a channel message logged by hand or imported is stored masked, as
 // capture stores it. A later edit masks the same way. A note is not masked.
 func TestALoggedMailOrMessageStoresItsPasswordMasked(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	for kind, want := range map[string]string{

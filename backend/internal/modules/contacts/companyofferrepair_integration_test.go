@@ -16,6 +16,7 @@ import (
 )
 
 func TestSiteOfferLivesOnlyInItsProfileField(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	made, err := e.store.CreateCompany(e.as(), CreateCompanyInput{DisplayName: "Profile Only", Source: "manual"})
 	if err != nil {
@@ -40,6 +41,7 @@ func TestSiteOfferLivesOnlyInItsProfileField(t *testing.T) {
 }
 
 func TestOfferDuplicateRepairPreservesHumanEditsAndReplays(t *testing.T) {
+	t.Parallel()
 	e := setupDedupe(t)
 	system := principal.SystemActing(e.as(), "system:test")
 	summary := "Supplies industrial bearings."
@@ -110,6 +112,7 @@ func TestOfferDuplicateRepairPreservesHumanEditsAndReplays(t *testing.T) {
 }
 
 func TestCompanyOfferSaveKeepsTheDescriptionSeparate(t *testing.T) {
+	t.Parallel()
 	e := newAnchorEnv(t)
 	offer := "Supplies precision bearings."
 	if _, err := e.store.SaveCompany(e.ctx, SaveCompanyInput{DisplayName: "Our Company", Fields: map[string]*string{fieldOfferSummary: &offer}}); err != nil {

@@ -80,6 +80,7 @@ func routedCall(t *testing.T, verb string) (string, map[string]any) {
 
 var (
 	registerOnce sync.Once
+	registered   *compose.Extensions
 	registerErr  error
 )
 
@@ -88,7 +89,7 @@ var (
 func registerUnit(t *testing.T) {
 	t.Helper()
 	registerOnce.Do(func() {
-		registerErr = compose.RegisterExtensions([]extension.Extension{syntheticUnit()}, []extension.Verb{cacheReadVerb}, nil)
+		registered, registerErr = compose.RegisterExtensions([]extension.Extension{syntheticUnit()}, []extension.Verb{cacheReadVerb}, nil)
 	})
 	if registerErr != nil {
 		t.Fatalf("registering the synthetic unit: %v", registerErr)
@@ -96,10 +97,11 @@ func registerUnit(t *testing.T) {
 }
 
 func TestTheExtensionVerbsRoleCellsArePublished(t *testing.T) {
+	t.Parallel()
 	registerUnit(t)
 	var mu sync.Mutex
 	recorded := map[string]auth.RecordedCall{}
-	e := apptest.SetupAppWithOptions(t, compose.WithMCPConnector(), compose.WithFinanceSources(apptest.InsertOnlyRunner(t)),
+	e := apptest.SetupAppComposing(t, registered, compose.WithMCPConnector(), compose.WithFinanceSources(apptest.InsertOnlyRunner(t)),
 		compose.WithToolChecksRecordedForTest(func(verb string, call auth.RecordedCall) {
 			mu.Lock()
 			defer mu.Unlock()

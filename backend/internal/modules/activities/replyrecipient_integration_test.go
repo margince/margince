@@ -119,6 +119,7 @@ func draftedTo(ctx context.Context, t *testing.T, h Handlers, anchor ids.Activit
 }
 
 func TestAReplyIsAddressedToTheSenderOfTheMessageItAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -144,6 +145,7 @@ func TestAReplyIsAddressedToTheSenderOfTheMessageItAnswers(t *testing.T) {
 }
 
 func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -178,6 +180,7 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 }
 
 func TestAColleagueWithoutASeatIsNotAddressable(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -195,6 +198,7 @@ func TestAColleagueWithoutASeatIsNotAddressable(t *testing.T) {
 }
 
 func TestAnUnwiredColleagueReaderOffersNoAddressRatherThanAnUnfilteredOne(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	coworker := e.linkContact(t, anchor, "Jonas Weber")
@@ -211,6 +215,7 @@ func TestAnUnwiredColleagueReaderOffersNoAddressRatherThanAnUnfilteredOne(t *tes
 }
 
 func TestTheDraftCarriesTheAddressTheRecipientEndpointNames(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -244,6 +249,7 @@ func TestTheDraftCarriesTheAddressTheRecipientEndpointNames(t *testing.T) {
 }
 
 func TestAnArchivedAddressIsNotOfferedAsTheRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -270,6 +276,7 @@ func TestAnArchivedAddressIsNotOfferedAsTheRecipient(t *testing.T) {
 }
 
 func TestAnErasedContactYieldsNeitherNameNorAddress(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -302,6 +309,7 @@ func TestAnErasedContactYieldsNeitherNameNorAddress(t *testing.T) {
 }
 
 func TestAPrivatelyCapturedContactStaysWithheldOnAReachableConversation(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -341,6 +349,7 @@ func TestAPrivatelyCapturedContactStaysWithheldOnAReachableConversation(t *testi
 }
 
 func TestAddressingRefusesACallerWithoutTheContactReadGrant(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
@@ -382,6 +391,7 @@ func TestAddressingRefusesACallerWithoutTheContactReadGrant(t *testing.T) {
 }
 
 func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -423,6 +433,7 @@ func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) 
 }
 
 func TestTheSurnameAFormalGreetingNeedsIsResolvedWithTheFirstName(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -448,6 +459,7 @@ func TestTheSurnameAFormalGreetingNeedsIsResolvedWithTheFirstName(t *testing.T) 
 }
 
 func TestAContactWithNoSurnameOnRecordOffersNone(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -478,6 +490,7 @@ func TestAContactWithNoSurnameOnRecordOffersNone(t *testing.T) {
 // deliberately outside the role vocabulary, so the resolver has to read the
 // name against its own domain rather than the local part.
 func TestASharedMailboxIsGreetedByNoName(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -506,6 +519,7 @@ func TestASharedMailboxIsGreetedByNoName(t *testing.T) {
 // The rule abstains rather than guessing, so the case it must NOT reach is a
 // real contact at the company whose domain this is.
 func TestAContactAtTheSameDomainIsStillGreetedByName(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 
@@ -561,6 +575,7 @@ func (e *sendEnv) noteFiledOn(ctx context.Context, t *testing.T, links ...Activi
 }
 
 func TestReplyingToANoteIsAddressedToTheContactItIsFiledOn(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	buyer := e.seedNamedContact(t, "Dietmar Rietsch")
@@ -577,6 +592,7 @@ func TestReplyingToANoteIsAddressedToTheContactItIsFiledOn(t *testing.T) {
 }
 
 func TestReplyingToANoteFiledOnlyOnACompanyOffersNoAddress(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	company := ids.NewV7()
@@ -594,6 +610,7 @@ func TestReplyingToANoteFiledOnlyOnACompanyOffersNoAddress(t *testing.T) {
 }
 
 func TestAnAutomationDraftingFromANoteStillHasNoReplyAddress(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	buyer := e.seedNamedContact(t, "Dietmar Rietsch")
@@ -613,6 +630,7 @@ func TestAnAutomationDraftingFromANoteStillHasNoReplyAddress(t *testing.T) {
 }
 
 func TestANoteOffersNoAddressOfAContactTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	readable := e.seedNamedContact(t, "Anne Wiegert")
@@ -646,6 +664,7 @@ func TestANoteOffersNoAddressOfAContactTheCallerCannotRead(t *testing.T) {
 }
 
 func TestANoteFiledOnAColleaguesAddressOffersNone(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	// The rep's own login address, off the registered domain, so only the
@@ -661,6 +680,7 @@ func TestANoteFiledOnAColleaguesAddressOffersNone(t *testing.T) {
 }
 
 func TestAnEmailWithNoParticipantsIsNotAddressedToItsLinkedContact(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	anchor := e.seedAnchor(t, "", "")
@@ -676,6 +696,7 @@ func TestAnEmailWithNoParticipantsIsNotAddressedToItsLinkedContact(t *testing.T)
 }
 
 func TestANoteFiledOnTwoContactsLeavesTheChoiceToTheRep(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	buyer := e.seedNamedContact(t, "Dietmar Rietsch")
@@ -693,6 +714,7 @@ func TestANoteFiledOnTwoContactsLeavesTheChoiceToTheRep(t *testing.T) {
 }
 
 func TestANoteFiledOnASharedMailboxOffersNoAddress(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	// One readable contact, so only the shared-mailbox verdict keeps the
@@ -708,6 +730,7 @@ func TestANoteFiledOnASharedMailboxOffersNoAddress(t *testing.T) {
 }
 
 func TestATaskFiledOnlyOnAContactTheCallerCannotReadOffersNoAddress(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
 	private := ids.NewV7()
@@ -741,6 +764,7 @@ func TestATaskFiledOnlyOnAContactTheCallerCannotReadOffersNoAddress(t *testing.T
 }
 
 func TestSenderContactsNamesTheFromParticipantNotTheCopiedOne(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	copied := e.linkContact(t, anchor, "Anne Wiegert")
@@ -771,6 +795,7 @@ func TestSenderContactsNamesTheFromParticipantNotTheCopiedOne(t *testing.T) {
 }
 
 func TestSenderContactsAnswersNothingForAnActivityTheCallerCannotRead(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	sender := e.linkContact(t, anchor, "Dietmar Rietsch")
@@ -790,6 +815,7 @@ func TestSenderContactsAnswersNothingForAnActivityTheCallerCannotRead(t *testing
 }
 
 func TestAReadableCopiedContactIsNotTheAddresseeWhenTheSenderIsPrivate(t *testing.T) {
+	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	readable := e.linkContact(t, anchor, "Anne Wiegert")

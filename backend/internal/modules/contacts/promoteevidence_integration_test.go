@@ -84,6 +84,7 @@ func (e *promoteConsentEnv) promotedEvidence(t *testing.T, lead ids.LeadID) stri
 }
 
 func TestAPromotionRefusesEvidenceThatDoesNotShowItsTrigger(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name    string
 		trigger PromoteTrigger
@@ -143,6 +144,7 @@ func TestAPromotionRefusesEvidenceThatDoesNotShowItsTrigger(t *testing.T) {
 }
 
 func TestAPromotionRecordsTheLeadsOwnEvidence(t *testing.T) {
+	t.Parallel()
 	t.Run("the cited reply of this lead", func(t *testing.T) {
 		e := setupPromoteConsent(t)
 		lead := e.seedLead(t, "cited@evidence.test")
@@ -200,6 +202,7 @@ func TestAPromotionRecordsTheLeadsOwnEvidence(t *testing.T) {
 // The lead read offers the evidence the promotion then accepts: the
 // qualification dialog sends the read's trigger and activity unchanged.
 func TestTheLeadReadOffersEvidenceThePromotionAccepts(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "offered@evidence.test")
 	e.seedEvidence(t, &lead, inboundReply)
@@ -224,6 +227,7 @@ func TestTheLeadReadOffersEvidenceThePromotionAccepts(t *testing.T) {
 // A writer that archives or unfiles the cited activity while the promotion runs
 // is waited for, and the promotion then refuses rather than record it.
 func TestAPromotionWaitsForAConcurrentChangeToItsEvidence(t *testing.T) {
+	t.Parallel()
 	cases := map[string]string{
 		"archived": `UPDATE activity SET archived_at = now() WHERE id = $1 AND $2::uuid IS NOT NULL`,
 		"unfiled":  `DELETE FROM activity_link WHERE activity_id = $1 AND lead_id = $2`,
@@ -266,6 +270,7 @@ func TestAPromotionWaitsForAConcurrentChangeToItsEvidence(t *testing.T) {
 // Engagement older than the waiting horizon no longer qualifies a lead. The read
 // stops offering it, and a promotion that must find it on the lead is refused.
 func TestEngagementOutsideTheWaitingHorizonNoLongerQualifies(t *testing.T) {
+	t.Parallel()
 	asOf := time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC)
 	previous := leadSLAClock
 	leadSLAClock = func() time.Time { return asOf }
@@ -305,6 +310,7 @@ func TestEngagementOutsideTheWaitingHorizonNoLongerQualifies(t *testing.T) {
 // One meeting reads the same to the lead's evidence, its score and its status
 // ladder, through each reader's own query. That holds for every status and answer.
 func TestEvidenceScoringAndTheLadderReadAMeetingAlike(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		status, response string
 		want             PromoteTrigger
@@ -371,6 +377,7 @@ func (e *promoteConsentEnv) readMeetingThreeWays(t *testing.T, lead ids.LeadID) 
 // An import of engagement already older than the waiting horizon when it was
 // captured does not move the lead to Engaged. A current one does.
 func TestOldEngagementDoesNotClimbTheLadder(t *testing.T) {
+	t.Parallel()
 	horizon := storekit.DefaultWaitingHorizonDays * 24 * time.Hour
 	for _, tc := range []struct {
 		name    string
@@ -401,6 +408,7 @@ func TestOldEngagementDoesNotClimbTheLadder(t *testing.T) {
 // advice already reads it. Channel capture names the sender by account, with
 // the address the source vouched for in counterparty_email.
 func TestAChannelMessageFromTheLeadIsReplyEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	lead := e.seedLead(t, "lan@channel.test")
 	message := e.seedEvidence(t, &lead, evidenceSeed{kind: "message", direction: "inbound"})

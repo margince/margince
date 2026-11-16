@@ -17,6 +17,7 @@ import (
 // A breach on a lead whose owner has left is the same miss as one on an unowned
 // lead. The owner's task would be refused, so it goes where that breach goes.
 func TestABreachOnALeadItsOwnerLeftReachesTheIntakeSeat(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name, leave string
 	}{
@@ -48,6 +49,7 @@ func TestABreachOnALeadItsOwnerLeftReachesTheIntakeSeat(t *testing.T) {
 }
 
 func TestABreachOnALeadItsOwnerLeftIsAddressedToNobodyWithoutAnIntakeSeat(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := clocktest.Now(t).UTC()
@@ -67,6 +69,7 @@ func TestABreachOnALeadItsOwnerLeftIsAddressedToNobodyWithoutAnIntakeSeat(t *tes
 }
 
 func TestABreachOnALeadItsOwnerStillHoldsStaysWithTheOwner(t *testing.T) {
+	t.Parallel()
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
 	now := clocktest.Now(t).UTC()

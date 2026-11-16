@@ -50,6 +50,7 @@ func company360ServiceAt(e *integration.Env, clock *movableClock) *company360svc
 }
 
 func TestAResumedContactPageRanksAgainstTheWalksOwnInstant(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)
@@ -156,6 +157,7 @@ func computedAtOf(t *testing.T, rows []crmcontracts.CompanyContact) time.Time {
 // pull request says it; neither is a test, and a refusal nothing exercises is a
 // sentence rather than a control.
 func TestAForgedWalkInstantIsRefused(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	clock := &movableClock{at: company360Clock}
@@ -216,6 +218,7 @@ func forgeCursor(t *testing.T, pos contactCursorForTest) string {
 // serving the first page twice. What the anchor is for is that the walk covers
 // the account exactly once, so that is what this counts.
 func TestAContactWalkSurvivesItsAnchorLeavingTheAccount(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)
@@ -286,6 +289,7 @@ func TestAContactWalkSurvivesItsAnchorLeavingTheAccount(t *testing.T) {
 // refusal that is all a token without the anchor's sort values can honestly
 // give once the anchor is gone.
 func TestAContactWalkResumesATokenMintedBeforeTheAnchorCarriedItsPosition(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	owner := integration.OwnerConn(t)

@@ -73,6 +73,7 @@ func (c *anchorRecorder) SyncFrom(
 // A short outage loses no mail: the retry reads from where the first attempt
 // was going to, not from a later point.
 func TestARetryOfAFirstSyncReadsWhereTheFirstAttemptDid(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 	reg.SetClock(func() time.Time { return at })
@@ -100,6 +101,7 @@ func TestARetryOfAFirstSyncReadsWhereTheFirstAttemptDid(t *testing.T) {
 // An outage past the bound records the skipped window, and reads from its own
 // window again rather than streaming everything since the held point.
 func TestAnOutagePastTheBoundRecordsWhatNobodyRead(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
@@ -210,6 +212,7 @@ func TestASupersededSyncCannotNarrowTheAnchor(t *testing.T) {
 // A sync that stored a watermark lets the anchor go. Held past that, a later
 // re-anchor would read a stale lower bound as a point somebody chose.
 func TestAStoredWatermarkReleasesTheAnchor(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
@@ -253,6 +256,7 @@ func syncOnceOfExisting(ctx context.Context, t *testing.T, reg interface {
 // outage would tell the mailbox owner mail went unread that the cursor was
 // about to bring in.
 func TestAConnectionWithAStoredWatermarkIsToldNoAnchor(t *testing.T) {
+	t.Parallel()
 	ctx, reg, _, _ := newCaptureRegistryFixture(t)
 	owner, _ := setupCaptureDB(t)
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
