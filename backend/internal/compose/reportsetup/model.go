@@ -110,6 +110,7 @@ func Request(in Input) model.Request {
 		Messages:       []model.Message{{Role: "user", Content: fence.Wrap(encode(in))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		SecretStripper: ai.NewSecretStripper(),
+		ResponseSchema: replySchema(),
 	}
 }
 
