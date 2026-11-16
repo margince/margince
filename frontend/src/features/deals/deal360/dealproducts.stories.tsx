@@ -139,6 +139,7 @@ function card(
   return (
     <StoryProviders>
       <DealProductsCard
+        canWrite
         dealId="d-1"
         currency="EUR"
         typedAmount={lines ? null : "€16,500.00"}

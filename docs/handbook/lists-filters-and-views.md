@@ -338,7 +338,7 @@ Also called: refresh a list, list sync, when does my list update.
 ### What changed on a list since my last visit?
 Margince keeps a note of when you last opened each list. In the **Filters and views** library, a Live List that changed since then shows "+3 / −1": three joined, one left. On a Live List's page, "Since your visit on" and the date give the same counts. They name the newest three records that joined and that left as links ("+2 more" for the rest), and say how often the filter changed. Each member that joined since your visit has a **New** mark.
 
-**What changed**, at the bottom of the list's page, is the full history. It shows who was added or taken off, and how. That can be by hand, in a change to many rows, by an automation, or because the record was archived or restored. It also shows each change to the list, and **Joined** and **Left** entries by **The 15-minute check**, with the date of its check. You see only the records you may see.
+**What changed**, at the bottom of the list's page, is the full history, and each entry names its record as a link. It shows who was added or taken off: by hand, in a change to many rows, by an automation, or by archive or restore. A change to the list says what changed, and a changed filter shows before and after. **Joined** and **Left** entries are by **The 15-minute check**, and an agent, a connector or a system task is named as such. You see only the records you may see.
 Also called: list history, list activity, who joined, who left, new members.
 
 ### How do I act on a list's members?

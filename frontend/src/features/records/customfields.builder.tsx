@@ -5,7 +5,6 @@ import {
   Button,
   Checkbox,
   Field,
-  SegmentedControl,
   TextInput,
 } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -143,16 +142,21 @@ export function FieldBuilder({
           </Field>
         </div>
 
-        <div className="field">
-          <span className="t-label">{t("cf.typeLabel")}</span>
-          <SegmentedControl
-            label={t("cf.typeLabel")}
-            options={offeredTypes}
-            value={type}
-            onChange={setType}
-            labels={typeLabels(t)}
-          />
-        </div>
+        <Field label={t("cf.typeLabel")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={offeredTypes.map((one) => ({
+                value: one,
+                label: typeLabels(t)[one],
+              }))}
+              value={type}
+              onChange={(next) =>
+                setType(offeredTypes.find((one) => one === next) ?? type)
+              }
+            />
+          )}
+        </Field>
 
         {type === "currency" && (
           <Field label={t("cf.currencyCode")} hint={t("cf.currencyHint")}>

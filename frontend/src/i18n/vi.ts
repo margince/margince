@@ -2118,7 +2118,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.schedule.unavailable": "Không thể tải lịch.",
   "brief.schedule.more": "Tải thêm mục lịch trình để xem các cuộc họp còn lại.",
   "brief.schedule.notConnected":
-    "Chưa kết nối lịch nên không thể hiển thị các cuộc họp hôm nay.",
+    "Chưa kết nối lịch. Đang hiển thị các cuộc họp được đặt, ghi lại hoặc nhập vào Margince.",
   "brief.schedule.unreadable":
     "Lịch hiện không đồng bộ nên không thể hiển thị các cuộc họp hôm nay.",
   "brief.schedule.connect": "Kết nối lịch",
@@ -6350,7 +6350,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.archivedReadOnly":
     "Deal này đang trong kho lưu trữ nên không thể thay đổi.",
   "deal.notYoursToChange":
-    "Bạn không có quyền thay đổi deal này. Liên hệ người chịu trách nhiệm để được chia sẻ, hoặc quản trị viên để được cấp quyền sửa.",
+    "Bạn có thể ghi nhận hoạt động và thêm việc cần làm. Để thay đổi deal này, người chịu trách nhiệm cần chia sẻ deal với bạn.",
   "deal.closedTakesNoStage":
     "Deal này đã đóng. Mở lại deal để chuyển sang giai đoạn khác.",
   "deal.reopen": "Mở lại",
@@ -6928,8 +6928,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.readings.needsPrep_other": "{count} cần chuẩn bị",
   "brief.readings.prepUnknown": "Chưa kiểm tra khâu chuẩn bị",
   "brief.readings.prepared": "Đã chuẩn bị đủ",
-  "brief.readings.calendarNotConnected": "Chưa kết nối",
-  "brief.readings.calendarNotConnectedWhy": "Kết nối lịch để đếm cuộc họp.",
+  "brief.readings.calendarNotConnectedWhy":
+    "Kết nối lịch để đếm cả các cuộc họp trong lịch.",
   "brief.readings.calendarUnreadable": "Không đồng bộ",
   "brief.readings.calendarUnreadableWhy": "Kết nối lại lịch để đếm cuộc họp.",
   "brief.readings.nextMeeting": "Cuộc họp tiếp theo: {date} · {subject}",
@@ -17678,13 +17678,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "consent.redirectsTo": "Margince sẽ gửi kết quả ủy quyền về {host}.",
   "consent.redirectsToLoopback":
     "Đó là một địa chỉ trên máy tính này, và kết nối này không thể chứng minh chương trình nào đang lắng nghe ở đó.",
-  "consent.scopeNote.read": "xem những gì bạn xem được",
-  "consent.scopeNote.draft": "soạn tin nhắn để bạn xem lại",
+  "consent.scopeNote.read": "Xem những gì bạn xem được",
+  "consent.scopeNote.draft": "Soạn tin nhắn để bạn xem lại",
   "consent.scopeNote.write":
-    "tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
+    "Tạo, sửa và chuyển hồ sơ vào kho lưu trữ với danh nghĩa của bạn",
   "consent.scopeNote.send":
-    "gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
-  "consent.scopeNote.enrich": "chạy việc AI và mua dữ liệu liên hệ",
+    "Gửi tin nhắn với danh nghĩa của bạn, không hỏi trước",
+  "consent.scopeNote.enrich": "Chạy việc AI và mua dữ liệu liên hệ",
+  "consent.scopesLegend": "Được làm những gì",
   "consent.ceiling":
     "Không bao giờ vượt quá quyền của chính bạn. Có thể ngắt kết nối bất cứ lúc nào trong Cài đặt, mục Trợ lý AI.",
   "consent.preset.label": "Quyền của trợ lý",
@@ -18897,6 +18898,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.saveFilterConflict":
     "Ai đó đã sửa danh sách này sau khi bạn mở. Mở lại danh sách để xem thay đổi đó, rồi sửa bộ lọc.",
   "lists.history.someone": "Ai \u0111\u00f3",
+  "lists.history.created": "Đã tạo danh sách",
+  "lists.history.renamed": "Đã đổi tên từ {before} thành {after}",
+  "lists.history.repurposed": "Đã đổi mục đích",
+  "lists.history.reshared": "Đã đổi phạm vi chia sẻ",
+  "lists.history.handedOver": "Đã giao lại việc phụ trách",
+  "lists.history.refiltered": "Đã đổi bộ lọc",
+  "lists.history.filterBefore": "Trước: {sentence}",
+  "lists.history.filterAfter": "Sau: {sentence}",
+  "lists.history.noFilter": "không có điều kiện",
   "lists.changes.since": "Kể từ lần truy cập ngày {when}:",
   "lists.changes.joined_one": "{count} được thêm vào",
   "lists.changes.joined_other": "{count} được thêm vào",
