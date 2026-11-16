@@ -22,6 +22,7 @@ import (
 // The fixture source never changes its mind, so it cannot reach these paths.
 // The double stands at the provider seam only; the store, SQL and audit writer are real.
 func TestARestatedSourceAuditsTheUpdateWithBothImages(t *testing.T) {
+	t.Parallel()
 	e := setupFinance(t)
 	source := restatingSource(e.external)
 

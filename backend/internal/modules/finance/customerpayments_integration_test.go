@@ -141,6 +141,7 @@ func TestCustomerPaymentsLeavesArchivedAndUnlinkedAndFormerCustomersOut(t *testi
 	t.Parallel()
 	for _, state := range []string{"archived", "unlinked", "former"} {
 		t.Run(state, func(t *testing.T) {
+			t.Parallel()
 			a := setupSourceAdmin(t)
 			syncPayments(t, a)
 			before := paymentResponse(a.documentReader(principal.RowScopeAll), t, a, nil, 50)

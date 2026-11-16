@@ -621,6 +621,7 @@ ROLE_SWEEP_TIMEOUT ?= 2700s
 # target fails on any SKIP, so a capacity check that quietly opted out would take
 # the whole lane red for a reason that has nothing to do with the tests.
 LANE_BUDGET_ENV = $(shell bash -c 'cd .. && source scripts/lib-testdb.sh && declare_lane_budget 1 && echo LANE_CONN_BUDGET=$$LANE_CONN_BUDGET MARGINCE_TEST_POOL_MAX_CONNS=$$MARGINCE_TEST_POOL_MAX_CONNS')
+LANE_TEST_PARALLEL = $(shell bash -c 'cd .. && source scripts/lib-testdb.sh && echo $$LANE_TEST_PARALLEL')
 
 test-integration-serial: composition ## Escape hatch: the old sequential lane, all packages on the shared margince_test DB (debugging a parallel-isolation issue).
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && ensure_template'
@@ -628,7 +629,7 @@ test-integration-serial: composition ## Escape hatch: the old sequential lane, a
 	trap 'rm -f "$$manifest"' EXIT; \
 	template=$$(cd .. && bash -c 'source scripts/lib-testdb.sh && echo "$$TEMPLATE_NAME"') || exit $$?; \
 	$(GOWORK_COMPOSED) $(GO) run ./cmd/migrate extension-manifest >"$$manifest" || exit $$?; \
-	{ $(GOWORK_COMPOSED) env MARGINCE_TEST_EXTENSION_MANIFEST="$$manifest" MARGINCE_TEST_TEMPLATE="$$template" $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
+	{ $(GOWORK_COMPOSED) env MARGINCE_TEST_EXTENSION_MANIFEST="$$manifest" MARGINCE_TEST_TEMPLATE="$$template" $(LANE_BUDGET_ENV) $(GO) test -tags integration -p 1 -parallel $(LANE_TEST_PARALLEL) -v ./... 2>&1; echo $$? >"$$st"; } | tee "$$log"; \
 	code=$$(cat "$$st"); rm -f "$$st"; \
 	if [ "$$code" -ne 0 ]; then rm -f "$$log"; exit "$$code"; fi; \
 	if grep -q -- '--- SKIP' "$$log"; then \
