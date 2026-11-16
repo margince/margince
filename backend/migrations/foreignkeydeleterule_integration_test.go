@@ -65,6 +65,7 @@ SELECT count(*), count(*) FILTER (WHERE delete_rule = 'NO ACTION')
 // A catalog or versioned parent is `RESTRICT`. So is a NOT NULL reference to app_user:
 // a user is deactivated and handed over, never deleted.
 func TestEveryForeignKeyStatesItsDeleteRule(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

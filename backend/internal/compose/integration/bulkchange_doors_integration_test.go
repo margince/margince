@@ -254,6 +254,7 @@ func TestBothDoorsSkipARecordEditedAfterThePreview(t *testing.T) {
 // A retried execution is never a second change. The REST door hands back the
 // first answer; the tool door refuses to replay an answer that names no record
 // it can re-check, which the tool surface does for every such answer.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestARetriedExecutionIsNotASecondChange(t *testing.T) {
 	e, _, doors := bulkDoorsApp(t, "bulk-retry", agentvolume.Limits{})

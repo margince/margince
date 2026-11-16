@@ -16,6 +16,7 @@ import (
 )
 
 func TestARetainedSignatureNoticeKeepsItsLinkAcrossStoredDescriptorVersions(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	signature, owner := ids.NewV7(), ids.NewV7()
 	input := NewNotice{

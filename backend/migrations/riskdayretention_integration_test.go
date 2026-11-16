@@ -62,6 +62,7 @@ func riskDayWindow(t *testing.T, conn *pgx.Conn) int {
 }
 
 func TestARunningInstallationWithAnEmptyLadderGetsTheRiskDayWindow(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -80,6 +81,7 @@ func TestARunningInstallationWithAnEmptyLadderGetsTheRiskDayWindow(t *testing.T)
 // A fresh database is left for bootstrap to seed, and a window an admin
 // already chose is not overwritten.
 func TestTheRiskDayWindowIsPlantedOnlyWhereNothingDecidedIt(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

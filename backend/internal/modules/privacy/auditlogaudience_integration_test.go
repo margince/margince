@@ -33,6 +33,7 @@ import (
 // TestACollateralImageFollowsItsActivitysAudience is the leak this closes: an
 // admin outside a held thread's audience reading a filename off the audit log.
 func TestACollateralImageFollowsItsActivitysAudience(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		entityType string
 		// seed places the collateral row and returns the id the audit row is
@@ -135,6 +136,7 @@ func TestACollateralImageFollowsItsActivitysAudience(t *testing.T) {
 // the extraction image WHOLE destroys "who asked to read this file", which is
 // the record a compliance reader opened this log for.
 func TestAnExtractionRequestKeepsItsGovernanceKeysWhenWithheld(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	activity := e.seedHeldActivity(t)
 	attachment := e.seedID(t, `
@@ -182,6 +184,7 @@ func TestAnExtractionRequestKeepsItsGovernanceKeysWhenWithheld(t *testing.T) {
 // holds, so a NULL route withholds — but only because the type is governed. The
 // pair of them is what this seeds.
 func TestAnUploadedFileOnAHeldThreadIsWithheld(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	activity := e.seedHeldActivity(t)
 	attachment := e.seedID(t, `
@@ -221,6 +224,7 @@ func TestAnUploadedFileOnAHeldThreadIsWithheld(t *testing.T) {
 // the reader may read in full. So the mutation is visible only from a workspace
 // activity, where the right answer is that nothing is redacted at all.
 func TestAnUploadedFileOnAnOpenThreadKeepsItsName(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	activity := e.seedID(t, `
 		INSERT INTO activity (id, kind, audience, source, captured_by, occurred_at)
@@ -264,6 +268,7 @@ func TestAnUploadedFileOnAnOpenThreadKeepsItsName(t *testing.T) {
 // that does not exist. The route resolves nothing for those six, and a row that
 // resolves nothing is not governed.
 func TestADocumentOnAContactKeepsItsName(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	attachment := e.seedID(t, `
 		INSERT INTO attachment (id, entity_type, entity_id, filename,
@@ -302,6 +307,7 @@ func TestADocumentOnAContactKeepsItsName(t *testing.T) {
 // route resolves that activity, the audience admits it, and nothing is redacted.
 // A broken one resolves NULL and the content vanishes.
 func TestEachRouteResolvesItsOwnActivity(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		entityType string
 		seed       func(t *testing.T, e *auditBoundaryEnv, activity ids.UUID) ids.UUID
@@ -387,6 +393,7 @@ func TestEachRouteResolvesItsOwnActivity(t *testing.T) {
 // and there is no audience to consult. Answering "readable" for exactly the rows
 // whose audience cannot be checked is how the disclosure returns.
 func TestAScheduledSendWithNoActivityIsWithheld(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	send := e.seedID(t, `
 		INSERT INTO scheduled_send (id, origin_kind, origin_links, status,

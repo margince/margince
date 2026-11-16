@@ -58,6 +58,7 @@ func (e *stagingEnv) lentPassport(t *testing.T, human ids.UUID) context.Context 
 }
 
 func TestASecondContactsPassportDoesNotReleaseAConfirmationRequiredAction(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 
@@ -186,6 +187,7 @@ func (e *stagingEnv) connectedPassport(t *testing.T, human, grant ids.UUID) cont
 // that cannot be taken back; TestACredentialReleasesTheUndoableChangeItStaged
 // is the other half.
 func TestARotatedCredentialDoesNotReleaseWhatItStagedAgainstTheDatabase(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 
@@ -244,6 +246,7 @@ func TestARotatedCredentialDoesNotReleaseWhatItStagedAgainstTheDatabase(t *testi
 // A second connection still sees nothing, which is what keeps this a fix to the
 // identity rather than a widening of who may poll.
 func TestARotatedCredentialStillPollsAndWithdrawsItsOwnProposal(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 
@@ -313,6 +316,7 @@ func TestARotatedCredentialStillPollsAndWithdrawsItsOwnProposal(t *testing.T) {
 // connecting an agent is not being present when it answers. The service here
 // declares no kind undoable, so every kind takes that rule.
 func TestASecondConnectionOfTheSameContactDoesNotReleaseWhatTheFirstStaged(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := context.Background()
 
@@ -385,6 +389,7 @@ func TestASecondConnectionOfTheSameContactDoesNotReleaseWhatTheFirstStaged(t *te
 // CRM and put back afterwards it releases itself — rotated, connected, its own.
 // What it still cannot release is the same change staged for somebody else.
 func TestACredentialReleasesTheUndoableChangeItStaged(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	e.svc.WithUndoableRelease(func(_ context.Context, _ Queryer, call StagedCall) bool {
 		return call.Kind == "company_name_promotion"

@@ -9,6 +9,7 @@ import "testing"
 
 // A catalog read on a dead transaction fails rather than answering an empty catalog.
 func TestTheCatalogReaderReportsAFailedQuery(t *testing.T) {
+	t.Parallel()
 	f := setupCandidates(t)
 	tx, err := f.owner.Begin(f.ctx)
 	if err != nil {

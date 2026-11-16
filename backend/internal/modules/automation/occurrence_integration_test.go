@@ -98,6 +98,7 @@ func clockPass(ws ids.UUID, automationID ids.AutomationID, entity datasource.Ent
 // that outcome apart from a healthy single firing; this one asserts the
 // firing actually happened.
 func TestClockTriggerFiresAfterEarlierNonMatchingPasses(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil) // nil resolver: these fixtures carry no owner_id, so the match-time gate skips before ever touching it
 	instanceID := fx.seedAutomation(t, "clock_first_firing")
@@ -142,6 +143,7 @@ func TestClockTriggerFiresAfterEarlierNonMatchingPasses(t *testing.T) {
 // overlapping time-scan passes before the first one's effects (moving
 // last_activity_at, say) would have re-armed it.
 func TestClockTriggerAtMostOnceOnAnUnchangedAnchor(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil) // nil resolver: these fixtures carry no owner_id, so the match-time gate skips before ever touching it
 	instanceID := fx.seedAutomation(t, "clock_at_most_once")
@@ -177,6 +179,7 @@ func TestClockTriggerAtMostOnceOnAnUnchangedAnchor(t *testing.T) {
 // second true evaluation over a NEW anchor (last_activity_at moved
 // again after a fresh burst of inactivity) must fire again.
 func TestClockTriggerRearmsWhenTheAnchorMoves(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	engine := NewWorkflowEngine(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)), nil) // nil resolver: these fixtures carry no owner_id, so the match-time gate skips before ever touching it
 	instanceID := fx.seedAutomation(t, "clock_rearm")

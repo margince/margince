@@ -18,6 +18,7 @@ import (
 )
 
 func TestTheWorklistCompletionDownMigrationRefusesOverRecordedCompletions(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

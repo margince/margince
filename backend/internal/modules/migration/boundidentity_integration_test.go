@@ -28,6 +28,7 @@ func bindLead(ctx context.Context, t *testing.T, s *RunStore, runID RunID, exter
 }
 
 func TestUndoNeverArchivesABoundRecord(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -53,6 +54,7 @@ func TestUndoNeverArchivesABoundRecord(t *testing.T) {
 }
 
 func TestABoundRowIsFoundByEveryBindingReader(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -71,6 +73,7 @@ func TestABoundRowIsFoundByEveryBindingReader(t *testing.T) {
 // A replayed row reads Unchanged and is counted as the create it was. A bound
 // row was never a create, so a crash after it must not turn it into one.
 func TestABoundRowIsNeverReplayedAsACreation(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)
@@ -100,6 +103,7 @@ func lookupNative(ctx context.Context, s *RunStore, system, object, externalID s
 }
 
 func TestRecordingARefMappedToAnotherRecordIsRefusedAndAReplayIsNot(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	l := approvedRun(ctx, t, s)

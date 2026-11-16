@@ -35,6 +35,7 @@ func (e *stagingEnv) effectFailureOf(t *testing.T, id ids.ApprovalID) (*time.Tim
 }
 
 func TestAnApprovedEffectThatFailsIsMarkedOnTheRow(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	e.svc.WithEffect(kindSiteLead, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {
 		return errors.New("the capture sink refused this lead: relation lead_intake, host db-3")
@@ -63,6 +64,7 @@ func TestAnApprovedEffectThatFailsIsMarkedOnTheRow(t *testing.T) {
 }
 
 func TestAnApprovedEffectThatRunsLeavesNoFailureMark(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	e.svc.WithEffect(kindSiteLead, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {
 		return nil
@@ -84,6 +86,7 @@ func TestAnApprovedEffectThatRunsLeavesNoFailureMark(t *testing.T) {
 // FailedForDecider binds the acting user inside List, so one rep cannot read
 // another's failed decisions by asking nicely.
 func TestAFailedEffectIsListedForItsDeciderAlone(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	e.svc.WithEffect(kindSiteLead, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {
 		return errors.New("the capture sink refused this lead")

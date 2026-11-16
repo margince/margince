@@ -13,7 +13,6 @@ import (
 	"context"
 	"errors"
 	"math"
-	"os"
 	"strings"
 	"testing"
 
@@ -40,12 +39,9 @@ type extensionSignalFixture struct {
 
 func newExtensionSignalFixture(t *testing.T) extensionSignalFixture {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,9 +50,6 @@ func newExtensionSignalFixture(t *testing.T) extensionSignalFixture {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	ws, admin, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
@@ -71,7 +64,7 @@ func newExtensionSignalFixture(t *testing.T) extensionSignalFixture {
 		company); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -119,6 +112,7 @@ func loss(fingerprint string) ExtensionSignal {
 }
 
 func TestAnExtensionSignalCarriesItsLayoutAndCoreStampedProvenance(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	_, id, err := f.file(loss("provenance-1"))
 	if err != nil {
@@ -144,6 +138,7 @@ func TestAnExtensionSignalCarriesItsLayoutAndCoreStampedProvenance(t *testing.T)
 }
 
 func TestTheSameFingerprintFromTwoReportersIsOneSignal(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	createdFirst, first, err := f.file(loss("same-event"))
 	if err != nil {
@@ -169,6 +164,7 @@ func TestTheSameFingerprintFromTwoReportersIsOneSignal(t *testing.T) {
 }
 
 func TestADismissedExtensionSignalIsNotRaisedAgainByAReplay(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	_, first, err := f.file(loss("dismissed-event"))
 	if err != nil {
@@ -184,6 +180,7 @@ func TestADismissedExtensionSignalIsNotRaisedAgainByAReplay(t *testing.T) {
 }
 
 func TestTheSameKeyOnTwoSubjectsIsTwoSignals(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	if _, _, err := f.file(loss("shared-key")); err != nil {
 		t.Fatal(err)
@@ -201,6 +198,7 @@ func TestTheSameKeyOnTwoSubjectsIsTwoSignals(t *testing.T) {
 }
 
 func TestAnExtensionSignalThatBreaksTheRulesIsRefused(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	mutate := func(fn func(*ExtensionSignal)) ExtensionSignal {
 		in := loss("refused")
@@ -228,6 +226,7 @@ func TestAnExtensionSignalThatBreaksTheRulesIsRefused(t *testing.T) {
 }
 
 func TestTheSignalKindCheckAdmitsOnlyCoreKindsAndTheExtensionSpelling(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	insert := func(kind string) error {
 		_, err := f.owner.Exec(f.ctx, `
@@ -248,6 +247,7 @@ func TestTheSignalKindCheckAdmitsOnlyCoreKindsAndTheExtensionSpelling(t *testing
 }
 
 func TestAnExtensionSignalCannotBeMovedToACoreKindOrHaveItsEvidenceReplaced(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	_, id, err := f.file(loss("frozen-1"))
 	if err != nil {
@@ -267,6 +267,7 @@ func TestAnExtensionSignalCannotBeMovedToACoreKindOrHaveItsEvidenceReplaced(t *t
 }
 
 func TestACallerCannotForgeExtensionEvidenceThroughTheHumanPaths(t *testing.T) {
+	t.Parallel()
 	f := newExtensionSignalFixture(t)
 	forged := []crmcontracts.SignalEvidence{{Snippet: "x", Provenance: &crmcontracts.SignalProvenance{Unit: "sigtest", CapturedBy: "someone"}}}
 	_, err := f.store.CreateSignal(f.ctx, CreateSignalInput{Kind: "risk", Summary: "s", Source: "manual", Evidence: forged})

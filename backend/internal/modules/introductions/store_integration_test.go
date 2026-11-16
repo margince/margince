@@ -13,7 +13,6 @@ package introductions
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -43,13 +42,9 @@ type introEnv struct {
 
 func setupIntro(t *testing.T) *introEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,12 +53,6 @@ func setupIntro(t *testing.T) *introEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	e := &introEnv{
 		owner: owner, ws: ids.NewV7(),
 		requester: ids.NewV7(), introducer: ids.NewV7(), stranger: ids.NewV7(),
@@ -92,7 +81,7 @@ func setupIntro(t *testing.T) *introEnv {
 		 VALUES ($1, 'Someone Else', 'manual', 'test', $2)`, e.unseen, e.stranger); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,6 +127,7 @@ func (e *introEnv) ask() NewRequest {
 // pressing send both pass any read-then-write check, and only one may pass the
 // partial unique index.
 func TestAnAskLandsInTheWriteShapeAndCannotBeMadeTwice(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -170,6 +160,7 @@ func TestAnAskLandsInTheWriteShapeAndCannotBeMadeTwice(t *testing.T) {
 // contact is the product forgetting a refusal it was told about — but once the
 // ask is closed, a NEW one is a fresh question and must be allowed.
 func TestAClosedAskFreesTheRouteAgain(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -192,6 +183,7 @@ func TestAClosedAskFreesTheRouteAgain(t *testing.T) {
 // records a handoff nobody made — and it passes every other check on this path,
 // because the requester and the introducer are each individually a real party.
 func TestNobodyIsTheirOwnIntroducer(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	ask := e.ask()
 	ask.IntroducerUser = e.requester
@@ -207,6 +199,7 @@ func TestNobodyIsTheirOwnIntroducer(t *testing.T) {
 // that this colleague was asked about this contact, which is the fact the row
 // is for.
 func TestOnlyThePartiesReachTheAsk(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -232,6 +225,7 @@ func TestOnlyThePartiesReachTheAsk(t *testing.T) {
 // records a name-drop, and the state the ask is in decides that — never the
 // caller, who would otherwise be able to report a door that never opened.
 func TestCompletingANameDropRecordsANameDrop(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -283,6 +277,7 @@ func TestCompletingANameDropRecordsANameDrop(t *testing.T) {
 // reports a loss by matching zero rows. If nothing reads that count, the loser
 // still writes an audit row and emits an event for a move it never made.
 func TestALostRaceWritesNoAuditTrail(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -345,6 +340,7 @@ func auditRowsFor(t *testing.T, e *introEnv, id ids.UUID) int {
 // win: the loser is told the record moved rather than overwriting an answer
 // already given.
 func TestAStaleVersionCannotOverwriteAnAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -368,6 +364,7 @@ func TestAStaleVersionCannotOverwriteAnAnswer(t *testing.T) {
 // workspace-readable here — every rep reads every contact — so the guard that
 // matters is existence and liveness, not ownership.
 func TestAnAskCannotNameAContactThatIsGoneOrErased(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 
 	missing := e.ask()
@@ -447,6 +444,7 @@ func (e *introEnv) introduced(t *testing.T) ids.UUID {
 // `replied` is the one status no endpoint can reach, so this is the ONLY path
 // that produces it — and it still audits and emits like every other mutation.
 func TestACapturedReplyClosesTheAskAndLeavesATrail(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id := e.introduced(t)
 	evidence := e.evidence(t)
@@ -500,6 +498,7 @@ func TestACapturedReplyClosesTheAskAndLeavesATrail(t *testing.T) {
 // itself as having done nothing — an error here would wedge the consumer group
 // on a message that will never stop being a duplicate.
 func TestASecondReplyChangesNothingAndIsNotAnError(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id := e.introduced(t)
 	first := e.evidence(t)
@@ -548,6 +547,7 @@ func TestASecondReplyChangesNothingAndIsNotAnError(t *testing.T) {
 // corresponding with them — must not close it. This is the clause that keeps
 // `requested` from silently becoming `replied` on ordinary traffic.
 func TestOnlyAHandshakeCanBeReplied(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -581,6 +581,7 @@ func TestOnlyAHandshakeCanBeReplied(t *testing.T) {
 // compare against, the first import would mark every introduction ever made as
 // answered.
 func TestAwaitingReplyNamesTheHandshakeInstant(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id := e.introduced(t)
 
@@ -616,6 +617,7 @@ func TestAwaitingReplyNamesTheHandshakeInstant(t *testing.T) {
 // admits both. A test that only walked the handshake would leave the name-drop
 // path unreachable without anything failing.
 func TestAUsedNameDropCanBeAnsweredToo(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -663,6 +665,7 @@ func TestAUsedNameDropCanBeAnsweredToo(t *testing.T) {
 // completes with no evidence, so the old value was null and any rule looked
 // right.
 func TestAReplyReplacesTheHandshakesEvidence(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -730,6 +733,7 @@ func linkEvidence(t *testing.T, e *introEnv, activity, contact ids.UUID) {
 // them until one answers — so the read is bound to the acting contact rather
 // than to a scope a manager could widen.
 func TestTheQueueCarriesOnlyTheAsksWaitingOnYou(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	mine, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -770,6 +774,7 @@ func TestTheQueueCarriesOnlyTheAsksWaitingOnYou(t *testing.T) {
 // stays on the contact's own page, where the requester follows what happened —
 // leaving it in the colleague's queue would ask them to answer twice.
 func TestAnAnsweredAskLeavesTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -804,6 +809,7 @@ func TestAnAnsweredAskLeavesTheQueue(t *testing.T) {
 // deadline rather than by age: the ask about to expire is the one a colleague
 // needs to see at the top.
 func TestTheQueueLeadsWithTheAskAboutToLapse(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	later := e.ask()
 	later.DueAt = testNow.AddDate(0, 0, 9)
@@ -835,6 +841,7 @@ func TestTheQueueLeadsWithTheAskAboutToLapse(t *testing.T) {
 }
 
 func TestSuggestingSomebodyElseNamesAThirdColleague(t *testing.T) {
+	t.Parallel()
 	e := setupIntro(t)
 	id, err := e.store.Create(e.asUser(e.requester), e.ask())
 	if err != nil {
@@ -859,6 +866,7 @@ func TestSuggestingSomebodyElseNamesAThirdColleague(t *testing.T) {
 // An agent's note never reads as typed by a person, whatever the call says.
 // A user's unstated note stays theirs.
 func TestAnAgentsAskRecordsItsNoteAsModelProse(t *testing.T) {
+	t.Parallel()
 	human := func(e *introEnv) context.Context { return e.asUser(e.requester) }
 	agent := func(e *introEnv) context.Context {
 		ctx := e.asUser(e.requester)

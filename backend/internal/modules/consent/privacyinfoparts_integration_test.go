@@ -35,6 +35,7 @@ func noticeFor(t *testing.T, e *channelConsentEnv, ref ConfirmRef) PrivacyInform
 }
 
 func TestThePrivacyPageNamesTheControllerTheInstallationStated(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stated := ControllerParticulars{
 		LegalName: "Beispiel GmbH", PostalAddress: "Hauptstr. 1\n10115 Berlin",
@@ -49,6 +50,7 @@ func TestThePrivacyPageNamesTheControllerTheInstallationStated(t *testing.T) {
 }
 
 func TestThePageNamesOnlyTheUsesOnRecordWithTheirRecordedBasis(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	reader := &fixedHeld{held: NoticeHeld{
 		Categories: []string{"name", "postal_address"},
@@ -78,6 +80,7 @@ func TestThePageNamesOnlyTheUsesOnRecordWithTheirRecordedBasis(t *testing.T) {
 // An unwired reader names no categories and no retention, and still names
 // the business correspondence purpose every page owes.
 func TestAnUnwiredReaderDisclosesNothingItCannotBack(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	info := noticeFor(t, e, ConfirmRef{ContactID: e.contact})

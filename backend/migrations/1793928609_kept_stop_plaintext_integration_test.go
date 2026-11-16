@@ -20,6 +20,7 @@ import (
 // its hash and no address. A hard bounce and a stop on a record keep their
 // addresses. The rollback has no address to restore and writes none.
 func TestAKeptStopLosesItsPlaintextAddress(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

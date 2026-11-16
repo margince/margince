@@ -44,6 +44,7 @@ type limitRefusal struct {
 
 // An Admin value saved through the settings binds the admin's real passport,
 // and its tool calls and REST requests fill one count against it.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestARoleLimitBindsOneCountAcrossMCPAndRest(t *testing.T) {
 	d := roleBoundDoors(t, "role-limit-doors")

@@ -18,6 +18,7 @@ import (
 // classification says undoable, the session is attended, the credential carries
 // write and the decision grants, and the target is one it may act on.
 func TestAStagedCallIsReleasableByTheCallerOnlyWhenDecideWouldAllowIt(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `

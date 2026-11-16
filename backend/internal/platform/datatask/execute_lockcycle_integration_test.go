@@ -15,6 +15,7 @@ import (
 )
 
 func TestACorrectionBatchRetriesContentionWithoutDuplicatingProgress(t *testing.T) {
+	t.Parallel()
 	ctx, pool, engine, _ := executorFixture(t)
 	attempts := 0
 	engine.beforeCommit = func(ctx context.Context, tx pgx.Tx) error {
@@ -38,6 +39,7 @@ func TestACorrectionBatchRetriesContentionWithoutDuplicatingProgress(t *testing.
 }
 
 func TestPersistentCorrectionContentionWaitsWithoutRecordingAFailedTask(t *testing.T) {
+	t.Parallel()
 	ctx, pool, engine, _ := executorFixture(t)
 	attempts := 0
 	engine.beforeCommit = func(ctx context.Context, tx pgx.Tx) error {

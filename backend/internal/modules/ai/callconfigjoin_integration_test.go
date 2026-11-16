@@ -25,6 +25,7 @@ import (
 )
 
 func TestACallResolvesTheConfigurationItRanUnder(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)
@@ -90,6 +91,7 @@ func TestACallResolvesTheConfigurationItRanUnder(t *testing.T) {
 // foreign key into the dimension, so a call carrying a hash always has a row
 // behind it — a call with no hash at all is the whole of the nil case.
 func TestACallNamingNoConfigurationResolvesToNothing(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)
@@ -126,6 +128,7 @@ func TestACallNamingNoConfigurationResolvesToNothing(t *testing.T) {
 // assigning it would hand a reader a non-nil pointer to nothing — a
 // configuration reporting an empty object it never pinned.
 func TestAStoredJSONNullIsNotReadAsAnEmptyParameterSet(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)

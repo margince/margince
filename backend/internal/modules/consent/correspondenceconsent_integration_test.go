@@ -50,6 +50,7 @@ func (e *qualifyingEnv) grant(t *testing.T, state string) {
 // `granted` branch from correspondenceVerdict and this fails on the first
 // assertion, with the verdict still unknown.
 func TestAnExplicitYesAuthorizesCorrespondence(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	// Nothing on the timeline: no inbound, no deal, no recorded exchange. The
@@ -81,6 +82,7 @@ func TestAnExplicitYesAuthorizesCorrespondence(t *testing.T) {
 // Mutation: move the objectionStands call below the class switch and this
 // fails — the inbound message answers instead.
 func TestAWithdrawalStillBeatsAQualifyingEvent(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	met := time.Now().Add(-48 * time.Hour).Truncate(time.Second)
@@ -114,6 +116,7 @@ func TestAWithdrawalStillBeatsAQualifyingEvent(t *testing.T) {
 // Mutation: return early from correspondenceVerdict on any non-granted state
 // and this fails.
 func TestTheTimelineStillAnswersForSomebodyWhoNeverSaid(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	met := time.Now().Add(-24 * time.Hour).Truncate(time.Second)
@@ -150,6 +153,7 @@ func TestTheTimelineStillAnswersForSomebodyWhoNeverSaid(t *testing.T) {
 // Mutation: drop `occurred_at >= $2` from inboundQualifyingEvent and the
 // lapsed case allows, failing the second assertion.
 func TestAnInboundStopsAuthorizingWhenItLapses(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	fresh := time.Now().Add(-30 * 24 * time.Hour)
@@ -181,6 +185,7 @@ func TestAnInboundStopsAuthorizingWhenItLapses(t *testing.T) {
 // fails while TestAnInboundStopsAuthorizingWhenItLapses still passes, which is
 // what makes it a separate test rather than a second assertion.
 func TestARecordedExchangeLapsesToo(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	met := time.Now().Add(-60 * 24 * time.Hour).Truncate(time.Second)
@@ -210,6 +215,7 @@ func TestARecordedExchangeLapsesToo(t *testing.T) {
 // Mutation: move the recordedState branch below latestQualifyingEvent in
 // correspondenceVerdict and this fails.
 func TestAnExplicitYesOutlivesTheWindow(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	e.grant(t, "granted")
@@ -237,6 +243,7 @@ func TestAnExplicitYesOutlivesTheWindow(t *testing.T) {
 // replace the guard's `since` with a zero time and the lapsed case reports
 // allowed while the send path says unknown, failing the second assertion.
 func TestTheGuardAnswersOnTheSameWindowAsTheSend(t *testing.T) {
+	t.Parallel()
 	e := setupQualifying(t)
 
 	// Old enough that the default twelve-month window has closed on it.

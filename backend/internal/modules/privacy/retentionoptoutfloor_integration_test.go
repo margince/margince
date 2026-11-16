@@ -18,6 +18,7 @@ import (
 // that hold a refusal inside its floor, as one recorded after the pass selected
 // them. Each retention action refuses, and the records keep their names.
 func TestARefusalRecordedAfterSelectionKeepsItsRecord(t *testing.T) {
+	t.Parallel()
 	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:retention"})
 	tx := subjectColumnsTx(ctx, t)

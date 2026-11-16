@@ -48,6 +48,7 @@ func purgeTestRedis(t *testing.T) (context.Context, *redis.Client) {
 	return ctx, rdb
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestPurgeStreamsEmptiesEveryCatalogStreamAndRestoresEveryGroup(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
 	for _, stream := range kevents.Streams() {
@@ -88,6 +89,7 @@ func TestPurgeStreamsEmptiesEveryCatalogStreamAndRestoresEveryGroup(t *testing.T
 	}
 }
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestPurgeDedupeDeletesOnlyDedupeKeys(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
 	if err := rdb.Set(ctx, DedupeKeyPrefix+"cg:probe:abc", "1", time.Minute).Err(); err != nil {
@@ -116,6 +118,8 @@ func TestPurgeDedupeDeletesOnlyDedupeKeys(t *testing.T) {
 // forcing PurgeDedupe through its mid-scan flush (len(batch) == scanBatch) as
 // well as the final flush after the loop — a count that survives both is the
 // only way to know the batching itself drops no keys.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestPurgeDedupeFlushesMidScan(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
 	const seeded = scanBatch + 1

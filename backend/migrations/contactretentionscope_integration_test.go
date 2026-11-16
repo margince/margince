@@ -48,6 +48,7 @@ func noConsentRows(t *testing.T, conn *pgx.Conn) []retentionRow {
 }
 
 func TestAPersonRetentionPolicyActsOnContactsAfterTheRename(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

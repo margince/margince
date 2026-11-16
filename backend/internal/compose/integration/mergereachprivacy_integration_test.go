@@ -71,6 +71,7 @@ func TestEveryMergeMovesALinkTheUnitDeclaresForPrivacyAndReach(t *testing.T) {
 
 // The refusal counts only the rows the merge would leave behind. The probe
 // note counts, because no reach declaration moves it. The unit note does not.
+//
 //testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestAMergeRefusalCountsOnlyTheRowsTheMergeWouldNotMove(t *testing.T) {
 	e := Setup(t)
@@ -98,6 +99,7 @@ func TestAMergeRefusalCountsOnlyTheRowsTheMergeWouldNotMove(t *testing.T) {
 // The reach moves a kind-column row only when its kind is the merged kind. A
 // row of another kind that privacy links to the lead stays behind. So it still
 // refuses the lead merge, and the lead-kind row does not.
+//
 //testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestAKindColumnRowTheMergeLeavesBehindStillRefusesIt(t *testing.T) {
 	e := Setup(t)

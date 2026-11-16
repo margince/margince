@@ -21,6 +21,7 @@ import (
 // has no date, because nobody recorded one. No row's version or updated_at
 // moves, because nobody edited it.
 func TestThePartnerStageListKeepsEveryPartnerWhereItStood(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

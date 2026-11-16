@@ -31,6 +31,7 @@ import (
 // moved — which is exactly the shape entityRefs cannot see and
 // assertSameCallIdentity exists to catch.
 func TestDecideRefusesAnEditThatRepointsARestStagedCall(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	company := e.company(t)
 	ctx := e.asHumanWith(decidesEverything())
@@ -86,6 +87,7 @@ func TestDecideRefusesAnEditThatRepointsARestStagedCall(t *testing.T) {
 // An edit approves values the summary's parts never named, so the row keeps
 // the sentence and drops the parts rather than showing the staged values.
 func TestAnEditedDecisionDropsTheSummaryValuesItReplaced(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	company := e.company(t)
 	ctx := e.asHumanWith(decidesEverything())

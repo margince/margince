@@ -37,6 +37,7 @@ func (e *stagingEnv) targetCount(as context.Context, t *testing.T, target ids.UU
 // equal every page of the inbox narrowed to that account, while the record list
 // stays at its cap.
 func TestTheRecordCountIsTheInboxCountForThatRecordPastTheScanCap(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	other := e.seedCompany(t)
@@ -96,6 +97,7 @@ func TestTheRecordCountIsTheInboxCountForThatRecordPastTheScanCap(t *testing.T) 
 // Triage is human work, so a caller acting for nobody is refused the record's
 // proposals. An empty list would read as "none waiting".
 func TestARecordsPendingProposalsAreRefusedToACallerActingForNobody(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := e.seedCompany(t)
 	as := e.sweeping()

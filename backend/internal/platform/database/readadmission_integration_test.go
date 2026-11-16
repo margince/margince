@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"testing"
 	"time"
 
@@ -19,9 +20,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// admissionTestDSN is the lane's package database, not a copy of the
+// template. This package cannot import testdb, which imports it, and these
+// tests run nothing past SELECT 1.
+func admissionTestDSN(t *testing.T) string {
+	t.Helper()
+	dsn := os.Getenv("MARGINCE_TEST_DSN")
+	if dsn == "" {
+		t.Fatal("MARGINCE_TEST_DSN is not set; run the package through `make test-it` (integration tests fail loudly, they never skip)")
+	}
+	return WithDSNParam(dsn, "pool_max_conns", "2")
+}
+
 func readAdmissionPool(t *testing.T, connections int32) *pgxpool.Pool {
 	t.Helper()
-	cfg, err := PoolConfig(ceilingTestDSN(t))
+	cfg, err := PoolConfig(admissionTestDSN(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,6 +48,7 @@ func readAdmissionPool(t *testing.T, connections int32) *pgxpool.Pool {
 }
 
 func TestSnapshotsAndBoundedReadsShareCapacityBeforeBorrowing(t *testing.T) {
+	t.Parallel()
 	pool := readAdmissionPool(t, 4)
 	workspace := ids.NewV7()
 	ctx := principal.WithWorkspaceID(context.Background(), workspace)
@@ -110,6 +124,7 @@ func TestSnapshotsAndBoundedReadsShareCapacityBeforeBorrowing(t *testing.T) {
 }
 
 func TestReadAdmissionReleasesFailedReadsAndHonorsTheFinalPoolSize(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		connections int32
 		capacity    int64
@@ -137,6 +152,7 @@ func TestReadAdmissionReleasesFailedReadsAndHonorsTheFinalPoolSize(t *testing.T)
 }
 
 func TestAnExpiredReadContextMustReacquireCapacity(t *testing.T) {
+	t.Parallel()
 	pool := readAdmissionPool(t, 2)
 	var saved context.Context
 	if err := WithReadAdmission(t.Context(), pool, func(ctx context.Context) error {
@@ -163,7 +179,8 @@ func TestAnExpiredReadContextMustReacquireCapacity(t *testing.T) {
 }
 
 func TestAdmissionIsIndependentOfTracersAndCopiedPoolConfigurations(t *testing.T) {
-	cfg, err := PoolConfig(ceilingTestDSN(t))
+	t.Parallel()
+	cfg, err := PoolConfig(admissionTestDSN(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,6 +214,7 @@ func TestAdmissionIsIndependentOfTracersAndCopiedPoolConfigurations(t *testing.T
 }
 
 func TestReadAdmissionUsesTheConfiguredLimitAndRefusesLiveChanges(t *testing.T) {
+	t.Parallel()
 	for _, limit := range []int{1, 3, 5, 100} {
 		t.Run(fmt.Sprint(limit), func(t *testing.T) {
 			pool := readAdmissionPool(t, 16)
@@ -225,6 +243,7 @@ func TestReadAdmissionUsesTheConfiguredLimitAndRefusesLiveChanges(t *testing.T) 
 }
 
 func TestReadAdmissionCannotReplaceALazyAllowanceWithAHeldPermit(t *testing.T) {
+	t.Parallel()
 	pool := readAdmissionPool(t, 16)
 	admission := admissionOf(pool)
 	if err := WithReadAdmission(t.Context(), pool, func(context.Context) error {

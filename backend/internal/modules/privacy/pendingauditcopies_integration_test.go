@@ -17,6 +17,7 @@ import (
 )
 
 func TestPendingHistoricalAuditCorrectionRevisitsReleasedHolds(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	contact, activity := ids.NewV7(), ids.NewV7()

@@ -92,6 +92,7 @@ func listTrace(reader context.Context, t *testing.T, store *CallReadStore, filte
 }
 
 func TestTheCallTraceBucketsAndPricesEachCall(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)
@@ -152,6 +153,7 @@ func TestTheCallTraceBucketsAndPricesEachCall(t *testing.T) {
 }
 
 func TestTheCallTraceNarrowsOnTheServer(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ctx := context.Background()
 	ws, ctx := env.seedWorkspace(ctx, t)

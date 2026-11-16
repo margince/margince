@@ -17,6 +17,7 @@ import (
 // rest. A promise is put only to the colleague who made it. One staged for the
 // reader, or private mail its owner did not promise, is closed instead.
 func TestTheDeciderBackfillPutsAPromiseOnlyToItsPromiser(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

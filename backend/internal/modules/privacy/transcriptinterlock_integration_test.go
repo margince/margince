@@ -22,7 +22,6 @@ package privacy
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -58,25 +57,9 @@ func heldTranscriptLock(ctx context.Context, t *testing.T, pool interface {
 }
 
 func TestPurgingReadingsWaitsForAReadingInFlight(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	if ownerDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	// The schema first, on a connection of its own: the shared pool is memoized
-	// for the process and a session open across the migration's DROP SCHEMA
-	// blocks it, which nothing later recovers from.
-	owner, err := pgx.Connect(ctx, ownerDSN)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := owner.Close(ctx); err != nil {
-		t.Fatal(err)
-	}
-	pool, err := testdb.Pool(ctx, ownerDSN)
+	pool, err := testdb.Pool(ctx, testdb.New(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

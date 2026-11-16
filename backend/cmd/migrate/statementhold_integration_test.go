@@ -16,21 +16,18 @@ package main
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 func migrateConn(t *testing.T) *pgx.Conn {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(context.Background(), dsn)
+	conn, err := pgx.Connect(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting: %v", err)
 	}
@@ -43,6 +40,7 @@ func migrateConn(t *testing.T) *pgx.Conn {
 }
 
 func TestABoundedMigrationStatementIsCancelledRatherThanHeld(t *testing.T) {
+	t.Parallel()
 	conn := migrateConn(t)
 	ctx := context.Background()
 	if err := boundStatementHold(ctx, conn, 100*time.Millisecond); err != nil {
@@ -62,6 +60,7 @@ func TestABoundedMigrationStatementIsCancelledRatherThanHeld(t *testing.T) {
 // file runs in without the file repeating it. A ceiling that stopped at the session
 // boundary would read as protection and bound nothing that matters.
 func TestTheCeilingReachesInsideAMigrationsTransaction(t *testing.T) {
+	t.Parallel()
 	conn := migrateConn(t)
 	ctx := context.Background()
 	if err := boundStatementHold(ctx, conn, 100*time.Millisecond); err != nil {
@@ -88,6 +87,7 @@ func TestTheCeilingReachesInsideAMigrationsTransaction(t *testing.T) {
 // statement_timeout = 0 as no timeout. Held because a flag that silently kept a
 // ceiling the operator asked to remove would be worse than having none.
 func TestZeroRemovesTheCeiling(t *testing.T) {
+	t.Parallel()
 	conn := migrateConn(t)
 	ctx := context.Background()
 	// A ceiling first, so the zero below has something to remove. Asked of a fresh

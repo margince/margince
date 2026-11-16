@@ -32,6 +32,7 @@ func rungHealthAfter(t *testing.T, logicalCalls ...[]Call) map[string]RungHealth
 }
 
 func TestCallerCancellationDoesNotReplaceTheProvidersLastOutcome(t *testing.T) {
+	t.Parallel()
 	rungs := rungHealthAfter(t,
 		[]Call{ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", "provider_error")},
 		[]Call{ladderRow(ids.NewV7(), 1, true, TierCheapCloud, "", sentinelCanceled)},
@@ -69,6 +70,7 @@ func rungHealthBoundTo(t *testing.T, bound map[Tier]ModelRef, logicalCalls ...[]
 // though the caller got an answer. Counted only on terminal attempts, a tier
 // failing over on every call reads "N calls, 0 failed".
 func TestRungHealthCountsATierThatFailedOverToTheNext(t *testing.T) {
+	t.Parallel()
 	logical := ids.NewV7()
 	rungs := rungHealthAfter(t, []Call{
 		ladderRow(logical, 1, false, TierLocalSmall, "", "provider_unavailable"),
@@ -93,6 +95,7 @@ func TestRungHealthCountsATierThatFailedOverToTheNext(t *testing.T) {
 // text. Both count as calls and neither as a failure — this surface asks
 // whether the tier responds, not whether its answers pass a task's check.
 func TestRungHealthCountsASchemaRetryAsAnotherAnsweredCall(t *testing.T) {
+	t.Parallel()
 	logical := ids.NewV7()
 	rungs := rungHealthAfter(t, []Call{
 		ladderRow(logical, 1, false, TierCheapCloud, "", ""),
@@ -109,6 +112,7 @@ func TestRungHealthCountsASchemaRetryAsAnotherAnsweredCall(t *testing.T) {
 // share occurred_at. The tier's latest outcome is then its highest attempt:
 // here it answered first and failed on the schema retry, and it is down now.
 func TestRungHealthReadsATiersLatestAttemptWithinOneCall(t *testing.T) {
+	t.Parallel()
 	logical := ids.NewV7()
 	rungs := rungHealthAfter(t, []Call{
 		ladderRow(logical, 1, false, TierLocalSmall, "", ""),
@@ -129,6 +133,7 @@ func TestRungHealthReadsATiersLatestAttemptWithinOneCall(t *testing.T) {
 // model was reached and decided. Counted as failures they would mark a
 // responding tier down on the one screen an operator reads to find an outage.
 func TestRungHealthDoesNotCountAnOutcomeAsAFailure(t *testing.T) {
+	t.Parallel()
 	withheld, rejected := ids.NewV7(), ids.NewV7()
 	rungs := rungHealthAfter(t,
 		[]Call{
@@ -148,6 +153,7 @@ func TestRungHealthDoesNotCountAnOutcomeAsAFailure(t *testing.T) {
 // arbitrary between them but the SAME answer on every read, so a health badge
 // cannot flicker between two reads of one set of rows.
 func TestRungHealthAnswersATiedLatestAttemptTheSameOnEveryRead(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	calls := NewCallMeter(env.dbFor(ws))
@@ -192,6 +198,7 @@ func madeBy(tier Tier, provider, modelID, sentinel string) []Call {
 // The previous model's failures are not the new one's. Shown on its row, they
 // would send an admin to replace a model that works.
 func TestRungHealthDropsTheAttemptsOfTheModelATierWasBoundToBefore(t *testing.T) {
+	t.Parallel()
 	bound := map[Tier]ModelRef{
 		TierPremium:   {Provider: "gemini", Model: "gemini-3.5-flash"},
 		TierEmbedLane: {Provider: "gemini", Model: "text-embedding-005"},
@@ -211,6 +218,7 @@ func TestRungHealthDropsTheAttemptsOfTheModelATierWasBoundToBefore(t *testing.T)
 // counting, and a tier rebound to the model it already had keeps its history.
 // A tier the binding does not name keeps every attempt it made.
 func TestRungHealthKeepsTheAttemptsOfTheModelATierIsBoundToNow(t *testing.T) {
+	t.Parallel()
 	bound := map[Tier]ModelRef{
 		TierPremium:    {Provider: "gemini", Model: "gemini-3.5-flash"},
 		TierCheapCloud: {Provider: "test", Model: "test-model"},

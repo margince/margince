@@ -33,6 +33,7 @@ func rereadColleagueCopy(ctx context.Context, t *testing.T, conn *pgx.Conn, seat
 }
 
 func TestAColleaguesCopiedMailOwesNothing(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

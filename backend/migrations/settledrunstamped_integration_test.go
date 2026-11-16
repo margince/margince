@@ -46,6 +46,7 @@ func seedRun(t *testing.T, conn *pgx.Conn, status string, stamped bool) error {
 }
 
 func TestATerminalRunWithoutAFinishIsRefused(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -97,6 +98,7 @@ func TestATerminalRunWithoutAFinishIsRefused(t *testing.T) {
 // against the shape it exists for is a migration that fails on the one
 // installation that needed it.
 func TestTheBackfillStampsARunThatStoppedWithoutSayingWhen(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)

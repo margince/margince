@@ -107,6 +107,7 @@ func seedDelivery(t *testing.T, e *channelConsentEnv) ids.UUID {
 // this, allowed_routes named a way to discharge a case that no writer honoured,
 // so a duty stayed open forever however many disclosures went out.
 func TestSendingTheDisclosureMovesTheDuty(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -130,6 +131,7 @@ func TestSendingTheDisclosureMovesTheDuty(t *testing.T) {
 // rides a reply somebody else has to write — a duty marked handled by a message
 // that does not contain it.
 func TestADutyIsOnlyDischargedByARouteItNamed(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	byReply := seedNoticeCase(t, e, "event_or_form", []string{noticeRouteReply})
 
@@ -146,6 +148,7 @@ func TestADutyIsOnlyDischargedByARouteItNamed(t *testing.T) {
 // would let attempts read as effort nobody made and would keep re-dating a case
 // whose subject received a single mail.
 func TestASecondSendInsideTheCooldownMovesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -184,6 +187,7 @@ func TestASecondSendInsideTheCooldownMovesNothing(t *testing.T) {
 // moves nothing — a mutation removing the filter fails here on the error, not
 // on the state.
 func TestABlockedDutyIsNotDischargedBySending(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	acq := seedAcquisition(t, e, "purchased_or_imported")
 	var blocked ids.UUID
@@ -216,6 +220,7 @@ func TestABlockedDutyIsNotDischargedBySending(t *testing.T) {
 // passed in the one configuration that has none. The lane is what makes the
 // subject of this test real.
 func TestTheConfirmMailItselfDischargesTheDuty(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -247,6 +252,7 @@ func TestTheConfirmMailItselfDischargesTheDuty(t *testing.T) {
 // at all, so no duty is met by a message that was never staged. No cooldown
 // then suppresses the send an operator earns by wiring the relay.
 func TestAnInstallationWithNoRelayDischargesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -267,6 +273,7 @@ func TestAnInstallationWithNoRelayDischargesNothing(t *testing.T) {
 // marketing; it does not tell them we hold their data, so the Art. 14 duty
 // stands exactly as owed as before.
 func TestAConsentLinkDischargesNoDisclosureDuty(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -303,6 +310,7 @@ func TestAConsentLinkDischargesNoDisclosureDuty(t *testing.T) {
 // and gets worked. A queued case that silently failed looks BETTER than an open
 // one while being worse, so nobody looks at it again.
 func TestABouncedDisclosureReopensTheDuty(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -341,6 +349,7 @@ func TestABouncedDisclosureReopensTheDuty(t *testing.T) {
 // TestAFailedDisclosureIsBackOnTheQueue. Reopening the case is only half of it:
 // the point is that somebody sees it again.
 func TestAFailedDisclosureIsBackOnTheQueue(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -378,6 +387,7 @@ func TestAFailedDisclosureIsBackOnTheQueue(t *testing.T) {
 // an older message: the state moved on for a reason, and a bounce is evidence
 // about one delivery rather than about the duty's whole history.
 func TestALateBounceDoesNotDragBackASettledDuty(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -421,6 +431,7 @@ func TestALateBounceDoesNotDragBackASettledDuty(t *testing.T) {
 // last_sent_at records when a disclosure actually went, which is the question
 // the cooldown is asking.
 func TestTheCooldownMeasuresFromTheSendAndNotFromAnyWrite(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
@@ -453,6 +464,7 @@ func TestTheCooldownMeasuresFromTheSendAndNotFromAnyWrite(t *testing.T) {
 // corrected re-send has to move the pointer, or the case would carry the old
 // dead message as the thing it is waiting on.
 func TestAResendAfterAFailureTracksTheNewMessage(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})

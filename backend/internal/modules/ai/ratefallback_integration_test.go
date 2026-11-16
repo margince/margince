@@ -15,6 +15,7 @@ import (
 )
 
 func TestAVertexCallIsPricedAtGeminisRateUntilVertexHasOne(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)
@@ -47,6 +48,7 @@ func TestAVertexCallIsPricedAtGeminisRateUntilVertexHasOne(t *testing.T) {
 }
 
 func TestTheCostReportPricesAVertexCallAtGeminisRate(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, wsCtx := e.seedWorkspace(ctx, t)

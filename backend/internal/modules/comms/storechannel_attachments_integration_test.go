@@ -22,6 +22,7 @@ import (
 // that dropped the set anywhere between the request and the row would be
 // invisible until a rep's file did not arrive.
 func TestStageChannelSnapshotsItsAttachments(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	activity := e.telegramActivity(t)
 	want := OutboundFile{
@@ -58,6 +59,7 @@ func TestStageChannelSnapshotsItsAttachments(t *testing.T) {
 // A channel reply with no files loads back as carrying none — never as a row the
 // shape constraint refused, and never as one file's worth of JSON null.
 func TestStageChannelWithNoAttachmentsCarriesNone(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.stageChannel(t, StageChannelInput{
 		ActivityID:     e.telegramActivity(t),

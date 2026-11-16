@@ -11,11 +11,9 @@ package jobs_test
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -24,6 +22,7 @@ import (
 )
 
 func TestPurgeWorkspaceKeepsAnotherWorkspacesRows(t *testing.T) {
+	t.Parallel()
 	ctx, pool := quiesceTestPool(t)
 	mine, theirs := ids.NewV7(), ids.NewV7()
 	insertJobRow(ctx, t, pool, "reset.probe", mine)
@@ -42,6 +41,7 @@ func TestPurgeWorkspaceKeepsAnotherWorkspacesRows(t *testing.T) {
 }
 
 func TestPurgeWorkspaceRemovesFleetDispatchers(t *testing.T) {
+	t.Parallel()
 	ctx, pool := quiesceTestPool(t)
 	ws := ids.NewV7()
 	insertDispatcherRow(ctx, t, pool, "reset.dispatcher") // args with no workspace_id key
@@ -56,6 +56,7 @@ func TestPurgeWorkspaceRemovesFleetDispatchers(t *testing.T) {
 }
 
 func TestQuiesceReportsNotDrainedWhileAJobRuns(t *testing.T) {
+	t.Parallel()
 	ctx, pool := quiesceTestPool(t)
 	insertRunningJobRow(ctx, t, pool, "reset.stuck")
 
@@ -79,6 +80,7 @@ func TestQuiesceReportsNotDrainedWhileAJobRuns(t *testing.T) {
 }
 
 func TestQuiesceDrainsWhenNothingRuns(t *testing.T) {
+	t.Parallel()
 	ctx, pool := quiesceTestPool(t)
 	q := jobs.Quiescer{
 		Runner: quiesceTestRunner(t, pool), Pool: pool,
@@ -100,29 +102,9 @@ func TestQuiesceDrainsWhenNothingRuns(t *testing.T) {
 func quiesceTestPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
 	ctx := t.Context()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
-	if err != nil {
-		t.Fatalf("connecting as owner: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing owner connection: %v", err)
-		}
-	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatalf("migrating the test schema: %v", err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting test data: %v", err)
-	}
-
-	ownerPool, err := testdb.OwnPool(ctx, ownerDSN)
+	ownerPool, err := testdb.OwnPool(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}
@@ -131,7 +113,7 @@ func quiesceTestPool(t *testing.T) (context.Context, *pgxpool.Pool) {
 		t.Fatal(err)
 	}
 
-	appPool, err := testdb.OwnPool(ctx, appDSN)
+	appPool, err := testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}

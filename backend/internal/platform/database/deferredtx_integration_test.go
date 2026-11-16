@@ -47,6 +47,7 @@ func selectOne(ctx context.Context, t *testing.T, tx pgx.Tx) {
 // close rides on the next statement after it. A lane that sends nothing sends
 // none of them.
 func TestALanesSessionStatementsRideOnTheExchangesAroundIt(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		selectOne(ctx, t, tx)
 		empty := exchangesOf(ctx, t, func(ctx context.Context) {
@@ -77,6 +78,7 @@ func TestALanesSessionStatementsRideOnTheExchangesAroundIt(t *testing.T) {
 // An inner lane that fails rolls back to its own savepoint, even while it
 // holds a pending release of a lane inside it. The outer lane's work stays.
 func TestAFailedInnerLaneRollsBackOnlyItsOwnWork(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		if _, err := tx.Exec(ctx, `CREATE TEMP TABLE lane_marks (mark text) ON COMMIT DROP`); err != nil {
 			t.Fatal(err)
@@ -121,6 +123,7 @@ func TestAFailedInnerLaneRollsBackOnlyItsOwnWork(t *testing.T) {
 // Plan reuse's mode is set for the statements inside it and put back after,
 // whichever exchange carries the two.
 func TestReusedPlansLeaveThePlanModeAsTheyFoundIt(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		mode := func() string {
 			var current string
@@ -149,6 +152,7 @@ func TestReusedPlansLeaveThePlanModeAsTheyFoundIt(t *testing.T) {
 // are encoded. The snapshot stays usable, because the lane's savepoint exists
 // before that statement is prepared.
 func TestALaneThatFailsBeforeItRunsLeavesTheSnapshotUsable(t *testing.T) {
+	t.Parallel()
 	meteredSnapshot(t, func(ctx context.Context, tx pgx.Tx) {
 		failures := map[string]func(context.Context) error{
 			"prepare": func(ctx context.Context) error {

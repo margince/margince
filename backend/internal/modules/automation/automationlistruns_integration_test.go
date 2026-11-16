@@ -101,6 +101,7 @@ func lastOutcome(runs RunSummary) string {
 }
 
 func TestTheListSummarizesEachRulesOwnCountedRuns(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	rule, sibling := summarizedRuns(t, fx)
@@ -135,6 +136,7 @@ func TestTheListSummarizesEachRulesOwnCountedRuns(t *testing.T) {
 // The window starts 30 days before the server's clock and includes its first
 // instant; the last run is the last one ever, whatever the window.
 func TestTheListCountsRunsInsideTheWindowOnly(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	rule, _ := summarizedRuns(t, fx)
@@ -162,6 +164,7 @@ func TestTheListCountsRunsInsideTheWindowOnly(t *testing.T) {
 }
 
 func TestTheListWithItsRunSummaryNeedsAutomationRead(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	summarizedRuns(t, fx)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))

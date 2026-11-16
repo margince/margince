@@ -44,6 +44,7 @@ func (e *contractVisEnv) seedFileOnCompany(t *testing.T) ids.UUID {
 }
 
 func TestAFileReachesWhoeverMayReadTheRecordItHangsOff(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	attachment := e.seedFileOnCompany(t)
 
@@ -61,6 +62,7 @@ func TestAFileReachesWhoeverMayReadTheRecordItHangsOff(t *testing.T) {
 
 // The grant the file borrows. There is no attachment.read to hold instead.
 func TestAFileReachesNobodyWhoCannotReadThatRecord(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	attachment := e.seedFileOnCompany(t)
 
@@ -81,6 +83,7 @@ func TestAFileReachesNobodyWhoCannotReadThatRecord(t *testing.T) {
 // the column is set, so requiring a live row would decline to deliver the very
 // event saying the file is gone, silently, which reads as nobody subscribing.
 func TestAnArchivedFileStillAnnouncesItsArchival(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	attachment := e.seedFileOnCompany(t)
 	if _, err := e.owner.Exec(context.Background(),
@@ -102,6 +105,7 @@ func TestAnArchivedFileStillAnnouncesItsArchival(t *testing.T) {
 
 // A file whose row is gone resolves to nothing rather than to everyone.
 func TestAFileThatIsNotThereReachesNobody(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 
 	visible, err := e.store.entityVisibleTo(
@@ -121,6 +125,7 @@ func TestAFileThatIsNotThereReachesNobody(t *testing.T) {
 // attachment is filed on the activity, so this is the common shape in
 // production and the only arm that reaches EnsureActivityContentVisible.
 func TestAFileOnAnActivityFollowsThatActivitysContentVisibility(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	attachment := e.seedFileOnActivity(t)
 
@@ -138,6 +143,7 @@ func TestAFileOnAnActivityFollowsThatActivitysContentVisibility(t *testing.T) {
 
 // And the same file reaches nobody without that read.
 func TestAFileOnAnActivityReachesNobodyWithoutActivityRead(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	attachment := e.seedFileOnActivity(t)
 

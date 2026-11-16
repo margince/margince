@@ -408,6 +408,7 @@ func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
 // Whoever binds first has to see that the credential for it has arrived.
 // /ai/provider-keys reports `configured` on the screen an admin opens to bind a
 // tier. A key a boot source sets is held whether or not a binding exists.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestAKeyInTheEnvironmentReadsAsConfiguredOnAnInstallationThatHasBoundNothing(t *testing.T) {
 	e := SetupSearch(t)

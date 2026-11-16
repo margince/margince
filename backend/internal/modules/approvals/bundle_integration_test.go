@@ -134,6 +134,7 @@ func outcomes(members []BundleMember) map[ids.ApprovalID]BundleOutcome {
 // per-effect decisions are better provenance than one covering seven effects,
 // and because each member's own redemption re-checks its own diff and pin.
 func TestABundleIsDecidedOnceAndRecordedPerMember(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -159,9 +160,6 @@ func TestABundleIsDecidedOnceAndRecordedPerMember(t *testing.T) {
 			t.Errorf("member %s stored status = %s, want approved", id, status)
 		}
 	}
-	// Scoped by SUBJECT for the reason the event assertion below states: this
-	// package's tests share one database, so counting the action alone counts
-	// every other test's approvals and grows as the suite does.
 	for _, id := range []ids.ApprovalID{facts, first, second} {
 		if n := e.count(t, `SELECT count(*) FROM audit_log
 			WHERE entity_type = 'approval' AND action = 'approve' AND entity_id = $1`,
@@ -169,9 +167,6 @@ func TestABundleIsDecidedOnceAndRecordedPerMember(t *testing.T) {
 			t.Errorf("approve audit rows for member %s = %d, want exactly one", id, n)
 		}
 	}
-	// Scoped by SUBJECT: the envelope carries no tenant (ADR-0091 §6), and this
-	// package's tests share one database, so counting the type alone would
-	// count every other bundle's decisions too.
 	for _, id := range []ids.ApprovalID{facts, first, second} {
 		if n := e.count(t, `SELECT count(*) FROM event_outbox
 			WHERE envelope->>'type' = 'approval.decided'
@@ -186,6 +181,7 @@ func TestABundleIsDecidedOnceAndRecordedPerMember(t *testing.T) {
 // all-or-nothing failure here would let one stale row block a whole read's
 // findings — and silently re-deciding it would overwrite a human's verdict.
 func TestABundleMemberAlreadyDecidedKeepsItsVerdictAndItsSiblingsStillDecide(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -220,6 +216,7 @@ func TestABundleMemberAlreadyDecidedKeepsItsVerdictAndItsSiblingsStillDecide(t *
 // as already_decided, which would say a human answered it, and not as decided,
 // which would approve a proposal staged against a world that has since moved.
 func TestAnExpiredBundleMemberIsReportedRatherThanApproved(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -251,6 +248,7 @@ func TestAnExpiredBundleMemberIsReportedRatherThanApproved(t *testing.T) {
 // not decide on its own is neither shown to them nor decided by them, and the
 // grants are checked per member exactly as a single decision checks them.
 func TestABundleMemberOutsideTheCallersAuthorityIsNeitherShownNorDecided(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	staging := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -280,6 +278,7 @@ func TestABundleMemberOutsideTheCallersAuthorityIsNeitherShownNorDecided(t *test
 // which acts exist and which do not, which is the same leak the inbox filter and
 // Get already close.
 func TestABundleWithNoDecidableMemberReadsAsAbsent(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	staging := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -299,6 +298,7 @@ func TestABundleWithNoDecidableMemberReadsAsAbsent(t *testing.T) {
 // rule can keep a bundle the caller sees. That bundle reads as absent too, and
 // is not noted as a row its scope hides.
 func TestOnlyABundleTheScopeHidesIsNotedAsAHiddenRow(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	staging := e.asHumanWith(decidesEverything())
 	bundle := ids.NewV7()
@@ -332,6 +332,7 @@ func TestOnlyABundleTheScopeHidesIsNotedAsAHiddenRow(t *testing.T) {
 // holding only the part that happened to be new, and whoever reviews "what this
 // read proposed" reviews a fraction of it with nothing saying so.
 func TestARestagedProposalMovesOntoTheFreshBundle(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -377,6 +378,7 @@ func TestARestagedProposalMovesOntoTheFreshBundle(t *testing.T) {
 // happen, so a rejected bundle must leave every executor untouched — otherwise
 // "no" costs exactly what "yes" does.
 func TestARejectedBundleRunsNoEffect(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ran := 0
 	e.svc.WithEffect(kindSiteLead, func(context.Context, ids.ApprovalID, json.RawMessage, string) error {
@@ -408,6 +410,7 @@ func TestARejectedBundleRunsNoEffect(t *testing.T) {
 // are committed by then, so the verdict stands, its sibling still lands, and the
 // caller is told which one did not.
 func TestABundleMemberWhoseEffectFailsIsReportedAlone(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	e.svc.WithEffect(kindSiteLead, func(_ context.Context, _ ids.ApprovalID, _ json.RawMessage, _ string) error {
 		return errors.New("the capture sink refused this lead")
@@ -446,6 +449,7 @@ func TestABundleMemberWhoseEffectFailsIsReportedAlone(t *testing.T) {
 // where they would otherwise get a 404 tells them the act exists, which is the
 // oracle every other read on this table closes.
 func TestABundleTooLargeToDecideIsRefusedAndStillHiddenFromOutsiders(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -540,6 +544,7 @@ func backendPID(t *testing.T, tx pgx.Tx) int {
 // contact's whole bundle into a failed request, and re-reading the row is what
 // makes the answer say which verdict actually won.
 func TestABundleMemberDecidedMidFlightIsAbsorbedRatherThanFailingTheBundle(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -614,6 +619,7 @@ func (e *stagingEnv) bundleOf(t *testing.T, id ids.ApprovalID) *ids.UUID {
 // the SAME bundle changes nothing, so it must not write an audit row saying
 // something moved.
 func TestARestagedProposalKeepsItsBundleWhenTheActHasNoneOrTheSameOne(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -650,6 +656,7 @@ func TestARestagedProposalKeepsItsBundleWhenTheActHasNoneOrTheSameOne(t *testing
 // decide and answers the same not-found any unreadable bundle answers. What
 // matters is the other half: no verdict was written on the way to that answer.
 func TestABundleWhoseTargetLeavesMidFlightDecidesNothingAtAll(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -714,6 +721,7 @@ func steppingClock(t0, t1 time.Time) func() time.Time {
 // selected it: membership is locked for the life of the transaction, so no other
 // decision can slip in, and the clock is what is left.
 func TestAMemberThatLapsesBetweenTheTwoClockReadingsIsReportedExpired(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -749,6 +757,7 @@ func TestAMemberThatLapsesBetweenTheTwoClockReadingsIsReportedExpired(t *testing
 // there. Locking the members as they are read makes the re-read see the move and
 // leave the row alone.
 func TestABundleDoesNotDecideAMemberThatMovedToAnotherBundleMidFlight(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -800,6 +809,7 @@ func TestABundleDoesNotDecideAMemberThatMovedToAnotherBundleMidFlight(t *testing
 // re-reads the row after the verdict commits, finds nothing live to join, and
 // creates the member it meant to.
 func TestAProposalDecidedWhileARePropositionJoinsItIsNotRebundled(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)

@@ -61,6 +61,7 @@ INSERT INTO capture_import (activity_id, user_id) SELECT id, $1::uuid FROM a RET
 }
 
 func TestAGroupPostIsReReadAsItsAuthorsMail(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -104,6 +105,7 @@ func TestAGroupPostIsReReadAsItsAuthorsMail(t *testing.T) {
 // The shapes the SQL cannot read the way the Go parser does are left as they
 // were captured, and a post is the seat's own when ANY importer wrote it.
 func TestTheGroupPostFixLeavesWhatItCannotReadAlone(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

@@ -15,6 +15,7 @@ import (
 )
 
 func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

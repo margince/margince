@@ -8,7 +8,6 @@ package storedobjects_test
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 // reaper the moment it is recorded, and a sweep running between this put and its row
 // commit then deletes the bytes just written.
 func TestARetryRestartsTheGracePeriod(t *testing.T) {
+	t.Parallel()
 	ctx, pool := ledgerEnv(t)
 	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
 	const key = "ws/attachment/retried"
@@ -60,6 +60,7 @@ func TestARetryRestartsTheGracePeriod(t *testing.T) {
 // It reaches the sweep as a key nobody owns, and the sweep cannot adjudicate one —
 // so a typo in a single writer would strand every other writer's orphans.
 func TestAnUndeclaredKindIsRefused(t *testing.T) {
+	t.Parallel()
 	ctx, pool := ledgerEnv(t)
 	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
 
@@ -73,6 +74,7 @@ func TestAnUndeclaredKindIsRefused(t *testing.T) {
 }
 
 func TestAnAdoptedScanCannotRetireANewerIntent(t *testing.T) {
+	t.Parallel()
 	ctx, pool := ledgerEnv(t)
 	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
 	key := "ws/attachment/" + ids.NewV7().String()
@@ -102,6 +104,7 @@ func TestAnAdoptedScanCannotRetireANewerIntent(t *testing.T) {
 // What is declared is what comes back, and clearing it on the caller's transaction
 // takes it away.
 func TestADeclarationSurvivesUntilItIsCleared(t *testing.T) {
+	t.Parallel()
 	ctx, pool := ledgerEnv(t)
 	db := database.BindTo(pool, workspaceOf(ctx))
 	ledger := storedobjects.NewLedger(db)
@@ -147,6 +150,7 @@ func TestADeclarationSurvivesUntilItIsCleared(t *testing.T) {
 // A seat asking what is provisional is asking which objects it could orphan, and
 // retiring one is the reaper's act — neither is a seat's to take.
 func TestTheSweepsReadsRefuseASeat(t *testing.T) {
+	t.Parallel()
 	ctx, pool := ledgerEnv(t)
 	ledger := storedobjects.NewLedger(database.BindTo(pool, workspaceOf(ctx)))
 
@@ -160,11 +164,8 @@ func TestTheSweepsReadsRefuseASeat(t *testing.T) {
 
 func ledgerEnv(t *testing.T) (context.Context, *pgxpool.Pool) {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
-	pool, err := testdb.OwnPool(context.Background(), dsn)
+	db := testdb.New(t)
+	pool, err := testdb.OwnPool(context.Background(), db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

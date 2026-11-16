@@ -17,6 +17,7 @@ import (
 )
 
 func TestSelfMadeStageUpdatesDoNotConsumeTheUnreadPage(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	for _, tc := range []struct {
 		name, actorType, actorID string
@@ -99,6 +100,7 @@ func TestSelfMadeStageUpdatesDoNotConsumeTheUnreadPage(t *testing.T) {
 }
 
 func TestOtherSelfAttributedNoticesRemainVisible(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	origin := &crmcontracts.NoticeOrigin{EventId: openapi_types.UUID(ids.NewV7()), ActorType: "human", ActorId: "human:" + e.recipient.String(), OccurredAt: time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)}
 	for _, tc := range []struct{ name, kind, target, dedupe string }{

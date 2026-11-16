@@ -393,6 +393,7 @@ func TestPublicBookingEndToEnd(t *testing.T) {
 
 // The anonymous surface is throttled per slug: a flood of booking posts
 // meets 429 long before it meets the calendar.
+//
 //testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestPublicBookingRateLimited(t *testing.T) {
 	e := setupBookingApp(t)
@@ -424,6 +425,7 @@ func TestPublicBookingRateLimited(t *testing.T) {
 // TRANSACTIONAL purpose. A door that resolved to whichever purpose came first
 // would answer 201 too, having written a stranger a grant under a marketing
 // lane they never saw.
+//
 //testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
 	e := setupBookingApp(t)
@@ -459,6 +461,7 @@ func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
 // A booking from a sending system's address names no contact. The form gets
 // the refusal on its own field, and nothing is written: no contact, no
 // meeting, no consent grant.
+//
 //testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAPublicBookingFromASendingSystemsAddressIsRefusedOnTheBookerEmail(t *testing.T) {
 	e := setupBookingApp(t)

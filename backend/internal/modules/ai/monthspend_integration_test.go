@@ -162,6 +162,7 @@ func julyDay(day, hour int) time.Time {
 // Truncating each call instead gives 6, and pricing the month in one go gives
 // 8, so the figure tells the three apart.
 func TestMonthSpendEqualsTheSumOfTheReportsPricedLines(t *testing.T) {
+	t.Parallel()
 	ledger := newSpendLedger(t, setupRateStore(t))
 	ledger.at(time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)).rate("1")
 	// Last month, and worth 10 cents: the window starts on 1 July.
@@ -205,6 +206,7 @@ func TestMonthSpendEqualsTheSumOfTheReportsPricedLines(t *testing.T) {
 }
 
 func TestMonthSpendWithNoPricedLineCarriesNoFigure(t *testing.T) {
+	t.Parallel()
 	ledger := newSpendLedger(t, setupRateStore(t))
 	ledger.at(julyDay(3, 9)).call(TaskEnrich, TierCheapCloud, spendUnpricedModel, 3_000, 1_000, false)
 
@@ -219,6 +221,7 @@ func TestMonthSpendWithNoPricedLineCarriesNoFigure(t *testing.T) {
 }
 
 func TestMonthSpendRefusesAReaderWithoutTheDiagnosticsGrant(t *testing.T) {
+	t.Parallel()
 	ledger := newSpendLedger(t, setupRateStore(t))
 	ledger.at(julyDay(20, 15))
 	seat := principal.WithActor(principal.WithWorkspaceID(context.Background(), ledger.ws), principal.Principal{

@@ -43,6 +43,7 @@ VALUES ('email', 'Re: offer', 'outbound', now(), 'gmail', $2, 'gmail:seed', $4, 
 }
 
 func TestACopyWithoutAnAuthenticatedFromTurnsBack(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

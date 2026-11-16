@@ -18,7 +18,6 @@ package forecasting
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -50,14 +49,9 @@ type snapshotEnv struct {
 // sibling still mid-query is no longer read as this test's leak.
 func setupSnapshot(t *testing.T) *snapshotEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` " +
-			"(integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -66,9 +60,6 @@ func setupSnapshot(t *testing.T) *snapshotEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	typed := ids.New[ids.WorkspaceKind]()
 	e := &snapshotEnv{owner: owner, ws: typed.UUID, wsTyped: typed, rep: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
@@ -79,7 +70,7 @@ func setupSnapshot(t *testing.T) *snapshotEnv {
 		e.rep, "mgr-"+e.rep.String()+"@snapshot.test"); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

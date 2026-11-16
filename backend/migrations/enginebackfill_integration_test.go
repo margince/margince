@@ -121,6 +121,7 @@ func seedPreEngineRecord(t *testing.T, conn *pgx.Conn) backfillFixture {
 // TestTheEngineInheritsAQualifyingEvent is the carry that gives the engine its
 // history: a ground a rep recorded years before communication_basis existed.
 func TestTheEngineInheritsAQualifyingEvent(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -174,6 +175,7 @@ func TestTheEngineInheritsAQualifyingEvent(t *testing.T) {
 // reader could check, so it stays absent rather than becoming a basis nobody
 // can trace.
 func TestACarriedGroundWithNoRecordBehindItIsNotCarried(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -205,6 +207,7 @@ func TestACarriedGroundWithNoRecordBehindItIsNotCarried(t *testing.T) {
 
 // TestAMarketingWithdrawalBecomesAnObjection is the suppression half.
 func TestAMarketingWithdrawalBecomesAnObjection(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -246,6 +249,7 @@ func TestAMarketingWithdrawalBecomesAnObjection(t *testing.T) {
 // Mutation: drop `AND cp.class = 'marketing'` from the second INSERT and this
 // fails with a suppression this contact should never have carried.
 func TestANonMarketingWithdrawalIsNotAnObjection(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -271,6 +275,7 @@ func TestANonMarketingWithdrawalIsNotAnObjection(t *testing.T) {
 // deploy, and a second run that doubled somebody's history would be a
 // correctness bug nothing else catches.
 func TestTheCarryIsIdempotent(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

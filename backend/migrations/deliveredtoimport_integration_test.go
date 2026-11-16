@@ -57,6 +57,7 @@ func importRows(ctx context.Context, t *testing.T, conn *pgx.Conn, activity, sea
 }
 
 func TestMailDeliveredToTheSeatGetsTheImportRowCaptureNeverWrote(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)
@@ -105,6 +106,7 @@ func TestMailDeliveredToTheSeatGetsTheImportRowCaptureNeverWrote(t *testing.T) {
 // reason, read by activities.contributionOf as participants. Where the mailbox
 // is shared, the only vote it could cast opens the message, so it casts none.
 func TestTheImportBackfillKeepsAHeldMessageHeld(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

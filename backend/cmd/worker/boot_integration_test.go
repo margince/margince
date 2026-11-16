@@ -24,7 +24,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"sync"
 	"testing"
@@ -37,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 	pool := workerTestPool(t)
 	rdb := redistest.Client(t)
@@ -105,11 +105,7 @@ func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 // looks exactly like one that passed.
 func workerTestPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	pool, err := testdb.OwnPool(t.Context(), dsn)
+	pool, err := testdb.OwnPool(t.Context(), testdb.For(t).AppDSN)
 	if err != nil {
 		t.Fatalf("opening the app pool: %v", err)
 	}

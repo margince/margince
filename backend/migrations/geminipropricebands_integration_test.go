@@ -47,6 +47,7 @@ func seedProRow(ctx context.Context, t *testing.T, conn *pgx.Conn, provider stri
 // An installation with no row gets the banded one. A row at the old flat price
 // gains the band. A price somebody set stays as it was.
 func TestGeminiProGetsItsBandOnlyWhereNobodyPricedItByHand(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	ctx := context.Background()
 	cases := []struct {

@@ -46,6 +46,7 @@ var updateCatalog = flag.Bool("update-catalog", false,
 const catalogGolden = "testdata/head_catalog.txt"
 
 func TestMigrationsBuildTheCommittedSchema(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

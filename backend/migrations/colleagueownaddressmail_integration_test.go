@@ -21,6 +21,7 @@ const (
 // with no `from` participant, so 1791775182 left it inbound. This migration
 // re-reads it from counterparty_email, as capture does, and down restores it.
 func TestAColleaguesMailUnderAnOwnAddressIsOurs(t *testing.T) {
+	t.Parallel()
 	dsn, _ := dsns(t)
 	conn := connect(t, dsn)
 	headSchema(t, conn)

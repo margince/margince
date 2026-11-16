@@ -69,6 +69,7 @@ func seedDealBoard(t *testing.T, fx *autoFixture) dealFixture {
 }
 
 func TestPreviewMatchesCurrentRecordsWithoutApplying(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
 	autoID := fx.seedAutomation(t, "stage_change_create_task")
@@ -120,6 +121,7 @@ func TestPreviewMatchesCurrentRecordsWithoutApplying(t *testing.T) {
 }
 
 func TestPreviewDraftOverrideAndValidation(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
 	autoID := fx.seedAutomation(t, "stage_change_create_task")
@@ -165,6 +167,7 @@ func TestPreviewDraftOverrideAndValidation(t *testing.T) {
 }
 
 func TestEventPreviewResponseMarksPopulationAndHistoryUnavailable(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	store := NewAutomationStore(database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws)))
 	automation := fx.seedAutomation(t, routeLeadName)

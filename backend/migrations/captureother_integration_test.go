@@ -11,6 +11,7 @@ import (
 )
 
 func TestOtherCaptureLabelsRemainWritableAcrossARollback(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -33,6 +34,7 @@ func TestOtherCaptureLabelsRemainWritableAcrossARollback(t *testing.T) {
 }
 
 func TestLinkedInRegistrationPreservesAnExistingTransportOwner(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

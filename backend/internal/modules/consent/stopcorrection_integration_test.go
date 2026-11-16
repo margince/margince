@@ -62,6 +62,7 @@ func onlyStop(t *testing.T, e *channelConsentEnv, ctx context.Context, contact i
 }
 
 func TestAnAdminCorrectsAnObjectionAColleagueTyped(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	contact := repOwnedContact(t, e)
 	rep := boundedRepCtx(e.ws, e.user)
@@ -118,6 +119,7 @@ func TestAnAdminCorrectsAnObjectionAColleagueTyped(t *testing.T) {
 }
 
 func TestNobodyCorrectsAnObjectionTheContactPressed(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	if _, err := e.store.PublicStop(systemCtx(e.ws), e.contact, StopAllMarketing, "No more ads."); err != nil {
 		t.Fatalf("the contact's own press: %v", err)
@@ -135,6 +137,7 @@ func TestNobodyCorrectsAnObjectionTheContactPressed(t *testing.T) {
 // A merge copies the contact's press onto the survivor and stamps the merger.
 // The copy is still the contact's.
 func TestACarriedPressStaysTheContacts(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	origin, carried := ids.NewV7(), ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -153,6 +156,7 @@ func TestACarriedPressStaysTheContacts(t *testing.T) {
 
 // No level lifts a restriction here: lifting one owes the contact notice first.
 func TestNoSeatLiftsARestriction(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -177,6 +181,7 @@ func TestNoSeatLiftsARestriction(t *testing.T) {
 // recorder counts as the contact's own act, and so does a copy whose original
 // is gone.
 func TestOnlyASeatTypedObjectionIsCorrectable(t *testing.T) {
+	t.Parallel()
 	cases := map[string]struct{ capturedBy, source string }{
 		"an agent recorded it":     {"agent:drafter", seatSourcePrefix + ": they said stop"},
 		"an import recorded it":    {"human:x", "import:legacy-crm"},
@@ -210,6 +215,7 @@ func TestOnlyASeatTypedObjectionIsCorrectable(t *testing.T) {
 // A passport agent's objection acts for its user. So the app names that user, and
 // an admin may correct it. The agent itself may not.
 func TestAnObjectionAPassportAgentRecordedIsCorrectable(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	passport := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -247,6 +253,7 @@ func TestAnObjectionAPassportAgentRecordedIsCorrectable(t *testing.T) {
 // A merge marks the copy it writes, and the copy of a typed objection stays
 // correctable through its chain.
 func TestACarriedTypedObjectionIsMarkedAndCorrectable(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	survivor := ids.New[ids.ContactKind]()
 	if _, err := e.owner.Exec(context.Background(), `
@@ -294,6 +301,7 @@ func typedObjectionOnContact(t *testing.T, e *channelConsentEnv) ids.UUID {
 // The list offers a lift only where Lift would take it. An admin who may only
 // read contacts is offered nothing, and Lift refuses them too.
 func TestAReadOnlyAdminIsOfferedNoLift(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := typedObjectionOnContact(t, e)
 	readOnly := principal.WithActor(e.ctx, principal.Principal{
@@ -340,6 +348,7 @@ func onBehalfOf(e *channelConsentEnv, passport ids.UUID) ids.UUID {
 // lent an admin role all read as LevelAdmin, and all are refused, an agent on
 // its user's passport included.
 func TestOnlyAHumanSeatCorrectsAnObjection(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	row := typedObjectionOnContact(t, e)
 	for name, ctx := range map[string]context.Context{
@@ -361,6 +370,7 @@ func TestOnlyAHumanSeatCorrectsAnObjection(t *testing.T) {
 
 // An agent on its user's passport lifts what its user may lift.
 func TestAnAgentOnItsUsersPassportLiftsARepsStop(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	contact := repOwnedContact(t, e)
 	if err := e.store.Suppress(boundedRepCtx(e.ws, e.user), SuppressInput{

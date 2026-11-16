@@ -34,6 +34,7 @@ func lifecycleCheck(t *testing.T, conn *pgx.Conn, name string) (validated bool, 
 }
 
 func TestAFreshDatabaseAcceptsOnboardingAndLive(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -50,6 +51,7 @@ func TestAFreshDatabaseAcceptsOnboardingAndLive(t *testing.T) {
 }
 
 func TestTheLifecycleDownMovesOnboardingAndLiveToCustomer(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

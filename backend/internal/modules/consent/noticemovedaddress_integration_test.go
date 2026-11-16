@@ -18,6 +18,7 @@ import (
 // sent from it before. That holds when the sender row names the former holder,
 // and when it carries only the address.
 func TestAFailedNoticeIsNotSettledByTheFormerHoldersMail(t *testing.T) {
+	t.Parallel()
 	for _, attributed := range []bool{true, false} {
 		failedNoticeAfterMovedMail(t, attributed)
 	}

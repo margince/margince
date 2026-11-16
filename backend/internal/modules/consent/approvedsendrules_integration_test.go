@@ -81,6 +81,7 @@ func (e *resolveEnv) recordInquiry(t *testing.T) {
 //
 // Mutation: drop the requestOnRecord arm from subjectAskedUs and both fail.
 func TestARequestOnRecordSupportsAFollowUpAtAnyAge(t *testing.T) {
+	t.Parallel()
 	t.Run("recorded by the rep", func(t *testing.T) {
 		e := setupResolve(t)
 		e.recordRequest(t, clocktest.Now(t).Add(-twoYears), false)
@@ -102,6 +103,7 @@ func TestARequestOnRecordSupportsAFollowUpAtAnyAge(t *testing.T) {
 // A message the subject wrote two years ago that asked for nothing is not a
 // request. The reply window still bounds an unprompted follow-up on it.
 func TestAnOldMessageThatAskedNothingDoesNotSupportAFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.inboundFrom(t, "an-old-thread", e.address, clocktest.Now(t).Add(-twoYears))
 
@@ -119,6 +121,7 @@ func TestAnOldMessageThatAskedNothingDoesNotSupportAFollowUp(t *testing.T) {
 // Mutation: drop the requestOnRecord arm from validateQuote and both cases are
 // held for review.
 func TestAQuoteGoesFromTheRequestBeforeAnyDealExists(t *testing.T) {
+	t.Parallel()
 	for name, record := range map[string]func(e *resolveEnv){
 		"recorded by the rep":   func(e *resolveEnv) { e.recordRequest(t, clocktest.Now(t).Add(-24*time.Hour), true) },
 		"recorded at acquiring": func(e *resolveEnv) { e.acquisition(t, "requested_quote_or_meeting", clocktest.Now(t)) },
@@ -146,6 +149,7 @@ func TestAQuoteGoesFromTheRequestBeforeAnyDealExists(t *testing.T) {
 // Mutation: drop quoteOnly from quoteRequests, or let validateQuote ask
 // subjectAskedUs, and a case here is allowed.
 func TestAQuoteToSomebodyWhoAskedForNoneIsNotRequested(t *testing.T) {
+	t.Parallel()
 	for name, seed := range map[string]func(e *resolveEnv){
 		"nothing on record":       func(*resolveEnv) {},
 		"only correspondence":     func(e *resolveEnv) { e.inboundFrom(t, "a-chat", e.address, clocktest.Now(t).Add(-24*time.Hour)) },
@@ -172,6 +176,7 @@ func TestAQuoteToSomebodyWhoAskedForNoneIsNotRequested(t *testing.T) {
 // A callback asked for and a form enquiry are requests for a follow-up, so the
 // follow-up they asked for still goes.
 func TestACallbackOrAnEnquirySupportsAFollowUp(t *testing.T) {
+	t.Parallel()
 	for name, seed := range map[string]func(e *resolveEnv){
 		"a callback asked for": func(e *resolveEnv) { e.recordRequest(t, clocktest.Now(t).Add(-twoYears), false) },
 		"an enquiry":           func(e *resolveEnv) { e.recordInquiry(t) },
@@ -202,6 +207,7 @@ func (e *resolveEnv) suppressAt(t *testing.T, kind string, at time.Time) {
 // An opt-out after a request cannot silently reuse the request.
 // The sender must acknowledge the warning for this one message.
 func TestAnOptOutAfterTheRequestStopsAQuoteWithNoDealBehindIt(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	now := clocktest.Now(t)
 	e.recordRequest(t, now.Add(-48*time.Hour), true)
@@ -225,6 +231,7 @@ func TestAnOptOutAfterTheRequestStopsAQuoteWithNoDealBehindIt(t *testing.T) {
 // Mutation: make objectionBindsResolution ignore RequestedAt and both cases are
 // refused.
 func TestARequestNewerThanTheOptOutCarriesTheQuote(t *testing.T) {
+	t.Parallel()
 	for name, record := range map[string]func(e *resolveEnv, now time.Time){
 		"recorded by the rep": func(e *resolveEnv, now time.Time) { e.recordRequest(t, now.Add(-time.Hour), true) },
 		"recorded at acquiring": func(e *resolveEnv, now time.Time) {
@@ -248,6 +255,7 @@ func TestARequestNewerThanTheOptOutCarriesTheQuote(t *testing.T) {
 // The objection still binds marketing to the contact whose newer request
 // carries a quote. The request reaches the quote and nothing else.
 func TestANewerQuoteRequestDoesNotLiftTheObjectionForMarketing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	now := clocktest.Now(t)
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -267,6 +275,7 @@ func TestANewerQuoteRequestDoesNotLiftTheObjectionForMarketing(t *testing.T) {
 // Mutation: drop "retracted_at IS NULL" from requestOnRecord, or let the
 // recording dedupe skip retracted rows, and the follow-up is supported again.
 func TestARetractedRequestNoLongerCounts(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	when := clocktest.Now(t).Add(-time.Hour)
 	event := recordedID(t, e.recordRequest(t, when, true))
@@ -311,6 +320,7 @@ func TestARetractedRequestNoLongerCounts(t *testing.T) {
 // Mutation: drop "retracted_at IS NULL" from requestOnRecord and the second
 // ticket still allows the message.
 func TestAWithdrawnRequestStopsAQueuedFollowUp(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	event := recordedID(t, e.recordRequest(t, clocktest.Now(t).Add(-twoYears), false))
 	delivery := e.plantDelivery(t)
@@ -353,6 +363,7 @@ func TestAWithdrawnRequestStopsAQueuedFollowUp(t *testing.T) {
 // A colleague who takes over the conversation replies on the same thread with
 // no consent question. A recipient who never wrote into it does not ride on it.
 func TestAColleagueWhoTakesOverRepliesWithoutAConsentQuestion(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "taken-over", e.address, clocktest.Now(t).Add(-30*24*time.Hour))
 	colleague := ids.NewV7()
@@ -454,6 +465,7 @@ func (e *resolveEnv) putUnderException(t *testing.T, delivery ids.UUID, givenByA
 // Mutation: drop instructionStillAnswers from AuthorizeTransmit and the second
 // ticket still offers the refusal to the exception.
 func TestAStopRecordedAfterQueueingIsNotOneAnExceptionAnswers(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery, transmit := e.stagedMarketingDelivery(t)
 	e.putUnderException(t, delivery, true)
@@ -471,6 +483,7 @@ func TestAStopRecordedAfterQueueingIsNotOneAnExceptionAnswers(t *testing.T) {
 
 // A provider's hard bounce is not lifted by a staff exception.
 func TestAHardBounceStopsEvenAnAdminsQueuedException(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name         string
 		givenByAdmin bool
@@ -500,6 +513,7 @@ func TestAHardBounceStopsEvenAnAdminsQueuedException(t *testing.T) {
 // Mutation: drop the requestedNegotiation check from validateDealFollowup, or let
 // resolveCategory read liveDealInLinks again, and a case here is supported.
 func TestAnInternallyCreatedDealIsNoPermission(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
 
@@ -521,6 +535,7 @@ func TestAnInternallyCreatedDealIsNoPermission(t *testing.T) {
 // Mutation: make validateDealFollowup read only Evidence.DealID again, and the
 // filed case answers no_evidence.
 func TestADealClaimReadsTheDealTheMessageIsFiledUnder(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	deal := e.openDeal(t, "open", true)
 
@@ -564,6 +579,7 @@ func (e *resolveEnv) recordRequestAbout(t *testing.T, deal ids.UUID, when time.T
 // Mutation: drop the deal test from any arm of requestedNegotiation (filing,
 // about_deal_id) and the matching case is supported for the wrong deal.
 func TestADealFollowUpRestsOnARequestAboutThatDeal(t *testing.T) {
+	t.Parallel()
 	followUp := func(deal ids.UUID) []commsauthz.Request {
 		return []commsauthz.Request{
 			{Context: commsauthz.CategoryActiveDealFollowup, Evidence: commsauthz.Evidence{DealID: deal}},
@@ -605,6 +621,7 @@ func TestADealFollowUpRestsOnARequestAboutThatDeal(t *testing.T) {
 // Mutation: drop the about_deal_id test from latestRequest and quote A goes on
 // B's date.
 func TestANewerRequestForOneQuoteDoesNotCarryItsSibling(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	now := clocktest.Now(t)
 	a, b := e.openDeal(t, "open", true), e.openDeal(t, "open", true)
@@ -693,6 +710,7 @@ func (e *resolveEnv) acquiredAboutDealAt(t *testing.T, deal ids.UUID, at time.Ti
 // requestedNegotiation with the bare kind or direction, or drop either
 // occurred_at bound, and the matching case carries the deal.
 func TestOnlyTheContactsOwnActOnTheDealCarriesIt(t *testing.T) {
+	t.Parallel()
 	future := func() time.Time { return clocktest.Now(t).Add(2 * time.Hour) }
 	past := func() time.Time { return clocktest.Now(t).Add(-time.Hour) }
 	for name, tc := range map[string]struct {

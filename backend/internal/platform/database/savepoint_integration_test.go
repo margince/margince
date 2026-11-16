@@ -50,6 +50,7 @@ func keyCount(ctx context.Context, t *testing.T, tx pgx.Tx) int {
 }
 
 func TestAFailedWriteUnderASavepointLeavesTheSharedTransactionUsable(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	err := inSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		keyedTable(ctx, t, tx)
@@ -73,6 +74,7 @@ func TestAFailedWriteUnderASavepointLeavesTheSharedTransactionUsable(t *testing.
 }
 
 func TestASuccessfulWriteUnderASavepointStaysInTheSharedTransaction(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	err := inSnapshot(ctx, t, pool, func(ctx context.Context, tx pgx.Tx) {
 		keyedTable(ctx, t, tx)
@@ -94,6 +96,7 @@ func TestASuccessfulWriteUnderASavepointStaysInTheSharedTransaction(t *testing.T
 }
 
 func TestWithoutASharedTransactionTheSavepointJustRuns(t *testing.T) {
+	t.Parallel()
 	ctx, _ := laneEnv(t)
 	ran := false
 	if err := database.WithSavepoint(ctx, func(context.Context) error { ran = true; return nil }); err != nil || !ran {
@@ -102,6 +105,7 @@ func TestWithoutASharedTransactionTheSavepointJustRuns(t *testing.T) {
 }
 
 func TestASavepointThatCannotOpenOrCloseSaysSo(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
 	cases := map[string]struct {
 		run  func(ctx context.Context, tx pgx.Tx, cancel context.CancelFunc) error

@@ -67,6 +67,7 @@ func (e *resolveEnv) seedMarketingOverrideAt(t *testing.T, level string, recorde
 // by authority — not whichever landed last. A weaker user row recorded after a
 // stronger admin row must not displace it.
 func TestTheStrongestOverrideWinsEvenWhenAWeakerOneIsNewer(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -91,6 +92,7 @@ func TestTheStrongestOverrideWinsEvenWhenAWeakerOneIsNewer(t *testing.T) {
 // the ordering is deterministic by authority in both recency directions, not an
 // artefact of which case happens to align with recorded_at.
 func TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -108,6 +110,7 @@ func TestAStrongerSurvivorIsNotDisplacedByAWeakerCarry(t *testing.T) {
 
 // A live user-level override flips a no-evidence refusal for its category.
 func TestAnOverrideFlipsANoEvidenceRefusal(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -142,6 +145,7 @@ func TestAnOverrideFlipsANoEvidenceRefusal(t *testing.T) {
 
 // An override for one category does not flip a refusal in another.
 func TestAnOverrideIsScopedToItsCategory(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -166,6 +170,7 @@ func TestAnOverrideIsScopedToItsCategory(t *testing.T) {
 // and CanBeOverruled refuses it before liveOverride is ever asked — a live
 // override for the same contact and category must not lift it.
 func TestAnOverrideCannotFlipASubjectStop(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -191,6 +196,7 @@ func TestAnOverrideCannotFlipASubjectStop(t *testing.T) {
 // ever run, so a live override for the same contact and category cannot reach
 // it.
 func TestAnOverrideCannotFlipAHardBounce(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")
@@ -212,6 +218,7 @@ func TestAnOverrideCannotFlipAHardBounce(t *testing.T) {
 // override for the same contact must NOT flip it. CanBeOverruledByCategory
 // excludes it before liveOverride is ever consulted.
 func TestAnOverrideCannotFlipAnUnknownPurpose(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	// No seedPurpose: the key is undefined, so the engine cannot resolve what
@@ -235,6 +242,7 @@ func TestAnOverrideCannotFlipAnUnknownPurpose(t *testing.T) {
 // A revoked override does nothing: liveOverride's own WHERE clause excludes
 // it, so the refusal it would have lifted stands.
 func TestARevokedOverrideDoesNotApply(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.livesIn(t, reviewableMarketingCountry())
 	e.seedPurpose(t, "newsletter", "marketing")

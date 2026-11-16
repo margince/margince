@@ -59,6 +59,7 @@ func linksOf(ctx context.Context, t *testing.T, tx pgx.Tx, contact ids.UUID) int
 }
 
 func TestErasingAContactRemovesItsLinksAndOnlyThose(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	s := seedLinkedSubjects(ctx, t, tx)
@@ -78,6 +79,7 @@ func TestErasingAContactRemovesItsLinksAndOnlyThose(t *testing.T) {
 }
 
 func TestAnonymizingAContactByRetentionRemovesItsLinks(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	s := seedLinkedSubjects(ctx, t, tx)

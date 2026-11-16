@@ -45,6 +45,7 @@ func expectLockedWrites(t *testing.T, e *apptest.AppEnv, writes []lockedWrite) {
 // The follow-up window the api's environment sets reads as that value and
 // refuses a change; resending it is accepted. A window outside the contract's
 // bounds is refused at decode, before any lock is read.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestFollowUpWindowSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS=6"})
@@ -69,6 +70,7 @@ func TestFollowUpWindowSetByEnvIsLockedAgainstAChange(t *testing.T) {
 
 // The particulars the api's environment sets read as that value and refuse a
 // change, even an invalid one; resending them is accepted.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestControllerParticularsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{
@@ -98,6 +100,7 @@ func TestControllerParticularsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 // The lead settings the api's environment sets read as those values and refuse
 // a change, even an invalid one; resending them is accepted. A target outside
 // the contract's bounds is refused at decode, before any lock is read.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 	seat := ids.NewV7().String()
@@ -136,6 +139,7 @@ func TestLeadSettingsSetByEnvAreLockedAgainstAChange(t *testing.T) {
 
 // The signature template the api's environment sets reads as that value and
 // refuses a change, even an invalid one; resending it is accepted.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestSignatureTemplateSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"})
@@ -161,6 +165,7 @@ func TestSignatureTemplateSetByEnvIsLockedAgainstAChange(t *testing.T) {
 // The legal review switch the api's environment sets reads as that value and
 // refuses a change; resending it is accepted. A bool has no invalid value, and
 // a body that is no bool is refused for its shape before the lock is asked.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestLegalReviewSetByEnvIsLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_DEALS_LEGAL_REVIEW_ENABLED=false"})
@@ -184,6 +189,7 @@ func TestLegalReviewSetByEnvIsLockedAgainstAChange(t *testing.T) {
 
 // The retain-only posture the api's environment sets reads as that value and
 // refuses a change; resending it is accepted. A bool has no invalid value.
+//
 //testdb:serial binds the process-wide configuration (config.Bind)
 func TestRetainOnlySetByEnvIsLockedAgainstAChange(t *testing.T) {
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_PRIVACY_RETAIN_ONLY=true"})

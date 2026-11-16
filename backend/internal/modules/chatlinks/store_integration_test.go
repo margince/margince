@@ -8,7 +8,6 @@ package chatlinks
 import (
 	"context"
 	"errors"
-	"os"
 	"sync"
 	"testing"
 
@@ -118,12 +117,9 @@ type linkEnv struct {
 
 func setupLinks(t *testing.T) *linkEnv {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,12 +128,6 @@ func setupLinks(t *testing.T) *linkEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	e := &linkEnv{
 		owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7(),
 		deal: ids.NewV7(), second: ids.NewV7(), project: ids.NewV7(),
@@ -164,7 +154,7 @@ func setupLinks(t *testing.T) *linkEnv {
 	connection := ids.NewV7()
 	e.exec(t, `INSERT INTO channel_connection (id, provider, channel_id, channel_label, address, credential_ref, status, connected_by)
 		VALUES ($1, 'dispact', 'team', 'Margince', 'https://chat.test', 'ref', 'connected', $2)`, connection, e.rep)
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -225,6 +215,7 @@ func (e *linkEnv) system() context.Context {
 }
 
 func TestCreatingAChannelLinksTheDealWithItsProjectAndInvitesTheRep(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
@@ -249,6 +240,7 @@ func TestCreatingAChannelLinksTheDealWithItsProjectAndInvitesTheRep(t *testing.T
 }
 
 func TestAnExistingChannelMustExistBePrivateAndHoldTheBot(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep)
 	no := false
@@ -264,6 +256,7 @@ func TestAnExistingChannelMustExistBePrivateAndHoldTheBot(t *testing.T) {
 }
 
 func TestOnlyAPrivateChannelWithTheBotThatNoRecordHoldsIsOffered(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	e.chat.channels["team-beta"] = dispact.Channel{Slug: "team-beta", Name: "team-beta", IsPrivate: true, BotIsMember: true}
 	e.chat.channels["old-team"] = dispact.Channel{Slug: "old-team", Name: "old-team", IsPrivate: true, BotIsMember: true, IsArchived: true}
@@ -289,6 +282,7 @@ func TestOnlyAPrivateChannelWithTheBotThatNoRecordHoldsIsOffered(t *testing.T) {
 }
 
 func TestARecordAndAChannelCarryOneLinkEach(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep)
 	yes := true
@@ -306,6 +300,7 @@ func TestARecordAndAChannelCarryOneLinkEach(t *testing.T) {
 }
 
 func TestARepWhoMayNotEditTheDealCannotLinkIt(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.other)
 	if _, err := e.store.Link(ctx, RecordDeal, e.deal, LinkRequest{Mode: ModeCreate}); !errors.Is(err, apperrors.ErrPermissionDenied) {
@@ -320,6 +315,7 @@ func TestARepWhoMayNotEditTheDealCannotLinkIt(t *testing.T) {
 }
 
 func TestAReplayedEventAddsNothingAndASilentLinkRecordsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
@@ -353,6 +349,7 @@ func TestAReplayedEventAddsNothingAndASilentLinkRecordsNothing(t *testing.T) {
 }
 
 func TestANarrowedActivityIsWithdrawnAndItsPostRewritten(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {
@@ -416,6 +413,7 @@ func TestALinkAskingForTheTalkSoFarQueuesItsBotsPullAtOnce(t *testing.T) {
 }
 
 func TestUnlinkingFreesTheChannelForTheRecordAgain(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep)
 	no := false
@@ -438,6 +436,7 @@ func TestUnlinkingFreesTheChannelForTheRecordAgain(t *testing.T) {
 }
 
 func TestADealsProjectJoinsItsChannelOnlyWhenTheRepMayEditTheProject(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seatWith(e.rep, principal.RowScopeOwn, map[string]principal.ObjectGrant{
 		"deal": {Read: true, Update: true}, "project": {Read: true},
@@ -452,6 +451,7 @@ func TestADealsProjectJoinsItsChannelOnlyWhenTheRepMayEditTheProject(t *testing.
 }
 
 func TestAWithdrawDuringAPostLeavesTheFlushMoreToDo(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	state, err := e.store.Link(e.seat(e.rep), RecordDeal, e.deal, LinkRequest{Mode: ModeCreate})
 	if err != nil {

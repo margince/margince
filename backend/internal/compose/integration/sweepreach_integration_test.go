@@ -138,6 +138,7 @@ func TestEveryMergeMovesThePlanLinesTheWeeklyPlanDeclared(t *testing.T) {
 
 // The kind column decides which rows move. A contact-kind row holding the
 // merged company's uuid names some other record and stays where it is.
+//
 //testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 	e := Setup(t)
@@ -175,6 +176,7 @@ func TestACompanyMergeLeavesARowOfAnotherKindWithTheSameID(t *testing.T) {
 
 // A unit's declared company column follows the company merge; a row naming a
 // third company is left alone.
+//
 //testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 	e := Setup(t)
@@ -203,6 +205,7 @@ func TestACompanyMergeMovesAUnitsDeclaredColumn(t *testing.T) {
 
 // The declared relink runs in the caller's transaction, so a merge that rolls
 // back leaves the unit's rows where they were.
+//
 //testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 	e := Setup(t)
@@ -228,6 +231,7 @@ func TestADeclaredRelinkRollsBackWithItsTransaction(t *testing.T) {
 
 // The erasure clears what a unit's table says about the subject, leaves a row
 // about somebody else, and tombstones each row it cleared.
+//
 //testdb:serial installs process-wide unit declarations (corereach.Install)
 func TestTheErasureClearsAUnitsDeclaredColumns(t *testing.T) {
 	e := Setup(t)

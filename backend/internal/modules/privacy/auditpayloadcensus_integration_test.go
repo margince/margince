@@ -17,6 +17,7 @@ import (
 )
 
 func TestAuditPayloadRedactionCoversEveryCatalogColumn(t *testing.T) {
+	t.Parallel()
 	for _, sample := range []json.RawMessage{
 		json.RawMessage(`"Census Contact census-contact@example.test +49305550101"`),
 		json.RawMessage(`{"evidence":[{"name":"Census Contact","address":"census-contact@example.test","phone":"+49305550101"}]}`),

@@ -18,6 +18,7 @@ import (
 )
 
 func TestPendingMaintenanceHonorsExpiryAndHeldMessages(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	at := time.Date(2026, time.September, 15, 12, 0, 0, 0, time.UTC)
 	e.svc.now = func() time.Time { return at }

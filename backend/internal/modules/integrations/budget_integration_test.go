@@ -60,6 +60,7 @@ func charged(actual *int) string {
 // A provider that charges only for a successful result owes nothing on a
 // no-match, so the whole hold is released.
 func TestReconcileReleasesTheHoldWhenNothingWasBought(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	runID := reserveOneRun(t, e)
 	desc := NewOfflineProvider(0, e.store.now).Descriptor()
@@ -78,6 +79,7 @@ func TestReconcileReleasesTheHoldWhenNothingWasBought(t *testing.T) {
 
 // On a match, the provider's own number wins where it gave one.
 func TestReconcileRecordsWhatTheProviderActuallyCharged(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	runID := reserveOneRun(t, e)
 	desc := NewOfflineProvider(0, e.store.now).Descriptor()
@@ -107,6 +109,7 @@ func TestReconcileRecordsWhatTheProviderActuallyCharged(t *testing.T) {
 // whole-run release never fires — and the silent pool fell through to its own
 // hold. A credit for a number nobody received.
 func TestReconcileReleasesAPoolTheProviderNeverAnsweredFor(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	runID := reserveOneRun(t, e)
 	desc := NewOfflineProvider(0, e.store.now).Descriptor()
@@ -147,6 +150,7 @@ func TestReconcileReleasesAPoolTheProviderNeverAnsweredFor(t *testing.T) {
 // day an adapter does declare per_request, this is the case that already held
 // the behaviour it needs.
 func TestReconcileKeepsAPerRequestHoldTheProviderNeverAnsweredFor(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	runID := reserveOneRun(t, e)
 	desc := NewOfflineProvider(0, e.store.now).Descriptor()

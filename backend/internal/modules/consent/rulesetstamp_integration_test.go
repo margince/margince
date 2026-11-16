@@ -63,6 +63,7 @@ func rulesetOf(t *testing.T, e *resolveEnv, delivery ids.UUID, phase string) (*i
 // what was true when the message was composed; the transmit row says what was
 // true when it left, and a delivery can sit queued across a change of either.
 func TestADecisionRecordsTheRulesetThatJudgedIt(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	inCountry(t, e, "ra", 4)
 	delivery := e.plantDelivery(t)
@@ -88,6 +89,7 @@ func TestADecisionRecordsTheRulesetThatJudgedIt(t *testing.T) {
 // consent requirement that binds everywhere is enforced by the marketing
 // verdict, which runs before any pack.
 func TestARecipientWithNoCountryRecordsNoRuleset(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	delivery := e.plantDelivery(t)
 
@@ -112,6 +114,7 @@ func TestARecipientWithNoCountryRecordsNoRuleset(t *testing.T) {
 // about a send that happened" — while no column carried a ruleset. Now one
 // does, so the promise is testable rather than aspirational.
 func TestErasureKeepsTheRulesetAndLosesTheSubject(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	inCountry(t, e, "rb", 2)
 	delivery := e.plantDelivery(t)
@@ -151,6 +154,7 @@ func TestErasureKeepsTheRulesetAndLosesTheSubject(t *testing.T) {
 // production writer cannot produce that pair, so this asks the database
 // directly rather than through the gate.
 func TestTheRecordedRulesetIsRefusedWhenItNamesNoJurisdiction(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	inCountry(t, e, "rc", 3)
 	delivery := e.plantDelivery(t)
@@ -185,6 +189,7 @@ func TestTheRecordedRulesetIsRefusedWhenItNamesNoJurisdiction(t *testing.T) {
 // Mutation: add the sender's code to the applicableRules call in rulesetStamp and
 // this fails.
 func TestTheSendersCountryIsNotStampedOnARecipientWithNone(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code("rd"), Version: 5,
@@ -226,6 +231,7 @@ func dataProtectionOf(t *testing.T, e *resolveEnv, delivery ids.UUID, phase stri
 // Mutation: stamp the installation country in dataProtectionStamp and the
 // branch case fails; stamp nil and both fail.
 func TestADecisionRecordsTheDataProtectionCountryOfItsEntity(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.gate = e.gate.WithInstallationCountry(
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) { return "de", nil }))
@@ -265,6 +271,7 @@ func TestADecisionRecordsTheDataProtectionCountryOfItsEntity(t *testing.T) {
 //
 // Mutation: resolve the country again in recordDecisions and this fails.
 func TestTransmitKeepsTheStagedDataProtectionCountry(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	installation := jurisdiction.Code("de")
 	e.gate = e.gate.WithInstallationCountry(

@@ -21,12 +21,12 @@ package ai
 
 import (
 	"context"
-	"os"
 	"sort"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -40,6 +40,7 @@ var databaseOwnedVersionColumns = gatekit.Waive(map[string]string{
 })
 
 func TestTheVoiceVersionWriterCoversEveryColumnACallerChooses(t *testing.T) {
+	t.Parallel()
 	// A ratified column the writer has taken over, or one the table no longer
 	// has, is reported rather than quietly standing: an entry that matches
 	// nothing is an exemption still covering a column nobody looked at again.
@@ -58,6 +59,7 @@ var databaseOwnedDeltaColumns = gatekit.Waive(map[string]string{
 })
 
 func TestTheVoiceDeltaWriterCoversEveryColumnACallerChooses(t *testing.T) {
+	t.Parallel()
 	defer databaseOwnedDeltaColumns.AssertAllMatched(t)
 	assertWriterCoversTable(t, "voice_profile_delta", voiceDeltaWriteColumns(), databaseOwnedDeltaColumns)
 }
@@ -87,12 +89,8 @@ func assertWriterCoversTable(t *testing.T, table string, written []string, datab
 // against the migration that adds one.
 func tableColumns(t *testing.T, table string) []string {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
 	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dsn)
+	conn, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting to the test database: %v", err)
 	}

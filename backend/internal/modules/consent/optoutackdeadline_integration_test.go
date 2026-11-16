@@ -33,6 +33,7 @@ func owingAcknowledgementWithin(t *testing.T, e *channelConsentEnv, within time.
 // TestTheReceiptIsDueWithinThePacksWindowOfTheRefusal pins the deadline to the
 // moment the refusal was recorded, on both doors that record one.
 func TestTheReceiptIsDueWithinThePacksWindowOfTheRefusal(t *testing.T) {
+	t.Parallel()
 	refused := time.Date(2026, 11, 5, 9, 30, 0, 0, time.UTC)
 	for _, door := range []struct {
 		name   string

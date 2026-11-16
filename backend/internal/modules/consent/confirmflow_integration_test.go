@@ -116,6 +116,7 @@ func marketingStateOf(t *testing.T, e *channelConsentEnv) string {
 // only runs when there is an employment row to find, so the shape of the read
 // went unexercised until it 500'd against a real record.
 func TestTheCardShowsTheSubjectTheirOwnRecord(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	companyID := ids.New[ids.CompanyKind]()
 	if _, err := e.owner.Exec(context.Background(),
@@ -154,6 +155,7 @@ func TestTheCardShowsTheSubjectTheirOwnRecord(t *testing.T) {
 // no second mail, because the link they arrived through already proved the
 // mailbox.
 func TestAnAnswerFromTheConfirmPageCompletesTheGrant(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -195,6 +197,7 @@ func TestAnAnswerFromTheConfirmPageCompletesTheGrant(t *testing.T) {
 // The property the whole design rests on: the link is spent, so a replay of the
 // same submit refuses. Without this the grant is replayable and proves nothing.
 func TestAConfirmLinkAnswersOnce(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -221,6 +224,7 @@ func TestAConfirmLinkAnswersOnce(t *testing.T) {
 // Opening the page reads as absent once the link is spent, so somebody who
 // forwards the mail cannot read the record afterwards.
 func TestASpentLinkOpensNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -240,6 +244,7 @@ func TestASpentLinkOpensNothing(t *testing.T) {
 // subject holds a bearer token and no principal — a leaked link that could
 // rewrite the CRM is the thing this design exists to prevent.
 func TestACorrectionIsStagedAndNeverWritten(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -281,6 +286,7 @@ func TestACorrectionIsStagedAndNeverWritten(t *testing.T) {
 // Asking to be removed files a request rather than erasing. Art. 17 allows a
 // month, and a link that could destroy a record is a weapon if it leaks.
 func TestARemovalRequestIsFiledAndTheRecordSurvives(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -314,6 +320,7 @@ func TestARemovalRequestIsFiledAndTheRecordSurvives(t *testing.T) {
 // Answering nothing records nothing. A page view is not consent, and a contact
 // who corrects their address without answering has not opted in.
 func TestOpeningThePageAndCorrectingGrantsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -332,6 +339,7 @@ func TestOpeningThePageAndCorrectingGrantsNothing(t *testing.T) {
 // corrections with it, or the page half-worked with nothing to tell the subject
 // which half.
 func TestARefusedAnswerLeavesNoStagedCorrections(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	// No marketing purpose seeded, so resolving it inside the transaction fails
 	// AFTER the corrections have been staged — which is the ordering that makes
@@ -365,6 +373,7 @@ func TestARefusedAnswerLeavesNoStagedCorrections(t *testing.T) {
 // A field the page does not offer is refused before the link is spent, so a
 // malformed client cannot cost somebody their one answer.
 func TestAnUnofferedFieldIsRefusedWithoutSpendingTheLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	link := issueLink(t, e)
 
@@ -382,6 +391,7 @@ func TestAnUnofferedFieldIsRefusedWithoutSpendingTheLink(t *testing.T) {
 // A fresh issuance supersedes the last, so a contact who is emailed twice cannot
 // answer through the older link.
 func TestAFreshLinkRetiresTheOneBeforeIt(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	first := issueLink(t, e)
 	second := issueLink(t, e)
@@ -399,6 +409,7 @@ func TestAFreshLinkRetiresTheOneBeforeIt(t *testing.T) {
 // levels, and a claim about isolation is worth a test rather than an argument.
 // Exactly one may win, or the grant is replayable by opening two tabs.
 func TestTwoSubmitsRacingOnOneLinkLeaveOneWinner(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -445,6 +456,7 @@ func TestTwoSubmitsRacingOnOneLinkLeaveOneWinner(t *testing.T) {
 // The archive path does not delete confirm_token (only erasure and the
 // retention anonymizer do), so liveness is the resolver's to check.
 func TestALinkHeldByAnArchivedSubjectReadsAsAbsent(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedMarketingPurpose(t, e)
 	link := issueLink(t, e)
@@ -473,6 +485,7 @@ func TestALinkHeldByAnArchivedSubjectReadsAsAbsent(t *testing.T) {
 // plaintext, and produce a grant that looks defensible against a mailbox the
 // subject never held.
 func TestAConfirmLinkIsAddressedToTheSubjectsOwnMailbox(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 
@@ -498,6 +511,7 @@ func TestAConfirmLinkIsAddressedToTheSubjectsOwnMailbox(t *testing.T) {
 // link could evidence. Minting one anyway would produce a credential whose whole
 // justification is an address nobody holds.
 func TestAContactWithNoAddressGetsNoConfirmLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 
 	_, err := e.store.IssueConfirmToken(e.ctx, e.contact, "")
@@ -526,6 +540,7 @@ func TestAContactWithNoAddressGetsNoConfirmLink(t *testing.T) {
 // exactly what they should, and the handler wrote a module type straight to the
 // response with no discriminator on it. A store-level test cannot see that.
 func TestEachConfirmLinkAnswersInItsOwnShape(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 

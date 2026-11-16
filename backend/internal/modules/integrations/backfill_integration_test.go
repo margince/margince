@@ -35,6 +35,7 @@ import (
 // one bad afternoon excludes somebody permanently and the backlog count reports
 // them as done.
 func TestTheSweepNeverAsksTwiceAboutTheSameAnswer(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	ctx := context.Background()
 
@@ -91,6 +92,7 @@ func TestTheSweepNeverAsksTwiceAboutTheSameAnswer(t *testing.T) {
 // so a budget that leaked would spend money on a standing instruction the
 // customer capped.
 func TestTheSweepSpendsNoMoreThanTheDayAllows(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	ctx := context.Background()
 
@@ -234,6 +236,7 @@ func (e *runsEnv) plantSubjectWithRun(t *testing.T, state string) ids.ContactID 
 // is watching it, and retrying a rate limit every minute is how a transient
 // limit becomes a sustained one.
 func TestAHumanCanProbeADegradedConnection(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	ctx := context.Background()
 
@@ -272,6 +275,7 @@ func TestAHumanCanProbeADegradedConnection(t *testing.T) {
 // reads, so it stops one step before the values exist and nothing comes back to
 // say they arrived.
 func TestASweepDoesNotCallAnEmptyRunApplied(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	runID := seedCompletedRunWithoutClaims(t, e)
 
@@ -334,6 +338,7 @@ func seedCompletedRunWithoutClaims(t *testing.T, e *runsEnv) string {
 // The other refusals keep the full cooldown: a rate limit or a budget refusal
 // says nothing about the RECORD, so editing the record is no reason to retry.
 func TestARecordFixedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	ctx := context.Background()
 
@@ -380,6 +385,7 @@ func TestARecordFixedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
 // contact.updated_at would tell the reader to add the company and then not
 // look until tomorrow — the exact failure the arm above exists to lift.
 func TestAnEmployerLinkedAfterNoIdentifiersIsPickedUpAtOnce(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 
 	hired := e.plantSubjectSkippedFor(t, provider.SkipNoIdentifiers)

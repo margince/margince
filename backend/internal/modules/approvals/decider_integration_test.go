@@ -55,6 +55,7 @@ func advanceDeal(deal ids.UUID, hash string) StageInput {
 }
 
 func TestABackgroundRequestIsForTheOwnerOfItsRecord(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondRep(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &other)
@@ -69,6 +70,7 @@ func TestABackgroundRequestIsForTheOwnerOfItsRecord(t *testing.T) {
 }
 
 func TestARequestOnARecordNobodyOwnsIsNotStaged(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, nil)
 	_, err := e.svc.Stage(e.sweeping(), advanceDeal(deal, "unowned"))
@@ -81,6 +83,7 @@ func TestARequestOnARecordNobodyOwnsIsNotStaged(t *testing.T) {
 }
 
 func TestTheHumanAnAgentWorksForOutranksTheRecordOwner(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondRep(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &other)
@@ -94,6 +97,7 @@ func TestTheHumanAnAgentWorksForOutranksTheRecordOwner(t *testing.T) {
 }
 
 func TestADeactivatedOwnerIsNotNamed(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondRep(t)
 	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, other); err != nil {
@@ -106,6 +110,7 @@ func TestADeactivatedOwnerIsNotNamed(t *testing.T) {
 }
 
 func TestOnlyTheNamedColleagueIsAskedToDecide(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	admin := e.secondRep(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
@@ -135,6 +140,7 @@ func TestOnlyTheNamedColleagueIsAskedToDecide(t *testing.T) {
 }
 
 func TestADealsNewOwnerInheritsItsOwnerNamedRequests(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	other := e.secondRep(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
@@ -163,6 +169,7 @@ func TestADealsNewOwnerInheritsItsOwnerNamedRequests(t *testing.T) {
 // A promise is put only to the colleague who made it. When they cannot be
 // asked, nobody is, not even the owner of the record it is staged on.
 func TestAPromiseWhosePromiserCannotBeAskedIsPutToNobody(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	promiser := e.secondRep(t)
 	if _, err := e.owner.Exec(context.Background(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, promiser); err != nil {
@@ -191,6 +198,7 @@ func counterpartyFor(owner ids.UUID, deal ids.UUID) StageInput {
 // A sender question is put only to the colleague whose mail it came from. When
 // they cannot be asked, nobody is: not the record's owner, who could not open it.
 func TestASenderQuestionWhoseMailboxOwnerCannotBeAskedIsPutToNobody(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, unaskable string }{
 		{"archived", `UPDATE app_user SET archived_at = now() WHERE id = $1`},
 		{"deactivated", `UPDATE app_user SET status = 'deactivated' WHERE id = $1`},
@@ -216,6 +224,7 @@ func TestASenderQuestionWhoseMailboxOwnerCannotBeAskedIsPutToNobody(t *testing.T
 }
 
 func TestASenderQuestionIsPutToItsMailboxOwner(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	mailboxOwner := e.secondRep(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)
@@ -231,6 +240,7 @@ func TestASenderQuestionIsPutToItsMailboxOwner(t *testing.T) {
 // A sender question staged on behalf of somebody else would show one
 // colleague's mail to another, so it is refused before anything is read.
 func TestASenderQuestionStagedForAnotherMemberIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	mailboxOwner := e.secondRep(t)
 	deal := newDealSeeder(t, e).dealOwnedBy(t, &e.rep)

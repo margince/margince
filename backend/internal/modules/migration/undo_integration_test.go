@@ -142,6 +142,7 @@ func undoRun(ctx context.Context, t *testing.T, s *RunStore, id RunID, w UndoWri
 }
 
 func TestUndoReversesUntouchedRowsAndKeepsHumanEdited(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -189,6 +190,7 @@ func TestUndoReversesUntouchedRowsAndKeepsHumanEdited(t *testing.T) {
 // A user's agent edits as its user does. Automatic work applying a user's
 // decision carries on_behalf_of with no passport, and its edit is no user's.
 func TestUndoKeepsARowAUsersAgentEditedAndReversesOneAutomaticWorkEdited(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -235,6 +237,7 @@ func TestUndoKeepsARowAUsersAgentEditedAndReversesOneAutomaticWorkEdited(t *test
 }
 
 func TestUndoKeepsARowAHumanTouchedThroughAnyAction(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -261,6 +264,7 @@ func TestUndoKeepsARowAHumanTouchedThroughAnyAction(t *testing.T) {
 // the run in `undoing` forever, since a deterministic per-row refusal fails
 // identically on every retry.
 func TestUndoRecordsAnUnreversibleRowAndContinues(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -294,6 +298,7 @@ func TestUndoRecordsAnUnreversibleRowAndContinues(t *testing.T) {
 // individually unreversible) and never completing the run as `undone` (which
 // would make it unrecoverable).
 func TestUndoStopsResumableOnAnUnclassifiedFailure(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -328,6 +333,7 @@ func TestUndoStopsResumableOnAnUnclassifiedFailure(t *testing.T) {
 }
 
 func TestARestartedUndoDoesNotKeepTheCauseOfTheStopBeforeIt(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -353,6 +359,7 @@ func TestARestartedUndoDoesNotKeepTheCauseOfTheStopBeforeIt(t *testing.T) {
 }
 
 func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "portal", Source: "import_api"})
@@ -368,6 +375,7 @@ func TestUndoRefusesEveryConnectorButCSV(t *testing.T) {
 }
 
 func TestUndoRefusesAnythingButComplete(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := newDraft(ctx, t, s, "")
@@ -383,6 +391,7 @@ func TestUndoRefusesAnythingButComplete(t *testing.T) {
 // a second pass over the same rows. beginUndo's row lock covers only its own
 // transaction, so the write lock the slice holds is what refuses it.
 func TestUndoRefusesAConcurrentSecondCallOnTheSameRun(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -404,6 +413,7 @@ func TestUndoRefusesAConcurrentSecondCallOnTheSameRun(t *testing.T) {
 // row (import_record_map.created_at), not the run's own last-touched time,
 // which advances every page.
 func TestUndoResumesFromAPersistedCheckpointAcrossPages(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -444,6 +454,7 @@ func TestUndoResumesFromAPersistedCheckpointAcrossPages(t *testing.T) {
 // An undo resolves its run before it queues anything. A run id that names no
 // run answers not-found.
 func TestUndoOfAnUnknownRunIsNotFound(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	if _, err := s.ClaimUndo(ctx, RunID(ids.NewV7()), queueNothing); !errors.Is(err, apperrors.ErrNotFound) {
@@ -454,6 +465,7 @@ func TestUndoOfAnUnknownRunIsNotFound(t *testing.T) {
 // Undo reads the identity map and never the file, so a finished run lets the
 // file go. No run can then test its upload again.
 func TestACompletedRunReleasesItsSource(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	done := completeCSVRun(ctx, t, s)
@@ -495,6 +507,7 @@ func (w *archivingUndoWriters) Reverse(_ context.Context, _ string, nativeID ids
 // A page replayed after the process died counts each row it reversed once. The
 // checkpoint and the report are one write, so both lost the same rows.
 func TestAReplayedUndoPageCountsEachRowOnce(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)
@@ -536,6 +549,7 @@ func TestAReplayedUndoPageCountsEachRowOnce(t *testing.T) {
 // An undo reports its rows per object from the moment it is queued.
 // A reader sees "0 of 2" before a worker has claimed it.
 func TestUndoReportsRowsReversedPerObject(t *testing.T) {
+	t.Parallel()
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	run := completeCSVRun(ctx, t, s)

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+//testdb:serial flushes and reads the package's one Redis database
 func TestSubscribeResetReceivesThePublishedWorkspace(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
 	ws := ids.NewV7()
@@ -76,6 +77,8 @@ func TestSubscribeResetReceivesThePublishedWorkspace(t *testing.T) {
 // A malformed payload must not wedge the loop: the process that skips it has
 // to keep delivering every reset that arrives afterward, or one publisher's
 // encoding drift silently stops cache flushing for every workspace.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestSubscribeResetSkipsAMalformedPayloadAndKeepsDelivering(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
 	ws := ids.NewV7()
@@ -136,6 +139,8 @@ func TestSubscribeResetSkipsAMalformedPayloadAndKeepsDelivering(t *testing.T) {
 // deleted ctx.Done() case would still let this test's assertions run against
 // a subscriber that never comes back, so the done channel is what actually
 // proves the exit rather than the test merely returning.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestSubscribeResetReturnsPromptlyAfterCancel(t *testing.T) {
 	ctx, rdb := purgeTestRedis(t)
 	runCtx, cancel := context.WithCancel(ctx)

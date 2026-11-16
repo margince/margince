@@ -37,6 +37,7 @@ import (
 const lockNotAvailable = "55P03"
 
 func TestTheGroupPreLockHoldsEveryPendingMemberAtOnce(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)
@@ -102,6 +103,7 @@ func TestTheGroupPreLockHoldsEveryPendingMemberAtOnce(t *testing.T) {
 // waiting for a facts row the act already holds. So the kinds are variadic, and
 // this is the test that says naming both of them means both are held at once.
 func TestAMultiKindActLocksEveryKindItStages(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	ctx := e.asHumanWith(decidesEverything())
 	company := e.company(t)

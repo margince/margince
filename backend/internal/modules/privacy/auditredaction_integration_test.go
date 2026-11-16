@@ -21,6 +21,7 @@ import (
 )
 
 func TestPrivacyCertificatesPhysicallyRedactHistoryAndCancelRetainedEvents(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	for _, kind := range []string{"contact", "lead", "activity", "attachment", "deal_room_participant"} {
@@ -68,6 +69,7 @@ func TestPrivacyCertificatesPhysicallyRedactHistoryAndCancelRetainedEvents(t *te
 }
 
 func TestAuditPayloadsCannotChangeWithoutACurrentMatchingCertificate(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	for name, statement := range map[string]string{
 		"redaction without a certificate": `UPDATE audit_log SET before=NULL, after=NULL, evidence='{"redacted":true}' WHERE id=$1`,
@@ -87,6 +89,7 @@ func TestAuditPayloadsCannotChangeWithoutACurrentMatchingCertificate(t *testing.
 }
 
 func TestErasureProofRedactionKeepsReplayReferencesAndTypedCounts(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject, request := ids.NewV7(), ids.NewV7()
@@ -116,6 +119,7 @@ func TestErasureProofRedactionKeepsReplayReferencesAndTypedCounts(t *testing.T) 
 }
 
 func TestPrivacyReasonProjectionMatchesEvents(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	id := ids.NewV7().String()
@@ -156,6 +160,7 @@ func auditMetadata(ctx context.Context, t *testing.T, tx pgx.Tx, id ids.UUID) []
 }
 
 func TestFixedPrivacyReasonsMatchTheDatabase(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	var stored []string
@@ -171,6 +176,7 @@ func TestFixedPrivacyReasonsMatchTheDatabase(t *testing.T) {
 }
 
 func TestPrivacyCertificatesWorkInsideSavepoints(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.NewV7()
@@ -201,6 +207,7 @@ func TestPrivacyCertificatesWorkInsideSavepoints(t *testing.T) {
 }
 
 func TestErasureKeepsControllerHoldAndReleaseDecisions(t *testing.T) {
+	t.Parallel()
 	ctx := principal.SystemActing(context.Background(), "privacy_test")
 	tx := subjectColumnsTx(ctx, t)
 	subject := ids.NewV7()
@@ -232,6 +239,7 @@ func TestErasureKeepsControllerHoldAndReleaseDecisions(t *testing.T) {
 }
 
 func TestHistoricalAuditCorrectionKeepsHeldActivityAndRequestHistory(t *testing.T) {
+	t.Parallel()
 	for _, protection := range []string{"legal_hold", "restriction", "floor", "dispute"} {
 		t.Run(protection, func(t *testing.T) {
 			ctx := principal.SystemActing(context.Background(), "privacy_test")

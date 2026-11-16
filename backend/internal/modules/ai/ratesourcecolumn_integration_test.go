@@ -12,6 +12,7 @@ import (
 )
 
 func TestEveryWriterFilesWhereItsPriceCameFrom(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
@@ -37,6 +38,7 @@ func TestEveryWriterFilesWhereItsPriceCameFrom(t *testing.T) {
 // Same-day writes upsert one row; an admin's correction must take the row's
 // provenance with it, or the next sync would overwrite what they just typed.
 func TestAnAdminCorrectingASyncedPriceMakesItTheirs(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
@@ -73,6 +75,7 @@ func TestAnAdminCorrectingASyncedPriceMakesItTheirs(t *testing.T) {
 // The sync plans from a snapshot; an admin may type a price between that read
 // and the sync's write. The write, under the model's lock, must still yield.
 func TestASyncWriteYieldsToAPriceTypedSinceItsRead(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)

@@ -68,6 +68,7 @@ func (e *storeEnv) bounceMark(t *testing.T, id ids.UUID) (kind, reason string, m
 }
 
 func TestRecordBounceMarksTheSentRowWithAuditAndEvent(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	id := e.sentDelivery(t, "bounced@myco.test")
 
@@ -103,6 +104,7 @@ func TestRecordBounceMarksTheSentRowWithAuditAndEvent(t *testing.T) {
 // timestamp says when the failure was learned — and a replay is a no-op that
 // emits nothing new.
 func TestRecordBounceKeepsTheFirstMarkOnReplay(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	e.sentDelivery(t, "twice@myco.test")
 	ctx := e.asCapturingConnector(e.user.UUID)
@@ -133,6 +135,7 @@ func TestRecordBounceKeepsTheFirstMarkOnReplay(t *testing.T) {
 // against it — but a report failing the owner or recipient match records
 // nothing, which is what makes a forged report inert.
 func TestRecordBounceRefusesWhatItCannotVerify(t *testing.T) {
+	t.Parallel()
 	e := setupStore(t)
 	pending := e.stage(t, e.baseInput(e.activity, "raced@myco.test"))
 	ctx := e.asCapturingConnector(e.user.UUID)

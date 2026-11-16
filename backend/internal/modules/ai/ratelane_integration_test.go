@@ -51,6 +51,7 @@ func laneOf(ctx context.Context, t *testing.T, s *RateStore, provider, model str
 }
 
 func TestModelRateLaneDefaultsToChatForAModelTheSheetHasNeverSeen(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
@@ -69,6 +70,7 @@ func TestModelRateLaneDefaultsToChatForAModelTheSheetHasNeverSeen(t *testing.T) 
 }
 
 func TestModelRateLaneIsNotRewrittenByAReprice(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
@@ -104,6 +106,7 @@ func TestModelRateLaneIsNotRewrittenByAReprice(t *testing.T) {
 }
 
 func TestModelRateLaneIsCorrectedByNamingIt(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ws, _ := e.seedWorkspace(context.Background(), t)
 	ctx := laneWriterCtx(ws)
@@ -141,6 +144,7 @@ func TestModelRateLaneIsCorrectedByNamingIt(t *testing.T) {
 // filed, or the picker on a brand-new installation offers every embedder as a
 // chat model on the one screen an admin sees first.
 func TestSeededSheetArrivesWithItsLanesFiled(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	ctx := context.Background()
 	ws, _ := e.seedWorkspace(ctx, t)

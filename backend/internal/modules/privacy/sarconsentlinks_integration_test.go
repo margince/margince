@@ -80,6 +80,7 @@ func seedConsentPurpose(ctx context.Context, t *testing.T, owner *pgx.Conn) *ids
 }
 
 func TestTheExportSaysWhatBecameOfEveryLinkItMailed(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	now := time.Now()
 
@@ -155,6 +156,7 @@ func TestTheExportSaysWhatBecameOfEveryLinkItMailed(t *testing.T) {
 // expire when the workspace withdrew it, which is a claim about their conduct
 // and not true.
 func TestASupersededLinkIsNotReportedAsIgnored(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	now := time.Now()
 
@@ -204,6 +206,7 @@ func TestASupersededLinkIsNotReportedAsIgnored(t *testing.T) {
 // idea", while an empty list says "we mailed you no links", which is a fact
 // about their record and one they may well be checking.
 func TestASubjectNeverAskedCarriesAnEmptyLinkSection(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 
 	pkg, err := AssembleSAR(e.ctx, e.db, e.contact)
@@ -233,6 +236,7 @@ func TestASubjectNeverAskedCarriesAnEmptyLinkSection(t *testing.T) {
 
 // One subject's links never appear in another's package.
 func TestTheLinkSectionNeverCarriesAnotherSubjectsRoundTrip(t *testing.T) {
+	t.Parallel()
 	e := setupSARIdentifiers(t)
 	now := time.Now()
 

@@ -13,7 +13,6 @@ package quickfindtest
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -95,11 +94,7 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 // planConn connects to the test database at head, closed when the test ends.
 func planConn(ctx context.Context, t *testing.T) *pgx.Conn {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
-	conn, err := pgx.Connect(ctx, dsn)
+	conn, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatalf("connecting to the test database: %v", err)
 	}
@@ -108,9 +103,6 @@ func planConn(ctx context.Context, t *testing.T) *pgx.Conn {
 			t.Errorf("closing the plan connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, conn); err != nil {
-		t.Fatalf("bringing the test database to head: %v", err)
-	}
 	return conn
 }
 

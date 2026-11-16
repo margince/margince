@@ -55,6 +55,7 @@ func (e *runsEnv) reservationsOf(t *testing.T, runID string) int {
 // live would buy the shared email twice. It is refused whole, as a skipped run
 // that holds no credit and no claim.
 func TestARunSharingALiveCategoryIsSkippedWhole(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	first := e.queueCategories(t, "professional_email")
 	if first.State != provider.RunQueued {
@@ -96,6 +97,7 @@ func TestARunSharingALiveCategoryIsSkippedWhole(t *testing.T) {
 // A run admitted before claim rows existed holds none, so the unique index
 // cannot see it. Its requested categories still refuse an overlapping request.
 func TestARunQueuedBeforeClaimsExistedStillRefusesAnOverlap(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	// Written by hand because it models a row no current writer produces: a
 	// live run from before the claim table, which never got claim rows.
@@ -121,6 +123,7 @@ func TestARunQueuedBeforeClaimsExistedStillRefusesAnOverlap(t *testing.T) {
 // Two requests racing on one contact: whichever commits first is admitted and
 // the other is refused, never both.
 func TestConcurrentOverlappingRunsAdmitOnlyOne(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sets := [][]provider.Category{
 		{"professional_email"},
@@ -160,6 +163,7 @@ func TestConcurrentOverlappingRunsAdmitOnlyOne(t *testing.T) {
 // The guard is per category, not per contact: two purchases that share
 // nothing are both admitted.
 func TestRunsWithDisjointCategoriesAreBothAdmitted(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	if _, err := e.owner.Exec(context.Background(), `
 		UPDATE provider_connection
@@ -167,15 +171,6 @@ func TestRunsWithDisjointCategoriesAreBothAdmitted(t *testing.T) {
 		 WHERE provider = $1`, e.provider); err != nil {
 		t.Fatal(err)
 	}
-	// The connection is one row per provider for the whole database, so the
-	// wider selection is put back for the tests that follow.
-	t.Cleanup(func() {
-		if _, err := e.owner.Exec(context.Background(), `
-			UPDATE provider_connection SET categories = ARRAY['professional_email','mobile']
-			 WHERE provider = $1`, e.provider); err != nil {
-			t.Errorf("restoring the connection's categories: %v", err)
-		}
-	})
 	email := e.queueCategories(t, "professional_email")
 	profile := e.queueCategories(t, "linkedin_profile")
 	if email.State != provider.RunQueued || profile.State != provider.RunQueued {
@@ -187,6 +182,7 @@ func TestRunsWithDisjointCategoriesAreBothAdmitted(t *testing.T) {
 // An identical repeat is still answered with the run in flight, as before:
 // the fingerprint index catches it ahead of the category claim.
 func TestAnIdenticalRepeatStillReturnsTheRunInFlight(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	first := e.queueCategories(t, "professional_email", "mobile")
 	repeat := e.queueCategories(t, "mobile", "professional_email")
@@ -202,6 +198,7 @@ func TestAnIdenticalRepeatStillReturnsTheRunInFlight(t *testing.T) {
 // submit and poll writers frees its categories. Asking again is then a new
 // purchase, not a refusal.
 func TestAFinishedRunReleasesItsCategories(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 	sealCredential(t, e)
 	first := e.queueCategories(t, "professional_email")

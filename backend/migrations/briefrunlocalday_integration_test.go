@@ -56,6 +56,7 @@ func replayLocalDayMigration(t *testing.T, conn *pgx.Conn) {
 }
 
 func TestTheLocalDayCollapseKeepsTheMarksThatSuppressDeals(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
@@ -112,6 +113,7 @@ func TestTheLocalDayCollapseKeepsTheMarksThatSuppressDeals(t *testing.T) {
 }
 
 func TestTheLocalDayBackfillUsesTheInstallationZoneNotUTC(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)

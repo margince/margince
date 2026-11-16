@@ -273,6 +273,7 @@ func TestAMalformedClaimBodyIsRefusedWithoutTouchingTheToken(t *testing.T) {
 // TestAnUnprovisionedBootMintsAndAnnouncesTheToken covers the boot half: an
 // empty database with no configured bootstrap_admin must not fail to start, and
 // must leave the operator a credential they can actually find.
+//
 //testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
 	e := apptest.SetupApp(t)
@@ -364,6 +365,7 @@ func TestAnUnprovisionedBootMintsAndAnnouncesTheToken(t *testing.T) {
 // The logged value is proven to BE the credential by claiming with it, not by
 // matching the attribute key. A test that greps for "setup_token" passes against
 // a line that logs a truncated value, a placeholder, or the hash.
+//
 //testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheSetupTokenReachesTheLogOnlyWhenTheFileCouldNotBeWritten(t *testing.T) {
 	e := apptest.SetupApp(t)

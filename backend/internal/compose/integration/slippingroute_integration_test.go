@@ -131,6 +131,7 @@ func compacted(t *testing.T, raw json.RawMessage) string {
 
 // The same input gets the same answer on both doors, at the default window and
 // at a shorter one the caller names.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestTheSlippingRouteAndToolAnswerAlike(t *testing.T) {
 	a := newSlippingApp(t, "slipping-doors")
@@ -154,6 +155,7 @@ func TestTheSlippingRouteAndToolAnswerAlike(t *testing.T) {
 
 // One REST call is one admitted call. It spends what the same call over MCP
 // spends, and the call ceiling moves by one.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestASlippingRouteCallIsChargedOnce(t *testing.T) {
 	a := newSlippingApp(t, "slipping-charge")
@@ -171,6 +173,7 @@ func TestASlippingRouteCallIsChargedOnce(t *testing.T) {
 // A human reads the route with their session. The home screen keeps its
 // shorter window, so it lists the deal quiet three weeks that the route's
 // default leaves out.
+//
 //testdb:serial flushes and reads the package's one Redis database
 func TestAHumanReadsSlippingDealsAndTheAttentionLaneKeepsItsWindow(t *testing.T) {
 	a := newSlippingApp(t, "slipping-human")

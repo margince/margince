@@ -19,7 +19,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 
@@ -46,13 +45,9 @@ type roleEnv struct {
 
 func setupRoleEnv(t *testing.T) *roleEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,9 +56,6 @@ func setupRoleEnv(t *testing.T) *roleEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	e := &roleEnv{owner: owner, ws: ids.NewV7(), admin: ids.NewV7()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -73,7 +65,7 @@ func setupRoleEnv(t *testing.T) *roleEnv {
 		e.admin, "admin-"+e.admin.String()+"@roles.test"); err != nil {
 		t.Fatal(err)
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -102,6 +94,7 @@ func (e *roleEnv) as() context.Context {
 // was written for returned an error the handler surfaced as a 500 — a test
 // that only checked "no error" from a call it never made would have passed.
 func TestAdministeringARoleReachesTheDatabase(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	ctx := e.as()
 
@@ -164,6 +157,7 @@ func TestAdministeringARoleReachesTheDatabase(t *testing.T) {
 // tables: every integration test saw an empty vocabulary and a picker with
 // nothing in it.
 func TestTheSeededVocabularyIsReadable(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	roles, err := e.store.ListRecordRoles(e.as())
 	if err != nil {
@@ -186,6 +180,7 @@ func TestTheSeededVocabularyIsReadable(t *testing.T) {
 // A role's label is held once, compared trimmed and ignoring case, and a
 // retired role keeps it. A label past the limit is refused before any write.
 func TestARoleLabelIsHeldOnce(t *testing.T) {
+	t.Parallel()
 	e := setupRoleEnv(t)
 	ctx := e.as()
 	create := func(key, label string) (ids.UUID, error) {

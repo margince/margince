@@ -20,6 +20,7 @@ import (
 )
 
 func TestOpenDSRsComeBackSoonestDeadlineFirst(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	later, err := e.store.CreateDSR(e.ctx, CreateDSRInput{
 		Kind: "access", SubjectRef: "later@dsr.test",
@@ -70,6 +71,7 @@ func TestOpenDSRsComeBackSoonestDeadlineFirst(t *testing.T) {
 // The queue names who exercised a legal right; the lane must reach exactly
 // as far as the queue's own admin gate and no further.
 func TestTheLaneReadIsRefusedForANonAdmin(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	rep := principal.WithWorkspaceID(context.Background(), e.ws)
 	rep = principal.WithCorrelationID(rep, ids.NewV7())

@@ -18,6 +18,8 @@ import (
 // Roles choose the limit and never the counter. One passport's count stays
 // put when its human loses Admin or an admin edits a role. The lower limit
 // refuses at once, and nothing starts the window again.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestARoleChangeKeepsTheCountAndMovesOnlyTheLimit(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	src := &scriptedSource{policy: rolePolicy()}
@@ -44,6 +46,8 @@ func TestARoleChangeKeepsTheCountAndMovesOnlyTheLimit(t *testing.T) {
 }
 
 // One usage read judges each holder against its own roles.
+//
+//testdb:serial flushes and reads the package's one Redis database
 func TestUsageJudgesEachHolderByItsOwnRoles(t *testing.T) {
 	at := time.Date(2026, 10, 14, 10, 0, 0, 0, time.UTC)
 	meter := NewWithClock(redistest.Client(t), Limits{}, DefaultWindow, frozen(&at)).

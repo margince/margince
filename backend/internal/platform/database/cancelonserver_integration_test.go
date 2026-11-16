@@ -8,20 +8,21 @@ package database_test
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // A cancelled statement ends on the server, for a pool and for a single
 // connection alike. A thread wait cancelled in Go gives up its barrier only
 // because of this: a backend blocked on a lock never reads its socket.
 func TestACancelledStatementEndsOnTheServer(t *testing.T) {
+	t.Parallel()
 	ctx, pool := laneEnv(t)
-	single, err := pgx.Connect(ctx, os.Getenv("MARGINCE_TEST_DSN"))
+	single, err := pgx.Connect(ctx, testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}

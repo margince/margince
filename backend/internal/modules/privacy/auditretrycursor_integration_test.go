@@ -20,6 +20,7 @@ import (
 )
 
 func TestAuditRetryCursorCountsHeldRowsAgainstItsPageAndContinues(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	withAuditRetryFixture(t, e, func(ctx context.Context) {
 		var start, boundary, later ids.UUID
@@ -76,6 +77,7 @@ func TestAuditRetryCursorCountsHeldRowsAgainstItsPageAndContinues(t *testing.T) 
 }
 
 func TestAuditRetrySweepReturnsToHeldLinkedCopiesAfterRelease(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	withAuditRetryFixture(t, e, func(ctx context.Context) {
 		var original, subject ids.UUID

@@ -15,7 +15,6 @@ import (
 	"errors"
 	"io"
 	"log/slog"
-	"os"
 	"slices"
 	"testing"
 	"time"
@@ -51,39 +50,15 @@ func (noopWorker) Work(context.Context, *river.Job[noopArgs]) error { return nil
 // tables. The pool is returned alongside the runner so callers can open their
 // own transactions (e.g. to exercise EnqueueTx*).
 //
-// The schema is brought to head once per test process (testdb.EnsureSchema) and
-// only the data is reset between tests (testdb.Reset) — the discipline
-// backend/gates/integrationmigrateonce_test.go enforces module-wide. The app-role
-// reach this suite asserts rests on GRANT USAGE ON SCHEMA public TO
-// margince_app, which EnsureSchema issues itself when it rebuilds the schema
-// and a lane clone carries from core 0015 when EnsureSchema reuses one.
+// The app-role reach this suite asserts rests on GRANT USAGE ON SCHEMA public
+// TO margince_app, which the test's copy of the template carries from core 0015.
 func migratedAppPool(t *testing.T, register ...func(*river.Workers)) (*jobs.Runner, *pgxpool.Pool) {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := t.Context()
 
-	owner, err := pgx.Connect(ctx, ownerDSN)
-	if err != nil {
-		t.Fatalf("connecting as owner: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := owner.Close(context.Background()); err != nil {
-			t.Errorf("closing owner connection: %v", err)
-		}
-	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatalf("migrating the test schema: %v", err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatalf("resetting test data: %v", err)
-	}
-
 	// River schema is applied on the owner pool, exactly as cmd/migrate does.
-	ownerPool, err := testdb.OwnPool(ctx, ownerDSN)
+	ownerPool, err := testdb.OwnPool(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatalf("opening owner pool: %v", err)
 	}
@@ -93,7 +68,7 @@ func migratedAppPool(t *testing.T, register ...func(*river.Workers)) (*jobs.Runn
 	}
 
 	// The runner runs on the app role — the same role the worker uses.
-	appPool, err := testdb.OwnPool(ctx, appDSN)
+	appPool, err := testdb.OwnPool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatalf("opening app pool: %v", err)
 	}
@@ -138,6 +113,7 @@ const riverLifecycleBudget = 30 * time.Second
 // one job claimed, worked and completed, then a graceful drain. The only
 // kind that may have reached the table afterwards is the one enqueued here.
 func TestRiversOwnMaintenanceWritesNoJobRowsOfItsOwn(t *testing.T) {
+	t.Parallel()
 	r, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -190,6 +166,7 @@ func TestRiversOwnMaintenanceWritesNoJobRowsOfItsOwn(t *testing.T) {
 }
 
 func TestRunnerStartsAndStopsCleanlyAsAppRole(t *testing.T) {
+	t.Parallel()
 	r, _ := migratedAppPool(t)
 	ctx := t.Context()
 	if err := r.Start(ctx); err != nil {
@@ -205,6 +182,7 @@ func TestRunnerStartsAndStopsCleanlyAsAppRole(t *testing.T) {
 // tells the two outcomes apart without an error — the first insert lands,
 // the second is River's own dedupe, not a failure.
 func TestEnqueueTxUniqueSurfacesDedupeOutcome(t *testing.T) {
+	t.Parallel()
 	r, pool := migratedAppPool(t)
 	ctx := t.Context()
 

@@ -11,7 +11,6 @@ package snapshotreads_test
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -23,11 +22,7 @@ import (
 
 func pool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
-	p, err := testdb.OwnPool(context.Background(), dsn)
+	p, err := testdb.OwnPool(context.Background(), testdb.For(t).OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,6 +58,7 @@ func (c *counted) read(ctx context.Context, tx pgx.Tx) func() (int, error) {
 }
 
 func TestASnapshotAnswersOneKeyOnceAcrossItsSavepoints(t *testing.T) {
+	t.Parallel()
 	for _, level := range []pgx.TxIsoLevel{pgx.RepeatableRead, pgx.Serializable} {
 		inTx(t, pool(t), level, func(tx pgx.Tx) {
 			ctx, release := snapshotreads.Open(context.Background(), tx)
@@ -97,6 +93,7 @@ func TestASnapshotAnswersOneKeyOnceAcrossItsSavepoints(t *testing.T) {
 }
 
 func TestReadCommittedReadsEveryTime(t *testing.T) {
+	t.Parallel()
 	inTx(t, pool(t), pgx.ReadCommitted, func(tx pgx.Tx) {
 		ctx, release := snapshotreads.Open(context.Background(), tx)
 		defer release()
@@ -113,6 +110,7 @@ func TestReadCommittedReadsEveryTime(t *testing.T) {
 }
 
 func TestFailuresAndCancellationAreNeverRemembered(t *testing.T) {
+	t.Parallel()
 	inTx(t, pool(t), pgx.RepeatableRead, func(tx pgx.Tx) {
 		ctx, release := snapshotreads.Open(context.Background(), tx)
 		defer release()
@@ -154,6 +152,7 @@ func TestFailuresAndCancellationAreNeverRemembered(t *testing.T) {
 }
 
 func TestAMemoEndsWithItsReleaseAndStaysOnItsConnection(t *testing.T) {
+	t.Parallel()
 	p := pool(t)
 	inTx(t, p, pgx.RepeatableRead, func(tx pgx.Tx) {
 		ctx, release := snapshotreads.Open(context.Background(), tx)

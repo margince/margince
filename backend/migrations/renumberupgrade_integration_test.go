@@ -188,6 +188,7 @@ func declaredIn(t *testing.T, nss []dbmigrate.Namespace) int {
 }
 
 func TestAnOldHeadDatabaseUpgradesToTheFreshSchema(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	fresh := freshCatalog(t, conn)
@@ -221,6 +222,7 @@ func TestAnOldHeadDatabaseUpgradesToTheFreshSchema(t *testing.T) {
 // The old database stopped halfway through the renumbered block: some old
 // versions are applied, the rest of the block is still to run.
 func TestAPartlyMigratedOldHeadUpgradesToTheFreshSchema(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	fresh := freshCatalog(t, conn)
@@ -241,6 +243,7 @@ func TestAPartlyMigratedOldHeadUpgradesToTheFreshSchema(t *testing.T) {
 // or an earlier binary could leave them. The rest still move, and a second
 // run changes nothing.
 func TestAHalfReconciledLedgerFinishesAndStaysFinished(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	fresh := freshCatalog(t, conn)
@@ -281,6 +284,7 @@ func TestAHalfReconciledLedgerFinishesAndStaysFinished(t *testing.T) {
 // Each refusal is an old row the renumber cannot be proved from. Up must
 // stop before it moves any row or applies any migration.
 func TestAnUnprovableOldRowStopsTheUpgradeBeforeAnyChange(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	old := oldHead(t)
@@ -348,6 +352,7 @@ func TestAnUnprovableOldRowStopsTheUpgradeBeforeAnyChange(t *testing.T) {
 // repair writes. So the repair changes nothing there, and a later change to the
 // meeting rule cannot leave it writing a stale body unnoticed.
 func TestTheActivityClockRepairWritesTheBodiesAFreshDatabaseHas(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	repair, _ := repairAndPrior(t)

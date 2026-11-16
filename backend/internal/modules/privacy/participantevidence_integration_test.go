@@ -16,6 +16,7 @@ import (
 )
 
 func TestBothPrivacyActsClearProjectedParticipantDomains(t *testing.T) {
+	t.Parallel()
 	acts := map[string]func(context.Context, pgx.Tx, ids.ContactID, []string) error{
 		"erasure": func(ctx context.Context, tx pgx.Tx, subject ids.ContactID, emails []string) error {
 			return scrubSubjectFromParticipants(ctx, tx, subject, emails, nil)

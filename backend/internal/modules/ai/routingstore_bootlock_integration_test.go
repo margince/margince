@@ -18,6 +18,7 @@ import (
 // A boot-set binding is kept or refused as it stands, so neither a resend nor
 // a change asks Google about a location.
 func TestALockedVertexBindingIsNeverProbed(t *testing.T) {
+	t.Parallel()
 	e := setupRateStore(t)
 	_, wsCtx := e.seedWorkspace(context.Background(), t)
 	ctx := routingWriter(wsCtx)

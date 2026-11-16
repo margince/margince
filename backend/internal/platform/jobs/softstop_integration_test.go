@@ -93,6 +93,7 @@ func awaitStarted(t *testing.T, held *heldWorker) {
 }
 
 func TestASignalLetsARunningJobFinishAndFetchesNothingNew(t *testing.T) {
+	t.Parallel()
 	held := newHeldWorker()
 	r, inserter := softStopRunner(t, held, riverLifecycleBudget)
 	completed, unsubscribe := r.SubscribeCompleted()
@@ -148,6 +149,7 @@ func TestASignalLetsARunningJobFinishAndFetchesNothingNew(t *testing.T) {
 }
 
 func TestAJobThatOverrunsTheDrainWindowIsCancelled(t *testing.T) {
+	t.Parallel()
 	const window = 300 * time.Millisecond
 	held := newHeldWorker()
 	r, inserter := softStopRunner(t, held, window)

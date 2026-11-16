@@ -141,6 +141,7 @@ func unitFor(snap jobs.Snapshot, kind string) (jobs.SweepUnit, bool) {
 // workspace, and a dispatcher reports the empty string rather than being
 // silently grouped with one.
 func TestStatsCountsLiveWorkAndNamesTheWorkspaceThatOwnsIt(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	ws := ids.NewV7()
@@ -170,6 +171,7 @@ func TestStatsCountsLiveWorkAndNamesTheWorkspaceThatOwnsIt(t *testing.T) {
 // history, not queue depth. Without this the gauges only fall when River's
 // cleaner runs.
 func TestStatsExcludesCompletedWorkFromTheRuntimeGauges(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	seedJob(ctx, t, pool, seed{Kind: "done", State: "completed"})
@@ -191,6 +193,7 @@ func TestStatsExcludesCompletedWorkFromTheRuntimeGauges(t *testing.T) {
 // its own now(): subtracting a database timestamp from the app clock is a
 // live intermittent flake elsewhere in this tree.
 func TestStatsMeasuresTheAgeOfRunnableWorkOnlyAndInTheDatabasesOwnClock(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	anHourAgo := time.Now().Add(-time.Hour)
@@ -242,6 +245,7 @@ func TestStatsMeasuresTheAgeOfRunnableWorkOnlyAndInTheDatabasesOwnClock(t *testi
 // The two must be distinguishable in the snapshot or the renderer cannot
 // tell them apart either.
 func TestAPresentButEmptyWorkspaceIsNotReportedAsADispatcher(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -294,6 +298,7 @@ func TestAPresentButEmptyWorkspaceIsNotReportedAsADispatcher(t *testing.T) {
 // admitted as a workspace of its own inflates the fleet with a phantom
 // tenant. It is excluded by the same test the state read uses.
 func TestASweepChildWithAnEmptyWorkspaceIsNotCountedAsATenant(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	tenant := ids.NewV7()
@@ -330,6 +335,7 @@ func TestASweepChildWithAnEmptyWorkspaceIsNotCountedAsATenant(t *testing.T) {
 // fan-out — and asserts the fleet is still reported whole. A fixture that
 // gives every row the same timestamp proves the fixture, not the query.
 func TestSweepCountsEachWorkspacesLatestOutcomeAndSurvivesADeduplicatedRetry(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	older, newer := time.Now().Add(-2*time.Hour), time.Now().Add(-1*time.Hour)
@@ -404,6 +410,7 @@ func TestSweepCountsEachWorkspacesLatestOutcomeAndSurvivesADeduplicatedRetry(t *
 // per connection are read at all, so a fixture kind would prove a query that
 // never runs.
 func TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-1*time.Hour)
@@ -456,6 +463,7 @@ func TestTheUnitPairSeesAFailedConnectionTheWorkspacePairMasks(t *testing.T) {
 // or its number would be published twice and an operator summing the pairs
 // would double-count the fleet.
 func TestTheUnitPairIgnoresAnUntaggedRowAndAWorkspaceGrainedKind(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	ws := ids.NewV7()
@@ -495,6 +503,7 @@ func TestTheUnitPairIgnoresAnUntaggedRowAndAWorkspaceGrainedKind(t *testing.T) {
 // InsertOpts merge that dropped them, fails here rather than silently
 // emptying the sweep gauges in production.
 func TestARealRiverInsertCarriesTheSweepTagIntoTheColumnTheReadFiltersOn(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -550,6 +559,7 @@ func (taggedWorker) Work(context.Context, *river.Job[taggedArgs]) error { return
 // TestSweepIgnoresAWorkspacesSupersededFailure — the mirror of the above. A
 // workspace that failed and then succeeded is not a tenant being missed.
 func TestSweepIgnoresAWorkspacesSupersededFailure(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	ws := ids.NewV7()
@@ -586,6 +596,7 @@ func TestSweepIgnoresAWorkspacesSupersededFailure(t *testing.T) {
 // the per-kind arm. gmail_sync is a REAL declared dispatcher (FanOutTo:
 // "capture_sync") and is the case that would actually catch that mistake.
 func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	seedJob(ctx, t, pool, seed{
@@ -619,6 +630,7 @@ func TestSweepOmitsADispatchersOwnRow(t *testing.T) {
 // telegram_poll: the standalone-kind arm is derived from the contract, so a
 // fixture kind would prove a query that never runs.
 func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -648,6 +660,7 @@ func TestSweepCountsAStandaloneFleetPassByKindNotByWorkspace(t *testing.T) {
 // holds for the per-kind arm: an earlier failing tick a later successful
 // one supersedes must not still read as failed.
 func TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
@@ -684,6 +697,7 @@ func TestSweepReadsOnlyTheLatestTickOfAStandaloneFleetPass(t *testing.T) {
 // without it, a row shaped like the second one below would be read by BOTH
 // arms and summed into one inflated count by the outer GROUP BY.
 func TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -717,6 +731,7 @@ func TestSweepDoesNotDoubleCountAStandaloneKindsRowThatCarriesAWorkspaceID(t *te
 // case. A fleet with nothing queued is a real state, and the reader above
 // must be able to tell it from a failed read.
 func TestStatsOnAnEmptyJobTableIsAnEmptySnapshotNotAnError(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 
 	snap, err := jobs.Stats(t.Context(), pool)
@@ -738,6 +753,7 @@ func TestStatsOnAnEmptyJobTableIsAnEmptySnapshotNotAnError(t *testing.T) {
 // proving nothing. It issues no query of its own, so a query-counting check
 // will read it as infra-free; it is not.
 func TestStatsFailsLoudlyWhenTheJobTableIsUnreachable(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 
 	cancelled, cancel := context.WithCancel(t.Context())
@@ -754,6 +770,7 @@ func TestStatsFailsLoudlyWhenTheJobTableIsUnreachable(t *testing.T) {
 // an unfinished successor almost all the time, so reading the newest row as the
 // outcome let every discard read as healthy.
 func TestAPendingNextTickDoesNotMaskADiscardedStandalonePass(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	earlier, later := time.Now().Add(-2*time.Hour), time.Now().Add(-time.Hour)
@@ -788,6 +805,7 @@ func TestAPendingNextTickDoesNotMaskADiscardedStandalonePass(t *testing.T) {
 // The same at workspace grain, because it is the same defect: one tenant's share
 // discarded, and a newer unfinished child of the next pass over it.
 func TestAPendingNextChildDoesNotMaskAWorkspacesDiscardedShare(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	ws := ids.NewV7()
@@ -822,6 +840,7 @@ func TestAPendingNextChildDoesNotMaskAWorkspacesDiscardedShare(t *testing.T) {
 // A pass with nothing finished yet reports no outcome either way, which is what
 // keeps the fix from inventing a failure out of silence.
 func TestAPassWithNothingEndedYetReportsNoFailure(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 
@@ -850,6 +869,7 @@ func TestAPassWithNothingEndedYetReportsNoFailure(t *testing.T) {
 // sentence stops being true: a connection whose share was discarded kept reading
 // healthy while its retry was merely pending.
 func TestAPendingNextChildDoesNotMaskADiscardedUnit(t *testing.T) {
+	t.Parallel()
 	_, pool := migratedAppPool(t)
 	ctx := t.Context()
 	ws, conn := ids.NewV7(), ids.NewV7()

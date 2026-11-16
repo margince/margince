@@ -15,6 +15,7 @@ import (
 )
 
 func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	seeder := newDealSeeder(t, e)
 	target := seeder.deal(t)
@@ -109,6 +110,7 @@ func TestPersonalDecisionsRemainReachableBehindATeamBacklog(t *testing.T) {
 }
 
 func TestADelegatedAgentDecisionReachesItsRequestingSeat(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	target := newDealSeeder(t, e).deal(t)
 	id, err := e.svc.Stage(e.asAgent(t), StageInput{

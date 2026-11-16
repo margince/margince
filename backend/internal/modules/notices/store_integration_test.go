@@ -13,7 +13,6 @@ package notices
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -37,13 +36,9 @@ type noticeEnv struct {
 
 func setupNotices(t *testing.T) *noticeEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,12 +47,6 @@ func setupNotices(t *testing.T) *noticeEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	e := &noticeEnv{owner: owner, ws: ids.NewV7(), recipient: ids.New[ids.UserKind](), other: ids.New[ids.UserKind]()}
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
@@ -69,7 +58,7 @@ func setupNotices(t *testing.T) *noticeEnv {
 			t.Fatal(err)
 		}
 	}
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -111,6 +100,7 @@ func (e *noticeEnv) asUser(u ids.UserID) context.Context {
 // this call's words describes a notice that exists nowhere — the reader cannot
 // find it, and the database does not say it.
 func TestARepeatAnswersWithTheStoredNoticeRatherThanTheReplay(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	key := "lead_sla:" + ids.NewV7().String()
 	firstTarget := Target{Type: "deal", ID: ids.NewV7()}
@@ -146,6 +136,7 @@ func TestARepeatAnswersWithTheStoredNoticeRatherThanTheReplay(t *testing.T) {
 // A notice that names a record carries it back out, so the Worklist row can
 // link to the thing the sentence is about.
 func TestANoticeCarriesTheRecordItNames(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	target := Target{Type: "deal", ID: ids.NewV7()}
 
@@ -185,6 +176,7 @@ func TestANoticeCarriesTheRecordItNames(t *testing.T) {
 // A notice about no record carries neither half, and the table's paired
 // constraint is what says it cannot carry one.
 func TestANoticeAboutNoRecordCarriesNeitherHalf(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	written, err := e.store.insertNotice(e.engineCtx(), NewNotice{
@@ -212,6 +204,7 @@ func TestANoticeAboutNoRecordCarriesNeitherHalf(t *testing.T) {
 }
 
 func TestANoticeCarryingAKeyIsWrittenOncePerRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	again := NewNotice{
 		Recipient: e.recipient, Kind: "lead_sla", Subject: "SLA breach",
@@ -273,6 +266,7 @@ func TestANoticeCarryingAKeyIsWrittenOncePerRecipient(t *testing.T) {
 // than an oversight: most notices are addressed by a human act and have no
 // event to key on, and two of them are two real notices.
 func TestANoticeWithoutAKeyIsWrittenEveryTime(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	unkeyed := NewNotice{Recipient: e.recipient, Kind: "automation", Subject: "Deal moved"}
 	first, err := e.store.Create(e.engineCtx(), unkeyed)
@@ -289,6 +283,7 @@ func TestANoticeWithoutAKeyIsWrittenEveryTime(t *testing.T) {
 }
 
 func TestANoticeIsCreatedInTheWriteShapeAndSettledOnce(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	id, err := e.store.Create(e.engineCtx(), NewNotice{
 		Recipient: e.recipient, Kind: "automation", Subject: "Deal moved", Body: "The rule fired.",
@@ -360,6 +355,7 @@ func TestANoticeIsCreatedInTheWriteShapeAndSettledOnce(t *testing.T) {
 }
 
 func TestANoticeToNobodyFailsLoudly(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if _, err := e.store.Create(e.engineCtx(), NewNotice{
 		Recipient: ids.New[ids.UserKind](), Kind: "automation", Subject: "orphan",

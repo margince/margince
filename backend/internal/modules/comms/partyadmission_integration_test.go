@@ -15,6 +15,7 @@ import (
 )
 
 func TestPostReceiptAdmissionCannotReopenAnAcceptedDelivery(t *testing.T) {
+	t.Parallel()
 	for _, failure := range []string{"error", "panic"} {
 		t.Run(failure, func(t *testing.T) {
 			e := setupStore(t)

@@ -72,6 +72,7 @@ func recordDecisionOutcomes(ctx context.Context, t *testing.T, meter *CallMeter)
 }
 
 func TestDecisionSummaryCountsEachConsultationOnce(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	recordDecisionOutcomes(ctx, t, NewCallMeter(env.dbFor(ws)))
@@ -97,6 +98,7 @@ func TestDecisionSummaryCountsEachConsultationOnce(t *testing.T) {
 }
 
 func TestDecisionSummaryOfAnEmptyWindowIsEmpty(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, _ := env.seedWorkspace(context.Background(), t)
 	now := time.Now().UTC()
@@ -107,6 +109,7 @@ func TestDecisionSummaryOfAnEmptyWindowIsEmpty(t *testing.T) {
 }
 
 func TestDecisionSummaryRefusesAReaderWithoutTheDiagnosticsGrant(t *testing.T) {
+	t.Parallel()
 	env := setupRateStore(t)
 	ws, ctx := env.seedWorkspace(context.Background(), t)
 	recordDecisionOutcomes(ctx, t, NewCallMeter(env.dbFor(ws)))

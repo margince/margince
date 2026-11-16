@@ -67,6 +67,7 @@ func (e *stagingEnv) markOf(t *testing.T, id ids.ApprovalID) time.Time {
 }
 
 func TestAnAcknowledgedFailureLeavesItsDecidersListAndANewFailureReturns(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	effect := &flakyEffect{e: e, failing: true}
 	deciding := e.asHumanWith(decidesEverything())
@@ -138,6 +139,7 @@ func TestAnAcknowledgedFailureLeavesItsDecidersListAndANewFailureReturns(t *test
 // The reader acknowledges the failure they were shown. A failure recorded
 // after it is one they have not seen, so it stays.
 func TestAnAcknowledgementOfAnOlderFailureIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deciding := e.asHumanWith(decidesEverything())
 	id := e.failedDecision(deciding, t, (&flakyEffect{e: e, failing: true}).run)
@@ -157,6 +159,7 @@ func TestAnAcknowledgementOfAnOlderFailureIsRefused(t *testing.T) {
 // Retry is offered only where the approve endpoint would run the work again,
 // which needs a registered effect for the kind.
 func TestAFailureWithNoEffectToRerunIsNotOfferedForRetry(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deciding := e.asHumanWith(decidesEverything())
 	id := e.failedDecision(deciding, t, (&flakyEffect{e: e, failing: true}).run)
@@ -175,6 +178,7 @@ func TestAFailureWithNoEffectToRerunIsNotOfferedForRetry(t *testing.T) {
 // there could only fail again, so it is not offered, and approving again is
 // answered as already decided rather than run.
 func TestAFailurePastTheRedemptionWindowIsNotOfferedForRetry(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deciding := e.asHumanWith(decidesEverything())
 	id := e.failedDecision(deciding, t, (&flakyEffect{e: e, failing: true}).run)
@@ -197,6 +201,7 @@ func TestAFailurePastTheRedemptionWindowIsNotOfferedForRetry(t *testing.T) {
 // Some effects redeem first and then call out. When the call fails the row is
 // already redeemed, and its decider must still be told.
 func TestAFailureAfterTheRedemptionReachesTheDecider(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	deciding := e.asHumanWith(decidesEverything())
 	redeemsThenFails := func(ctx context.Context, id ids.ApprovalID, _ json.RawMessage, diffHash string) error {
@@ -219,6 +224,7 @@ func TestAFailureAfterTheRedemptionReachesTheDecider(t *testing.T) {
 // The decider's agent clears a failure from the decider's list. It reads the
 // same list, and its acknowledgement is its own in the audit row.
 func TestAnAgentAcknowledgesAFailureItsUserDecided(t *testing.T) {
+	t.Parallel()
 	e := setupStaging(t)
 	effect := &flakyEffect{e: e, failing: true}
 	deciding := e.asHumanWith(decidesEverything())

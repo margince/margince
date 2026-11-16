@@ -18,6 +18,7 @@ import (
 )
 
 func TestStandingExceptionsArePagedAndCanBeRevoked(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	wanted := make(map[ids.UUID]bool)
 	for range 3 {
@@ -59,6 +60,7 @@ func TestStandingExceptionsArePagedAndCanBeRevoked(t *testing.T) {
 }
 
 func TestStandingExceptionReadUsesContactAccessAndRevocationAuthority(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	id := recordedOverrideAs(e.ctx, t, e.store, e.contact, "requested_followup")
 	actor, ok := principal.Actor(e.ctx)
@@ -95,6 +97,7 @@ func TestStandingExceptionReadUsesContactAccessAndRevocationAuthority(t *testing
 }
 
 func TestCarriedStandingExceptionKeepsItsOriginalAuthorAndCompany(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	recorder := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `INSERT INTO app_user (id, email, display_name)
@@ -138,6 +141,7 @@ func TestCarriedStandingExceptionKeepsItsOriginalAuthorAndCompany(t *testing.T) 
 }
 
 func TestAStandingExceptionDoesNotAcquireTheReadersNewCompany(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	recordedOverrideAs(e.ctx, t, e.store, e.contact, "requested_followup")
 	before, _, err := e.store.ListContactOverrides(e.ctx, e.contact, 50, "")
@@ -181,6 +185,7 @@ func overrideTestCompany(t *testing.T, e *channelConsentEnv, user ids.UUID, name
 }
 
 func TestAnUnmarkedStandingExceptionDoesNotInventItsOrigin(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	id := recordedOverrideAs(e.ctx, t, e.store, e.contact, "requested_followup")
 	if _, err := e.owner.Exec(context.Background(), `UPDATE communication_override SET recorded_directly = NULL WHERE id = $1`, id); err != nil {

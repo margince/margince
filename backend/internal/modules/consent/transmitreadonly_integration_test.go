@@ -14,6 +14,7 @@ import (
 )
 
 func TestTheFinalSendReaderCannotTakeDomainRowLocksOrWrite(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	for _, statement := range []string{
 		"SELECT 1 FROM contact FOR UPDATE",

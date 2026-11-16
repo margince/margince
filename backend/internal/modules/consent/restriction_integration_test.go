@@ -71,6 +71,7 @@ func (e *dsrEnv) fulfilOverHTTP(ctx context.Context, t *testing.T, request ids.U
 }
 
 func TestFulfillingARestrictionRequestRecordsOneRestriction(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	contact := e.seedContact(t)
 	req := e.mustCreate(t, dsrKindRestriction, contact.String())
@@ -113,6 +114,7 @@ func TestFulfillingARestrictionRequestRecordsOneRestriction(t *testing.T) {
 }
 
 func TestOnlyAnAdminInTheAppFulfilsARestriction(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	refused := map[string]context.Context{
 		"an agent": e.asActor(t, func(p *principal.Principal) {
@@ -135,6 +137,7 @@ func TestOnlyAnAdminInTheAppFulfilsARestriction(t *testing.T) {
 }
 
 func TestARestrictionRequestIsNotClosedByHand(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	req := e.mustCreate(t, dsrKindRestriction, e.seedContact(t).String())
 	_, err := e.store.UpdateDSR(e.ctx, req.ID, UpdateDSRInput{
@@ -147,6 +150,7 @@ func TestARestrictionRequestIsNotClosedByHand(t *testing.T) {
 }
 
 func TestARestrictionRequestNamingNoContactIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	req := e.mustCreate(t, dsrKindRestriction, "anna.weber@brandt-automotive.de")
 	w := e.fulfilOverHTTP(e.ctx, t, req.ID)
@@ -156,6 +160,7 @@ func TestARestrictionRequestNamingNoContactIsRefused(t *testing.T) {
 }
 
 func TestTheStopDoorTakesARestrictionFromAnAdminOnly(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	contact := e.seedContact(t)
 	in := SuppressInput{ContactID: contact, Kind: kindProcessingRestriction}

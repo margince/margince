@@ -23,6 +23,8 @@ import (
 // execute runs the corrections through the executor and never through the
 // operation that queues work for a worker. Both are replaced, so the command's
 // own wiring is what is under test.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDataTasksExecuteRunsInProcessAndQueuesNothing(t *testing.T) {
 	dsn := migratedDatabase(t, "_dtexec")
 	savedOp, savedExec := dataTaskOperation, dataTaskExecutor

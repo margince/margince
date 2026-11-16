@@ -56,6 +56,7 @@ func (e *dsrEnv) file(t *testing.T, h Handlers, body string) (int, crmcontracts.
 // A request filed without a date gets the deadline the selected jurisdiction
 // gives its kind, counted from when it arrived, and names the rule.
 func TestAManualRequestGetsTheComputedDeadline(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	received := time.Date(2026, time.January, 31, 9, 0, 0, 0, time.UTC)
 	at := received.Format(time.RFC3339)
@@ -80,6 +81,7 @@ func TestAManualRequestGetsTheComputedDeadline(t *testing.T) {
 // A deadline later than the law's would show a request as on time on a day it
 // is already late. It is refused, and nothing is stored.
 func TestADeadlineLaterThanTheComputedOneIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	received := time.Now().UTC().Add(-time.Hour)
 	late := received.Add(73 * time.Hour).Format(time.RFC3339)
@@ -124,6 +126,7 @@ func TestADeadlineBeforeTheRequestArrivedIsRefused(t *testing.T) {
 // A request cannot have arrived in the future: that would grant days the
 // subject is not owed.
 func TestARequestReceivedInTheFutureIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	future := time.Now().Add(48 * time.Hour).UTC().Format(time.RFC3339)
 	status, _, field := e.file(t, e.handlers(), `{"kind":"access","subject_ref":"f@dsr.test","received_at":"`+future+`"}`)
@@ -134,6 +137,7 @@ func TestARequestReceivedInTheFutureIsRefused(t *testing.T) {
 
 // The form's preview and the filing come from one resolver.
 func TestTheDeadlinePreviewMatchesTheFiling(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	received := time.Date(2026, time.March, 31, 12, 0, 0, 0, time.UTC)
 	h := e.underDeadlinePack()
@@ -157,6 +161,7 @@ func TestTheDeadlinePreviewMatchesTheFiling(t *testing.T) {
 // The preview refuses what filing refuses: a request cannot have arrived
 // tomorrow.
 func TestTheDeadlinePreviewRefusesAFutureArrival(t *testing.T) {
+	t.Parallel()
 	e := setupDSR(t)
 	tomorrow := time.Now().Add(24 * time.Hour)
 	r, err := http.NewRequestWithContext(e.ctx, http.MethodGet, "/v1/data-subject-requests/deadline", nil)

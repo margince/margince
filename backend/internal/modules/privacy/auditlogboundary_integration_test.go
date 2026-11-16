@@ -22,7 +22,6 @@ package privacy
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -53,12 +52,9 @@ type auditBoundaryEnv struct {
 
 func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,9 +63,6 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	ws, user, contact := ids.NewV7(), ids.NewV7(), ids.New[ids.ContactKind]()
 	other := ids.NewV7()
@@ -94,7 +87,7 @@ func setupAuditBoundary(t *testing.T) *auditBoundaryEnv {
 		}
 	}
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,6 +194,7 @@ var (
 // The disclosure this closes: a name the subject typed, recorded before the
 // erasure that deleted it, read back out of the spine afterwards.
 func TestAnImageWrittenBeforeAnErasureIsWithheld(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	edit := e.auditRow(t, "update", boundaryEarlier,
 		`{"full_name":"Sara Subject"}`, `{"full_name":"Sara Renamed"}`)
@@ -216,6 +210,7 @@ func TestAnImageWrittenBeforeAnErasureIsWithheld(t *testing.T) {
 // itself stays, because a compliance log that hid the write would answer "did
 // anybody change this record" with a lie.
 func TestTheWriteItselfSurvivesTheErasure(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	edit := e.auditRow(t, "update", boundaryEarlier,
 		`{"full_name":"Sara Subject"}`, `{"full_name":"Sara Renamed"}`)
@@ -235,6 +230,7 @@ func TestTheWriteItselfSurvivesTheErasure(t *testing.T) {
 // A write AFTER the scrub is about data the erasure did not touch, so it reads
 // whole. Without this the rule would be satisfied by withholding everything.
 func TestAnImageWrittenAfterAnErasureIsReadable(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	e.auditRow(t, "erase", boundaryErasure, "", "")
 	later := e.auditRow(t, "update", boundaryLater,
@@ -248,6 +244,7 @@ func TestAnImageWrittenAfterAnErasureIsReadable(t *testing.T) {
 
 // A record nobody erased is untouched by any of this.
 func TestARecordWithNoScrubKeepsEveryImage(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	edit := e.auditRow(t, "update", boundaryEarlier,
 		`{"full_name":"Sara Subject"}`, `{"full_name":"Sara Renamed"}`)
@@ -263,6 +260,7 @@ func TestARecordWithNoScrubKeepsEveryImage(t *testing.T) {
 // the subject, so images captured before it are as gone to a reader as an
 // erase's.
 func TestEveryScrubVerbMovesTheBoundary(t *testing.T) {
+	t.Parallel()
 	for _, verb := range []string{"erase", "anonymize", "restrict"} {
 		t.Run(verb, func(t *testing.T) {
 			// A fixture of its own: each case writes a scrub row for the SAME
@@ -288,6 +286,7 @@ func TestEveryScrubVerbMovesTheBoundary(t *testing.T) {
 // otherwise "which passport did this" is unanswerable for exactly the writes
 // that most need to be answerable.
 func TestAnAgentsRowKeepsThePassportAndTheContactBehindIt(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	id, passport, onBehalfOf := e.agentRow(t, boundaryEarlier)
 
@@ -312,6 +311,7 @@ func TestAnAgentsRowKeepsThePassportAndTheContactBehindIt(t *testing.T) {
 // And the same row after a scrub: the envelope still answers who did it, while
 // the image it carried does not.
 func TestAnAgentsRowKeepsItsEnvelopeAndLosesItsImage(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	id, passport, _ := e.agentRow(t, boundaryEarlier)
 	e.auditRow(t, "erase", boundaryErasure, "", "")
@@ -335,6 +335,7 @@ func TestAnAgentsRowKeepsItsEnvelopeAndLosesItsImage(t *testing.T) {
 // filter below narrows to the same pre-scrub edit, and every one of them must
 // answer with the image withheld.
 func TestTheBoundaryHoldsOnEveryNarrowedPage(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	edit := e.auditRow(t, "update", boundaryEarlier,
 		`{"full_name":"Sara Subject"}`, `{"full_name":"Sara Renamed"}`)
@@ -370,6 +371,7 @@ func TestTheBoundaryHoldsOnEveryNarrowedPage(t *testing.T) {
 // so a second page is judged by the same rule the first was — and a boundary
 // that held only on the page a reader happens to land on would be no boundary.
 func TestTheBoundaryHoldsOnThePageAfterTheFirst(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	for i := range 4 {
 		e.auditRow(t, "update", boundaryEarlier.Add(time.Duration(i)*time.Minute),
@@ -410,6 +412,7 @@ func TestTheBoundaryHoldsOnThePageAfterTheFirst(t *testing.T) {
 // the only door they were ever readable through, and the boundary only fires
 // where a tombstone exists.
 func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
+	t.Parallel()
 	for _, entityType := range []string{"attachment", "scheduled_send"} {
 		t.Run(entityType, func(t *testing.T) {
 			e := setupAuditBoundary(t)
@@ -449,6 +452,7 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 // erasure here on purpose — a tombstone withholds the image on its own, so a
 // case that had one would pass whichever way this resolved.
 func TestAnAttachmentWithNoRowLeftIsWithheldRatherThanReleased(t *testing.T) {
+	t.Parallel()
 	e := setupAuditBoundary(t)
 	entityType := "attachment"
 	id := ids.NewV7()

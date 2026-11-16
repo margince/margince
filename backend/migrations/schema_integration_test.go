@@ -17,7 +17,6 @@ package migrations_test
 import (
 	"context"
 	"errors"
-	"os"
 	"strings"
 	"testing"
 
@@ -25,18 +24,16 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/migrations"
 )
 
-// ownerDSN administers the throwaway test database; appDSNFmt is the
-// non-owner runtime role RLS must bind.
-func dsns(t *testing.T) (owner string, appFmt string) {
+// dsns answers the test's own database as its owner, who rewinds and
+// replays migrations on it, and as the non-owner runtime role.
+func dsns(t *testing.T) (owner string, app string) {
 	t.Helper()
-	owner = os.Getenv("MARGINCE_TEST_DSN")
-	if owner == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
-	return owner, os.Getenv("MARGINCE_TEST_APP_DSN")
+	db := testdb.For(t)
+	return db.OwnerDSN, db.AppDSN
 }
 
 func connect(t *testing.T, dsn string) *pgx.Conn {
@@ -96,6 +93,7 @@ func resetSchema(t *testing.T, conn *pgx.Conn) {
 }
 
 func TestMigrations_applyReverseReapply(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -182,6 +180,7 @@ func inTx(t *testing.T, conn *pgx.Conn, fn func(pgx.Tx) error) error {
 }
 
 func TestVersionBumpAndSkewSemantics(t *testing.T) {
+	t.Parallel()
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -234,6 +233,7 @@ func TestVersionBumpAndSkewSemantics(t *testing.T) {
 }
 
 func TestAuditLogIsAppendOnly(t *testing.T) {
+	t.Parallel()
 	ownerDSN, appDSN := dsns(t)
 	owner := connect(t, ownerDSN)
 	headSchema(t, owner)
@@ -307,6 +307,7 @@ func seedLedgerRowsForReversal(t *testing.T, conn *pgx.Conn) {
 // what the source names rather than what the database has, then deletes the row
 // that was the only record of what it did apply.
 func TestMigrations_downRefusesAnEditedMigration(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
@@ -364,6 +365,7 @@ func TestMigrations_downRefusesAnEditedMigration(t *testing.T) {
 // predicate was already right and unread: what this pins is that the production
 // migrate path consults it.
 func TestMigrations_upRefusesAnEditedMigrationBeforeApplyingAny(t *testing.T) {
+	t.Parallel()
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)

@@ -67,6 +67,7 @@ func (e *noticeEnv) raiseAutomation(t *testing.T, recipient ids.UserID, subject 
 }
 
 func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	claimed, err := e.store.ClaimDigestRun(e.engineCtx(), e.recipient, digestWindow.Day)
@@ -116,6 +117,7 @@ func TestTheDigestClaimIsTakenOnceAndNeverReleased(t *testing.T) {
 // operator reads to find out why a message did not arrive must not fill up with
 // them.
 func TestADigestFailureWithoutAClaimIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 
 	err := e.store.DigestFailed(e.engineCtx(), e.recipient, digestWindow.Day, "relay refused")
@@ -130,6 +132,7 @@ func TestADigestFailureWithoutAClaimIsRefused(t *testing.T) {
 // so the store refuses rather than trusting its caller to have bound the right
 // seat.
 func TestAMorningDigestIsOnlyReadableByItsOwnRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if _, err := e.store.SaveNotificationPreference(
 		e.asUser(e.recipient), classAutomation, DeliveryDigest); err != nil {
@@ -159,6 +162,7 @@ func TestAMorningDigestIsOnlyReadableByItsOwnRecipient(t *testing.T) {
 // routing choice rather than from the presence of a notice: a colleague who
 // reads their queue on screen has notices waiting and is owed no message.
 func TestOnlySeatsWhoBatchedAClassAreDigestCandidates(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	if _, err := e.store.SaveNotificationPreference(
 		e.asUser(e.recipient), classAutomation, DeliveryDigest); err != nil {
@@ -190,6 +194,7 @@ func TestOnlySeatsWhoBatchedAClassAreDigestCandidates(t *testing.T) {
 }
 
 func TestOnlyTheRecipientOrSystemCanClaimADigest(t *testing.T) {
+	t.Parallel()
 	e := setupNotices(t)
 	for _, ctx := range []context.Context{context.Background(), e.asUser(e.other)} {
 		claimed, err := e.store.ClaimDigestRun(ctx, e.recipient, digestWindow.Day)

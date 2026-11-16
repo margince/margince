@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package database
+package database_test
 
 // What the pool's two ceilings are worth against a real server. A runtime
 // parameter that never reaches Postgres reads exactly like one that did: the
@@ -13,13 +13,14 @@ package database
 import (
 	"context"
 	"errors"
-	"os"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // queryCanceled is the SQLSTATE Postgres ends a statement with when
@@ -47,13 +48,9 @@ func effectiveMilliseconds(ctx context.Context, q rowQuerier, setting string) (i
 
 func ceilingTestDSN(t *testing.T) string {
 	t.Helper()
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN is not set — run `make db-up` and try again (integration tests fail loudly, they never skip)")
-	}
 	// Two connections, because each assertion below needs one and the lane's
 	// connection budget is shared with every package running beside this one.
-	return WithDSNParam(dsn, "pool_max_conns", "2")
+	return database.WithDSNParam(testdb.For(t).OwnerDSN, "pool_max_conns", "2")
 }
 
 // TestThePoolsCeilingsReachTheServer reads back what the connection actually
@@ -61,16 +58,17 @@ func ceilingTestDSN(t *testing.T) string {
 // and a factor of a thousand either way is a ceiling that never fires or one
 // that fires on everything.
 func TestThePoolsCeilingsReachTheServer(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	pool, err := NewPool(ctx, ceilingTestDSN(t))
+	pool, err := database.NewPool(ctx, ceilingTestDSN(t))
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer pool.Close()
 
 	for setting, want := range map[string]time.Duration{
-		"statement_timeout":                   StatementCeiling,
-		"idle_in_transaction_session_timeout": IdleTransactionCeiling,
+		"statement_timeout":                   database.StatementCeiling,
+		"idle_in_transaction_session_timeout": database.IdleTransactionCeiling,
 	} {
 		got, err := effectiveMilliseconds(ctx, pool, setting)
 		if err != nil {
@@ -87,8 +85,9 @@ func TestThePoolsCeilingsReachTheServer(t *testing.T) {
 // that a ceiling named this way ENDS a statement — proving it at the product's
 // own thirty seconds would cost thirty seconds to learn the same thing.
 func TestAStatementPastTheCeilingIsEnded(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	pool, err := NewPool(ctx, WithDSNParam(ceilingTestDSN(t), "statement_timeout", "100"))
+	pool, err := database.NewPool(ctx, database.WithDSNParam(ceilingTestDSN(t), "statement_timeout", "100"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,8 +106,9 @@ func TestAStatementPastTheCeilingIsEnded(t *testing.T) {
 // did. Every path that needs longer — the schema-changing roles, a background
 // sweep — depends on being able to say so and be believed.
 func TestATransactionsOwnBudgetOutranksThePoolsCeiling(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
-	pool, err := NewPool(ctx, WithDSNParam(ceilingTestDSN(t), "statement_timeout", "100"))
+	pool, err := database.NewPool(ctx, database.WithDSNParam(ceilingTestDSN(t), "statement_timeout", "100"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func TestATransactionsOwnBudgetOutranksThePoolsCeiling(t *testing.T) {
 		}
 	}()
 
-	if err := BoundStatement(ctx, tx, 20*time.Second); err != nil {
+	if err := database.BoundStatement(ctx, tx, 20*time.Second); err != nil {
 		t.Fatalf("widening the budget: %v", err)
 	}
 	got, err := effectiveMilliseconds(ctx, tx, "statement_timeout")

@@ -50,6 +50,7 @@ func (e *resolveEnv) previewOne(t *testing.T, req commsauthz.Request) commsauthz
 //
 // Mutation: return nil from supportedAlternatives, and the first case fails.
 func TestAFailedClaimNamesTheReasonTheRecordCarries(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.theyWroteAMonthAgo(t)
 	deal := e.openDeal(t, "open", false)
@@ -83,6 +84,7 @@ func TestAFailedClaimNamesTheReasonTheRecordCarries(t *testing.T) {
 // empty-record case offers every reason; drop the marketing guard, and the
 // marketing case offers the follow-up.
 func TestNoAlternativeIsOfferedThatWouldNotCarryTheSend(t *testing.T) {
+	t.Parallel()
 	t.Run("nothing on record", func(t *testing.T) {
 		e := setupResolve(t)
 		d := e.previewOne(t, commsauthz.Request{Context: commsauthz.CategoryActiveDealFollowup})
@@ -135,6 +137,7 @@ func (e *resolveEnv) tableCounts(t *testing.T) map[string]int {
 // Mutation: commit the preview's transaction instead of rolling it back, and
 // the basis and audit counts grow.
 func TestWorkingOutAnAlternativeWritesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.theyWroteAMonthAgo(t)
 	before := e.tableCounts(t)
@@ -154,6 +157,7 @@ func TestWorkingOutAnAlternativeWritesNothing(t *testing.T) {
 // Each recipient is offered only what its own record carries: one wrote to
 // us a month ago, the other's request was recorded and then retracted.
 func TestEachRecipientGetsOnlyItsOwnAlternatives(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	recorded := e.recordRequest(t, clocktest.Now(t).AddDate(0, 0, -10), false)
 	if err := e.store.RetractQualifyingEvent(e.seatCtx(e.user), e.contact, recordedID(t, recorded)); err != nil {

@@ -13,7 +13,6 @@ package signals
 
 import (
 	"context"
-	"os"
 	"regexp"
 	"slices"
 	"testing"
@@ -24,12 +23,10 @@ import (
 )
 
 func TestSignalEntityTablesMatchTheSchemaCheck(t *testing.T) {
-	dsn := os.Getenv("MARGINCE_TEST_DSN")
-	if dsn == "" {
-		t.Fatal("MARGINCE_TEST_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	t.Parallel()
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, dsn)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -38,9 +35,6 @@ func TestSignalEntityTablesMatchTheSchemaCheck(t *testing.T) {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	var def string
 	if err := owner.QueryRow(ctx, `
 		SELECT pg_get_constraintdef(oid) FROM pg_constraint

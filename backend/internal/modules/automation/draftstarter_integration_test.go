@@ -19,6 +19,7 @@ import (
 )
 
 func TestEnablingADraftStarterClaimsItsOwnerOnce(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)
@@ -71,6 +72,7 @@ func TestEnablingADraftStarterClaimsItsOwnerOnce(t *testing.T) {
 }
 
 func TestAStageNoticeStartsPausedAndRequiresStageSelectionBeforeEnabling(t *testing.T) {
+	t.Parallel()
 	fx := setupAutomationDB(t)
 	db := database.BindTo(fx.pool, ids.From[ids.WorkspaceKind](fx.ws))
 	ctx := fx.humanCtx(fx.rep1, principal.RowScopeAll)

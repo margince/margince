@@ -44,6 +44,7 @@ func (c writeWatchedConn) Read(p []byte) (int, error) {
 // request is written. At every write of the request the erasure is still
 // blocked by the check's hold; it commits only after the hold ends.
 func TestAnErasureThatStartsAfterTheCheckWaitsUntilTheRequestIsWritten(t *testing.T) {
+	t.Parallel()
 	e := setupContractVis(t)
 	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
 	sub, deliveries := e.seedDeliveries(t, 1)

@@ -86,6 +86,7 @@ func stopsOnAddress(ctx context.Context, t *testing.T, tx pgx.Tx, address string
 }
 
 func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	contact := keptStopSubject(ctx, t, tx)
@@ -112,6 +113,7 @@ func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
 // After a wrong merge one human's stop and withdrawal must not land on the
 // other human's address. The merge bound both to the record they were made on.
 func TestAnAnonymizePinsABoundStopAndWithdrawalOnlyToTheirOwnAddresses(t *testing.T) {
+	t.Parallel()
 	ctx := principal.WithActor(context.Background(),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:retention"})
 	tx := subjectColumnsTx(ctx, t)
@@ -158,6 +160,7 @@ func TestAnAnonymizePinsABoundStopAndWithdrawalOnlyToTheirOwnAddresses(t *testin
 // Mutation: drop the erasure_suppression insert from anonymizeSubjectRows and
 // the address is accepted again.
 func TestErasingAnAnonymizedContactKeepsItsAddressesRefused(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	tx := subjectColumnsTx(ctx, t)
 	contact := keptStopSubject(ctx, t, tx)

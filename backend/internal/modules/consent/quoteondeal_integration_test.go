@@ -97,6 +97,7 @@ func (e *resolveEnv) quoteRefusedOn(t *testing.T, deal ids.UUID) bool {
 // Mutation: drop any one clause of quoteOnDeal's query and its own case is
 // allowed.
 func TestAQuoteRestsOnASentOfferToACurrentStakeholderOfAnOpenDeal(t *testing.T) {
+	t.Parallel()
 	for _, status := range []string{"sent", "accepted"} {
 		t.Run("allowed: "+status, func(t *testing.T) {
 			e := setupResolve(t)
@@ -173,6 +174,7 @@ func (e *resolveEnv) dealWithOffer(t *testing.T, status string) ids.UUID {
 // Mutation: drop the contact_id clause from requestOnRecord and both others
 // are allowed.
 func TestARequestReachesOnlyTheContactWhoMadeIt(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.recordRequest(t, clocktest.Now(t).Add(-time.Hour), true)
 	company := e.company(t)
@@ -211,6 +213,7 @@ func TestARequestReachesOnlyTheContactWhoMadeIt(t *testing.T) {
 // Mutation: drop "retracted_at IS NULL" from requestOnRecord and the second
 // ticket still allows the quote.
 func TestAQueuedQuoteWhoseRequestIsWithdrawnIsRefusedAtTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	event := recordedID(t, e.recordRequest(t, clocktest.Now(t).Add(-time.Hour), true))
 	delivery := e.plantDelivery(t)

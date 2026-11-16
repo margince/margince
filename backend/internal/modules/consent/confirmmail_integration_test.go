@@ -111,6 +111,7 @@ func withLane(e *channelConsentEnv, stager ConfirmationSender, vault ConfirmLink
 }
 
 func TestAConfirmRequestQueuesTheSubjectTheirOwnLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager, vault := &recordingStager{}, &recordingVault{}
@@ -165,6 +166,7 @@ func TestAConfirmRequestQueuesTheSubjectTheirOwnLink(t *testing.T) {
 // row, the timeline, the audit entry and the outbox event, so a link on it would
 // be a live credential in all four.
 func TestTheStagedMessageCarriesAPlaceholderAndNotTheLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager, vault := &recordingStager{}, &recordingVault{}
@@ -187,6 +189,7 @@ func TestTheStagedMessageCarriesAPlaceholderAndNotTheLink(t *testing.T) {
 }
 
 func TestAContactWithNoAddressIsRefusedRatherThanSilentlyNotMailed(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	stager := &recordingStager{}
 
@@ -206,6 +209,7 @@ func TestAContactWithNoAddressIsRefusedRatherThanSilentlyNotMailed(t *testing.T)
 // nobody can pass on by hand. Minting it recorded a disclosure the contact had
 // no way to read.
 func TestAnInstallationThatCannotDeliverMintsNoLink(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	// A store built without the lane, which is the ordinary state of an
@@ -239,6 +243,7 @@ func TestAnInstallationThatCannotDeliverMintsNoLink(t *testing.T) {
 // who retries gets a fresh link rather than a second one superseding a first
 // that was never sent.
 func TestAStagingFailureFailsTheRequestRatherThanMintingASilentToken(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := &recordingStager{fail: errors.New("the queue refused the message")}
@@ -265,6 +270,7 @@ func TestAStagingFailureFailsTheRequestRatherThanMintingASilentToken(t *testing.
 }
 
 func TestAMintedLinkOpensTheSubjectsOwnRecord(t *testing.T) {
+	t.Parallel()
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager, vault := &recordingStager{}, &recordingVault{}

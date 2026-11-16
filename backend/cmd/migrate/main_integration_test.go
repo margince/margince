@@ -141,6 +141,7 @@ func tableExists(t *testing.T, dsn, table string) bool {
 	return exists
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestRecreateDBCopiesTheTemplateAndStartsOverOnAnExistingDatabase(t *testing.T) {
 	maint, base, withDB := testDSNs(t)
 	tpl, clone := base+"_verbs_tpl", base+"_verbs_clone"
@@ -164,6 +165,7 @@ func TestRecreateDBCopiesTheTemplateAndStartsOverOnAnExistingDatabase(t *testing
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDropDBSucceedsWhenTheDatabaseIsAbsent(t *testing.T) {
 	maint, base, _ := testDSNs(t)
 	name := base + "_verbs_never_created"
@@ -175,6 +177,7 @@ func TestDropDBSucceedsWhenTheDatabaseIsAbsent(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDropDBTerminatesLingeringSessions(t *testing.T) {
 	// Teardown runs right after a test process exits, when its backends may
 	// not have gone yet — and drop_clone now propagates failures, so a drop
@@ -206,6 +209,7 @@ func TestDropDBTerminatesLingeringSessions(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDropDBDropsTheTestCopiesNamedAfterIt(t *testing.T) {
 	maint, base, _ := testDSNs(t)
 	name := base + "_verbs_package"
@@ -226,6 +230,7 @@ func TestDropDBDropsTheTestCopiesNamedAfterIt(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBExistsPrintsTheLiteralAnswerTheLaneParses(t *testing.T) {
 	// ensure_template string-compares this stdout — it is a wire contract
 	// between the binary and scripts/lib-testdb.sh, not cosmetics.
@@ -242,6 +247,7 @@ func TestDBExistsPrintsTheLiteralAnswerTheLaneParses(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBVerbsQuoteNamesThatNeedIt(t *testing.T) {
 	maint, base, _ := testDSNs(t)
 	// Uppercase folds and the embedded quote breaks if the name is spliced
@@ -259,6 +265,7 @@ func TestDBVerbsQuoteNamesThatNeedIt(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBVerbsRejectNamesTheServerWouldTruncate(t *testing.T) {
 	// Postgres truncates identifiers over 63 bytes to their prefix, so an
 	// unchecked long --name would drop/create the database that owns that
@@ -296,6 +303,7 @@ func TestDBVerbsRejectNamesTheServerWouldTruncate(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestRecreateDBRefusesATemplateNamingTheDatabaseItself(t *testing.T) {
 	// recreate-db drops before it creates, so --template equal to --name
 	// would destroy the template and then copy from nothing. The refusal
@@ -315,6 +323,7 @@ func TestRecreateDBRefusesATemplateNamingTheDatabaseItself(t *testing.T) {
 	}
 }
 
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestDBVerbsRequireAName(t *testing.T) {
 	maint, _, _ := testDSNs(t)
 	for _, verb := range []string{"recreate-db", "drop-db", "db-exists"} {
@@ -344,6 +353,8 @@ func TestDBVerbsRequireAName(t *testing.T) {
 // import that feeds nothing a compile error. Neither is a substitute for the
 // other: this test proves the namespaces are applied, the arch test proves
 // they are the composed set's.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 	maint, base, withDB := testDSNs(t)
 	name := base + "_up_ext"
@@ -416,6 +427,8 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 // companies with `archived_at IS NULL`, and a probe that merely counted rows
 // would call an archived-only installation provisioned and withhold the
 // credential that could still bootstrap it.
+//
+//testdb:serial binds the process-wide configuration (config.Bind)
 func TestWorkspaceExistsAnswersTheEntrypointsQuestion(t *testing.T) {
 	dsn := migratedDatabase(t, "_company_probe")
 

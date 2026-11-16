@@ -36,6 +36,7 @@ import (
 // has no age limit at all — the subject wrote to us and never withdrew — so a
 // rep answering a two-year-old thread is doing the ordinary thing.
 func TestAReplyToAVeryOldThreadIsStillAReply(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-old", e.address, time.Now().Add(-3*365*24*time.Hour))
 
@@ -53,6 +54,7 @@ func TestAReplyToAVeryOldThreadIsStillAReply(t *testing.T) {
 // an unprompted follow-up falls back to "this contact wrote to us inside the
 // window" without needing the same thread.
 func TestAnUnpromptedFollowUpRestsOnAnyRecentInbound(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.inboundFrom(t, "some-other-thread", e.address, time.Now().Add(-24*time.Hour))
 
@@ -73,6 +75,7 @@ func TestAnUnpromptedFollowUpRestsOnAnyRecentInbound(t *testing.T) {
 // again in a different table would be asking them to restate what the CRM
 // already knows.
 func TestAContactWhoAskedInPersonCanBeWrittenTo(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"requested_quote_or_meeting", "in_person_permission"} {
 		t.Run(kind, func(t *testing.T) {
 			e := setupResolve(t)
@@ -91,6 +94,7 @@ func TestAContactWhoAskedInPersonCanBeWrittenTo(t *testing.T) {
 // treated as permission. Where a contact CAME FROM is provenance; a purchased
 // list and a public source say nothing about what this contact asked for.
 func TestProvenanceIsNotPermission(t *testing.T) {
+	t.Parallel()
 	for _, kind := range []string{"purchased_or_imported", "public_or_business_source", "referral"} {
 		t.Run(kind, func(t *testing.T) {
 			e := setupResolve(t)
@@ -111,6 +115,7 @@ func TestProvenanceIsNotPermission(t *testing.T) {
 // review naming what to link, and the send still goes while the engine is
 // observed — never a deny that leaves finance unable to send an invoice.
 func TestAnInvoiceRecipientTheRecordDoesNotNameIsReviewedNotRefused(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	invoice := e.invoice(t, e.company(t), false)
 
@@ -136,6 +141,7 @@ func TestAnInvoiceRecipientTheRecordDoesNotNameIsReviewedNotRefused(t *testing.T
 // customer's billing contact. Without this the test above would pass against a
 // validator that never allows.
 func TestAnInvoiceReachesTheCustomersBillingContact(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -174,6 +180,7 @@ func TestAnInvoiceReachesTheCustomersBillingContact(t *testing.T) {
 // nobody can evidence is the point, refusing an invoice somebody DID evidence
 // is the regression.
 func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -254,6 +261,7 @@ func TestAnEvidencedInvoiceSurvivesToTransmit(t *testing.T) {
 // billing contact of, so the invoice arm would allow if it ever ran. And a
 // sender principal holding neither finance nor contract.
 func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -319,6 +327,7 @@ func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 //
 // Mutation: put the employment arm back in documentRecipientSQL and this fails.
 func TestEmploymentAloneChoosesNoDocumentRecipient(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -339,6 +348,7 @@ func TestEmploymentAloneChoosesNoDocumentRecipient(t *testing.T) {
 //
 // Mutation: drop b.archived_at IS NULL from documentRecipientSQL and this fails.
 func TestARemovedBillingContactIsNotReachedByTheInvoices(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -366,6 +376,7 @@ func TestARemovedBillingContactIsNotReachedByTheInvoices(t *testing.T) {
 // Mutation: drop the NOT EXISTS clause from documentRecipientSQL and the last
 // case fails; drop the role filter and the adviser case fails.
 func TestACompanyWithNoBillingContactSendsToTheBuyerOnTheDeal(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name          string
 		role          string
@@ -406,6 +417,7 @@ func TestACompanyWithNoBillingContactSendsToTheBuyerOnTheDeal(t *testing.T) {
 // Mutation: spell the employment test as `r.ended_at IS NULL` and the notice
 // case fails; drop the won-deal arm and the won-deal case fails.
 func TestAContactAtACustomerIsSentServiceMailWithNoFact(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name     string
 		customer func(t *testing.T, e *resolveEnv, company ids.UUID)
@@ -454,6 +466,7 @@ func TestAContactAtACustomerIsSentServiceMailWithNoFact(t *testing.T) {
 // caller-supplied, so naming an invoice belonging to a company this
 // contact has nothing to do with must not admit the message.
 func TestAnInvoiceForAnotherCustomerSupportsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.billTo(t, e.company(t))
 	elsewhere := e.invoice(t, e.company(t), false)
@@ -471,6 +484,7 @@ func TestAnInvoiceForAnotherCustomerSupportsNothing(t *testing.T) {
 // A category claimed with NO record named supports nothing. Naming the kind of
 // message is not evidence that it is one.
 func TestAClaimNamingNoRecordSupportsNothing(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	got := e.resolve(t, commsauthz.Request{Context: commsauthz.CategoryContractNotice})
@@ -483,6 +497,7 @@ func TestAClaimNamingNoRecordSupportsNothing(t *testing.T) {
 // A category the vocabulary does not contain is not treated as an ordinary
 // unevidenced claim: the engine knows nothing about it and says so.
 func TestACategoryOutsideTheVocabularyIsNotAnOrdinaryClaim(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 
 	got := e.resolve(t, commsauthz.Request{Context: commsauthz.Category("not_a_category")})
@@ -501,6 +516,7 @@ func TestACategoryOutsideTheVocabularyIsNotAnOrdinaryClaim(t *testing.T) {
 //
 // Mutation: drop the recordBasis call from decideResolved and this fails.
 func TestASupportedSendWritesDownTheGroundItRelliedOn(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 
@@ -532,6 +548,7 @@ func TestASupportedSendWritesDownTheGroundItRelliedOn(t *testing.T) {
 // ground, and a row per message would make the export a second copy of the
 // mailbox.
 func TestTheSameGroundIsRecordedOnce(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 	req := commsauthz.Request{AnchorActivityID: anchor}
@@ -554,6 +571,7 @@ func TestTheSameGroundIsRecordedOnce(t *testing.T) {
 //
 // Mutation: drop the thread_key comparison from basisAlreadyLive and this fails.
 func TestASecondThreadEarnsItsOwnGround(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	first := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 	second := e.inboundFrom(t, "thread-2", e.address, time.Now().Add(-time.Hour))
@@ -575,6 +593,7 @@ func TestASecondThreadEarnsItsOwnGround(t *testing.T) {
 // legacy verdict, whose own grounds are already recorded as consent rows, and a
 // basis row here would claim a ground the engine never reached.
 func TestAnUnsupportedResolutionRecordsNoGround(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
 
@@ -707,6 +726,7 @@ func (e *resolveEnv) acquisition(t *testing.T, kind string, when time.Time) {
 // Mutation: ask activity_link instead of activity_participant with role 'from'
 // — the shape this shipped as — and this passes with forged evidence.
 func TestAFiledActivityIsNotSomethingTheContactWrote(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	ctx := context.Background()
 	// An inbound activity FILED under the contact, which they did not write:
@@ -740,6 +760,7 @@ func TestAFiledActivityIsNotSomethingTheContactWrote(t *testing.T) {
 //
 // Mutation: drop the refuseUnreadableEvidence call and this passes.
 func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	invoice := e.invoice(t, company, false)
@@ -769,6 +790,7 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 //
 // Mutation: drop any one of the added clauses and its own row here fails.
 func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name  string
 		spoil func(t *testing.T, e *resolveEnv, company, invoice ids.UUID)
@@ -812,6 +834,7 @@ func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
 //
 // Mutation: drop the phase guard in decideResolved and this fails.
 func TestTheGroundIsRecordedAtStagingAndNotAgainAtTransmit(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
 	req := commsauthz.Request{AnchorActivityID: anchor}
@@ -886,6 +909,7 @@ func (e *resolveEnv) dropGrant(t *testing.T, object string) {
 // alone would pass against a writer that had stopped consulting suppression at
 // all, which is the failure on the other side of this one.
 func TestAStopThatBindsNothingHereStillLeavesTheGroundRecorded(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	e.suppress(t, commsauthz.ReasonObjection)
 	anchor := e.inboundFrom(t, "thread-1", e.address, time.Now().Add(-time.Hour))
@@ -913,6 +937,7 @@ func TestAStopThatBindsNothingHereStillLeavesTheGroundRecorded(t *testing.T) {
 // send is refused and nothing about a lawful ground is written. A basis row
 // here would be a claim made after the subject said stop, in their own export.
 func TestAStopThatBindsThisMessageWritesNoGround(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	// The STORED kind, which is what the table's own check constraint admits;
 	// liveSuppression maps it onto commsauthz.ReasonRestricted on the way in.
@@ -941,6 +966,7 @@ func TestAStopThatBindsThisMessageWritesNoGround(t *testing.T) {
 // Mutation: put back a bare archived_at check in either validator and its
 // half of these cases fails.
 func TestAContractNotInForceCarriesNothing(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, spoil string }{
 		{"draft", `UPDATE contract SET status = 'draft' WHERE id = $1`},
 		{"expired", `UPDATE contract SET ends_on = current_date - 1 WHERE id = $1`},
@@ -981,6 +1007,7 @@ func TestAContractNotInForceCarriesNothing(t *testing.T) {
 //
 // Mutation: drop the cancelled arm from contractCarriesMailSQL and this fails.
 func TestACancelledContractCarriesMailUntilTheCancellationTakesEffect(t *testing.T) {
+	t.Parallel()
 	e := setupResolve(t)
 	company := e.company(t)
 	e.employ(t, company)

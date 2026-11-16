@@ -19,7 +19,6 @@ package integrations
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 	"time"
 
@@ -61,13 +60,9 @@ type runsEnv struct {
 
 func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 	t.Helper()
-	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
-	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,13 +71,6 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	// To head before anything else touches this database: testdb.Pool refuses
-	// until EnsureSchema has run, and EnsureSchema still REBUILDS whenever it
-	// cannot prove the database is a fresh lane clone — so a seed written
-	// before it would be dropped rather than reset.
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 
 	e := &runsEnv{
 		ws: ids.NewV7(), owner: owner,
@@ -136,22 +124,12 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 		}
 	})
 
-	// provider_connection is unique per provider — it is installation-owned,
-	// so there is exactly one row per provider for the whole database. Upsert
-	// rather than insert, so two environments in one test binary do not
-	// collide on a table that is deliberately a singleton.
-	var connID ids.UUID
-	if err := owner.QueryRow(ctx, `
+	connID := ids.NewV7()
+	if _, err := owner.Exec(ctx, `
 		INSERT INTO provider_connection
 		       (id, provider, status, mode, preset, categories, daily_run_limit)
 		VALUES ($1, $2, 'connected', 'automatic_on_create', 'full',
-		        ARRAY['professional_email','mobile'], NULL)
-		ON CONFLICT (provider) DO UPDATE SET status = 'connected'
-		RETURNING id`, ids.NewV7(), cfg.providerOf()).Scan(&connID); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := owner.Exec(ctx,
-		`DELETE FROM provider_connection_budget WHERE connection_id = $1`, connID); err != nil {
+		        ARRAY['professional_email','mobile'], NULL)`, connID, cfg.providerOf()); err != nil {
 		t.Fatal(err)
 	}
 	for pool, ceiling := range cfg.ceilings {
@@ -161,21 +139,13 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 			t.Fatal(err)
 		}
 	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(),
-			`DELETE FROM provider_connection WHERE id = $1`, connID); err != nil {
-			t.Errorf("cleaning the connection: %v", err)
-		}
-	})
 
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// Registered where the pool is handed out, before the test adds any cleanup
 	// of its own, so it runs last and sees a package that has genuinely stopped.
-	// The pool outlives the test now, so a goroutine still holding a connection
-	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
 
 	e.provider = cfg.providerOf()
@@ -295,6 +265,7 @@ func (c runsConfig) providerOf() string {
 // The defect: QueueRun checked the role grant but never the row scope, so a
 // rep could name any contact id and buy data on a record outside their scope.
 func TestQueueRunRefusesASubjectTheCallerCannotSee(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 
 	if _, err := e.store.QueueRun(e.ctx, provider.QueueInput{
@@ -333,6 +304,7 @@ func TestQueueRunRefusesASubjectTheCallerCannotSee(t *testing.T) {
 // contact is theirs to read, so a 404 here would hide nothing and would send
 // them looking for a record that is plainly in their list.
 func TestQueueRunRefusesASubjectTheCallerMaySeeButNotChange(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 
 	_, err := e.store.QueueRun(e.ctx, provider.QueueInput{
@@ -367,6 +339,7 @@ func TestQueueRunRefusesASubjectTheCallerMaySeeButNotChange(t *testing.T) {
 // land provider claims on a contact. The row arm cannot catch this one: the
 // subject here is the caller's OWN record, and it is the ACTION that is wrong.
 func TestQueueRunRefusesASeatThatMayReadContactsButNotChangeThem(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{})
 
 	_, err := e.store.QueueRun(e.readOnlyCtx(), provider.QueueInput{
@@ -414,6 +387,7 @@ func (e *runsEnv) runRows(t *testing.T, contact ids.ContactID) int {
 // refused on its SECOND pool committed the first pool's hold — credits held
 // against work that will never happen.
 func TestARunRefusedOnItsSecondPoolHoldsNothing(t *testing.T) {
+	t.Parallel()
 	// email has room; mobile does not. Alphabetical lock order means email is
 	// reserved first, so this is exactly the case that used to leak.
 	e := setupRuns(t, runsConfig{ceilings: map[string]int{"email": 10, "mobile": 0}})
@@ -441,6 +415,7 @@ func TestARunRefusedOnItsSecondPoolHoldsNothing(t *testing.T) {
 // The defect: a nil enqueue callback committed a queued run with no job, which
 // would occupy the live-run index forever while nothing executed it.
 func TestAQueuedRunAlwaysHasAJob(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{withoutEnqueue: true})
 
 	_, err := e.store.QueueRun(e.ctx, provider.QueueInput{
@@ -483,6 +458,7 @@ func TestAQueuedRunAlwaysHasAJob(t *testing.T) {
 // sweep re-breaks it on every tick. In the installation that surfaced this,
 // 214 of 1045 contacts were in exactly this state.
 func TestASubjectWithNothingToMatchOnIsNeverSent(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{identifiers: &provider.ContactIdentifiers{
 		FirstName: "Lars", LastName: "Jankowfsky",
 	}})
@@ -516,6 +492,7 @@ func TestASubjectWithNothingToMatchOnIsNeverSent(t *testing.T) {
 // this case the one above passes against a guard that declines everybody,
 // which reads as a working feature and silences the lane completely.
 func TestASubjectWithACompanyIsStillSent(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{identifiers: &provider.ContactIdentifiers{
 		FirstName: "Anna", LastName: "Muster", CompanyDomain: "example.com",
 	}})
@@ -537,6 +514,7 @@ func TestASubjectWithACompanyIsStillSent(t *testing.T) {
 
 // A profile link alone is the other rule, and it carries no name at all.
 func TestAProfileLinkAloneIsEnoughToBeSent(t *testing.T) {
+	t.Parallel()
 	e := setupRuns(t, runsConfig{identifiers: &provider.ContactIdentifiers{
 		LinkedInURL: "https://www.linkedin.com/in/someone",
 	}})

@@ -11,7 +11,6 @@ package recordlinks
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -41,12 +40,9 @@ type linkEnv struct {
 
 func setupLinks(t *testing.T) *linkEnv {
 	t.Helper()
-	ownerDSN, appDSN := os.Getenv("MARGINCE_TEST_DSN"), os.Getenv("MARGINCE_TEST_APP_DSN")
-	if ownerDSN == "" || appDSN == "" {
-		t.Fatal("MARGINCE_TEST_DSN / MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
-	}
+	db := testdb.New(t)
 	ctx := context.Background()
-	owner, err := pgx.Connect(ctx, ownerDSN)
+	owner, err := pgx.Connect(ctx, db.OwnerDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,12 +51,6 @@ func setupLinks(t *testing.T) *linkEnv {
 			t.Errorf("closing owner connection: %v", err)
 		}
 	})
-	if err := testdb.EnsureSchema(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
-	if err := testdb.Reset(ctx, owner); err != nil {
-		t.Fatal(err)
-	}
 	e := &linkEnv{
 		owner: owner, ws: ids.NewV7(), rep: ids.NewV7(), other: ids.NewV7(),
 		deal: ids.NewV7(), renewal: ids.NewV7(), company: ids.NewV7(), theirs: ids.NewV7(),
@@ -82,7 +72,7 @@ func setupLinks(t *testing.T) *linkEnv {
 	}
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)
 		VALUES ($1, 'Acme', $2, 'seed', 'system')`, e.company, e.rep)
-	pool, err := testdb.Pool(ctx, appDSN)
+	pool, err := testdb.Pool(ctx, db.AppDSN)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,6 +121,7 @@ func (e *linkEnv) dealLink(to ids.UUID, linkType string) NewLink {
 }
 
 func TestALinkIsReadFromBothEndsAndWritesTheWriteShape(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep, true, full())
 	link, err := e.store.Create(ctx, e.dealLink(e.deal, "follow_up_of"))
@@ -155,6 +146,7 @@ func TestALinkIsReadFromBothEndsAndWritesTheWriteShape(t *testing.T) {
 }
 
 func TestLinkingAPairTwiceWritesOnce(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep, true, full())
 	first, err := e.store.Create(ctx, e.dealLink(e.deal, "renews"))
@@ -175,6 +167,7 @@ func TestLinkingAPairTwiceWritesOnce(t *testing.T) {
 }
 
 func TestALinkTheTypeOrTheShapeForbidsIsRefused(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	extregistrytest.Reset(t)
 	recordkinds.RegisterLinkTypes("links-test", []extension.LinkType{
@@ -203,6 +196,7 @@ func TestALinkTheTypeOrTheShapeForbidsIsRefused(t *testing.T) {
 }
 
 func TestBothEndsGateALink(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	own := e.seat(e.rep, false, full())
 
@@ -231,6 +225,7 @@ func TestBothEndsGateALink(t *testing.T) {
 }
 
 func TestAReadDropsALinkWhoseOtherEndTheCallerMayNotRead(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	all := e.seat(e.rep, true, full())
 	if _, err := e.store.Create(all, NewLink{FromType: "deal", FromID: e.renewal, ToType: "company", ToID: e.company, LinkType: "related_to"}); err != nil {
@@ -253,6 +248,7 @@ func TestAReadDropsALinkWhoseOtherEndTheCallerMayNotRead(t *testing.T) {
 }
 
 func TestArchivingAnEndHidesTheLinkAndUnarchivingBringsItBack(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep, true, full())
 	if _, err := e.store.Create(ctx, e.dealLink(e.deal, "follow_up_of")); err != nil {
@@ -272,6 +268,7 @@ func TestArchivingAnEndHidesTheLinkAndUnarchivingBringsItBack(t *testing.T) {
 }
 
 func TestRemovingALinkDeletesTheRowAndAuditsIt(t *testing.T) {
+	t.Parallel()
 	e := setupLinks(t)
 	ctx := e.seat(e.rep, true, full())
 	link, err := e.store.Create(ctx, e.dealLink(e.deal, "related_to"))
