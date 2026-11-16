@@ -146,7 +146,7 @@ type ownDomainReader struct{ store *capture.OwnDomainStore }
 // init binds the own-domain list for the activities reads that have no store.
 // The History mail badge then tests a colleague's invitation as the Worklist does.
 func init() {
-	activities.UseColleagueDomains(capture.ColleagueDomainsTx)
+	activities.UseColleagueDomains(capture.TrustedColleagueDomainsTx)
 }
 
 func (o ownDomainReader) Domains(ctx context.Context, tx pgx.Tx) ([]string, error) {
