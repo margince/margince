@@ -55,10 +55,10 @@ func TestTheBadgeAndTheWorklistReadOneOwnDomainListThroughTheProductionWiring(t 
 	}
 }
 
-// A reader without the activity grant still sees whose move a mail is where
-// a page derives it, as the company page does for a contact's engagement. The
-// own-domain list is workspace setting, so the colleague test reads it whoever
-// asks, and that reader is not told a colleague's invitation waits on us.
+// The company page derives a contact's engagement from whose move a mail is,
+// for a reader without the activity grant too. The own-domain list is
+// workspace setting, so the colleague test reads it whoever asks. That reader
+// is not told a colleague's invitation waits on us.
 func TestWhoseMoveReadsOurDomainsForAReaderWithoutTheActivityGrant(t *testing.T) {
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
