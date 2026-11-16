@@ -6,6 +6,7 @@
 package activities
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -30,6 +31,43 @@ func TestARequestReminderQuotesWhatItsSenderAsked(t *testing.T) {
 	want := "Anna Weber asked: “Please send the report.”"
 	if got := reminderBody(t, e, store, source); got != want {
 		t.Fatalf("reminder body %q, want %q", got, want)
+	}
+}
+
+// A request whose row another writer holds is skipped by that pass, and the
+// next pass still quotes the ask the verdict kept.
+func TestARequestSkippedWhileLockedIsQuotedByTheNextPass(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Product report", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	if _, err := store.SetOwedVerdictAsked(asClassifier(e), source, OwedVerdictAsksUs, "prompts-ask", dbNow(t, e), "Please send the report."); err != nil {
+		t.Fatal(err)
+	}
+	holder, err := e.owner.Begin(e.as())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := holder.Exec(e.as(), `SELECT 1 FROM activity WHERE id = $1 FOR UPDATE`, source); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := holder.Rollback(e.as()); err != nil {
+		t.Fatal(err)
+	}
+	var filed int
+	if err := e.owner.QueryRow(e.as(), `SELECT count(*) FROM activity WHERE source_system = 'email_request' AND source_activity_id = $1`, source).Scan(&filed); err != nil {
+		t.Fatal(err)
+	}
+	if filed != 0 {
+		t.Fatalf("%d reminder(s) filed for a row another writer held, want the pass to skip it", filed)
+	}
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if got, want := reminderBody(t, e, store, source), "“Please send the report.”"; !strings.Contains(got, want) {
+		t.Fatalf("reminder body %q, want it to quote %q", got, want)
 	}
 }
 
