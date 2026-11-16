@@ -29,18 +29,20 @@ Margince stops working until it has a licence. There is no grace period. Every m
 Margince trial has ended** in place of the app, with the same button to write to the team, and
 **Sign out**.
 
-Nothing is deleted, and nothing changes until the licence is in place: every change is refused.
-Reading still works, and so do data exports and privacy requests. The screen has no way to reach
-them, so ask whoever runs your Margince to make an export for you.
+Nothing is deleted. Until the licence is in place, Margince refuses changes to your records. Some
+things still work: reading, data exports, privacy requests, the licence itself, and each member's
+own password, two-step sign-in and sessions. The screen has no way to reach an export, so ask
+whoever runs your Margince to make one for you.
 
 How the licence goes in depends on where your server admin puts the key:
 
-- **In a licence file** (`license.token_file`): an admin presses **Check now** on the same screen,
-  or in **Settings → Seats and license**. Margince opens again without starting Margince again.
-- **In the configuration** (`license.token` or `MARGINCE_LICENSE`): the admin starts Margince
-  again, because that value is read only when Margince starts.
+- **In a licence file** (`license.token_file`, or a `${file:…}` value in `license.token`): an
+  admin presses **Check now**. It is on the same screen and in **Settings → Seats and license**.
+  Margince opens again at once.
+- **Typed into the configuration** (`license.token` or `MARGINCE_LICENSE`): the admin starts
+  Margince again, because that value is read only when Margince starts.
 
-Background work starts again on its own within 5 minutes. An agent you connected stops too: every
-call it makes is refused. Margince sends no email until then, and that includes privacy notices
+Background work starts again on its own within about 15 minutes. An agent you connected stops
+too: every call it makes is refused. Margince sends no email until then, and that includes privacy notices
 and confirmation links.
 Also called: trial ended, trial expired, Margince stopped working, locked.

@@ -450,7 +450,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
-| `license.token` | `MARGINCE_LICENSE` | — | `string`, secret | — | api, worker | Licence token, read once at boot; unset with no `license.token_file`, production runs the 14-day trial and then locks, while dev and test run with no license. |
+| `license.token` | `MARGINCE_LICENSE` | — | `string`, secret | — | api, worker | Licence token, read once at boot, or at each licence check when it is a `${file:}` reference; with it, `license.token_file` and the key vault all empty, production runs the 14-day trial and then locks, while dev and test run with no license. |
 | `license.token_file` | `MARGINCE_LICENSE_TOKEN_FILE` | — | `string` | — | api, worker | Path to a file holding the licence token, read again at each licence check; license.token wins over it. |
 
 ### `lists`
