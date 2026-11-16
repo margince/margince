@@ -323,13 +323,13 @@ type Copy struct {
 	// narrower and more specific proposition.
 	//
 	// Binding either door to the other's sentence would record somebody
-	// agreeing to something they were not asked, which is the defect the whole
-	// published-question change exists to end.
-	//
-	// {purpose}, {controller}, {frequency} and {privacy_page} are filled when
-	// a confirm page serves the question, so the grant records the full text.
-	ConfirmSubscriptionAsk     string
-	ConfirmSubscriptionConfirm string
+	// agreeing to something they were not asked. {purpose}, {controller},
+	// {frequency} and {privacy_page} are filled when a confirm page serves the
+	// question. The Unscheduled one, for a purpose that is not advertising,
+	// states no frequency.
+	ConfirmSubscriptionAsk            string
+	ConfirmSubscriptionAskUnscheduled string
+	ConfirmSubscriptionConfirm        string
 	// The words a purpose's frequency is named by inside that sentence.
 	FrequencyWeekly    string
 	FrequencyMonthly   string

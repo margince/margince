@@ -19,12 +19,14 @@ package consent
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // mintRequest is what the mint needs, and it deliberately holds no plaintext.
@@ -220,7 +222,11 @@ func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.
 	var key *string
 	var version *int
 	if link.rules.asksNews {
-		questionKey, questionVersion := QuestionKeyForLink(link.kind), marketingQuestionVersion
+		advertising, err := linkAdvertisesTx(ctx, tx, link)
+		if err != nil {
+			return ids.UUID{}, err
+		}
+		questionKey, questionVersion := QuestionKeyForLink(link.kind, advertising), marketingQuestionVersion
 		key, version = &questionKey, &questionVersion
 	}
 	args := []any{
@@ -235,4 +241,14 @@ func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.
 		VALUES (`+storekit.Placeholders(args)+`)
 		RETURNING id`, args...).Scan(&id)
 	return id, err
+}
+
+// linkAdvertisesTx reports whether a consent link asks about a purpose of a
+// marketing class. A link that names no purpose asks about none.
+func linkAdvertisesTx(ctx context.Context, tx pgx.Tx, link contactLink) (bool, error) {
+	if link.purposeID.IsZero() {
+		return false, nil
+	}
+	class, err := purposeClassTx(ctx, tx, link.purposeID)
+	return slices.Contains(commsauthz.MarketingPurposeClasses(), string(class)), err
 }

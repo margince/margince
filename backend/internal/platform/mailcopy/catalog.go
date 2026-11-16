@@ -298,6 +298,10 @@ func confirmAskLines(line writeLine) {
 		"Confirm that you agree that {controller} may use your name and email address to send you {purpose} by email, roughly {frequency}. You can withdraw your consent at any time with the unsubscribe link in each email. Information about your rights: {privacy_page}.",
 		"Bestätigen Sie, dass {controller} Ihren Namen und Ihre E-Mail-Adresse verwenden darf, um Ihnen etwa {frequency} {purpose} per E-Mail zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen. Informationen zu Ihren Rechten: {privacy_page}.",
 		"Xác nhận quý khách đồng ý để {controller} dùng họ tên và địa chỉ email của quý khách để gửi email {purpose}, khoảng {frequency}. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào bằng liên kết hủy đăng ký trong mỗi email. Thông tin về quyền của quý khách: {privacy_page}.")
+	line(func(c *Copy) *string { return &c.ConfirmSubscriptionAskUnscheduled },
+		"Confirm that you agree that {controller} may use your name and email address to send you {purpose} by email. You can withdraw your consent at any time with the unsubscribe link in each email. Information about your rights: {privacy_page}.",
+		"Bestätigen Sie, dass {controller} Ihren Namen und Ihre E-Mail-Adresse verwenden darf, um Ihnen {purpose} per E-Mail zu senden. Sie können Ihre Einwilligung jederzeit über den Abmeldelink in jeder E-Mail widerrufen. Informationen zu Ihren Rechten: {privacy_page}.",
+		"Xác nhận quý khách đồng ý để {controller} dùng họ tên và địa chỉ email của quý khách để gửi email {purpose}. Quý khách có thể rút lại sự đồng ý bất cứ lúc nào bằng liên kết hủy đăng ký trong mỗi email. Thông tin về quyền của quý khách: {privacy_page}.")
 	line(func(c *Copy) *string { return &c.ConfirmSubscriptionConfirm },
 		"Confirm subscription",
 		"Abonnement bestätigen",
