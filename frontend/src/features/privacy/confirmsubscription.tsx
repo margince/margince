@@ -35,6 +35,7 @@ import {
   RateLimitedError,
 } from "../settings/preferences";
 import { ControllerCard } from "./confirmprivacyparts";
+import { privacyPageOf } from "./privacypage";
 import { PublicPage } from "./publicpage";
 
 type SubscriptionPage = components["schemas"]["SubscriptionConfirmationPage"];
@@ -157,7 +158,7 @@ function subscriptionQuestion(
         "confirm.frequency.monthly",
       ),
     ),
-    privacy_page: controller?.privacy_page ?? controller?.privacy_contact ?? "",
+    privacy_page: privacyPageOf(controller),
   });
   return { ask, confirm: t("confirm.subscription.confirm"), text: ask };
 }

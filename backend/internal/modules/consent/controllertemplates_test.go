@@ -31,7 +31,7 @@ func renderAnyTemplate(key string, expiresAt time.Time, language, purpose string
 	if controllerTemplates[key].refusalTimes {
 		return renderReceipt(key, language, exampleRefusal)
 	}
-	return renderTemplateContext(key, expiresAt, language, purpose)
+	return renderTemplate(key, linkExpiry{at: expiresAt}, language, purpose)
 }
 
 // TestEveryControllerTemplateCarriesExactlyOnePlaceholder holds the rendered
@@ -389,7 +389,7 @@ func TestQueuedControllerVersionsRemainRecognized(t *testing.T) {
 
 func TestOnlyTheSubscriptionTemplateNamesASubscription(t *testing.T) {
 	for _, key := range []string{TemplateRecordConfirmation, TemplateConsentConfirmation, TemplatePrivacyNotice} {
-		rendered, _, err := renderTemplateContext(key, time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC), "de", "Produktneuigkeiten")
+		rendered, _, err := renderTemplate(key, linkExpiry{at: time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC)}, "de", "Produktneuigkeiten")
 		if err != nil {
 			t.Fatal(err)
 		}

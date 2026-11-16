@@ -54,3 +54,25 @@ func TestTheRecordQuestionNamesTheSender(t *testing.T) {
 		}
 	}
 }
+
+// TestTheRightsLinkIsThePrivacyPageThenTheContactThenNothing. The CRM's own
+// address is never offered as where a reader's rights are.
+func TestTheRightsLinkIsThePrivacyPageThenTheContactThenNothing(t *testing.T) {
+	cases := []struct {
+		particulars ControllerParticulars
+		want        string
+	}{
+		{ControllerParticulars{PrivacyPage: "https://example.test/privacy", PrivacyContact: "dpo@example.test"}, "https://example.test/privacy"},
+		{ControllerParticulars{PrivacyContact: "dpo@example.test"}, "dpo@example.test"},
+		{ControllerParticulars{}, ""},
+	}
+	for _, tc := range cases {
+		if got := privacyPageOf(tc.particulars); got != tc.want {
+			t.Errorf("privacyPageOf(%+v) = %q, want %q", tc.particulars, got, tc.want)
+		}
+	}
+	served := fillQuestion(RenderQuestion(TemplateSubscriptionQuestion, "en"), questionFields{words: mailcopy.For("en")})
+	if strings.Contains(served, privacyPagePlaceholder) {
+		t.Errorf("an unstated privacy page left its placeholder in %q", served)
+	}
+}

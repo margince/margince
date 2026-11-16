@@ -2,8 +2,8 @@
 # The copied Windows zone mapping
 
 `windowsZones.xml` is a byte-for-byte copy of `common/supplemental/windowsZones.xml`. Its partner
-`timezone.xml` now lives in `backend/internal/platform/cldrzone/data/`, where the mail copy reads it
-too. That file is a byte-for-byte copy of `common/bcp47/timezone.xml`. Both come from [Unicode CLDR](https://github.com/unicode-org/cldr)
+`timezone.xml` lives in `backend/internal/platform/cldrzone/data/`, and the `README.md` there
+owns it. The consent module reads it there too. Both come from [Unicode CLDR](https://github.com/unicode-org/cldr)
 at the tag `release-48`. Both are under the Unicode License version 3 (© Unicode, Inc.). The license text is
 copied in `LICENSE-cldr.txt`, and it must ship with every copy of this software that we give out.
 

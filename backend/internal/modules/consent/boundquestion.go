@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -128,7 +129,7 @@ func (s *Store) questionFieldsTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef)
 		return out, err
 	}
 	out.controller = held.Controller.LegalName
-	out.privacyPage = firstStated(held.Controller.PrivacyPage, held.Controller.PrivacyContact, s.publicBaseURL)
+	out.privacyPage = privacyPageOf(held.Controller)
 	if ref.PurposeID.IsZero() {
 		return out, nil
 	}
@@ -146,9 +147,9 @@ func (s *Store) questionFieldsTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef)
 	return out, nil
 }
 
-// fillQuestion puts the fields into a published question. A field with no
-// value keeps its placeholder, except the controller, who is "we" when the
-// installation has stated no name.
+// fillQuestion puts the fields into a published question. A purpose or
+// frequency with no value keeps its placeholder. The controller is "the sender"
+// when the installation has stated no name, and the privacy page is empty.
 func fillQuestion(text string, f questionFields) string {
 	controller := f.controller
 	if controller == "" {
@@ -157,9 +158,9 @@ func fillQuestion(text string, f questionFields) string {
 			controller = capitalized(controller)
 		}
 	}
-	pairs := []string{controllerPlaceholder, controller}
+	pairs := []string{controllerPlaceholder, controller, privacyPagePlaceholder, f.privacyPage}
 	for placeholder, value := range map[string]string{
-		purposePlaceholder: f.purpose, frequencyPlaceholder: f.frequency, privacyPagePlaceholder: f.privacyPage,
+		purposePlaceholder: f.purpose, frequencyPlaceholder: f.frequency,
 	} {
 		if value != "" {
 			pairs = append(pairs, placeholder, value)
@@ -179,10 +180,22 @@ func frequencyName(frequency string, words mailcopy.Copy) string {
 	return words.FrequencyMonthly
 }
 
-func firstStated(values ...string) string {
-	for _, value := range values {
-		if strings.TrimSpace(value) != "" {
-			return strings.TrimSpace(value)
+// privacyPageFields is where a subscription question points its reader for
+// their rights, first stated wins: the privacy page, then the privacy contact,
+// then nothing. frontend/src/features/privacy/privacypage.ts mirrors it.
+//
+// Held by: TestThePrivacyPageFallbackIsOneOnBothSides
+// (backend/gates/privacypagefallback_test.go)
+var privacyPageFields = []string{"privacy_page", "privacy_contact"}
+
+// PrivacyPageFields is privacyPageFields for the gate that holds the mirror.
+func PrivacyPageFields() []string { return slices.Clone(privacyPageFields) }
+
+func privacyPageOf(p ControllerParticulars) string {
+	stated := map[string]string{"privacy_page": p.PrivacyPage, "privacy_contact": p.PrivacyContact}
+	for _, field := range privacyPageFields {
+		if value := strings.TrimSpace(stated[field]); value != "" {
+			return value
 		}
 	}
 	return ""

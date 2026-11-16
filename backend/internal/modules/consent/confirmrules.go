@@ -44,11 +44,12 @@ func (s *Store) confirmRulesTx(
 	if kind != LinkConsentConfirmation || !operatorAsks {
 		return out, nil
 	}
-	out.subjectRequest, err = s.subscriptionRequestTx(ctx, tx, contactID, address)
+	var asked bool
+	out.subjectRequest, asked, err = s.subscriptionRequestTx(ctx, tx, contactID, address)
 	if err != nil {
 		return out, err
 	}
-	if found && rules.ConsentConfirmationNeedsRequest && out.subjectRequest.IsZero() {
+	if found && rules.ConsentConfirmationNeedsRequest && !asked {
 		return out, &NoSubjectRequestError{}
 	}
 	return out, nil
@@ -72,48 +73,39 @@ func (e *NoSubjectRequestError) reason() string {
 		"(a form they posted, a mail they wrote, or a call you log) first"
 }
 
-// subscriptionRequestTx is the contact's own request a consent mail answers,
-// zero when there is none. It asks the send path's qualifying-event readers.
-// First comes a request a user or agent recorded, or a booking inquiry whose
-// meeting still exists. Then comes a mail the contact wrote, read again from
-// the timeline and stamped, so the link and the grant can name it. The mail
-// is the installation's own, so the default legal entity is the sender.
-func (s *Store) subscriptionRequestTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) (ids.UUID, error) {
+// subscriptionRequestTx is the contact's own request a consent mail answers.
+// It is the request owner's answer for subscriptionRequests (newestRequest),
+// else a mail the contact wrote, read again from the timeline and stamped. The
+// mail is the installation's own, so the default legal entity is the sender.
+// found is false when there is none; request is zero for acquisition evidence,
+// which has no qualifying-event row to name.
+func (s *Store) subscriptionRequestTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, address string) (ids.UUID, bool, error) {
 	entity, err := storekit.LegalEntityOf(ctx, tx, ids.UUID{})
 	if err != nil {
-		return ids.UUID{}, err
+		return ids.UUID{}, false, err
 	}
-	sub, _, err := qualifyingSubjectRef(subjectRef{Kind: entityContact, ID: contactID.String()})
+	subject := subjectRef{Kind: entityContact, ID: contactID.String(), Address: address, SendingEntity: entity}
+	request, found, err := newestRequest(ctx, tx, subject, subscriptionRequests, ids.UUID{})
+	if err != nil || found {
+		return request.event, found, err
+	}
+	event, found, err := inboundQualifyingEvent(ctx, tx, subject, time.Time{}, entity)
+	if err != nil || !found {
+		return ids.UUID{}, false, err
+	}
+	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return ids.UUID{}, err
+		return ids.UUID{}, false, err
 	}
-	event, found, err := recordedSubjectQualifyingEvent(ctx, tx, sub, time.Time{}, s.now(), &address, entity)
-	if err != nil {
-		return ids.UUID{}, err
+	if err := RecordDerivedQualifyingEvent(ctx, tx, contactID.String(), event, by); err != nil {
+		return ids.UUID{}, false, err
 	}
-	if !found {
-		event, found, err = inboundQualifyingEvent(ctx, tx,
-			subjectRef{Kind: entityContact, ID: contactID.String(), Address: address}, time.Time{}, entity)
-		if err != nil || !found {
-			return ids.UUID{}, err
-		}
-		by, err := storekit.CapturedBy(ctx)
-		if err != nil {
-			return ids.UUID{}, err
-		}
-		if err := RecordDerivedQualifyingEvent(ctx, tx, contactID.String(), event, by); err != nil {
-			return ids.UUID{}, err
-		}
-	}
-	return qualifyingEventRowTx(ctx, tx, contactID, event)
+	id, err := qualifyingEventRowTx(ctx, tx, contactID, event)
+	return id, err == nil, err
 }
 
-// qualifyingEventRowTx names the stored row behind an event: its own id for a
-// hand-recorded one, else the row its source record was stamped as.
+// qualifyingEventRowTx names the row a derived event was stamped as.
 func qualifyingEventRowTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, event QualifyingEvent) (ids.UUID, error) {
-	if event.ID != "" {
-		return ids.Parse(event.ID)
-	}
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM consent_qualifying_event

@@ -52,10 +52,10 @@ func TestEveryDisclosedParticularIsLabelledInTheMailsLanguage(t *testing.T) {
 	}
 }
 
-// TestTheLinkExpiryIsPrintedOnTheRecipientsClock. A country with one zone gives
-// the expiry on the recipient's clock, named. With no known zone, the mail
-// prints the installation's clock by offset alone.
-func TestTheLinkExpiryIsPrintedOnTheRecipientsClock(t *testing.T) {
+// TestTheExpiryLineNamesTheCountryItIsGivenIn. An expiry given with a country
+// names that country's time beside the offset; one given without prints the
+// offset alone.
+func TestTheExpiryLineNamesTheCountryItIsGivenIn(t *testing.T) {
 	saigon, err := time.LoadLocation("Asia/Ho_Chi_Minh")
 	if err != nil {
 		t.Fatal(err)

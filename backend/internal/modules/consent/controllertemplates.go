@@ -323,10 +323,6 @@ func renderLinkless(key, language string, args ...any) (Rendered, commsauthz.Cat
 	}, t.category, nil
 }
 
-func renderTemplateContext(key string, expiresAt time.Time, language, purpose string) (Rendered, commsauthz.Category, error) {
-	return renderTemplate(key, linkExpiry{at: expiresAt}, language, purpose)
-}
-
 func renderTemplate(key string, expiry linkExpiry, language, purpose string) (Rendered, commsauthz.Category, error) {
 	t, ok := controllerTemplates[key]
 	if !ok {
