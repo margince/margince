@@ -4,7 +4,7 @@
 A unit may declare one app, and the home side drawer then lists it with the unit's own icon and name. This page
 says why the drawer is open to a unit, and what stops that from costing the product its own list of destinations.
 It is for anyone who reviews a unit or changes the drawer. To declare an app, go to
-[how-to/add-an-extension.md](../how-to/add-an-extension.md#show-an-app-in-the-home-side-drawer).
+[how-to/declare-an-app-in-the-home-drawer.md](../how-to/declare-an-app-in-the-home-drawer.md).
 
 ## The decision
 

@@ -129,6 +129,23 @@ What a unit does not get:
 | A spend cap for each unit's model calls | Not yet | One shared budget serves all units, and the audit rows say which unit spent it. |
 | Expiry or an index of a unit's objects | Not yet | A unit deletes its own objects with `Delete`. |
 
+### What a unit can change in the screens
+
+| Capability | Declared in | Where it shows | Decided by | State |
+|---|---|---|---|---|
+| Its own screen under Settings | The default export of its frontend package | `#/ext/<name>` | The settings rules of the page | Built |
+| An app in the home side drawer | `App` | A drawer row and `#/app/<name>` | `read` on the unit's RBAC object | Built |
+| A button or a note on a core screen | `Entries` | The log form, and the contact, company and deal pages | `read` on the unit's RBAC object | Built |
+| Other wording for a core key | Files in `frontend/i18n-overrides/` | Any frontend text of the core | The build checks only | Built |
+
+| Not offered | State | Why |
+|---|---|---|
+| A second app, a new drawer heading, or a row position | Never | The core draws the drawer, so a unit cannot restyle it. |
+| A path below `#/app/<name>` | Not yet | The app route holds the unit's name and nothing else. |
+| Overriding a record type's name, AI prompts, agent tools or text the backend writes | Not yet | An override changes frontend wording only. |
+
+How to do each: [declare-an-app-in-the-home-drawer.md](../how-to/declare-an-app-in-the-home-drawer.md), [Override core wording](../how-to/add-an-extension.md#override-core-wording) and [Offer an entry on a core screen](../how-to/add-an-extension.md#offer-an-entry-on-a-core-screen).
+
 ## The tool bag: what a unit can do to each core record
 
 Read a row as "can a unit do this to that record?" A ✅ is a door the core offers. A · is no door. Every table
@@ -288,6 +305,8 @@ first how-to below.
   records.
 - [declare-a-service-member.md](../how-to/declare-a-service-member.md): the account a timed job runs as.
 - [send-a-notice-from-an-extension.md](../how-to/send-a-notice-from-an-extension.md): tell a user about a record.
+- [declare-an-app-in-the-home-drawer.md](../how-to/declare-an-app-in-the-home-drawer.md): give a unit a row in the
+  home side drawer.
 - [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md): let units use a core
   service that holds a secret.
 - [extensibility.md](extensibility.md): why the tier is built this way, and what it guards.
