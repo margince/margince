@@ -163,3 +163,33 @@ func TestATranscriptIsReadByTheMeetingsGuestsJudgedOnTheMeeting(t *testing.T) {
 		t.Error("a guest taken off the meeting still reads its transcript before any sweep")
 	}
 }
+
+// A transcript that cites a task, not a meeting, is read by its own guests.
+func TestATranscriptCitingATaskIsReadByItsOwnGuests(t *testing.T) {
+	e := setupSend(t)
+	customer, deal := seedCustomer(t, e), e.seedDeal(t, "Renewal")
+	booked := string(crmcontracts.ActivityMeetingStatusBooked)
+	meeting := customerMeeting(t, e, customer, "Quarterly review", clocktest.Now(t).Add(-2*time.Hour), &booked)
+	created, err := transcriptOf(t, e, meeting, customer, deal)
+	if err != nil {
+		t.Fatalf("logging the transcript: %v", err)
+	}
+	transcript := ids.From[ids.ActivityKind](ids.UUID(created.Id))
+	ctx, task := context.Background(), ids.NewV7()
+	for _, seed := range []struct {
+		sql  string
+		args []any
+	}{
+		{`INSERT INTO activity (id, kind, subject, source, captured_by) VALUES ($1, 'task', 'Send the deck', 'manual', $2)`,
+			[]any{task, "human:" + e.rep.String()}},
+		{`UPDATE activity SET source_activity_id = $2, audience = 'participants' WHERE id = $1`, []any{transcript, task}},
+		{`INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'attendee')`, []any{transcript, e.other}},
+	} {
+		if _, err := e.owner.Exec(ctx, seed.sql, seed.args...); err != nil {
+			t.Fatalf("seeding: %v", err)
+		}
+	}
+	if !colleagueReads(t, e, transcript) {
+		t.Error("a guest of a transcript that cites a task cannot read it")
+	}
+}
