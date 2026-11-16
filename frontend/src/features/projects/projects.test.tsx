@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -16,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { openFilterValues } from "../../testing/listquery.testkit";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { COMPANY, project } from "../../testing/projects.fixtures";
 import { ProjectsScreen } from "./projects";
 import { projectsBackend } from "./projects.testing";
@@ -299,5 +301,37 @@ describe("ProjectsScreen", () => {
       source: "manual",
     });
     expect(window.location.hash).toBe("#/projects/pr-new");
+  });
+});
+
+describe("ProjectsScreen — a row on a phone", () => {
+  it("ends the name's line in the phase and names the customer under it", async () => {
+    stubWindowWidth(390);
+    projectsBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout", phase: "delivering" }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    await screen.findByText("Brandt Automotive");
+    const row = await phoneRowOf("CRM rollout");
+    expect(row.end).toEqual(["Delivering"]);
+    expect(row.caption).toEqual(["Brandt Automotive"]);
+    expect(
+      screen.queryByRole("link", { name: "Brandt Automotive" }),
+    ).toBeNull();
+  });
+
+  it("draws no line two for a project with no customer", async () => {
+    stubWindowWidth(390);
+    projectsBackend({
+      projects: [
+        project({ id: "pr-1", name: "CRM rollout", company_id: null }),
+      ],
+    });
+    render(<ProjectsScreen />);
+    const row = await phoneRowOf("CRM rollout");
+    expect(row.caption).toEqual([]);
+    expect(row.row).not.toHaveTextContent("—");
   });
 });

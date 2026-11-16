@@ -64,12 +64,24 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.create_lead",
   "magic.action.create_project",
   "magic.action.create_activity",
+  "magic.action.create_activity_email",
+  "magic.action.create_activity_meeting",
+  "magic.action.create_activity_call",
+  "magic.action.create_activity_note",
+  "magic.action.create_activity_task",
+  "magic.action.create_activity_message",
   "magic.action.archive_contact",
   "magic.action.archive_company",
   "magic.action.archive_deal",
   "magic.action.archive_lead",
   "magic.action.archive_project",
   "magic.action.archive_activity",
+  "magic.action.archive_activity_email",
+  "magic.action.archive_activity_meeting",
+  "magic.action.archive_activity_call",
+  "magic.action.archive_activity_note",
+  "magic.action.archive_activity_task",
+  "magic.action.archive_activity_message",
 ] as const satisfies readonly MessageKey[];
 
 export type MagicSentenceKey = (typeof MAGIC_SENTENCE_KEYS)[number];
@@ -162,11 +174,17 @@ const MAGIC_UNDO_REASONS: Readonly<Record<string, MessageKey | undefined>> = {
   undo_not_evaluated: "magic.undoReason.notEvaluated",
 };
 
-/** Why this line cannot be taken back, in words, or null for a reason this build has none for. */
+// Refusals about the reader, not the change. A receipt says what happened to
+// the reader's work; that they may not write it is no news on every row.
+const READER_REFUSALS: ReadonlySet<string> = new Set([
+  "not_writable_by_caller",
+]);
+
+/** Why this line cannot be taken back, in words, or null for a reason this build has none for or does not say. */
 export function magicUndoReasonKey(
   reason: string | undefined,
 ): MessageKey | null {
-  if (!reason) {
+  if (!reason || READER_REFUSALS.has(reason)) {
     return null;
   }
   return undoRefusalKey(reason) ?? MAGIC_UNDO_REASONS[reason] ?? null;

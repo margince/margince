@@ -36,6 +36,7 @@ import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
 import { probabilitySetNote } from "../dealprobability";
+import { archiveDeal } from "../deals.write";
 import { CorrectCloseDayAction } from "./correctcloseday";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
@@ -343,16 +344,7 @@ export function DealActions({
             label={t("deal.archive")}
             confirmText={t("deal.archiveConfirm")}
             archivedMessage={t("record.archiveDone", { name: deal.name })}
-            archive={async () => {
-              return unwrap(
-                await api.DELETE("/deals/{id}", {
-                  params: {
-                    path: { id: deal.id },
-                    ...ifMatch(requireVersion(deal.version)),
-                  },
-                }),
-              );
-            }}
+            archive={() => archiveDeal(deal)}
             invalidate="deals"
             recordKey="deal"
             onArchived={() => navigate({ screen: "deals" })}

@@ -21,7 +21,7 @@ import { showLayout } from "../../testing/listquery.testkit";
 import { openView } from "../../testing/listview.testkit";
 import { askedToClose } from "./deal360/confirmadvance.testkit";
 import { DealsScreen } from "./deals";
-import { deal, render, stubBackend } from "./deals.testkit";
+import { deal, dropOnStage, render, stubBackend } from "./deals.testkit";
 
 afterEach(() => {
   cleanup();
@@ -29,19 +29,6 @@ afterEach(() => {
   window.location.hash = "";
   localStorage.clear();
 });
-
-// Drops deal d1 on a stage column the way the board's drag does. jsdom carries
-// no drag-and-drop, so the drop handler is dispatched directly. On touch the
-// reader takes the stepper, which its own tests cover.
-function dropOnStage(stageId: string, dealId = "d1") {
-  const column = document.querySelector(
-    `[data-stage="${stageId}"]`,
-  ) as HTMLElement;
-  const dataTransfer = { getData: () => dealId, setData: () => {} };
-  const dropEvent = new Event("drop", { bubbles: true });
-  Object.assign(dropEvent, { dataTransfer });
-  column.dispatchEvent(dropEvent);
-}
 
 describe("DealsScreen", () => {
   // The card takes a view model rather than the wire row, so every fact it
