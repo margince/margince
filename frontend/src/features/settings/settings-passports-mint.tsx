@@ -34,7 +34,7 @@ const PASSPORT_SCOPES = [
   "enrich",
   "personal_channels",
 ] as const;
-type PassportScope = (typeof PASSPORT_SCOPES)[number];
+export type PassportScope = (typeof PASSPORT_SCOPES)[number];
 
 // Annotated, so an added scope is a missing-key compile error rather than a
 // checkbox labelled with its wire token.
@@ -60,18 +60,21 @@ export function MintDialog({
   apiBaseUrl,
   reachable,
   onMinted,
+  preset,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   apiBaseUrl: string | undefined;
   reachable: readonly WorkArea[];
   onMinted: () => unknown;
+  /** What the form starts from, for a passport opened for one purpose. */
+  preset?: Readonly<{ label: string; scopes: readonly PassportScope[] }>;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [label, setLabel] = useState("");
+  const [label, setLabel] = useState(preset?.label ?? "");
   const [scopes, setScopes] = useState<Set<PassportScope>>(
-    new Set(["read", "draft"]),
+    new Set(preset?.scopes ?? ["read", "draft"]),
   );
   const [areas, setAreas] = useState<PassportAreas>(ALL_AREAS);
   const [neverExpires, setNeverExpires] = useState(false);

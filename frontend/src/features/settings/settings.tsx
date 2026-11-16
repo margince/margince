@@ -24,6 +24,7 @@ import { BlockedDomainsCard } from "../capture/blocked-domains";
 import { CaptureActivityTab } from "../capture/capture-activity";
 import { OwnerIdentitiesCard } from "../capture/capture-owner-identities";
 import { ConnectorsCard, WorkspaceBotPanel } from "../capture/connectors";
+import { PersonalChannelsCard } from "../capture/personal-channels";
 import { ConsumerMailDomainsCard } from "../capture/consumer-mail-domains";
 import { ProviderCard } from "../capture/integrations-provider";
 import { OwnDomainsCard } from "../capture/own-domains";
@@ -293,7 +294,12 @@ function connectionsTab(tab: string): ReactNode {
     case "activity":
       return <CaptureActivityTab />;
     default:
-      return <ConnectorsCard />;
+      return (
+        <>
+          <ConnectorsCard />
+          <PersonalChannelsCard />
+        </>
+      );
   }
 }
 

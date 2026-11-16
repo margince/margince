@@ -37,6 +37,7 @@ import {
   usePassportUsageDetail,
 } from "../automations/agentusage";
 import { PassportUses } from "./settings.passportuse";
+import { Heading } from "../../design-system/heading";
 import { MintDialog } from "./settings-passports-mint";
 import "./settings.css";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -59,11 +60,38 @@ function passportAnchor(id: string): HTMLElement | null {
   return document.querySelector<HTMLElement>(`[data-passport="${id}"]`);
 }
 
+const CHAT_BRIDGE_PRESET = {
+  label: "Chat Bridge",
+  scopes: ["personal_channels"],
+} as const;
+
+/** The developer guide to the Personal channels API, in the public docs. */
+const PERSONAL_CHANNELS_GUIDE =
+  "https://github.com/margince/margince/blob/main/docs/handbook/personal-channels-api.md";
+
+function PersonalChannelsApi({ onMint }: Readonly<{ onMint: () => void }>) {
+  const t = useT();
+  return (
+    <section className="form-stack" aria-labelledby="personal-channels-api">
+      <Heading size="small" id="personal-channels-api">
+        {t("personalChannels.apiTitle")}
+      </Heading>
+      <p>{t("personalChannels.apiIntro")}</p>
+      <span>
+        <a href={PERSONAL_CHANNELS_GUIDE} target="_blank" rel="noreferrer">
+          {t("personalChannels.readGuide")}
+        </a>{" "}
+        <Button onClick={onMint}>{t("personalChannels.mintForBridge")}</Button>
+      </span>
+    </section>
+  );
+}
+
 export function PassportCard() {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const [minting, setMinting] = useState(false);
+  const [minting, setMinting] = useState<false | "plain" | "channels">(false);
   // Metadata only: PassportSummary carries no token, so this list cannot
   // re-disclose one.
   const list = usePassports();
@@ -104,7 +132,7 @@ export function PassportCard() {
     <Panel
       title={t("settings.passports")}
       titleAction={
-        <Button onClick={() => setMinting(true)}>
+        <Button onClick={() => setMinting("plain")}>
           {t("settings.mintOpen")}
         </Button>
       }
@@ -112,6 +140,7 @@ export function PassportCard() {
       <PanelBody>
         <PanelIntro>{t("settings.passportsSub")}</PanelIntro>
         <PassportUses apiBaseUrl={list.data?.api_base_url} />
+        <PersonalChannelsApi onMint={() => setMinting("channels")} />
       </PanelBody>
       <PanelGroupHead title={t("settings.passportsYours")} level="h3" />
       {list.isSuccess && shown.length > 0 ? (
@@ -144,7 +173,9 @@ export function PassportCard() {
         <p className="t-caption">{t("settings.passportsMcpHint")}</p>
       </PanelBody>
       <MintDialog
-        open={minting}
+        key={minting || "closed"}
+        preset={minting === "channels" ? CHAT_BRIDGE_PRESET : undefined}
+        open={minting !== false}
         onClose={() => setMinting(false)}
         apiBaseUrl={list.data?.api_base_url}
         reachable={reachable}

@@ -11816,6 +11816,31 @@ export const en = {
   // Connected inboxes (Settings → Connections): the "manage in Settings"
   // surface the onboarding copy promises.
   "connectors.title": "Mail and calendar",
+  "personalChannels.title": "Personal channels",
+  "personalChannels.apiTitle": "Personal channels API",
+  "personalChannels.apiIntro": "Send chats and files in, and pull replies, from Chat Bridge or your own code. Create a passport with Personal channels ticked, then follow the guide. The skill download carries the same guide.",
+  "personalChannels.readGuide": "Read the guide",
+  "personalChannels.mintForBridge": "New passport for Chat Bridge",
+  "personalChannels.turnOn": "Turn on",
+  "personalChannels.turnOff": "Turn off",
+  "personalChannels.loading": "Loading personal channels…",
+  "personalChannels.intro": "Bring your own WhatsApp, Zalo or other chats into Margince. You choose what is sent; each message lands on the contact’s timeline, and you can reply from Margince.",
+  "personalChannels.ownClient": "Building your own client, such as Chat Bridge?",
+  "personalChannels.developers": "See For developers in AI assistants.",
+  "personalChannels.assistant": "Through your AI assistant",
+  "personalChannels.connected": "Connected",
+  "personalChannels.notConnected": "Not connected",
+  "personalChannels.assistantFacts": "Claude, ChatGPT, Gemini, Copilot or any MCP client sends chats and files for you.",
+  "personalChannels.setUp": "Set up",
+  "personalChannels.step1": "Open Connect your AI tool in Settings → AI assistants.",
+  "personalChannels.step2": "On Authorize access, tick Personal channels.",
+  "personalChannels.step3": "Ask your assistant: “Send this chat with An to Margince.”",
+  "personalChannels.replies": "Replies",
+  "personalChannels.waiting_one": "{count} waiting",
+  "personalChannels.waiting_other": "{count} waiting",
+  "personalChannels.oldest": "Oldest written {date}",
+  "personalChannels.lastSeen": "Client last seen {date}",
+  "personalChannels.neverSeen": "No client has picked replies up yet",
   // The rep's standing overnight authority — one question, asked beside the
   // mailbox connect in onboarding and again in Settings. The danger line names
   // the features that go empty, because "some things stop working" is not
