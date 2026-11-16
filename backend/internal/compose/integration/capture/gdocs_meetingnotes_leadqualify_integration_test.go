@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/qualifytest"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -32,9 +33,9 @@ func leadOnMeeting(t *testing.T, e *integration.SearchEnv, email string, meeting
 	return ids.UUID(lead.Id)
 }
 
-// The notes Doc that lands as a meeting's transcript marks the meeting held,
-// and the capture writer asks the lead's owner to qualify the lead once, however
-// often the Doc is synced. A lead nobody owns on the same meeting gets no task.
+// A notes Doc landing as a meeting's transcript marks the meeting held. The
+// capture writer then asks the lead's owner to qualify the lead, once per sync
+// run or more. A lead nobody owns on the same meeting gets no task.
 func TestMeetingNotesMarkingALeadMeetingHeldAskTheOwnerToQualify(t *testing.T) {
 	env := newCaptureEnvAt(t, clocktest.Now(t))
 	e := env.e
@@ -49,8 +50,8 @@ func TestMeetingNotesMarkingALeadMeetingHeldAskTheOwnerToQualify(t *testing.T) {
 	if got := notesTranscripts(t, e); got != 1 {
 		t.Fatalf("%d transcripts from the notes Doc, want 1", got)
 	}
-	integration.AssertOwnerAskedToQualify(e.AsFullUser(), t, e.DB(), owned, meeting)
-	if tasks := integration.OpenQualifyTasks(e.AsFullUser(), t, e.DB(), ownerless); len(tasks) != 0 {
+	qualifytest.AssertOwnerAsked(e.AsFullUser(), t, e.DB(), owned, meeting)
+	if tasks := qualifytest.OpenTasks(e.AsFullUser(), t, e.DB(), ownerless); len(tasks) != 0 {
 		t.Errorf("a lead nobody owns was asked to qualify: %+v", tasks)
 	}
 }

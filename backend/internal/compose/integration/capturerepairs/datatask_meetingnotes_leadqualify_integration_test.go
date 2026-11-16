@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/qualifytest"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -26,9 +27,9 @@ func leadMetAt(t *testing.T, e *integration.Env, email string, meeting ids.UUID)
 	return ids.UUID(lead.Id)
 }
 
-// The release's notes repair, run through the catalog the worker runs, marks a
-// booked lead meeting held and asks the lead's owner to qualify the lead. Notes
-// on a meeting already canceled keep that outcome and ask nobody.
+// The release's notes repair runs through the catalog the worker runs. It marks
+// a booked lead meeting held and asks the lead's owner to qualify the lead.
+// Notes on a meeting already canceled keep that outcome and ask nobody.
 func TestTheNotesRepairMarkingALeadMeetingHeldAsksTheOwnerToQualify(t *testing.T) {
 	e := integration.Setup(t)
 	booked, _ := storedAutomaticNotes(t, e, "booked")
@@ -43,8 +44,8 @@ func TestTheNotesRepairMarkingALeadMeetingHeldAsksTheOwnerToQualify(t *testing.T
 	if got := e.WsScalar(t, `SELECT meeting_status FROM activity WHERE id=$1`, booked); got != "held" {
 		t.Fatalf("the repair left the booked meeting %q, want held", got)
 	}
-	integration.AssertOwnerAskedToQualify(e.Admin(), t, e.DB(), met, booked)
-	if tasks := integration.OpenQualifyTasks(e.Admin(), t, e.DB(), missed); len(tasks) != 0 {
+	qualifytest.AssertOwnerAsked(e.Admin(), t, e.DB(), met, booked)
+	if tasks := qualifytest.OpenTasks(e.Admin(), t, e.DB(), missed); len(tasks) != 0 {
 		t.Errorf("notes on a canceled meeting asked to qualify its lead: %+v", tasks)
 	}
 }
