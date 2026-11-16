@@ -29,10 +29,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-// triageBrainFake answers the classification call with one canned verdict and
-// counts how many times it was asked. Non-triage calls fall through to the
-// extraction fake, so one worker serves both lanes. The count is atomic: the
-// read extracts its pages concurrently.
+// triageBrainFake answers the classification call with one canned verdict and counts the calls atomically,
+// because the read extracts its pages concurrently. Other calls go to the extraction fake, so one worker serves both.
 type triageBrainFake struct {
 	verdict string
 	calls   atomic.Int64
