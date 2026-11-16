@@ -208,9 +208,11 @@ const (
 	// MarketingPendingConfirmation is the ordinary success: the question was
 	// mailed and the grant waits on the subject answering it.
 	MarketingPendingConfirmation MarketingOutcome = "pending_confirmation"
-	// MarketingNotAsked is a question this installation could not put: no live
-	// mailbox on the record, a purpose archived since the form was published,
-	// or a mail lane that refused it. The booking stands either way.
+	// MarketingNotAsked is a question this installation could not put. The
+	// record has no live mailbox, the purpose was archived after the form was
+	// published, or a mail lane refused it. A user's booking for a contact whose
+	// rules need their own request first is not asked either. The booking
+	// stands in every case.
 	MarketingNotAsked MarketingOutcome = "not_asked"
 )
 
