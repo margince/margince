@@ -30,7 +30,7 @@ import (
 // So the landing path starts one too.
 //
 // Three conditions, and each one is load-bearing:
-//   - source_system = 'transcript' is the marker the retention selector and
+//   - source_system transcriptSourceSystem is the marker the retention selector and
 //     the reader both key on. It is what says "this body is a recording of a
 //     conversation" rather than notes about one.
 //   - a body, because there is nothing to read without one.

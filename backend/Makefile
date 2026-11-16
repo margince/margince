@@ -250,13 +250,14 @@ build: composition ## Compile every package (composed workspace)
 
 # fetch-test-deps resolves what only a TAGGED TEST imports, which `build` never
 # reaches: `go build ./...` reads no `_test.go`, so a module imported from one
-# is still missing after it.
+# is still missing after it. `./...` stops at the tools module's boundary, so
+# `./tools/...` names its packages (the code generators' test deps) as well.
 #
 # The clock-drift lane is why this is a target. It downloads at the real date
 # because a runner 200 days ahead verifies no certificate, and a fetch there
 # fails as `[setup failed]` on a package that reads as a test finding.
 fetch-test-deps: composition ## Download what the tagged suites import, nothing else
-	$(GOWORK_COMPOSED) $(GO) list -tags=integration -deps -test ./... > /dev/null
+	$(GOWORK_COMPOSED) $(GO) list -tags=integration -deps -test ./... ./tools/... > /dev/null
 
 vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# UNTAGGED, and only untagged. The tagged lanes are vetted by `make lint`:

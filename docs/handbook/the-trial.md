@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/app/trialpill.tsx frontend/src/app/trialring.tsx frontend/src/app/licensebanner.tsx frontend/src/app/trialended.tsx frontend/src/components/trialcontact.tsx backend/internal/compose/installtrial/installtrial.go -->
+<!-- describes: frontend/src/app/trialpill.tsx frontend/src/app/trialring.tsx frontend/src/app/licensebanner.tsx frontend/src/app/trialended.tsx frontend/src/components/trialcontact.tsx backend/internal/compose/installtrial/installtrial.go backend/internal/modules/identity/triallock.go -->
 # The trial
 
 A Margince you set up yourself runs for 14 days with no licence. The days count from the day its
@@ -29,8 +29,20 @@ Margince stops working until it has a licence. There is no grace period. Every m
 Margince trial has ended** in place of the app, with the same button to write to the team, and
 **Sign out**.
 
-Nothing is deleted, and your data is all there again once the licence is in place. Your server
-admin sets the licence key in the installation's configuration and starts Margince again. An agent you
-connected stops too: every call it makes is refused. Margince sends no email until then, and that
-includes privacy notices and confirmation links.
+Nothing is deleted. Until the licence is in place, Margince refuses changes to your records. Some
+things still work: reading, data exports, privacy requests, the licence itself, and each member's
+own password, two-step sign-in and sessions. The screen has no way to reach an export, so ask
+whoever runs your Margince to make one for you.
+
+How the licence goes in depends on where your server admin puts the key:
+
+- **In a licence file** (`license.token_file`, or a `${file:…}` value in `license.token`): an
+  admin presses **Check now**. It is on the same screen and in **Settings → Seats and license**.
+  Margince opens again at once.
+- **Typed into the configuration** (`license.token` or `MARGINCE_LICENSE`): the admin starts
+  Margince again, because that value is read only when Margince starts.
+
+Background work starts again on its own within about 15 minutes. An agent you connected stops
+too: every call it makes is refused. Margince sends no email until then, and that includes privacy notices
+and confirmation links.
 Also called: trial ended, trial expired, Margince stopped working, locked.

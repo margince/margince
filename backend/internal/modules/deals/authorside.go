@@ -165,12 +165,9 @@ func domainSideOf(address string, ownDomains []string) domainSide {
 }
 
 // TranscriptSourceSystem is the activity.source_system value that marks a body
-// as a recording of a conversation rather than notes about one.
-//
-// Spelled here as well as in the activities module because a module never
-// imports a sibling. The two are one vocabulary and must agree;
-// backend/gates/transcriptmarker_test.go is what fails when they drift.
-const TranscriptSourceSystem = "transcript"
+// as a recording of a conversation rather than notes about one. The kernel
+// spells it once; backend/gates/transcriptmarker_test.go holds every module to it.
+const TranscriptSourceSystem = meetingoutcome.TranscriptSourceSystem
 
 // CountsAsBuyerParticipant reports whether one participant is evidence that
 // somebody from the OTHER side was on the activity. seatDomains are the folded
