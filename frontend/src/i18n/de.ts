@@ -4223,7 +4223,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Seite ist möglicherweise unvollständig, da einige Bereiche nicht geladen werden konnten.",
   "evidence.explain": "Herkunft von „{value}“",
   "evidence.explainBeside": "{label}: Herkunft von „{value}“",
-  "evidence.fromMeeting": "Aus einer Besprechung am {date}",
+  "evidence.fromMeeting": "Aus einem Termin am {date}",
   "evidence.fullHistory": "Vollständiger Verlauf",
   "co.section.unavailable":
     "Dieser Bereich ist möglicherweise unvollständig, da einige Daten nicht geladen werden konnten.",

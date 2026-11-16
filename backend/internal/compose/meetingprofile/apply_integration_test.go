@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"maps"
 	"testing"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const distributors = "They sell through regional distributors."
@@ -73,27 +75,36 @@ func (m *meeting) employee(t *testing.T, company ids.UUID, name string) ids.UUID
 	return contact
 }
 
-// read applies a reading that states entries, each said by an outside contact.
+// read applies, as an admin, a reading that states entries, each said by an
+// outside contact with confidence 0.8.
 func (m *meeting) read(t *testing.T, entries ...saidBy) {
 	t.Helper()
+	sure := make([]float64, len(entries))
+	for i := range sure {
+		sure[i] = 0.8
+	}
+	m.readAs(t, m.e.Admin(), entries, sure)
+}
+
+// readAs applies a reading as reader; confidence[i] is entries[i]'s.
+func (m *meeting) readAs(t *testing.T, reader context.Context, entries []saidBy, confidence []float64) {
+	t.Helper()
 	profile := []map[string]any{}
-	for _, entry := range entries {
+	var parties []commitmentparty.Party
+	for i, entry := range entries {
 		profile = append(profile, map[string]any{
 			"speaker_ref": "contact:" + entry.speaker.String(),
-			"field":       entry.field, "value": entry.value, "source_lines": []int{1}, "confidence": 0.8,
+			"field":       entry.field, "value": entry.value, "source_lines": []int{1}, "confidence": confidence[i],
 		})
+		parties = append(parties, commitmentparty.Party{Ref: "contact:" + entry.speaker.String(), Contact: &entry.speaker})
 	}
 	raw, err := json.Marshal(profile)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var parties []commitmentparty.Party
-	for _, entry := range entries {
-		parties = append(parties, commitmentparty.Party{Ref: "contact:" + entry.speaker.String(), Contact: &entry.speaker})
-	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	if err := database.WithWorkspaceTx(m.e.Admin(), m.e.Pool, func(tx pgx.Tx) error {
-		return meetingprofile.Apply(m.e.Admin(), tx, quiet, raw, 1, m.transcript, parties)
+	if err := database.WithWorkspaceTx(reader, m.e.Pool, func(tx pgx.Tx) error {
+		return meetingprofile.Apply(reader, tx, quiet, raw, 1, m.transcript, parties)
 	}); err != nil {
 		t.Fatalf("applying the reading: %v", err)
 	}
@@ -203,5 +214,62 @@ func TestAUsersCorrectionStopsCitingTheMeeting(t *testing.T) {
 	if got.Source != crmcontracts.CompanyProfileFieldSourceHuman || got.SourceActivityId != nil || got.SourceOccurredAt != nil {
 		t.Errorf("the corrected field reads source %q citing %v on %v, want a user's value citing no meeting",
 			got.Source, got.SourceActivityId, got.SourceOccurredAt)
+	}
+}
+
+func TestTwoSpeakersOfOneCompanyAgreeOnTheSurerValue(t *testing.T) {
+	m := newMeeting(t, "workspace")
+	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
+	dana, erik := m.employee(t, company, "Dana Brandt"), m.employee(t, company, "Erik Brandt")
+	stated := []saidBy{{dana, "sales_motion", distributors}, {erik, "sales_motion", "They sell online."}}
+
+	m.readAs(t, m.e.Admin(), stated, []float64{0.6, 0.9})
+	if got, _ := m.field(t, company, "sales_motion"); got.Value != "They sell online." {
+		t.Errorf("sales_motion reads %q, want the surer speaker's value", got.Value)
+	}
+	m.readAs(t, m.e.Admin(), stated, []float64{0.8, 0.8})
+	if got, _ := m.field(t, company, "sales_motion"); got.Value != distributors {
+		t.Errorf("sales_motion reads %q on a tie, want the earlier entry's value", got.Value)
+	}
+}
+
+// companyEditor may update companies, but only those of their own team.
+func companyEditor(m *meeting) context.Context {
+	perms := integration.AccountRepPerms
+	perms.Objects = maps.Clone(integration.AccountRepPerms.Objects)
+	perms.Objects["company"] = principal.ObjectGrant{Read: true, Update: true}
+	return m.e.As(m.e.Rep3, []ids.UUID{m.e.Team2}, perms)
+}
+
+func TestAReaderWhoMayNotChangeACompanyLeavesItsMeetingFields(t *testing.T) {
+	m := newMeeting(t, "workspace")
+	company := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep1)
+	m.read(t, saidBy{m.employee(t, company, "Dana Brandt"), "sales_motion", distributors})
+
+	m.readAs(t, companyEditor(m), nil, nil)
+	if got, ok := m.field(t, company, "sales_motion"); !ok || got.Value != distributors {
+		t.Errorf("sales_motion reads %q (present %v) after a reading by someone who may not change the company", got.Value, ok)
+	}
+}
+
+func TestACompanyTheReaderMayNotWriteLeavesTheOthersAudited(t *testing.T) {
+	m := newMeeting(t, "workspace")
+	ours, theirs := m.e.SeedCompany(t, "Brandt IT", &m.e.Rep3), m.e.SeedCompany(t, "Nordkraft", &m.e.Rep1)
+	m.read(t, saidBy{m.employee(t, ours, "Dana Brandt"), "icp", "Banks"})
+	sigrid := m.employee(t, theirs, "Sigrid Berg")
+	audited := func() int {
+		return m.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1`, ours)
+	}
+	before := audited()
+
+	m.readAs(t, companyEditor(m), []saidBy{{sigrid, "sales_motion", distributors}}, []float64{0.8})
+	if got, ok := m.field(t, ours, "icp"); ok {
+		t.Errorf("icp still reads %q; the re-reading no longer states it", got.Value)
+	}
+	if after := audited(); after != before+1 {
+		t.Errorf("Brandt IT has %d new audit rows, want 1 for the removed icp", after-before)
+	}
+	if got, ok := m.field(t, theirs, "sales_motion"); ok {
+		t.Errorf("a reader who may not change Nordkraft wrote %q onto it", got.Value)
 	}
 }

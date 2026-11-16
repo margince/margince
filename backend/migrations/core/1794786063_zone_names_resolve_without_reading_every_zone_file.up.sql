@@ -4,6 +4,8 @@
 -- spelling back keeps the match exact, since the file lookup ignores case.
 -- A name with a digit (Etc/GMT+5, but also the POSIX rule UTC+3) keeps the
 -- exact catalog lookup. The setting is undone with its subtransaction.
+-- Postgres parses a value that starts with "interval" as an interval, which is
+-- no zone name, and a failed parse there raises an error other than a refusal.
 CREATE FUNCTION public.named_time_zone(zone_name text)
 RETURNS boolean LANGUAGE plpgsql STABLE STRICT SET search_path = pg_catalog AS $$
 DECLARE
@@ -11,6 +13,9 @@ DECLARE
 BEGIN
  IF zone_name ~ '[0-9]' THEN
   RETURN EXISTS (SELECT 1 FROM pg_timezone_names WHERE name = zone_name);
+ END IF;
+ IF zone_name ~* '^interval' THEN
+  RETURN false;
  END IF;
  BEGIN
   PERFORM set_config('TimeZone', zone_name, true);

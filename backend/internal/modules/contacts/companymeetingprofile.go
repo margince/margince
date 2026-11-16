@@ -4,9 +4,12 @@
 package contacts
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -14,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -34,6 +38,7 @@ type MeetingProfileField struct {
 // what an earlier reading of it wrote and this one no longer states. A user's
 // or agent's value and our own company are never written. Only a transcript the
 // whole workspace may read fills a field, since the company's readers see it.
+// A company the caller may not change keeps its fields as they are.
 func ApplyMeetingProfileTx(
 	ctx context.Context, tx pgx.Tx, transcript ids.ActivityID, stated map[ids.CompanyID][]MeetingProfileField,
 ) error {
@@ -52,8 +57,15 @@ func ApplyMeetingProfileTx(
 	if err != nil {
 		return err
 	}
+	changeable, err := meetingChangeableCompanies(ctx, tx, transcript, stated)
+	if err != nil {
+		return err
+	}
+	maps.DeleteFunc(stated, func(company ids.CompanyID, _ []MeetingProfileField) bool {
+		return !slices.Contains(changeable, company.UUID)
+	})
 	changed := map[ids.CompanyID]*meetingFieldImages{}
-	if err := retractUnstatedMeetingFields(ctx, tx, transcript, stated, changed); err != nil {
+	if err := retractUnstatedMeetingFields(ctx, tx, transcript, stated, changeable, changed); err != nil {
 		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
@@ -78,9 +90,6 @@ func writeMeetingFieldsTx(
 	ctx context.Context, tx pgx.Tx, company ids.CompanyID, transcript ids.ActivityID, by string,
 	fields []MeetingProfileField, images *meetingFieldImages,
 ) error {
-	if err := auth.EnsureWritableLive(ctx, tx, companyEntity, company.UUID); err != nil {
-		return err
-	}
 	for _, field := range fields {
 		var was *string
 		if err := tx.QueryRow(ctx, `SELECT value FROM company_profile_field WHERE company_id = $1 AND field = $2`,
@@ -117,11 +126,44 @@ func withoutAnchorCompany(
 	return out, nil
 }
 
-// retractUnstatedMeetingFields removes the values this transcript wrote that
-// the new reading does not state, and notes each removal in changed (nil value).
+// meetingChangeableCompanies asks, before anything is written, which companies
+// this apply may change. One it writes to must be writable and live. One it only
+// removes values from must be the caller's to change.
+func meetingChangeableCompanies(
+	ctx context.Context, tx pgx.Tx, transcript ids.ActivityID, stated map[ids.CompanyID][]MeetingProfileField,
+) ([]ids.UUID, error) {
+	var touched []ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT coalesce(array_agg(DISTINCT company_id), '{}') FROM company_profile_field
+		 WHERE source = 'meeting' AND source_activity_id = $1`, transcript.UUID).Scan(&touched); err != nil {
+		return nil, fmt.Errorf("read the companies a meeting wrote to: %w", err)
+	}
+	for company := range stated {
+		touched = append(touched, company.UUID)
+	}
+	slices.SortFunc(touched, func(a, b ids.UUID) int { return bytes.Compare(a[:], b[:]) })
+	var changeable []ids.UUID
+	for _, company := range slices.Compact(touched) {
+		check := auth.EnsureRetractable
+		if _, writes := stated[ids.From[ids.CompanyKind](company)]; writes {
+			check = auth.EnsureWritableLive
+		}
+		err := check(ctx, tx, companyEntity, company)
+		switch {
+		case err == nil:
+			changeable = append(changeable, company)
+		case !errors.Is(err, apperrors.ErrPermissionDenied) && !errors.Is(err, apperrors.ErrNotFound):
+			return nil, err
+		}
+	}
+	return changeable, nil
+}
+
+// retractUnstatedMeetingFields removes the values this transcript wrote on a
+// changeable company that the new reading does not state. It notes each
+// removal in changed (nil value).
 func retractUnstatedMeetingFields(
-	ctx context.Context, tx pgx.Tx, transcript ids.ActivityID,
-	stated map[ids.CompanyID][]MeetingProfileField, changed map[ids.CompanyID]*meetingFieldImages,
+	ctx context.Context, tx pgx.Tx, transcript ids.ActivityID, stated map[ids.CompanyID][]MeetingProfileField,
+	changeable []ids.UUID, changed map[ids.CompanyID]*meetingFieldImages,
 ) error {
 	var keepCompanies []ids.UUID
 	var keepFields []string
@@ -132,9 +174,9 @@ func retractUnstatedMeetingFields(
 	}
 	rows, err := tx.Query(ctx, `
 		DELETE FROM company_profile_field f
-		 WHERE f.source = 'meeting' AND f.source_activity_id = $1
+		 WHERE f.source = 'meeting' AND f.source_activity_id = $1 AND f.company_id = ANY($4::uuid[])
 		   AND (f.company_id, f.field) NOT IN (SELECT * FROM unnest($2::uuid[], $3::text[]))
-		RETURNING f.company_id, f.field, f.value`, transcript.UUID, keepCompanies, keepFields)
+		RETURNING f.company_id, f.field, f.value`, transcript.UUID, keepCompanies, keepFields, changeable)
 	if err != nil {
 		return fmt.Errorf("remove the fields a meeting no longer states: %w", err)
 	}
