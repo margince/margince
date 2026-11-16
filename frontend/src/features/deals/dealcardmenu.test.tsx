@@ -83,12 +83,27 @@ describe("deal card menu on the deals board", () => {
     const user = userEvent.setup();
     render(<DealsScreen />);
     const menu = await openCardMenu(user);
-    await user.click(await menu.findByRole("button", { name: "Mark won…" }));
+    await user.click(await menu.findByRole("button", { name: "Mark won" }));
 
     await askedToClose("Won");
     expect(advances).toHaveLength(0);
     await user.click(screen.getByRole("button", { name: "Confirm" }));
     await waitFor(() => expect(advances).toHaveLength(1));
     expect(advances[0]).toEqual([{ to_stage_id: "s3", status: "won" }, "4"]);
+  });
+
+  it("closes the menu behind the confirm when Won is picked from the stage list", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Move to stage" }));
+    await user.click(await screen.findByRole("option", { name: "Won" }));
+
+    await askedToClose("Won");
+    const trigger = screen.getByRole("button", {
+      name: "More actions for Fleet retrofit",
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
   });
 });

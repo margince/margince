@@ -5,6 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { Button, Modal, OverflowMenu } from "./atoms";
 import { Heading } from "./heading";
+import { ListPopover } from "./listpopover";
+import { useCloseOverflowMenu } from "./overflowmenu";
 
 // The panel hangs off the trigger's end, so the trigger sits at the right edge
 // with the height it drops into reserved.
@@ -115,4 +117,50 @@ export const InsideADrawerPhone: Story = {
   ...InsideADrawer,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+// An item that opens a list of its own: the menu stays open over the list, and
+// a pick in it closes both, as choosing an item does (`useCloseOverflowMenu`).
+function MoveToStage() {
+  const closeMenu = useCloseOverflowMenu();
+  return (
+    <ListPopover
+      label="Move to stage"
+      title="Move to stage"
+      searchLabel="Pick a stage"
+      options={[
+        { id: "qualified", name: "Qualified" },
+        { id: "proposal", name: "Proposal" },
+        { id: "won", name: "Won" },
+      ]}
+      selected="qualified"
+      onPick={(_stage, done) => {
+        done();
+        closeMenu();
+      }}
+    />
+  );
+}
+
+export const WithAPickInANestedList: Story = {
+  render: () => (
+    <OverflowMenu label="More actions">
+      <MoveToStage />
+      <Button>Merge with…</Button>
+      <Button variant="danger">Archive</Button>
+    </OverflowMenu>
+  ),
+  play: async ({ canvasElement }) => {
+    const trigger = await within(canvasElement).findByRole("button", {
+      name: "More actions",
+    });
+    await userEvent.click(trigger);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Move to stage" }),
+    );
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await userEvent.click(await screen.findByRole("option", { name: "Won" }));
+    await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await expect(trigger).toHaveFocus();
+  },
 };

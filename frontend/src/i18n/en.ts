@@ -2964,9 +2964,8 @@ export const en = {
   "deal.card.addTask": "Add task: {name}",
   "deal.card.summaryItem": "Deal summary",
   "deal.card.moveTo": "Move to {stage}",
-  "deal.card.moveToStage": "Move to stage…",
-  "deal.card.markWon": "Mark won…",
-  "deal.card.markLost": "Mark lost…",
+  "deal.card.markWon": "Mark won",
+  "deal.card.markLost": "Mark lost",
   "deal.card.closedReopen":
     "This deal is closed. Reopen it on its page to move it.",
   "deal.card.copyLink": "Copy link",

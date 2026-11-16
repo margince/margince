@@ -45,8 +45,8 @@ function boardDeal(extra?: Partial<BoardDeal>): BoardDeal {
 const menu = (
   <>
     <Button>Move to Proposal</Button>
-    <Button>Move to stage…</Button>
-    <Button>Mark won…</Button>
+    <Button>Move to stage</Button>
+    <Button>Mark won</Button>
     <Button>Deal summary</Button>
     <Button>Copy link</Button>
     <Button variant="danger">Archive deal</Button>
@@ -251,7 +251,7 @@ const openMenu: StoryObj["play"] = async ({ canvasElement }) => {
   await expect(trigger).toHaveAttribute("aria-expanded", "true");
   await expect(
     within(canvasElement.ownerDocument.body).getByRole("button", {
-      name: "Move to stage…",
+      name: "Move to stage",
     }),
   ).toBeVisible();
 };

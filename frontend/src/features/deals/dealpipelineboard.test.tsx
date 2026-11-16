@@ -222,9 +222,9 @@ describe("DealPipelineBoard", () => {
       const { panel } = await openMenu("Fleet retrofit");
       expect(itemNames(panel)).toEqual([
         "Move to Proposal",
-        "Move to stage…",
-        "Mark won…",
-        "Mark lost…",
+        "Move to stage",
+        "Mark won",
+        "Mark lost",
         "Deal summary",
         "Add task",
         "Copy link",
@@ -250,7 +250,7 @@ describe("DealPipelineBoard", () => {
         onAdvance,
       });
       const { user, panel } = await openMenu("Fleet retrofit");
-      await user.click(panel.getByRole("button", { name: "Move to stage…" }));
+      await user.click(panel.getByRole("button", { name: "Move to stage" }));
       await user.click(await screen.findByRole("option", { name: "Won" }));
       expect(onAdvance).toHaveBeenCalledWith("d1", "s3");
     });
@@ -266,14 +266,14 @@ describe("DealPipelineBoard", () => {
       const { panel } = await openMenu("Fleet retrofit");
       const reason = "This deal is closed. Reopen it on its page to move it.";
       expect(panel.getByText(reason)).toBeTruthy();
-      for (const name of ["Move to Lost", "Move to stage…", "Mark lost…"]) {
+      for (const name of ["Move to stage", "Mark lost"]) {
         const item = panel.getByRole("button", { name });
         expect(item).toHaveProperty("disabled", true);
         expect(item.getAttribute("aria-describedby")).toBe(
           panel.getByText(reason).id,
         );
       }
-      expect(panel.queryByRole("button", { name: "Mark won…" })).toBeNull();
+      expect(panel.queryByRole("button", { name: "Mark won" })).toBeNull();
     });
 
     it("offers an archived deal its summary and its link alone", async () => {
@@ -309,6 +309,22 @@ describe("DealPipelineBoard", () => {
       ]);
     });
 
+    // One item per destination: the close says more than the bare move.
+    it("offers the next stage as its close when it is the won stage", async () => {
+      renderBoard([openDeal], null, {
+        deals: [deal({ stage_id: "s2" })],
+        stages: pipeline,
+        onAdvance,
+      });
+      const { panel } = await openMenu("Fleet retrofit");
+      expect(panel.queryByRole("button", { name: "Move to Won" })).toBeNull();
+      expect(itemNames(panel).slice(0, 3)).toEqual([
+        "Move to stage",
+        "Mark won",
+        "Mark lost",
+      ]);
+    });
+
     // With two won stages, no one stage is what "won" means.
     it("offers Mark won only where one stage means won", async () => {
       const secondWin: Stage = {
@@ -323,8 +339,8 @@ describe("DealPipelineBoard", () => {
         onAdvance,
       });
       const { panel } = await openMenu("Fleet retrofit");
-      expect(panel.queryByRole("button", { name: "Mark won…" })).toBeNull();
-      expect(panel.getByRole("button", { name: "Mark lost…" })).toBeTruthy();
+      expect(panel.queryByRole("button", { name: "Mark won" })).toBeNull();
+      expect(panel.getByRole("button", { name: "Mark lost" })).toBeTruthy();
     });
   });
 });

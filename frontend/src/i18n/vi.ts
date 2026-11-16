@@ -2963,9 +2963,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.card.addTask": "Thêm việc cần làm: {name}",
   "deal.card.summaryItem": "Tóm tắt deal",
   "deal.card.moveTo": "Chuyển sang {stage}",
-  "deal.card.moveToStage": "Chuyển sang giai đoạn…",
-  "deal.card.markWon": "Đánh dấu thắng…",
-  "deal.card.markLost": "Đánh dấu thua…",
+  "deal.card.markWon": "Đánh dấu thắng",
+  "deal.card.markLost": "Đánh dấu thua",
   "deal.card.closedReopen":
     "Deal này đã đóng. Mở lại deal trên trang của deal để chuyển giai đoạn.",
   "deal.card.copyLink": "Sao chép liên kết",

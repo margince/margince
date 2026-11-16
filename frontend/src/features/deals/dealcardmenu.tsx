@@ -2,20 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect, useId } from "react";
-import { api } from "../../api/client";
-import { ifMatch, requireVersion } from "../../api/version";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
 import { Button } from "../../design-system/button";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import type { DealCardActions } from "../../design-system/dealcard";
 import { ListPopover } from "../../design-system/listpopover";
+import { useCloseOverflowMenu } from "../../design-system/overflowmenu";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import type { Deal, Stage } from "./deals";
+import { archiveDeal } from "./deals.write";
 
 type CardVerbs = Pick<DealCardActions, "onSummary" | "onEmail" | "onAddTask">;
 
@@ -72,18 +71,22 @@ function DealMoves({
   const t = useT();
   const reasonId = useId();
   const writable = useCanWriteRecord("deal", deal);
+  const closeMenu = useCloseOverflowMenu();
   if (!writable) {
     return null;
   }
   const refused = deal.status === "open" ? undefined : reasonId;
-  const here = stages.findIndex((stage) => stage.id === deal.stage_id);
-  const next = here < 0 ? undefined : stages[here + 1];
   // A pipeline with two won stages has no one stage "won" means.
   const closers = (["won", "lost"] as const).flatMap((semantic) => {
     const matching = stages.filter((stage) => stage.semantic === semantic);
     const only = matching.length === 1 ? matching[0] : undefined;
     return only && only.id !== deal.stage_id ? [{ semantic, stage: only }] : [];
   });
+  const here = stages.findIndex((stage) => stage.id === deal.stage_id);
+  const following = here < 0 ? undefined : stages[here + 1];
+  const next = closers.some(({ stage }) => stage.id === following?.id)
+    ? undefined
+    : following;
   const move = (stageId: string) => onAdvance(deal.id, stageId);
   return (
     <>
@@ -98,7 +101,7 @@ function DealMoves({
         </Button>
       )}
       <ListPopover
-        label={t("deal.card.moveToStage")}
+        label={t("deals.bulkStage")}
         title={t("deals.bulkStage")}
         searchLabel={t("deals.bulkStagePick")}
         reasonId={refused}
@@ -106,6 +109,7 @@ function DealMoves({
         selected={deal.stage_id ?? undefined}
         onPick={(stage, done) => {
           done();
+          closeMenu();
           if (stage.id !== deal.stage_id) {
             move(stage.id);
           }
@@ -160,16 +164,7 @@ function ArchiveDeal({ deal }: Readonly<{ deal: Deal }>) {
       label={t("deal.archive")}
       confirmText={t("deal.archiveConfirm")}
       archivedMessage={t("record.archiveDone", { name: deal.name })}
-      archive={async () => {
-        return unwrap(
-          await api.DELETE("/deals/{id}", {
-            params: {
-              path: { id: deal.id },
-              ...ifMatch(requireVersion(deal.version)),
-            },
-          }),
-        );
-      }}
+      archive={() => archiveDeal(deal)}
       invalidate="deals"
       recordKey="deal"
       onArchived={() => undefined}
