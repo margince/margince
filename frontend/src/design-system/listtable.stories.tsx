@@ -31,6 +31,12 @@ export default meta;
 
 type Story = StoryObj;
 
+const phoneStory = {
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+} satisfies Story;
+
 type Company = {
   id: string;
   name: string;
@@ -401,6 +407,7 @@ function SelectableSurface({
       rows={rows}
       columns={drawn}
       rowKey={(row) => row.id}
+      rowHref={(row) => `#/companies/${row.id}`}
       unit="companies"
       selection={{
         selected,
@@ -594,9 +601,7 @@ export const ShortListEmpty: Story = {
 
 export const ShortListEmptyOnPhone: Story = {
   ...ShortListEmpty,
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
+  ...phoneStory,
 };
 
 // Past the smallest page size the pager and the dials stay. A larger size may
@@ -645,13 +650,11 @@ export const RowMenu: Story = {
   play: openRowMenu,
 };
 
-// On a phone the menu ends the name's line; no column here has a phone place.
+// On a phone each row is a card, and the menu keeps its corner of it.
 export const RowMenuOnPhone: Story = {
   render: () => <Surface rows={companies(4)} columns={menuColumns} />,
   play: openRowMenu,
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
+  ...phoneStory,
 };
 
 const cardColumns: ListColumn<Company>[] = [
@@ -659,18 +662,18 @@ const cardColumns: ListColumn<Company>[] = [
   {
     key: "email",
     header: "E-mail",
-    phone: "caption",
     cell: (row: Company) => (
       <a href={`mailto:${row.id}`}>
         {`procurement.department.${row.id}@a-very-long-company-domain.example`}
       </a>
     ),
   },
-  { key: "seen", header: "Last activity", phone: "caption", cell: () => null },
+  // A renderer that wraps nothing in an element, as the Last activity cell does.
+  { key: "seen", header: "Last activity", cell: () => <span /> },
 ];
 
-// On a phone a row keeps a long caption fact inside its edge, and a fact with
-// nothing in it takes no place.
+// On a phone a card keeps a long value inside its edge, and a field with
+// nothing in it shows no label.
 export const CardsOnPhone: Story = {
   render: () => <Surface rows={companies(3)} columns={cardColumns} />,
   play: async ({ canvasElement }) => {
@@ -680,16 +683,13 @@ export const CardsOnPhone: Story = {
     await expect(value.getBoundingClientRect().right).toBeLessThanOrEqual(
       card?.getBoundingClientRect().right ?? 0,
     );
-    await expect(canvas.queryByText("Manufacturing")).toBeNull();
     for (const cell of canvasElement.querySelectorAll(
-      'td[data-phone="blank"]',
+      'td[data-label="Last activity"]',
     )) {
       await expect(cell).not.toBeVisible();
     }
   },
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
+  ...phoneStory,
 };
 
 // The phone row's own set: a badge at the end of the name's line, two caption
@@ -720,15 +720,11 @@ const phoneRowColumns: ListColumn<Company>[] = [
   ...columns.slice(4),
 ];
 
-const phoneStory = {
-  parameters: { layout: "fullscreen" },
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-} satisfies Story;
-
 function factsOf(row: Element | null | undefined): string[] {
-  return [...(row?.querySelectorAll("td") ?? [])]
-    .filter((cell) => cell.checkVisibility())
+  return [...(row?.querySelectorAll<HTMLElement>("td, .lt-fact") ?? [])]
+    .filter(
+      (cell) => cell.checkVisibility() && cell.dataset.phone !== "caption",
+    )
     .map((cell) => cell.textContent ?? "");
 }
 
@@ -762,7 +758,7 @@ export const PhoneRowSkipsPlaceholder: Story = {
     const name = await within(canvasElement).findByText("Company 02");
     const row = name.closest("tr");
     await expect(factsOf(row)).toEqual(["Company 02", "Prospect", "Logistics"]);
-    const industry = row?.querySelector('td[data-phone="caption"]');
+    const industry = row?.querySelector(".lt-fact");
     if (!industry) throw new Error("the row drew no caption");
     await expect(getComputedStyle(industry, "::after").content).toBe("none");
   },
@@ -772,8 +768,8 @@ export const PhoneRowSkipsPlaceholder: Story = {
 const LONG_NAME =
   "Vereinigte Norddeutsche Präzisionsmaschinenbau- und Antriebstechnik GmbH & Co. KG";
 
-// A long name wraps inside line one; a long caption fact ends in an ellipsis.
-// Nothing runs past the screen's edge.
+// A long name wraps inside line one and a long caption wraps under it. Nothing
+// runs past the screen's edge.
 export const PhoneRowLongText: Story = {
   render: () => (
     <Surface
@@ -791,14 +787,7 @@ export const PhoneRowLongText: Story = {
     />
   ),
   play: async ({ canvasElement }) => {
-    const name = await within(canvasElement).findByText(LONG_NAME);
-    const row = name.closest("tr");
-    const edge = row?.getBoundingClientRect().right ?? 0;
-    for (const cell of row?.querySelectorAll("td") ?? []) {
-      await expect(cell.getBoundingClientRect().right).toBeLessThanOrEqual(
-        edge,
-      );
-    }
+    await within(canvasElement).findByText(LONG_NAME);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       document.documentElement.clientWidth,
     );
@@ -806,12 +795,26 @@ export const PhoneRowLongText: Story = {
   ...phoneStory,
 };
 
-// The selection box leads the name and the menu ends its line, each its own target.
+const markedName: ListColumn<Company> = {
+  key: "name",
+  header: "Company",
+  fixed: true,
+  cell: (row: Company) => (
+    <span className="avatar-row">
+      <Avatar identity={row.id} name={row.name} />
+      <strong>{row.name}</strong>
+    </span>
+  ),
+};
+
+// The selection box and the logo lead the name, the menu ends its line, and
+// the caption starts under the name, not under the box or the logo.
 export const PhoneRowMenuAndSelection: Story = {
   render: () => (
     <SelectableSurface
       columns={[
-        ...phoneRowColumns,
+        markedName,
+        ...phoneRowColumns.slice(1),
         {
           key: "menu",
           header: "Actions",
@@ -832,17 +835,60 @@ export const PhoneRowMenuAndSelection: Story = {
       name: "Select Company 01",
     });
     await expect(box).toBeVisible();
+    const [name, caption] = ["strong", '[data-phone="caption"]'].map((part) =>
+      box.closest("tr")?.querySelector(part)?.getBoundingClientRect(),
+    );
+    await expect(caption?.left).toBeCloseTo(name?.left ?? 0, 0);
     await openRowMenu(context);
   },
   ...phoneStory,
 };
 
-// A list that gives no column a phone place shows the name and nothing else.
+// Desk: the name with its region beside it, no Headcount column. Phone: the
+// name alone, and the headcount, a phone-only column, among the caption facts.
+export const PhoneRowFoldedName: Story = {
+  render: () => (
+    <Surface
+      rows={companies(4)}
+      columns={[
+        {
+          ...markedName,
+          cell: (row: Company) => `${row.name} · ${row.region}`,
+          folded: (row: Company) => row.name,
+        },
+        ...phoneRowColumns.slice(1),
+        {
+          key: "headcount",
+          header: "Headcount",
+          phone: "caption",
+          phoneOnly: true,
+          cell: (row: Company) => `${row.size} people`,
+        },
+      ]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const name = await within(canvasElement).findByText("Company 01");
+    await expect(factsOf(name.closest("tr"))).toEqual([
+      "Company 01",
+      "Customer",
+      "Manufacturing",
+      "Lars",
+      "201-500 people",
+    ]);
+  },
+  ...phoneStory,
+};
+
+// A list that gives no column a phone place keeps the card: the name over a
+// labelled line for every shown column.
 export const PhoneRowWithoutPlaces: Story = {
   render: () => <Surface rows={companies(4)} />,
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText("Company 01");
-    await expect(factsOf(name.closest("tr"))).toEqual(["Company 01"]);
+    const value = name.closest("tr")?.querySelector('[data-label="Region"]');
+    if (!value) throw new Error("the card drew no Region line");
+    await expect(getComputedStyle(value, "::before").content).toBe('"Region"');
   },
   ...phoneStory,
 };

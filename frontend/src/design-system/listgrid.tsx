@@ -5,7 +5,7 @@
 // biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
 // biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
 
-import { type ReactNode, type RefObject, useRef } from "react";
+import { Fragment, type ReactNode, type RefObject, useRef } from "react";
 import { useT } from "../i18n";
 import { opensRow } from "../lib/linkclick";
 import { useFoldedViewport } from "../lib/viewport";
@@ -73,13 +73,13 @@ function IdentityCell<Row>({
   rowKey,
   rowHref,
   selection,
-  cell,
+  children,
 }: Readonly<{
   row: Row;
   rowKey: (row: Row) => string;
   rowHref?: (row: Row) => string;
   selection?: ListSelection<Row>;
-  cell: (row: Row) => ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <span className="lt-identity-row">
@@ -95,10 +95,10 @@ function IdentityCell<Row>({
           href={rowHref(row)}
           onClick={(event) => event.stopPropagation()}
         >
-          {cell(row)}
+          {children}
         </AppLink>
       ) : (
-        cell(row)
+        children
       )}
     </span>
   );
@@ -135,6 +135,7 @@ export function ListGrid<Row>({
   frozen,
   head,
   dense,
+  phone,
   layout,
   shown,
   sort,
@@ -146,6 +147,8 @@ export function ListGrid<Row>({
   frozen: ReturnType<typeof useFrozenEdge>;
   head: RefObject<HTMLTableElement | null>;
   dense: boolean;
+  /** The rows are phone rows, which `listtable.css` keys on the table. */
+  phone: boolean;
   layout: ColumnLayout & ColumnResize;
   shown: readonly ListColumn<Row>[];
   sort?: SortControl;
@@ -167,7 +170,7 @@ export function ListGrid<Row>({
         ref={head}
         className={`lt-table${dense ? " dense" : ""}${
           layout.resizing ? " is-resizing" : ""
-        }`}
+        }${phone ? " lt-phonerows" : ""}`}
         role="table"
         // A custom property rather than `min-width`: the phone layout drops
         // this floor to lay the rows out as cards, and an inline width wins.
@@ -214,7 +217,7 @@ type RowProps<Row> = Readonly<{
   onRowClick?: (row: Row) => void;
   rowHref?: (row: Row) => string;
   selection?: ListSelection<Row>;
-  /** The rows are phone rows: `shown` is the phone row's columns, and a cell says what `folded` gives. */
+  /** Phone rows: `shown` is the phone row's columns, and a cell says what `folded` gives. */
   phone: boolean;
 }>;
 
@@ -280,6 +283,18 @@ function DataRow<Row>({
   selection,
   phone,
 }: RowProps<Row> & Readonly<{ row: Row }>) {
+  const identity = (column: ListColumn<Row>) => (
+    <td key={column.key} role="cell" className={cellClass(column)}>
+      <IdentityCell
+        row={row}
+        rowKey={rowKey}
+        rowHref={rowHref}
+        selection={selection}
+      >
+        {phone ? asElement(phoneContent(column, row)) : column.cell(row)}
+      </IdentityCell>
+    </td>
+  );
   return (
     <tr
       role="row"
@@ -294,33 +309,23 @@ function DataRow<Row>({
           : undefined
       }
     >
-      {shown.map((column) => {
-        if (column.fixed) {
-          return (
-            <td key={column.key} role="cell" className={cellClass(column)}>
-              <IdentityCell
-                row={row}
-                rowKey={rowKey}
-                rowHref={rowHref}
-                selection={selection}
-                cell={column.cell}
-              />
-            </td>
-          );
-        }
-        const said = phone ? column.folded?.(row) : undefined;
-        const content = said === undefined ? column.cell(row) : said;
-        return (
-          <td
-            key={column.key}
-            role="cell"
-            className={cellClass(column)}
-            data-phone={phone ? phoneSlot(column, content) : undefined}
-          >
-            {content}
-          </td>
-        );
-      })}
+      {phone
+        ? phoneCells(row, shown, identity)
+        : shown.map((column) =>
+            column.fixed ? (
+              identity(column)
+            ) : (
+              <td
+                key={column.key}
+                role="cell"
+                className={cellClass(column)}
+                // A card on a phone has no header row, so each value carries its own label.
+                data-label={column.header}
+              >
+                {column.cell(row)}
+              </td>
+            ),
+          )}
       <td className="lt-slack" aria-hidden="true" />
     </tr>
   );
@@ -385,22 +390,25 @@ function phonePlace<Row>(column: ListColumn<Row>): PhonePlace | undefined {
 }
 
 /**
- * The columns the grid draws. A phone row reads the identity, its one end item,
- * the row menu, then the caption facts, in declared order: a phone has no Columns step.
+ * The columns the grid draws. A list with a `phone` place draws phone rows at
+ * the fold, in declared order: the reader's ticks and order are a desk's.
  */
 export function useDrawnColumns<Row>(
   columns: readonly ListColumn<Row>[],
   placed: readonly ListColumn<Row>[],
   hidden: ReadonlySet<string>,
 ): { phone: boolean; shown: readonly ListColumn<Row>[] } {
-  const phone = useFoldedViewport();
-  if (!phone) {
-    return { phone, shown: placed.filter((column) => !hidden.has(column.key)) };
-  }
+  const folded = useFoldedViewport();
   const at = (place: PhonePlace) =>
     columns.filter((column) => phonePlace(column) === place);
+  if (!folded || at("end").length + at("caption").length === 0) {
+    return {
+      phone: false,
+      shown: placed.filter((column) => !hidden.has(column.key)),
+    };
+  }
   return {
-    phone,
+    phone: true,
     shown: [
       ...at("title"),
       ...at("end").slice(0, 1),
@@ -410,18 +418,69 @@ export function useDrawnColumns<Row>(
   };
 }
 
-/** Where the phone row lays a cell out; a fact with nothing to say is left out. */
-function phoneSlot<Row>(
-  column: ListColumn<Row>,
-  content: ReactNode,
-): "end" | "caption" | "blank" | undefined {
-  const place = phonePlace(column);
-  if (place !== "end" && place !== "caption") {
-    return undefined;
+// The phone row's grid places elements; bare text would land in the first free track.
+function asElement(content: ReactNode): ReactNode {
+  return typeof content === "string" || typeof content === "number" ? (
+    <span>{content}</span>
+  ) : (
+    content
+  );
+}
+
+function phoneContent<Row>(column: ListColumn<Row>, row: Row): ReactNode {
+  const said = column.folded?.(row);
+  return said === undefined ? column.cell(row) : said;
+}
+
+/**
+ * A phone row: the identity, its end item and the row menu on line one, and
+ * one caption cell of the facts that have something to say.
+ */
+function phoneCells<Row>(
+  row: Row,
+  shown: readonly ListColumn<Row>[],
+  identity: (column: ListColumn<Row>) => ReactNode,
+): ReactNode[] {
+  const cells: ReactNode[] = [];
+  const facts: ReactNode[] = [];
+  for (const column of shown) {
+    const place = phonePlace(column);
+    if (place === "title") {
+      cells.push(identity(column));
+      continue;
+    }
+    const content = phoneContent(column, row);
+    if (content == null || content === false || content === "") {
+      continue;
+    }
+    if (place === "caption") {
+      facts.push(
+        <Fragment key={column.key}>
+          {facts.length > 0 && " "}
+          <span className="lt-fact">{content}</span>
+        </Fragment>,
+      );
+    } else {
+      cells.push(
+        <td
+          key={column.key}
+          role="cell"
+          className={cellClass(column)}
+          data-phone={place}
+        >
+          {content}
+        </td>,
+      );
+    }
   }
-  return content == null || content === false || content === ""
-    ? "blank"
-    : place;
+  if (facts.length > 0) {
+    cells.push(
+      <td key="caption" role="cell" data-phone="caption">
+        {facts}
+      </td>,
+    );
+  }
+  return cells;
 }
 
 /**

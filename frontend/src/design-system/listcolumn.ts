@@ -32,13 +32,15 @@ export type ListColumn<Row> = {
   /** Starts unticked in the Display menu: offered rather than drawn. */
   initiallyHidden?: boolean;
   /**
-   * Its place in a phone row: "end" on the end edge of the name's line (one per list), "caption"
-   * a fact on the muted line under it. A column with neither is not drawn on a phone.
+   * Its place in a phone row: "end" closes the name's line (one per list), "caption" is a fact
+   * under the name. A list that places no column keeps the labelled phone card.
    */
   phone?: "end" | "caption";
+  /** Drawn in phone rows alone: no desk column, tick, width or place in the order. */
+  phoneOnly?: boolean;
   /**
-   * What the cell says in a phone row: `null` says nothing, so the fact and its
-   * separator go; `undefined` keeps the cell.
+   * What the cell says in a phone row, the identity's included: `null` says
+   * nothing, so the fact and its separator go; `undefined` keeps the cell.
    */
   folded?: (row: Row) => ReactNode | undefined;
 };

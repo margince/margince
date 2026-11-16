@@ -75,7 +75,7 @@ export function ListTable<Row>({
   bodyCount,
   countScope,
   rows,
-  columns,
+  columns: declared,
   rowKey,
   onRowClick,
   rowHref,
@@ -312,12 +312,13 @@ export function ListTable<Row>({
   /** A line under the search; see `ListSurface`. */
   notice?: ReactNode;
 }>) {
+  const columns = declared.filter((column) => !column.phoneOnly);
   const display = useColumnDisplay(columns);
   const order = useColumnOrder(widthsKey);
   const placed = orderedColumns(columns, order.order);
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
-  const { phone, shown } = useDrawnColumns(columns, placed, display.hidden);
+  const { phone, shown } = useDrawnColumns(declared, placed, display.hidden);
   // The width observer re-attaches when the scroller comes or goes.
   const drawsOwnTable = body === undefined || body === null;
   const layout = useColumnWidths(
@@ -473,6 +474,7 @@ export function ListTable<Row>({
           frozen={frozen}
           head={head}
           dense={display.dense}
+          phone={phone}
           layout={layout}
           shown={shown}
           sort={sort}
