@@ -152,6 +152,7 @@ describe("Help and feedback", () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(trigger());
+    await screen.findByRole("menu", { name: "Account" });
     expect(row("Help and feedback")).toHaveAttribute("aria-haspopup", "menu");
     expect(row("Theme")).not.toHaveAttribute("aria-haspopup");
   });
@@ -386,6 +387,7 @@ describe("the build at the foot of Help and feedback", () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(trigger());
+    await screen.findByRole("menu", { name: "Account" });
     expect(screen.queryByText("Version v1.4.0")).toBeNull();
   });
   it("offers web app licenses without a settings grant", async () => {
