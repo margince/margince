@@ -93,8 +93,7 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 // proof row — one concept: the current state is always backed by an
 // append-only consent_event that says when, how, and by whom. The upsert
 // targets the subject arm's own unique key (contact×purpose or
-// lead×purpose); the other arm's column stays NULL. keptUntil is the proof
-// row's retention floor, written here because the row cannot be updated later.
+// lead×purpose); the other arm's column stays NULL.
 func upsertConsentWithProof(
 	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject,
 	doiConfirmedAt *time.Time, capturedAt time.Time, keptUntil *time.Time, actorID string,

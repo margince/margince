@@ -421,7 +421,7 @@ func (l *receiptLaneEnv) withdrawingContact(t *testing.T, store *consent.Store, 
 }
 
 // TestRetentionKeepsAWithdrawalWithNoStopOrReceipt withdraws two contacts by
-// link press with no mail lane, so neither has a stop or a receipt, and runs the
+// link press with no mail lane, so neither has a stop or a receipt. It runs the
 // real retention pass with a one-day contact anonymize policy. The withdrawal
 // inside its year keeps its contact whole. One past it is anonymized, and its
 // registration and withdrawal stay in the export.

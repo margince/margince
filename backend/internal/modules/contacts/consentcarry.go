@@ -184,9 +184,8 @@ func carryConsent(ctx context.Context, tx pgx.Tx, kind consentCarryKind, fromID,
 // in the same statement — a state change without proof would break the
 // Art. 7(1) demonstrability invariant.
 //
-// The flipped row takes the addresses the withdrawal was bound to, because the
-// retiring record's subject withdrew, not the survivor's. Its proof row takes
-// the withdrawal's retention floor for the same reason.
+// The flipped row takes the withdrawal's addresses and its proof row the
+// retention floor, because the retiring record's subject withdrew.
 func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpec,
 	fromID, toID ids.UUID, by string, now time.Time,
 ) error {
