@@ -5,8 +5,8 @@
 
 .pref-page {
   min-height: 100vh;
-  /* The shell's scroller is a flex column, where an explicit min-height is also
-     the shrink floor: a long page would run past its band and lose the clearance. */
+  /* In the shell's flex-column scroller, an explicit min-height is also the
+     shrink floor. A long page would then run past its band. */
   flex-shrink: 0;
   display: flex;
   justify-content: center;
@@ -25,6 +25,11 @@
 .pref-center {
   width: 100%;
   max-width: var(--settingsColumn);
+}
+
+/* PublicPage sets this while the centred column glides to where a height change put it. */
+.pref-center[data-gliding] {
+  transition: transform var(--dur-move) var(--ease-in-out);
 }
 
 .pref-header p {
