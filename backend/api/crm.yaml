@@ -10703,6 +10703,40 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /emails/lawful-basis-confirmations:
+    post:
+      tags: [Communication]
+      operationId: confirmSendWithoutLawfulBasis
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # a person's own answer to a legal warning; an agent's would record a confirmation nobody gave
+      summary: Record that a person read the no-lawful-basis warning and chose to send anyway.
+      description: |
+        A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
+        legitimate-interest basis and the record holds neither their consent nor an agreement with
+        them. The composer and the approval card show a warning for such a recipient. This records,
+        in the audit log, that the signed-in person read it and chose to send. It sends nothing and
+        blocks nothing.
+
+        An address the warning no longer applies to is left out of `confirmed`: consent may have
+        been recorded since the preview. An address no record the caller can see holds is refused
+        as not found.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LawfulBasisConfirmationRequest' }
+      responses:
+        '200':
+          description: The addresses whose warning this person confirmed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LawfulBasisConfirmation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /emails:sign-off:
     post:
       tags: [Activities]
@@ -61261,6 +61295,27 @@ components:
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
 
+    LawfulBasisConfirmationRequest:
+      type: object
+      required: [addresses]
+      additionalProperties: false
+      properties:
+        addresses:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: The recipients the preview marked `lawful_basis_missing`.
+          items: { type: string, format: email }
+
+    LawfulBasisConfirmation:
+      type: object
+      required: [confirmed]
+      properties:
+        confirmed:
+          type: array
+          description: The addresses whose warning was recorded as confirmed by the signed-in person.
+          items: { type: string, format: email }
+
     SendAuthorizationPreview:
       type: object
       required: [allowed, recipients]
@@ -61298,6 +61353,13 @@ components:
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
         address: { type: string, format: email }
+        lawful_basis_missing:
+          type: boolean
+          description: |
+            The recipient's country has no legitimate-interest basis, and the record holds neither
+            their consent nor an agreement with them. A privacy notice they were sent is neither.
+            Not a refusal: a surface shows a warning and records the sender's confirmation through
+            `POST /emails/lawful-basis-confirmations` before the send. Absent or false otherwise.
         evidence_subject:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidenceSubject' }]
           description: |
@@ -75365,6 +75427,14 @@ components:
             product seeds in its reader's language by its key, and shows the published name of any
             other.
           items: { type: string }
+        purpose_since:
+          type: array
+          description: |
+            When the reader gave the consent each entry in `purposes` rests on, at the same index.
+            Null for an entry whose basis is not consent.
+          items:
+            type: [string, 'null']
+            format: date-time
         rights:
           type: array
           description: |

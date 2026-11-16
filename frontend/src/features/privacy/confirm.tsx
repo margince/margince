@@ -220,7 +220,13 @@ function ConfirmDetailsBody({ token }: Readonly<{ token: string }>) {
           <Heading size="xlarge" className="t-h2">
             {t("confirm.done.title")}
           </Heading>
-          <p className="t-body">{t("confirm.done.body")}</p>
+          <p className="t-body">
+            {card.controller?.legal_name
+              ? t("confirm.done.bodyNamed", {
+                  controller: card.controller.legal_name,
+                })
+              : t("confirm.done.body")}
+          </p>
           <RequestReceipts receipts={receipts} />
         </Card>
       </PublicPage>

@@ -209,7 +209,8 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	publicEdge := publicInstrument(ComposedExtensions(), newPublicInstrumentLimiter())(
 		publicForms(srv.webFormsHandlers)(
 			publicConfirm(newPublicConfirmLimiters())(
-				publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+				publicPreferences(consent.NewStore(InstallationDB(pool)).
+					WithRequestTasks(privacyRequestTasks{tasks: activities.NewStore(InstallationDB(pool))}), newPublicPreferenceLimiters())(
 					publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
 						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
 							extensionEdge(srv, log)(api),

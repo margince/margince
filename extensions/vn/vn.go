@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // New returns the unit's declaration (the ADR-0120 §4 constructor contract the
@@ -47,6 +48,7 @@ func New() extension.Extension {
 		Description:   "Vietnamese jurisdiction pack: the Decree 91/2020/ND-CP advertising-email rules — prior consent, the subject label, advertiser identity, the daily ceiling and the acknowledged opt-out.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
 		Messaging:     []messaging.Rules{messagingRules()},
+		SubjectRights: []subjectrights.Rules{subjectRights()},
 	}
 }
 
@@ -160,12 +162,10 @@ func vnInstruments() []messaging.Instrument {
 func messagingRules() messaging.Rules {
 	return messaging.Rules{
 		Jurisdiction: "vn",
-		// 2, because the instruments below changed. The obligations the engine
-		// applies did not: a decision recording version 1 was judged under
-		// Decree 91/2020 alone, and one recording version 2 was judged under
-		// the same decree as amended. The number is what tells those two apart
-		// in a record read years later, which is the only reason it moves.
-		Version:            2,
+		// 2 stated the 2025 instruments. 3 applies them: the data-protection
+		// rules follow the recipient, and no use rests on legitimate interests.
+		// The number tells a decision taken under each set apart.
+		Version:            3,
 		Instruments:        vnInstruments(),
 		ReplyWindow:        365 * 24 * time.Hour,
 		DealFollowUpWindow: 182 * 24 * time.Hour,
@@ -186,5 +186,32 @@ func messagingRules() messaging.Rules {
 		},
 		OptOutAcknowledgement:       true,
 		OptOutAcknowledgementWithin: 24 * time.Hour,
+		// Law 91/2025/QH15 Art. 1.2(c) reaches a foreign controller that
+		// processes a Vietnamese citizen's data.
+		DataProtectionFollowsRecipient: true,
+		DisclosureLanguage:             "vi",
+		// Art. 9 and 11.1 need consent before collection, unless an Art. 19.1
+		// case applies. The law has no legitimate-interest basis.
+		NoLegitimateInterests: true,
+	}
+}
+
+// subjectRights are the Decree 356/2025/ND-CP Art. 5 deadlines. Every request
+// is owed a first answer in 2 working days. It is carried out in 10 days to
+// correct (Art. 5.3), 20 to erase (Art. 5.4) and 15 to restrict (Art. 5.2),
+// counted in calendar days. Access keeps the core month.
+func subjectRights() subjectrights.Rules {
+	return subjectrights.Rules{
+		Jurisdiction: "vn",
+		Version:      1,
+		Instruments: []messaging.Instrument{
+			{Name: "Decree 356/2025/ND-CP, Art. 5", EffectiveFrom: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)},
+		},
+		Deadlines: map[subjectrights.RequestKind]subjectrights.Deadline{
+			subjectrights.Rectify:     {Period: jurisdiction.Period{Days: 10}},
+			subjectrights.Erasure:     {Period: jurisdiction.Period{Days: 20}},
+			subjectrights.Restriction: {Period: jurisdiction.Period{Days: 15}},
+		},
+		ReplyWithinWorkingDays: 2,
 	}
 }

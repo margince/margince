@@ -2183,6 +2183,10 @@ func (stubs) SendCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "SendCompanyEmail")
 }
 
+func (stubs) ConfirmSendWithoutLawfulBasis(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmSendWithoutLawfulBasis")
+}
+
 func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
 }

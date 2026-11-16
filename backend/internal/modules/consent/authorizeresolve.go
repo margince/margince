@@ -124,9 +124,13 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		return resolution{}, err
 	}
 	if copied {
+		basis, err := interestBasisTx(ctx, tx, subject)
+		if err != nil {
+			return resolution{}, err
+		}
 		return resolution{
 			Category:  commsauthz.CategoryReplyToInbound,
-			Basis:     commsauthz.BasisLegitimateInterests,
+			Basis:     basis,
 			Supported: true,
 		}, nil
 	}
@@ -135,9 +139,13 @@ func (g *Gate) resolveCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		return resolution{}, err
 	}
 	if live {
+		basis, err := interestBasisTx(ctx, tx, subject)
+		if err != nil {
+			return resolution{}, err
+		}
 		return resolution{
 			Category:  commsauthz.CategoryActiveDealFollowup,
-			Basis:     commsauthz.BasisLegitimateInterests,
+			Basis:     basis,
 			Supported: true,
 		}, nil
 	}

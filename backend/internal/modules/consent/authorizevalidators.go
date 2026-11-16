@@ -202,9 +202,13 @@ func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request
 	if !asked {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonDealNotRequested}, nil
 	}
+	basis, err := interestBasisTx(ctx, tx, subject)
+	if err != nil {
+		return resolution{}, err
+	}
 	return resolution{
 		Category:  commsauthz.CategoryActiveDealFollowup,
-		Basis:     commsauthz.BasisLegitimateInterests,
+		Basis:     basis,
 		Supported: true,
 	}, nil
 }
@@ -274,6 +278,23 @@ func documentRecipientSQL(company, deal string) string {
 // customer. A customer is a contact currently employed at a company with a
 // contract in force or a won deal. No inline fact is needed; the record carries the relationship.
 func validateCustomerNotice(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
+	customer, err := isCustomerTx(ctx, tx, subject.ID)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !customer {
+		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	basis := commsauthz.BasisContract
+	if category == commsauthz.CategorySecurityNotice {
+		basis = commsauthz.BasisVitalOrSecurityInterest
+	}
+	return resolution{Category: category, Basis: basis, Supported: true}, nil
+}
+
+// isCustomerTx answers whether a contact is currently employed at a company
+// with a contract in force or a won deal.
+func isCustomerTx(ctx context.Context, tx pgx.Tx, contactID string) (bool, error) {
 	var customer bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -286,17 +307,10 @@ func validateCustomerNotice(ctx context.Context, tx pgx.Tx, subject subjectRef, 
 			                   AND `+contractCarriesMailSQL("c")+`)
 			        OR EXISTS (SELECT 1 FROM deal d
 			                    WHERE d.company_id = r.company_id AND d.archived_at IS NULL
-			                      AND d.status = 'won')))`, subject.ID).Scan(&customer); err != nil {
-		return resolution{}, wrapEvidenceRead("whether the recipient works for a customer", err)
+			                      AND d.status = 'won')))`, contactID).Scan(&customer); err != nil {
+		return false, wrapEvidenceRead("whether the recipient works for a customer", err)
 	}
-	if !customer {
-		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
-	}
-	basis := commsauthz.BasisContract
-	if category == commsauthz.CategorySecurityNotice {
-		basis = commsauthz.BasisVitalOrSecurityInterest
-	}
-	return resolution{Category: category, Basis: basis, Supported: true}, nil
+	return customer, nil
 }
 
 // validateQuote answers a requested quote or offer. Either a sent offer on the

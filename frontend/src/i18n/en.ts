@@ -8036,6 +8036,18 @@ export const en = {
   "sendPermission.ready": "Recipients checked",
   "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "lawfulBasis.title": "No consent on record for this contact",
+  "lawfulBasis.body":
+    "Under Vietnamese law you may not process this person’s data without consent. Sending is at your own risk.",
+  "lawfulBasis.confirm": "Send anyway",
+  "lawfulBasis.failed": "Your confirmation was not recorded. Try again.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "your consent of {date}",
+  "privacynotice.basisOn.agreement":
+    "to carry out the agreement between you and {controller}",
+  "privacynotice.basisOn.us": "us",
+  "confirm.done.bodyNamed":
+    "Your answer is recorded. Staff at {controller} will handle your request and give you the reason if they need more time. This link is now used up.",
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
@@ -8220,6 +8232,8 @@ export const en = {
     "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.privacy_request":
+    "Created when the contact asked to correct, erase or stop the use of their data. Their country’s law sets the dates on this task.",
   "tasks.origin.analytics_decision":
     "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
@@ -11069,7 +11083,7 @@ export const en = {
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",
-  "privacynotice.purposes.title": "What we use it for",
+  "privacynotice.purposes.title": "What we use it for, and on what basis",
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
     "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
@@ -11135,7 +11149,7 @@ export const en = {
   "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
   "privacynotice.retention.erase": "{scope}: deleted after {days}.",
   "privacynotice.retention.rest":
-    "We keep everything else while we use it for the purposes above. If you ask us to delete it, we delete what the law lets us delete.",
+    "We keep everything else while we use it for the purposes under “What we use it for, and on what basis”. If you ask us to delete it, we delete what the law lets us delete.",
   "privacynotice.retention.scope.activity":
     "Emails, meetings and calls with you",
   "privacynotice.retention.scope.activityTranscript":
@@ -13466,7 +13480,7 @@ export const en = {
   "confirm.receipt.rectify": "Correction requested",
   "confirm.receipt.erasure": "Removal requested",
   "confirm.done.body":
-    "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
+    "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":

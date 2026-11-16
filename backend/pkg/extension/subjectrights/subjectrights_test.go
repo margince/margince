@@ -87,3 +87,32 @@ func TestADeadlineCountsHoursExactlyAndMonthsToTheMonthEnd(t *testing.T) {
 		t.Errorf("a month and two days after %s = %s, want %s", december, got, want)
 	}
 }
+
+// A first answer owed in two working days, asked on a Friday, is owed on the
+// Tuesday after.
+func TestAReplyInWorkingDaysSkipsTheWeekend(t *testing.T) {
+	friday := time.Date(2026, time.November, 13, 10, 0, 0, 0, time.UTC)
+	if got, want := ReplyBy(friday, 2), time.Date(2026, time.November, 17, 10, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("two working days after %s = %s, want %s", friday, got, want)
+	}
+	saturday := time.Date(2026, time.November, 14, 10, 0, 0, 0, time.UTC)
+	if got, want := ReplyBy(saturday, 2), time.Date(2026, time.November, 17, 10, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("two working days after %s = %s, want %s", saturday, got, want)
+	}
+	monday := time.Date(2026, time.November, 16, 10, 0, 0, 0, time.UTC)
+	if got, want := ReplyBy(monday, 2), time.Date(2026, time.November, 18, 10, 0, 0, 0, time.UTC); !got.Equal(want) {
+		t.Errorf("two working days after %s = %s, want %s", monday, got, want)
+	}
+}
+
+func TestAReplyDeadlineNeedsItsSourceAndABound(t *testing.T) {
+	if err := (Rules{Jurisdiction: "zz", Version: 1, ReplyWithinWorkingDays: 2}).Validate(); err == nil {
+		t.Error("a reply deadline that cites no instrument was accepted")
+	}
+	if err := (Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), ReplyWithinWorkingDays: -1}).Validate(); err == nil {
+		t.Error("a negative reply deadline was accepted")
+	}
+	if err := (Rules{Jurisdiction: "zz", Version: 1, Instruments: cited(), ReplyWithinWorkingDays: 2}).Validate(); err != nil {
+		t.Errorf("a cited two-day reply deadline was refused: %v", err)
+	}
+}

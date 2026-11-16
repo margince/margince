@@ -360,6 +360,12 @@ func (s *Store) suppressAdmittedTx(
 	if err := s.acknowledgeOptOutTx(ctx, tx, sub, in.Kind, stopID); err != nil {
 		return err
 	}
+	if acknowledgeableStop(in.Kind) {
+		who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
+		if err := s.openRequestTaskTx(ctx, tx, who, RequestTaskObjection, stopID.String(), recordedAt); err != nil {
+			return err
+		}
+	}
 	// EmitEvent, because the payload declares a STATIC entity: this door writes
 	// about a contact and only a contact, so the fan-out gate resolves delivery
 	// scope from the type rather than from a runtime subject somebody has to

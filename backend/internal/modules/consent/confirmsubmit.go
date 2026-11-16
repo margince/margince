@@ -141,6 +141,12 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 			return err
 		}
 		receipts = staged
+		who := ruleSubject{Kind: entityContact, ID: ref.ContactID.String()}
+		for _, receipt := range staged {
+			if err := s.openRequestTaskTx(ctx, tx, who, receipt.Kind, receipt.Reference, receivedAt); err != nil {
+				return err
+			}
+		}
 		if in.MarketingChoice == "" {
 			return nil
 		}

@@ -237,7 +237,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], string(d.Mode), by, evidence, authority, instructionID,
 			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
-			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
+			groundNotice(d), groundOffer(d), groundSoldAt(d), dataProtectionStampFor(countries[i], protection),
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision

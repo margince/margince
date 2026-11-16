@@ -8035,6 +8035,19 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.markName": "Sendestatus dieser Nachricht",
   "sendPermission.checking":
     "Wird geprüft, ob diese Nachricht gesendet werden kann…",
+  "lawfulBasis.title": "Für diesen Kontakt ist keine Einwilligung erfasst",
+  "lawfulBasis.body":
+    "Nach vietnamesischem Recht darfst du die Daten dieser Person ohne Einwilligung nicht verarbeiten. Du sendest auf eigenes Risiko.",
+  "lawfulBasis.confirm": "Trotzdem senden",
+  "lawfulBasis.failed":
+    "Deine Bestätigung wurde nicht gespeichert. Versuche es erneut.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "Ihre Einwilligung vom {date}",
+  "privacynotice.basisOn.agreement":
+    "Erfüllung der Vereinbarung zwischen Ihnen und {controller}",
+  "privacynotice.basisOn.us": "uns",
+  "confirm.done.bodyNamed":
+    "Ihre Antwort wurde erfasst. Das Team von {controller} bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
@@ -8220,6 +8233,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erstellt, weil dieser Lead geschrieben oder einen Termin gebucht hat. Eine Antwort wandelt niemanden um: Qualifiziere den Lead, wenn er so weit ist.",
   "tasks.origin.assurance":
     "Erstellt von der nächtlichen Prognoseprüfung: Angaben zu diesem Deal brauchen Aufmerksamkeit. Die Deal-Seite listet sie auf.",
+  "tasks.origin.privacy_request":
+    "Erstellt, als der Kontakt die Korrektur, Löschung oder das Ende der Nutzung seiner Daten verlangt hat. Das Recht seines Landes legt die Fristen dieser Aufgabe fest.",
   "tasks.origin.analytics_decision":
     "Aus einem Vertriebstermin festgehalten: eine Entscheidung mit Verantwortlichem und Prüftermin. Halte das Ergebnis unter Entscheidungen aus dem letzten Termin fest.",
   "tasks.origin.overnight_reconcile":
@@ -11092,7 +11107,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ihre Daten stammen aus einer Liste, die gekauft oder importiert wurde.",
   "privacynotice.source.unknown":
     "Wir können nicht sagen, wie Ihre Daten zu uns gelangt sind.",
-  "privacynotice.purposes.title": "Wofür wir Ihre Daten nutzen",
+  "privacynotice.purposes.title":
+    "Wofür wir Ihre Daten nutzen und auf welcher Grundlage",
   "privacynotice.rights.title": "Ihre Rechte an diesen Daten",
   "privacynotice.rights.how":
     "Um eines dieser Rechte zu nutzen, antworten Sie auf die Nachricht, die Sie hierher geführt hat, oder kontaktieren Sie uns über die Adresse auf unserer Website.",
@@ -11164,7 +11180,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacynotice.retention.anonymize": "{scope}: nach {days} anonymisiert.",
   "privacynotice.retention.erase": "{scope}: nach {days} gelöscht.",
   "privacynotice.retention.rest":
-    "Alles andere speichern wir, solange wir es für die oben genannten Zwecke nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
+    "Alles andere speichern wir, solange wir es für die Zwecke unter „Wofür wir Ihre Daten nutzen und auf welcher Grundlage“ nutzen. Bitten Sie uns um Löschung, löschen wir, was das Gesetz uns zu löschen erlaubt.",
   "privacynotice.retention.scope.activity":
     "E-Mails, Termine und Anrufe mit Ihnen",
   "privacynotice.retention.scope.activityTranscript":
@@ -13490,7 +13506,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "confirm.receipt.rectify": "Korrektur angefordert",
   "confirm.receipt.erasure": "Löschung angefordert",
   "confirm.done.body":
-    "Ihre Antwort wurde erfasst. Änderungen gehen zur Übernahme an eine Person aus dem Team. Dieser Link kann nun nicht mehr verwendet werden.",
+    "Ihre Antwort wurde erfasst. Das zuständige Team bearbeitet Ihre Anfrage. Wird mehr Zeit benötigt, erhalten Sie die Gründe. Dieser Link kann nun nicht mehr verwendet werden.",
   "confirm.invalidLink":
     "Dieser Link ist nicht mehr gültig. Er wurde vielleicht schon verwendet oder ist abgelaufen. Wenn Sie noch etwas brauchen, antworten Sie auf die E-Mail, die Sie hierher geführt hat.",
   "confirm.questionChanged":

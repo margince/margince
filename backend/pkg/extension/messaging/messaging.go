@@ -133,6 +133,22 @@ type Rules struct {
 
 	// OptOutAcknowledgementWithin bounds receipt delivery from the recorded refusal; zero declares no deadline.
 	OptOutAcknowledgementWithin time.Duration
+
+	// DataProtectionFollowsRecipient says this jurisdiction's data-protection
+	// law reaches a recipient here whatever country the controller is in. The
+	// disclosures, the privacy page and the request deadlines then follow the
+	// recipient's pack instead of the sender's. False keeps the sender's.
+	DataProtectionFollowsRecipient bool
+
+	// NoLegitimateInterests says the law has no legitimate-interest basis: each
+	// use rests on the recipient's consent or on a case the law names. The
+	// engine then never records legitimate interests for a recipient here.
+	NoLegitimateInterests bool
+
+	// DisclosureLanguage is the language the recipient's disclosures and
+	// privacy pages are written in, as a lower-case ISO 639-1 code. It applies
+	// only with DataProtectionFollowsRecipient. Empty keeps the installation's.
+	DisclosureLanguage string
 }
 
 // ExceptionKind names a route to lawful advertising without consent. Closed:
@@ -347,6 +363,24 @@ func (r Rules) Validate() error {
 		if err := r.FrequencyCap.Validate(); err != nil {
 			return fmt.Errorf("messaging rules for %q: %w", string(r.Jurisdiction), err)
 		}
+	}
+	return r.validateDisclosureLanguage()
+}
+
+// validateDisclosureLanguage refuses a language that is not two lower-case
+// letters, or one stated where the recipient's pack does not apply.
+func (r Rules) validateDisclosureLanguage() error {
+	language := r.DisclosureLanguage
+	if language == "" {
+		return nil
+	}
+	if !r.DataProtectionFollowsRecipient {
+		return fmt.Errorf("messaging rules for %q name a disclosure language and do not follow the recipient, so nothing would use it",
+			string(r.Jurisdiction))
+	}
+	if len(language) != 2 || strings.Trim(language, "abcdefghijklmnopqrstuvwxyz") != "" {
+		return fmt.Errorf("messaging rules for %q name disclosure language %q; use a lower-case ISO 639-1 code",
+			string(r.Jurisdiction), language)
 	}
 	return nil
 }

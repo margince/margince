@@ -222,16 +222,25 @@ func (s *Store) sendLanguage(ctx context.Context, tx pgx.Tx, picked string) stri
 }
 
 // replyLanguage is the language of a linkless mail that answers the subject's
-// own act, such as an opt-out receipt. It is the language of the last link mail
-// staged for them, else the installation's: what they last read from us. A link
-// minted with no mail, as a booking without a lane mints one, was never read.
+// own act, such as an opt-out receipt. A pack that follows the recipient
+// decides it first. Else it is the language of the last link mail staged for
+// them, else the installation's: what they last read from us. A link minted
+// with no mail, as a booking without a lane mints one, was never read.
 func (s *Store) replyLanguage(ctx context.Context, tx pgx.Tx, sub subject) string {
+	pack, err := subjectPackLanguageTx(ctx, tx, ruleSubject{Kind: sub.entityType, ID: sub.id.String()})
+	if err != nil {
+		slog.WarnContext(ctx, "the subject's pack language could not be read; answering in the last one they read",
+			"cause", err)
+	}
+	if pack != "" {
+		return pack
+	}
 	column := subjectColumnContact
 	if sub.entityType == entityLead {
 		column = subjectColumnLead
 	}
 	var last string
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT coalesce((SELECT t.question_locale
 		                   FROM confirm_token t
 		                   JOIN comms_outbound o ON o.link_id = t.id

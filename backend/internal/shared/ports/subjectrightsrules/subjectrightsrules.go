@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 	pub "github.com/margince/margince/backend/pkg/extension/subjectrights"
@@ -68,6 +69,11 @@ func clone(r Rules) Rules {
 	out.Instruments = slices.Clone(r.Instruments)
 	out.Deadlines = maps.Clone(r.Deadlines)
 	return out
+}
+
+// ReplyBy is the published working-day count, for a core caller.
+func ReplyBy(received time.Time, workingDays int) time.Time {
+	return pub.ReplyBy(received, workingDays)
 }
 
 // GDPRRule names the fallback deadline: one calendar month from receipt, GDPR

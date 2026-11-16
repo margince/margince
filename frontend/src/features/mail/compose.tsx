@@ -464,6 +464,7 @@ export function ComposeWindow({
             addressRefused={fields.addressRefused}
             marksRef={setMarkRow}
           />
+          {send.lawfulBasisDialog}
         </ComposeFrame>
       )}
     </>

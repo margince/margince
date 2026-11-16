@@ -201,6 +201,11 @@ func stricter(a, b Rules) Rules {
 	out.ConsentOnly = a.ConsentOnly || b.ConsentOnly
 	out.OptOutAcknowledgement = a.OptOutAcknowledgement || b.OptOutAcknowledgement
 	out.OptOutAcknowledgementWithin = shorterWindow(a.OptOutAcknowledgementWithin, b.OptOutAcknowledgementWithin)
+	out.DataProtectionFollowsRecipient = a.DataProtectionFollowsRecipient || b.DataProtectionFollowsRecipient
+	out.NoLegitimateInterests = a.NoLegitimateInterests || b.NoLegitimateInterests
+	if out.DisclosureLanguage == "" {
+		out.DisclosureLanguage = b.DisclosureLanguage
+	}
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.

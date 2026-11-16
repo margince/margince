@@ -53927,6 +53927,18 @@ type LatestInboundList struct {
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
 }
 
+// LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
+type LawfulBasisConfirmation struct {
+	// Confirmed The addresses whose warning was recorded as confirmed by the signed-in person.
+	Confirmed []openapi_types.Email `json:"confirmed"`
+}
+
+// LawfulBasisConfirmationRequest defines model for LawfulBasisConfirmationRequest.
+type LawfulBasisConfirmationRequest struct {
+	// Addresses The recipients the preview marked `lawful_basis_missing`.
+	Addresses []openapi_types.Email `json:"addresses"`
+}
+
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -58900,6 +58912,10 @@ type PrivacyInformationPage struct {
 	// product seeds in its reader's language by its key, and shows the published name of any
 	// other.
 	PurposeKeys *[]string `json:"purpose_keys,omitempty"`
+
+	// PurposeSince When the reader gave the consent each entry in `purposes` rests on, at the same index.
+	// Null for an entry whose basis is not consent.
+	PurposeSince *[]*time.Time `json:"purpose_since,omitempty"`
 
 	// Purposes What the installation uses this contact's data for, by published name.
 	Purposes *[]string `json:"purposes,omitempty"`
@@ -64625,6 +64641,12 @@ type SendAuthorizationPreviewRecipient struct {
 	// can read it. Absent for newly filed addresses and records unavailable to the
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
+
+	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
+	// their consent nor an agreement with them. A privacy notice they were sent is neither.
+	// Not a refusal: a surface shows a warning and records the sender's confirmation through
+	// `POST /emails/lawful-basis-confirmations` before the send. Absent or false otherwise.
+	LawfulBasisMissing *bool `json:"lawful_basis_missing,omitempty"`
 
 	// Mode How much authority the engine's answer carries for this category on this
 	// installation. Under `observe` a `deny` here still sends, and a composer that
@@ -81829,6 +81851,9 @@ type SaveEmailSignatureTemplateJSONRequestBody = EmailSignatureTemplate
 // SendCompanyEmailJSONRequestBody defines body for SendCompanyEmail for application/json ContentType.
 type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 
+// ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
+type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
+
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
@@ -97474,6 +97499,9 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
+	// Record that a person read the no-lawful-basis warning and chose to send anyway.
+	// (POST /emails/lawful-basis-confirmations)
+	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
 	// Would a new message with no thread behind it be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
@@ -102406,6 +102434,12 @@ func (_ Unimplemented) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http
 // Start a new email conversation from a record — runs directly, consent-gated.
 // (POST /emails)
 func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record that a person read the no-lawful-basis warning and chose to send anyway.
+// (POST /emails/lawful-basis-confirmations)
+func (_ Unimplemented) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -131115,6 +131149,26 @@ func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// ConfirmSendWithoutLawfulBasis operation middleware
+func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConfirmSendWithoutLawfulBasis(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PreviewAccountSendAuthorization operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
 
@@ -155916,6 +155970,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails", wrapper.SendCompanyEmail)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/emails/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)

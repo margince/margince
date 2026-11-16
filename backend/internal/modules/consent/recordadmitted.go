@@ -14,6 +14,7 @@ package consent
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -128,7 +129,7 @@ func (s *Store) recordAdmittedTx(
 	// Here rather than at each door, so no door that records a withdrawal can
 	// leave out the receipt a refusal of advertising owes.
 	if ConsentState(in.NewState) == StateWithdrawn && !reassertion {
-		if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purpose.class); err != nil {
+		if err := s.answerWithdrawalTx(ctx, tx, sub, purpose.class, capturedAt); err != nil {
 			return State{}, err
 		}
 	}
@@ -138,6 +139,21 @@ func (s *Store) recordAdmittedTx(
 		Changed: !reassertion, ProofEventID: proofID,
 	}
 	return out, nil
+}
+
+// answerWithdrawalTx stages the receipt a withdrawal owes and opens the task
+// its pack sets. One task per act: a press that withdrew four purposes is one
+// request.
+func (s *Store) answerWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, purposeClass string, at time.Time) error {
+	if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purposeClass); err != nil {
+		return err
+	}
+	act, err := withdrawalActTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
+	return s.openRequestTaskTx(ctx, tx, who, RequestTaskWithdrawal, withdrawalMessageID(sub.id, act), at)
 }
 
 // rowProbeFor answers which row probe a recorded state must clear.

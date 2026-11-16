@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -107,6 +107,16 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 - the sales-mail rules for recipients under that law.
 
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
+
+Vietnamese data-protection law also follows the recipient. When a contact's or lead's address is in Vietnam, the Vietnamese rules apply to them whatever law you chose:
+
+- the privacy notice, the record confirmation and the privacy page are written in Vietnamese, with the Vietnamese rights text;
+- the foot of their mail says who your company is and whom to ask about data;
+- a correction is due in 10 days, an erasure in 20 days and a restriction in 15 days. Margince also makes a task for the request, due on that date, with the first answer due in 2 working days. Saturday and Sunday are not working days;
+- an objection to their data's use, or a withdrawal of consent, makes a task due in 15 days;
+- legitimate interest is never recorded as the reason for using their data. Margince records their consent with its date, or the agreement you have with them. Without either, the send screen and the approval card show a warning before you send. You can still send. The audit log records that you confirmed the warning.
+
+Margince knows a contact's country only from the addresses above. It cannot tell that a contact is a Vietnamese citizen who lives abroad with a foreign address, so the Vietnamese rules do not apply to that contact.
 
 With no law chosen, a privacy request is due in one calendar month. Mail is then kept for the longest time any built-in law asks for.
 

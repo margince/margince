@@ -12,11 +12,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // NoticeSubject is the contact or website lead a notice link names.
@@ -29,6 +31,8 @@ type NoticeSubject struct {
 type NoticeUse struct {
 	PurposeKey string
 	Basis      string
+	// Since is when a consent use was granted; nil for any other basis.
+	Since *time.Time
 }
 
 // LawFloor is a statutory period that keeps some data past a rule's window.
@@ -99,19 +103,60 @@ func (s *Store) controllerParticulars(ctx context.Context) (ControllerParticular
 	return out.Controller, err
 }
 
-// readHeld fills the parts read about this subject. Unwired, the page says
-// nothing about them rather than something it cannot back.
+// readHeld fills the parts read about this subject. Unwired, the page names no
+// categories and no retention rather than something it cannot back, and still
+// names the purpose settleUsesTx gives every reader.
 func (s *Store) readHeld(ctx context.Context, subject NoticeSubject, out *PrivacyInformation) error {
-	if s.held == nil {
-		return nil
-	}
-	held, err := s.held.NoticeHeld(ctx, subject)
-	if err != nil {
-		return fmt.Errorf("consent: reading what is held about this reader: %w", err)
+	var held NoticeHeld
+	if s.held != nil {
+		read, err := s.held.NoticeHeld(ctx, subject)
+		if err != nil {
+			return fmt.Errorf("consent: reading what is held about this reader: %w", err)
+		}
+		held = read
 	}
 	out.DataCategories = append(out.DataCategories, held.Categories...)
 	out.Retention = append(out.Retention, held.Retention...)
-	return s.db.Tx(ctx, func(tx pgx.Tx) error { return namePurposesTx(ctx, tx, held.Uses, out) })
+	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		uses, err := settleUsesTx(ctx, tx, subject, held.Uses)
+		if err != nil {
+			return err
+		}
+		return namePurposesTx(ctx, tx, uses, out)
+	})
+}
+
+// settleUsesTx is the uses the page lists. A reader whose pack has no
+// legitimate-interest basis is never shown one. A reader with no use on record
+// is shown business correspondence, so the page always names a purpose. Under
+// such a pack it rests on the agreement with them (Law 91/2025 Art. 19.1(d)).
+// Elsewhere it rests on legitimate interests (GDPR Art. 14(1)(c)).
+func settleUsesTx(ctx context.Context, tx pgx.Tx, subject NoticeSubject, uses []NoticeUse) ([]NoticeUse, error) {
+	who := ruleSubject{Kind: entityContact, ID: subject.ContactID.String()}
+	if subject.ContactID.IsZero() {
+		who = ruleSubject{Kind: entityLead, ID: subject.LeadID.String()}
+	}
+	country, err := recipientCountryTx(ctx, tx, who)
+	if err != nil {
+		return nil, err
+	}
+	rules, _, found := applicableRules(country.Code)
+	noInterests := found && rules.NoLegitimateInterests
+	kept := make([]NoticeUse, 0, len(uses))
+	for _, use := range uses {
+		if noInterests && use.Basis == string(commsauthz.BasisLegitimateInterests) {
+			continue
+		}
+		kept = append(kept, use)
+	}
+	if len(kept) > 0 {
+		return kept, nil
+	}
+	basis := commsauthz.BasisLegitimateInterests
+	if noInterests {
+		basis = commsauthz.BasisContract
+	}
+	return []NoticeUse{{PurposeKey: PurposeBusinessCorrespondence, Basis: string(basis)}}, nil
 }
 
 // namePurposesTx names each use by its purpose's published label. The key
@@ -126,6 +171,7 @@ func namePurposesTx(ctx context.Context, tx pgx.Tx, uses []NoticeUse, out *Priva
 		out.Purposes = append(out.Purposes, label)
 		out.PurposeKeys = append(out.PurposeKeys, use.PurposeKey)
 		out.PurposeBases = append(out.PurposeBases, use.Basis)
+		out.PurposeSince = append(out.PurposeSince, use.Since)
 	}
 	return nil
 }

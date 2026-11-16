@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // TestNewDeclaresTheJurisdictionAndNoRetentionClass pins the two structural
@@ -158,8 +159,41 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 // TestTheVersionMovedWithTheInstruments. The number exists to tell two records
 // apart, so it is meaningless if it stays put when the law it names changes.
 func TestTheVersionMovedWithTheInstruments(t *testing.T) {
-	if got := messagingRules().Version; got != 2 {
-		t.Errorf("ruleset version = %d, want 2 — the pack now states the 2025 "+
+	if got := messagingRules().Version; got != 3 {
+		t.Errorf("ruleset version = %d, want 3 — the pack now applies the 2025 "+
 			"instruments and a decision must be able to say which set judged it", got)
+	}
+}
+
+func TestDataProtectionFollowsAVietnameseRecipient(t *testing.T) {
+	rules := messagingRules()
+	if !rules.DataProtectionFollowsRecipient {
+		t.Error("the pack does not follow the recipient; Law 91/2025 Art. 1.2(c) reaches a foreign controller")
+	}
+	if rules.DisclosureLanguage != "vi" {
+		t.Errorf("disclosure language = %q, want vi", rules.DisclosureLanguage)
+	}
+	if !rules.NoLegitimateInterests {
+		t.Error("the pack allows legitimate interests; Vietnamese law has no such basis")
+	}
+}
+
+func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
+	rules := subjectRights()
+	if err := rules.Validate(); err != nil {
+		t.Fatalf("the declared deadlines do not validate: %v", err)
+	}
+	for kind, days := range map[subjectrights.RequestKind]int{
+		subjectrights.Rectify: 10, subjectrights.Erasure: 20, subjectrights.Restriction: 15,
+	} {
+		if got := rules.Deadlines[kind].Period.Days; got != days {
+			t.Errorf("%s is due in %d days, want %d", kind, got, days)
+		}
+	}
+	if rules.ReplyWithinWorkingDays != 2 {
+		t.Errorf("a first answer is owed in %d working days, want 2", rules.ReplyWithinWorkingDays)
+	}
+	if _, declared := rules.Deadlines[subjectrights.Access]; declared {
+		t.Error("the pack declares an access deadline the decree does not set")
 	}
 }

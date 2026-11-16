@@ -159,6 +159,10 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		if err := s.acknowledgeOptOutTx(ctx, tx, lead, commsauthz.ReasonObjection, stopID); err != nil {
 			return false, err
 		}
+		who := ruleSubject{Kind: entityLead, ID: ref.LeadID.String()}
+		if err := s.openRequestTaskTx(ctx, tx, who, RequestTaskObjection, stopID.String(), s.now()); err != nil {
+			return false, err
+		}
 	}
 	entity, entityID := entityLead, ref.LeadID.UUID
 	if entityID.IsZero() {
