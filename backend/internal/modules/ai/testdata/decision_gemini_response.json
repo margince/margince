@@ -1,0 +1,19 @@
+{
+  "answers": {
+    "kind": {
+      "type": "choice",
+      "choice": "company",
+      "confidence": 0.9945,
+      "probabilities": {
+        "company": 0.9973,
+        "parked": 0.0027
+      }
+    }
+  },
+  "usage": {
+    "total_input_tokens": 163,
+    "input_tokens_by_modality": [{ "modality": "TEXT", "token_count": 163 }],
+    "total_output_tokens": 0,
+    "total_tokens": 163
+  }
+}

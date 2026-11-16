@@ -12,6 +12,7 @@ const PROVIDER_NAMES = {
   gemini_vertex: "aiProviders.name.geminiVertex",
   jev: "aiProviders.name.jev",
   jev_compatible: "aiProviders.name.jevCompatible",
+  gemini_decision: "aiProviders.name.geminiDecision",
   ollama: "aiProviders.name.ollama",
   vllm: "aiProviders.name.vllm",
   fake: "aiProviders.name.fake",

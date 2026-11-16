@@ -11,11 +11,7 @@ import { formatNumber } from "../../format/format";
 import { lockReasonOr } from "../../format/settinglocks";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  unkeyedProviders,
-  useAiModelCatalogue,
-  withBorrowedRows,
-} from "../../lib/ai-models";
+import { useAiModelCatalogue, withBorrowedRows } from "../../lib/ai-models";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
 import { providerName } from "../../lib/ai-provider-names";
 import {
@@ -32,6 +28,7 @@ import { useAiStatus } from "./ai-admin";
 import { BindingEditor } from "./ai-binding-editor";
 import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
 import { useAiHealth } from "./ai-health";
+import { unkeyedProviders } from "./ai-key-rows";
 import { useProviderKeys } from "./ai-provider-key-hooks";
 import { reachableProviders } from "./ai-provider-reach";
 import { DECISION_PROVIDERS } from "./ai-routing-fields";

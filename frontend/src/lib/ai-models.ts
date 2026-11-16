@@ -432,23 +432,6 @@ export function offeredModels(
   return [...fromVendor, ...fromSheet];
 }
 
-// A vendor whose key is optional calls without one, so an absent key there is
-// no warning to draw.
-export function unkeyedProviders(
-  providers:
-    | readonly { provider: string; configured: boolean; optional: boolean }[]
-    | undefined,
-): ReadonlySet<string> | null {
-  if (!providers) {
-    return null;
-  }
-  return new Set(
-    providers
-      .filter((p) => !p.configured && !p.optional)
-      .map((p) => p.provider),
-  );
-}
-
 /**
  * The rows provider borrows from pricedBy: pricedBy's rows for the models
  * provider's own sheet does not price, on any lane. A mirror of the server's

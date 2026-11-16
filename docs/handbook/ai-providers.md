@@ -136,6 +136,8 @@ tiers** with **Add decision model**.
 - **Jev-compatible**, served somewhere else: under **Service** choose
   **OpenRouter**, or **Other decision server** and fill in its full address. A
   key is sent if one is saved, and is not required.
+- **Gemini Decisions API**: add the **Google Gemini** key. It has no sheet of its
+  own, and it sends that key.
 
 ### Where do I set up a local model, such as Ollama or vLLM?
 A local model runs on your own servers, so it needs no key and has no sheet

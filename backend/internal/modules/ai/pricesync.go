@@ -106,10 +106,7 @@ func (p *PriceSync) sources(ctx context.Context) (PriceSources, error) {
 	if err != nil {
 		return PriceSources{}, err
 	}
-	src := PriceSources{Routing: cfg, Usable: map[string]bool{}, Listed: map[string][]model.Info{}, Switched: switched}
-	for _, s := range statuses {
-		src.Usable[s.Provider] = s.Usable()
-	}
+	src := PriceSources{Routing: cfg, Usable: usableByProvider(statuses), Listed: map[string][]model.Info{}, Switched: switched}
 	readBroker, readModelsDev := cataloguesToRead(cfg, src.Usable)
 	if readBroker {
 		src.Broker = p.d.Broker.List(ctx, 0)
@@ -130,6 +127,21 @@ func (p *PriceSync) sources(ctx context.Context) (PriceSources, error) {
 		}
 	}
 	return src, nil
+}
+
+// usableByProvider is each key slot's Usable, and an adapter sending another
+// slot's key is as usable as that slot.
+func usableByProvider(statuses []ProviderKeyStatus) map[string]bool {
+	usable := make(map[string]bool, len(statuses))
+	for _, s := range statuses {
+		usable[s.Provider] = s.Usable()
+	}
+	for _, provider := range providerNames() {
+		if slot := keySlotOf(provider); slot != provider {
+			usable[provider] = usable[slot]
+		}
+	}
+	return usable
 }
 
 // cataloguesToRead is which public lists this run needs: OpenRouter's only while
