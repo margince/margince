@@ -18,6 +18,11 @@ export function addressedAPathWeDoNotServe(): boolean {
     !namesAnAppAddress(pathname) &&
     pathname !== base &&
     `${pathname}/` !== base &&
-    pathname !== `${base}index.html`
+    pathname !== `${base}index.html` &&
+    !(isStorybook() && pathname === `${base}iframe.html`)
   );
 }
+
+// Storybook draws every story in its own frame document. Outside it no such
+// document exists, and the web tier answers that path like any other.
+const isStorybook = (): boolean => import.meta.env.STORYBOOK === "true";

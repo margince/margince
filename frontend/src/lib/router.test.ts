@@ -435,3 +435,20 @@ describe("a credential taken out of the address", () => {
     }
   });
 });
+
+describe("the address a story frame opens at", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  it("is the screen it names, and a path nobody serves is still not found", () => {
+    vi.stubEnv("STORYBOOK", "true");
+    globalThis.history.replaceState(null, "", "/iframe.html?id=s#/onboarding");
+    expect(renderHook(useRoute).result.current.screen).toBe("onboarding");
+    cleanup();
+
+    globalThis.history.replaceState(null, "", "/settings#/onboarding");
+    expect(renderHook(useRoute).result.current.screen).toBe("not-found");
+  });
+});
