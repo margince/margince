@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The closed set the column's CHECK admits, spelled here because the store is
@@ -120,8 +119,9 @@ type RepliedRequest struct {
 // verdict that recorded its evidence is skipped while that evidence is
 // unchanged, so an edit, a narrowing or a backdated answer brings it back. An
 // older verdict without it is skipped while its answer is still the newest. A
-// still_owed verdict from an older rule is never skipped. A never-owed invitation is not judged.
-var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `)) AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL("$1::timestamptz") + `)
+// still_owed verdict from an older rule is never skipped. A never-owed invitation is not judged;
+// $4 is the own-domain list that tells a colleague's invitation.
+var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettlementSQL + `)) AND (` + acceptedRequestSQL + ` OR NOT ` + invitationNeverOwedSQL("$1::timestamptz", "$4") + `)
  AND ` + auth.WorkspaceAudienceSQL("a") + `
  AND NOT ` + auth.ActivityRestrictedSQL("a.id") + `
  AND a.counterparty_email IS NOT NULL
@@ -133,22 +133,6 @@ var repliedRequestsSQL = `((` + outstandingRequestSQL + `) OR (` + reArmedSettle
      AND (judged.verdict <> '` + RequestStillOwed + `' OR judged.rule_version = '` + RequestSettlementRule + `')
      AND ((judged.judged_evidence IS NULL AND judged.judged_through_activity_id = (` + newestAnswerSince + `))
        OR judged.judged_evidence = (` + settlementEvidenceSQL() + `)))`
-
-// settlementEvidenceCompleteSQL keeps a request off the candidate list when its
-// evidence holds a body that was not read in full. The settlement pass would
-// refuse to judge it. A refused request left on the list comes back first on
-// every pass, so a few of them would starve every other request. It covers at
-// least what the pass reads. That is the request, its later thread messages
-// with the same correspondent, and the answers off its thread.
-var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
- AND NOT EXISTS (SELECT 1 FROM activity later
-   WHERE later.thread_key = a.thread_key AND later.kind = a.kind
-     AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
-     AND ` + occurredday.BegunSQL("later", "$1") + ` AND ` + SettlementThreadSQL("later", "a") + ` AND later.id <> a.id
-     AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
- AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
-   JOIN activity answer ON answer.id = off.id
-   WHERE NOT ` + provenance.MailBodyCompleteSQL("answer") + `)`
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
 // as of the pass's own instant ($1): our attested reply in the conversation and
@@ -208,6 +192,10 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	}
 	var out []RepliedRequest
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		ownDomains, err := s.ownDomainList(ctx, tx)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, coalesce(a.counterparty_email, ''),
 			       latest.id,
@@ -231,7 +219,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			 WHERE %[5]s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
 			 LIMIT $3`, settlementEvidenceSQL(), newestAnswerRow, EmailRequestTaskSource, settlementCompletedTaskSQL("reminder"), repliedRequestsSQL),
-			asOf, OwedVerdictCapturedBy, limit)
+			asOf, OwedVerdictCapturedBy, limit, ownDomains)
 		if err != nil {
 			return fmt.Errorf("activities: reading answered requests: %w", err)
 		}

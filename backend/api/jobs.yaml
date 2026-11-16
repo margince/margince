@@ -932,6 +932,20 @@ kinds:
       the sooner the first one exists the sooner the second is worth taking.
 
 
+  meeting_profile_retract_sweep:
+    role: worker
+    fleet: true
+    go_type: MeetingProfileRetractSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 1h
+    reason: >-
+      Removes the company fields a meeting filled once its transcript was
+      narrowed, restricted, archived or redacted. Hourly, so a value stops
+      speaking for a meeting its readers lost within the hour; database-only,
+      and bounded per workspace pass.
+
   initiative_enrolment_sweep:
     role: worker
     fleet: true

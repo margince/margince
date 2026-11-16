@@ -37,6 +37,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/commitmentparty"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -215,9 +216,9 @@ func (p extractPayload) asRead(thread settledThread) extractPayload {
 	for i := range events {
 		events[i].MessageID = thread.messageID(events[i].MessageID)
 		events[i].RestatedMessageID = thread.messageID(events[i].RestatedMessageID)
-		events[i].PromiserRef = partyKey(parties, events[i].PromiserRef)
-		events[i].BuyerRef = partyKey(parties, events[i].BuyerRef)
-		events[i].RecipientRefs = partyKeys(parties, events[i].RecipientRefs)
+		events[i].PromiserRef = commitmentparty.Key(parties, events[i].PromiserRef)
+		events[i].BuyerRef = commitmentparty.Key(parties, events[i].BuyerRef)
+		events[i].RecipientRefs = commitmentparty.Keys(parties, events[i].RecipientRefs)
 	}
 	if len(thread.Focus) > 0 {
 		events = slices.DeleteFunc(events, func(event extractedEvent) bool {

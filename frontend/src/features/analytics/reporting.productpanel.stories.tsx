@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProductReports } from "./reporting.productpanel";
@@ -22,6 +23,7 @@ type Story = StoryObj;
 
 function panel(products: readonly { id: string; name: string }[]) {
   installFetchStub({
+    "GET /me": meRoute({ deal: ["read"] }),
     "GET /products": () =>
       jsonResponse({
         data: products,

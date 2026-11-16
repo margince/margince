@@ -62,7 +62,7 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 		// on: a contact's answer always lands, including over their own earlier
 		// one, which is the half a read-back never gets.
 		if _, err := tx.Exec(ctx, upsertCompanyProfileField,
-			companyID, field, trimmed, "", "", humanAuthoredConfidence, companyAuthorSource(ctx), by, true); err != nil {
+			companyID, field, trimmed, "", "", humanAuthoredConfidence, companyAuthorSource(ctx), by, true, nil); err != nil {
 			return nil, fmt.Errorf("save company field %s: %w", field, err)
 		}
 		applied[field] = trimmed
