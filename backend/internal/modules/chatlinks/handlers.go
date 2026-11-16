@@ -68,6 +68,23 @@ func (h Handlers) GetChannelLink(w http.ResponseWriter, r *http.Request, kind cr
 	httperr.WriteJSON(w, http.StatusOK, wireState(state))
 }
 
+// ListLinkableChannels lists the channels the record can be linked to.
+func (h Handlers) ListLinkableChannels(w http.ResponseWriter, r *http.Request, kind crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
+	if !h.composed(w, r) {
+		return
+	}
+	channels, err := h.store.LinkableChannels(r.Context(), string(kind), ids.UUID(id))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	out := crmcontracts.LinkableChannels{Channels: make([]crmcontracts.LinkableChannel, 0, len(channels))}
+	for _, ch := range channels {
+		out.Channels = append(out.Channels, crmcontracts.LinkableChannel{Slug: ch.Slug, Name: ch.Name})
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // LinkChannel links a record to a new or existing channel.
 func (h Handlers) LinkChannel(w http.ResponseWriter, r *http.Request, kind crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
 	if !h.composed(w, r) {

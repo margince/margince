@@ -281,6 +281,14 @@ type historyPage struct {
 				ID string `json:"id"`
 			} `json:"message"`
 		}] `json:"messagesDeleted"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		// LabelsAdded carries the moment a scheduled message goes: Gmail files
+		// the message it already listed under SENT, and adds no new message.
+		LabelsAdded boundedJSONList[struct {
+			Message struct {
+				ID string `json:"id"`
+			} `json:"message"`
+			LabelIDs []string `json:"labelIds"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
+		}] `json:"labelsAdded"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	}] `json:"history"`
 	HistoryID     string `json:"historyId"`     //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
 	NextPageToken string `json:"nextPageToken"` //nolint:tagliatelle // Google's wire format (camelCase); must match to decode
@@ -288,6 +296,7 @@ type historyPage struct {
 
 func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID string) ([]string, []string, string, error) {
 	var ids, deleted []string
+	added := map[string]bool{}
 	latest := startHistoryID
 	pageToken := ""
 	for {
@@ -296,7 +305,7 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 		// the connector could not have acted on one however it tried.
 		q := url.Values{
 			"startHistoryId": {startHistoryID},
-			"historyTypes":   {"messageAdded", "messageDeleted"},
+			"historyTypes":   {"messageAdded", "messageDeleted", "labelAdded"},
 		}
 		if pageToken != "" {
 			q.Set("pageToken", pageToken)
@@ -311,8 +320,15 @@ func (a *httpAPI) History(ctx context.Context, accessToken, startHistoryID strin
 		}
 		for _, h := range page.History {
 			for _, ma := range h.MessagesAdded {
-				if ma.Message.ID != "" {
+				if ma.Message.ID != "" && !added[ma.Message.ID] {
+					added[ma.Message.ID] = true
 					ids = append(ids, ma.Message.ID)
+				}
+			}
+			for _, la := range h.LabelsAdded {
+				if la.Message.ID != "" && hasSentLabel(la.LabelIDs) && !added[la.Message.ID] {
+					added[la.Message.ID] = true
+					ids = append(ids, la.Message.ID)
 				}
 			}
 			for _, md := range h.MessagesDeleted {
@@ -384,6 +400,12 @@ func hasDraftLabel(labelIDs []string) bool {
 // where the labels of the message actually being captured are in hand.
 func hasRejectedLabel(labelIDs []string) bool {
 	return slices.Contains(labelIDs, spamLabelID) || slices.Contains(labelIDs, trashLabelID)
+}
+
+// refusedUnread reports whether a fetched message is refused before it is
+// parsed: a draft, spam or trash. Both capture paths ask this one function.
+func refusedUnread(m Message) bool {
+	return hasDraftLabel(m.Labels) || hasRejectedLabel(m.Labels)
 }
 
 // watchOnce registers a users.watch so Gmail publishes change notifications for

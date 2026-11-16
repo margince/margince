@@ -40,5 +40,5 @@ func messageContentGateFor(p principal.Principal, alias string, arg func(any) in
 	if p.Type == principal.PrincipalSystem {
 		return gate
 	}
-	return gate + " AND " + activityAudienceArm(p, alias, arg) + agentRestrictionArm(p, alias)
+	return gate + " AND " + activityAudienceMembership(p, alias, arg) + agentRestrictionArm(p, alias)
 }

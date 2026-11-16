@@ -5,8 +5,13 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture } from "../../testing/mefixture";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
-import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../../testing/story-utils";
 import { CONTEXTS } from "./analytics.overview.fixtures";
 import { render } from "./analytics.testkit";
 import { GoalEditor } from "./goals.editor";
@@ -201,6 +206,8 @@ describe("GoalEditor", () => {
 function stubWork(answer: (url: URL) => unknown) {
   vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
     const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.pathname.endsWith("/me"))
+      return jsonResponse(meFixture({ allow: { lead: ["read"] } }));
     return jsonResponse(answer(url));
   });
 }
@@ -357,6 +364,7 @@ describe("ProgressScreen", () => {
     const seller = "00000000-0000-4000-8000-0000000000b2";
     window.location.hash = `#/progress?scope=owner:${seller}`;
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
       "GET /analytics/progress": () =>
         jsonResponse({
@@ -387,6 +395,7 @@ describe("ProgressScreen", () => {
 
   it("offers no team the reader may not measure, and opens Analytics on the same days", async () => {
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "GET /analytics/context": () =>
         jsonResponse({
           default_scope: { kind: "owner", id: "u1", label: "Alex Brandt" },
@@ -423,6 +432,7 @@ describe("ProgressScreen", () => {
     const seller = "00000000-0000-4000-8000-0000000000b2";
     window.location.hash = `#/progress?period=year&year=2026&scope=owner:${seller}`;
     installFetchStub({
+      "GET /me": meRoute({ lead: ["read"] }),
       "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
       "GET /analytics/progress": () =>
         jsonResponse({

@@ -47,6 +47,16 @@ function stubRoutes() {
       const key = url.pathname.replace(/^\/v1/, "");
       if (key === "/consent-purposes") return jsonResponse(PURPOSES);
       if (key === "/voice-profiles") return jsonResponse({ data: [] });
+      if (
+        key === "/records/references" &&
+        url.searchParams.get("kind") === "contact"
+      ) {
+        return jsonResponse({
+          data: url.searchParams.getAll("id").includes("c-1")
+            ? [{ id: "c-1", name: "Anna Weber", archived: false }]
+            : [],
+        });
+      }
       if (key === "/contacts/c-1") {
         return jsonResponse({ id: "c-1", full_name: "Anna Weber" });
       }

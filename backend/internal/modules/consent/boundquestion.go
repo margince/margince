@@ -5,31 +5,12 @@ package consent
 
 // What a proof row records as the thing the subject agreed to.
 //
-// Both confirm-link doors used to write in.MarketingWording — the sentence that
-// arrived in the same request as the answer it is meant to evidence. This
-// resolves the published question the link pinned instead, so the proof names a
-// row the controller published and a reader can check it against.
-//
-// WHAT THE PIN DOES NOT SETTLE, stated because the limits are real and a reader
-// should not take this for more than it is.
-//
-// The page renders its own copy of the question from the frontend catalog
-// rather than fetching the published row. Two consequences follow, and both are
-// bounded rather than closed:
-//
-//   - The page picks its language from the reader's browser, while the pin
-//     records the language the MAIL went out in. A link mailed in English and
-//     opened in a German browser records the English wording as what was seen.
-//   - The pin names the version live when the link was minted. A frontend
-//     redeploy between minting and clicking changes what the page shows while
-//     the proof still names what was pinned.
-//
-// Both are narrower than what they replace: an unpinned, unpublished,
-// client-supplied string that could say anything. The cross-catalog gate
-// (gates/marketingquestion_test.go) keeps the two copies of the wording in step
-// so the second case needs a deliberate edit to arise, and closing either
-// properly means the page rendering the published row — one source, nothing to
-// drift.
+// A confirm link pins one published question: its key, version and language.
+// The page's GET serves it with the purpose filled in, and the page shows those
+// words. The proof records the same served text. The client's sentence is only
+// a check. A grant with other words came from a page older than the question.
+// It is refused with "reload the page" and never recorded. A link that pinned
+// nothing keeps the client's sentence, the weaker evidence it always had.
 
 import (
 	"context"
@@ -40,6 +21,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -54,46 +37,75 @@ type GrantWording struct {
 	VersionID ids.UUID
 }
 
-// wordingForGrantTx decides what a grant through a confirm link records.
-//
-// ONE HELPER FOR BOTH DOORS. A record-confirmation link and a dedicated consent
-// link each wrote whatever sentence arrived in the submission, and fixing one
-// would have left the other — the one most double-opt-in grants come through —
-// exactly as it was.
-func (s *Store) wordingForGrantTx(
-	ctx context.Context, tx pgx.Tx, ref ConfirmRef, submitted string,
-) (GrantWording, error) {
+// ServedQuestion is a pinned question as a confirm page serves it and a proof
+// records it. Text is the published body with the purpose filled in: the ask on
+// its first line, the answers the page offers on the lines after.
+type ServedQuestion struct {
+	Version string
+	Text    string
+}
+
+// Parts splits Text into the sentence the reader answers and the answers' labels.
+func (q ServedQuestion) Parts() (string, []string) {
+	lines := strings.Split(q.Text, "\n")
+	return lines[0], lines[1:]
+}
+
+// errPageOlderThanQuestion refuses a grant whose words are not the question the
+// link served. Nothing is recorded and the link stays unspent.
+var errPageOlderThanQuestion = &apperrors.VersionSkewError{
+	Message: "The question on this page changed after it was opened. Reload the page and answer again.",
+}
+
+// servedQuestionTx resolves the question this link pinned, in the link's language.
+func servedQuestionTx(ctx context.Context, tx pgx.Tx, ref ConfirmRef) (ServedQuestion, boundQuestion, bool, error) {
 	bound, found, err := publishedQuestionForLinkTx(ctx, tx, ref)
+	if err != nil || !found {
+		return ServedQuestion{}, boundQuestion{}, false, err
+	}
+	text, err := substitutePurposeTx(ctx, tx, bound.Text, ref.PurposeID, ref.QuestionLocale)
+	if err != nil {
+		return ServedQuestion{}, boundQuestion{}, false, err
+	}
+	return ServedQuestion{Version: bound.Version, Text: text}, bound, true, nil
+}
+
+// servedQuestionFor is the question a confirm page shows for this link, absent
+// when the link pinned none.
+func (s *Store) servedQuestionFor(ctx context.Context, ref ConfirmRef) (*ServedQuestion, error) {
+	var out *ServedQuestion
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		served, _, found, err := servedQuestionTx(ctx, tx, ref)
+		if found {
+			out = &served
+		}
+		return err
+	})
+	return out, err
+}
+
+// wordingForGrantTx decides what an answer through a confirm link records: the
+// served question where the link pinned one, else the client's sentence. Both
+// confirm-link doors call it. A withdrawal is never refused over its words.
+func (s *Store) wordingForGrantTx(
+	ctx context.Context, tx pgx.Tx, ref ConfirmRef, in ConfirmSubmission,
+) (GrantWording, error) {
+	served, bound, found, err := servedQuestionTx(ctx, tx, ref)
 	if err != nil {
 		return GrantWording{}, err
 	}
 	if !found {
-		// The client's sentence, which is what this door recorded before and is
-		// the honest evidence for a link that cannot name a published row.
-		return GrantWording{Text: submitted}, nil
+		return GrantWording{Text: in.MarketingWording}, nil
 	}
-	// THE PURPOSE GOES INTO THE RECORDED SENTENCE, not into the published row.
-	//
-	// The subscription question carries a {purpose} placeholder, and the page
-	// fills it with the purpose's own label before the subject reads it. The
-	// PUBLISHED row keeps the placeholder — publishing one row per purpose
-	// would make a version mean something different for each — but the PROOF
-	// records what was actually on the screen.
-	//
-	// Without this the subject's own data export hands them "Confirm that you
-	// want to receive {purpose}.", a sentence with a hole in it, and the export
-	// carries the purpose's KEY rather than its label, so nothing in front of
-	// them fills it.
-	text, err := substitutePurposeTx(ctx, tx, bound.Text, ref.PurposeID)
-	if err != nil {
-		return GrantWording{}, err
+	if in.MarketingChoice == string(StateGranted) && in.MarketingWording != served.Text {
+		return GrantWording{}, errPageOlderThanQuestion
 	}
 	version := bound.Version
-	return GrantWording{Text: text, Version: &version, VersionID: bound.VersionID}, nil
+	return GrantWording{Text: served.Text, Version: &version, VersionID: bound.VersionID}, nil
 }
 
-// substitutePurposeTx fills the {purpose} placeholder with the label the page
-// showed, leaving any other text untouched.
+// substitutePurposeTx fills the {purpose} placeholder with the purpose's name in
+// the question's language, as the page shows it, leaving any other text untouched.
 //
 // A MISSING LABEL LEAVES THE PLACEHOLDER rather than failing the grant. A
 // purpose archived between the mail and the click has no label to read, and
@@ -101,21 +113,21 @@ func (s *Store) wordingForGrantTx(
 // subscribed to would be the wrong way round — the proof still carries
 // purpose_id, which is what identifies it.
 func substitutePurposeTx(
-	ctx context.Context, tx pgx.Tx, text string, purposeID ids.PurposeID,
+	ctx context.Context, tx pgx.Tx, text string, purposeID ids.PurposeID, locale string,
 ) (string, error) {
 	if !strings.Contains(text, purposePlaceholder) || purposeID.IsZero() {
 		return text, nil
 	}
-	var label string
+	var key, label string
 	err := tx.QueryRow(ctx,
-		`SELECT label FROM consent_purpose WHERE id = $1`, purposeID).Scan(&label)
+		`SELECT key, label FROM consent_purpose WHERE id = $1`, purposeID).Scan(&key, &label)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return text, nil
 	}
 	if err != nil {
 		return "", fmt.Errorf("consent: naming the purpose this question asked about: %w", err)
 	}
-	return strings.ReplaceAll(text, purposePlaceholder, label), nil
+	return strings.ReplaceAll(text, purposePlaceholder, purposeName(key, label, mailcopy.For(locale))), nil
 }
 
 // purposePlaceholder is what the published subscription question holds where

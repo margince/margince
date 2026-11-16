@@ -2,6 +2,7 @@ import type { useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { MessageKey } from "../i18n/en";
 import { DEAL_COVERAGE_KEY } from "../lib/activitykeys";
+import { stillHeld } from "../lib/employmentcurrency";
 import type { EntityKind } from "../lib/entity";
 import { labelFor } from "../lib/labelfor";
 import { unwrap } from "../lib/problem";
@@ -142,7 +143,16 @@ export function dateRange(
   rel: Relationship,
   t: (key: MessageKey) => string,
 ): string {
-  const end = rel.ended_at ?? t("rel.current");
+  // An employment is current only as the contact page judges it. A job with an
+  // unknown status is neither current nor former there, so it names no end.
+  const unknown =
+    rel.kind === "employment" && rel.employment_status === "unknown";
+  const held = rel.kind !== "employment" || stillHeld(rel);
+  const end =
+    rel.ended_at ?? (unknown ? "" : t(held ? "rel.current" : "rel.former"));
+  if (!end) {
+    return rel.started_at ?? "";
+  }
   return rel.started_at ? `${rel.started_at} – ${end}` : end;
 }
 

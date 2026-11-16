@@ -8,6 +8,7 @@ import type { Locale } from "../../i18n";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { PartnerDeals } from "./partnerdeals";
@@ -53,6 +54,7 @@ function Panel({
   locale = "en",
 }: Readonly<{ deals: Deal[]; locale?: Locale }>) {
   installFetchStub({
+    "GET /me": meRoute({ deal: ["read"], company: ["read"] }),
     "GET /deals": () =>
       jsonResponse({
         data: deals,

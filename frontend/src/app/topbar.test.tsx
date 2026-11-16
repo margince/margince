@@ -220,20 +220,33 @@ describe("Top bar at phone width", () => {
   });
 
   it("reads no record name for the trail it does not draw", async () => {
-    const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
-      fetch.mock.calls.filter(([request]) =>
-        String(request instanceof Request ? request.url : request).includes(
-          "/deals/d-1",
-        ),
+    const asksForDeal = (request: RequestInfo | URL) => {
+      const url = new URL(
+        request instanceof Request ? request.url : String(request),
+        "https://test.local",
       );
-    const wideFetch = vi.fn(async () => new Response(null, { status: 404 }));
+      return (
+        url.pathname === "/v1/records/references" &&
+        url.searchParams.get("kind") === "deal" &&
+        url.searchParams.getAll("id").includes("d-1")
+      );
+    };
+    const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
+      fetch.mock.calls.filter(([request]) => asksForDeal(request));
+    const answer = async (request: RequestInfo | URL) =>
+      asksForDeal(request)
+        ? Response.json({
+            data: [{ id: "d-1", name: "Renewal", archived: false }],
+          })
+        : new Response(null, { status: 404 });
+    const wideFetch = vi.fn(answer);
     vi.stubGlobal("fetch", wideFetch);
     renderTopBar({ screen: "deals", id: "d-1" });
     await waitFor(() => expect(recordReads(wideFetch)).not.toEqual([]));
     cleanup();
 
     stubPhoneViewport();
-    const phoneFetch = vi.fn(async () => new Response(null, { status: 404 }));
+    const phoneFetch = vi.fn(answer);
     vi.stubGlobal("fetch", phoneFetch);
     renderTopBar({ screen: "deals", id: "d-1" });
     await waitFor(() => expect(phoneFetch).toHaveBeenCalled());

@@ -325,7 +325,7 @@ function SiteReadPanel({
  * query key so the two are one request and can never disagree about whether
  * this account has been read.
  */
-function useLatestSiteRead(companyId: string) {
+export function useLatestSiteRead(companyId: string) {
   return useQuery({
     queryKey: ["site-read-latest", companyId],
     queryFn: async () => {

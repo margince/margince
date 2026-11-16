@@ -19,41 +19,47 @@ import (
 // Exchanges counts pgx calls, with a batch as one. Internal plan lookups may
 // add protocol trips. Transactions counts the begins among those calls.
 type StatementCost struct {
-	Statements   int64
-	Exchanges    int64
-	Transactions int64
-	Prepares     int64
-	Failed       int64
-	Acquires     int64
-	DBTime       time.Duration
-	PoolWait     time.Duration
+	Statements    int64
+	Exchanges     int64
+	Transactions  int64
+	Prepares      int64
+	Failed        int64
+	Acquires      int64
+	DBTime        time.Duration
+	PoolWait      time.Duration
+	Admissions    int64
+	AdmissionWait time.Duration
 }
 
 // Minus answers the cost run since earlier was read off the same meter.
 func (c StatementCost) Minus(earlier StatementCost) StatementCost {
 	return StatementCost{
-		Statements:   c.Statements - earlier.Statements,
-		Exchanges:    c.Exchanges - earlier.Exchanges,
-		Transactions: c.Transactions - earlier.Transactions,
-		Prepares:     c.Prepares - earlier.Prepares,
-		Failed:       c.Failed - earlier.Failed,
-		Acquires:     c.Acquires - earlier.Acquires,
-		DBTime:       c.DBTime - earlier.DBTime,
-		PoolWait:     c.PoolWait - earlier.PoolWait,
+		Statements:    c.Statements - earlier.Statements,
+		Exchanges:     c.Exchanges - earlier.Exchanges,
+		Transactions:  c.Transactions - earlier.Transactions,
+		Prepares:      c.Prepares - earlier.Prepares,
+		Failed:        c.Failed - earlier.Failed,
+		Acquires:      c.Acquires - earlier.Acquires,
+		DBTime:        c.DBTime - earlier.DBTime,
+		PoolWait:      c.PoolWait - earlier.PoolWait,
+		Admissions:    c.Admissions - earlier.Admissions,
+		AdmissionWait: c.AdmissionWait - earlier.AdmissionWait,
 	}
 }
 
 // Plus answers both costs together.
 func (c StatementCost) Plus(other StatementCost) StatementCost {
 	return StatementCost{
-		Statements:   c.Statements + other.Statements,
-		Exchanges:    c.Exchanges + other.Exchanges,
-		Transactions: c.Transactions + other.Transactions,
-		Prepares:     c.Prepares + other.Prepares,
-		Failed:       c.Failed + other.Failed,
-		Acquires:     c.Acquires + other.Acquires,
-		DBTime:       c.DBTime + other.DBTime,
-		PoolWait:     c.PoolWait + other.PoolWait,
+		Statements:    c.Statements + other.Statements,
+		Exchanges:     c.Exchanges + other.Exchanges,
+		Transactions:  c.Transactions + other.Transactions,
+		Prepares:      c.Prepares + other.Prepares,
+		Failed:        c.Failed + other.Failed,
+		Acquires:      c.Acquires + other.Acquires,
+		DBTime:        c.DBTime + other.DBTime,
+		PoolWait:      c.PoolWait + other.PoolWait,
+		Admissions:    c.Admissions + other.Admissions,
+		AdmissionWait: c.AdmissionWait + other.AdmissionWait,
 	}
 }
 

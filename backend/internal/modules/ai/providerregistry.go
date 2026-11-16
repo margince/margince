@@ -78,10 +78,7 @@ type providerDescriptor struct {
 	// to; empty means the binding must name one. A decision binding's base_url
 	// is the whole URL, posted to as written.
 	defaultEndpoint string
-	// localByEndpoint marks an adapter whose locality is its endpoint's: it is
-	// local exactly when its base_url's host is the customer's own
-	// (classifyHost). That one answer makes it sovereign-eligible and decides
-	// whether a local-only task may take it.
+	// Endpoint ownership decides whether sovereign routing can use this adapter.
 	localByEndpoint bool
 	// thinkingFloor reports whether a binding's adapter maps a site's thinking
 	// floor onto its wire (sitethinking.go); nil maps none.

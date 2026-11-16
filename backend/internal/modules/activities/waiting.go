@@ -381,13 +381,19 @@ func (s *Store) ownDomainList(ctx context.Context, tx pgx.Tx) ([]string, error) 
 // Held by: TestEveryOwnDomainComparisonInSQLReadsFoldedDomains
 // (backend/gates/owndomainpredicate_test.go)
 func ownDomainSenderSQL(alias string, domainArg int) string {
+	return ownDomainSenderAtSQL(alias, fmt.Sprintf("$%d", domainArg))
+}
+
+// ownDomainSenderAtSQL is ownDomainSenderSQL with the domain list under any
+// placeholder, such as a named argument.
+func ownDomainSenderAtSQL(alias, domains string) string {
 	return fmt.Sprintf(`EXISTS (
 	         SELECT 1 FROM activity_participant ours
 	          WHERE ours.activity_id = %[1]s.id
 	            AND ours.role = 'from'
 	            AND EXISTS (
-	                  SELECT 1 FROM unnest($%[2]d::text[]) AS own(domain)
-	                   WHERE %[3]s))`, alias, domainArg, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
+	                  SELECT 1 FROM unnest(%[2]s::text[]) AS own(domain)
+	                   WHERE %[3]s))`, alias, domains, owndomain.CoversSQL("ours.address_domain_folded", "own.domain"))
 }
 
 func scanWaitingReply(record pgx.Row) (WaitingReply, error) {

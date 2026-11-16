@@ -52,8 +52,8 @@ import { stagesOfEveryPipeline } from "./pipelinestages";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
 
-import { ExtensionReports } from "../../components/extensionreports";
 import { SECTION_REPORTS, useReportRun } from "./analytics.reports.queries";
+import { ExtensionReports } from "./extensionreports";
 
 export function AnalyticsScreen({
   reviewActions,

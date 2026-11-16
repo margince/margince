@@ -9,6 +9,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -16,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -65,21 +67,23 @@ func (in LogActivityInput) sourceActivity() *ids.UUID {
 // transcript at it. The lock holds until the outcome lands, so a second answer
 // to the same meeting waits and is then refused.
 func admitRecordedMeeting(ctx context.Context, tx pgx.Tx, in *LogActivityInput) (crmcontracts.Activity, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-		return crmcontracts.Activity{}, err
-	}
 	id := *in.recordsMeeting
 	if _, err := storekit.LockRow(ctx, tx, "activity", id.UUID, storekit.LiveOnly); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if err := auth.EnsureActivityWritable(ctx, tx, id.UUID); err != nil {
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, id.UUID); err != nil {
 		return crmcontracts.Activity{}, err
 	}
+	writable, err := recordedMeetingWritable(ctx, tx, id, in.keepRecordedOutcome)
+	if err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	in.recordedMeetingWritable = writable
 	meeting, err := readActivityContent(ctx, tx, id, storekit.LiveOnly)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	if !owesOutcome(meeting) {
+	if meeting.Kind != crmcontracts.ActivityKindMeeting || (!owesOutcome(meeting) && !in.keepRecordedOutcome) {
 		return crmcontracts.Activity{}, &followUpFieldError{
 			Field:   fieldRecordsMeetingID,
 			Message: "Choose a meeting that still waits for its outcome.",
@@ -105,21 +109,22 @@ func owesOutcome(meeting crmcontracts.Activity) bool {
 // meeting already on a deal keeps that deal.
 func markRecordedMeetingHeld(
 	ctx context.Context, tx pgx.Tx, meeting, transcript crmcontracts.Activity, in LogActivityInput,
-) error {
+) (crmcontracts.Activity, error) {
 	held := meetingoutcome.Held
 	id := ids.From[ids.ActivityKind](ids.UUID(meeting.Id))
-	if _, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{MeetingStatus: &held, recordedAt: in.recordedAt}); err != nil {
-		return err
+	marked, err := updateActivityInTx(ctx, tx, id, UpdateActivityInput{MeetingStatus: &held, recordedAt: in.recordedAt})
+	if err != nil {
+		return crmcontracts.Activity{}, err
 	}
 	missing := slices.DeleteFunc(slices.Clone(filingKinds), func(kind string) bool {
 		return len(linksOfKinds(meeting, []string{kind})) > 0
 	})
 	for _, link := range linksOfKinds(transcript, missing) {
 		if _, err := RelinkActivityInTx(ctx, tx, id, RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
-			return err
+			return crmcontracts.Activity{}, err
 		}
 	}
-	return nil
+	return marked, nil
 }
 
 func linksOfKinds(activity crmcontracts.Activity, kinds []string) []ActivityLinkInput {
@@ -130,4 +135,16 @@ func linksOfKinds(activity crmcontracts.Activity, kinds []string) []ActivityLink
 		}
 	}
 	return links
+}
+
+func recordedMeetingWritable(ctx context.Context, tx pgx.Tx, id ids.ActivityID, automatic bool) (bool, error) {
+	err := auth.Require(ctx, "activity", principal.ActionUpdate)
+	if err == nil {
+		err = auth.EnsureActivityWritable(ctx, tx, id.UUID)
+	}
+	if automatic && (errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound)) {
+		// Capture can file readable notes without authority to change the meeting.
+		return false, nil
+	}
+	return err == nil, err
 }

@@ -144,6 +144,14 @@ type ListActivitiesInput struct {
 	// CollapseSeatCopies shows one row per email that several colleagues'
 	// mailboxes each hold a copy of (seatcopies.go), before the page is cut.
 	CollapseSeatCopies bool
+	// FactsOnly reads the rows as facts for a reader that draws none of them.
+	// Each row keeps its mail facts and summary. Its links, creators, write
+	// affordances, commitment admissions, offered email and custom values are
+	// not read.
+	FactsOnly bool
+	// LinkedFactsOnly is FactsOnly with each row's links, for a reader that
+	// draws a row from its own columns and the records it is filed under.
+	LinkedFactsOnly bool
 	// WithoutCopiesOf leaves out, on a collapsed page, the row that stands for
 	// this activity or any mailbox copy of it, whatever filter the copy passes.
 	WithoutCopiesOf *ids.UUID

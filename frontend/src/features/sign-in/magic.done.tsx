@@ -14,7 +14,8 @@ import { floorFigure } from "../../format/figure";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MagicLine } from "../../lib/magic.queries";
-import { LineSubject, LineUndo, lineNotes, lineSentence } from "./magic.lines";
+import { lineSentence } from "../../lib/magiccopy";
+import { LineSubject, LineUndo, lineNotes } from "./magic.lines";
 import { axisLabel, markKind } from "./magic.marks";
 
 /** Lines whose sentence reads the same, newest first. */
@@ -31,7 +32,6 @@ export function MagicDoneCard({
   zone,
   byDay,
   floor,
-  defaultOpen,
 }: Readonly<{
   rows: readonly MagicLine[];
   since: string | undefined;
@@ -39,8 +39,6 @@ export function MagicDoneCard({
   byDay: boolean;
   /** The lane's read was cut short, so its total is only a floor. */
   floor: boolean;
-  /** Open on arrival: nothing else in the section asks to be read first. */
-  defaultOpen: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -53,9 +51,7 @@ export function MagicDoneCard({
   const groups = groupBySentence(ordered, (line) => lineSentence(line, t));
   const total = groups.reduce((sum, group) => sum + group.records, 0);
   const newest = ordered[0];
-  const [open, setOpen] = useState(defaultOpen);
-  // One step per kind, as the app's other summary lines list their parts.
-  const summary = groups.map((group) => group.sentence).join(" · ");
+  const [open, setOpen] = useState(false);
   return (
     <Card as="article" className="brief-done-deal brief-done-small">
       <Disclosure
@@ -77,7 +73,6 @@ export function MagicDoneCard({
                 {axisLabel(newest.occurred_at, byDay, locale, zone)}
               </time>
             )}
-            {!open && <span className="brief-done-net">{summary}</span>}
           </span>
         }
       >

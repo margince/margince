@@ -23,11 +23,11 @@ fixture:
       talk through what you do? Tuesday or Thursday morning both work here.
 expect:
   outcome: accepted
-  answer: [commitment, noise, meeting]
+  answer: [commitment, other, meeting]
   rubric: >
     Three messages in one call, one per label, deliberately ordered so a
     transposition is visible: a purchase order promised this afternoon
-    (commitment), a holiday autoresponder on the SAME subject line (noise), and a
+    (commitment), a holiday autoresponder on the SAME subject line (other), and a
     request for twenty minutes with two offered mornings (meeting).
     Score high only if all three labels are right AND each is attached to its own
     message. The second message shares its subject with the first, which is the

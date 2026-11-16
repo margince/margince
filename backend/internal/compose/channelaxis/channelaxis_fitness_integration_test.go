@@ -28,40 +28,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// contractEnumRe finds enum members spelled anywhere in the contract document.
-// Deliberately a scan of the raw text rather than a parse of the four nodes
-// anyone currently remembers: a provider name reappearing in a FIFTH enum added
-// later is exactly the regression this guards, and a parser aimed at the known
-// nodes would not see it.
-//
-// BOTH YAML sequence styles, because the document uses both: flow
-// (`enum: [a, b]`) and block (`enum:` then `- a`). Matching only flow would
-// leave four existing block-style enums unchecked and the guard would report
-// clean over a document it had not fully read.
-var (
-	contractEnumRe      = regexp.MustCompile(`enum:\s*\[([^\]]*)\]`)
-	contractBlockEnumRe = regexp.MustCompile(`(?m)^\s*enum:\s*\n((?:\s*-\s*[^\n]*\n)+)`)
-)
-
-// contractEnums returns every enum's member set, from both spellings.
-func contractEnums(raw string) [][]string {
-	var out [][]string
-	for _, m := range contractEnumRe.FindAllStringSubmatch(raw, -1) {
-		out = append(out, strings.Split(m[1], ","))
-	}
-	for _, m := range contractBlockEnumRe.FindAllStringSubmatch(raw, -1) {
-		var members []string
-		for line := range strings.SplitSeq(m[1], "\n") {
-			line = strings.TrimSpace(line)
-			if after, ok := strings.CutPrefix(line, "-"); ok {
-				members = append(members, strings.TrimSpace(after))
-			}
-		}
-		out = append(out, members)
-	}
-	return out
-}
-
 func contractPath(t *testing.T, name string) string {
 	t.Helper()
 	// The test binary runs in its package directory; the contract lives at the
@@ -110,13 +76,8 @@ func enumKey(members map[string]bool) string {
 	return strings.Join(slices.Sorted(maps.Keys(members)), ",")
 }
 
-// A registered transport must not appear as a member of any kind-style enum in
-// the contract. Derived from channel_provider — the registry IS the list, so a
-// provider registered tomorrow is covered without touching this test.
-//
-// The one exception is an enum of the core bot connectors a workspace binds
-// (ChannelConnection, ConnectChannelRequest, ChannelLink). An extension unit
-// never writes that surface (ADR-0107).
+// Transport enums come from the registry. Bot bindings retain their schema-owned
+// set; profile fields and writing evidence retain their independent LinkedIn meaning.
 func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 	integration.Setup(t)
 	owner := integration.OwnerConn(t)
@@ -146,7 +107,8 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 
 	allowed := botBindingProviderSets(ctx, t, owner)
 
-	for _, members := range contractEnums(string(raw)) {
+	for _, item := range contractEnums(t, raw) {
+		members := item.Members
 		trimmed := make(map[string]bool, len(members))
 		for _, m := range members {
 			trimmed[strings.Trim(strings.TrimSpace(m), `'"`)] = true
@@ -155,9 +117,9 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 			continue
 		}
 		for _, provider := range providers {
-			if trimmed[provider] {
-				t.Errorf("a contract enum %v spells the registered transport %q; a provider vocabulary is a deployment fact and cannot live in an installation-independent enum (ADR-0107/A158) — use ProviderRef",
-					members, provider)
+			if trimmed[provider] && !independentLinkedInMeaning(item.Path, provider) {
+				t.Errorf("contract enum %s %v spells the registered transport %q; a provider vocabulary is a deployment fact and cannot live in an installation-independent enum — use ProviderRef",
+					item.Path, members, provider)
 			}
 		}
 	}

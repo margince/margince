@@ -215,16 +215,19 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 	if params.Relationships != nil && *params.Relationships == crmcontracts.GetWorklistParamsRelationshipsOmit {
 		svc = svc.OmittingRelationships()
 	}
+	if params.Shape != nil && *params.Shape == crmcontracts.GetWorklistParamsShapeHome {
+		svc = svc.ShapedForHome()
+	}
 	out, err := h.worklistAnswer(r.Context(), svc, worklistQuestion{
 		view: view, scope: scope, filter: filter, owner: owner, limit: limit, token: token,
-		omitRelationships: svc.omitDecay,
+		omitRelationships: svc.omitDecay, home: svc.homeShape,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
 	markRefusedMoves(r.Context(), &out)
-	httperr.WriteJSON(w, http.StatusOK, out)
+	httperr.WriteJSONTagged(w, r, out)
 }
 
 // MarkWorklistRowsDone takes rows off the calling reader's own Worklist.

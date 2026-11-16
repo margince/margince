@@ -9,7 +9,11 @@ import { join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { build } from "vite";
 import { expect, it } from "vitest";
-import { entryChunks, preloadEntries } from "./vite-entry-chunks";
+import {
+  chunksOverBudget,
+  entryChunks,
+  preloadEntries,
+} from "./vite-entry-chunks";
 
 it("groups static dependencies once and leaves unopened features lazy", async () => {
   const dir = await realpath(await mkdtemp(join(tmpdir(), "entry-chunks-")));
@@ -179,4 +183,33 @@ it("preloads the main entry under the configured base without preloading unopene
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+it("names only the chunks that outgrow their budget", () => {
+  expect(
+    chunksOverBudget(
+      [
+        { name: "home", bytes: 820_001 },
+        { name: "startup", bytes: 9_000_000 },
+        { name: "brief.weeklypage", bytes: 10 },
+      ],
+      { home: 820_000, "brief.weeklypage": 10 },
+    ),
+  ).toEqual(["home is 820001 bytes, over its 820000-byte budget"]);
+});
+
+it("refuses a budget whose chunk was renamed or split", () => {
+  expect(
+    chunksOverBudget(
+      [
+        { name: "home-2", bytes: 1 },
+        { name: "brief", bytes: 1 },
+        { name: "brief", bytes: 1 },
+      ],
+      { home: 820_000, brief: 10 },
+    ),
+  ).toEqual([
+    "the home budget names 0 chunks, not one",
+    "the brief budget names 2 chunks, not one",
+  ]);
 });

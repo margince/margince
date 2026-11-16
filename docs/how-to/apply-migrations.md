@@ -132,6 +132,9 @@ Put `-- pgmigrate:no-transaction` on a line by itself in the up file of such a m
 The [runner](../../backend/internal/platform/dbmigrate/notransaction.go) records the version after
 all statements finish, so each statement must be safe to run again.
 
+An index build can wait for older transactions and snapshots. Its `lock_timeout` bounds those
+waits too; a timeout needs a retry after the older transaction ends.
+
 A failed build can leave behind an index Postgres never uses. The
 [indexes that let a delete find its child rows](../../backend/migrations/core/1794471014_parent_deletes_find_their_children.up.sql)
 put `DROP INDEX CONCURRENTLY IF EXISTS` before each build, so a second try builds it again.

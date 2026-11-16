@@ -84,11 +84,11 @@ func refuseIfSoleCompanyOnALiveProject(ctx context.Context, tx pgx.Tx, companyID
 		SELECT count(*)
 		  FROM relationship mine
 		  JOIN project p ON p.id = mine.project_id AND p.archived_at IS NULL
-		 WHERE mine.kind = 'project_company' AND mine.company_id = $1
+		 WHERE mine.kind = '`+ProjectCompanyKind+`' AND mine.company_id = $1
 		   AND mine.archived_at IS NULL
 		   AND NOT EXISTS (
 		       SELECT 1 FROM relationship other
-		        WHERE other.kind = 'project_company' AND other.project_id = mine.project_id
+		        WHERE other.kind = '`+ProjectCompanyKind+`' AND other.project_id = mine.project_id
 		          AND other.company_id <> $1 AND other.archived_at IS NULL)`,
 		companyID).Scan(&stranded); err != nil {
 		return fmt.Errorf("contacts: counting the projects company %s is the only company on: %w", companyID, err)

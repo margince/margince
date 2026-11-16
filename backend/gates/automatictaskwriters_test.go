@@ -111,6 +111,7 @@ var taskSourceWriters = map[string][]string{
 	"modules/activities/scheduling_invitation.go:insertInvitation":        {writesNoTask},
 	"modules/activities/scheduling_proposal.go:CreateProposal":            {writesNoTask},
 	"modules/activities/outboundmessage.go:activity":                      {writesNoTask},
+	"modules/activities/meetingnotesrepair.go:connectMeetingNotesTx":      {writesNoTask},
 	"modules/activities/meetingnotes.go:LandMeetingNotesTx":               {writesNoTask},
 }
 
@@ -118,6 +119,9 @@ var taskSourceWriters = map[string][]string{
 // storekit.CurrentTaskClause itself, with why.
 // gatekit:fixture the declared readers of another population, checked both ways below
 var openTaskReadersElsewhere = map[string]string{
+	"modules/activities/systemtaskopen.go:lockOpenSystemTask":         "Finds the record's open task of one source, current or stale, so an arrival keeps or repoints it instead of filing a second. It surfaces no open work.",
+	"modules/activities/duplicatesystemtasks.go:duplicateLeadTaskSQL": "Duplicate repair compares all open source tasks, current or stale, to preserve one newest task per lead. It returns no worklist rows.",
+
 	"modules/activities/taskanswered.go:answeredTaskSQL":                  "The answered-task rule: completes every existing open task for the sender and addressed contact, including dormant automatic tasks. It creates and surfaces no open work.",
 	"modules/activities/taskansweredbatch.go:CompleteAnsweredTasksTx":     "Pages the same rule over open contact tasks once, to close those stored mail already answered. It creates and surfaces no open work.",
 	"modules/activities/taskansweredbatch.go:CountAnsweredTaskCandidates": "Counts the open contact tasks the one-time batch will inspect, for its progress estimate. It surfaces no open work.",

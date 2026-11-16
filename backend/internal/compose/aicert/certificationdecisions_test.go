@@ -77,7 +77,7 @@ func decisionRecordKey(d aiCertDecision) string {
 func writeAICertDecisions(page *strings.Builder, decisions []aiCertDecision) {
 	page.WriteString("### Decision models\n\n")
 	page.WriteString("A decision model answers a site's closed question first. The site's LLM ladder\n")
-	page.WriteString("answers instead whenever the lane may not be asked (a local-only task), fails,\n")
+	page.WriteString("answers instead whenever the lane is unbound, fails,\n")
 	page.WriteString("or answers below the site's own floor. A decision record comes from a\n")
 	page.WriteString("`make e2e-ai ROUTING=` run whose config binds `decisions:`, and is certified\n")
 	page.WriteString("per site with no judge: `certified` means no answer the site kept was wrong in\n")

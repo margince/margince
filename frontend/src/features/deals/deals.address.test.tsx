@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { ADDRESSABLE_DEAL_DIALS, type DealDial } from "../../lib/dealsaddress";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { DealsScreen, dealsQueryParams } from "./deals";
 
@@ -78,6 +79,11 @@ function stubBackend(seen: Seen) {
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
     const path = new URL(url, "http://localhost").pathname;
+    const reference =
+      method === "GET"
+        ? companyNamesAnswer(url, { [COMPANY.id]: COMPANY.display_name })
+        : null;
+    if (reference) return reference;
     if (url.includes("/pipelines")) {
       return jsonResponse({
         data: [

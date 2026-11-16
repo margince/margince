@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -63,7 +64,7 @@ func scanQuietProjects(ctx context.Context, tx pgx.Tx, now time.Time) ([]quietPr
 	rows, err := tx.Query(ctx, `
 		SELECT p.id, pc.company_id, p.name, `+projects.ProjectQuietAnchorSQL("p")+`
 		  FROM project p
-		  JOIN relationship pc ON pc.kind = 'project_company' AND pc.project_id = p.id
+		  JOIN relationship pc ON pc.kind = '`+auth.ProjectCompanyKind+`' AND pc.project_id = p.id
 		                      AND pc.archived_at IS NULL
 		 WHERE p.archived_at IS NULL
 		   AND `+projects.ProjectInFlightSQL("p")+`

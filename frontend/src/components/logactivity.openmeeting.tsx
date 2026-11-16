@@ -455,6 +455,7 @@ export async function recordOnMeeting(
       taskType: "reach_out",
       asTranscript: false,
       callOutcome: "",
+      channelProvider: "",
       sourceActivityId: meeting.id,
     });
     record.followUp = true;

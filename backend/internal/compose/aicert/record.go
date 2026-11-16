@@ -244,7 +244,7 @@ type DecisionStats struct {
 	FallbackRate float64 `json:"fallback_rate"`
 	// FallbackByReason counts the fallbacks by the attempt reason the ladder
 	// walk would carry, without its "decision_" prefix: below_floor, error,
-	// off_enum, state_too_large, local_only.
+	// off_enum, state_too_large.
 	FallbackByReason map[string]int `json:"fallback_by_reason,omitempty"`
 	// MinKeptConfidence is the least confident answer the gate kept. A
 	// diagnostic of how close the floor is, never a floor itself.

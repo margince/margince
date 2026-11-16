@@ -47,6 +47,8 @@ const (
 	objDeal     = "deal"
 	objCompany  = "company"
 	objPipeline = "pipeline"
+	objLead     = "lead"
+	objProject  = "project"
 	// objRelationship gates the EDGE — an employment or a stakeholder seat.
 	// Every seeded role holds read on it (identity/internal/policy.go: crud for
 	// admin, management, manager and ops, create+read+update for rep, read for

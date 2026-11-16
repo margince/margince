@@ -17,6 +17,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { LEAD_LIST_KEY } from "../../lib/leadkeys";
 import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
+import { meFixture } from "../../testing/mefixture";
 import { LeadBoard } from "./leadpresentation.board";
 
 type Lead = components["schemas"]["Lead"];
@@ -73,6 +74,7 @@ function drawBoard(query: ListQuery) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   const board = (dials: ListQuery) => (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

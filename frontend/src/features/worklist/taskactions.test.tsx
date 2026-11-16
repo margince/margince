@@ -20,6 +20,7 @@ import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
+import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
 import {
@@ -386,6 +387,35 @@ function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
         data: [{ id: "co-1", display_name: "Brandt Automotive" }],
         next_cursor: null,
       }),
+  });
+  const recordFetch = globalThis.fetch;
+  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+    const request = input instanceof Request ? input : null;
+    const url = new URL(request?.url ?? String(input), "https://test.local");
+    const method = request?.method ?? init?.method ?? "GET";
+    if (method === "GET") {
+      const company = companyNamesAnswer(url.href, {
+        "co-1": "Brandt Automotive",
+      });
+      if (company) return Promise.resolve(company);
+      if (
+        url.pathname === "/v1/records/references" &&
+        url.searchParams.get("kind") === "deal"
+      ) {
+        return Promise.resolve(
+          jsonResponse({
+            data: url.searchParams
+              .getAll("id")
+              .flatMap((id) =>
+                id === "deal-1"
+                  ? [{ id, name: "Brandt renewal 2027", archived: false }]
+                  : [],
+              ),
+          }),
+        );
+      }
+    }
+    return recordFetch(input, init);
   });
 }
 

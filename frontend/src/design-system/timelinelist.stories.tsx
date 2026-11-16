@@ -640,3 +640,35 @@ export const NotesAnAgentLogged: Story = {
     await expect(canvas.getByText("Automated by an agent")).toBeVisible();
   },
 };
+
+export const ThreadSplitIntoParts: Story = {
+  render: () => (
+    <GroupedTimelineList
+      zone={ZONE}
+      groups={groupChronology([
+        entry("split-new", "2026-08-20T09:00:00Z", {
+          threadKey: "split-thread",
+          body: "The revised quote is ready.",
+        }),
+        entry("split-task", "2026-08-18T09:00:00Z", {
+          kind: "task",
+          title: "Review the pricing",
+          isDone: true,
+        }),
+        entry("split-meeting", "2026-08-15T09:00:00Z", {
+          kind: "meeting",
+          title: "Pricing review",
+        }),
+        entry("split-old", "2026-08-11T09:00:00Z", {
+          threadKey: "split-thread",
+          body: "Can you update the quote?",
+        }),
+      ])}
+    />
+  ),
+};
+
+export const ThreadSplitIntoPartsDark: Story = {
+  ...ThreadSplitIntoParts,
+  globals: { theme: "dark" },
+};

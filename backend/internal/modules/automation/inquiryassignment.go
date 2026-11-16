@@ -20,6 +20,9 @@ type InquiryAssignment struct {
 	RequestTypeField *string
 }
 
+// MaxInquiryAssignments is how many tasks one Assignments call answers.
+const MaxInquiryAssignments = 200
+
 // Assignments exposes handling facts only for task identities the reader may open.
 func (s *InquiryService) Assignments(ctx context.Context, tasks []ids.ActivityID) (map[ids.UUID]InquiryAssignment, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
@@ -28,7 +31,7 @@ func (s *InquiryService) Assignments(ctx context.Context, tasks []ids.ActivityID
 	if len(tasks) == 0 {
 		return map[ids.UUID]InquiryAssignment{}, nil
 	}
-	if len(tasks) > 200 {
+	if len(tasks) > MaxInquiryAssignments {
 		return nil, apperrors.ErrInvalidArgument
 	}
 	if s.routing == nil {

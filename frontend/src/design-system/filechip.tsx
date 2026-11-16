@@ -1,4 +1,10 @@
-import { File, FileText, Image, type LucideIcon } from "lucide-react";
+import {
+  ExternalLink,
+  File,
+  FileText,
+  Image,
+  type LucideIcon,
+} from "lucide-react";
 import { opensElsewhere } from "../lib/linkclick";
 import { useFilePreview } from "./filepreview";
 import "./filechip.css";
@@ -36,6 +42,14 @@ export function FileChip(
           // Same-origin path to the bytes. This control is for OUR files;
           // anything pointing off the origin is a link, not a file.
           href: string;
+          link?: never;
+          withheld?: never;
+        }
+      | {
+          // A link row's web address (a Google Doc, say): no bytes to fetch,
+          // so it opens in a new tab instead of starting a download.
+          link: string;
+          href?: never;
           withheld?: never;
         }
       | {
@@ -43,6 +57,7 @@ export function FileChip(
           // by name only, whose bytes were never kept. The card is drawn the
           // same, so the list still says what arrived, but it is not a link.
           href?: never;
+          link?: never;
           withheld: string;
         }
     )
@@ -51,7 +66,27 @@ export function FileChip(
   if (props.withheld !== undefined) {
     return <WithheldFileChip {...props} withheld={props.withheld} />;
   }
+  if (props.link !== undefined) {
+    return <LinkFileChip {...props} link={props.link} />;
+  }
   return <StoredFileChip {...props} href={props.href} />;
+}
+
+function LinkFileChip({
+  link,
+  filename,
+}: Readonly<{ link: string; filename: string }>) {
+  return (
+    <a
+      className="file-chip"
+      href={link}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <ExternalLink size={14} aria-hidden="true" />
+      <span className="file-chip-name">{filename}</span>
+    </a>
+  );
 }
 
 function StoredFileChip({

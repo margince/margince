@@ -67,7 +67,6 @@ var columnBackedColdStartFields = map[string]string{
 	fieldLegalName:       columnLegalName,
 	"industry":           "industry",
 	"registered_address": "address",
-	fieldOfferSummary:    "description",
 }
 
 // ApplyColdStartProfile executes an ACCEPTED coldstart proposal. A
@@ -324,6 +323,15 @@ func applyEvidenceFieldsWithOverwrite(
 	}
 	applied := map[string]any{}
 	for _, f := range fields {
+		// A machine's industry is a code or nothing: free words reach neither
+		// the column nor the evidence row.
+		if f.Field == columnIndustry {
+			code, ok := ResolveIndustry(f.Value)
+			if !ok {
+				continue
+			}
+			f.Value = code
+		}
 		if column, backed := columnBackedColdStartFields[f.Field]; backed {
 			filled, err := writeCompanyColumn(ctx, tx, companyID, column, f.Value, overwrite[f.Field])
 			if err != nil {

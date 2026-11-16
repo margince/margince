@@ -16,11 +16,11 @@ expect:
   answer: [meeting]
   rubric: >
     This site answers with {id, label, confidence} per message and nothing
-    else, the label drawn from the closed set commitment | meeting | noise.
+    else, the label drawn from the closed set commitment | meeting | other.
     Score the label first: the mail asks for thirty minutes on Thursday
     afternoon and offers a time, which is scheduling and nothing more, so
     "meeting" is right — the tie-break that prefers commitment when a message
-    is both does not fire here, and "noise" is wrong on a mail that names a
+    is both does not fire here, and "other" is wrong on a mail that names a
     slot. Then score the confidence as a real judgement rather than a
     formality, because production spends on it: every message left under the
     0.7 floor is re-asked alone on the next rung of the routing ladder, and

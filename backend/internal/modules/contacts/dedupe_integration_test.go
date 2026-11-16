@@ -14,6 +14,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 
@@ -503,4 +504,37 @@ func (e *dedupeEnv) asOther() context.Context {
 			RowScope: principal.RowScopeAll,
 		},
 	})
+}
+
+// A bought employment carries the bought title as its role, so the company's
+// contact list names it. An empty title leaves the role empty.
+func TestABoughtEmploymentCarriesItsTitleAsRole(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: "Initech", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range []struct{ title, want string }{{" Head of Sales ", "Head of Sales"}, {"", ""}} {
+		contact, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Peter Gibbons " + tc.want})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var role, audited string
+		if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+			edge, planted, err := plantProviderEmploymentEdge(ctx, tx, ids.UUID(contact.Id),
+				ids.From[ids.CompanyKind](ids.UUID(company.Id)), "databroker", tc.title)
+			if err != nil || !planted {
+				return fmt.Errorf("planting the bought employment: planted %v, %w", planted, err)
+			}
+			return tx.QueryRow(ctx, `SELECT coalesce(r.role, ''), coalesce(al.after->>'role', '')
+				FROM relationship r JOIN audit_log al ON al.entity_id = r.id AND al.action = 'create'
+				WHERE r.id = $1`, edge).Scan(&role, &audited)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if role != tc.want || audited != tc.want {
+			t.Errorf("title %q gave role %q (audited %q), want %q", tc.title, role, audited, tc.want)
+		}
+	}
 }

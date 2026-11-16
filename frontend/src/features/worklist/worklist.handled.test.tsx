@@ -5,6 +5,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -416,4 +417,48 @@ describe("a link to the Change history", () => {
     await screen.findByText("Sent the reminder to Kirsten");
     expect(scrolled).not.toHaveBeenCalled();
   });
+});
+
+it("keeps an incomplete empty history distinct from nothing done", async () => {
+  stubHandled({
+    as_of: "2026-11-15T09:00:00Z",
+    truncated: false,
+    receipts: [],
+    sources_unavailable: [{ source: "approval", reason: "withheld" }],
+  });
+  window.location.hash = "#/?queue=1&queue_at=history";
+  render(panel());
+  await waitFor(() =>
+    expect(screen.queryByText(en["worklist.handled.loading"])).toBeNull(),
+  );
+  expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
+  expect(screen.getByText(en["worklist.handled.title"])).toBeTruthy();
+});
+
+it("shows a direct automatic change from the common Home result", async () => {
+  stubHandled({
+    as_of: "2026-11-15T09:00:00Z",
+    truncated: false,
+    receipts: [
+      {
+        id: "11111111-1111-7111-8111-111111111111",
+        kind: "magic.action.create_contact",
+        summary: "",
+        occurred_at: "2026-11-15T08:00:00Z",
+        completed_change: {
+          id: "11111111-1111-7111-8111-111111111111",
+          lane: "done",
+          occurred_at: "2026-11-15T08:00:00Z",
+          summary: { key: "magic.action.create_contact" },
+          actor: { type: "system", id: "capture" },
+          count: 3,
+        },
+      },
+    ],
+  });
+  render(panel());
+  const user = userEvent.setup();
+  await user.click(await screen.findByText(en["worklist.handled.showHistory"]));
+  expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
+  expect(screen.getByText(/Created contact/)).toBeTruthy();
 });

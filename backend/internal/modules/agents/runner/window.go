@@ -300,6 +300,7 @@ Rules:
 - A refused tool call is an answer: re-plan within what you are allowed to do; do not retry the same refused call.
 - Actions needing human approval are staged automatically; never fabricate their outcome.
 - ` + mcp.ConflictingSourcesRule + `
+- ` + mcp.OwnershipRule + `
 ` + surfaceSchemaRules)
 	// The rule governs the run's final summary, which is filed on a record the
 	// whole team reads. Every compose caller passes one; an empty block (a

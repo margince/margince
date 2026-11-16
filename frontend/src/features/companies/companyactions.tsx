@@ -3,62 +3,19 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
 import { currencyField } from "../../components/currencyfield";
-import { toMinorUnits } from "../../format/minorunits";
+import { useDealCreateFields } from "../../components/dealcreatefields";
+import { useOwnerPicker } from "../../components/recordowners";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { currencyBeside } from "../../lib/dealcurrency";
-import {
-  translatedLabel,
-  translatedPipeline,
-} from "../../lib/labeltranslation";
+import { mapDealCreate } from "../../lib/dealcreate";
+import { translatedPipeline } from "../../lib/labeltranslation";
 import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
-import { defaultPipelineOf } from "../../lib/pipelines.queries";
+import {
+  defaultPipelineOf,
+  pipelinesOptions,
+} from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useProjectCreateForm } from "../projects/projects.create";
-
-// What a rep can START from the company page.
-//
-// The page could already say everything about an account and do nothing with
-// it: opening a deal meant leaving for the pipeline board and re-finding the
-// company there, and applying a tag or adding the account to a list had no
-// control at all. Each action below is the record's OWN verb — the company is
-// the subject, so it is never something the rep has to pick.
-
-type Pipeline = components["schemas"]["Pipeline"];
-type Stage = components["schemas"]["Stage"];
-
-/**
- * useDealTarget resolves where a deal created from this page should land: the
- * default pipeline and its first OPEN stage.
- *
- * Open only. A deal is born open (INV-CLOSE-PAST), so won and lost are reached
- * through the confirmed advance and must never be a create-time choice — the
- * deal board applies the same rule to its own stage picker.
- */
-function useDealTarget() {
-  const { locale } = useLocale();
-  return useQuery({
-    select: ({ pipeline, open }) => ({
-      pipeline: pipeline && translatedPipeline(pipeline, locale),
-      open: open.map((stage) => ({
-        ...stage,
-        name: translatedLabel(stage.name, stage.name_translations, locale),
-      })),
-    }),
-    queryKey: ["pipelines", "dealTarget"],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/pipelines", {
-          params: { query: {} },
-        }),
-      );
-      const pipeline: Pipeline | undefined = defaultPipelineOf(data.data);
-      const stages: Stage[] = pipeline?.stages ?? [];
-      const open = stages.filter((stage) => stage.semantic === "open");
-      return { pipeline, open };
-    },
-  });
-}
 
 /**
  * NewDealAction opens a deal on THIS company.
@@ -86,10 +43,13 @@ export function NewDealAction({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const target = useDealTarget();
+  const target = useQuery({ ...pipelinesOptions, select: defaultPipelineOf });
   const leading = useLeadingCurrencies();
-  const pipeline = target.data?.pipeline;
-  const open = target.data?.open ?? [];
+  const owner = useOwnerPicker(null);
+  const optionalFields = useDealCreateFields(t, owner);
+  const pipeline = target.data && translatedPipeline(target.data, locale);
+  const open =
+    pipeline?.stages?.filter((stage) => stage.semantic === "open") ?? [];
   // No pipeline, or none of its stages is open, means there is nowhere for a
   // deal to land. A button that can only fail is worse than no button.
   if (!pipeline || open.length === 0) {
@@ -114,6 +74,7 @@ export function NewDealAction({
       required: true,
       options: open.map((stage) => ({ value: stage.id, label: stage.name })),
     },
+    ...optionalFields,
     { key: "expected_close_date", label: "create.expectedClose", type: "date" },
   ];
 
@@ -122,23 +83,14 @@ export function NewDealAction({
     _rows: unknown,
     idempotencyKey: string,
   ) => {
-    const amount = values.amount?.trim();
-    const currency = values.currency || leading[0];
     return unwrap(
       await api.POST("/deals", {
         params: { header: { "Idempotency-Key": idempotencyKey } },
-        body: {
-          name: (values.name ?? "").trim(),
-          pipeline_id: pipeline.id,
-          stage_id: values.stage_id ?? "",
-          // The form takes major units; the wire is minor units.
-          amount_minor: amount ? toMinorUnits(Number(amount), currency) : null,
-          currency: currencyBeside(currency, amount),
-          company_id: companyId,
-          project_id: projectId ?? null,
-          expected_close_date: values.expected_close_date || null,
-          source: "manual",
-        },
+        body: mapDealCreate(
+          { ...values, company_id: companyId, project_id: projectId ?? "" },
+          pipeline.id,
+          leading[0],
+        ),
       }),
       t,
     );

@@ -156,6 +156,17 @@ func TestHeadersOfAMultipartMessageStillParse(t *testing.T) {
 	}
 }
 
+func TestHeadersDropAScheduledSendWithoutJudgingIt(t *testing.T) {
+	// The header pass refuses what the full capture refuses, so a scheduled
+	// send is dropped here and never downloaded.
+	head := "From: " + owner + "\r\nTo: alice@acme.com\r\nSubject: tomorrow\r\n\r\n"
+	sink := &judgingSink{}
+	drop, err := dropFromHeaders(context.Background(), Message{RFC822: []byte(head)}, sink, owner)
+	if err != nil || !drop || len(sink.judged) != 0 {
+		t.Fatalf("drop=%v err=%v judged=%v; want a scheduled send dropped unjudged", drop, err, sink.judged)
+	}
+}
+
 func TestBackfillPageCapturesInListingOrderWhateverFinishesFirst(t *testing.T) {
 	ids := []string{"m1@mail.gmail.com", "m2@mail.gmail.com", "m3@mail.gmail.com", "m4@mail.gmail.com"}
 	api := pageOf(ids...)

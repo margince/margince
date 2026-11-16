@@ -10,6 +10,7 @@ import { useLocale, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
+import { useFirstScreenSettled } from "../lib/journeymarks";
 import {
   ariaKeyShortcuts,
   binding,
@@ -230,6 +231,7 @@ export function TopBar({
   // The page heading under the bar already names the page, and the account
   // menu carries the setup reminder at this width.
   const phone = usePhoneViewport();
+  const sideReadsMayStart = useFirstScreenSettled();
   return (
     <header className="topbar">
       <div className="topbar-lead">
@@ -279,7 +281,7 @@ export function TopBar({
             wants their attention stacks up before it. */}
         {/* Keyed on the route: a step's action navigates, and the new page
             should not open under a panel left over from the last one. */}
-        {!phone && (
+        {!phone && sideReadsMayStart && (
           <Suspense fallback={null}>
             <SetupReminder
               key={routeHash(route)}

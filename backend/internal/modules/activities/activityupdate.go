@@ -19,12 +19,14 @@ import (
 
 // UpdateActivityInput is a sparse activity edit. A nil field stays as stored.
 type UpdateActivityInput struct {
+	FollowUpTask       *crmcontracts.ActivityFollowUpTask
 	DueIntent          *crmcontracts.IntentTime
 	RemindIntent       *crmcontracts.IntentTime
 	MeetingIntent      *crmcontracts.IntentTime
 	DealFiling         *crmcontracts.ActivityDealFiling
 	recordedAt         *time.Time
 	sourceActivityID   *ids.UUID
+	recordsMeeting     bool
 	calendarSettlement bool
 	// recordZone dates a stored instant made a day; the store sets it (WithRecordZone).
 	recordZone RecordZone
@@ -85,6 +87,12 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 		out, err = updateActivityInTx(ctx, tx, id, in)
 		if err == nil {
 			out, err = s.fileUpdatedActivity(ctx, tx, out, in)
+		}
+		if err == nil && in.MeetingStatus != nil {
+			err = s.askLeadsToQualifyTx(ctx, tx, out)
+		}
+		if err == nil && in.FollowUpTask != nil {
+			err = s.writeOutcomeFollowUp(ctx, tx, out, *in.FollowUpTask)
 		}
 		return err
 	})

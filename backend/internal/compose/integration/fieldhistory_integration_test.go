@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -527,37 +528,33 @@ func TestFieldHistoryHonestEmptyForVisibleRecordWithNoMatches(t *testing.T) {
 	}
 }
 
-// TestEnrichmentWritesProjectAsRealColumnDiffs is the honesty check on what
-// the company page's Changes filter shows a reader.
-//
-// A cold-start apply used to audit with before=nil and after={source,
-// source_url, fields:[…]} — a bag whose keys are not columns. Field history
-// projects per FIELD from before/after images, so it rendered pseudo-fields
-// called "source" and "fields": changes that never happened on the record,
-// while the actual legal_name it had just written appeared nowhere. The
-// operation's metadata now rides audit_log.evidence, which is the column for
-// it, and before/after carry the record's own images.
+// Enrichment history names only the company columns the real writer changes.
 func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 	e := Setup(t)
 
-	// The apply resolves its target by the source URL's host, so it names the
-	// company it touched rather than one seeded beside it.
+	description := "An independent description written by a member."
+	seeded, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
+		DisplayName: "Scale Commerce", Description: &description, Source: "manual",
+		Domains: []contacts.CompanyDomainInput{{Domain: "scale.example", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	company, err := e.Contacts.ApplyColdStartProfile(e.Admin(), contacts.ApplyColdStartProfileInput{
 		SourceURL: "https://scale.example/impressum",
 		Fields: []contacts.ColdStartFieldInput{
 			{Field: "legal_name", Value: "Scale Commerce GmbH", EvidenceSnippet: "Scale Commerce GmbH, Berlin", SourceURL: "https://scale.example/impressum", Confidence: 0.9},
-			// Column-backed through a column of a DIFFERENT name: an accepted
-			// offer_summary fills company.description. It is here because
-			// that pair is where the field-vs-column keying can part company.
 			{Field: "offer_summary", Value: "Managed hosting", EvidenceSnippet: "Managed hosting for e-commerce", SourceURL: "https://scale.example", Confidence: 0.8},
-			// Not column-backed at all: it lives only in
-			// company_profile_field, so it must NOT appear as a change to
-			// the company row.
 			{Field: "icp", Value: "Mid-market retailers", EvidenceSnippet: "We serve mid-market retailers", SourceURL: "https://scale.example", Confidence: 0.7},
 		},
 	})
 	if err != nil {
 		t.Fatalf("apply cold-start profile: %v", err)
+	}
+
+	if company.UUID != ids.UUID(seeded.Id) {
+		t.Fatalf("apply targeted %s, want seeded %s", company.UUID, seeded.Id)
 	}
 
 	page, err := privacy.ListFieldHistory(e.Admin(), e.DB(), privacy.FieldHistoryFilter{
@@ -566,27 +563,53 @@ func TestEnrichmentWritesProjectAsRealColumnDiffs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list: %v", err)
 	}
+	var applyAudit ids.UUID
+	for _, entry := range page.Entries {
+		if entry.Field == "legal_name" {
+			applyAudit = entry.ID
+		}
+	}
+	if applyAudit == ids.Nil {
+		t.Fatal("the written legal name is absent from field history")
+	}
 	seen := map[string]bool{}
 	for _, entry := range page.Entries {
-		seen[entry.Field] = true
+		if entry.ID == applyAudit {
+			seen[entry.Field] = true
+		}
 	}
 	for _, pseudo := range []string{"source", "source_url", "fields", "facts"} {
 		if seen[pseudo] {
 			t.Errorf("field history shows %q as a changed field — that is operation metadata, not a column on the record", pseudo)
 		}
 	}
-	if seen["icp"] {
+	if seen["icp"] || seen["offer_summary"] {
 		t.Error("a profile-field-only value appeared as a company column change")
 	}
-	// And the positive half: the column the apply actually filled is the one a
-	// reader now sees. Asserting only the absence of the pseudo-fields would
-	// pass just as well if the write had stopped auditing altogether.
-	if !seen["legal_name"] {
-		t.Errorf("legal_name is missing from field history: %v — the apply wrote it, so the record's own change must be what shows", seen)
+	if len(seen) != 1 || !seen["legal_name"] {
+		t.Errorf("enrichment field history = %v, want only legal_name", seen)
 	}
-	// The accepted offer_summary fills company.description. The image keys the
-	// column, because an Undo replays it through the company update path.
-	if !seen["description"] {
-		t.Errorf("description is missing from field history: %v — an accepted offer_summary fills that column, so it is a change the record really made", seen)
+	if seen["description"] {
+		t.Errorf("offer-only enrichment reported a description change: %v", seen)
 	}
+	reread, err := e.Contacts.GetCompany(e.Admin(), company, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reread.Description == nil || *reread.Description != description {
+		t.Errorf("enrichment overwrote the independent description: %v", reread.Description)
+	}
+	fields, err := e.Contacts.ListCompanyProfileFields(e.Admin(), company)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, field := range fields {
+		if string(field.Field) == "offer_summary" {
+			if field.Value != "Managed hosting" {
+				t.Errorf("offer summary = %q", field.Value)
+			}
+			return
+		}
+	}
+	t.Fatal("accepted offer summary was not stored in the profile")
 }

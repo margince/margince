@@ -113,12 +113,11 @@ func TestTaskCensusFindsConstantsButDoesNotReadCommentsOrRequires(t *testing.T) 
 	}
 }
 
-// currentTaskLiterals reads the whole compose tree, the same tree the released
-// side archives, so a task declared in a compose subpackage is counted.
+// currentTaskLiterals reads every internal package, including module-owned tasks.
 func currentTaskLiterals() ([]string, error) {
 	var out []string
 	files := 0
-	err := gatekit.WalkDir("internal/compose", func(path string, entry fs.DirEntry, err error) error {
+	err := gatekit.WalkDir("internal", func(path string, entry fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -135,13 +134,13 @@ func currentTaskLiterals() ([]string, error) {
 		return err
 	})
 	if err == nil && files == 0 {
-		err = errors.New("empty compose source census")
+		err = errors.New("empty internal source census")
 	}
 	return out, err
 }
 
 func releasedTaskLiterals() ([]string, error) {
-	body, err := exec.Command("git", "-C", repoRoot, "archive", "origin/main", "backend/internal/compose").Output()
+	body, err := exec.Command("git", "-C", repoRoot, "archive", "origin/main", "backend/internal").Output()
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,41 @@ import { describe, expect, it } from "vitest";
 import { plantedFindings, srcDir } from "../tree";
 import { rule, screenSendsSort } from "./list-sort-claim-coverage.census";
 
+// A screen may import its fetcher, so a shell prefetch can share it without
+// loading the screen. The sort it sends is read from that module.
+describe("an imported fetcher", () => {
+  const screenText = [
+    'import { fetchThingsPage } from "./things.queries";',
+    "const list = useListQuery<Thing>({",
+    "    fetchPage: fetchThingsPage,",
+    "});",
+    "",
+  ].join("\n");
+  const moduleWith = (query: string) => () =>
+    [
+      "export async function fetchThingsPage(query: ListQuery) {",
+      `  return api.GET("/things", { params: { query: { ${query} } } });`,
+      "}",
+      "",
+    ].join("\n");
+
+  it("sends sort when the imported fetcher puts it on the wire", () => {
+    expect(
+      screenSendsSort(
+        "x/things.tsx",
+        screenText,
+        moduleWith("\n      sort: query.sort || undefined,\n      limit: 50"),
+      ),
+    ).toBe(true);
+  });
+
+  it("does not when the imported fetcher leaves sort off", () => {
+    expect(
+      screenSendsSort("x/things.tsx", screenText, moduleWith("limit: 50")),
+    ).toBe(false);
+  });
+});
+
 // The builder a fetcher spreads is read alone: a sibling that sends sort does
 // not speak for one that does not.
 describe("a fetcher's spread builder", () => {

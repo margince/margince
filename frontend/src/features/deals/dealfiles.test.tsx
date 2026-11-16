@@ -15,8 +15,13 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import {
+  companyDocumentsKey,
+  contactFilesKey,
+  roomDocumentsKey,
+} from "../../lib/attachmentkeys";
 import { CompanyZoneProvider } from "../../lib/companyzone";
-import { DealFiles } from "./dealfiles";
+import { DealFiles, dealDocumentsKey } from "./dealfiles";
 
 // The deal's Files area as a rep meets it: a captured file says which message
 // it came with and offers Hide, an upload offers Delete, and a hide lands on
@@ -50,10 +55,12 @@ function dealOf(overrides: Partial<Deal> = {}): Deal {
   } as Deal;
 }
 
-const render = (ui: ReactNode) => {
-  const client = new QueryClient({
+const render = (
+  ui: ReactNode,
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+) => {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -448,4 +455,48 @@ it("withholds the upload and the row verbs on a deal this caller may not write",
   expect(
     screen.queryByRole("button", { name: /Actions for MSA-redline/ }),
   ).toBeNull();
+});
+
+it("takes a deleted upload out of every list that showed it, and no other", async () => {
+  const doc = upload();
+  const stamped = {
+    ...doc,
+    attachment: { ...doc.attachment, company_id: "co-1" },
+  };
+  stubApi([stamped]);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const showing = [
+    dealDocumentsKey("deal-1", true),
+    companyDocumentsKey("co-1"),
+    roomDocumentsKey("room-1"),
+  ];
+  const elsewhere = [
+    companyDocumentsKey("co-2"),
+    contactFilesKey("c-1"),
+    dealDocumentsKey("deal-2", false),
+  ];
+  for (const queryKey of [...showing, ...elsewhere]) {
+    client.setQueryData(queryKey, { data: [], page: { has_more: false } });
+  }
+  const user = userEvent.setup();
+  render(<DealFiles deal={dealOf()} />, client);
+
+  await user.click(
+    await screen.findByRole("button", { name: /Actions for pricing/ }),
+  );
+  await user.click(screen.getByRole("button", { name: en["files.delete"] }));
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: en["files.delete"],
+    }),
+  );
+
+  // The area's own default read refetches at once; the rest are marked stale.
+  await screen.findByText(en["files.empty"]);
+  const stale = (keys: readonly (readonly unknown[])[]) =>
+    keys.map((queryKey) => client.getQueryState(queryKey)?.isInvalidated);
+  expect(stale(showing)).toEqual([true, true, true]);
+  expect(stale(elsewhere)).toEqual([false, false, false]);
 });

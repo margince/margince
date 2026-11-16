@@ -3022,7 +3022,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * What this account needs, as the model last judged it for this reader.
+         * What this company needs, as the model last judged it for this reader.
          * @description The account scan is the model's reading of one account for one reader: what the
          *     exchanges and the pipeline say needs a contact, each finding citing the records it
          *     rests on and quoting the words it read. It is the same advice shape the 360's own
@@ -3042,7 +3042,7 @@ export interface paths {
         get: operations["getCompanyScan"];
         put?: never;
         /**
-         * Make sure this reader's scan of the account is current, reading it again only when the account changed.
+         * Make sure this reader's scan of the company is current, reading it again only when the company changed.
          * @description Opening an account page calls this once. It compares the account as this reader
          *     sees it now — a fingerprint over the composite read, the recent message words, the
          *     prompt and the routing — against the stored scan, and answers in one of three ways:
@@ -3123,7 +3123,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The standing account brief — what this account is, where it stands, and what changed.
+         * The standing company brief — what this company is, where it stands, and what changed.
          * @deprecated
          * @description A short written brief over the same records the 360 serves, cached and reused
          *     until its inputs change.
@@ -3150,7 +3150,7 @@ export interface paths {
         get: operations["getCompanyBrief"];
         put?: never;
         /**
-         * Regenerate this account's brief, ignoring the cached one.
+         * Regenerate this company's brief, ignoring the cached one.
          * @deprecated
          * @description The explicit refresh behind the brief card's "outdated — refresh". It reads and
          *     writes only the cached brief: no record field changes, and nothing is sent.
@@ -3220,7 +3220,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask one of the prepared questions about this account.
+         * Ask one of the prepared questions about this company.
          * @description The company view's "Ask Margince". The question is chosen from a fixed list, not
          *     typed: each prepared question names records the answer must be written from, so
          *     every sentence can be cited and checked. Free-text questions need retrieval that
@@ -3679,6 +3679,34 @@ export interface paths {
         };
         /** Relationship strength for a company (max over current employees). */
         get: operations["getCompanyStrength"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/finance/customer-payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Overdue customer invoices the reader may see.
+         * @description Requires finance and company read grants. Company row visibility, including
+         *     private capture rows and live record shares, is applied before totals,
+         *     counts, previews and pages. The payment read also requires company ownership,
+         *     a shared owner team, an explicit read share, or an all-rows grant;
+         *     workspace-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
+         *     Only the current accounting connection and its live customer links contribute.
+         *     Disputed invoices and former customers are excluded from collection prompts.
+         *     Amounts stay in their invoice currency; totals in different currencies stay separate.
+         *     Invoice pages are ordered by due date and invoice id, oldest first.
+         */
+        get: operations["getCustomerPayments"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6113,7 +6141,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The counts and breakdowns installed extensions add to Reports and Home, answered for this caller.
+         * The counts and breakdowns installed extensions add to Reports, answered for this caller.
          * @description Each count and breakdown an installed extension declares, run through the report engine for
          *     this caller. Row scope, field masks and the group floor apply as they do to a core report.
          *     Which extensions are installed is a fact of the binary, so the contract cannot list them;
@@ -7259,7 +7287,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Would this account-started message be allowed, and on what ground.
+         * Would a new message with no thread behind it be allowed, and on what ground.
          * @description The account-started twin of `POST /activities/{id}/send-email:preview`, for a message
          *     with no anchor to derive a category from. It names its own `links`, exactly as the send
          *     it previews does.
@@ -11167,6 +11195,33 @@ export interface paths {
         patch: operations["setChannelVerbosity"];
         trace?: never;
     };
+    "/channel-links/{record_type}/{id}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * The private channels this record can be linked to.
+         * @description The private, unarchived channels the bot is a member of that no live link holds, by name.
+         *     Only a member who may link this record reads it. A private channel the bot is not in is
+         *     never listed: the chat does not tell the bot it exists. A member of that channel adds the
+         *     bot to it first.
+         */
+        get: operations["listLinkableChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}/notes": {
         parameters: {
             query?: never;
@@ -14431,6 +14486,10 @@ export interface paths {
          *     `sources_unavailable`, exactly as `/attention` names a withheld lane, and a
          *     source that FAILED is named there too. A day cannot read as clear while something
          *     that would have filled it never answered.
+         *
+         *     `If-None-Match` with the answer's `ETag` answers 304 when the bytes have not
+         *     changed. The answer is `private, no-cache`: only the reader's own browser keeps it,
+         *     and it asks again before each use.
          */
         get: operations["getWorklist"];
         put?: never;
@@ -17254,10 +17313,10 @@ export interface paths {
          *     reports that disclosure as unmeetable rather than inventing one, which is what makes an
          *     unconfigured installation visible instead of silently non-compliant.
          *
-         *     NOTHING RENDERS THESE INTO A MESSAGE YET. The particulars are stated here and the mapping
-         *     from a jurisdiction's obligation to the words that meet it exists, but no step between
-         *     composing a body and handing it to a provider asks for them. The gap is recorded in
-         *     `backend/gates/messagingruleapplied_test.go`.
+         *     The legal name opens and heads every mail the installation sends as controller. The
+         *     particulars a jurisdiction requires are printed at the end of that mail, each under a label
+         *     in the mail's language, and at the end of a marketing mail a member sends. The particulars
+         *     themselves are printed as stated, in the language they were typed in.
          */
         get: operations["getControllerParticulars"];
         /**
@@ -19491,7 +19550,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Retire an account while preserving historical attribution.
+         * Retire a member while preserving historical attribution.
          * @description Removal is permanent. The original email remains reserved for historical attribution. Deactivate an account that may return instead.
          */
         post: operations["removeMember"];
@@ -19673,6 +19732,32 @@ export interface paths {
          *     Answers 404 for an id that is not a live service member, including one already archived.
          */
         post: operations["archiveServiceMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/references": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read names and archive state for a bounded set of records.
+         * @description Requires the selected record kind's read grant. A denied object is 403.
+         *     Missing and row-hidden ids are omitted without distinguishing them.
+         *     Includes readable archived records and the company anchor. Results are
+         *     unique and follow the first occurrence of each requested id. This is not
+         *     a page: there is no cursor or total. The input bound applies before deduplication.
+         *     Lead names fall back to email when the full name is blank. Company logos
+         *     use the same revision URL as the company detail read.
+         */
+        get: operations["readRecordReferences"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -23978,7 +24063,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Which accounts your imported network reaches.
+         * Which companies your imported network reaches.
          * @description The account-level payoff of importing an export, and the one answer the ghosts
          *     exist to give: for each company on file, how many of your connections work
          *     there, and how many of those are already contacts.
@@ -24609,7 +24694,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The agreements this account holds, newest first (CONTRACT-WIRE-1).
+         * The agreements this company holds, newest first (CONTRACT-WIRE-1).
          * @description Every contract anchored to this company, whatever its status.
          *
          *     `under_contract` on each row is a DERIVED reading computed from the dates
@@ -29120,7 +29205,7 @@ export interface components {
             total: number;
         };
         /** @enum {string} */
-        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "backfill_failed" | "sync_stalled" | "capture_silent";
+        CaptureConcernKind: "reauth_required" | "connection_error" | "sync_failing" | "notes_grant_missing" | "notes_account_mismatch" | "backfill_failed" | "sync_stalled" | "capture_silent";
         DismissCaptureSilenceRequest: {
             /**
              * Format: date-time
@@ -30792,7 +30877,8 @@ export interface components {
                 classify?: {
                     commitments?: number;
                     meetings?: number;
-                    noise?: number;
+                    /** @description Neither a commitment nor a meeting; says nothing about importance. */
+                    other?: number;
                 };
             };
             connectors: {
@@ -31553,13 +31639,13 @@ export interface components {
              */
             impact: "unchanged" | "model_changed" | "decision_changed" | "fallback_changed" | "budget_blocked" | "unconfigured";
             budget_exempt: boolean;
-            /** @description The decision lane answers this feature first: bound, certified for one of its sites, and — for a feature whose data must stay on this installation — a local provider. */
+            /** @description The configured decision lane answers this feature before its LLM ladder. A bound lane needs no certification record; each site validates the answer against its own floor. */
             decision_first: boolean;
             /**
              * @description Why a feature that declares a decision form is not answered by the decision lane; absent when it is, and for a feature with no decision form.
              * @enum {string}
              */
-            decision_skip_reason?: "unbound" | "uncertified" | "local_only";
+            decision_skip_reason?: "unbound" | "uncertified";
             decision_candidate?: components["schemas"]["AiRouteCandidate"];
             /** @description The task declares a decision form, so a decision model may answer it first and its decision timeout applies. */
             decides?: boolean;
@@ -31889,7 +31975,7 @@ export interface components {
         AiCallAttempt: {
             attempt: number;
             is_terminal: boolean;
-            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified, decision_local_only — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
+            /** @description Why this attempt ran — one of provider_error, timeout (the attempt before stopped at its deadline), schema_invalid, budget_degrade; empty for an ordinary first attempt, though budget_degrade can appear on attempt 1 when the budget guardrail demotes the ladder. Or one of decision_below_floor, decision_error, decision_off_enum, decision_state_too_large, decision_uncertified — the decision attempt before this walk did not stand, and why. Read an unrecognized reason as "some reason" rather than refusing it. */
             attempt_reason: string;
             /**
              * @description What this attempt asked: a chat completion, an embedding, or a decision model.
@@ -32143,6 +32229,14 @@ export interface components {
             url: string;
             /** @description The notice types the app subscribes to. */
             types: string[];
+        };
+        LinkableChannels: {
+            channels: components["schemas"]["LinkableChannel"][];
+        };
+        LinkableChannel: {
+            /** @description The value a link request names the channel by. */
+            slug: string;
+            name: string;
         };
         LinkChannelRequest: {
             /** @enum {string} */
@@ -35082,6 +35176,53 @@ export interface components {
         LinkFinanceSourceCustomerRequest: {
             /** Format: uuid */
             company_id: string;
+        };
+        CustomerPayments: {
+            state: components["schemas"]["FinanceSummaryState"];
+            /** @description Opaque revision of readable companies and the imported snapshot. Pages with different revisions must not be combined. */
+            access_scope: string;
+            provider?: string;
+            /** Format: date-time */
+            last_synced_at?: string;
+            /** @description Readable, live linked companies eligible for the payment overview. */
+            linked_companies: number;
+            invoice_count: number;
+            company_count: number;
+            /** @description Complete overdue totals for readable companies, each in its own currency. */
+            totals: components["schemas"]["CustomerPaymentTotal"][];
+            /** @description Up to three company and currency groups, oldest overdue invoice first. */
+            customers: components["schemas"]["CustomerPaymentCustomer"][];
+            data: components["schemas"]["CustomerPaymentInvoice"][];
+            page: components["schemas"]["PageInfo"];
+        };
+        CustomerPaymentTotal: {
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+        };
+        CustomerPaymentCustomer: {
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            currency: string;
+            /** Format: int64 */
+            amount_minor: number;
+            invoice_count: number;
+            oldest_days: number;
+        };
+        CustomerPaymentInvoice: {
+            /** Format: uuid */
+            invoice_id: string;
+            /** Format: uuid */
+            company_id: string;
+            company_name: string;
+            number?: string | null;
+            currency: string;
+            /** Format: int64 */
+            open_minor: number;
+            /** Format: date */
+            due_at: string;
+            days_overdue: number;
         };
         /**
          * @description What the accounting mirror knows about one customer (ADR-0083).
@@ -41009,6 +41150,14 @@ export interface components {
             subject: string;
             /** Format: date-time */
             due_at: string | null;
+            /** @description True when `due_at` names an agreed time of day, as on the task itself. A snooze keeps that time. */
+            due_has_time: boolean;
+            due_intent?: components["schemas"]["IntentTime"];
+            /**
+             * Format: int64
+             * @description The task row's version, which a write to the task names.
+             */
+            version: number;
             /** Format: uuid */
             assignee_id: string | null;
             assignee_name: string | null;
@@ -41987,7 +42136,10 @@ export interface components {
             contact_id: string;
             /** Format: email */
             attendee_email: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description The booked instant. A start_intent, when sent, replaces it, and end moves with it so the meeting keeps its length.
+             */
             start: string;
             /** Format: date-time */
             end: string;
@@ -42196,6 +42348,14 @@ export interface components {
             contact_id?: string;
             response: components["schemas"]["MeetingResponse"];
         };
+        /** @description The calendar invitation mail of one meeting, folded onto it in History: how many were invited and how many answered each way. */
+        MeetingInvitationSummary: {
+            /** @description The colleagues and contacts on the meeting. */
+            invited: number;
+            accepted: number;
+            declined: number;
+            tentative: number;
+        };
         /**
          * @description A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
          *     **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
@@ -42289,6 +42449,8 @@ export interface components {
             readonly guests?: components["schemas"]["MeetingGuest"][];
             /** @description Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`. */
             readonly attendee_responses?: components["schemas"]["MeetingAttendeeResponse"][];
+            /** @description Meeting only, on a record's History read with `collapse_copies`: who a calendar meeting invited and how they answered. That read folds the event's invitation mail, updates, cancellations and answers onto the meeting instead of listing them as mail rows, when you may open both. Absent when `content_state` is `withheld`. */
+            readonly invitation?: components["schemas"]["MeetingInvitationSummary"];
             /** @description Meeting only: how many outside guests of a meeting past the party cap are not listed, because a crowded meeting keeps at most 200 by address. Filled and withheld like `guests`. */
             readonly guests_left_out?: number;
             /**
@@ -42312,10 +42474,10 @@ export interface components {
             /** @description The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none. */
             readonly thread_key?: string | null;
             /**
-             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
+             * @description What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary". Other means neither a commitment nor a meeting; it says nothing about importance.
              * @enum {string|null}
              */
-            readonly capture_label?: null | "commitment" | "meeting" | "noise";
+            readonly capture_label?: null | "commitment" | "meeting" | "other";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
             /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
@@ -42346,6 +42508,11 @@ export interface components {
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
+            /**
+             * @description A notes document is waiting within its reading window and this reader needs to connect meeting notes or repair the connection. Absent after the document becomes a transcript.
+             * @enum {string}
+             */
+            readonly meeting_notes_connection?: "connect" | "notes_grant_missing" | "notes_account_mismatch";
             /**
              * @description Calendar delivery state, independent of the recorded meeting outcome. Absent for meetings without a Margince invitation.
              * @enum {string|null}
@@ -43092,6 +43259,8 @@ export interface components {
             remind_intent?: components["schemas"]["IntentTime"];
             /** @description Optional filing choice when recording a call or meeting outcome. Existing deal links remain. */
             deal_filing?: components["schemas"]["ActivityDealFiling"];
+            /** @description Optional next step when marking a meeting held. Creates the task in the same transaction, with the meeting as its source and its links and audience inherited. Requires activity create authority. A meeting already held cannot add another task through this outcome write. */
+            follow_up_task?: components["schemas"]["ActivityFollowUpTask"];
             subject?: string | null;
             body?: string | null;
             /** Format: date-time */
@@ -48482,6 +48651,17 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+        };
+        RecordReference: {
+            /** Format: uuid */
+            id: string;
+            name: string | null;
+            archived: boolean;
+            /** @description Company logo URL; omitted for other kinds. */
+            logo?: string | null;
+        };
+        RecordReferenceListResponse: {
+            data: components["schemas"]["RecordReference"][];
         };
         /** @description A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them. */
         SeatName: {
@@ -54970,7 +55150,7 @@ export interface components {
              * @description The rights the contact holds over this data, as codes a page renders in its own
              *     language. Art. 14(2)(c)-(e) requires naming them.
              */
-            rights: ("access" | "rectification" | "erasure" | "restriction" | "objection" | "complain_to_authority")[];
+            rights: ("access" | "rectification" | "erasure" | "restriction" | "portability" | "objection" | "withdraw_consent" | "complain_to_authority")[];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
         };
@@ -54979,6 +55159,8 @@ export interface components {
          *     rule the mail's disclosure lines use. A part the installation has not stated is absent.
          */
         PrivacyInformationController: {
+            /** @description The legal name alone, which every controller mail opens with. Absent when not stated. */
+            legal_name?: string;
             /** @description The legal name and postal address, as lines. Absent unless both are stated. */
             identity?: string;
             /** @description How to reach whoever answers questions about the data. */
@@ -55023,6 +55205,8 @@ export interface components {
             state: "unknown" | "granted" | "withdrawn";
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+            controller?: components["schemas"]["PrivacyInformationController"];
+            question?: components["schemas"]["ConfirmQuestion"];
         };
         /**
          * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
@@ -55050,6 +55234,23 @@ export interface components {
             provenance: components["schemas"]["ConfirmFieldOrigin"][];
             /** @description The language the link's mail was written in, which the page asks in too. Absent when the link records no language. */
             language?: components["schemas"]["MailLanguage"];
+            controller?: components["schemas"]["PrivacyInformationController"];
+            question?: components["schemas"]["ConfirmQuestion"];
+        };
+        /**
+         * @description The question this link pinned, in the link's language and resolved with its purpose. The
+         *     page shows `ask` and offers `answers`, and sends `text` back unchanged as
+         *     `marketing_wording`. The proof records `text`. Absent on a link that pinned no question.
+         */
+        ConfirmQuestion: {
+            /** @description The published version the link pinned. */
+            version: string;
+            /** @description The whole question as the proof records it: the ask, then each answer, one per line. */
+            text: string;
+            /** @description The sentence the reader answers. */
+            ask: string;
+            /** @description The labels of the answers the page offers, in order. */
+            answers: string[];
         };
         /** @description One line of where a held value came from, for the Art. 14 disclosure on the confirm page. */
         ConfirmFieldOrigin: {
@@ -59187,6 +59388,13 @@ export interface components {
              */
             as_of: string;
             /**
+             * @description True when this answer is Home's kept answer past its five-minute freshness,
+             *     served while the server reads it again. It still holds every access rule the
+             *     fresh read would apply. A client asks again a few seconds later for the fresh
+             *     answer. Absent or false means the answer is fresh.
+             */
+            served_stale?: boolean;
+            /**
              * @description Whose work this read answered for.
              * @enum {string}
              */
@@ -59466,6 +59674,10 @@ export interface components {
          *     the same admission every manager figure on this surface makes.
          */
         HandledForYou: {
+            /** @description The shared completed-change read reached a source bound; counts remain lower bounds. */
+            count_is_floor?: boolean;
+            /** @description Sources that could not be read. An empty receipt list with unavailable sources does not establish that nothing happened. */
+            sources_unavailable?: components["schemas"]["WorklistSourceUnavailable"][];
             /**
              * Format: date-time
              * @description The instant these were read at.
@@ -59547,6 +59759,8 @@ export interface components {
          *     client draws the summary alone rather than inventing something to open.
          */
         Receipt: {
+            /** @description The canonical completed change or group shared with Home, including receipt identities and count bounds. */
+            completed_change?: components["schemas"]["MagicLine"];
             system_display?: components["schemas"]["SystemDisplay"];
             close_date_change?: components["schemas"]["CloseDateChange"];
             /**
@@ -60047,6 +60261,13 @@ export interface components {
              *     able to give.
              */
             review: number;
+            /**
+             * Format: date-time
+             * @description When the nearest open task on a lead is due, over every task this read weighed.
+             *     Absent when no such task has a due time, or when the task lane was read to its
+             *     bound or could not be read, so an unseen task could be due sooner.
+             */
+            soonest_lead_due?: string;
             /**
              * @description True when any source behind any figure here was read to its work bound, so
              *     every number above is a floor. Set once for the strip rather than per reading:
@@ -67265,6 +67486,34 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getCustomerPayments: {
+        parameters: {
+            query?: {
+                /** @description Opaque continuation from this response's page.next_cursor. */
+                cursor?: string;
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Scoped customer payment overview and one overdue invoice page. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomerPayments"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getCompanyFinanceSummary: {
         parameters: {
             query?: never;
@@ -71864,7 +72113,7 @@ export interface operations {
                 waiting_reply?: boolean;
                 /** @description Restrict the list to the caller's own due reminders: open, live tasks assigned to the caller whose `remind_at` has passed, at most 30 days ago. The latest reminder comes first. It reads content, so a task whose content the caller may not read is left out. */
                 reminder_due?: boolean;
-                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. */
+                /** @description Show one row per email when several colleagues' mailboxes each hold a copy of it. Only copies the caller may read are joined, and the row shown says how many in `copies`. Off by default, so an export or sync client still reads every row. With `entity_type` and `entity_id`, a calendar invitation, update, cancellation or answer whose meeting is on the same page set is folded onto that meeting's `invitation`. */
                 collapse_copies?: boolean;
             };
             header?: never;
@@ -75529,9 +75778,12 @@ export interface operations {
                      */
                     marketing_choice?: "granted" | "withdrawn";
                     /**
-                     * @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a
-                     *     grant. Bounded because it is stored on the proof row and read back through the subject
-                     *     access export — the same bound is enforced server-side, and the two are one rule.'
+                     * @description The wording shown beside the choice. Required with a grant. Where the page carried a
+                     *     `question`, send its `text` unchanged: the proof records the served question, and a
+                     *     grant with other words is refused with 409 `version_skew`, because the page is older
+                     *     than the question the link pinned. Where the page carried none, this sentence is
+                     *     stored verbatim as proof. Bounded because it is stored on the proof row and read back
+                     *     through the subject access export.
                      */
                     marketing_wording?: string;
                 };
@@ -75553,6 +75805,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -80967,6 +81220,52 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listLinkableChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The channels, sorted by name. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LinkableChannels"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description No chat bot is connected (`code: channel_bot_not_connected`). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description The chat could not be reached (`code: channel_provider_unreachable`). */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     fileChannelMessage: {
         parameters: {
             query?: never;
@@ -85535,6 +85834,15 @@ export interface operations {
                  *     is still read and still reaches the queue. Nothing else on the page changes.
                  */
                 relationships?: "include" | "omit";
+                /**
+                 * @description How much of the ranked day the page carries. `queue` is the page of the queue
+                 *     and its cursor. `home` is what Home draws: `focus`, every figure, and as `queue`
+                 *     the day's meeting rows plus every row that comes due in the next five minutes,
+                 *     with no cursor and no rows below the cut. Focus, the
+                 *     summary, `counts[].considered`, `reach[].considered` and the readings are the
+                 *     same in both shapes; `shown` counts the rows this page carries.
+                 */
+                shape?: "queue" | "home";
             };
             header?: never;
             path?: never;
@@ -85545,11 +85853,26 @@ export interface operations {
             /** @description The ranked day. */
             200: {
                 headers: {
+                    /** @description A weak tag of the answer's bytes, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Worklist"];
                 };
+            };
+            /** @description The client already holds this answer. */
+            304: {
+                headers: {
+                    /** @description The tag the client holds, quoted. */
+                    ETag?: string;
+                    /** @description Always `private, no-cache`. */
+                    "Cache-Control"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -90902,6 +91225,11 @@ export interface operations {
                 "application/json": {
                     /** Format: uuid */
                     purpose_id: string;
+                    /**
+                     * @description The language of the mail and of the page its link opens. Absent means the
+                     *     installation's mail language.
+                     */
+                    language?: components["schemas"]["MailLanguage"];
                 };
             };
         };
@@ -92179,6 +92507,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    readRecordReferences: {
+        parameters: {
+            query: {
+                kind: "contact" | "company" | "lead" | "deal" | "project";
+                id: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The readable references, or an empty data array. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordReferenceListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

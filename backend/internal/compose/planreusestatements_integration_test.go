@@ -143,7 +143,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
-		if _, err := (attentionTasks{store: store}).RemindersForViewer(ctx, at); err != nil {
+		if _, err := plannedRead(ctx, attentionTasks{store: store}, at, at, true); err != nil {
 			return err
 		}
 		if _, _, err := (attentionAwaiting{store: store}).AwaitingReplies(ctx, at); err != nil {
@@ -326,7 +326,7 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 // the seams that reuse their plans.
 func readSuggestionLanes(ctx context.Context, db *database.DB) error {
 	dealSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}
-	if _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
+	if _, _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
 		return err
 	}
 	if _, err := dealSuggestions.CountOpen(ctx, nil); err != nil {

@@ -15,6 +15,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { contactDocuments } from "../../testing/contactdocuments";
+import { meFixture } from "../../testing/mefixture";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -107,6 +109,7 @@ function jsonResponse(body: unknown, status = 200) {
 
 function stubRoutes(
   overrides: Record<string, () => Response | Promise<Response>> = {},
+  docs?: ReturnType<typeof contactDocuments>,
 ) {
   const sent: Sent[] = [];
   vi.stubGlobal(
@@ -118,6 +121,8 @@ function stubRoutes(
         "https://test.local",
       );
       const method = request?.method ?? init?.method ?? "GET";
+      const contactList = docs?.answer(method, url);
+      if (contactList) return contactList;
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       let body: unknown = null;
       if (method !== "GET") {
@@ -154,6 +159,7 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -439,6 +445,75 @@ describe("what the message carries", () => {
     // NAMED BY ID, never uploaded here: the send snapshots each file, so what
     // travels is a set of references.
     expect(sentMail(sent)?.attachment_ids).toEqual(["att-1"]);
+  });
+
+  it("counts the sent file in a recipient's Documents tab", async () => {
+    const user = userEvent.setup();
+    const docs = contactDocuments(1);
+    stubRoutes(
+      {
+        "POST /emails": () => {
+          docs.becomes(2);
+          return jsonResponse(SENT_ACTIVITY, 202);
+        },
+      },
+      docs,
+    );
+    render(
+      <>
+        {docs.strip}
+        {drawer()}
+      </>,
+    );
+    await docs.shows(1);
+
+    // The drawer is open on the same contact, so it offers that contact's file.
+    await user.click(await screen.findByRole("button", { name: /Attach/ }));
+    await user.click(
+      await screen.findByRole("button", { name: /^file-0\.pdf/ }),
+    );
+    await fillAndSend(user);
+
+    await docs.shows(2);
+  });
+
+  it("counts a file uploaded from the drawer in the contact's Documents tab", async () => {
+    const user = userEvent.setup();
+    const docs = contactDocuments(1);
+    stubRoutes(
+      {
+        "POST /attachments": () => {
+          docs.becomes(2);
+          return jsonResponse(
+            {
+              id: "att-new",
+              entity_type: "contact",
+              entity_id: "p-1",
+              filename: "pricing.txt",
+              source: "upload",
+              created_at: "2026-08-15T09:00:00Z",
+            },
+            201,
+          );
+        },
+      },
+      docs,
+    );
+    render(
+      <>
+        {docs.strip}
+        {drawer()}
+      </>,
+    );
+    await docs.shows(1);
+
+    await user.click(await screen.findByRole("button", { name: /Attach/ }));
+    await user.upload(
+      await screen.findByLabelText("Upload file"),
+      new File(["Offer"], "pricing.txt", { type: "text/plain" }),
+    );
+
+    await docs.shows(2);
   });
 
   it("takes a file back off before the send", async () => {

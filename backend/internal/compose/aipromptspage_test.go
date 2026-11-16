@@ -47,6 +47,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -342,7 +343,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 	if prepErr != nil {
 		return sitePrompt{}, nil, fmt.Errorf("the site refused its own committed fixture: %w", prepErr)
 	}
-	recorder := &recordingCompleter{reply: canaryReply}
+	recorder := &testmodel.Recorder{}
 	// A case may refuse the stand-in reply — that is its validator working, not
 	// a failure of this page, and the requests already issued are what gets
 	// published. The refusal is still reported rather than dropped: a site that
@@ -351,12 +352,12 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 	if _, runErr := prepared.Run(context.Background(), recorder); runErr != nil {
 		refused = runErr
 	}
-	if len(recorder.requests) == 0 {
+	if len(recorder.Requests) == 0 {
 		return sitePrompt{}, refused, errors.New("the case issued no request, so it has no prompt to publish")
 	}
 	var systems []string
 	seen := map[string]bool{}
-	for _, req := range recorder.requests {
+	for _, req := range recorder.Requests {
 		canonical := promptfence.Canonicalize(req.System, req.System)
 		if seen[canonical] {
 			continue
@@ -364,7 +365,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		seen[canonical] = true
 		systems = append(systems, canonical)
 	}
-	first := recorder.requests[0]
+	first := recorder.Requests[0]
 	spans := 0
 	for _, msg := range first.Messages {
 		spans += fencedSpansIn(first.System, msg.Content)
@@ -375,7 +376,7 @@ func readSitePrompt(census *aitasks.Registry, sc aicert.Scenario) (out sitePromp
 		systems:   systems,
 		schema:    canonicalSchema(first.ResponseSchema),
 		spans:     spans,
-		requests:  len(recorder.requests),
+		requests:  len(recorder.Requests),
 		decisions: decisionQuestionsOf(prepared),
 	}, refused, nil
 }

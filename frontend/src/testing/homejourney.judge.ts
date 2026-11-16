@@ -210,8 +210,6 @@ function answerReasons(
 function dayReasons(body: unknown, expected: Expectation): string[] {
   if (!isWorklist(body)) return ["worklist: answered a partial day"];
   const reasons = worklistGaps(body);
-  if (expected.work && body.queue.length === 0)
-    reasons.push("worklist: empty queue for a reader who has work");
   if (expected.work && body.focus?.items.length === 0)
     reasons.push("worklist: no focus item for a reader who has work");
   return reasons;

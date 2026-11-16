@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput, by string, assignee, host *ids.UserID) (ids.ActivityID, time.Time, error) {
@@ -43,6 +44,8 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	})
 	args = append(args, entity)
 	entityHolder := storekit.SQLf("$%d", len(args))
+	args = append(args, orWallClock(in.recordedAt))
+	undated := occurredday.UndatedSQL(storekit.SQLf("$%d", len(args)))
 	args = append(args, pickedWall(in.DueIntent), pickedZone(in.DueIntent), pickedWall(in.RemindIntent), pickedZone(in.RemindIntent), pickedWall(in.MeetingIntent), pickedZone(in.MeetingIntent))
 	timeHolders := storekit.SQLf(",$%d::text::timestamp,$%d,$%d::text::timestamp,$%d,$%d::text::timestamp,$%d", len(args)-5, len(args)-4, len(args)-3, len(args)-2, len(args)-1, len(args))
 	systemCol, systemHolder, args := systemTextInsert(ctx, in, args)
@@ -53,15 +56,14 @@ func insertLoggedActivityRow(ctx context.Context, tx pgx.Tx, in LogActivityInput
 	if err != nil {
 		return ids.ActivityID{}, time.Time{}, err
 	}
-	// An undated activity takes the transaction's now(): the last-activity clock
-	// counts only occurred_at <= now(), and a Go clock read here runs ahead of it.
+	// An undated activity has happened both for now() and for the store's clock.
 	var occurredAt time.Time
 	err = tx.QueryRow(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
 		                       source_activity_id, raw, duration_seconds, sender_is_machine, due_has_time, call_outcome, task_type`+authorCols+`, legal_entity_id`+precisionCol+languageCol+assistedCol+systemCol+cfCols+`, due_wall, due_zone, remind_wall, remind_zone, meeting_wall, meeting_zone)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, `+undated+`), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
 		         NULLIF($19, ''), $20, $21, $22, $23, $24, $25, $26, $27, $28`+authorHolders+`, `+entityHolder+precisionHolder+languageHolder+assistedHolder+systemHolder+cfHolders+timeHolders+`) RETURNING occurred_at`,
 		args...).Scan(&occurredAt)
 	if err != nil {

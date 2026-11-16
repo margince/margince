@@ -52,6 +52,7 @@ import { RESET_ROUTE } from "./features/sign-in/auth.route";
 import { CompleteLocale } from "./i18n";
 import { isContactTab } from "./lib/contacttab";
 import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
+import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
 import { EXTENSION_SCREEN } from "./lib/extensions";
 import { routeIdentity } from "./lib/routeidentity";
@@ -195,7 +196,7 @@ export const screenOfAddress = (address: string) => {
 
 function screenWithLocale(address: string) {
   const view = screenOfAddress(address);
-  return parseHash(address).screen === "analytics" ? (
+  return bootsOnEssentialCopy(address) ? (
     view
   ) : (
     <CompleteLocale>{view}</CompleteLocale>

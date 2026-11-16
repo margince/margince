@@ -6,6 +6,7 @@ import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import { defineConfig } from "vitest/config";
 import {
+  chunkBudgets,
   entryChunks,
   initialEntries,
   preloadEntries,
@@ -101,6 +102,9 @@ const analyticsPreparation = entryChunks(
   15,
 );
 const analytics = entryChunks("analytics", entries.analytics);
+// Home is the screen most loads open on, and bootstrap.ts fetches its chunk
+// early on Home. Ranked below startup and Analytics, it takes none of their modules.
+const home = entryChunks("home", entries.home, 5);
 
 // Classifying the suite reads every test file, so only a test run pays for it.
 const sourceScans = process.env.VITEST ? await compilerTests(frontendRoot) : [];
@@ -118,6 +122,7 @@ export default defineConfig({
             analyticsPreparation.group,
             startup.group,
             analytics.group,
+            home.group,
             {
               name: "shared",
               minShareCount: 2,
@@ -142,6 +147,9 @@ export default defineConfig({
     analyticsPreparation.plugin,
     startup.plugin,
     analytics.plugin,
+    home.plugin,
+    // Home's chunk is what a cold load on Home waits for.
+    chunkBudgets({ home: 820_000 }),
     react(),
     tailwindcss(),
     // The Material files say 48px; without dimensions the glyph's `size` prop decides.

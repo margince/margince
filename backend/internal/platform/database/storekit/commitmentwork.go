@@ -46,21 +46,25 @@ func scopedTaskClause(alias string, asOf time.Time, identities string, arg func(
 	request := `EXISTS (SELECT 1 FROM activity request_source WHERE request_source.id = ` + alias + `.source_activity_id
  AND request_source.kind = 'email' AND request_source.direction = 'inbound' AND request_source.archived_at IS NULL
  AND ` + AutomaticRequestIntentClause("request_source") + `
- AND NOT ` + AnsweredSQL("request_source", instant) + `
  AND NOT EXISTS (SELECT 1 FROM activity successor WHERE successor.source_system = ` + alias + `.source_system
  AND successor.source_activity_id = ` + alias + `.source_activity_id AND successor.id <> ` + alias + `.id
  AND ` + HeldTaskClause("successor") + `)
  AND ` + occurredday.BegunSQL("request_source", instant) + `
  AND ` + occurredday.FromSQL("request_source", instant+` - make_interval(days => `+horizon+`)`) + ` AND (` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + held + `))`
-	engagement := CurrentLeadEngagementClause(provenance.TaskSourceActivitySQL(alias), asOf, arg) + " AND " + latestLeadAdviceSQL(alias)
+	engagement := leadEngagementSQL(provenance.TaskSourceActivitySQL(alias), instant, asOf, arg, "") + " AND " + latestLeadAdviceSQL(alias)
 	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
+	// A request and a lead cue both lapse once their source message is
+	// answered. They ask it once: the answer test is the largest part of
+	// this clause, and Postgres keeps a plan of every copy per connection.
+	unanswered := `NOT EXISTS (SELECT 1 FROM activity answered_source WHERE answered_source.id = ` + provenance.TaskSourceActivitySQL(alias) + `
+ AND ` + InboundReplySQL("answered_source") + ` AND ` + AnsweredSQL("answered_source", instant) + `)`
 	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
  OR %[1]s.source_system = ANY($%[4]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
- OR (%[1]s.source_system = $%[3]d AND `+request+`)
  OR (%[1]s.source_system = ANY($%[5]d) AND `+question+`)
- OR (%[1]s.source_system = ANY($%[6]d) AND `+engagement+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
+ OR (((%[1]s.source_system = $%[3]d AND `+request+`)
+   OR (%[1]s.source_system = ANY($%[6]d) AND `+engagement+`)) AND `+unanswered+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
 		arg(taskSourcesOf(currentByItsWriter)), arg(taskSourcesOf(currentBySourceMail)), arg(taskSourcesOf(currentByLeadEngagement)))
 }
 

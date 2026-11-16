@@ -13,7 +13,8 @@ import (
 
 // Receipt is one completed autonomous act, reported rather than asked about.
 type Receipt struct {
-	SystemDisplay *crmcontracts.SystemDisplay
+	CompletedChange *crmcontracts.MagicLine
+	SystemDisplay   *crmcontracts.SystemDisplay
 	// Source says which identity ID is; AuditLogID is the correction's audit
 	// entry, kept apart from Undo because a receipt without Undo still has one.
 	Source          ReceiptSource

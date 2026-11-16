@@ -57,6 +57,8 @@ var leadGate = objectGate{
 // than in the gated set: removing the lead condition could only WIDEN the
 // result the caller already sees.
 var predicateLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/legacysystemtext.go:RestoreTaskSystemTextTx": "System-only descriptor repair asks whether the linked lead has no name or address. Only that boolean selects a catalog phrase; no lead column is returned.",
+
 	"internal/modules/privacy/notementionlocks.go:lockNoteMentions":          "the contact-delete-authorized eraser locks records linked to candidate notes so their legal-hold flags cannot change during erasure. IDs are consumed inside the transaction and no record content is disclosed",
 	"internal/modules/privacy/historicalaudit.go:markerHoldSQL":              "system-only marker correction reads existence of a legal hold to refuse destruction. No record field leaves the transaction; SHARE locks keep the hold decision stable",
 	"internal/modules/consent/ruleselectors.go:leadCountryCandidates":        "the marketing rule selector's lead arm: the country of the company a recipient lead is filed under picks which country's messaging rules judge the send. No lead column is selected beyond the join key; what leaves is a pack choice and the pack code a decision records",
@@ -87,6 +89,8 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities/duplicatesystemtasks.go:RetireDuplicateLeadTasksTx": "System-only duplicate repair locks lead identities before tasks in the qualification writer order. IDs remain inside the repair transaction.",
+
 	"internal/modules/initiatives/enrolment.go:estimatedJoin":                        "the upgrade task's estimate reads only the created_at of a lead or deal the membership evaluation already admitted, to date its enrolment row. It runs under the system data task, and no field of the record leaves the statement",
 	"internal/modules/privacy/anonymizedsubject.go:subjectStillNamedSQL":             "the missed-receipt sweep asks whether a lead it is about to name in a notice was erased or anonymized, and leaves such leads out of its read. One boolean per lead leaves it, and it only ever withholds a notice; no lead column reaches any caller",
 	"internal/platform/database/storekit/stopaddress.go:LockSubjectsStopAddresses":   "consent and erasure writers read addresses only to lock their stop keys inside the same transaction. The helper returns only an error and discloses no lead field; its caller owns the permission for the mutation",

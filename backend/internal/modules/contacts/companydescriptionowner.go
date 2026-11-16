@@ -3,24 +3,7 @@
 
 package contacts
 
-// Who owns a company's description.
-//
-// The column is written by two kinds of author. A human types it into the
-// company header or the company form; a site read fills it from the company's
-// own website. A site read may replace what another automated writer put there
-// — that is what lets a crawl correct a description an agent wrote from a
-// meeting transcript — and must never replace a contact's sentence.
-//
-// The header's summary is meant to say what the company SELLS, and the site is
-// what knows that. An agent creating a record while holding a meeting
-// transcript writes a summary of the MEETING there instead: true, about the
-// wrong subject, and under the older fill-where-blank rule it permanently
-// blocked the read that could have corrected it, because whoever wrote first
-// won. Replacing an unclaimed value is what removes that trap.
-//
-// The answer lives in field_provenance, the same layer the logo asks
-// (logoHeldByHuman), so "a human owns this field" has one answer in the
-// product rather than one per column.
+// Description provenance keeps user-authored text protected during corrections.
 
 import (
 	"context"

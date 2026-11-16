@@ -386,6 +386,8 @@ export const CompactLongNamesPhone: Story = {
     </StatStrip>
   ),
   play: async ({ canvasElement }) => {
+    // Measured once the web fonts load. A fallback face is wider and wraps more.
+    await document.fonts.ready;
     const names = [
       ...canvasElement.querySelectorAll<HTMLElement>(".stat-card-label-text"),
     ];

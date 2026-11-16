@@ -24,6 +24,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useHealthScope } from "../../lib/healthscope";
 import { labelFor } from "../../lib/labelfor";
 import { useMemberNames } from "../../lib/membernames";
 import { unwrap } from "../../lib/problem";
@@ -65,9 +66,17 @@ function ownerFilter(progress: SalesProgress) {
 // How many leads sit in each open status. A list that does not count leaves
 // its status unknown, never zero.
 function useLeadCounts(progress: SalesProgress) {
+  const readerScope = useHealthScope();
   const reads = useQueries({
     queries: LEAD_STATUSES.map((status) => ({
-      queryKey: ["progress-work", "lead-count", progress.scope, status],
+      queryKey: [
+        "progress-work",
+        "lead-count",
+        progress.scope,
+        status,
+        readerScope ?? "",
+      ],
+      enabled: readerScope !== undefined,
       queryFn: async ({ signal }: { signal: AbortSignal }) =>
         unwrap(
           await api.GET("/leads", {
@@ -149,6 +158,7 @@ function OpenLeads({
   const t = useT();
   const { locale } = useLocale();
   const [status, setStatus] = useState<OpenLeadStatus>("new");
+  const readerScope = useHealthScope();
   const query = useInfiniteQuery<
     Paged<Lead>,
     Error,
@@ -156,7 +166,14 @@ function OpenLeads({
     QueryKey,
     string | undefined
   >({
-    queryKey: ["progress-work", "leads", progress.scope, status],
+    queryKey: [
+      "progress-work",
+      "leads",
+      progress.scope,
+      status,
+      readerScope ?? "",
+    ],
+    enabled: readerScope !== undefined,
     initialPageParam: undefined,
     getNextPageParam: (last) =>
       last.page.has_more ? (last.page.next_cursor ?? undefined) : undefined,

@@ -8,6 +8,7 @@ import { FileChip } from "../../design-system/filechip";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatBytes } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { fileChipTarget } from "../../lib/attachmentlink";
 import { useContractPaper } from "./contractpaper";
 
 /**
@@ -77,7 +78,7 @@ export function ContractPaper({
             // names nothing.
             <FileChip
               key={file.id}
-              href={`/v1/attachments/${file.id}`}
+              {...fileChipTarget(file)}
               filename={file.filename}
               size={
                 file.byte_size == null

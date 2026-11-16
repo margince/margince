@@ -132,10 +132,11 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	// page and once for the total, and they must judge the same leads overdue.
 	ctx = withPinnedSLANow(ctx, leadSLAClock().UTC())
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
-		entity:  leadEntity,
-		prepare: withLeadTaskIdentities,
-		columns: leadColumns,
-		fields:  leadListFields,
+		entity:    leadEntity,
+		firstPage: in.Cursor == nil || *in.Cursor == "",
+		prepare:   withLeadTaskIdentities,
+		columns:   leadColumns,
+		fields:    leadListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			return leadListWhere(ctx, in, active, sorted, policy, arg)
 		},

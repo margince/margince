@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { AppLink } from "../design-system/applink";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { CopyAction } from "../design-system/clipboardcopy";
@@ -22,8 +21,6 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, unwrap } from "../lib/problem";
-import { routeHash } from "../lib/router";
-import { settingsHref } from "../lib/settingsrouting";
 import {
   isVerbosity,
   LinkExistingDialog,
@@ -31,6 +28,7 @@ import {
   verbosityOptions,
 } from "./channellinkdialog";
 
+type LinkableChannel = components["schemas"]["LinkableChannel"];
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
 type ChannelLink = components["schemas"]["ChannelLink"];
 type ChannelInvites = components["schemas"]["ChannelInvites"];
@@ -71,6 +69,7 @@ export function ChannelPanel({
   // Held here, not in the unlinked body. A create moves the card to linked,
   // and the notice must outlive the body that asked for the channel.
   const [invites, setInvites] = useState<ChannelInvites | null>(null);
+  if (query.isPending || state?.state === "off") return null;
   return (
     <OverviewCard
       title={t("channelLink.title")}
@@ -85,38 +84,21 @@ export function ChannelPanel({
           />
         ) : undefined
       }
-      empty={state?.state === "off" ? t("channelLink.off") : undefined}
-      emptyAction={
-        state?.state === "off" ? (
-          <AppLink
-            className="link-button"
-            href={routeHash(settingsHref("integrations", "telegram"))}
-          >
-            {t("channelLink.openSettings")}
-          </AppLink>
-        ) : undefined
-      }
     >
-      {state?.state === "off" ? undefined : (
-        <QueryStates query={query} pendingLabel={t("channelLink.title")}>
-          {state?.state === "none" && (
-            <UnlinkedBody
-              record={ref}
-              canEdit={canEdit}
-              onCreated={setInvites}
-            />
-          )}
-          {state?.link && (
-            <LinkedBody
-              record={ref}
-              channel={state.link}
-              paused={state.state === "paused"}
-              canEdit={canEdit}
-            />
-          )}
-          {invites && <InvitesNotice invites={invites} />}
-        </QueryStates>
-      )}
+      <QueryStates query={query} pendingLabel={t("channelLink.title")}>
+        {state?.state === "none" && (
+          <UnlinkedBody record={ref} canEdit={canEdit} onCreated={setInvites} />
+        )}
+        {state?.link && (
+          <LinkedBody
+            record={ref}
+            channel={state.link}
+            paused={state.state === "paused"}
+            canEdit={canEdit}
+          />
+        )}
+        {invites && <InvitesNotice invites={invites} />}
+      </QueryStates>
     </OverviewCard>
   );
 }
@@ -146,6 +128,29 @@ function useLinkChannel(
   });
 }
 
+// The channels the record can be linked to. It is read only while the dialog
+// is open, because the list is the bot's and changes in the chat.
+function useLinkableChannels(record: RecordRef, open: boolean) {
+  const t = useT();
+  return useQuery({
+    queryKey: [
+      CHANNEL_LINK_KEY,
+      "linkable",
+      record.recordType,
+      record.recordId,
+    ],
+    enabled: open,
+    queryFn: async (): Promise<LinkableChannel[]> =>
+      unwrap(
+        await api.GET(
+          "/channel-links/{record_type}/{id}/channels",
+          linkPath(record),
+        ),
+        t,
+      ).channels,
+  });
+}
+
 function UnlinkedBody({
   record,
   canEdit,
@@ -158,6 +163,7 @@ function UnlinkedBody({
   const t = useT();
   const link = useLinkChannel(record, onCreated);
   const [existingOpen, setExistingOpen] = useState(false);
+  const linkable = useLinkableChannels(record, existingOpen);
   const createFailed = link.isError && link.variables?.mode === "create";
   return (
     <>
@@ -193,6 +199,7 @@ function UnlinkedBody({
       )}
       <LinkExistingDialog
         open={existingOpen}
+        channels={linkable.data}
         onClose={() => {
           setExistingOpen(false);
           link.reset();

@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/commissions"
@@ -63,7 +64,7 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithInstallationRenamer(installationRenamer(pool)),
 		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
 		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
-		activities:  activities.NewProvider(InstallationDB(pool)).WithIdentityProver(capture.ProvedUnambiguouslyTx).WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx),
+		activities:  activities.NewProvider(InstallationDB(pool)).WithMeetingNotesAccess(capturehealth.MeetingNotesAccess{}).WithIdentityProver(capture.ProvedUnambiguouslyTx).WithDealFiling(NewActivityDealFiling(InstallationDB(pool))).WithTaskRecommendation(taskRecommendationReader(pool)).WithFieldCatalog(customfields.NewService(pool, nil)).WithRecordZone(installationZoneTx).WithLeadQualifyTasks(newLeadWorkTasks(db, slog.Default())),
 		commissions: commissions.NewProvider(db),
 		dealRooms:   dealrooms.NewProvider(db),
 		reports:     newReportEngine(pool),

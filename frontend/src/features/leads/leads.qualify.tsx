@@ -17,7 +17,6 @@ import {
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { leadIdentityName } from "../../format/leadname";
 import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
@@ -26,6 +25,7 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
+import { leadIdentityName } from "./leadname";
 import {
   ExistingQualificationDeal,
   type QualificationDealChoice,

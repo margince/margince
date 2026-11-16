@@ -20,7 +20,6 @@ package consent
 import (
 	"context"
 	"errors"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -271,20 +270,7 @@ func (s *Store) PublicWithdrawAll(
 			return err
 		}
 		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, purposeKeys)
-		if err != nil {
-			return err
-		}
-		// The press for one purpose is the unsubscribe link every marketing
-		// send carries, so it owes the same acknowledgement as the unnamed one.
-		// Only a marketing purpose is a refusal of advertising.
-		marketing, err := withdrawableMarketingPurposeKeysTx(ctx, tx)
-		if err != nil {
-			return err
-		}
-		refused := slices.DeleteFunc(slices.Clone(changed), func(key string) bool {
-			return !slices.Contains(marketing, key)
-		})
-		return s.acknowledgeWithdrawalTx(ctx, tx, contactID, refused)
+		return err
 	})
 	if err != nil {
 		return nil, err
@@ -345,15 +331,7 @@ func (s *Store) PublicStopAllMarketing(
 			return err
 		}
 		changed, err = s.withdrawPurposesTx(ctx, tx, contactID, keys)
-		if err != nil {
-			return err
-		}
-		// THE ACKNOWLEDGEMENT THIS PRESS OWES, where a pack owes one. This is
-		// the ordinary refusal of advertising — the suppression door beside it
-		// is what a rep records and what the stronger public stop writes — so
-		// acknowledging only that one would answer the rarer act and stay
-		// silent on the common one.
-		return s.acknowledgeWithdrawalTx(ctx, tx, contactID, changed)
+		return err
 	})
 	if err != nil {
 		return nil, err

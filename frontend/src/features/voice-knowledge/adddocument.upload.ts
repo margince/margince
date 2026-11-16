@@ -1,29 +1,5 @@
-import type { QueryKey } from "@tanstack/react-query";
 import type { MessageKey } from "../../i18n/en";
-import { activityFileStaleKeys } from "../../lib/activitykeys";
 import type { AttachmentParent } from "../../lib/attachmentupload";
-import type { DocumentAnchor } from "./adddocument";
-
-/**
- * What a landed upload makes stale, per anchor. Each library is read under its
- * own key. The contact 360 carries no attachments, so it is not refetched.
- */
-export function staleAfterUpload(anchor: DocumentAnchor): readonly QueryKey[] {
-  if (anchor.record === "contact") {
-    return [["attachments", "contact", anchor.id]];
-  }
-  if (anchor.record === "activity") return activityFileStaleKeys(anchor.id);
-  if (anchor.record === "deal") {
-    return [
-      ["deal-documents", anchor.id],
-      ["deal-attachments", anchor.id],
-    ];
-  }
-  return [
-    ["companyDocuments", anchor.id],
-    ["company360", anchor.id],
-  ];
-}
 
 // Why the upload cannot be offered, in the order the reader can act on. A
 // missing file is theirs to fix and a missing grant is not. A request in

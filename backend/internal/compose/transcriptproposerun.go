@@ -188,6 +188,14 @@ func (p *TranscriptProposer) stage(
 		if err != nil {
 			return transcriptStaging{}, err
 		}
+		known, err := p.messages.TranscriptFollowUpExistsTx(ctx, tx, activityID, commitment.Summary, commitment.Seat)
+		if err != nil {
+			return transcriptStaging{}, err
+		}
+		if known {
+			out.known[derefSeat(commitment.Seat)]++
+			continue
+		}
 		outcome, id, err := p.dispatch.DispatchTx(ctx, tx, commitment, bundleID)
 		if err != nil {
 			return transcriptStaging{}, err

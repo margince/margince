@@ -251,6 +251,21 @@ describe("LeadScreen: the Deals tab's deal and project verbs", () => {
   it("carries no Qualify verb once the lead already named a deal", async () => {
     const user = userEvent.setup();
     stubLeadScreenFetch(async (url) => {
+      const asked = new URL(url);
+      if (asked.pathname === "/v1/records/references") {
+        const kind = asked.searchParams.get("kind");
+        return jsonResponse({
+          data: asked.searchParams.getAll("id").flatMap((id) => {
+            const name =
+              kind === "deal" && id === "d-9"
+                ? "Nordwind Renewal"
+                : kind === "project" && id === "pr-1"
+                  ? "Atlas rollout"
+                  : undefined;
+            return name === undefined ? [] : [{ id, name, archived: false }];
+          }),
+        });
+      }
       if (url.includes("/deals/d-9")) {
         return jsonResponse({ id: "d-9", name: "Nordwind Renewal" });
       }
@@ -320,6 +335,21 @@ describe("LeadScreen: Deals tab", () => {
   it("opens onto the lead's deal, under a Deals panel, and the project it names", async () => {
     const user = userEvent.setup();
     stubLeadScreenFetch((url) => {
+      const asked = new URL(url);
+      if (asked.pathname === "/v1/records/references") {
+        const kind = asked.searchParams.get("kind");
+        return jsonResponse({
+          data: asked.searchParams.getAll("id").flatMap((id) => {
+            const name =
+              kind === "deal" && id === "d-9"
+                ? "Nordwind Renewal"
+                : kind === "project" && id === "pr-1"
+                  ? "Atlas rollout"
+                  : undefined;
+            return name === undefined ? [] : [{ id, name, archived: false }];
+          }),
+        });
+      }
       if (url.includes("/deals/d-9")) {
         return jsonResponse({ id: "d-9", name: "Nordwind Renewal" });
       }

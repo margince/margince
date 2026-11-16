@@ -28,6 +28,7 @@ import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useCompanyZone } from "../../lib/companyzone";
+import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import type { ReportingSelection } from "./reporting.model";
 
@@ -282,8 +283,10 @@ export function RecordDecisionDialog({
     true,
     assignedRecord("deal", draft.dealId),
   );
+  const readerScope = useHealthScope();
   const deals = useQuery({
-    queryKey: ["decision-deals"],
+    queryKey: ["decision-deals", readerScope ?? ""],
+    enabled: readerScope !== undefined,
     queryFn: async () =>
       unwrap(
         await api.GET("/deals", {
