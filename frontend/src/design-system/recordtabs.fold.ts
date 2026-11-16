@@ -109,7 +109,9 @@ function foldKey<Option extends string>(
   return [least, ...folded].join(SEPARATOR);
 }
 
-function watchSize(strip: RefObject<HTMLElement | null>) {
+/** A `useSyncExternalStore` subscription to the strip's size. Where nothing can
+ *  be measured it never calls back. */
+export function watchSize(strip: RefObject<HTMLElement | null>) {
   return (changed: () => void) => {
     const element = strip.current;
     if (!element || typeof ResizeObserver === "undefined") {

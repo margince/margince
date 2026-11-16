@@ -841,8 +841,8 @@
   /* A second row only once the words themselves cannot share one: a strip on
      two rows reads as two controls. */
   flex-wrap: wrap;
-  /* A set size, so a host that stretches its children never leaves empty
-     track after the last option. */
+  /* A set size, so a host that stretches its children cannot pull the track
+     past its options. Each row of a wrapped strip fills it, by the rule below. */
   inline-size: fit-content;
   max-inline-size: 100%;
   background: var(--bgChip);
@@ -875,6 +875,11 @@
   cursor: pointer;
   /* Unselectable, for `.checkfield`'s reason. */
   user-select: none;
+}
+/* Every segment on a wrapped row stops at its cap, so the row would end short
+   of the track. The component marks a strip once it wraps. */
+.segmented[data-wrapped] button {
+  max-inline-size: none;
 }
 .segmented button:hover:where(:not(:disabled)) {
   background: var(--groundHover);

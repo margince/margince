@@ -4,7 +4,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
 import { useState } from "react";
-import { expect } from "storybook/test";
+import { expect, waitFor } from "storybook/test";
+import { useT } from "../i18n";
+import { StoryProviders } from "../testing/story-utils";
 import { Card, Kbd, SegmentedControl } from "./atoms";
 
 const meta: Meta<typeof SegmentedControl> = {
@@ -215,4 +217,70 @@ export const AtPhoneWidth: Story = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
+};
+
+const STATUSES = ["new", "contacted", "engaged"] as const;
+type Status = (typeof STATUSES)[number];
+
+function GermanStatusDemo() {
+  const t = useT();
+  const [status, setStatus] = useState<Status>("new");
+  return (
+    <SegmentedControl
+      options={STATUSES}
+      value={status}
+      onChange={setStatus}
+      labels={{
+        new: t("lead.status.new"),
+        contacted: t("lead.status.contacted"),
+        engaged: t("lead.status.engaged"),
+      }}
+      counts={{ new: 0, contacted: 0, engaged: 0 }}
+      label="Status"
+    />
+  );
+}
+
+// How far each row of segments falls short of the track's content box.
+function rowShortfalls(strip: Element): number[] {
+  const style = getComputedStyle(strip);
+  const content =
+    strip.clientWidth -
+    Number.parseFloat(style.paddingLeft) -
+    Number.parseFloat(style.paddingRight);
+  const gap = Number.parseFloat(style.columnGap) || 0;
+  const rows = new Map<number, number[]>();
+  for (const segment of strip.querySelectorAll("button")) {
+    const { top, width } = segment.getBoundingClientRect();
+    rows.set(Math.round(top), [...(rows.get(Math.round(top)) ?? []), width]);
+  }
+  return [...rows.values()].map(
+    (widths) =>
+      content -
+      widths.reduce((sum, width) => sum + width, 0) -
+      gap * (widths.length - 1),
+  );
+}
+
+// The German status words with their counts cannot share one row at 320px.
+// Each row the strip falls to is filled by its own segments.
+export const GermanWrap: Story = {
+  render: () => (
+    <StoryProviders locale="de">
+      <div style={{ inlineSize: "320px" }}>
+        <GermanStatusDemo />
+      </div>
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = canvasElement.querySelector(".segmented");
+    await expect(strip).not.toBeNull();
+    if (!strip) return;
+    await waitFor(() => expect(rowShortfalls(strip).length).toBe(2));
+    await waitFor(async () => {
+      for (const shortfall of rowShortfalls(strip)) {
+        await expect(Math.abs(shortfall)).toBeLessThanOrEqual(1);
+      }
+    });
+  },
 };

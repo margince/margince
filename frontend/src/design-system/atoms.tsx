@@ -1,11 +1,16 @@
 import { type LucideIcon, Sparkles } from "lucide-react";
-import type {
-  CSSProperties,
-  ElementType,
-  FormEventHandler,
-  ReactNode,
+import {
+  type CSSProperties,
+  type ElementType,
+  type FormEventHandler,
+  type ReactNode,
+  type RefObject,
+  useMemo,
+  useRef,
+  useSyncExternalStore,
 } from "react";
 import { Heading, type HeadingElement, type HeadingSize } from "./heading";
+import { watchSize } from "./recordtabs.fold";
 import { useWaited } from "./waited";
 import "./badge.css";
 import "./atoms.css";
@@ -447,11 +452,15 @@ export function SegmentedControl<Option extends string>({
   // so a second press cannot overtake the first.
   busy?: Option;
 }>) {
+  const strip = useRef<HTMLFieldSetElement>(null);
+  const wrapped = useWrapped(strip);
   return (
     <fieldset
+      ref={strip}
       className="segmented"
       aria-label={label}
       disabled={busy !== undefined}
+      data-wrapped={wrapped || undefined}
     >
       {options.map((option) => {
         const count = counts?.[option];
@@ -472,6 +481,25 @@ export function SegmentedControl<Option extends string>({
         );
       })}
     </fieldset>
+  );
+}
+
+// Whether the strip fell to a second row, which lets its segments fill each
+// row. Rows break on word widths alone, so the answer never undoes itself.
+function useWrapped(strip: RefObject<HTMLElement | null>): boolean {
+  const subscribe = useMemo(() => watchSize(strip), [strip]);
+  return useSyncExternalStore(
+    subscribe,
+    () => {
+      const first = strip.current?.firstElementChild;
+      const last = strip.current?.lastElementChild;
+      return (
+        first instanceof HTMLElement &&
+        last instanceof HTMLElement &&
+        last.offsetTop !== first.offsetTop
+      );
+    },
+    () => false,
   );
 }
 
