@@ -31,10 +31,10 @@ export default meta;
 
 type Story = StoryObj;
 
+// The `uat-phone` tag stays a literal in each story: the index reads it unrun.
 const phoneStory = {
   parameters: { layout: "fullscreen" },
   globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
 } satisfies Story;
 
 type Company = {
@@ -602,6 +602,7 @@ export const ShortListEmpty: Story = {
 export const ShortListEmptyOnPhone: Story = {
   ...ShortListEmpty,
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
 // Past the smallest page size the pager and the dials stay. A larger size may
@@ -655,6 +656,7 @@ export const RowMenuOnPhone: Story = {
   render: () => <Surface rows={companies(4)} columns={menuColumns} />,
   play: openRowMenu,
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
 const cardColumns: ListColumn<Company>[] = [
@@ -690,10 +692,10 @@ export const CardsOnPhone: Story = {
     }
   },
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
-// The phone row's own set: a badge at the end of the name's line, two caption
-// facts under it, and the rest of the desktop columns not drawn there.
+// A stage badge ends the name's line; industry and owner are its caption.
 const phoneRowColumns: ListColumn<Company>[] = [
   ...columns.slice(0, 1),
   ...columns
@@ -721,27 +723,25 @@ const phoneRowColumns: ListColumn<Company>[] = [
 ];
 
 function factsOf(row: Element | null | undefined): string[] {
-  return [...(row?.querySelectorAll<HTMLElement>("td, .lt-fact") ?? [])]
-    .filter(
-      (cell) => cell.checkVisibility() && cell.dataset.phone !== "caption",
-    )
-    .map((cell) => cell.textContent ?? "");
+  const parts = row?.querySelectorAll(
+    'td:not([data-phone]), [data-phone="end"], .lt-fact',
+  );
+  return [...(parts ?? [])]
+    .filter((part) => part.checkVisibility())
+    .map((part) => part.textContent ?? "");
 }
 
-// Line one: the name and its stage badge; line two: industry · owner. Size,
-// region, pipeline and created are not drawn on a phone.
+// Line one: the name and its stage badge; line two: industry · owner.
 export const PhoneRow: Story = {
   render: () => <Surface rows={companies(4)} columns={phoneRowColumns} />,
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText("Company 01");
-    await expect(factsOf(name.closest("tr"))).toEqual([
-      "Company 01",
-      "Customer",
-      "Manufacturing",
-      "Lars",
-    ]);
+    await expect(factsOf(name.closest("tr")).join(" | ")).toBe(
+      "Company 01 | Customer | Manufacturing | Lars",
+    );
   },
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
 // "Unowned" stands in for nothing, so the phone row leaves it out with its dot.
@@ -763,13 +763,13 @@ export const PhoneRowSkipsPlaceholder: Story = {
     await expect(getComputedStyle(industry, "::after").content).toBe("none");
   },
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
 const LONG_NAME =
   "Vereinigte Norddeutsche Präzisionsmaschinenbau- und Antriebstechnik GmbH & Co. KG";
 
-// A long name wraps inside line one and a long caption wraps under it. Nothing
-// runs past the screen's edge.
+// A long name and a long caption wrap; nothing runs past the screen's edge.
 export const PhoneRowLongText: Story = {
   render: () => (
     <Surface
@@ -793,6 +793,7 @@ export const PhoneRowLongText: Story = {
     );
   },
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
 const markedName: ListColumn<Company> = {
@@ -807,8 +808,7 @@ const markedName: ListColumn<Company> = {
   ),
 };
 
-// The selection box and the logo lead the name, the menu ends its line, and
-// the caption starts under the name, not under the box or the logo.
+// The box and the logo lead the name; the caption starts under the name.
 export const PhoneRowMenuAndSelection: Story = {
   render: () => (
     <SelectableSurface
@@ -842,10 +842,10 @@ export const PhoneRowMenuAndSelection: Story = {
     await openRowMenu(context);
   },
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
-// Desk: the name with its region beside it, no Headcount column. Phone: the
-// name alone, and the headcount, a phone-only column, among the caption facts.
+// The name drops its region on a phone, where a phone-only headcount joins the caption.
 export const PhoneRowFoldedName: Story = {
   render: () => (
     <Surface
@@ -869,19 +869,15 @@ export const PhoneRowFoldedName: Story = {
   ),
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText("Company 01");
-    await expect(factsOf(name.closest("tr"))).toEqual([
-      "Company 01",
-      "Customer",
-      "Manufacturing",
-      "Lars",
-      "201-500 people",
-    ]);
+    await expect(factsOf(name.closest("tr")).join(" | ")).toBe(
+      "Company 01 | Customer | Manufacturing | Lars | 201-500 people",
+    );
   },
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
-// A list that gives no column a phone place keeps the card: the name over a
-// labelled line for every shown column.
+// A list that places no column keeps the card of labelled lines.
 export const PhoneRowWithoutPlaces: Story = {
   render: () => <Surface rows={companies(4)} />,
   play: async ({ canvasElement }) => {
@@ -891,6 +887,7 @@ export const PhoneRowWithoutPlaces: Story = {
     await expect(getComputedStyle(value, "::before").content).toBe('"Region"');
   },
   ...phoneStory,
+  tags: ["uat-phone"],
 };
 
 const longHeaderColumns: ListColumn<Company>[] = [
