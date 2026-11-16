@@ -290,7 +290,7 @@ Dragging deal cards on the board does not work on touch screens; use the deal's 
 Also called: iPhone app, Android app, phone app, use Margince on mobile.
 
 ### What does a list show on a phone?
-On a phone or a narrow window, most record lists show each record in two lines. Line 1 has the company's logo or a picture made from the person's name, its name and at most one mark. Line 2 has a few facts, and a fact the record does not have is left out.
+On a phone or a narrow window, most record lists show each record in two lines. Line 1 has the company's logo or a picture made from the contact's or lead's name, its name and at most one mark. Line 2 has a few facts, and a fact the record does not have is left out.
 - **Contacts**: job title and employer, with no mark.
 - **Companies**: the website, and the lifecycle as the mark.
 - **Leads**: the company, next task and due date, and the status as the mark.
