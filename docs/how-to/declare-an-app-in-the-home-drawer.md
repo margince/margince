@@ -1,4 +1,3 @@
-<!-- prose:plain -->
 # Declare an app in the home side drawer
 
 Use this page to give a unit a row in the home side drawer, with its own icon and name. It assumes the unit already has a frontend package, as in [add-an-extension.md](add-an-extension.md). For why the drawer is open to a unit, read [Why a unit may have a drawer entry](../explanation/extension-apps-in-the-drawer.md).
