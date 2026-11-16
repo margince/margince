@@ -139,7 +139,7 @@ var (
 // statesProof reports whether a line of text holds a date and a document
 // number, as in "Giấy chứng nhận số 123/2026/GCN ngày 01/02/2026".
 func statesProof(text string) bool {
-	for _, line := range strings.Split(text, "\n") {
+	for line := range strings.SplitSeq(text, "\n") {
 		date := dateInText.FindStringIndex(line)
 		if date == nil {
 			continue
@@ -155,7 +155,7 @@ func statesProof(text string) bool {
 // leadsWith reports whether the first paragraph whose language can be told is
 // in language. A draft with no such paragraph is not judged.
 func leadsWith(body string, language textlang.Lang) bool {
-	for _, paragraph := range strings.Split(body, "\n\n") {
+	for paragraph := range strings.SplitSeq(body, "\n\n") {
 		if found := textlang.Detect(paragraph); found != textlang.Unknown {
 			return found == language
 		}

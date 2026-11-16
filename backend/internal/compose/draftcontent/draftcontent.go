@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+// Package draftcontent binds the send preview's advertising content check to
+// the consent module, which owns the packs and reads each recipient's country.
 package draftcontent
-
-// The preview's advertising content edge, bound to the consent module, which
-// owns the packs and reads each recipient's country.
 
 import (
 	"context"
