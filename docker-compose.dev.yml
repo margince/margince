@@ -88,24 +88,21 @@ services:
     # their sum, not a round figure chosen to be comfortable:
     #
     #   INTEGRATION_JOBS                    8   (.github/workflows/_lane-integration.yml)
-    #   x LANE_CONNS_PER_PACKAGE           24   two pools at LANE_POOL_MAX_CONNS=8,
-    #                                           plus 8 for what the pin does not
-    #                                           reach — see the term's own note
+    #   x LANE_CONNS_PER_PACKAGE           72   3 parallel tests (the local ceiling;
+    #                                           CI runs 1), each with two
+    #                                           pools at LANE_POOL_MAX_CONNS=8
+    #                                           plus 8 the pin does not reach
     #   + one admin connection per slot     1   CREATE/DROP DATABASE at a handover
     #   ------------------------------------
-    #      8 x (24 + 1)                  = 200
+    #      8 x (72 + 1)                  = 584
     #   + LANE_FIXED_CONNS                  8   template migrate 2, superuser
     #                                           reserve 3, an operator's psql 3
     #   ------------------------------------
-    #                                    = 208
+    #                                    = 592
     #
-    # This number stays at 408, which is that sum at the SIXTEEN jobs the lane
-    # ran until the memory finding in #5483 brought it to eight. It is left above
-    # the demand deliberately, and it is the one place in this block where the
-    # figure is not the sum: the gate below holds `demand <= max_connections`,
-    # the direction that actually fails a lane, and cutting capacity in the same
-    # change that cut demand would mean a later INTEGRATION_JOBS going back up
-    # re-crosses two ceilings at once instead of one gate.
+    # postgres-test sets 600, a little above the sum: the gate holds
+    # `demand <= max_connections`, the direction that fails a lane. This
+    # server keeps 408 for make dev and the migrator.
     #
     # Measured, so the terms are not guesses: at INTEGRATION_JOBS=16 the whole
     # cluster peaks at 86 backends and one package at 16, sampled every 100ms
@@ -116,7 +113,7 @@ services:
     # entire content of #1109.
     #
     # TestTheLaneFitsInsideTheClusterItRunsAgainst (backend/gates/laneconnbudget_test.go)
-    # reads INTEGRATION_JOBS from the workflow and this number from this file, and
+    # reads INTEGRATION_JOBS from the workflow and this number from postgres-test, and
     # asks the lane script's own declare_lane_budget for the sum rather than
     # re-implementing it. It fails `make check` when the two stop fitting. Raising INTEGRATION_JOBS without raising this is
     # therefore a red gate rather than a lane that fails somewhere else.
@@ -191,29 +188,70 @@ services:
       timeout: 5s
       retries: 15
 
+  # The integration lanes' server. Every test copies the migrated template into
+  # a database of its own and drops it at the end; in RAM without disk syncs a
+  # copy and a drop take ~50 ms, on a durable disk ~140 ms
+  # (docs/explanation/ci-pipeline.md). A crash can corrupt its data, and the
+  # data is gone when the container stops, so it holds nothing worth keeping.
+  # The lock, connection and shared-memory notes on `postgres` above hold here
+  # too; the lane's connection budget is checked against this service. Its 640
+  # connections take about 48MB more shared memory than the 408 above.
+  postgres-test:
+    image: pgvector/pgvector:pg16@sha256:484e838076e04939d27d3e176e91c86eea96236126023be8d3059761122e579f
+    shm_size: 1g
+    command:
+      - postgres
+      - -c
+      - max_locks_per_transaction=512
+      - -c
+      - max_connections=640
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+    environment:
+      POSTGRES_USER: margince_owner
+      POSTGRES_PASSWORD: dev
+      POSTGRES_DB: margince
+    ports:
+      - "15433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U margince_owner -d margince"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
   redis:
     # 7.2 is the newest Redis the product supports
     # (docs/operations/system-requirements.md): 7.4 left the BSD license
     # family. renovate.json holds this image below 7.3; digest updates
     # within the 7.2 tag still flow, which is how patch releases arrive.
     image: redis:7.2@sha256:5b816bb37d9707a70f10ef5002ecf8ee431750d397010fc4314c93dca887962f
-    # 64 logical dbs, not the default 16. The integration lane gives each package
-    # its own db so two packages can never share one — several of them FLUSHDB
-    # between tests, which makes a shared db a silent corruption rather than a
-    # slowdown. The lane has more packages than 16 and keeps growing; keep this
-    # in step with REDIS_DBS in scripts/test-integration-parallel.sh, which
-    # refuses to run rather than wrap the mapping.
-    # 81 logical databases, in three blocks that must not overlap:
-    #   0        bare `make dev`
-    #   1..64    the parallel integration lane, one per package
-    #            (REDIS_DBS in scripts/test-integration-parallel.sh,
-    #             testdb.RedisDBs — the two must agree)
-    #   65..80   per-worktree dev stacks, one per slug (scripts/dev.sh)
-    # A slug sharing a db with a test package would have its streams FLUSHDB'd
-    # mid-run, and the test would read a dev stack's events as its own.
+    # 81 logical databases: db 0 for bare `make dev`, and 65..80 for the
+    # per-worktree dev stacks, one per slug (scripts/dev.sh). Tests never use
+    # this server; they use redis-test below.
     command: ["redis-server", "--databases", "81"]
     ports:
       - "16379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # The integration lanes' Redis, in RAM. Each test leases a database of its
+  # own for its life (testdb.RedisDB): db 0 holds the leases, the rest are
+  # leased. A lease reads this count from here and refuses a server that
+  # serves another, so it must differ from the count of `redis` above.
+  redis-test:
+    image: redis:7.2@sha256:5b816bb37d9707a70f10ef5002ecf8ee431750d397010fc4314c93dca887962f
+    command: ["redis-server", "--databases", "1024", "--save", "", "--appendonly", "no"]
+    ports:
+      - "16380:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 2s

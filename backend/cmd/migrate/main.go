@@ -348,7 +348,16 @@ func recreateDB(ctx context.Context, conn *pgx.Conn, name, template string, stdo
 	}
 	create := "CREATE DATABASE " + pgx.Identifier{name}.Sanitize()
 	if template != "" {
-		create += " TEMPLATE " + pgx.Identifier{template}.Sanitize()
+		// FILE_COPY forces a checkpoint, which costs nothing when the server does not sync to disk.
+		var unsynced bool
+		if err := conn.QueryRow(ctx, "SELECT current_setting('fsync') = 'off'").Scan(&unsynced); err != nil {
+			return fmt.Errorf("migrate recreate-db: reading fsync: %w", err)
+		}
+		strategy := "WAL_LOG"
+		if unsynced {
+			strategy = "FILE_COPY"
+		}
+		create += " TEMPLATE " + pgx.Identifier{template}.Sanitize() + " STRATEGY " + strategy
 	}
 	if _, err := conn.Exec(ctx, create); err != nil {
 		return fmt.Errorf("migrate recreate-db: creating %q: %w", name, err)
