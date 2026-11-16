@@ -767,3 +767,58 @@ it("reports a calendar connected from this page on its landing", async () => {
   await userEvent.setup().click(dismiss);
   expect(screen.queryByRole("button", { name: "Dismiss" })).toBeNull();
 });
+
+async function editLengths(user: User, value: string, input = "keyboard") {
+  const actions = await screen.findAllByRole("button", {
+    name: /More actions for/,
+  });
+  await user.click(actions[0]);
+  await user.click(screen.getByRole("button", { name: "Edit link" }));
+  const offered = await screen.findByRole<HTMLInputElement>("textbox", {
+    name: "Additional meeting lengths",
+  });
+  if (input === "keyboard") {
+    await user.clear(offered);
+    await user.type(offered, value);
+  } else {
+    offered.value = value;
+  }
+  await user.click(screen.getByRole("button", { name: "Save link" }));
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("textbox", { name: "Additional meeting lengths" }),
+    ).toBeNull(),
+  );
+}
+
+it.each(["keyboard", "accessibility"])(
+  "saves additional lengths again after reopening through %s edits",
+  async (input) => {
+    const user = userEvent.setup();
+    const server = mount({ video_call: true, location: "" });
+    await editLengths(user, "15, 30, 45, 60, 90", input);
+    expect(server.profileWrites).toHaveLength(1);
+    await editLengths(user, "15, 45, 60, 90", input);
+    expect(server.profileWrites).toHaveLength(2);
+    expect(server.profile.offered_lengths).toEqual([15, 45, 60, 90]);
+  },
+);
+
+it("removes unoffered booking rows and keeps the default duration", async () => {
+  const user = userEvent.setup();
+  const server = mount({
+    video_call: true,
+    location: "",
+    offered_lengths: [15, 30, 45, 60, 90],
+  });
+  await editLengths(user, "15, 60, 90");
+  expect(server.profileWrites).toHaveLength(1);
+  expect(server.profileWrites[0]).toMatchObject({
+    offered_lengths: [15, 60, 90],
+  });
+  for (const length of ["15 min", "60 min", "90 min"]) {
+    expect(screen.getByRole("cell", { name: length })).toBeTruthy();
+  }
+  expect(screen.queryByRole("cell", { name: "45 min" })).toBeNull();
+  expect(screen.getByRole("cell", { name: "30 min" })).toBeTruthy();
+});

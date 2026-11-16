@@ -95,6 +95,9 @@ func (s *Store) connectMeetingNotesTx(ctx context.Context, tx pgx.Tx, note notes
 	if err != nil {
 		return false, err
 	}
+	if err := followMeetingReadersTx(ctx, tx, note.Transcript, meetingID); err != nil {
+		return false, err
+	}
 	if input.recordedMeetingWritable && owesOutcome(meeting) {
 		marked, err := markRecordedMeetingHeld(ctx, tx, meeting, transcript, LogActivityInput{recordedAt: &at})
 		if err != nil {

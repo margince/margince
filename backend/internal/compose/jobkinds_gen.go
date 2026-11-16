@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "4a470aa751d30f7fc75cb645470da98d47828032cb1b143902cb74d9a2ec2085"
+const jobContractHash = "b811fc1bec958522798f4ddaa8973798971f78e158f23f1807855ca79beb1a20"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -122,6 +122,7 @@ func (TelegramIngestArgs) declaredJobType(TelegramIngestArgs)                   
 func (TelegramPollArgs) declaredJobType(TelegramPollArgs)                             {}
 func (TelegramPollSweepArgs) declaredJobType(TelegramPollSweepArgs)                   {}
 func (TimeScanArgs) declaredJobType(TimeScanArgs)                                     {}
+func (TranscriptAudienceSweepArgs) declaredJobType(TranscriptAudienceSweepArgs)       {}
 func (TranscriptProposeArgs) declaredJobType(TranscriptProposeArgs)                   {}
 func (VCardIngestArgs) declaredJobType(VCardIngestArgs)                               {}
 func (VoiceBuildArgs) declaredJobType(VoiceBuildArgs)                                 {}
@@ -197,6 +198,7 @@ var (
 	_ jobs.FleetWide = TagScoutArgs{}
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}
+	_ jobs.FleetWide = TranscriptAudienceSweepArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
 	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
 )
