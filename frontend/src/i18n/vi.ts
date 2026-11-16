@@ -21218,6 +21218,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.guide": "Hướng dẫn định tuyến ↗",
   "aiServing.blocked.decisions":
     "Mô hình quyết định trả lời qua endpoint decisions của OpenRouter, endpoint này không nhận khối định tuyến. Thời gian chờ đặt theo từng tác vụ trong mục Tác vụ AI.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} tự phục vụ mô hình quyết định, nên định tuyến máy chủ không áp dụng. Thời gian chờ đặt theo từng tác vụ trong mục Tác vụ AI.",
   "aiServing.blocked.provider":
     "Định tuyến máy chủ chỉ áp dụng cho OpenRouter. {provider} tự phục vụ mô hình này. Mức suy nghĩ và thời gian chờ vẫn đặt theo từng tác vụ trong mục Tác vụ AI.",
   "aiServing.blocked.host":

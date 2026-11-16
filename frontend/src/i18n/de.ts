@@ -21794,6 +21794,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiServing.guide": "Routing-Leitfaden ↗",
   "aiServing.blocked.decisions":
     "Das Entscheidungsmodell antwortet über den Entscheidungs-Endpunkt von OpenRouter, der keinen Routing-Block annimmt. Das Zeitlimit des Entscheidungsmodells wird pro Aufgabe unter KI-Aufgaben festgelegt.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} stellt das Entscheidungsmodell selbst bereit, daher gilt kein Host-Routing. Das Zeitlimit wird pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.blocked.provider":
     "Host-Routing gilt nur für OpenRouter. {provider} stellt dieses Modell selbst bereit. Denkstufe und Zeitlimit werden weiterhin pro Aufgabe unter KI-Aufgaben festgelegt.",
   "aiServing.blocked.host":
