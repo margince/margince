@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/suggestionlanes"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -40,7 +41,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// sentStatements records every statement a pool sends.
 type sentStatements struct{ sql []string }
 
 func (s *sentStatements) TraceQueryStart(ctx context.Context, _ *pgx.Conn, data pgx.TraceQueryStartData) context.Context {
@@ -67,7 +67,6 @@ func (*sentStatements) TraceBatchEnd(context.Context, *pgx.Conn, pgx.TraceBatchE
 // bound strict comparison proves the null test, so the generic plan keeps it.
 var predicateSpelling = regexp.MustCompile(`'(?:[^']|'')*'|::\w+(?:\[\])?|\b\w+\s*\([^()]*\)\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s+IS\s+(?:NOT\s+)?NULL\b|\b\w+\s*\(`)
 
-// predicateWords are the SQL words left in a predicate once predicateSpelling ran.
 var predicateWords = map[string]bool{
 	"and": true, "or": true, "not": true, "any": true, "array": true,
 	"is": true, "distinct": true, "from": true, "true": true, "false": true, "in": true, "null": true,
@@ -157,7 +156,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if _, err := cards.ReadFacts(ctx, ids.From[ids.DealKind](deal)); err != nil {
 			return err
 		}
-		if err := readSuggestionLanes(ctx, db); err != nil {
+		if err := readSuggestionLanes(ctx, db, deal); err != nil {
 			return err
 		}
 		if err := readPlannedOnceLanes(ctx, plannedOnceLanes{db: db, pool: pool, engine: engine}, deal, ids.UUID(mail.Id), at); err != nil {
@@ -294,17 +293,12 @@ func TestAWholeWorklistReadReusesPlansWithoutBindingPartialIndexPredicates(t *te
 	}
 }
 
-// plannedOnceLanes is what the Worklist's other plan-reusing reads are built on.
 type plannedOnceLanes struct {
 	db     *database.DB
 	pool   *pgxpool.Pool
 	engine *briefs.BriefEngine
 }
 
-// readPlannedOnceLanes runs the Worklist's other plan-reusing reads through
-// their seams. They are the task flags and their claims, the domain questions,
-// the champion cover and the brief run items. readMeetingLanes runs the
-// meetings.
 func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, task ids.UUID, at time.Time) error {
 	store := activities.NewStore(lanes.db)
 	claims := contacts.NewStore(lanes.db)
@@ -322,26 +316,36 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 	return err
 }
 
-// readSuggestionLanes runs the needs_you lane's four suggestion reads through
-// the seams that reuse their plans.
-func readSuggestionLanes(ctx context.Context, db *database.DB) error {
-	dealSuggestions := attentionDealSuggestions{store: deals.NewStore(db, DealsInstallation())}
+func readSuggestionLanes(ctx context.Context, db *database.DB, positionID ids.UUID) error {
+	dealSuggestions := suggestionlanes.Deals{Store: deals.NewStore(db, DealsInstallation())}
 	if _, _, err := dealSuggestions.OpenSuggestions(ctx, nil, 10); err != nil {
 		return err
 	}
 	if _, err := dealSuggestions.CountOpen(ctx, nil); err != nil {
 		return err
 	}
-	tagSuggestions := attentionTagSuggestions{store: collections.NewStore(db)}
+	position, err := deals.SuggestionPositionAfter(time.Unix(0, 0), positionID)
+	if err != nil {
+		return err
+	}
+	if _, _, err := dealSuggestions.SuggestionsAfter(ctx, nil, position, 10); err != nil {
+		return err
+	}
+	tagSuggestions := suggestionlanes.Tags{Store: collections.NewStore(db)}
 	if _, err := tagSuggestions.OpenTagSuggestions(ctx, 10); err != nil {
 		return err
 	}
-	_, err := tagSuggestions.CountOpenTagSuggestions(ctx)
+	if _, err := tagSuggestions.CountOpenTagSuggestions(ctx); err != nil {
+		return err
+	}
+	position, err = collections.TagSuggestionPositionAfter(time.Unix(0, 0), positionID)
+	if err != nil {
+		return err
+	}
+	_, _, err = tagSuggestions.TagSuggestionsAfter(ctx, position, 10)
 	return err
 }
 
-// seedPlannedMeeting books a meeting with the contact at the given start, so the
-// meeting lanes read a row and finish it.
 func seedPlannedMeeting(t *testing.T, e *integration.Env, contact ids.UUID, startsAt time.Time) {
 	t.Helper()
 	subject, status := "Kick-off", "booked"
@@ -353,8 +357,6 @@ func seedPlannedMeeting(t *testing.T, e *integration.Env, contact ids.UUID, star
 	}
 }
 
-// readMeetingLanes runs the meetings lanes' reads through the seams that reuse
-// their plans, under every scope a lane can be asked for.
 func readMeetingLanes(ctx context.Context, store *activities.Store, at time.Time, owner ids.UUID) error {
 	window := attention.MeetingWindow{From: at.Add(-24 * time.Hour), Until: at.Add(12 * time.Hour), DaysFrom: at, DaysUntil: at.AddDate(0, 0, 1)}
 	for _, scope := range []attention.TaskScope{attention.TasksVisible, attention.TasksMine, attention.TasksUnassigned, attention.TasksOwnedBy} {

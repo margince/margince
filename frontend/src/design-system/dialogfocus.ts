@@ -158,6 +158,7 @@ export function panelsOpenedFrom(container: HTMLElement | null): HTMLElement[] {
     .map((trigger) =>
       document.getElementById(trigger.getAttribute("aria-controls") ?? ""),
     )
+    .map((panel) => panel?.closest<HTMLElement>("[data-portal-panel]") ?? panel)
     .filter(
       (panel): panel is HTMLElement =>
         panel !== null && !container?.contains(panel),

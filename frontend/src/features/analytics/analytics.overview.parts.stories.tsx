@@ -80,7 +80,11 @@ function story(view: OverviewView, children: ReactNode): Story {
         ...setup,
         routes: {
           ...setup.routes,
-          evidence: () => evidence(null),
+          evidence: () =>
+            evidence(
+              null,
+              new URL("https://storybook.local/v1/analytics/evidence"),
+            ),
           grants: { ...ADMIN_GRANTS, activity: ["read", "create", "update"] },
         },
       });

@@ -2,9 +2,11 @@
   "verb": "run_analytics_query",
   "checks": [
     "activity.read",
+    "company.read",
     "deal.read",
     "installation_settings.read",
     "lead.read",
-    "project.read"
+    "project.read",
+    "relationship.read"
   ]
 }

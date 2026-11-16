@@ -700,7 +700,7 @@ export const SectionPhoneGerman: Story = {
       }
       expect(name.textContent).toBe("Datenschutz und Aufbewahrung");
       expect(name.scrollWidth).toBeLessThanOrEqual(name.clientWidth);
-      const firstLine = parseFloat(getComputedStyle(name).lineHeight);
+      const firstLine = Number.parseFloat(getComputedStyle(name).lineHeight);
       const glyph = chevron.getBoundingClientRect();
       expect(glyph.top + glyph.height / 2).toBeCloseTo(
         name.getBoundingClientRect().top + firstLine / 2,

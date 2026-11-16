@@ -13,6 +13,7 @@ import {
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { FilterBuilder } from "./filterbuilder";
@@ -84,6 +85,11 @@ const FIELDS: VocabularyField[] = [
 // makes it stop at its page budget instead, which the clause has to disclose.
 function routes(nextCursor: string | null = null): void {
   installFetchStub({
+    "GET /me": meRoute({
+      contact: ["read"],
+      company: ["read"],
+      deal: ["read"],
+    }),
     "GET /users": () =>
       jsonResponse({
         data: [

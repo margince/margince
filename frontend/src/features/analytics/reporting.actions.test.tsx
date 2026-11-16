@@ -223,10 +223,12 @@ it("creates a fiscal-quarter count target on every pipeline and pages the target
         value: 120,
         period_kind: "fiscal_quarter",
       }),
+      expect.any(URL),
     ),
   );
   expect(write).not.toHaveBeenCalledWith(
     expect.objectContaining({ pipeline_id: expect.anything() }),
+    expect.any(URL),
   );
 });
 
@@ -260,6 +262,7 @@ it("removes a capture context without leaving an enabled phantom capture", async
   await waitFor(() =>
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({ capture_contexts: [] }),
+      expect.any(URL),
     ),
   );
 });
