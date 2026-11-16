@@ -29,6 +29,7 @@ import (
 // Each test gets its own database: the path is set per-database and would
 // otherwise outlive the test for every suite that connected afterwards.
 
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 	ctx := context.Background()
 	t.Setenv(clockskew.EnvVar, "database:200")
@@ -78,6 +79,7 @@ func TestTheDatabaseApplierMovesAnUnqualifiedNowForTheAppRole(t *testing.T) {
 	}
 }
 
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestEveryOtherApplierLeavesTheDatabaseClockAlone(t *testing.T) {
 	ctx := context.Background()
 
@@ -100,6 +102,8 @@ func TestEveryOtherApplierLeavesTheDatabaseClockAlone(t *testing.T) {
 // lives in pg_db_role_setting rather than in a schema, so re-migrating does not
 // remove it. An ordinary run would otherwise inherit a previous drift run's path,
 // with nothing set and nothing printed.
+//
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestAnOrdinaryRunClearsAPreviousDriftRunsResidue(t *testing.T) {
 	ctx := context.Background()
 	t.Setenv(clockskew.EnvVar, "database:200")

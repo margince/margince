@@ -7,7 +7,6 @@ package testdb
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -21,17 +20,12 @@ import (
 // the lane stays on the mode cmd/api runs. The two DSNs come from different
 // env vars, so a mode exported on one would escape an app-pool-only assertion.
 func TestEveryPooledDSNRunsProductionsExecMode(t *testing.T) {
-	// ownerConn migrates, which is the precondition Pool refuses to run before.
-	// Opening both DSNs here means the map holds what the lane's fixtures hold,
-	// rather than whichever one a neighbouring test happened to ask for first.
-	ownerConn(t)
-	for _, env := range []string{"MARGINCE_TEST_APP_DSN", "MARGINCE_TEST_DSN"} {
-		dsn := os.Getenv(env)
-		if dsn == "" {
-			t.Fatalf("%s not set — run `make db-up` (integration tests fail loudly, they never skip)", env)
-		}
+	t.Parallel()
+	// Both DSNs, so the map holds what the lane's fixtures hold.
+	db := For(t)
+	for _, dsn := range []string{db.AppDSN, db.OwnerDSN} {
 		if _, err := Pool(context.Background(), dsn); err != nil {
-			t.Fatalf("opening the shared pool for %s: %v", env, err)
+			t.Fatalf("opening the shared pool for %s: %v", redactDSN(dsn), err)
 		}
 	}
 

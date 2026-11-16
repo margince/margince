@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheCloneProbeChecksEveryComposedExtensionLedger(t *testing.T) {
 	ctx := context.Background()
 	owner := ownerConn(t)
@@ -67,6 +68,7 @@ func TestTheCloneProbeChecksEveryComposedExtensionLedger(t *testing.T) {
 	}
 }
 
+//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestAnAbsentExtensionCensusCannotProveTheCloneAtHead(t *testing.T) {
 	t.Setenv(extensionManifestEnv, "")
 	if _, err := testExtensionNamespaces(); err == nil {

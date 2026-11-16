@@ -20,9 +20,8 @@ import (
 // 8 is measured, not guessed. A batch's cost is not its table count: CASCADE
 // also locks each dropped table's indexes and every constraint riding on it, so
 // on this schema a batch runs ~30-40 locks per table. Batches of 24 peaked at
-// 780; batches of 8 peak at 339, which puts the drop at or below what one
-// ordinary Reset already costs — the point past which shrinking it further only
-// buys round trips.
+// 780; batches of 8 peak at 339, the point past which shrinking it further
+// only buys round trips.
 const dropTableBatch = 8
 
 // unreferencedTables lists tables no OTHER table's foreign key points at — the
@@ -124,9 +123,8 @@ func dropCandidates(ctx context.Context, owner *pgx.Conn, selector string) ([]st
 // opclasses and support functions with them — split out, the worst is 653 and the
 // final schema drop is 18.
 //
-// 653 is no longer an outlier: it is what one ordinary Reset already costs on
-// this schema, so EnsureSchema stops being the statement that alone cannot share
-// the instance. Sizing the instance for the lane's remaining steady-state demand
+// At 653, EnsureSchema stops being the statement that alone cannot share the
+// instance. Sizing the instance for the lane's remaining steady-state demand
 // is a separate matter, and is done where the instance is defined —
 // docker-compose.dev.yml, which CI runs via `make db-up`.
 //
@@ -170,7 +168,7 @@ func dropPublicSchema(ctx context.Context, owner *pgx.Conn) error {
 		// CASCADE, and the batch is named in ONE statement: two tables in the
 		// same batch may reference each other, and dropping them one at a time
 		// would refuse on the dependency rather than remove it. Same injection
-		// posture as the reset's DELETE batch — every name is quote_ident()
+		// posture as every other catalog read here — every name is quote_ident()
 		// over pg_class, schema-qualified, never caller input.
 		if _, err := owner.Exec(ctx, `DROP TABLE `+strings.Join(tables, `, `)+` CASCADE`); err != nil {
 			return fmt.Errorf("dropping tables: %w", err)
