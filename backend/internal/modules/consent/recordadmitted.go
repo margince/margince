@@ -145,7 +145,7 @@ func (s *Store) recordAdmittedTx(
 // its pack sets. One task per act: a press that withdrew four purposes is one
 // request.
 func (s *Store) answerWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, purposeClass string, at time.Time) error {
-	if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purposeClass); err != nil {
+	if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purposeClass, at); err != nil {
 		return err
 	}
 	act, err := withdrawalActTx(ctx, tx)

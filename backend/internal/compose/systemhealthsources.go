@@ -14,9 +14,12 @@ import (
 	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/continuity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/noticekeys"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -298,6 +301,40 @@ func (s Server) automaticSummary(ctx context.Context) (crmcontracts.HealthSource
 	source.Condition, source.Code = healthWaitingHuman, "automatic_routing"
 	f := healthFinding(source, source.Code, healthWaitingHuman, n, "items")
 	f.Responsible = crmcontracts.HealthFindingResponsibleAdministrator
+	f.Urgency = 1
+	return source, []crmcontracts.HealthFinding{f}, nil
+}
+
+// receiptsSummary reports the opt-out receipts a refusal owed that did not go
+// out in time, over the window the alarm sweep still retries.
+func (s Server) receiptsSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+	source := healthSource("receipts", healthReadObject)
+	now := utcNow()
+	from := now.Add(-owedReceiptWindow)
+	n, err := healthTx(ctx, s.jobHealthHandlers.pool, func(ctx context.Context, tx pgx.Tx) (int, error) {
+		missed, err := consent.MissedReceiptsSinceTx(ctx, tx, from)
+		if err != nil {
+			return 0, err
+		}
+		overdue, err := comms.UnraisedOverdueReceiptCountTx(ctx, tx, now, noticekeys.OptOutReceiptPrefix)
+		return missed + overdue, err
+	})
+	if err != nil {
+		return source, nil, err
+	}
+	source.ObservedAt = &now
+	source.WindowStart, source.WindowEnd = &from, &now
+	source.Condition, source.Code = healthClear, "receipts_sent"
+	source.Count = &n
+	unit := crmcontracts.HealthSourceUnit("items")
+	source.Unit = &unit
+	if n == 0 {
+		return source, nil, nil
+	}
+	source.Condition, source.Code = healthWaitingHuman, "receipts_missed"
+	f := healthFinding(source, source.Code, healthWaitingHuman, n, "items")
+	f.Responsible = crmcontracts.HealthFindingResponsibleAdministrator
+	f.Impact = crmcontracts.HealthFindingImpactMeasured
 	f.Urgency = 1
 	return source, []crmcontracts.HealthFinding{f}, nil
 }

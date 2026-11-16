@@ -1639,6 +1639,10 @@ func (stubs) PreviewControllerMail(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "PreviewControllerMail")
 }
 
+func (stubs) ExportContactOptOutRecords(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ExportContactOptOutRecords")
+}
+
 func (stubs) SendPrivacyNotice(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SendPrivacyNotice")
 }

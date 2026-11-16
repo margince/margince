@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -52,6 +53,10 @@ type SuppressInput struct {
 	// suppression somebody later wants lifted is only reviewable if the record
 	// says why it was made.
 	Reason string
+	// ReceivedAt is when the refusal reached the controller: the arrival of the
+	// mail that said so, or the time of the call. Nil means it arrived as it was
+	// recorded. A Vietnamese receipt prints it (Decree 91/2020 Art. 20.4(a)).
+	ReceivedAt *time.Time
 }
 
 // The kinds a seat may write, and the two are a different shape of thing.
@@ -283,6 +288,9 @@ func (s *Store) suppressAdmittedTx(
 	if err != nil {
 		return err
 	}
+	if in.ReceivedAt != nil && in.ReceivedAt.After(recordedAt) {
+		return &ValidationError{Field: fieldReceivedAt, Reason: "a refusal cannot arrive after it is recorded; give the time it reached you"}
+	}
 	// storekit.CapturedBy, which is the write shape's own reader: it resolves
 	// the authenticated principal to the string every audited table stores, so
 	// a suppression names its author the same way every other row does.
@@ -311,12 +319,13 @@ func (s *Store) suppressAdmittedTx(
 	// subject's new record is matched through them. The first row answers the id.
 	rows, err := tx.Query(ctx, `
 		INSERT INTO communication_suppression
-		    (`+sub.column+`, address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_through, recorded_at)
-		SELECT $1, u.hash, CASE WHEN u.hash IS NOT NULL THEN $8::text END, $2, $3, $4, $5, $6, $9
+		    (`+sub.column+`, address_hash, address_key_id, kind, source, captured_by, decided_by_level, recorded_through,
+		     recorded_at, received_at)
+		SELECT $1, u.hash, CASE WHEN u.hash IS NOT NULL THEN $8::text END, $2, $3, $4, $5, $6, $9::timestamptz, coalesce($10::timestamptz, $9::timestamptz)
 		  FROM unnest(coalesce($7::text[], ARRAY[NULL::text])) WITH ORDINALITY AS u(hash, n)
 		 ORDER BY u.n
 		RETURNING id`,
-		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept, keptKey, recordedAt)
+		sub.id, in.Kind, suppressionSource(in.Reason), by, string(level), string(through), kept, keptKey, recordedAt, in.ReceivedAt)
 	if err != nil {
 		return fmt.Errorf("consent: recording the suppression: %w", err)
 	}
@@ -348,7 +357,7 @@ func (s *Store) suppressAdmittedTx(
 	}
 	// THE ACKNOWLEDGEMENT THIS STOP OWES, on the same transaction.
 	//
-	// Decree 91/2020 Art. 16 owes a Vietnamese recipient a confirmation that
+	// Decree 91/2020 Art. 20 owes a Vietnamese recipient a confirmation that
 	// their refusal was received. Staging it here rather than from a consumer
 	// of the event below makes the stop and its acknowledgement one fact: a
 	// separate consumer would have to answer what happens when the stop commits
@@ -357,7 +366,12 @@ func (s *Store) suppressAdmittedTx(
 	//
 	// Answers nothing where no pack owes one, which is every installation but a
 	// Vietnamese one today.
-	if err := s.acknowledgeOptOutTx(ctx, tx, sub, in.Kind, stopID); err != nil {
+	received := recordedAt
+	if in.ReceivedAt != nil {
+		received = *in.ReceivedAt
+	}
+	if err := s.acknowledgeOptOutTx(ctx, tx, sub, in.Kind, stopID,
+		RefusalTimes{ReceivedAt: received, StoppedAt: recordedAt}); err != nil {
 		return err
 	}
 	if acknowledgeableStop(in.Kind) {

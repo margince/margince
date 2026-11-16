@@ -2092,9 +2092,7 @@ export const en = {
   "brief.schedule.connect": "Connect a calendar",
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
-  "brief.schedule.now": "Now",
-  "brief.schedule.freeUntil": "Free until {time}",
-  "brief.schedule.clearRest": "Nothing else booked today",
+  "brief.schedule.clearRest": "No more external meetings today",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -3598,6 +3596,7 @@ export const en = {
   "consent.stopLiftBody": "Mail this stop held back can be sent again.",
   "consent.stopReason": "Why (kept in the record history)",
   "consent.manage": "Manage consent and proof history",
+  "consent.optOutRecords": "Download opt-out records",
   "contact.consent": "Consent",
   "consent.grant": "Record consent",
   // Submitted as the proof row's wording when an operator records a grant
@@ -7059,7 +7058,7 @@ export const en = {
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.panel.schedule": "Your day",
+  "brief.panel.schedule": "External meetings",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -22285,6 +22284,8 @@ export const en = {
     "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
   "health.effect.automatic":
     "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
+  "health.effect.receipts":
+    "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, which the rules of their country require at once.",
   "health.effect.readFailed":
     "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
   "health.reportCopyFailed": "Could not copy the technical report",
@@ -22377,6 +22378,7 @@ export const en = {
   "health.source.updates": "Data updates",
   "health.source.recovery": "Recovery evidence",
   "health.source.automatic": "Automatic work quality",
+  "health.source.receipts": "Opt-out receipts",
   "health.scope": "Affected scope",
   "health.window": "Reporting window",
   "health.observed": "Latest observation",
@@ -22403,6 +22405,8 @@ export const en = {
     "Record a successful restore drill within the recovery and data-loss targets.",
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
+  "health.recovery.receipts":
+    "Each refusal in the last 30 days must have a sent receipt, or its alert must be settled.",
   "health.ownerHandoff":
     "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Connections, on the Activity tab.",
   "health.operatorHandoff":
@@ -22474,6 +22478,9 @@ export const en = {
   "health.code.automatic_checked":
     "No routing-review threshold exceeded in the checked sample",
   "health.code.automatic_routing": "Automatic work routing needs review",
+  "health.code.receipts_sent":
+    "Every opt-out receipt owed in the last 30 days was sent",
+  "health.code.receipts_missed": "Some opt-out receipts were not sent",
   "health.code.capture_thread_processing":
     "Thread classification is processing",
   "health.code.capture_thread_uncertain": "Review private conversations",
@@ -22497,6 +22504,8 @@ export const en = {
     "The restore test did not meet its targets. Ask your system operator to fix the problem and run another test.",
   "health.impact.automatic":
     "Work may be assigned to the wrong colleague. Review routing and correct the owner.",
+  "health.impact.receipts":
+    "Contacts who refused advertising did not get the receipt the law requires. Open the notifications about missed receipts and fix the address or the mail setup.",
   "analytics.outlook.calledAt": "Called {at}",
   "analytics.prospect.weeksByQualification":
     "Each lead counts in the week it was first qualified.",
