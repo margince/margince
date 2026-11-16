@@ -24,12 +24,14 @@ func TestErasingAMessageErasesTheReminderThatQuotesIt(t *testing.T) {
 			env := setupSARIdentifiers(t)
 			message := seedSubjectActivity(t, env)
 			reminder := ids.NewV7()
+			quoted := &systemtext.Message{
+				Version: 1, Subject: systemtext.Sentence("task.reply_to_email"),
+				Body: systemtext.Sentence("request.asked", systemtext.Text("Anna Weber"), systemtext.Text("Please send the report.")),
+			}
 			mustExec(context.Background(), t, env.owner, `INSERT INTO activity
 				(id, kind, subject, body, system_text, occurred_at, source, captured_by, source_system, source_id, source_activity_id)
 				VALUES ($1, 'task', $5, 'Anna Weber asked: "Please send the report."', $6, now(), 'manual',
-				        'system:test', $2, $3, $4)`, reminder, provenance.EmailRequestSource, message.String(), message, title,
-				&systemtext.Message{Version: 1, Subject: systemtext.Sentence("task.reply_to_email"),
-					Body: systemtext.Sentence("request.asked", systemtext.Text("Anna Weber"), systemtext.Text("Please send the report."))})
+				        'system:test', $2, $3, $4)`, reminder, provenance.EmailRequestSource, message.String(), message, title, quoted)
 
 			eraser := NewEraser(env.db).WithRawCapturePurger(&nilRawPurger{})
 			if err := env.db.Tx(env.ctx, func(tx pgx.Tx) error {

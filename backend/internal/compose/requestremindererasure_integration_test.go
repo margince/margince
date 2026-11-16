@@ -42,9 +42,11 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 		t.Fatal(err)
 	}
 	connector := principal.WithActor(reader, principal.Principal{Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: integration.AdminPerms})
-	raw := []byte(strings.Join([]string{"From: Anna Weber <anna@customer.test>", "To: first@customer.test, reply-alias@ourco.test",
+	raw := []byte(strings.Join([]string{
+		"From: Anna Weber <anna@customer.test>", "To: first@customer.test, reply-alias@ourco.test",
 		"Subject: Product report", "Message-ID: <quoted-ask@customer.test>", "Date: " + at.Format(time.RFC1123Z),
-		"Content-Type: text/plain; charset=utf-8", "", "Hello. Please send the report. Thanks."}, "\r\n"))
+		"Content-Type: text/plain; charset=utf-8", "", "Hello. Please send the report. Thanks.",
+	}, "\r\n"))
 	parsed, err := mailmap.Parse(raw, "reply-alias@ourco.test")
 	if err != nil {
 		t.Fatal(err)

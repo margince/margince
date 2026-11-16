@@ -24,7 +24,7 @@ func (e *Eraser) eraseRequestReminders(ctx context.Context, tx pgx.Tx, source id
  WHERE a.source_system = @system AND a.source_activity_id = @source AND a.system_text IS DISTINCT FROM @erased
  AND a.restricted_at IS NULL AND NOT `+retentionscope.HeldThroughAnyLink("a.id")+`
  ORDER BY a.id FOR UPDATE`,
-		pgx.NamedArgs{"system": provenance.EmailRequestSource, "source": source, "erased": erasedActivityText()})
+		pgx.NamedArgs{"system": provenance.EmailRequestSource, "source": source, erasedTextParameter: erasedActivityText()})
 	if err != nil {
 		return err
 	}
