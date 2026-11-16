@@ -98,39 +98,24 @@ func (s *Store) SyncConnection(
 		return SyncResult{}, err
 	}
 
-	// The ledgers are read with no transaction open. A vendor answers in
-	// seconds per customer, and a transaction held across every call would
-	// keep the mirror's rows locked for the whole pass.
-	ledgers := make(map[string]SourceLedger, len(links))
+	// Each ledger is read with no transaction open, then written in its own.
+	// One transaction across every vendor call would lock the mirror for the
+	// whole pass. A pass cut short would also keep nothing it had read.
 	for _, l := range links {
 		ledger, err := provider.InvoicesFor(ctx, l.externalCustomerID)
 		if err != nil {
 			return SyncResult{}, fmt.Errorf("read the ledger for %s: %w", l.externalCustomerID, err)
 		}
-		ledgers[l.externalCustomerID] = ledger
+		stillConnected, err := s.mirrorCustomerLedger(ctx, conn.id, l.externalCustomerID, ledger, source, &out)
+		if err != nil || !stillConnected {
+			return SyncResult{}, err
+		}
 	}
 
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// A source disconnected while the ledgers were read is left as the
-		// administrator set it; marking it synced would reconnect it.
 		live, stillConnected, err := readConnection(ctx, tx)
 		if err != nil || !stillConnected || live.id != conn.id {
 			return err
-		}
-		// The links as they stand now. One removed while the ledgers were read
-		// writes nothing, and one moved to another company follows the move.
-		current, err := readLinks(ctx, tx, conn.id)
-		if err != nil {
-			return err
-		}
-		for _, l := range current {
-			ledger, fetched := ledgers[l.externalCustomerID]
-			if !fetched {
-				continue
-			}
-			if err := s.mirrorLedger(ctx, tx, conn.id, l, ledger, source, &out); err != nil {
-				return err
-			}
 		}
 		return markSynced(ctx, tx, conn.id)
 	})
@@ -138,6 +123,37 @@ func (s *Store) SyncConnection(
 		return SyncResult{}, err
 	}
 	return out, nil
+}
+
+// mirrorCustomerLedger writes one customer's ledger through its link as the
+// link stands now. It answers false when the connection the pass ran against
+// is no longer the live one. Writing then, or marking the pass synced, would
+// reconnect a source the administrator disconnected while the ledger was read.
+func (s *Store) mirrorCustomerLedger(
+	ctx context.Context, connectionID ids.UUID, externalCustomerID string,
+	ledger SourceLedger, source string, out *SyncResult,
+) (bool, error) {
+	stillConnected := false
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		live, connected, err := readConnection(ctx, tx)
+		if err != nil || !connected || live.id != connectionID {
+			return err
+		}
+		stillConnected = true
+		// A link removed while the ledger was read writes nothing, and one
+		// moved to another company follows the move.
+		current, err := readLinks(ctx, tx, connectionID)
+		if err != nil {
+			return err
+		}
+		for _, l := range current {
+			if l.externalCustomerID == externalCustomerID {
+				return s.mirrorLedger(ctx, tx, connectionID, l, ledger, source, out)
+			}
+		}
+		return nil
+	})
+	return stillConnected, err
 }
 
 // link is one accounting customer's mapping onto a company. Every row mirrored
@@ -382,6 +398,9 @@ func stampOf(at *time.Time) string {
 // that fails must not replace the failure it was trying to record — the caller
 // would then report the wrong reason for the wrong thing.
 func (s *Store) RecordSyncFailure(ctx context.Context, cause error) error {
+	// Detached: the pass's context may have ended, often the reason it failed.
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), failureRecordTimeout)
+	defer cancel()
 	writeErr := s.tx(ctx, func(tx pgx.Tx) error {
 		// The SAME connection the pass ran against, resolved the same way the
 		// pass resolved it. The statement used to carry no id predicate at all
@@ -405,6 +424,9 @@ func (s *Store) RecordSyncFailure(ctx context.Context, cause error) error {
 	}
 	return cause
 }
+
+// failureRecordTimeout bounds the write that records a failed pass.
+const failureRecordTimeout = 15 * time.Second
 
 // markSyncFailed puts one connection into the error state.
 //
