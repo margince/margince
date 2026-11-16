@@ -34,9 +34,10 @@ const meetingTranscriptSharedSQL = `t.audience = 'workspace' AND t.restricted_at
 	AND cardinality(t.redacted_fields) = 0`
 
 // meetingCompanyPresentSQL holds while transcript t still has a participant
-// who could speak for the company of field alias: a stated, standing party in a
-// role a reading attributes, whose current primary employer it is. The reading
-// reads its speakers through activities.PartiesOf under the same tests.
+// who could speak for the company of field alias. That is a stated, standing
+// party in a role a reading attributes, and the company is its current primary
+// employer. A reading takes its speakers from activities.PartiesOf under the
+// same tests.
 func meetingCompanyPresentSQL(field string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant p JOIN relationship rel ON rel.contact_id = p.contact_id
 		WHERE p.activity_id = t.id AND p.role IN ('from', 'to', 'cc', 'organizer', 'attendee')
