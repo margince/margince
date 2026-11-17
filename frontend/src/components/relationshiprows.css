@@ -8,3 +8,9 @@
 .relationshiprows-verbs-stacked {
   justify-content: flex-end;
 }
+
+/* A date range reads as one value: the role and the name beside it wrap first,
+   and a table still too wide scrolls inside its own box. */
+.relationshiprows-dates {
+  white-space: nowrap;
+}

@@ -176,6 +176,8 @@ const sent: Array<{ method: string; path: string; body: unknown }> = [];
 function mount(
   view: Contact360,
   guard?: components["schemas"]["ContactConsentGuard"],
+  // `null` leaves the import read unanswered, as a slow provider would.
+  imported: components["schemas"]["EmploymentImportItem"][] | null = [],
 ) {
   sent.length = 0;
   vi.stubGlobal(
@@ -219,6 +221,10 @@ function mount(
           })),
           page,
         });
+      }
+      if (url.pathname.endsWith("/employment-import")) {
+        if (imported === null) return new Promise<Response>(() => undefined);
+        return json({ contact_id: view.contact.id, items: imported });
       }
       // The employer picker searches companies; without a candidate the
       // modal's Save stays disabled and there is no request to inspect.
@@ -742,6 +748,51 @@ describe("a contact with no primary employer", () => {
       await screen.findByText(en["contact.rail.noEmployment"]),
     ).toBeTruthy();
     expect(screen.queryByText(en["contact.rail.noPrimaryEmployer"])).toBeNull();
+  });
+});
+
+describe("bought work history that waits for a company match", () => {
+  const bought: Contact360 = {
+    ...emptyButGranted,
+    provider_profiles: [
+      {
+        provider: "surfe",
+        state: "completed",
+        categories_not_requested: [],
+        emails: [],
+        mobile_phones: [],
+        departments: [],
+        seniorities: [],
+        job_history: [
+          { company_name: "Kessler Logistik AG", job_title: "CFO" },
+        ],
+      },
+    ],
+  };
+  const episode: components["schemas"]["EmploymentImportItem"] = {
+    key: "episode",
+    provider: "surfe",
+    company_name: "Kessler Logistik AG",
+    role: "CFO",
+    employment_status: "former",
+    state: "needs_match",
+  };
+
+  it("lists the episodes instead of calling the work history empty", async () => {
+    mount(bought, undefined, [episode]);
+    expect(await screen.findByText("Kessler Logistik AG")).toBeTruthy();
+    expect(screen.queryByText(en["contact.rail.noEmployment"])).toBeNull();
+    expect(
+      screen.getByRole("button", { name: en["contact.rail.addEmployment"] }),
+    ).toBeTruthy();
+  });
+
+  it("does not call it empty while the bought episodes are still loading", async () => {
+    mount(bought, undefined, null);
+    expect(
+      await screen.findByText(en["employment.importLoading"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["contact.rail.noEmployment"])).toBeNull();
   });
 });
 

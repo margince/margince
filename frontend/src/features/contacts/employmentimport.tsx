@@ -21,21 +21,17 @@ type Item = components["schemas"]["EmploymentImportItem"];
 type Request = components["schemas"]["EmploymentImportRequest"];
 type Contact360 = components["schemas"]["Contact360"];
 
-export function ImportedEmploymentHistory({
-  view,
-  canEdit,
-}: Readonly<{ view: Contact360; canEdit: boolean }>) {
-  const t = useT();
-  const client = useQueryClient();
+// The bought episodes no linked employment answers yet. The panel's empty line
+// reads this too, so it cannot call the panel empty while episodes still show.
+export function useEmploymentImport(view: Contact360, enabled = true) {
   const id = view.contact.id;
   const hasEvidence =
     view.provider_profiles?.some(
       (profile) => profile.current_employment || profile.job_history.length > 0,
     ) ?? false;
-  const key = ["employmentImport", id];
   const reading = useQuery({
-    queryKey: key,
-    enabled: hasEvidence,
+    queryKey: ["employmentImport", id],
+    enabled: enabled && hasEvidence,
     queryFn: async () => {
       return unwrap(
         await api.GET("/contacts/{id}/employment-import", {
@@ -44,6 +40,27 @@ export function ImportedEmploymentHistory({
       );
     },
   });
+  const linkedIds = new Set(
+    view.employments?.data.map((role) => role.relationship_id),
+  );
+  const outstanding = hasEvidence
+    ? (reading.data?.items ?? []).filter(
+        (item) =>
+          item.state !== "dismissed" &&
+          (!item.relationship_id || !linkedIds.has(item.relationship_id)),
+      )
+    : [];
+  return { hasEvidence, reading, outstanding };
+}
+
+export function ImportedEmploymentHistory({
+  view,
+  canEdit,
+}: Readonly<{ view: Contact360; canEdit: boolean }>) {
+  const t = useT();
+  const client = useQueryClient();
+  const id = view.contact.id;
+  const { hasEvidence, reading, outstanding } = useEmploymentImport(view);
   const [resolving, setResolving] = useState<Item | null>(null);
   const apply = useMutation({
     mutationFn: async ({
@@ -71,14 +88,6 @@ export function ImportedEmploymentHistory({
     },
   });
   if (!hasEvidence) return null;
-  const linkedIds = new Set(
-    view.employments?.data.map((role) => role.relationship_id),
-  );
-  const outstanding = (reading.data?.items ?? []).filter(
-    (item) =>
-      item.state !== "dismissed" &&
-      (!item.relationship_id || !linkedIds.has(item.relationship_id)),
-  );
   const groups = new Map<string, Item[]>();
   for (const item of outstanding) {
     const company = item.company_id ?? item.company_name.toLowerCase();

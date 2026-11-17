@@ -289,7 +289,9 @@ export function RelationshipRows({
     {
       key: "dates",
       header: t("rel.dates"),
-      render: (rel: Relationship) => dateRange(rel, t),
+      render: (rel: Relationship) => (
+        <span className="relationshiprows-dates">{dateRange(rel, t)}</span>
+      ),
     },
     {
       key: "actions",

@@ -28,7 +28,10 @@ import {
   useEmployerProposal,
 } from "./employerproposal";
 import { EmploymentEdit } from "./employmentedit";
-import { ImportedEmploymentHistory } from "./employmentimport";
+import {
+  ImportedEmploymentHistory,
+  useEmploymentImport,
+} from "./employmentimport";
 import { useEmploymentPages } from "./employmentpages";
 import { patchEmployment } from "./employmentpatch";
 
@@ -189,6 +192,12 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   );
   const adding = useAddEmployment(contact.id, actions.create, employments);
   const proposed = proposedEmployer(view, employments);
+  const withheld = withheldSections(view).employments;
+  const importView = {
+    ...view,
+    employments: { data: employments, page: { has_more: false } },
+  };
+  const imported = useEmploymentImport(importView, !withheld);
   return (
     <Panel
       title={t("contact.rail.employmentTitle")}
@@ -220,10 +229,15 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
         <ErrorLine error={proposal.verdict.error} />
         <SurfaceState
           loadingLabel={t("contact.rail.employmentTitle")}
-          state={bodyState(
-            withheldSections(view).employments,
-            employments.length,
-          )}
+          state={
+            // `isLoading`, not `isPending`: a disabled read is pending forever.
+            employments.length === 0 && imported.reading.isLoading
+              ? "loading"
+              : bodyState(
+                  withheld,
+                  employments.length + imported.outstanding.length,
+                )
+          }
           emptyLabel={t("contact.rail.noEmployment")}
         >
           {employments.map((employment, index) => (
@@ -282,13 +296,10 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             {t("employment.more")}
           </Button>
         )}
-        {!withheldSections(view).employments && (
+        {!withheld && (
           <ImportedEmploymentHistory
             key={contact.id}
-            view={{
-              ...view,
-              employments: { data: employments, page: { has_more: false } },
-            }}
+            view={importView}
             canEdit={canEdit}
           />
         )}
