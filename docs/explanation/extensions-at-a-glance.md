@@ -309,4 +309,6 @@ first how-to below.
   home side drawer.
 - [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md): let units use a core
   service that holds a secret.
+- [override-core-wording-from-an-extension.md](../how-to/override-core-wording-from-an-extension.md): change the
+  words the core shows.
 - [extensibility.md](extensibility.md): why the tier is built this way, and what it guards.
