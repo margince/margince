@@ -11,7 +11,12 @@
 
 import { relative, sep } from "node:path";
 import ts from "typescript";
-import { type CensusFile, type CensusRule, repoRoot } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  extensionShipsScreens,
+  repoRoot,
+} from "../tree";
 
 export const OWNER = "frontend/src/features/lists/filtersentence.ts";
 const OPERATOR_FAMILY = "filters.op";
@@ -83,7 +88,8 @@ export const rule: CensusRule = {
     ...(writersIn(corpus).get(OWNER)?.includes("filters.op.eq")
       ? []
       : [`${OWNER} spells no filters.op.eq, so the scan does not reach it`]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the walk reached no extension frontend module"]),
   ],

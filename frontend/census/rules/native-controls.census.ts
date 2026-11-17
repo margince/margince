@@ -48,7 +48,13 @@ import {
   parseSource,
   scriptKindFor,
 } from "../../scripts/lib/source-tree";
-import { type CensusRule, extensionsDir, repoRoot, srcDir } from "../tree";
+import {
+  type CensusRule,
+  extensionShipsScreens,
+  extensionsDir,
+  repoRoot,
+  srcDir,
+} from "../tree";
 
 // The elements a native dropdown is made of.
 export const nativeControls = new Set(["select", "option", "optgroup"]);
@@ -267,7 +273,7 @@ export const rule: CensusRule = {
       );
     return [
       ...(corpus.length > 100 ? [] : ["fewer than 100 files were read"]),
-      ...(corpus.some((f) => f.area === "extensions")
+      ...(!extensionShipsScreens || corpus.some((f) => f.area === "extensions")
         ? []
         : ["the census covered frontend/src but no extension frontend layer"]),
       ...missing,

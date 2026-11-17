@@ -9972,7 +9972,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.passportNoExpiry": "Kein Ablauf",
   "settings.passportNeverExpires": "Läuft nie ab",
   "settings.passportNeverExpiresHint":
-    "Er gilt, bis Sie ihn widerrufen oder Ihr Konto deaktiviert wird. Bewahren Sie ihn sicher auf.",
+    "Er gilt, bis er widerrufen oder das Konto deaktiviert wird. Sicher aufbewahren.",
   "settings.passportLastUsedOn": "Zuletzt genutzt am {date}",
   "settings.passportExpiresOn": "Läuft am {date} ab",
   "settings.revokeNamed": "{name} widerrufen",
@@ -11987,29 +11987,28 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "personalChannels.title": "Persönliche Kanäle",
   "personalChannels.apiTitle": "API für persönliche Kanäle",
   "personalChannels.apiIntro":
-    "Übermitteln Sie Chats und Dateien und holen Sie Antworten ab, aus Chat Bridge oder Ihrem eigenen Code. Erstellen Sie einen Pass mit Persönliche Kanäle und folgen Sie der Anleitung. Der Skill-Download enthält dieselbe Anleitung.",
+    "Chats und Dateien übermitteln und Antworten abholen, aus Chat Bridge oder eigenem Code. Dazu einen Pass mit Persönliche Kanäle erstellen und der Anleitung folgen. Der Skill-Download enthält dieselbe Anleitung.",
   "personalChannels.readGuide": "Anleitung lesen",
   "personalChannels.mintForBridge": "Neuer Pass für Chat Bridge",
   "personalChannels.turnOn": "Einschalten",
   "personalChannels.turnOff": "Ausschalten",
   "personalChannels.loading": "Persönliche Kanäle werden geladen…",
   "personalChannels.intro":
-    "Bringen Sie Ihre eigenen WhatsApp-, Zalo- oder anderen Chats in Margince. Sie wählen, was gesendet wird; jede Nachricht landet in der Chronik des Kontakts, und Sie können aus Margince antworten.",
-  "personalChannels.ownClient":
-    "Sie bauen Ihren eigenen Client, etwa Chat Bridge?",
+    "Die eigenen WhatsApp-, Zalo- oder anderen Chats in Margince bringen. Gesendet wird nur, was ein Mitglied freigibt; jede Nachricht landet in der Chronik des Kontakts, und Antworten sind aus Margince möglich.",
+  "personalChannels.ownClient": "Einen eigenen Client bauen, etwa Chat Bridge?",
   "personalChannels.developers": "Siehe Für Entwickler unter KI-Assistenten.",
-  "personalChannels.assistant": "Über Ihren KI-Assistenten",
+  "personalChannels.assistant": "Über den KI-Assistenten",
   "personalChannels.connected": "Verbunden",
   "personalChannels.notConnected": "Nicht verbunden",
   "personalChannels.assistantFacts":
-    "Claude, ChatGPT, Gemini, Copilot oder ein anderer MCP-Client übermittelt Chats und Dateien für Sie.",
+    "Claude, ChatGPT, Gemini, Copilot oder ein anderer MCP-Client übermittelt Chats und Dateien im Auftrag des Mitglieds.",
   "personalChannels.setUp": "Einrichten",
   "personalChannels.step1":
-    "Öffnen Sie KI-Tool verbinden unter Einstellungen → KI-Assistenten.",
+    "Unter Einstellungen → KI-Assistenten „KI-Tool verbinden“ öffnen.",
   "personalChannels.step2":
-    "Haken Sie bei Zugriff erlauben Persönliche Kanäle an.",
+    "Bei „Zugriff erlauben“ Persönliche Kanäle anhaken.",
   "personalChannels.step3":
-    "Bitten Sie Ihren Assistenten: „Übermittle diesen Chat mit An an Margince.“",
+    "Den Assistenten bitten: „Übermittle diesen Chat mit An an Margince.“",
   "personalChannels.replies": "Antworten",
   "personalChannels.waiting_one": "{count} wartend",
   "personalChannels.waiting_other": "{count} wartend",

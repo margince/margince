@@ -21,7 +21,12 @@
 import { join } from "node:path";
 import ts from "typescript";
 import { parseSource, scriptKindFor } from "../../scripts/lib/source-tree";
-import { type CensusFile, type CensusRule, srcDir } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  extensionShipsScreens,
+  srcDir,
+} from "../tree";
 
 /** The roles a native input already carries. */
 export const TICK_ROLES: ReadonlySet<string> = new Set([
@@ -128,7 +133,8 @@ export const rule: CensusRule = {
     ...(corpus.some((file) => file.rel.startsWith("src/features/"))
       ? []
       : ["the census covered no screen under src/features/"]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the census reached no extension frontend layer"]),
   ],

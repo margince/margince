@@ -44,6 +44,7 @@ import {
   type CensusFile,
   type CensusRule,
   type CensusTree,
+  extensionShipsScreens,
   frontendRoot,
   srcDir,
 } from "../tree";
@@ -210,7 +211,8 @@ export const rule: CensusRule = {
         : [
             `src/ folders with screens the census missed: ${unswept.join(", ")}`,
           ]),
-      ...(corpus.some((file) => file.area === "extensions")
+      ...(!extensionShipsScreens ||
+      corpus.some((file) => file.area === "extensions")
         ? []
         : ["the census reached no extension frontend layer"]),
       ...(corpus.some((file) => file.path.endsWith(".stories.tsx"))

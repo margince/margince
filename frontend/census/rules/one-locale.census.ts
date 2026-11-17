@@ -27,7 +27,12 @@ import { join } from "node:path";
 import ts from "typescript";
 import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
 import { stable } from "../../src/format/collate";
-import { type CensusFile, type CensusRule, frontendRoot } from "../tree";
+import {
+  type CensusFile,
+  type CensusRule,
+  extensionShipsScreens,
+  frontendRoot,
+} from "../tree";
 
 /**
  * The members of `Intl` that take a locales argument, asked of the runtime.
@@ -416,7 +421,8 @@ export const rule: CensusRule = {
       ...(missed.length === 0
         ? []
         : [`src/ folders not read: ${missed.join(", ")}`]),
-      ...(corpus.some((file) => file.area === "extensions")
+      ...(!extensionShipsScreens ||
+      corpus.some((file) => file.area === "extensions")
         ? []
         : ["no extension frontend was read"]),
       ...["NumberFormat", "DateTimeFormat", "RelativeTimeFormat", "PluralRules"]

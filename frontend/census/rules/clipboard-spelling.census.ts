@@ -13,6 +13,7 @@
 
 import ts from "typescript";
 import type { CensusFile, CensusRule } from "../tree";
+import { extensionShipsScreens } from "../tree";
 
 // The files allowed to name it: the one implementation, and the helper that
 // installs a stub for it in tests.
@@ -137,7 +138,8 @@ export const rule: CensusRule = {
   // The count floor cannot notice the extension half's loss on its own.
   floors: (corpus) => [
     ...(corpus.length > 100 ? [] : ["fewer than 100 modules were read"]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the census covered frontend/src but no extension frontend layer"]),
     ...(corpus.some(

@@ -11672,9 +11672,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "personalChannels.title": "Kênh cá nhân",
   "personalChannels.apiTitle": "API kênh cá nhân",
   "personalChannels.apiIntro":
-    "Gửi đoạn chat và tệp vào, và lấy câu trả lời, từ Chat Bridge hoặc mã của bạn. Tạo hộ chiếu có chọn Kênh cá nhân, rồi làm theo hướng dẫn. Gói kỹ năng tải về cũng có hướng dẫn này.",
+    "Gửi đoạn chat và tệp vào, và lấy câu trả lời, từ Chat Bridge hoặc mã của bạn. Tạo passport có chọn Kênh cá nhân, rồi làm theo hướng dẫn. Gói kỹ năng tải về cũng có hướng dẫn này.",
   "personalChannels.readGuide": "Đọc hướng dẫn",
-  "personalChannels.mintForBridge": "Hộ chiếu mới cho Chat Bridge",
+  "personalChannels.mintForBridge": "Passport mới cho Chat Bridge",
   "personalChannels.turnOn": "Bật",
   "personalChannels.turnOff": "Tắt",
   "personalChannels.loading": "Đang tải kênh cá nhân…",

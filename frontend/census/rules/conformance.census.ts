@@ -8,6 +8,7 @@
 import ts from "typescript";
 import { parseSource } from "../../scripts/lib/source-tree";
 import type { CensusFile, CensusRule } from "../tree";
+import { extensionShipsScreens } from "../tree";
 
 const allowedFamilies = new Set([
   "Outfit",
@@ -300,7 +301,8 @@ export const rule: CensusRule = {
   corpus: (tree) => tree.files.filter(isSource),
   floors: (corpus) => [
     ...(corpus.length > 500 ? [] : ["fewer than 500 source files were read"]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the census reached no extension frontend layer"]),
     ...(corpus.filter((file) => file.rel.endsWith(".html")).length > 1

@@ -17,6 +17,7 @@ import ts from "typescript";
 import { selectorList } from "../../scripts/lib/css-rules";
 import { withoutComments } from "../../src/testing/css";
 import type { CensusFile, CensusRule } from "../tree";
+import { extensionShipsScreens } from "../tree";
 
 // The four components a head is built from.
 const HEAD_COMPONENTS = new Set([
@@ -119,7 +120,8 @@ export const rule: CensusRule = {
     ...(corpus.filter(isMarkup).length > TSX_FLOOR
       ? []
       : [`${TSX_FLOOR} or fewer components were read`]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the census reached no extension frontend layer"]),
     ...(corpus.filter(isSheet).length > CSS_FLOOR

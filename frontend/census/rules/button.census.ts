@@ -13,6 +13,7 @@
 import ts from "typescript";
 import { rulesOfText } from "../../scripts/lib/css-rules";
 import type { CensusFile, CensusRule } from "../tree";
+import { extensionShipsScreens } from "../tree";
 
 // The pairs written today. Pinned, so a pair deleted on both sides fails.
 export const PAIRS = 28;
@@ -159,7 +160,8 @@ export const rule: CensusRule = {
     const tsx = corpus.filter((file) => file.rel.endsWith(".tsx"));
     return [
       ...(tsx.length > 100 ? [] : ["fewer than 100 .tsx files were read"]),
-      ...(tsx.some((file) => file.area === "extensions")
+      ...(!extensionShipsScreens ||
+      tsx.some((file) => file.area === "extensions")
         ? []
         : ["the census reached no extension frontend layer"]),
       ...(pairs === PAIRS

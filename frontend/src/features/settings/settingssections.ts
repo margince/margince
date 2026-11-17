@@ -68,6 +68,7 @@ export const SETTINGS_SECTIONS = {
     "autonomy.title",
     "approvalPreferences.title",
     "settings.passportUseAi",
+    "personalChannels.apiTitle",
     "settings.tierRead",
     "settings.tierSend",
     "settings.tierWait",

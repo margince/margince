@@ -217,7 +217,7 @@ func TestOnlyTheIdentitiesTheMembersOwnChatAppMetAreReachable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tx.Rollback(context.Background()) //nolint:errcheck // read-only probe
+	defer tx.Rollback(context.Background())
 	got, err := personalchannelwire.OwnIdentities(context.Background(), tx, e.Rep1, []connector.ChannelIdentity{own, foreign})
 	if err != nil || len(got) != 1 || got[0] != own {
 		t.Fatalf("own identities = %v, %v; want only %v", got, err, own)

@@ -12,6 +12,7 @@
 import ts from "typescript";
 import { declarationOf } from "../../src/testing/classnames";
 import type { CensusFile, CensusRule } from "../tree";
+import { extensionShipsScreens } from "../tree";
 
 const FIXTURE = /\.(test|stories)\.[cm]?[jt]sx?$|\.testkit\.[jt]sx?$/;
 
@@ -98,7 +99,8 @@ export const rule: CensusRule = {
   // A census that judged nothing certifies nothing.
   floors: (corpus) => [
     ...(corpus.length > 500 ? [] : ["fewer than 500 modules were read"]),
-    ...(corpus.some((file) => file.area === "extensions")
+    ...(!extensionShipsScreens ||
+    corpus.some((file) => file.area === "extensions")
       ? []
       : ["the census covered frontend/src but no extension frontend layer"]),
   ],

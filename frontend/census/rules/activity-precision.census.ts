@@ -38,6 +38,7 @@ import {
 } from "../../scripts/lib/activity-precision.sweep";
 import { inWorker } from "../../scripts/lib/in-worker";
 import type { CensusFile, CensusRule, CensusTree } from "../tree";
+import { extensionShipsScreens } from "../tree";
 
 // The formatters the derivation must arrive at, as proof that it ran.
 export const DERIVED_READERS = [
@@ -118,7 +119,8 @@ export const rule: CensusRule = {
       ...(folders.size > 3
         ? []
         : ["the census reached three src/ folders or fewer"]),
-      ...(corpus.some((file) => file.area === "extensions")
+      ...(!extensionShipsScreens ||
+      corpus.some((file) => file.area === "extensions")
         ? []
         : ["the census reached no extension frontend layer"]),
     ];

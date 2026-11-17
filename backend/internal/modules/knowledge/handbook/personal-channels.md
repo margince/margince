@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/personal-channels.tsx backend/internal/modules/personalchannels backend/internal/compose/personalchannelwire -->
+<!-- describes: frontend/src/features/settings/personal-channels.tsx backend/internal/modules/personalchannels backend/internal/compose/personalchannelwire -->
 # Personal channels: bring your own chats into Margince
 
 Your customers write to you on WhatsApp, Zalo and other chat apps that Margince cannot read. **Personal channels** let you bring those chats in yourself. You choose what is sent; each message lands on the contact's timeline, and you can reply from Margince.
