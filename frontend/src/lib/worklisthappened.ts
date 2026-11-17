@@ -129,31 +129,44 @@ export function happenedLines(
   item: WorklistItem,
   t: T,
   clock: Clock,
+  // The surface already prints the reason above, as a task's own panel does.
+  groundsShown = false,
 ): Readonly<{ lines: string[]; told: boolean }> {
+  const why = groundsLine(item);
   const event = ownEvent(item, t, clock);
   const deal = dealLine(item, t, clock);
-  const lines = [event, deal, ...touchLines(item, t, clock)].filter(
-    (line): line is string => Boolean(line),
-  );
+  const lines = [
+    groundsShown ? null : why,
+    event,
+    deal,
+    ...touchLines(item, t, clock),
+  ].filter((line): line is string => Boolean(line));
   // A deal at risk has no event of its own; its figures are what happened.
   const dealTold = item.source === "deal_at_risk" && deal !== null;
-  return { lines, told: event !== null || dealTold };
+  return { lines, told: why !== null || event !== null || dealTold };
 }
 
 /**
- * A card's line: its own event. The card's title and buttons already say
- * what to do, so a task adds the last contact each way instead. Null with
- * no event, so the row keeps its whole ask.
+ * A card's line: why the work exists, when its maker said, else its own
+ * event. The card's title and buttons already say what to do, so a task adds
+ * the last contact each way instead. Null with neither, so the row keeps its
+ * whole ask.
  */
 export function cardLine(
   item: WorklistItem,
   t: T,
   clock: Clock,
 ): string | null {
-  const event = ownEvent(item, t, clock);
+  const event = groundsLine(item) ?? ownEvent(item, t, clock);
   if (!event) return null;
   const touch = item.source === "task" ? touchLines(item, t, clock) : [];
   return [event, ...touch].join(" ");
+}
+
+// The reason the row's maker wrote down: the trigger, with names. The server
+// sends none rather than a stock sentence, so its absence falls back here.
+function groundsLine(item: WorklistItem): string | null {
+  return item.why?.text.trim() || null;
 }
 
 function ownEvent(item: WorklistItem, t: T, clock: Clock): string | null {

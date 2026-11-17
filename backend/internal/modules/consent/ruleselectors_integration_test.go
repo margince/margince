@@ -131,7 +131,7 @@ func TestTheSendingEntityPicksTheDataProtectionCountry(t *testing.T) {
 // objection route on advertising (marketing).
 func TestDisclosuresFollowTheirOwnSelectors(t *testing.T) {
 	e := setupChannelConsent(t)
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: "zj", Version: 1,
 		Disclosures: []messagingrules.Disclosure{
 			{Kind: messagingrules.ControllerIdentity},

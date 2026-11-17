@@ -144,10 +144,19 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		// The notice and the task are stored, so they speak the
 		// installation's language rather than the language of whoever's
 		// breach tripped the rule.
-		words := mailcopy.For(string(identity.BaseLanguageForRecord(ctx, tx)))
+		language := identity.BaseLanguageForRecord(ctx, tx)
+		words := mailcopy.For(string(language))
 		subject := words.NoticeSLASubject
 		in.Subject = &subject
 		in.SystemText = &systemtext.Message{Subject: systemtext.Sentence("notice.NoticeSLASubject")}
+		noticeText := &systemtext.Message{Subject: systemtext.Sentence("notice.NoticeSLASubject"), Body: systemtext.Sentence("notice.NoticeSLABody")}
+		noticeBody := words.NoticeSLABody
+		if err := in.SayWhy(contacts.BreachReason(payload), language); err != nil {
+			return err
+		}
+		if in.Body != nil {
+			noticeText.Body, noticeBody = in.SystemText.Body, *in.Body
+		}
 		seat, addressed, err := deliverableSeat(ctx, tx, in.AssigneeID)
 		if err != nil {
 			return err
@@ -166,11 +175,11 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 			return nil
 		}
 		if _, err := w.notices.CreateTx(ctx, tx, notices.NewNotice{
-			SystemText: &systemtext.Message{Subject: systemtext.Sentence("notice.NoticeSLASubject"), Body: systemtext.Sentence("notice.NoticeSLABody")},
+			SystemText: noticeText,
 			Recipient:  seat,
 			Kind:       noticeKindLeadSLA,
 			Subject:    subject,
-			Body:       words.NoticeSLABody,
+			Body:       noticeBody,
 			DedupeKey:  leadSLATaskSource + ":" + sourceID,
 			Target:     notices.Target{Type: entityLead, ID: ev.Entity.ID},
 		}); err != nil {

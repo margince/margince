@@ -1,0 +1,321 @@
+/** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
+import { QueryClient } from "@tanstack/react-query";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { stubClipboard } from "../../design-system/clipboard-testing";
+import { askedToClose } from "./deal360/confirmadvance.testkit";
+import { DealsScreen } from "./deals";
+import {
+  deal,
+  dropOnStage,
+  jsonResponse,
+  render,
+  stubBackend,
+} from "./deals.testkit";
+
+// A card's menu moves a deal as a drop does: pinned, and confirmed when terminal.
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  window.history.replaceState(null, "", "/");
+  localStorage.clear();
+});
+
+function newClient() {
+  return new QueryClient({ defaultOptions: { queries: { retry: false } } });
+}
+
+// Every read and write the board started has answered.
+async function settled(client: QueryClient) {
+  await waitFor(() =>
+    expect(client.isFetching() + client.isMutating()).toBe(0),
+  );
+}
+
+async function openCardMenu(
+  user: ReturnType<typeof userEvent.setup>,
+  dealName = "Fleet retrofit",
+) {
+  const trigger = await screen.findByRole("button", {
+    name: `More actions for ${dealName}`,
+  });
+  await user.click(trigger);
+  const panel = document.getElementById(
+    trigger.getAttribute("aria-controls") ?? "",
+  );
+  if (!panel) throw new Error("the card's menu drew no panel");
+  return within(panel);
+}
+
+// The deal's link, once the board draws it in that stage's column.
+function cardLinkIn(stageId: string) {
+  return waitFor(() => {
+    const column = document.querySelector<HTMLElement>(
+      `[data-stage="${stageId}"]`,
+    );
+    if (!column) throw new Error(`no column for stage ${stageId}`);
+    return within(column).getByRole("link", { name: "Fleet retrofit" });
+  });
+}
+
+const COPY_REFUSED =
+  "Could not copy the link. Open the deal and copy the address from the browser’s address bar.";
+
+async function closeShownToast(user: ReturnType<typeof userEvent.setup>) {
+  const close = document.querySelector<HTMLElement>(
+    '[data-toast-control="close"]',
+  );
+  if (!close) throw new Error("no toast is showing a close button");
+  await user.click(close);
+}
+
+describe("deal card menu on the deals board", () => {
+  it("moves a deal to the next stage with the version it was drawn from", async () => {
+    const advances: [unknown, string | null][] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onAdvance: (b, m) => advances.push([b, m]) }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(
+      await menu.findByRole("button", { name: "Move to Proposal" }),
+    );
+
+    await waitFor(() => expect(advances).toHaveLength(1));
+    expect(advances[0]).toEqual([{ to_stage_id: "s2" }, "4"]);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(await screen.findByText("Moved to Proposal")).toBeTruthy();
+  });
+
+  // The card is drawn anew in its new column; a keyboard reader stays on it.
+  it("keeps focus on the deal it moved", async () => {
+    const rows = [deal({})];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend(rows, {
+        onAdvance: () => {
+          rows[0] = deal({ stage_id: "s2", version: 5 });
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    (await menu.findByRole("button", { name: "Move to Proposal" })).focus();
+    await user.keyboard("{Enter}");
+
+    const proposal = await cardLinkIn("s2");
+    await waitFor(() => expect(document.activeElement).toBe(proposal));
+  });
+
+  it("does not follow a deal whose terminal move was cancelled", async () => {
+    const rows = [deal({})];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend(rows, {
+        onAdvance: () => {
+          rows[0] = deal({ stage_id: "s3", status: "won", version: 5 });
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(await menu.findByRole("button", { name: "Mark won" }));
+    await askedToClose("Won");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    dropOnStage("s3");
+    await askedToClose("Won");
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await cardLinkIn("s3");
+    await settled(client);
+    expect(document.activeElement).not.toBe(await cardLinkIn("s3"));
+  });
+
+  it("does not follow a deal whose move was refused", async () => {
+    const rows = [deal({})];
+    const backend = stubBackend(rows, {
+      onAdvance: () => {
+        rows[0] = deal({ stage_id: "s2", version: 5 });
+      },
+    });
+    let refused = false;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (!refused && url.includes("/advance")) {
+        refused = true;
+        return Promise.resolve(
+          jsonResponse({ status: 409, title: "Conflict" }, 409),
+        );
+      }
+      return backend(input, init);
+    });
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(
+      await menu.findByRole("button", { name: "Move to Proposal" }),
+    );
+    await waitFor(() => expect(refused).toBe(true));
+    await settled(client);
+
+    dropOnStage("s2");
+    await cardLinkIn("s2");
+    await settled(client);
+    expect(document.activeElement).not.toBe(await cardLinkIn("s2"));
+  });
+
+  it("forgets a saved move once the board's reads leave the card undrawn", async () => {
+    const rows = [deal({})];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend(rows, {
+        onAdvance: () => {
+          rows[0] = deal({ stage_id: "s-hidden", version: 5 });
+        },
+      }),
+    );
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(
+      await menu.findByRole("button", { name: "Move to Proposal" }),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-deal="d1"]')).toBeNull(),
+    );
+    await settled(client);
+
+    rows[0] = deal({ stage_id: "s2", version: 5 });
+    await client.invalidateQueries({ queryKey: ["deals"] });
+    await cardLinkIn("s2");
+    await settled(client);
+    expect(document.activeElement).not.toBe(await cardLinkIn("s2"));
+  });
+
+  it("takes no drag out of the stage list for the card's own", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    const client = newClient();
+    render(<DealsScreen />, client);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Move to stage" }));
+    const search = await screen.findByRole("combobox", {
+      name: "Pick a stage",
+    });
+    await user.type(search, "Prop");
+    const setData = vi.fn();
+    fireEvent.dragStart(search, { dataTransfer: { setData } });
+
+    dropOnStage("s2", "Prop");
+    expect(setData).not.toHaveBeenCalled();
+    expect(client.isMutating()).toBe(0);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  // A chat preview reads the path and the page opens the fragment: both name
+  // this deal, whatever record page the board was reached from.
+  it("copies the deal's own record address", async () => {
+    const id = "0b8f6c1e-2a3b-4c5d-8e9f-0a1b2c3d4e5f";
+    const other = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    window.history.replaceState(null, "", `/r/deals/${other}#/deals`);
+    vi.stubGlobal("fetch", stubBackend([deal({ id })]));
+    const user = userEvent.setup();
+    const clipboard = stubClipboard("accepts");
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Copy link" }));
+
+    await waitFor(() =>
+      expect(clipboard.written).toEqual([
+        `${window.location.origin}/r/deals/${id}#/deals/${id}`,
+      ]),
+    );
+    expect(await screen.findByText("Link copied")).toBeTruthy();
+  });
+
+  // The region draws one toast at a time, so a second refusal queued behind
+  // the first shows only once the first is closed.
+  it("leaves one refused copy to close, however often it is pressed", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    render(<DealsScreen />);
+    const first = await openCardMenu(user);
+    await user.click(first.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+    const second = await openCardMenu(user);
+    await user.click(second.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+
+    await closeShownToast(user);
+    expect(screen.queryByText(COPY_REFUSED)).toBeNull();
+  });
+
+  it("leaves one refused copy to close across two cards", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({}), deal({ id: "d2", name: "Harbour cranes" })]),
+    );
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    render(<DealsScreen />);
+    const first = await openCardMenu(user);
+    await user.click(first.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+    const second = await openCardMenu(user, "Harbour cranes");
+    await user.click(second.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(COPY_REFUSED);
+
+    await closeShownToast(user);
+    expect(screen.queryByText(COPY_REFUSED)).toBeNull();
+  });
+
+  it("asks before marking a deal won, and posts only after the confirm", async () => {
+    const advances: [unknown, string | null][] = [];
+    vi.stubGlobal(
+      "fetch",
+      stubBackend([deal({})], { onAdvance: (b, m) => advances.push([b, m]) }),
+    );
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(await menu.findByRole("button", { name: "Mark won" }));
+
+    await askedToClose("Won");
+    expect(advances).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(advances).toHaveLength(1));
+    expect(advances[0]).toEqual([{ to_stage_id: "s3", status: "won" }, "4"]);
+  });
+
+  it("closes the menu behind the confirm when Won is picked from the stage list", async () => {
+    vi.stubGlobal("fetch", stubBackend([deal({})]));
+    const user = userEvent.setup();
+    render(<DealsScreen />);
+    const menu = await openCardMenu(user);
+    await user.click(menu.getByRole("button", { name: "Move to stage" }));
+    await user.click(await screen.findByRole("option", { name: "Won" }));
+
+    await askedToClose("Won");
+    const trigger = screen.getByRole("button", {
+      name: "More actions for Fleet retrofit",
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+  });
+});

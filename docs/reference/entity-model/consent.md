@@ -425,7 +425,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## consent_event
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+17 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -437,6 +437,7 @@ The 22 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `double_opt_in_confirmed_at` | `timestamp with time zone` |  |  |
 | `issuance_trigger` | `text` |  |  |
+| `kept_until` | `timestamp with time zone` |  |  |
 | `lawful_basis` | `text` |  |  |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `new_state` | `text` | yes | Proof rows record only transitions to granted/withdrawn (never to unknown). |

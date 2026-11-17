@@ -27,6 +27,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { type Receipt, useHandledForYou } from "../../lib/handled";
 import { type MagicLine, magicKey } from "../../lib/magic.queries";
+import { lineSentence } from "../../lib/magiccopy";
 import { unwrap } from "../../lib/problem";
 import { receiptAuditId } from "../../lib/receiptstate";
 import { routeHash } from "../../lib/router";
@@ -130,7 +131,11 @@ function LineRecordsList({
       )}
       <ul className="magic-records">
         {records.map((record) => (
-          <RecordRow key={record.audit_id} record={record} />
+          <RecordRow
+            key={record.audit_id}
+            record={record}
+            happened={lineSentence(line, t)}
+          />
         ))}
       </ul>
       {read.hasNextPage && (
@@ -145,7 +150,12 @@ function LineRecordsList({
   );
 }
 
-function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
+// A record shares its line's sentence: a line groups records whose change reads
+// the same. A create or an archive moved no field, so the sentence is what it says.
+function RecordRow({
+  record,
+  happened,
+}: Readonly<{ record: MagicLineRecord; happened: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const entity = record.entity;
@@ -162,7 +172,11 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
       <time className="t-caption" dateTime={record.occurred_at}>
         {formatDateTime(record.occurred_at, locale, browserZone())}
       </time>
-      <ChangeList changes={record.changes} />
+      {record.changes.length > 0 ? (
+        <ChangeList changes={record.changes} />
+      ) : (
+        <p className="t-body">{happened}</p>
+      )}
     </li>
   );
 }

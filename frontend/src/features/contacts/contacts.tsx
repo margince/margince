@@ -42,6 +42,25 @@ import {
 
 type Contact = components["schemas"]["Contact"];
 
+function ContactName({
+  contact,
+  title,
+}: Readonly<{ contact: Contact; title?: string | null }>) {
+  const t = useT();
+  return (
+    <span className="avatar-row">
+      <Avatar identity={contact.id} name={contact.full_name} />
+      <span>
+        <strong>{contact.full_name}</strong>
+        {title && <span className="t-caption"> · {title}</span>}
+      </span>
+      {contact.archived_at && (
+        <Badge tone="warning">{t("record.archived")}</Badge>
+      )}
+    </span>
+  );
+}
+
 // `#/contacts/import` is this screen's reserved segment (app/nav.ts), so the
 // list's reads never start for the import page.
 export function ContactsScreen({
@@ -99,16 +118,10 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
             key: "name",
             header: t("contacts.name"),
             cell: (contact: Contact) => (
-              <span>
-                <strong>{contact.full_name}</strong>
-                {contact.title && (
-                  <span className="t-caption"> · {contact.title}</span>
-                )}
-                {contact.archived_at && (
-                  <Badge tone="warning">{t("record.archived")}</Badge>
-                )}
-              </span>
+              <ContactName contact={contact} title={contact.title} />
             ),
+            // On a phone the title is a caption fact of its own.
+            folded: (contact: Contact) => <ContactName contact={contact} />,
             sort: "full_name",
             fixed: true,
           },
@@ -138,6 +151,13 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
             sort: "primary_email",
           },
           {
+            key: "title",
+            header: t("create.contactTitle"),
+            cell: (contact: Contact) => contact.title || null,
+            phone: "caption",
+            phoneOnly: true,
+          },
+          {
             // Who they work for TODAY, from the row itself: the wire carries
             // the current primary employment resolved to its account, so the
             // column costs no lookup and shows no company the reader has no
@@ -152,6 +172,9 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
             // By the company's NAME, walking the same edge the row walked. A
             // reader who may see no employer at all is ordered by none.
             sort: "employer",
+            phone: "caption",
+            folded: (contact: Contact) =>
+              contact.employer?.company_name ?? null,
             cell: (contact: Contact) =>
               contact.employer ? (
                 // A real link to the COMPANY, in a cell that is not the row's

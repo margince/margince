@@ -20,6 +20,7 @@ public.activity.meeting_status document
 public.activity.meeting_zone document
 public.activity.occurred_precision document
 public.activity.origin document
+public.activity.owed_ask note
 public.activity.owed_verdict document
 public.activity.owed_verdict_declined_ruleset document
 public.activity.owed_verdict_ruleset document

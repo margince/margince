@@ -116,6 +116,7 @@ var erasureCascadeFiles = []string{
 	"internal/modules/privacy/commitmentlegacy.go",
 	"internal/modules/privacy/activityerase.go",
 	"internal/modules/privacy/commitmenterasure.go",
+	"internal/modules/privacy/requestremindererasure.go",
 	"internal/modules/privacy/activitycontenterasure.go",
 	// armSuppression, the erasure list writer every erasure calls.
 	"internal/modules/privacy/suppressionlift.go",
@@ -271,6 +272,7 @@ var reachedButNotCascade = gatekit.Waive(map[string]string{
 var retentionSweepFiles = []string{
 	"internal/platform/database/storekit/auditredaction.go",
 	"internal/modules/privacy/commitmenterasure.go",
+	"internal/modules/privacy/requestremindererasure.go",
 	"internal/modules/privacy/reportingredaction.go",
 	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/reportingbindings.go",
