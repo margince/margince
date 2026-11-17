@@ -11,8 +11,8 @@ import { LocaleProvider } from "../../i18n";
 import { ConfirmDetailsScreen } from "./confirm";
 
 // The privacy page's storage line names why the archive keeps the reader's
-// correspondence: the purpose the installation stated in the link's language,
-// or the default purpose in that language.
+// correspondence. It prints the purpose the installation stated in the link's
+// language, or else the default purpose in that language.
 
 const NOTICE = {
   kind: "privacy_notice",

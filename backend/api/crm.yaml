@@ -74162,6 +74162,7 @@ components:
         `kept_by_law`: business correspondence inside its statutory retention period.
         `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
       enum: [legal_hold, opt_out_record, kept_by_law, not_archived, not_found]
+      x-extensible-enum: true
 
     ArchiveDeletionRequest:
       type: object

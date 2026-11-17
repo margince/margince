@@ -3,21 +3,22 @@
 
 //go:build integration
 
-package compose
+package integration
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,7 +31,7 @@ type archiveFixture struct {
 	free, held, receipt, recent, live ids.UUID
 }
 
-func seedArchive(t *testing.T, e *integration.Env) archiveFixture {
+func seedArchive(t *testing.T, e *Env) archiveFixture {
 	t.Helper()
 	f := archiveFixture{
 		contact: e.SeedContact(t, "Archived Subject", nil),
@@ -60,9 +61,20 @@ func seedArchive(t *testing.T, e *integration.Env) archiveFixture {
 	return f
 }
 
+// archiveReviewerCtx is a signed-in user holding grant on the retention
+// authority, plus reads, any further object grants.
+func archiveReviewerCtx(e *Env, grant principal.ObjectGrant, reads ...string) context.Context {
+	objects := map[string]principal.ObjectGrant{"retention_policy": grant}
+	for _, object := range reads {
+		objects[object] = principal.ObjectGrant{Read: true}
+	}
+	return e.As(ids.NewV7(), nil, principal.Permissions{Objects: objects, RowScope: principal.RowScopeAll})
+}
+
 func listArchive(t *testing.T, h interface {
 	ListArchivedActivities(http.ResponseWriter, *http.Request, crmcontracts.ListArchivedActivitiesParams)
-}, as *http.Request, params crmcontracts.ListArchivedActivitiesParams) (int, []crmcontracts.ArchivedActivity) {
+}, as *http.Request, params crmcontracts.ListArchivedActivitiesParams,
+) (int, []crmcontracts.ArchivedActivity) {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	h.ListArchivedActivities(rec, as, params)
@@ -80,13 +92,13 @@ func listArchive(t *testing.T, h interface {
 // TestTheArchiveReviewListsOldArchivedMailWithWhatKeepsIt reads the archive as
 // the controller filters it: by age and by contact, each record with its keeper.
 func TestTheArchiveReviewListsOldArchivedMailWithWhatKeepsIt(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	f := seedArchive(t, e)
-	h := newPrivacyHandlers(e.Pool)
+	h := compose.NewPrivacyHandlers(e.Pool)
 	admin := httptest.NewRequest(http.MethodGet, "/v1/retention/archive", nil).
-		WithContext(retentionHumanCtx(e, principal.ObjectGrant{Read: true, Delete: true}))
+		WithContext(archiveReviewerCtx(e, principal.ObjectGrant{Read: true, Delete: true}))
 
-	yearAgo := time.Now().AddDate(-1, 0, 0)
+	yearAgo := clocktest.Now(t).AddDate(-1, 0, 0)
 	contact := openapi_types.UUID(f.contact)
 	code, rows := listArchive(t, h, admin, crmcontracts.ListArchivedActivitiesParams{Before: &yearAgo, ContactId: &contact})
 	if code != http.StatusOK {
@@ -116,18 +128,61 @@ func TestTheArchiveReviewListsOldArchivedMailWithWhatKeepsIt(t *testing.T) {
 	}
 }
 
+// TestTheArchiveReviewNamesOnlyThePartiesTheReaderMayRead lists the record
+// linked to a contact and a company twice. A reviewer holding contact and
+// company read sees both names. One holding only the retention authority sees
+// the same ids with the names left empty.
+func TestTheArchiveReviewNamesOnlyThePartiesTheReaderMayRead(t *testing.T) {
+	e := Setup(t)
+	f := seedArchive(t, e)
+	h := compose.NewPrivacyHandlers(e.Pool)
+	contact := openapi_types.UUID(f.contact)
+	heldOf := func(reads ...string) crmcontracts.ArchivedActivity {
+		t.Helper()
+		as := httptest.NewRequest(http.MethodGet, "/v1/retention/archive", nil).
+			WithContext(archiveReviewerCtx(e, principal.ObjectGrant{Read: true}, reads...))
+		code, rows := listArchive(t, h, as, crmcontracts.ListArchivedActivitiesParams{ContactId: &contact})
+		if code != http.StatusOK {
+			t.Fatalf("list with reads %v = %d, want 200", reads, code)
+		}
+		for _, row := range rows {
+			if ids.UUID(row.ActivityId) == f.held {
+				return row
+			}
+		}
+		t.Fatalf("the held record is missing from the list with reads %v", reads)
+		return crmcontracts.ArchivedActivity{}
+	}
+
+	named := heldOf("contact", "company")
+	if len(named.Contacts) != 1 || named.Contacts[0].Name != "Archived Subject" {
+		t.Errorf("contacts with the contact grant = %+v, want Archived Subject", named.Contacts)
+	}
+	if len(named.Companies) != 1 || named.Companies[0].Name != "Held Company" {
+		t.Errorf("companies with the company grant = %+v, want Held Company", named.Companies)
+	}
+
+	bare := heldOf()
+	if len(bare.Contacts) != 1 || ids.UUID(bare.Contacts[0].Id) != f.contact || bare.Contacts[0].Name != "" {
+		t.Errorf("contacts without the contact grant = %+v, want the id with no name", bare.Contacts)
+	}
+	if len(bare.Companies) != 1 || bare.Companies[0].Name != "" {
+		t.Errorf("companies without the company grant = %+v, want one with no name", bare.Companies)
+	}
+}
+
 // TestAnAdminDeletesOldArchivedMailAndTheKeptRecordsStay deletes everything
 // the review lists. Only the record nothing keeps is erased, with its audit
 // certificate and event. A reader without the grant is refused.
 func TestAnAdminDeletesOldArchivedMailAndTheKeptRecordsStay(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	f := seedArchive(t, e)
-	h := newPrivacyHandlers(e.Pool)
+	h := compose.NewPrivacyHandlers(e.Pool)
 	body := `{"activity_ids":["` + f.free.String() + `","` + f.held.String() + `","` + f.receipt.String() + `","` + f.live.String() + `"]}`
 	deleteAs := func(grant principal.ObjectGrant) *httptest.ResponseRecorder {
 		rec := httptest.NewRecorder()
 		h.DeleteArchivedActivities(rec, httptest.NewRequest(http.MethodPost, "/v1/retention/archive/delete",
-			strings.NewReader(body)).WithContext(retentionHumanCtx(e, grant)), crmcontracts.DeleteArchivedActivitiesParams{})
+			strings.NewReader(body)).WithContext(archiveReviewerCtx(e, grant)), crmcontracts.DeleteArchivedActivitiesParams{})
 		return rec
 	}
 
@@ -188,7 +243,7 @@ func TestAnAdminDeletesOldArchivedMailAndTheKeptRecordsStay(t *testing.T) {
 	}
 
 	admin := httptest.NewRequest(http.MethodGet, "/v1/retention/archive", nil).
-		WithContext(retentionHumanCtx(e, principal.ObjectGrant{Read: true}))
+		WithContext(archiveReviewerCtx(e, principal.ObjectGrant{Read: true}))
 	contact := openapi_types.UUID(f.contact)
 	_, rows := listArchive(t, h, admin, crmcontracts.ListArchivedActivitiesParams{ContactId: &contact})
 	listed := make([]ids.UUID, 0, len(rows))

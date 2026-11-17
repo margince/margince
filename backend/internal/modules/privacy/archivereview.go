@@ -47,7 +47,7 @@ const (
 var archivedActivitySQL = `a.archived_at IS NOT NULL AND a.restricted_at IS NULL AND NOT ` +
 	storekit.ActivityErasedSQL("a")
 
-// archiveKeeperSQL names what keeps the archived activity aliased a, or ”
+// archiveKeeperSQL names what keeps the archived activity aliased a, or empty
 // when nothing does. These are the checks the nightly retention selector runs
 // before it acts on an activity, so the controller cannot delete what the
 // clock may not. currentArg and carriedArg are the floor's classes.
@@ -95,21 +95,51 @@ type ArchivePage struct {
 	HasMore    bool
 }
 
-// requireArchiveReviewer admits a signed-in user holding the retention-policy
-// authority at verb. The archive restricts access, so an agent does not read it.
-func requireArchiveReviewer(ctx context.Context, verb principal.Action) error {
+// requireArchiveReviewer admits only a signed-in user; each caller then asks
+// the retention-policy grant. The archive restricts access, so an agent does
+// not read it.
+func requireArchiveReviewer(ctx context.Context) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return fmt.Errorf("the archive review is for a signed-in user: %w", apperrors.ErrPermissionDenied)
 	}
-	return auth.Require(ctx, retentionPolicyObject, verb)
+	return nil
+}
+
+// archiveContactNameSQL is the name of the contact aliased c. It is
+// empty where the reader holds no contact read or the row scope does not reach it.
+func archiveContactNameSQL(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return "''", nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	if err != nil || scope == "" {
+		return "coalesce(c.full_name, '')", err
+	}
+	return "CASE WHEN " + scope + " THEN coalesce(c.full_name, '') ELSE '' END", nil
+}
+
+// archiveCompanyNameSQL is the name of the company aliased o. It is
+// empty where the reader holds no company read or the row scope does not reach it.
+func archiveCompanyNameSQL(ctx context.Context, arg func(any) int) (string, error) {
+	if !auth.ReadGranted(ctx, "company") {
+		return "''", nil
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
+	if err != nil || scope == "" {
+		return "o.display_name", err
+	}
+	return "CASE WHEN " + scope + " THEN o.display_name ELSE '' END", nil
 }
 
 // ListArchivedActivities reads the archive, oldest first, with what keeps
 // each record. A subject shows only where the reader's audience admits the
-// record's content.
+// record's content, and a linked party's name only where the reader may read it.
 func (e *Eraser) ListArchivedActivities(ctx context.Context, f ArchiveFilter) (ArchivePage, error) {
-	if err := requireArchiveReviewer(ctx, principal.ActionRead); err != nil {
+	if err := requireArchiveReviewer(ctx); err != nil {
+		return ArchivePage{}, err
+	}
+	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionRead); err != nil {
 		return ArchivePage{}, err
 	}
 	size := storekit.ClampLimit(f.Limit)
@@ -126,6 +156,14 @@ func (e *Eraser) ListArchivedActivities(ctx context.Context, f ArchiveFilter) (A
 		if err != nil {
 			return err
 		}
+		contactName, err := archiveContactNameSQL(ctx, arg)
+		if err != nil {
+			return err
+		}
+		companyName, err := archiveCompanyNameSQL(ctx, arg)
+		if err != nil {
+			return err
+		}
 		where, err := archiveListWhere(f, arg)
 		if err != nil {
 			return err
@@ -133,9 +171,9 @@ func (e *Eraser) ListArchivedActivities(ctx context.Context, f ArchiveFilter) (A
 		limit := arg(size + 1)
 		rows, err := tx.Query(ctx, `
 			SELECT a.id, a.kind, CASE WHEN `+readable+` THEN a.subject END, a.occurred_at, a.occurred_precision, a.archived_at,
-			       coalesce((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'name', coalesce(c.full_name, '')) ORDER BY c.full_name, c.id)
+			       coalesce((SELECT jsonb_agg(jsonb_build_object('id', c.id, 'name', `+contactName+`) ORDER BY `+contactName+`, c.id)
 			                   FROM contact c WHERE c.id IN (SELECT l.contact_id FROM activity_link l WHERE l.activity_id = a.id)), '[]'::jsonb),
-			       coalesce((SELECT jsonb_agg(jsonb_build_object('id', o.id, 'name', o.display_name) ORDER BY o.display_name, o.id)
+			       coalesce((SELECT jsonb_agg(jsonb_build_object('id', o.id, 'name', `+companyName+`) ORDER BY `+companyName+`, o.id)
 			                   FROM company o WHERE o.id IN (SELECT l.company_id FROM activity_link l WHERE l.activity_id = a.id)), '[]'::jsonb),
 			       `+archiveKeeperSQL(1, 2)+`
 			  FROM activity a
@@ -215,7 +253,10 @@ type KeptActivity struct {
 // legal hold, an opt-out receipt or the statutory floor keeps is reported
 // with the reason and left as it was.
 func (e *Eraser) DeleteArchivedActivities(ctx context.Context, activityIDs []ids.UUID) (ArchiveDeletion, error) {
-	if err := requireArchiveReviewer(ctx, principal.ActionDelete); err != nil {
+	if err := requireArchiveReviewer(ctx); err != nil {
+		return ArchiveDeletion{}, err
+	}
+	if err := auth.Require(ctx, retentionPolicyObject, principal.ActionDelete); err != nil {
 		return ArchiveDeletion{}, err
 	}
 	if len(activityIDs) == 0 || len(activityIDs) > ArchiveDeletionLimit {

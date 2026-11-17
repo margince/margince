@@ -26,9 +26,9 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	return s.eraser.eraseActivityContent(ctx, tx, id, theClockRanOut)
 }
 
-// eraseActivityContent is the one writer of an activity's content erasure, for
-// the nightly erase action and a controller's archive deletion alike. The
-// caller has already decided that nothing keeps the record.
+// eraseActivityContent erases an activity's content, for the nightly erase
+// action and a controller's archive deletion alike. The caller has already
+// decided that nothing keeps the record.
 func (e *Eraser) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
 	err := clearActivityContent(ctx, tx, id)
 	if err == nil {
