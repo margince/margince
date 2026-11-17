@@ -12,6 +12,9 @@ import {
 } from "../../testing/contactpage.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const MEET_NAME = `${en["record.verb.meet"]}, ${en["contact.action.meetings"]}`;
+
 // The header's edit/merge/archive verbs, restored to the record page every
 // contact actually opens to — now rows of its overflow menu rather than
 // buttons in the open. Its own file, sharing contactpage.testkit.tsx's fixture
@@ -214,7 +217,7 @@ describe("every secondary verb is a row of the header's one menu", () => {
     }
     // The other direction: the verbs a reader came to do must not cost them
     // an opening press.
-    for (const daily of [en["log.title"], en["contact.action.meetings"]]) {
+    for (const daily of [en["log.title"], MEET_NAME]) {
       expect(within(actions).getByRole("button", { name: daily })).toBeTruthy();
     }
   });

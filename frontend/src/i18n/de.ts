@@ -22911,6 +22911,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.reach.label": "E-Mail und Telefon",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.verb.email": "E-Mail",
+  "record.verb.message": "Nachricht",
   "record.verb.call": "Anruf",
   "record.verb.meet": "Termin",
   "record.verb.log": "Notiz",

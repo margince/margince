@@ -24,6 +24,9 @@ import {
 } from "../../testing/story-utils";
 import { ContactActions } from "./contactactions";
 
+// The verb shows "Meet", so its name starts with the word a speech user says.
+const MEET_NAME = `${en["record.verb.meet"]}, ${en["contact.action.meetings"]}`;
+
 afterEach(cleanup);
 
 // Reachable both ways, so a header that drew a Call verb would show it.
@@ -104,11 +107,7 @@ describe("the contact header", () => {
     expect(
       screen.queryByRole("button", { name: en["contact.action.addTask"] }),
     ).toBeNull();
-    for (const verb of [
-      en["contact.action.meetings"],
-      en["log.title"],
-      en["record.moreActions"],
-    ]) {
+    for (const verb of [MEET_NAME, en["log.title"], en["record.moreActions"]]) {
       expect(screen.getByRole("button", { name: verb })).toBeTruthy();
     }
   });

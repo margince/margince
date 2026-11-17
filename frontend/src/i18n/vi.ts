@@ -22300,6 +22300,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.reach.label": "Email và điện thoại",
   "record.details.hideEmpty": "Ẩn trường trống",
   "record.verb.email": "Thư",
+  "record.verb.message": "Nhắn",
   "record.verb.call": "Gọi",
   "record.verb.meet": "Họp",
   "record.verb.log": "Ghi",

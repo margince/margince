@@ -22593,6 +22593,7 @@ export const en = {
   "record.reach.label": "Email and phone",
   "record.details.hideEmpty": "Hide empty fields",
   "record.verb.email": "Email",
+  "record.verb.message": "Message",
   "record.verb.call": "Call",
   "record.verb.meet": "Meet",
   "record.verb.log": "Log",
