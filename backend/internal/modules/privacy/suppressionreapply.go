@@ -178,7 +178,7 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				var live liveIdentifier
 				var email string
 				err := rows.Scan(&live.contact, &live.created, &email)
-				live.forms = storekit.EmailSuppressionForms(email)
+				live.forms = storekit.EmailSuppressionForms(ctx, email)
 				return live, err
 			},
 		},
@@ -193,7 +193,7 @@ func (e *Eraser) contactsMatchingSuppression(ctx context.Context, suppressed map
 				var live liveIdentifier
 				var provider, account string
 				err := rows.Scan(&live.contact, &live.created, &provider, &account)
-				live.forms = storekit.ChannelIdentityForms(provider, account)
+				live.forms = storekit.ChannelIdentityForms(ctx, provider, account)
 				return live, err
 			},
 		},

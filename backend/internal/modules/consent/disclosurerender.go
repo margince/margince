@@ -133,7 +133,7 @@ func (s *Store) DisclosuresFor(
 	// StoredApplyTx, not StoredValTx: the particulars must reach whoever composes the
 	// message, and a worker dispatching a scheduled send holds no settings
 	// grant. See ControllerIdentity's own note on why that is safe here.
-	installation, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
+	installation, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), ControllerIdentity)
 	if err != nil {
 		return nil, err
 	}

@@ -229,7 +229,7 @@ func (h Handlers) GetLeadSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
-	out.Locks = h.settingLocks(LeadSettingsSurface()...)
+	out.Locks = h.settingLocks(r.Context(), LeadSettingsSurface()...)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -259,7 +259,7 @@ func (h Handlers) UpdateLeadSettings(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
-	out.Locks = h.settingLocks(LeadSettingsSurface()...)
+	out.Locks = h.settingLocks(r.Context(), LeadSettingsSurface()...)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 

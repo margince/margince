@@ -66,7 +66,7 @@ func TestABootSourceAnswersAStoredSettingWithoutTheDatabase(t *testing.T) {
 	if err != nil || v != 900 || origin.Source != config.SourceEnv || origin.Name != "X_TEST_CAP" {
 		t.Fatalf("got %d %+v %v", v, origin, err)
 	}
-	if o, locked := cfg.Locked("test.cap"); !locked || o.Name != "X_TEST_CAP" {
+	if o, locked := cfg.Locked(reader, "test.cap"); !locked || o.Name != "X_TEST_CAP" {
 		t.Fatalf("Locked = %+v %v", o, locked)
 	}
 }
@@ -176,8 +176,8 @@ func TestAnUnlockedStoredSettingNeedsTheDatabase(t *testing.T) {
 	if err := config.Save(writer, cfg, storedCap, 5); err == nil {
 		t.Fatal("a save with no database reported success")
 	}
-	if _, locked := cfg.Locked("test.cap"); locked || len(cfg.BootLocked()) != 0 {
-		t.Fatalf("nothing sets test.cap at boot, yet it reads as locked: %v", cfg.BootLocked())
+	if _, locked := cfg.Locked(reader, "test.cap"); locked || len(cfg.BootLocked(reader)) != 0 {
+		t.Fatalf("nothing sets test.cap at boot, yet it reads as locked: %v", cfg.BootLocked(reader))
 	}
 }
 
@@ -198,7 +198,7 @@ func TestOnlyStoredSettingsAreLockedAndRegistered(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := cfg.BootLocked(); len(got) != 1 || !got["test.cap"] {
+	if got := cfg.BootLocked(reader); len(got) != 1 || !got["test.cap"] {
 		t.Fatalf("BootLocked = %v, want only test.cap", got)
 	}
 	defs := cfg.StoredDefinitions()
@@ -258,14 +258,14 @@ func TestLockedChangeJudgesTheBootValueByTheCallersRule(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if locked, err := config.LockedChange(unlocked, storedCap, func(int) bool { return false }); locked || err != nil {
+	if locked, err := config.LockedChange(reader, unlocked, storedCap, func(int) bool { return false }); locked || err != nil {
 		t.Fatalf("no boot source: locked %v, %v", locked, err)
 	}
 	cfg := lockedCap(t)
-	if locked, err := config.LockedChange(cfg, storedCap, func(boot int) bool { return boot%100 == 0 }); !locked || err != nil {
+	if locked, err := config.LockedChange(reader, cfg, storedCap, func(boot int) bool { return boot%100 == 0 }); !locked || err != nil {
 		t.Fatalf("the same value by the caller's rule: locked %v, %v", locked, err)
 	}
-	locked, err := config.LockedChange(cfg, storedCap, func(int) bool { return false })
+	locked, err := config.LockedChange(reader, cfg, storedCap, func(int) bool { return false })
 	if !locked || !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), "X_TEST_CAP") {
 		t.Fatalf("another value: locked %v, %v", locked, err)
 	}
@@ -277,17 +277,17 @@ func TestLockedChangeJudgesTheBootValueByTheCallersRule(t *testing.T) {
 func TestLockFirstAnswersTheLockInPlaceOfARefusal(t *testing.T) {
 	refused := errors.New("must be at least 1")
 	var locked config.LockedError
-	if err := lockedCap(t).LockFirst("test.cap", refused); !errors.As(err, &locked) || !errors.Is(err, apperrors.ErrConflict) {
+	if err := lockedCap(t).LockFirst(reader, "test.cap", refused); !errors.As(err, &locked) || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a refusal of a locked key = %v, want the LockedError", err)
 	}
 	unlocked, err := load(t, fixture{}, storedCap)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := unlocked.LockFirst("test.cap", refused); !errors.Is(err, refused) {
+	if err := unlocked.LockFirst(reader, "test.cap", refused); !errors.Is(err, refused) {
 		t.Fatalf("a refusal of an unlocked key = %v, want it unchanged", err)
 	}
-	if err := lockedCap(t).LockFirst("test.cap", nil); err != nil {
+	if err := lockedCap(t).LockFirst(reader, "test.cap", nil); err != nil {
 		t.Fatalf("no refusal = %v, want nil", err)
 	}
 }

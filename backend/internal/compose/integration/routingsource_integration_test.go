@@ -362,16 +362,15 @@ func TestAnIgnoredRoutingPathIsAnnouncedAndSaysWhichSituation(t *testing.T) {
 // Whoever binds first has to see that the credential for it has arrived.
 // /ai/provider-keys reports `configured` on the screen an admin opens to bind a
 // tier. A key a boot source sets is held whether or not a binding exists.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestAKeyInTheEnvironmentReadsAsConfiguredOnAnInstallationThatHasBoundNothing(t *testing.T) {
+	t.Parallel()
 	e := SetupSearch(t)
-	apptest.BindEnv(t, []string{"GEMINI_API_KEY=a-gemini-key"})
+	boot := apptest.LoadEnv(t, []string{"GEMINI_API_KEY=a-gemini-key"})
 	env := config.Static(map[string]string{
 		keyvault.EnvRootKey: base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("k"), 32)),
 	})
 
-	cfg, err := compose.ResolveRouting(context.Background(), e.Pool, "", env, discard())
+	cfg, err := compose.ResolveRouting(compose.ConfigContext(context.Background(), boot), e.Pool, "", env, discard())
 	if err != nil {
 		t.Fatalf("ResolveRouting on an unbound installation: %v", err)
 	}
@@ -383,7 +382,7 @@ func TestAKeyInTheEnvironmentReadsAsConfiguredOnAnInstallationThatHasBoundNothin
 	if n := searchSealedBlobCount(t, e); n != 0 {
 		t.Errorf("%d blobs sealed at boot; a key the environment sets is never copied into the vault", n)
 	}
-	listed, err := ai.NewProviderKeyStore(compose.StoredConfig(e.Pool)).List(e.adminRoutingCtx())
+	listed, err := ai.NewProviderKeyStore(compose.StoredConfig(e.Pool)).List(compose.ConfigContext(e.adminRoutingCtx(), boot))
 	if err != nil {
 		t.Fatalf("listing the provider keys: %v", err)
 	}

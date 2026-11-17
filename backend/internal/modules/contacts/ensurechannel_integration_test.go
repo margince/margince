@@ -213,7 +213,7 @@ func TestEnsureChannelCounterpartyRespectsTheSuppressionLedger(t *testing.T) {
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash) VALUES ('channel_identity', $1)`,
-			storekit.ChannelIdentityHash(erased.Provider, erased.ChannelUserID))
+			storekit.ChannelIdentityHash(ctx, erased.Provider, erased.ChannelUserID))
 		return err
 	}); err != nil {
 		t.Fatal(err)

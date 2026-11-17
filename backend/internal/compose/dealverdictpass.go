@@ -214,7 +214,7 @@ func ownerVerdictSwitches(ctx context.Context, tx pgx.Tx, owner ids.UUID) (map[s
 		out[correction] = mode == approvals.ModeAuto
 	}
 	// An admin may stop every stage move for the installation.
-	moves, err := config.StoredApplyTx(ctx, tx, config.Bound(), deals.StageAutopilotEnabled)
+	moves, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), deals.StageAutopilotEnabled)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading whether deals may move: %w", err)
 	}

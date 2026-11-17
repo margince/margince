@@ -159,7 +159,7 @@ func (h connectorAppHandlers) view(ctx context.Context, p capture.AppProvider) (
 	}
 	locks := []crmcontracts.SettingLock{}
 	// Built here, not by Locks: a connector app is no registered setting.
-	if lock, ok := h.envLock(p); ok {
+	if lock, ok := h.envLock(ctx, p); ok {
 		locks = append(locks, crmcontracts.SettingLock{Key: lock.Key, Origin: settingOrigin(lock.Origin)})
 	}
 	view.Locks = &locks
@@ -180,7 +180,7 @@ func (h connectorAppHandlers) SetOauthApp(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	if err := h.locked(p); err != nil {
+	if err := h.locked(r.Context(), p); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -201,7 +201,7 @@ func (h connectorAppHandlers) DeleteOauthApp(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return
 	}
-	if err := h.locked(p); err != nil {
+	if err := h.locked(r.Context(), p); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -295,8 +295,8 @@ var envAppSettings = map[capture.AppProvider]struct {
 // locked refuses a change to an app the deployment composed. That app is the
 // one every connect uses, so a stored one would be saved and never read. The
 // lock comes after the grant and the body, and before the value is judged.
-func (h connectorAppHandlers) locked(p capture.AppProvider) error {
-	if lock, ok := h.envLock(p); ok {
+func (h connectorAppHandlers) locked(ctx context.Context, p capture.AppProvider) error {
+	if lock, ok := h.envLock(ctx, p); ok {
 		return lock
 	}
 	return nil
@@ -304,12 +304,12 @@ func (h connectorAppHandlers) locked(p capture.AppProvider) error {
 
 // envLock is the lock the deployment's app puts on the stored one, named by
 // the client id's source. A read reports it and a write is refused with it.
-func (h connectorAppHandlers) envLock(p capture.AppProvider) (config.LockedError, bool) {
+func (h connectorAppHandlers) envLock(ctx context.Context, p capture.AppProvider) (config.LockedError, bool) {
 	if h.composed[p].envClientID == "" {
 		return config.LockedError{}, false
 	}
 	app := envAppSettings[p]
-	origin, set := loadedConfig().Locked(app.clientID.Key())
+	origin, set := loadedConfig(ctx).Locked(ctx, app.clientID.Key())
 	if !set {
 		origin = config.Origin{Source: config.SourceEnv, Name: app.clientID.Env()}
 	}

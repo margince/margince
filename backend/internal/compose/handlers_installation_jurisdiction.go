@@ -107,7 +107,7 @@ func (h installationSettingsHandlers) readJurisdiction(ctx context.Context, fn f
 }
 
 func gatedCountry(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
-	code, err := config.StoredValTx(ctx, tx, loadedConfig(), identity.Country)
+	code, err := config.StoredValTx(ctx, tx, loadedConfig(ctx), identity.Country)
 	return jurisdiction.Code(code), err
 }
 

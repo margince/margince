@@ -94,7 +94,7 @@ func TestAnAddressErasedInUnicodeStaysDeadInPunycode(t *testing.T) {
 	ctx := e.as()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1)`,
-			storekit.SuppressionHash("anna@bücher.example"))
+			storekit.SuppressionHash(ctx, "anna@bücher.example"))
 		return err
 	}); err != nil {
 		t.Fatal(err)

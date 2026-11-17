@@ -228,10 +228,8 @@ func TestAMailedCardObeysTheMailboxsOwnSwitch(t *testing.T) {
 
 // A mailbox that never chose follows the workspace default. A boot-set default
 // wins over the row in the card path's SQL, as it does in the signature pass.
-// Not parallel: the binding is the process's own.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestABootSetMailReadingDefaultBindsTheCardPath(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	activity := seedCardMail(ctx, t, e, e.Rep1, "workspace")
@@ -244,9 +242,7 @@ func TestABootSetMailReadingDefaultBindsTheCardPath(t *testing.T) {
 		t.Fatalf("with the saved default on, the import was refused: %v", err)
 	}
 
-	before := config.Bound()
-	UseConfig(bootConfigForTest(t, config.RoleWorker, "MARGINCE_CAPTURE_SIGNATURE_ENRICH=false"))
-	t.Cleanup(func() { UseConfig(before) })
+	ctx = ConfigContext(ctx, bootConfigForTest(t, config.RoleWorker, "MARGINCE_CAPTURE_SIGNATURE_ENRICH=false"))
 	if _, err := grantorOf(ctx, e, activity); err == nil {
 		t.Fatal("a boot-set default of off still granted the import over the saved row")
 	}

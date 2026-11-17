@@ -154,7 +154,7 @@ func (s *Store) closeStillDue(ctx context.Context, tx pgx.Tx, in CloseLostInput)
 	if DealStatus(status) != DealOpen || legalHold || owner == nil || *owner != in.Owner {
 		return false, nil
 	}
-	on, err := config.StoredApplyTx(ctx, tx, config.Bound(), MaintenanceWritesEnabled)
+	on, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), MaintenanceWritesEnabled)
 	if err != nil || !on {
 		return false, err
 	}

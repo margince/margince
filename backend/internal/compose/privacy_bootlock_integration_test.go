@@ -18,19 +18,17 @@ import (
 )
 
 // A deployment's retain-only seed writes no row under a boot value, which
-// would act only once that value is gone. Not parallel: the binding is the
-// process's own.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
+// would act only once that value is gone.
 func TestABootSetRetainOnlyPostureIsNotSeeded(t *testing.T) {
+	t.Parallel()
 	e := integration.Setup(t)
-	bindForTest(t, "MARGINCE_PRIVACY_RETAIN_ONLY=false")
+	ctx := apiBootCtx(e.Admin(), t, "MARGINCE_PRIVACY_RETAIN_ONLY=false")
 	seeds := deployconfig.Seeds{Retention: &deployconfig.RetentionSeed{DefaultPolicy: deployconfig.RetentionRetainOnlyPosture}}
 	if !seeds.RetainOnly() {
 		t.Fatal("the fixture does not ask for the retain-only posture")
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		return seedRetentionPosture(e.Admin(), tx, seeds)
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		return seedRetentionPosture(ctx, tx, seeds)
 	}); err != nil {
 		t.Fatalf("seeding the posture under a boot value: %v", err)
 	}

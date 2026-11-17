@@ -302,7 +302,7 @@ func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FILTER (WHERE contact_id = $1),
 		       count(*) FILTER (WHERE contact_id IS NULL AND address_hash = $2 AND revoked_at IS NULL)
-		  FROM communication_suppression`, predecessor, storekit.SuppressionHash("hedda@anon.test")).Scan(&onPredecessor, &onAddress); err != nil {
+		  FROM communication_suppression`, predecessor, storekit.SuppressionHash(ctx, "hedda@anon.test")).Scan(&onPredecessor, &onAddress); err != nil {
 		t.Fatalf("counting the predecessor's suppressions: %v", err)
 	}
 	if onPredecessor != 0 || onAddress != 1 {
@@ -351,7 +351,7 @@ func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
 		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND address IN ($3, $4)),
 		       count(*) FILTER (WHERE revoked_at IS NOT NULL AND contact_id = $1)
 		  FROM communication_suppression`, contact,
-		[]string{storekit.SuppressionHash(work), storekit.SuppressionHash(home)}, work, home).Scan(&liveOnAddresses, &liftedWithAddress, &liftedKept); err != nil {
+		[]string{storekit.SuppressionHash(ctx, work), storekit.SuppressionHash(ctx, home)}, work, home).Scan(&liveOnAddresses, &liftedWithAddress, &liftedKept); err != nil {
 		t.Fatalf("counting the stops: %v", err)
 	}
 	if liveOnAddresses != 2 || liftedWithAddress != 0 || liftedKept != 2 {

@@ -445,7 +445,7 @@ func TestLoginLockoutEndToEnd(t *testing.T) {
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT detail->>'outcome' FROM system_log
 		 WHERE action = 'login' AND detail->>'email_hash' = $1
-		 ORDER BY id DESC LIMIT 1`, storekit.SuppressionHash(e.member.Email)).Scan(&outcome); err != nil {
+		 ORDER BY id DESC LIMIT 1`, storekit.SuppressionHash(ctx, e.member.Email)).Scan(&outcome); err != nil {
 		t.Fatal(err)
 	}
 	if outcome != "lockout" {

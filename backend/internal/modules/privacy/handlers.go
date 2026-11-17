@@ -4,6 +4,7 @@
 package privacy
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -25,7 +26,7 @@ import (
 type Handlers struct {
 	// locks reports the settings a boot source sets on each settings response;
 	// nil leaves the field out.
-	locks func(surface []config.Any) *[]crmcontracts.SettingLock
+	locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock
 	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
 	db       *database.DB
 	policies *PolicyStore

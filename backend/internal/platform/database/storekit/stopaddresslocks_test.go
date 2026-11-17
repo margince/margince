@@ -10,28 +10,28 @@ import (
 
 func TestStopLocksMeetEveryPlainAndHashedReaderMatch(t *testing.T) {
 	addresses := []string{" Buyer@BÜCHER.example ", "buyer@xn--bcher-kva.example"}
-	lowered, hashes := StopAddressArgs(addresses...)
+	lowered, hashes := StopAddressArgs(t.Context(), addresses...)
 	if len(lowered) == 0 || len(hashes) == 0 {
 		t.Fatal("the reader lost its plain or hashed address matches")
 	}
-	keys := StopAddressLockKeys(addresses, nil)
+	keys := StopAddressLockKeys(t.Context(), addresses, nil)
 	if len(keys) == 0 || !slices.IsSorted(keys) {
 		t.Fatalf("reader keys are empty or unordered: %v", keys)
 	}
 	for _, address := range lowered {
-		if !overlappingStopKeys(keys, StopAddressLockKeys([]string{address}, nil)) {
+		if !overlappingStopKeys(keys, StopAddressLockKeys(t.Context(), []string{address}, nil)) {
 			t.Fatalf("plain reader match %q has no shared lock", address)
 		}
 	}
 	for _, hash := range hashes {
-		if !overlappingStopKeys(keys, StopAddressLockKeys(nil, []string{hash})) {
+		if !overlappingStopKeys(keys, StopAddressLockKeys(t.Context(), nil, []string{hash})) {
 			t.Fatal("a hash-only stop has no lock shared with the reader")
 		}
 	}
-	if overlappingStopKeys(keys, StopAddressLockKeys([]string{"elsewhere@another.example"}, nil)) {
+	if overlappingStopKeys(keys, StopAddressLockKeys(t.Context(), []string{"elsewhere@another.example"}, nil)) {
 		t.Fatal("unrelated recipients share a stop lock")
 	}
-	repeated := StopAddressLockKeys(append(addresses, addresses...), append(hashes, hashes...))
+	repeated := StopAddressLockKeys(t.Context(), append(addresses, addresses...), append(hashes, hashes...))
 	if !slices.Equal(keys, repeated) {
 		t.Fatal("repeated reader matches change the ordered lock set")
 	}

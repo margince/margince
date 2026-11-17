@@ -27,7 +27,7 @@ import (
 func SeedCountryOnce(ctx context.Context, pool *pgxpool.Pool, code string) (stored bool, err error) {
 	err = database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
 		var seedErr error
-		stored, seedErr = config.SeedTx(ctx, tx, config.Bound(), Country, code)
+		stored, seedErr = config.SeedTx(ctx, tx, config.Bound(ctx), Country, code)
 		return seedErr
 	})
 	return stored, err

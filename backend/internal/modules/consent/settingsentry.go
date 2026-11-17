@@ -75,7 +75,7 @@ var AuthorizationModes = config.DefineStored(config.Spec[map[string]string]{
 // authorizationModesTx is the posture every decision reads, inside the
 // transaction that records it, under the boot value the program bound.
 func authorizationModesTx(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
-	return config.StoredApplyTx(ctx, tx, config.Bound(), AuthorizationModes)
+	return config.StoredApplyTx(ctx, tx, config.Bound(ctx), AuthorizationModes)
 }
 
 // settingsAuditVerb is the audit action every consent settings change records.

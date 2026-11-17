@@ -83,7 +83,7 @@ func disclosureRecipients() []string {
 // particulars. The installation sends the notice, so its default legal entity
 // is the sending entity whose rules the data follows.
 func readControllerTx(ctx context.Context, tx pgx.Tx, out *PrivacyInformation) error {
-	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
+	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), ControllerIdentity)
 	if err != nil {
 		return fmt.Errorf("consent: reading who answers for this data: %w", err)
 	}

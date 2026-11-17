@@ -46,7 +46,7 @@ func readLeadNotice(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, out *Noti
 		{"correspondence", kinds[6]},
 	})
 	var pkg SARPackage
-	for _, section := range sarCommunicationSections(&pkg, nil, []ids.UUID{leadID.UUID}, []ids.UUID{}) {
+	for _, section := range sarCommunicationSections(ctx, &pkg, nil, []ids.UUID{leadID.UUID}, []ids.UUID{}) {
 		if section.dest != &pkg.CommunicationBases {
 			continue
 		}

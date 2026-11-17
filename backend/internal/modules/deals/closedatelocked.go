@@ -48,7 +48,7 @@ func (c closeDateCandidate) stillAssessed(ctx context.Context, tx pgx.Tx, row lo
 		c.provisional != row.provisional || !samePtr(c.override, row.override) || !samePtr(c.overrideBy, row.overrideBy) {
 		return false, nil
 	}
-	horizon, err := config.StoredApplyTx(ctx, tx, config.Bound(), SilentCloseDays)
+	horizon, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), SilentCloseDays)
 	if err != nil {
 		return false, fmt.Errorf("deals: reading the silent close days the estimate stops at: %w", err)
 	}

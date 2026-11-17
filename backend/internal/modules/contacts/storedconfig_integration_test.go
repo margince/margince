@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -75,9 +76,9 @@ func TestABootSetTemplateIsTheOneASendSignsWith(t *testing.T) {
 		SignatureTemplate.Key()); err != nil {
 		t.Fatal(err)
 	}
-	configtest.Bind(t, configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"))
+	boot := config.WithBound(e.ctx, configtest.StoredOver(t, e.store.db.Pool(), ConfigSettings(), "MARGINCE_CONTACTS_SIGNATURE_TEMPLATE=<p>{name}</p>"))
 
-	signature, err := e.store.SignatureFor(e.ctx, e.user, ids.Nil)
+	signature, err := e.store.SignatureFor(boot, e.user, ids.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}

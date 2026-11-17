@@ -191,7 +191,7 @@ func refuseSharedWithoutOptInTx(ctx context.Context, tx pgx.Tx, posture string) 
 	if posture != PostureShared {
 		return nil
 	}
-	allowed, err := config.StoredApplyTx(ctx, tx, config.Bound(), SharedPostureAllowed)
+	allowed, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), SharedPostureAllowed)
 	if err != nil {
 		return fmt.Errorf("capture: reading the shared-posture opt-in: %w", err)
 	}

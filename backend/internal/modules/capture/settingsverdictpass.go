@@ -51,7 +51,7 @@ func (s *ThreadVerdictStore) PassCap(ctx context.Context) (int, error) {
 	var passCap int
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		passCap, err = config.StoredApplyTx(ctx, tx, config.Bound(), ConfidentialityPassCap)
+		passCap, err = config.StoredApplyTx(ctx, tx, config.Bound(ctx), ConfidentialityPassCap)
 		return err
 	})
 	if err != nil {

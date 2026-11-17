@@ -411,7 +411,7 @@ func aStopThatBindsTheMessage(
 	ctx context.Context, db *database.DB, subject ids.ContactID, refusal RefusedRecipient,
 ) (string, error) {
 	var stops []liveStop
-	lowered, hashes := storekit.StopAddressArgs(refusal.Address)
+	lowered, hashes := storekit.StopAddressArgs(ctx, refusal.Address)
 	err := db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT kind, purpose_id FROM communication_suppression s

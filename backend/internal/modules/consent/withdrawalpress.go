@@ -131,7 +131,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 	// exactly the behaviour this dedup had before the column existed.
 	// A stop kept from an anonymized or earlier press may hold only the hash of
 	// the address, so the bare-address arm matches either.
-	lowered, hashes := storekit.StopAddressArgs(ref.Address)
+	lowered, hashes := storekit.StopAddressArgs(ctx, ref.Address)
 	var stopID ids.UUID
 	err = tx.QueryRow(ctx, `
 		INSERT INTO communication_suppression

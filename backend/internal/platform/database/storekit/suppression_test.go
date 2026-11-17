@@ -14,13 +14,13 @@ import (
 // as a wildcard.
 
 func TestSuppressionHashNormalizes(t *testing.T) {
-	base := SuppressionHash("selma@example.test")
+	base := SuppressionHash(t.Context(), "selma@example.test")
 	for _, variant := range []string{"SELMA@example.test", "  selma@example.test  ", "Selma@Example.Test"} {
-		if SuppressionHash(variant) != base {
+		if SuppressionHash(t.Context(), variant) != base {
 			t.Errorf("variant %q hashes differently — a trivial respelling would resurrect the subject", variant)
 		}
 	}
-	if SuppressionHash("other@example.test") == base {
+	if SuppressionHash(t.Context(), "other@example.test") == base {
 		t.Error("distinct identifiers collide")
 	}
 }
@@ -30,19 +30,19 @@ func TestSuppressionHashNormalizes(t *testing.T) {
 // are different humans, and the same numeric id on two providers is two
 // contacts. A key that collided would suppress a stranger.
 func TestChannelIdentityHashSeparatesProviderFromAccount(t *testing.T) {
-	base := ChannelIdentityHash("telegram", "123456789")
+	base := ChannelIdentityHash(t.Context(), "telegram", "123456789")
 	others := map[string]string{
 		"telegram":   "12345678",  // a neighbouring account on the same provider
 		"zalo":       "123456789", // the same digits on another provider
 		"telegram:1": "23456789",  // the same characters, boundary shifted
 	}
 	for provider, channelUserID := range others {
-		if ChannelIdentityHash(provider, channelUserID) == base {
+		if ChannelIdentityHash(t.Context(), provider, channelUserID) == base {
 			t.Errorf("%q/%q collides with telegram/123456789 — an erasure would suppress a different account",
 				provider, channelUserID)
 		}
 	}
-	if ChannelIdentityHash("Telegram", " 123456789 ") != base {
+	if ChannelIdentityHash(t.Context(), "Telegram", " 123456789 ") != base {
 		t.Error("the channel key skips the normalization every suppression key shares")
 	}
 }

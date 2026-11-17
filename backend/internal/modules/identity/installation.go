@@ -209,7 +209,7 @@ const (
 // against the previous revision. The values it collects are a second OUTCOME of
 // a successful create, not a second result of the call.
 func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in InstallationBootstrap, origin provisioningOrigin, seed func(ctx context.Context, tx pgx.Tx) error, discarded *[]string) (ids.WorkspaceID, error) {
-	in = in.underBootValues(c)
+	in = in.underBootValues(ctx, c)
 	boot := BootstrapInput{
 		WorkspaceName: in.CompanyName,
 		AdminEmail:    in.AdminEmail,
@@ -362,14 +362,14 @@ func resolveBasis(in InstallationBootstrap, origin provisioningOrigin) (currency
 
 // underBootValues replaces what a boot source sets, so the bootstrap writes
 // and reports the value every reader answers.
-func (in InstallationBootstrap) underBootValues(c *config.Config) InstallationBootstrap {
-	if name, ok := config.BootVal(c, Name); ok {
+func (in InstallationBootstrap) underBootValues(ctx context.Context, c *config.Config) InstallationBootstrap {
+	if name, ok := config.BootVal(ctx, c, Name); ok {
 		in.CompanyName = name
 	}
-	if language, ok := config.BootVal(c, BaseLanguage); ok {
+	if language, ok := config.BootVal(ctx, c, BaseLanguage); ok {
 		in.BaseLanguage = language
 	}
-	if country, ok := config.BootVal(c, Country); ok {
+	if country, ok := config.BootVal(ctx, c, Country); ok {
 		in.Country = &country
 	}
 	return in
@@ -416,7 +416,7 @@ func seedInstallationIdentity(ctx context.Context, tx pgx.Tx, boot *config.Confi
 			return nil, err
 		}
 		// A boot-set key is neither seeded nor reported.
-		if _, locked := boot.Locked(key); !stored && !locked {
+		if _, locked := boot.Locked(ctx, key); !stored && !locked {
 			discarded = append(discarded, key)
 		}
 	}

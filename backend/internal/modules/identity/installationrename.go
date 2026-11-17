@@ -29,7 +29,7 @@ func refuseRenameTx(ctx context.Context, tx pgx.Tx, c *config.Config, next *stri
 	if *next == current {
 		return nil
 	}
-	return c.LockFirst(Name.Key(), settings.InvalidValue{
+	return c.LockFirst(ctx, Name.Key(), settings.InvalidValue{
 		Setting: Name.Key(), Code: "set_on_company_profile",
 		Reason: "the installation's name is the company's name; change it on the company profile",
 	})

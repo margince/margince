@@ -50,13 +50,3 @@ func StoredOverWith(
 	store := settings.New(pool, settings.NewRegistry(slices.Concat(rows, cfg.StoredDefinitions())...))
 	return store, cfg.WithDatabase(store)
 }
-
-// Bind binds cfg as the program's configuration until the test ends. The
-// binding is the process's own, so a test that calls it must not run in
-// parallel.
-func Bind(t testing.TB, cfg *config.Config) {
-	t.Helper()
-	before := config.Bound()
-	config.Bind(cfg)
-	t.Cleanup(func() { config.Bind(before) })
-}

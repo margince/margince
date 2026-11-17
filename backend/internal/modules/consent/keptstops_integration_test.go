@@ -30,7 +30,7 @@ func TestTheSendCheckMatchesAStopKeptAsTheHashOfTheAddress(t *testing.T) {
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'subject_request', 'kept', 'system', 'user')`,
-		storekit.SuppressionHash("kept@returning.test")); err != nil {
+		storekit.SuppressionHash(t.Context(), "kept@returning.test")); err != nil {
 		t.Fatalf("planting the kept stop: %v", err)
 	}
 	for _, c := range []struct {
@@ -65,7 +65,7 @@ func TestAReviewSeesAStopKeptAsTheHashOfTheAddress(t *testing.T) {
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'subject_request', 'kept', 'system', 'user')`,
-		storekit.SuppressionHash("kept@returning.test")); err != nil {
+		storekit.SuppressionHash(t.Context(), "kept@returning.test")); err != nil {
 		t.Fatalf("planting the kept stop: %v", err)
 	}
 	binding, err := aStopThatBindsTheMessage(e.ctx, e.store.db, ids.New[ids.ContactKind](), RefusedRecipient{
@@ -251,7 +251,7 @@ func TestAReplayedPressFindsTheStopKeptAsAHash(t *testing.T) {
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO communication_suppression (address_hash, kind, source, captured_by, decided_by_level)
 		VALUES ($1, $2, 'public_link', 'system', 'machine')`,
-		storekit.SuppressionHash(address), commsauthz.ReasonObjection); err != nil {
+		storekit.SuppressionHash(t.Context(), address), commsauthz.ReasonObjection); err != nil {
 		t.Fatalf("planting the kept stop: %v", err)
 	}
 	var stopped bool

@@ -123,10 +123,10 @@ func keepStopsOnAddresses(ctx context.Context, tx pgx.Tx, column stopSubjectColu
 }
 
 // addressHashes hashes each address the way the send check matches it.
-func addressHashes(addresses []string) []string {
+func addressHashes(ctx context.Context, addresses []string) []string {
 	hashes := make([]string, 0, len(addresses))
 	for _, address := range addresses {
-		hashes = append(hashes, storekit.SuppressionHash(address))
+		hashes = append(hashes, storekit.SuppressionHash(ctx, address))
 	}
 	return hashes
 }
@@ -141,7 +141,7 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 	if len(addresses) == 0 {
 		return nil
 	}
-	hashes := addressHashes(addresses)
+	hashes := addressHashes(ctx, addresses)
 	if err := storekit.LockStopAddresses(ctx, tx, addresses, hashes); err != nil {
 		return err
 	}
@@ -154,7 +154,7 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 		  FROM communication_suppression s
 		 CROSS JOIN unnest($2::text[], $3::text[]) AS u(address, hash)
 		 WHERE s.id = $1
-		ON CONFLICT DO NOTHING`, stop, addresses[1:], hashes[1:], commsauthz.ReasonHardBounce, storekit.SuppressionKeyID()); err != nil {
+		ON CONFLICT DO NOTHING`, stop, addresses[1:], hashes[1:], commsauthz.ReasonHardBounce, storekit.SuppressionKeyID(ctx)); err != nil {
 		return fmt.Errorf("copy the subject's stop onto each address it covers: %w", err)
 	}
 	if _, err := tx.Exec(ctx, fmt.Sprintf(`
@@ -162,7 +162,7 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 		   SET %s = NULL, address = CASE WHEN kind = $4 THEN $2::text END, address_hash = $3,
 		       address_key_id = $5, recorded_for_addresses = NULL
 		 WHERE id = $1 AND revoked_at IS NULL`, column),
-		stop, addresses[0], hashes[0], commsauthz.ReasonHardBounce, storekit.SuppressionKeyID()); err != nil {
+		stop, addresses[0], hashes[0], commsauthz.ReasonHardBounce, storekit.SuppressionKeyID(ctx)); err != nil {
 		return fmt.Errorf("detach the subject's stop onto its address: %w", err)
 	}
 	return nil
@@ -233,7 +233,7 @@ func keepWithdrawalOn(ctx context.Context, tx pgx.Tx, addresses []string, withdr
 	if len(addresses) == 0 {
 		return nil
 	}
-	hashes := addressHashes(addresses)
+	hashes := addressHashes(ctx, addresses)
 	if err := storekit.LockStopAddresses(ctx, tx, addresses, hashes); err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func keepWithdrawalOn(ctx context.Context, tx pgx.Tx, addresses []string, withdr
 		SELECT u.hash, $8, $2, $3, $4, $5, $6, $7 FROM unnest($1::text[]) AS u(hash)`,
 		hashes, commsauthz.ReasonObjection, sourceKeptFromWithdrawal, by,
 		string(commsauthz.LevelSubject), withdrawnAt, string(commsauthz.RecordedByMachine),
-		storekit.SuppressionKeyID()); err != nil {
+		storekit.SuppressionKeyID(ctx)); err != nil {
 		return fmt.Errorf("keep the subject's marketing withdrawal on their addresses: %w", err)
 	}
 	return nil

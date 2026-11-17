@@ -77,7 +77,7 @@ func (s *SettingsStore) Update(ctx context.Context, automaticLookup *bool) (Sett
 // differently.
 // Held by: TestOnlyOneReaderAnswersTheAutomaticLookupPosture (settings_test.go)
 func automaticLookupEnabled(ctx context.Context, tx pgx.Tx) (bool, error) {
-	on, err := config.StoredApplyTx(ctx, tx, config.Bound(), AutomaticLookup)
+	on, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), AutomaticLookup)
 	if err != nil {
 		return false, fmt.Errorf("integrations: reading the automatic-lookup posture: %w", err)
 	}

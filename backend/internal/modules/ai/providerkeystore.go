@@ -140,7 +140,7 @@ func (s *ProviderKeyStore) Set(ctx context.Context, provider string, sent Provid
 	if !cloud {
 		return keyRefused(provider, fmt.Sprintf("%q takes no credential — it is served without one", provider))
 	}
-	if _, err := config.LockedChange(s.cfg, setting, func(string) bool { return false }); err != nil {
+	if _, err := config.LockedChange(ctx, s.cfg, setting, func(string) bool { return false }); err != nil {
 		return err
 	}
 	secret, err := s.acceptedCredential(ctx, provider, sent)
@@ -164,7 +164,7 @@ func (s *ProviderKeyStore) LockFirst(ctx context.Context, provider string, err e
 	if gateErr := auth.Require(ctx, providerKeysObject, principal.ActionUpdate); gateErr != nil {
 		return gateErr
 	}
-	return s.cfg.LockFirst(setting.Key(), err)
+	return s.cfg.LockFirst(ctx, setting.Key(), err)
 }
 
 // acceptedCredential is the one field this provider takes, trimmed, or a
@@ -247,7 +247,7 @@ func (s *ProviderKeyStore) Remove(ctx context.Context, provider string) error {
 	if !cloud {
 		return nil
 	}
-	if _, err := config.LockedChange(s.cfg, setting, func(string) bool { return false }); err != nil {
+	if _, err := config.LockedChange(ctx, s.cfg, setting, func(string) bool { return false }); err != nil {
 		return err
 	}
 	if !s.cfg.Seals() {

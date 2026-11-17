@@ -65,7 +65,7 @@ func EmailErasedAt(ctx context.Context, tx pgx.Tx, email string) (time.Time, boo
 	if err := tx.QueryRow(ctx, `
 		SELECT max(created_at) FROM erasure_suppression
 		 WHERE kind = 'email' AND value_hash = ANY(@forms) AND lifted_at IS NULL`,
-		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(email)}).Scan(&erasedAt); err != nil {
+		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(ctx, email)}).Scan(&erasedAt); err != nil {
 		return time.Time{}, false, fmt.Errorf("privacy: reading when an address was erased: %w", err)
 	}
 	if erasedAt == nil {
@@ -93,7 +93,7 @@ func LiftEmailSuppressionTx(ctx context.Context, tx pgx.Tx, email string, erased
 	if _, err := tx.Exec(ctx, `
 		UPDATE erasure_suppression SET lifted_at = now(), lift_consent_event_id = @consent, lift_contact_id = @contact
 		 WHERE kind = 'email' AND value_hash = ANY(@forms) AND lifted_at IS NULL`,
-		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(email), "consent": consentEvent, sqlArgContact: contact}); err != nil {
+		pgx.StrictNamedArgs{"forms": storekit.EmailSuppressionForms(ctx, email), "consent": consentEvent, sqlArgContact: contact}); err != nil {
 		return fmt.Errorf("privacy: lifting an address from the erasure list: %w", err)
 	}
 	return nil

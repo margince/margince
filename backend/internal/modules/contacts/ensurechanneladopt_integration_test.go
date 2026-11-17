@@ -148,7 +148,7 @@ func TestAnErasedAddressIsNotResurrectedByADirectMessage(t *testing.T) {
 
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1)`,
-			storekit.SuppressionHash(erased))
+			storekit.SuppressionHash(ctx, erased))
 		return err
 	}); err != nil {
 		t.Fatal(err)

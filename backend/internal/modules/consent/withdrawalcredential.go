@@ -339,7 +339,7 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 		contactID ids.UUID
 		address   *string
 	)
-	row, ok := signedPreferenceRow(token)
+	row, ok := signedPreferenceRow(ctx, token)
 	if !ok {
 		return WithdrawalRef{}, apperrors.ErrNotFound
 	}

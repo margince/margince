@@ -136,7 +136,7 @@ func resolvePreferenceTokenTx(ctx context.Context, tx pgx.Tx, token string) (Pre
 		merged  bool
 		address *string
 	)
-	row, ok := signedPreferenceRow(token)
+	row, ok := signedPreferenceRow(ctx, token)
 	if !ok {
 		return PreferenceRef{}, apperrors.ErrNotFound
 	}
@@ -309,7 +309,7 @@ func ensurePreferenceTokenTx(
 ) (string, error) {
 	// Without a root key a link can only be handed out again as stored. A row
 	// whose link was hashed is then not honourable, and is rotated.
-	signed := preferenceLinkKey() != nil
+	signed := preferenceLinkKey(ctx) != nil
 	var (
 		row    ids.UUID
 		stored *string
@@ -324,7 +324,7 @@ func ensurePreferenceTokenTx(
 		RETURNING id, token`,
 		contactID, preferenceTokenTTLDays, preferenceTokenMaxAgeDays, emailID, signed).Scan(&row, &stored)
 	if err == nil {
-		return issuePreferenceLink(row, stored)
+		return issuePreferenceLink(ctx, row, stored)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return "", err
@@ -369,12 +369,12 @@ func ensurePreferenceTokenTx(
 			contactID, emailID).Scan(&row, &stored); err != nil {
 			return "", err
 		}
-		return issuePreferenceLink(row, stored)
+		return issuePreferenceLink(ctx, row, stored)
 	}
 	if err != nil {
 		return "", err
 	}
-	return issuePreferenceLink(row, stored)
+	return issuePreferenceLink(ctx, row, stored)
 }
 
 func newPreferenceToken() (string, error) {

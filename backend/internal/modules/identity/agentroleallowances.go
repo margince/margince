@@ -139,7 +139,7 @@ func (s *InstallationSettingsStore) resetAgentAllowancesTx(ctx context.Context, 
 	}
 	keys = append(keys, AgentWritesPerWindow.Key(), AgentEgressPerWindow.Key(), AgentCallsPerWindow.Key())
 	for _, key := range keys {
-		if _, locked := s.config.Locked(key); locked {
+		if _, locked := s.config.Locked(ctx, key); locked {
 			continue
 		}
 		if _, err := s.settings.DeleteRawTx(ctx, tx, key); err != nil {

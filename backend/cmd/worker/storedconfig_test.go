@@ -20,10 +20,10 @@ func TestTheWorkerLoadLocksAStoredSettingItsEnvironmentSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if config.Bound() != loaded {
+	if config.Bound(t.Context()) != loaded {
 		t.Fatal("compose holds a configuration other than the one the worker loaded")
 	}
-	origin, locked := compose.StoredConfig(nil).Locked(identity.SendRateLimit.Key())
+	origin, locked := compose.StoredConfig(nil).Locked(t.Context(), identity.SendRateLimit.Key())
 	if !locked || origin.Name != "MARGINCE_INSTALLATION_SEND_RATE_LIMIT" {
 		t.Fatalf("the environment's send rate is not a lock compose sees: %+v %v", origin, locked)
 	}
@@ -45,10 +45,10 @@ func TestALaneLoadLocksAStoredSettingItsEnvironmentSets(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if config.Bound() != loaded {
+	if config.Bound(t.Context()) != loaded {
 		t.Fatal("compose holds a configuration other than the one the lane loaded")
 	}
-	if _, locked := compose.StoredConfig(nil).Locked(identity.SendRateLimit.Key()); !locked {
+	if _, locked := compose.StoredConfig(nil).Locked(t.Context(), identity.SendRateLimit.Key()); !locked {
 		t.Fatal("the environment's send rate is not a lock the lane's compose sees")
 	}
 }

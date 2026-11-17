@@ -548,7 +548,7 @@ func suppressAddress(t *testing.T, e *integration.Env, email string) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO erasure_suppression (kind, value_hash)
-			VALUES ('email', $1)`, storekit.SuppressionHash(email))
+			VALUES ('email', $1)`, storekit.SuppressionHash(t.Context(), email))
 		return err
 	})
 	if err != nil {

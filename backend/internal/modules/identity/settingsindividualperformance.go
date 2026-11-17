@@ -30,7 +30,7 @@ var IndividualPerformance = config.DefineStored(config.Spec[bool]{
 // IndividualPerformanceTx reads the switch inside a transaction the caller
 // already holds, ungated: every reader's figures obey it, whatever their grants.
 func IndividualPerformanceTx(ctx context.Context, tx pgx.Tx) (bool, error) {
-	return config.StoredApplyTx(ctx, tx, config.Bound(), IndividualPerformance)
+	return config.StoredApplyTx(ctx, tx, config.Bound(ctx), IndividualPerformance)
 }
 
 // IndividualPerformanceFor answers the switch for one request: the value its

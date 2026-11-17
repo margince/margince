@@ -48,7 +48,7 @@ func writeAiRouting(w http.ResponseWriter, r *http.Request, cfg ai.RoutingConfig
 		httperr.Write(w, r, err)
 		return
 	}
-	out.Locks = loadedLocks(ai.RoutingSurface())
+	out.Locks = loadedLocks(r.Context(), ai.RoutingSurface())
 	w.Header().Set("ETag", `"`+cfg.Revision()+`"`)
 	httperr.WriteJSON(w, http.StatusOK, out)
 }

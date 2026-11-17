@@ -12,6 +12,7 @@ package privacy
 // evaluator's own selector table.
 
 import (
+	"context"
 	"net/http"
 	"slices"
 
@@ -123,7 +124,7 @@ func (h Handlers) GetRetentionSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RetentionSettings{
-		RetainOnly: retainOnly, Locks: h.settingLocks(ConfigSettings()...),
+		RetainOnly: retainOnly, Locks: h.settingLocks(r.Context(), ConfigSettings()...),
 	})
 }
 
@@ -143,7 +144,7 @@ func (h Handlers) UpdateRetentionSettings(w http.ResponseWriter, r *http.Request
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.RetentionSettings{
-		RetainOnly: retainOnly, Locks: h.settingLocks(ConfigSettings()...),
+		RetainOnly: retainOnly, Locks: h.settingLocks(r.Context(), ConfigSettings()...),
 	})
 }
 
@@ -166,15 +167,15 @@ func policyToWire(p Policy) crmcontracts.RetentionPolicy {
 }
 
 // WithLocks binds what reports the settings a boot source sets.
-func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+func (h Handlers) WithLocks(locks func(ctx context.Context, surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
 	h.locks = locks
 	return h
 }
 
 // settingLocks are the locks among surface, the settings one response carries.
-func (h Handlers) settingLocks(surface ...config.Any) *[]crmcontracts.SettingLock {
+func (h Handlers) settingLocks(ctx context.Context, surface ...config.Any) *[]crmcontracts.SettingLock {
 	if h.locks == nil {
 		return nil
 	}
-	return h.locks(surface)
+	return h.locks(ctx, surface)
 }

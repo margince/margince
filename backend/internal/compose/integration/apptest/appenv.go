@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -55,6 +56,8 @@ type AppEnv struct {
 	// placeholder, so a suite that needs the link the SUBJECT would receive
 	// reads the same bytes the dispatcher substitutes.
 	Vault keyvault.Vault
+	// Config is the configuration the app was composed over, nil for none.
+	Config *config.Config
 
 	// wiring is the suite's extra compose options, kept so Reboot recomposes
 	// the same application rather than the default one.
@@ -133,7 +136,7 @@ func (e *AppEnv) RebootWith(t *testing.T, tune func(*pgxpool.Config)) *AppEnv {
 		t.Fatalf("opening the rebooted app pool: %v", err)
 	}
 	t.Cleanup(pool.Close)
-	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, wiring: e.wiring, ownPool: true}
+	next := &AppEnv{Owner: e.Owner, Pool: pool, Vault: e.Vault, Config: e.Config, wiring: e.wiring, ownPool: true}
 	return next.serve(t, e.Client.Jar)
 }
 
@@ -353,7 +356,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, workspaceName, adminEmai
 			Email: adminEmail, DisplayName: adminName, PasswordFile: pwFile,
 		},
 	}
-	if err := compose.EnsureInstallation(context.Background(), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
+	if err := compose.EnsureInstallation(e.Ctx(context.Background()), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
 	if status := e.signIn(t, adminEmail, operatorSupplied); status != http.StatusOK {

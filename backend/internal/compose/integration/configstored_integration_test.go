@@ -165,7 +165,7 @@ func TestConfigStored_SeedSkipsABootLockedKeyAndResetClearsIt(t *testing.T) {
 		}
 	}
 	inTx(func(tx pgx.Tx) error {
-		stored, err := settings.Seed(ctx, tx, def, json.RawMessage(`7`), cfg.BootLocked())
+		stored, err := settings.Seed(ctx, tx, def, json.RawMessage(`7`), cfg.BootLocked(ctx))
 		if stored {
 			t.Error("seed wrote a row under a boot-locked key")
 		}

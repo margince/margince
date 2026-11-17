@@ -42,7 +42,7 @@ func roomInviteIdentity(ctx context.Context, pool *pgxpool.Pool) (string, string
 	var company string
 	err = InstallationDB(pool).Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		company, err = config.StoredApplyTx(ctx, tx, loadedConfig(), identity.Name)
+		company, err = config.StoredApplyTx(ctx, tx, loadedConfig(ctx), identity.Name)
 		return err
 	})
 	return name, company, err

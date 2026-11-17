@@ -10,14 +10,14 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A window the environment sets is the one the worklist applies, over a saved
-// row. The endpoint refuses any other value before it judges it. Not parallel:
-// the binding is the process's own.
+// row. The endpoint refuses any other value before it judges it.
 func TestABootSetFollowUpWindowBindsTheWorklistAndRefusesAChange(t *testing.T) {
 	t.Parallel()
 	e := setupLoad(t)
@@ -28,7 +28,7 @@ func TestABootSetFollowUpWindowBindsTheWorklistAndRefusesAChange(t *testing.T) {
 		t.Fatalf("saving 9 days with nothing set at boot = %d, want 200", code)
 	}
 	locked := configtest.StoredOver(t, e.pool, ConfigSettings(), "MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS=4")
-	configtest.Bind(t, locked)
+	admin = config.WithBound(admin, locked)
 
 	_, window, err := NewStore(db).AwaitingReplies(admin, clocktest.Now(t))
 	if err != nil || window != 4 {

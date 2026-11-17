@@ -225,9 +225,11 @@ func joinNotes(notes ...string) string {
 }
 
 // dailyScale reads the corpus multiplier; 1 is the published mid-market tier.
-// A value that is not a positive number is an error, never a silent default.
-func dailyScale() (float64, error) {
-	raw := os.Getenv(dailyScaleEnv)
+func dailyScale() (float64, error) { return dailyScaleOf(os.Getenv(dailyScaleEnv)) }
+
+// dailyScaleOf is the multiplier raw names. A value that is not a positive
+// number is an error, never a silent default.
+func dailyScaleOf(raw string) (float64, error) {
 	if raw == "" {
 		return 1, nil
 	}
@@ -370,23 +372,20 @@ func TestARowEntryBackUnderBudgetAsksForItsRowToGo(t *testing.T) {
 	}
 }
 
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheDailyScaleDefaultsToThePublishedTier(t *testing.T) {
-	t.Setenv(dailyScaleEnv, "")
-	if scale, err := dailyScale(); err != nil || scale != 1 {
+	t.Parallel()
+	if scale, err := dailyScaleOf(""); err != nil || scale != 1 {
 		t.Fatalf("got %v, %v; want 1 and no error", scale, err)
 	}
-	t.Setenv(dailyScaleEnv, "0.05")
-	if scale, err := dailyScale(); err != nil || scale != 0.05 {
+	if scale, err := dailyScaleOf("0.05"); err != nil || scale != 0.05 {
 		t.Fatalf("got %v, %v; want 0.05 and no error", scale, err)
 	}
 }
 
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheDailyScaleRefusesAValueThatSeedsNothing(t *testing.T) {
+	t.Parallel()
 	for _, raw := range []string{"0", "-1", "half"} {
-		t.Setenv(dailyScaleEnv, raw)
-		if _, err := dailyScale(); err == nil || !strings.Contains(err.Error(), dailyScaleEnv) {
+		if _, err := dailyScaleOf(raw); err == nil || !strings.Contains(err.Error(), dailyScaleEnv) {
 			t.Fatalf("%s=%q: got %v; want an error naming the variable", dailyScaleEnv, raw, err)
 		}
 	}

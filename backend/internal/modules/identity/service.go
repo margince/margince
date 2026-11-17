@@ -382,7 +382,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		if err != nil {
 			return err
 		}
-		if name, ok := config.BootVal(config.Bound(), Name); ok {
+		if name, ok := config.BootVal(ctx, config.Bound(ctx), Name); ok {
 			id.WorkspaceName = name
 		}
 		id.UserID = userID

@@ -24,9 +24,8 @@ const lockedCode = "setting_locked_by_boot_source"
 // A settings response carries the value a boot source sets, and its lock names
 // the source. Only a change is refused: the value in force, sent again beside
 // another field, saves.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestLockedSettingsShowInTheAPIAndRefuseAChange(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{"MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP=900"})
 	e.BootstrapWorkspace(t)
 
@@ -53,9 +52,8 @@ func TestLockedSettingsShowInTheAPIAndRefuseAChange(t *testing.T) {
 // The overview lists every setting of every program once, with the programs
 // that read it. A secret set at boot is named by its source, and its value
 // appears nowhere in the answer. Reading every setting is not enough to see it.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheOverviewNeverCarriesASecretValue(t *testing.T) {
+	t.Parallel()
 	const webhookKey = "c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0c2VjcmV0MTI="
 	e := apptest.SetupAppWithEnv(t, []string{
 		"MARGINCE_WEBHOOK_KEY=" + webhookKey, "ANTHROPIC_API_KEY=" + envProviderKey, "MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP=900",
@@ -142,9 +140,8 @@ func overviewByKey(t *testing.T, entries []crmcontracts.ConfigurationEntry) map[
 
 // The task overrides answer as a map of tasks, with no room for a lock. Their
 // lock is reported on the routing response, which the same screen reads.
-//
-//testdb:serial binds the process-wide configuration (config.Bind)
 func TestTheRoutingResponseReportsTheTaskOverridesLock(t *testing.T) {
+	t.Parallel()
 	e := apptest.SetupAppWithEnv(t, []string{`MARGINCE_AI_TASK_OVERRIDES={"capture_classify":{"thinking":"high"}}`})
 	e.BootstrapWorkspace(t)
 

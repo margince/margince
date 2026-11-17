@@ -100,10 +100,11 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 // the close_date_workspace worker binds — the pass is per workspace now, and a
 // suite that bound its own scope would be proving a path the product does not
 // run.
-func (e *closeDateEnv) sweep() error {
-	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	ctx = principal.SystemActing(ctx, closeDateSweepActor)
-	return e.corrector.SweepWorkspace(ctx)
+func (e *closeDateEnv) sweep() error { return e.corrector.SweepWorkspace(e.sweepCtx()) }
+
+// sweepCtx is the nightly sweep's actor on the workspace.
+func (e *closeDateEnv) sweepCtx() context.Context {
+	return principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), closeDateSweepActor)
 }
 
 // seedSweepDeal plants one deal through the owner connection — exactly

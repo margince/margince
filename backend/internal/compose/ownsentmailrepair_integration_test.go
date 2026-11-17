@@ -196,7 +196,7 @@ func TestTheOwnSentMailRepairLeavesMailItCannotClaim(t *testing.T) {
 			seedRepairSeat(t, e)
 			if tc.buyerWasErased {
 				e.WsExec(t, `INSERT INTO erasure_suppression (kind, value_hash) VALUES ('email', $1)`,
-					storekit.SuppressionHash(repairBuyer))
+					storekit.SuppressionHash(t.Context(), repairBuyer))
 			}
 			id := seedReceivedMailTo(t, e, tc.to, "kept@"+strings.ReplaceAll(tc.name, " ", "-")+".example", tc.received)
 

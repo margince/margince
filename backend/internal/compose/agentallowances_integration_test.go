@@ -153,7 +153,7 @@ func readAgentPolicyAsMachinery(e *integration.Env) (agentvolume.Policy, error) 
 	var policy agentvolume.Policy
 	err := NewSettingsStore(e.Pool).WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		policy, err = identity.AgentPolicyTx(ctx, tx, loadedConfig())
+		policy, err = identity.AgentPolicyTx(ctx, tx, loadedConfig(ctx))
 		return err
 	})
 	return policy, err

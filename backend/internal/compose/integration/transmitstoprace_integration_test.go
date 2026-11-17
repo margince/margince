@@ -373,5 +373,5 @@ func stageAddressStopMail(t *testing.T, p *preflightEnv, scenario permissionWrit
 	if status := p.Call(t, "POST", "/v1/emails", body, nil, &activity); status != http.StatusAccepted {
 		t.Fatalf("stage address-stop message: %d %s %s %s", status, activity.Code, activity.Detail, activity.Details)
 	}
-	return uuidOf(t, activity.ID), path, storekit.StopAddressLockKeys([]string{address}, nil)
+	return uuidOf(t, activity.ID), path, storekit.StopAddressLockKeys(ctx, []string{address}, nil)
 }

@@ -61,7 +61,7 @@ func TestTheKeptStopBackfillHashesTheAddressAndReadsTheChain(t *testing.T) {
 		kept).Scan(&address, &hash); err != nil {
 		t.Fatal(err)
 	}
-	if address == nil || *address != keptAddress || hash == nil || *hash != storekit.SuppressionHash(keptAddress) {
+	if address == nil || *address != keptAddress || hash == nil || *hash != storekit.SuppressionHash(ctx, keptAddress) {
 		t.Errorf("the kept stop holds address %v and hash %v, want the address and the send check's hash", address, hash)
 	}
 	if err := conn.QueryRow(ctx, `SELECT address, address_hash FROM communication_suppression WHERE id = $1`,

@@ -169,7 +169,7 @@ func plantRouting(ctx context.Context, store settingsWriter, cfg ai.RoutingConfi
 	var planted bool
 	if err := store.WriteTx(ctx, func(tx pgx.Tx) error {
 		var err error
-		planted, err = config.SeedTx(ctx, tx, loadedConfig(), ai.Routing, cfg)
+		planted, err = config.SeedTx(ctx, tx, loadedConfig(ctx), ai.Routing, cfg)
 		return err
 	}); err != nil {
 		// Not fatal. The installation still boots and still resolves whatever it
@@ -237,7 +237,7 @@ func sealedKeys(ctx context.Context, pool *pgxpool.Pool, env config.Lookup, log 
 func sealedProviderRefs(ctx context.Context, cfg *config.Config, log *slog.Logger) map[string]string {
 	refs := map[string]string{}
 	for _, s := range ai.KeySettings() {
-		if _, locked := cfg.Locked(s.Key()); locked {
+		if _, locked := cfg.Locked(ctx, s.Key()); locked {
 			continue
 		}
 		ref, stored, err := config.SealedRef(ctx, cfg, s)

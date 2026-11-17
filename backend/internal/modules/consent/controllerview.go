@@ -23,7 +23,7 @@ func (s *Store) controllerView(ctx context.Context, tx pgx.Tx, rendered Rendered
 	if err != nil {
 		return Rendered{}, err
 	}
-	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(), ControllerIdentity)
+	identity, err := config.StoredApplyTx(ctx, tx, config.Bound(ctx), ControllerIdentity)
 	if err != nil {
 		return Rendered{}, err
 	}

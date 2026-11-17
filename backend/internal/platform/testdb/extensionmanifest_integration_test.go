@@ -18,8 +18,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestTheCloneProbeChecksEveryComposedExtensionLedger(t *testing.T) {
+	t.Parallel()
 	ctx := context.Background()
 	owner := ownerConn(t)
 	existing, err := testExtensionNamespaces()
@@ -39,7 +39,7 @@ func TestTheCloneProbeChecksEveryComposedExtensionLedger(t *testing.T) {
 	if _, err := dbmigrate.Up(ctx, owner, dbmigrate.Namespace{Name: ns.Name, Migrations: []dbmigrate.Migration{old}}); err != nil {
 		t.Fatal(err)
 	}
-	if reason, err := ledgerAtHead(ctx, owner); err != nil || !strings.Contains(reason, "absent from") {
+	if reason, err := ledgerAtHeadWith(ctx, owner, existing); err != nil || !strings.Contains(reason, "absent from") {
 		t.Fatalf("unlisted extension: %q %v", reason, err)
 	}
 	body, err := json.Marshal(append(existing, ns))
@@ -50,28 +50,30 @@ func TestTheCloneProbeChecksEveryComposedExtensionLedger(t *testing.T) {
 	if err := os.WriteFile(path, body, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	t.Setenv(extensionManifestEnv, path)
-	if reason, err := ledgerAtHead(ctx, owner); err != nil || reason != "" {
+	declared, err := extensionNamespacesIn(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if reason, err := ledgerAtHeadWith(ctx, owner, declared); err != nil || reason != "" {
 		t.Fatalf("declared old stamp: %q %v", reason, err)
 	}
 	if _, err := owner.Exec(ctx, `UPDATE `+table+` SET content_digest='wrong'`); err != nil {
 		t.Fatal(err)
 	}
-	if reason, err := ledgerAtHead(ctx, owner); err != nil || !strings.Contains(reason, "different content") {
+	if reason, err := ledgerAtHeadWith(ctx, owner, declared); err != nil || !strings.Contains(reason, "different content") {
 		t.Fatalf("edited extension: %q %v", reason, err)
 	}
 	if _, err := owner.Exec(ctx, `DELETE FROM `+table); err != nil {
 		t.Fatal(err)
 	}
-	if reason, err := ledgerAtHead(ctx, owner); err != nil || !strings.Contains(reason, "not recorded") {
+	if reason, err := ledgerAtHeadWith(ctx, owner, declared); err != nil || !strings.Contains(reason, "not recorded") {
 		t.Fatalf("short extension: %q %v", reason, err)
 	}
 }
 
-//testdb:serial sets the environment or working directory, which Go refuses in a parallel test
 func TestAnAbsentExtensionCensusCannotProveTheCloneAtHead(t *testing.T) {
-	t.Setenv(extensionManifestEnv, "")
-	if _, err := testExtensionNamespaces(); err == nil {
+	t.Parallel()
+	if _, err := extensionNamespacesIn(""); err == nil {
 		t.Fatal("an absent composed migration census was treated as no extensions")
 	}
 }

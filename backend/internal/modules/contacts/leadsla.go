@@ -296,7 +296,7 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 // It reads (id, true) when one is configured and can still work the queue.
 // The scan and the delivery of its event share it.
 func IntakeSeat(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
-	return unassignedEscalationTarget(ctx, tx, config.Bound())
+	return unassignedEscalationTarget(ctx, tx, config.Bound(ctx))
 }
 
 // unassignedEscalationTarget reads the configured intake seat: (id, true) for a
@@ -336,7 +336,7 @@ func unassignedEscalationTarget(ctx context.Context, tx pgx.Tx, cfg *config.Conf
 // learns the seat they set answers for nothing.
 func warnSeatAnswersNobody(ctx context.Context, cfg *config.Config) {
 	source := "the database"
-	if origin, locked := cfg.Locked(UnassignedEscalationUserID.Key()); locked {
+	if origin, locked := cfg.Locked(ctx, UnassignedEscalationUserID.Key()); locked {
 		source = origin.String()
 	}
 	slog.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on a lead with no owner, or whose owner has left, escalates to nobody",

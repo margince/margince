@@ -4,6 +4,7 @@
 package consent
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -25,8 +26,8 @@ const (
 
 // preferenceLinkKey is the key links are signed with, or nil when the
 // installation configures no root key.
-func preferenceLinkKey() []byte {
-	return keyvault.DerivedKey(config.Bound(), preferenceKeyLabel)
+func preferenceLinkKey(ctx context.Context) []byte {
+	return keyvault.DerivedKey(config.Bound(ctx), preferenceKeyLabel)
 }
 
 func preferenceLinkMAC(key []byte, row ids.UUID) []byte {
@@ -46,8 +47,8 @@ var errUnissuableLink = errors.New("consent: this recipient's preference link ne
 
 // issuePreferenceLink is the link a send carries for a row: a signed one when
 // a key is configured, and the row's stored link otherwise.
-func issuePreferenceLink(row ids.UUID, stored *string) (string, error) {
-	if key := preferenceLinkKey(); key != nil {
+func issuePreferenceLink(ctx context.Context, row ids.UUID, stored *string) (string, error) {
+	if key := preferenceLinkKey(ctx); key != nil {
 		return mintPreferenceLink(key, row), nil
 	}
 	if stored == nil {
@@ -65,11 +66,11 @@ const preferenceLinkRowSQL = `(pt.id = @link_row OR (@link_row::uuid IS NULL
 
 // signedPreferenceRow is the row a signed link names, nil for an older link.
 // ok is false for a signed link whose MAC does not hold under the current key.
-func signedPreferenceRow(token string) (row *ids.UUID, ok bool) {
+func signedPreferenceRow(ctx context.Context, token string) (row *ids.UUID, ok bool) {
 	if !strings.HasPrefix(token, preferenceLinkPrefix) {
 		return nil, true
 	}
-	key := preferenceLinkKey()
+	key := preferenceLinkKey(ctx)
 	raw, err := base64.RawURLEncoding.DecodeString(token[len(preferenceLinkPrefix):])
 	if key == nil || err != nil || len(raw) != len(ids.UUID{})+sha256.Size {
 		return nil, false
