@@ -215,7 +215,7 @@ test("names the missing critical role", async () => {
   expect(await screen.findByText("No champion")).not.toBeNull();
   // And the gap is shown WHERE it is: in the column that would hold them.
   expect(screen.getByTestId("gap-champion")).not.toBeNull();
-  // Each column is headed like any other label and counts the people in it.
+  // Each column is headed like any other label and counts the contacts in it.
   expect(screen.getByText("Champion")).not.toBeNull();
   expect(screen.getByText("Economic buyer")).not.toBeNull();
   expect(screen.getByText("1 contact")).not.toBeNull();
