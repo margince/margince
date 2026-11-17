@@ -470,7 +470,9 @@ describe("ProjectScreen", () => {
     await screen.findByRole("heading", { name: "CRM rollout" });
 
     expect(screen.getByText(/You cannot edit this project/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Edit (About|Ownership)$/ }),
+    ).toBeNull();
   });
 
   // Absent is not "unknown", it is "no": a response from a server too old to
@@ -544,6 +546,69 @@ describe("ProjectScreen", () => {
     expect(landed).not.toBe(document.body);
     expect(landed?.isConnected).toBe(true);
     expect(landed?.closest("[hidden]")).toBeNull();
+  });
+});
+
+describe("Edit project in the More menu", () => {
+  const region = {
+    id: "cf-region",
+    object: "project",
+    label: "Region",
+    slug: "region",
+    type: "text",
+    status: "active",
+    column_name: "cf_region",
+    show_in_create: true,
+    reportable: false,
+    created_by: "human:u-1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+
+  it("opens the project's fields in one dialog and saves them through the record write", async () => {
+    const user = userEvent.setup();
+    const writes: { body: unknown; ifMatch: string | null }[] = [];
+    projectsBackend({
+      view: project360({
+        project: Object.assign(project(), { cf_region: "North" }),
+      }),
+      respond: async (url, method, request) => {
+        if (new URL(url).pathname === "/v1/custom-fields") {
+          return jsonResponse({ data: [region] });
+        }
+        if (method === "PATCH") {
+          writes.push({
+            body: await request.json(),
+            ifMatch: request.headers.get("If-Match"),
+          });
+          return jsonResponse(project({ name: "CRM rollout two", version: 4 }));
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: en["project.edit"] }));
+    const dialog = within(
+      await screen.findByRole("dialog", { name: en["project.edit"] }),
+    );
+    expect(dialog.getByRole("textbox", { name: "Description" })).toBeTruthy();
+    expect(dialog.getByLabelText(en["project.targetEnd"])).toBeTruthy();
+    expect(dialog.getByLabelText(/^Owner/)).toBeTruthy();
+    const regionBox = await dialog.findByRole("textbox", { name: "Region" });
+    await user.clear(regionBox);
+    await user.type(regionBox, "South");
+    const name = dialog.getByRole("textbox", { name: /^Project name/ });
+    await user.clear(name);
+    await user.type(name, "CRM rollout two");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(writes).toEqual([
+        { body: { name: "CRM rollout two", cf_region: "South" }, ifMatch: "3" },
+      ]),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
 
