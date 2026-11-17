@@ -11073,7 +11073,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
 
   "archivePurpose.title": "Mục đích lưu trữ",
   "archivePurpose.intro":
-    "Hết thời hạn lưu, email và cuộc họp đã ghi nhận được chuyển sang lưu trữ hạn chế truy cập. Trang quyền riêng tư nêu lý do lưu trữ, và bạn xóa những gì không còn phục vụ mục đích đó.",
+    "Hết thời hạn lưu, email, cuộc họp và cuộc gọi đã ghi nhận được chuyển sang lưu trữ hạn chế truy cập. Trang quyền riêng tư nêu lý do lưu trữ, và bạn xóa những gì không còn phục vụ mục đích đó.",
   "archivePurpose.label": "Mục đích lưu trữ",
   "archivePurpose.translationLabel": "Mục đích lưu trữ bằng {language}",
   "archivePurpose.hint":
@@ -11100,15 +11100,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "archiveReview.deleteShown_other": "Xóa {count} mục đang hiển thị",
   "archiveReview.confirmTitle": "Xóa các mục đã lưu trữ?",
   "archiveReview.confirmBody_one":
-    "Nội dung của {count} mục đã lưu trữ bị xóa vĩnh viễn. Thông tin với ai và khi nào vẫn được giữ. Mục đang bị lưu trữ pháp lý hoặc được luật giữ lại không thay đổi.",
+    "Nội dung của {count} mục đã lưu trữ bị xóa vĩnh viễn. Thông tin với ai và khi nào vẫn được giữ. Mục đang bị lưu trữ pháp lý, hồ sơ từ chối nhận tin và mục được luật giữ lại không thay đổi.",
   "archiveReview.confirmBody_other":
-    "Nội dung của {count} mục đã lưu trữ bị xóa vĩnh viễn. Thông tin với ai và khi nào vẫn được giữ. Mục đang bị lưu trữ pháp lý hoặc được luật giữ lại không thay đổi.",
+    "Nội dung của {count} mục đã lưu trữ bị xóa vĩnh viễn. Thông tin với ai và khi nào vẫn được giữ. Mục đang bị lưu trữ pháp lý, hồ sơ từ chối nhận tin và mục được luật giữ lại không thay đổi.",
   "archiveReview.confirm": "Xóa",
   "archiveReview.doneTitle": "Đã xóa xong",
+  "archiveReview.partialTitle": "Đã xong trước khi việc xóa dừng lại",
   "archiveReview.deleted_one": "Đã xóa {count} mục.",
   "archiveReview.deleted_other": "Đã xóa {count} mục.",
   "archiveReview.keptCount_one": "{reason}: {count} mục",
   "archiveReview.keptCount_other": "{reason}: {count} mục",
+  "archiveReview.failed_one": "{count} mục không xóa được và giữ nguyên.",
+  "archiveReview.failed_other": "{count} mục không xóa được và giữ nguyên.",
   "restricted.title": "Mục bị hạn chế",
   "restricted.sub":
     "Các mục mà nghĩa vụ lưu trữ theo luật định còn giữ lại sau khi xóa: mục nào, vì sao và đến khi nào. Nội dung thư từ bị ẩn để không bị đọc.",

@@ -24,6 +24,7 @@ import {
 } from "../../design-system/recordpicker";
 import { activityDay } from "../../format/activitywhen";
 import { formatNumber } from "../../format/format";
+import { humanizeToken } from "../../format/humanizetoken";
 import { startOfDayInZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -31,7 +32,6 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { humanizeToken } from "./audit";
 
 // Settings → Privacy → Retention: the archive, for the controller to delete
 // what no longer serves its purpose. The server decides what a deletion keeps;
@@ -43,7 +43,7 @@ type Deletion = components["schemas"]["ArchiveDeletionResult"];
 
 export const ARCHIVE_KEY = ["retention", "archive"] as const;
 
-// The server takes at most this many records per request.
+// The maxItems of activity_ids in crm.yaml (ArchiveDeletionRequest).
 const DELETION_BATCH = 100;
 
 const KEPT_LABEL: Readonly<Record<KeptReason, MessageKey>> = {
@@ -82,17 +82,35 @@ async function searchCompanies(q: string): Promise<RecordPickerCandidate[]> {
   }));
 }
 
+/** A request failed after earlier ones were done. done is what the earlier
+ * requests deleted and kept; the failed request's records and the rest stay
+ * as they were. */
+export class PartialDeletion extends Error {
+  constructor(
+    readonly done: Deletion,
+    readonly reason: unknown,
+  ) {
+    super("the deletion stopped part way");
+  }
+}
+
 /** Deletes in requests the server accepts, and adds up their answers. */
 async function deleteArchived(activityIds: readonly string[]) {
-  const total: Deletion = { deleted: [], kept: [] };
+  const total: Deletion = { deleted: [], kept: [], failed: [] };
   for (let at = 0; at < activityIds.length; at += DELETION_BATCH) {
-    const part = unwrap(
-      await api.POST("/retention/archive/delete", {
-        body: { activity_ids: activityIds.slice(at, at + DELETION_BATCH) },
-      }),
-    );
+    let part: Deletion;
+    try {
+      part = unwrap(
+        await api.POST("/retention/archive/delete", {
+          body: { activity_ids: activityIds.slice(at, at + DELETION_BATCH) },
+        }),
+      );
+    } catch (reason) {
+      throw new PartialDeletion(total, reason);
+    }
     total.deleted.push(...part.deleted);
     total.kept.push(...part.kept);
+    total.failed.push(...part.failed);
   }
   return total;
 }
@@ -147,11 +165,11 @@ function ArchiveReview() {
   });
   const remove = useMutation({
     mutationFn: deleteArchived,
-    onSuccess: () => {
-      setConfirming(false);
-      return queryClient.invalidateQueries({ queryKey: ARCHIVE_KEY });
-    },
+    onSuccess: () => setConfirming(false),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ARCHIVE_KEY }),
   });
+  const partial =
+    remove.error instanceof PartialDeletion ? remove.error.done : null;
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
   const deletable = rows
     .filter((row) => row.kept === undefined)
@@ -247,7 +265,12 @@ function ArchiveReview() {
             )}
           </Field>
         </FilterBar>
-        {remove.data ? <DeletionOutcome deletion={remove.data} /> : null}
+        {remove.data ? (
+          <DeletionOutcome
+            title={t("archiveReview.doneTitle")}
+            deletion={remove.data}
+          />
+        ) : null}
         {rows.length === 0 && (
           <QueryStates query={query} pendingLabel={t("archiveReview.title")}>
             <EmptyState>{t("archiveReview.empty")}</EmptyState>
@@ -278,20 +301,38 @@ function ArchiveReview() {
         confirmVariant="danger"
         onConfirm={() => remove.mutate(deletable)}
         pending={remove.isPending}
-        error={remove.error ? problemMessageOf(remove.error, t) : null}
+        error={
+          remove.error
+            ? problemMessageOf(
+                remove.error instanceof PartialDeletion
+                  ? remove.error.reason
+                  : remove.error,
+                t,
+              )
+            : null
+        }
       >
         <p>
           {plural("archiveReview.confirmBody", deletable.length, {
             count: formatNumber(deletable.length, locale),
           })}
         </p>
+        {partial ? (
+          <DeletionOutcome
+            title={t("archiveReview.partialTitle")}
+            deletion={partial}
+          />
+        ) : null}
       </ConfirmModal>
     </>
   );
 }
 
 /** What the last deletion did, with each kept record's reason counted. */
-function DeletionOutcome({ deletion }: Readonly<{ deletion: Deletion }>) {
+function DeletionOutcome({
+  title,
+  deletion,
+}: Readonly<{ title: string; deletion: Deletion }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -300,7 +341,7 @@ function DeletionOutcome({ deletion }: Readonly<{ deletion: Deletion }>) {
     counts.set(kept.reason, (counts.get(kept.reason) ?? 0) + 1);
   }
   return (
-    <Callout title={t("archiveReview.doneTitle")}>
+    <Callout title={title}>
       <p>
         {plural("archiveReview.deleted", deletion.deleted.length, {
           count: formatNumber(deletion.deleted.length, locale),
@@ -314,6 +355,13 @@ function DeletionOutcome({ deletion }: Readonly<{ deletion: Deletion }>) {
           })}
         </p>
       ))}
+      {deletion.failed.length > 0 ? (
+        <p>
+          {plural("archiveReview.failed", deletion.failed.length, {
+            count: formatNumber(deletion.failed.length, locale),
+          })}
+        </p>
+      ) : null}
     </Callout>
   );
 }

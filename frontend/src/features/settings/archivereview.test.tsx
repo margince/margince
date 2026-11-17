@@ -47,17 +47,27 @@ const PAGE = {
   page: { has_more: false, next_cursor: null },
 };
 
-const reply = (body: unknown) =>
+const reply = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
+    status,
     headers: { "Content-Type": "application/json" },
   });
+
+type DeleteReply = (body: { activity_ids: string[] }, call: number) => Response;
+
+const deleteFree: DeleteReply = () =>
+  reply({ deleted: [FREE], kept: [], failed: [] });
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
 
-function show(allow: Record<string, string[]>) {
+function show(
+  allow: Record<string, string[]>,
+  page: unknown = PAGE,
+  onDelete: DeleteReply = deleteFree,
+) {
   const deletes: unknown[] = [];
   const lists: URLSearchParams[] = [];
   vi.stubGlobal(
@@ -68,15 +78,13 @@ function show(allow: Record<string, string[]>) {
       const url = new URL(request.url);
       if (url.pathname.endsWith("/v1/me")) return reply(meFixture({ allow }));
       if (url.pathname.endsWith("/retention/archive/delete")) {
-        deletes.push(await request.json());
-        return reply({
-          deleted: [FREE],
-          kept: [],
-        });
+        const body = await request.json();
+        deletes.push(body);
+        return onDelete(body, deletes.length);
       }
       if (url.pathname.endsWith("/retention/archive")) {
         lists.push(url.searchParams);
-        return reply(PAGE);
+        return reply(page);
       }
       throw new Error(`Unexpected request: ${request.method} ${url.pathname}`);
     }),
@@ -114,4 +122,41 @@ it("offers no deletion to a reader without the delete grant", async () => {
   expect(
     screen.queryByRole("button", { name: /Delete .* shown/ }),
   ).not.toBeInTheDocument();
+});
+
+it("shows what was done before a later request failed, and reloads the archive", async () => {
+  const user = userEvent.setup();
+  const rows = Array.from({ length: 101 }, (_, n) => ({
+    ...PAGE.data[0],
+    activity_id: `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
+    subject: `Old offer ${n}`,
+  }));
+  const { deletes, lists } = show(
+    { retention_policy: ["read", "delete"] },
+    { data: rows, page: PAGE.page },
+    (body, call) =>
+      call === 1
+        ? reply({
+            deleted: body.activity_ids.slice(1),
+            kept: [],
+            failed: body.activity_ids.slice(0, 1),
+          })
+        : reply({ code: "internal", message: "The server failed." }, 500),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Delete 101 shown records" }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(within(dialog).getByRole("button", { name: "Delete" }));
+  await waitFor(() => expect(deletes).toHaveLength(2));
+  expect(
+    await within(dialog).findByText("Done before the deletion stopped"),
+  ).toBeInTheDocument();
+  expect(within(dialog).getByText("99 records deleted.")).toBeInTheDocument();
+  expect(
+    within(dialog).getByText(
+      "1 record could not be deleted and stays as it was.",
+    ),
+  ).toBeInTheDocument();
+  await waitFor(() => expect(lists.length).toBeGreaterThan(1));
 });

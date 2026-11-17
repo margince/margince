@@ -177,7 +177,7 @@ func NewPrivacyHandlers(pool *pgxpool.Pool) privacy.Handlers {
 	return privacy.NewHandlers(InstallationDB(pool), StoredConfig(pool)).WithLocks(loadedLocks).
 		WithCountry(identity.CountryForDecision).WithExtensions(ExtensionData()).
 		WithRawCapturePurger(RawCapturePurgerFor(InstallationDB(pool))).
-		WithLegalHoldWriter(NewLegalHoldSeam(pool)).
+		WithLegalHoldWriter(NewLegalHoldSeam(pool)).WithEdgeInvalidator(search.RecomputeEdgesForActivities).
 		WithRecordLabeler(newAttentionNames(InstallationDB(pool)))
 }
 

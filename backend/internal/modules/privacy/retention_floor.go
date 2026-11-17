@@ -63,7 +63,7 @@ func correspondenceFloorPredicate(currentArg, carriedArg int) string {
 	// (A167/ADR-0116). The expiry sweep reaches these rows by its own
 	// selector, which is the only path that may.
 	return `AND a.restricted_at IS NULL
-		  AND NOT (` + handelsbriefShielded(currentArg, carriedArg) + `)`
+		  ` + excluding(handelsbriefShielded(currentArg, carriedArg))
 }
 
 // handelsbriefShielded is the floor's positive form: the activity aliased `a`

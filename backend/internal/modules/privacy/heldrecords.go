@@ -11,7 +11,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
 )
 
 // heldRecord is the rule that keeps one kind of record: its table aliased a,
@@ -37,10 +36,10 @@ func (r heldRecord) args(floor FloorPolicy, records any) []any {
 // legalHoldPredicate is the hold every record with a legal_hold column keeps.
 const legalHoldPredicate = "a.legal_hold"
 
-// heldRecordRule is the legal hold, open dispute or statutory floor that keeps
-// a record of kind, or false for a kind no hold reaches. The audit cleanup asks
-// it of one record and the copy retention of a page of them, so the two keep
-// the same records.
+// heldRecordRule is what keeps a record of kind: a legal hold, an open dispute,
+// an opt-out floor or the statutory floor. It is false for a kind no hold
+// reaches. The audit cleanup asks it of one record and the copy retention of a
+// page of them, so the two keep the same records.
 func heldRecordRule(kind string) (heldRecord, bool) {
 	switch kind {
 	case contactObject:
@@ -56,8 +55,7 @@ func heldRecordRule(kind string) (heldRecord, bool) {
 	case rightsRequestEntity:
 		return heldRecord{from: " FROM data_subject_request a", predicate: "a.dispute_open"}, true
 	case "activity":
-		return heldRecord{from: " FROM activity a", predicate: "a.restricted_at IS NOT NULL OR " +
-			retentionscope.HeldThroughAnyLink("a.id") + " OR (" + handelsbriefShielded(1, 2) + ")", floor: true}, true
+		return heldRecord{from: " FROM activity a", predicate: keptActivitySQL(1, 2), floor: true}, true
 	}
 	return heldRecord{}, false
 }

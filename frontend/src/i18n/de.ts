@@ -11375,7 +11375,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
 
   "archivePurpose.title": "Zweck des Archivs",
   "archivePurpose.intro":
-    "Nach ihrer Aufbewahrungsfrist kommen erfasste E-Mails und Termine in ein Archiv mit eingeschränktem Zugriff. Die Datenschutzseite nennt, wozu das Archiv sie aufbewahrt, und du löschst, was diesem Zweck nicht mehr dient.",
+    "Nach ihrer Aufbewahrungsfrist kommen erfasste E-Mails, Termine und Anrufe in ein Archiv mit eingeschränktem Zugriff. Die Datenschutzseite nennt, wozu das Archiv sie aufbewahrt, und du löschst, was diesem Zweck nicht mehr dient.",
   "archivePurpose.label": "Zweck des Archivs",
   "archivePurpose.translationLabel": "Zweck des Archivs auf {language}",
   "archivePurpose.hint":
@@ -11402,15 +11402,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "archiveReview.deleteShown_other": "{count} angezeigte Einträge löschen",
   "archiveReview.confirmTitle": "Archivierte Einträge löschen?",
   "archiveReview.confirmBody_one":
-    "Der Inhalt von {count} archivierten Eintrag wird endgültig gelöscht. Mit wem und wann bleibt erhalten. Einträge unter Legal Hold oder mit gesetzlicher Frist bleiben, wie sie sind.",
+    "Der Inhalt von {count} archivierten Eintrag wird endgültig gelöscht. Mit wem und wann bleibt erhalten. Einträge unter Legal Hold, Abmeldenachweise und Einträge mit gesetzlicher Frist bleiben, wie sie sind.",
   "archiveReview.confirmBody_other":
-    "Der Inhalt von {count} archivierten Einträgen wird endgültig gelöscht. Mit wem und wann bleibt erhalten. Einträge unter Legal Hold oder mit gesetzlicher Frist bleiben, wie sie sind.",
+    "Der Inhalt von {count} archivierten Einträgen wird endgültig gelöscht. Mit wem und wann bleibt erhalten. Einträge unter Legal Hold, Abmeldenachweise und Einträge mit gesetzlicher Frist bleiben, wie sie sind.",
   "archiveReview.confirm": "Löschen",
   "archiveReview.doneTitle": "Löschen abgeschlossen",
+  "archiveReview.partialTitle": "Erledigt, bevor das Löschen abbrach",
   "archiveReview.deleted_one": "{count} Eintrag gelöscht.",
   "archiveReview.deleted_other": "{count} Einträge gelöscht.",
   "archiveReview.keptCount_one": "{reason}: {count} Eintrag",
   "archiveReview.keptCount_other": "{reason}: {count} Einträge",
+  "archiveReview.failed_one":
+    "{count} Eintrag konnte nicht gelöscht werden und bleibt, wie er war.",
+  "archiveReview.failed_other":
+    "{count} Einträge konnten nicht gelöscht werden und bleiben, wie sie waren.",
   "restricted.title": "Eingeschränkte Datensätze",
   "restricted.sub":
     "Datensätze, die eine gesetzliche Aufbewahrungspflicht nach einer Löschung sperrt: welcher Datensatz, warum und bis wann. Die Korrespondenz selbst ist ausgeblendet, damit sie nicht gelesen wird.",

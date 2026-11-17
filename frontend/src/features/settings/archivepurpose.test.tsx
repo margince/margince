@@ -21,7 +21,15 @@ const STORED = {
   objection_route: "Write to privacy@example.com.",
   advertiser_contact: "",
   archive_purpose: "keep business records",
-  translations: [{ language: "vi", objection_route: "gửi email" }],
+  // A field a newer server stores and neither screen knows.
+  signature_line: "Example Trading GmbH, Berlin",
+  translations: [
+    {
+      language: "vi",
+      objection_route: "gửi email",
+      signature_line: "Example Trading GmbH, Berlin",
+    },
+  ],
   disclosure_languages: ["vi"],
   objection_route_means: [],
 };
@@ -108,10 +116,12 @@ it("saves the Vietnamese purpose and sends every other particular back unchanged
     objection_route: "Write to privacy@example.com.",
     advertiser_contact: "",
     archive_purpose: "keep business records",
+    signature_line: "Example Trading GmbH, Berlin",
     translations: [
       {
         language: "vi",
         objection_route: "gửi email",
+        signature_line: "Example Trading GmbH, Berlin",
         archive_purpose: "lưu giữ hồ sơ kinh doanh",
       },
     ],
@@ -128,7 +138,7 @@ it("names the default purpose for an empty field", async () => {
   ).not.toHaveLength(0);
 });
 
-it("keeps the archive purpose and the privacy page when the company details are saved", async () => {
+it("keeps the archive purpose, the privacy page and a field it does not know when the company details are saved", async () => {
   const user = userEvent.setup();
   const { puts } = show("particulars");
   const name = await waitFor(() => {
@@ -145,5 +155,12 @@ it("keeps the archive purpose and the privacy page when the company details are 
     legal_name: "Example Trading GmbH AG",
     privacy_page: "https://example.com/privacy",
     archive_purpose: "keep business records",
+    signature_line: "Example Trading GmbH, Berlin",
+    translations: [
+      expect.objectContaining({
+        language: "vi",
+        signature_line: "Example Trading GmbH, Berlin",
+      }),
+    ],
   });
 });

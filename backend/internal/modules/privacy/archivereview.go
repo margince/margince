@@ -13,6 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -46,17 +47,6 @@ const (
 // restricted record is left out.
 var archivedActivitySQL = `a.archived_at IS NOT NULL AND a.restricted_at IS NULL AND NOT ` +
 	storekit.ActivityErasedSQL("a")
-
-// archiveKeeperSQL names what keeps the archived activity aliased a, or empty
-// when nothing does. These are the checks the nightly retention selector runs
-// before it acts on an activity, so the controller cannot delete what the
-// clock may not. currentArg and carriedArg are the floor's classes.
-func archiveKeeperSQL(currentArg, carriedArg int) string {
-	return `CASE WHEN ` + retentionscope.HeldThroughAnyLink("a.id") + ` THEN '` + keptLegalHold + `'
-	  WHEN ` + receiptKept("a.id") + ` THEN '` + keptOptOutRecord + `'
-	  WHEN ` + handelsbriefShielded(currentArg, carriedArg) + ` THEN '` + keptByLaw + `'
-	  ELSE '' END`
-}
 
 // ArchiveParty is a contact or company an archived activity is linked to.
 type ArchiveParty struct {
@@ -150,9 +140,14 @@ func (e *Eraser) ListArchivedActivities(ctx context.Context, f ArchiveFilter) (A
 			return err
 		}
 		floorCurrent, floorCarried := floor.sqlArgs()
-		args := []any{floorCurrent, floorCarried}
+		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
+		kept := activityKeptReasonSQL(arg(floorCurrent), arg(floorCarried))
 		readable, err := auth.ActivityContentClause(ctx, "a", arg)
+		if err != nil {
+			return err
+		}
+		reach, err := archiveReachSQL(ctx, arg)
 		if err != nil {
 			return err
 		}
@@ -175,9 +170,9 @@ func (e *Eraser) ListArchivedActivities(ctx context.Context, f ArchiveFilter) (A
 			                   FROM contact c WHERE c.id IN (SELECT l.contact_id FROM activity_link l WHERE l.activity_id = a.id)), '[]'::jsonb),
 			       coalesce((SELECT jsonb_agg(jsonb_build_object('id', o.id, 'name', `+companyName+`) ORDER BY `+companyName+`, o.id)
 			                   FROM company o WHERE o.id IN (SELECT l.company_id FROM activity_link l WHERE l.activity_id = a.id)), '[]'::jsonb),
-			       `+archiveKeeperSQL(1, 2)+`
+			       `+kept+`
 			  FROM activity a
-			 WHERE `+archivedActivitySQL+where+`
+			 WHERE `+archivedActivitySQL+reach+where+`
 			 ORDER BY a.occurred_at ASC, a.id ASC
 			 LIMIT $`+fmt.Sprint(limit), args...)
 		if err != nil {
@@ -209,6 +204,18 @@ func (e *Eraser) ListArchivedActivities(ctx context.Context, f ArchiveFilter) (A
 	return page, nil
 }
 
+// archiveReachSQL leaves out the archived activity the reader may not
+// discover, so its id, kind, dates and links are not listed. It applies to an
+// all-scope reader too. A colleague's unpromoted captured contact is private
+// even to an admin, and so is mail linked only to it.
+func archiveReachSQL(ctx context.Context, arg func(any) int) (string, error) {
+	discover, err := auth.ActivityDiscoverClause(ctx, "a", arg)
+	if err != nil {
+		return "", err
+	}
+	return " AND " + discover, nil
+}
+
 // archiveListWhere renders the filter, numbering each argument through arg.
 // The cursor's created_at slot carries occurred_at, which the page is ordered
 // by.
@@ -236,10 +243,12 @@ func archiveListWhere(f ArchiveFilter, arg func(any) int) (string, error) {
 	return where, nil
 }
 
-// ArchiveDeletion is what one request deleted, and what it kept and why.
+// ArchiveDeletion is what one request deleted, what it kept and why, and
+// which records failed and are left as they were.
 type ArchiveDeletion struct {
 	Deleted []ids.UUID
 	Kept    []KeptActivity
+	Failed  []ids.UUID
 }
 
 // KeptActivity is one record a deletion left as it was.
@@ -251,7 +260,9 @@ type KeptActivity struct {
 // DeleteArchivedActivities erases the content of each named archived record
 // that nothing keeps, each in its own audited transaction. A record that a
 // legal hold, an opt-out receipt or the statutory floor keeps is reported
-// with the reason and left as it was.
+// with the reason and left as it was. A record whose transaction fails is
+// reported as failed, and the rest still run, so the answer names what each
+// committed transaction did.
 func (e *Eraser) DeleteArchivedActivities(ctx context.Context, activityIDs []ids.UUID) (ArchiveDeletion, error) {
 	if err := requireArchiveReviewer(ctx); err != nil {
 		return ArchiveDeletion{}, err
@@ -263,42 +274,65 @@ func (e *Eraser) DeleteArchivedActivities(ctx context.Context, activityIDs []ids
 		return ArchiveDeletion{}, httperr.Validation("activity_ids", "size",
 			fmt.Sprintf("name between 1 and %d archived activities to delete", ArchiveDeletionLimit))
 	}
-	out := ArchiveDeletion{Deleted: []ids.UUID{}, Kept: []KeptActivity{}}
+	return deleteEach(ctx, activityIDs, e.deleteArchivedActivity), nil
+}
+
+// deleteEach runs deleteOne once for each distinct id and sorts the answers.
+// A failed id is logged and reported, and the ids after it still run.
+func deleteEach(ctx context.Context, activityIDs []ids.UUID,
+	deleteOne func(context.Context, ids.UUID) (string, error),
+) ArchiveDeletion {
+	out := ArchiveDeletion{Deleted: []ids.UUID{}, Kept: []KeptActivity{}, Failed: []ids.UUID{}}
 	seen := map[ids.UUID]bool{}
 	for _, id := range activityIDs {
 		if seen[id] {
 			continue
 		}
 		seen[id] = true
-		kept, err := e.deleteArchivedActivity(ctx, id)
-		if err != nil {
-			return out, err
-		}
-		if kept != "" {
+		kept, err := deleteOne(ctx, id)
+		switch {
+		case err != nil:
+			slog.ErrorContext(ctx, "privacy: an archived activity could not be deleted; it is left as it was",
+				"activity_id", id, "error", err)
+			out.Failed = append(out.Failed, id)
+		case kept != "":
 			out.Kept = append(out.Kept, KeptActivity{ActivityID: id, Reason: kept})
-			continue
+		default:
+			out.Deleted = append(out.Deleted, id)
 		}
-		out.Deleted = append(out.Deleted, id)
 	}
-	return out, nil
+	return out
 }
 
 // deleteArchivedActivity erases one record's content under its row lock, or
-// answers what keeps it. The keepers are read under the lock, so a hold placed
-// after the list was read still keeps the record.
+// answers what keeps it. A record the reader may not discover reads as not
+// found. The linked records are share-locked before the keepers are read. A
+// hold placed meanwhile either commits first and keeps the record, or waits
+// until the deletion commits.
 func (e *Eraser) deleteArchivedActivity(ctx context.Context, id ids.UUID) (string, error) {
 	var kept string
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
+		hidden, err := archiveTarget(ctx, tx, id)
+		if err != nil || hidden != "" {
+			kept = hidden
+			return err
+		}
 		floor, err := ResolveFloorPolicy(ctx, tx, e.country)
 		if err != nil {
 			return err
 		}
+		if _, err := tx.Exec(ctx, retentionscope.LockHeldLinks("$1"), id); err != nil {
+			return err
+		}
 		floorCurrent, floorCarried := floor.sqlArgs()
+		args := []any{}
+		arg := func(v any) int { args = append(args, v); return len(args) }
+		target := arg(id)
+		reason := activityKeptReasonSQL(arg(floorCurrent), arg(floorCarried))
+		var archived bool
 		err = tx.QueryRow(ctx, `
-			SELECT CASE WHEN a.restricted_at IS NOT NULL THEN '`+keptByLaw+`'
-			            WHEN a.archived_at IS NULL OR `+storekit.ActivityErasedSQL("a")+` THEN '`+keptNotArchived+`'
-			            ELSE `+archiveKeeperSQL(2, 3)+` END
-			  FROM activity a WHERE a.id = $1 FOR UPDATE`, id, floorCurrent, floorCarried).Scan(&kept)
+			SELECT `+reason+`, a.archived_at IS NOT NULL AND NOT `+storekit.ActivityErasedSQL("a")+`
+			  FROM activity a WHERE a.id = $`+fmt.Sprint(target)+` FOR UPDATE`, args...).Scan(&kept, &archived)
 		if errors.Is(err, pgx.ErrNoRows) {
 			kept = keptNotFound
 			return nil
@@ -306,12 +340,36 @@ func (e *Eraser) deleteArchivedActivity(ctx context.Context, id ids.UUID) (strin
 		if err != nil || kept != "" {
 			return err
 		}
+		if !archived {
+			kept = keptNotArchived
+			return nil
+		}
 		if err := e.eraseActivityContent(ctx, tx, id, aControllerReviewedArchive); err != nil {
 			return err
 		}
 		return auditArchiveDeletion(ctx, tx, id)
 	})
 	return kept, err
+}
+
+// archiveTarget answers keptNotFound for an activity the reader may not
+// discover, the gate archiveReachSQL lists by. The gate hides a restricted
+// record from everyone, so a restricted one answers kept by law instead, as
+// the controller's pin answers it.
+func archiveTarget(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
+	err := auth.EnsureActivityVisible(ctx, tx, id)
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		return "", err
+	}
+	var restricted bool
+	err = tx.QueryRow(ctx, `SELECT restricted_at IS NOT NULL FROM activity WHERE id = $1`, id).Scan(&restricted)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows) || (err == nil && !restricted):
+		return keptNotFound, nil
+	case err != nil:
+		return "", err
+	}
+	return keptByLaw, nil
 }
 
 // auditArchiveDeletion records the controller's deletion as an erase

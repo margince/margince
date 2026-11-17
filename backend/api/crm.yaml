@@ -27446,7 +27446,7 @@ paths:
             schema: { $ref: '#/components/schemas/ArchiveDeletionRequest' }
       responses:
         '200':
-          description: What was deleted, and what was kept and why.
+          description: What was deleted, what was kept and why, and what failed.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ArchiveDeletionResult' }
@@ -74178,7 +74178,7 @@ components:
 
     ArchiveDeletionResult:
       type: object
-      required: [deleted, kept]
+      required: [deleted, kept, failed]
       properties:
         deleted:
           type: array
@@ -74188,6 +74188,12 @@ components:
           type: array
           description: The activity left as it was, each with the reason.
           items: { $ref: '#/components/schemas/ArchiveKeptActivity' }
+        failed:
+          type: array
+          description: >-
+            The activity whose deletion failed and is left as it was. The other
+            records in the request still ran, so a retry names only these.
+          items: { type: string, format: uuid }
 
     ArchiveKeptActivity:
       type: object

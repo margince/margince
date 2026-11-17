@@ -35945,6 +35945,9 @@ type ArchiveDeletionResult struct {
 	// Deleted The activity whose content was erased.
 	Deleted []openapi_types.UUID `json:"deleted"`
 
+	// Failed The activity whose deletion failed and is left as it was. The other records in the request still ran, so a retry names only these.
+	Failed []openapi_types.UUID `json:"failed"`
+
 	// Kept The activity left as it was, each with the reason.
 	Kept []ArchiveKeptActivity `json:"kept"`
 }

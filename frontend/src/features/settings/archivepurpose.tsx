@@ -13,13 +13,20 @@ import { languageName } from "../../format/languagename";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemFieldSentencesOf, throwProblem } from "../../lib/problem";
-import { languagesOf, PARTICULARS_QUERY_KEY } from "./controllerparticulars";
+import {
+  languagesOf,
+  PARTICULARS_QUERY_KEY,
+  particularsBody,
+} from "./controllerparticulars";
 
 // Settings → Privacy → Retention: why the archive keeps correspondence, as the
 // privacy page states it. The words are part of the controller particulars, so
 // a save sends the stored particulars back with only these words changed.
 
 type Particulars = components["schemas"]["ControllerParticulars"];
+
+// The maxLength of archive_purpose in crm.yaml (ControllerParticulars).
+const PURPOSE_MAX_LENGTH = 500;
 
 type Draft = Readonly<{
   purpose: string;
@@ -41,33 +48,18 @@ function draftOf(particulars: Particulars): Draft {
   };
 }
 
-/** The stored particulars with the purpose words replaced. A language with no
- * translation yet gains one that states the purpose alone. */
-export function archivePurposeBody(
-  particulars: Particulars,
-  draft: Draft,
-): Particulars {
-  const {
-    locks: _locks,
-    disclosure_languages: _languages,
-    objection_route_means: _means,
-    ...stored
-  } = particulars;
-  const kept = (stored.translations ?? []).map((t) => ({
-    ...t,
-    archive_purpose: draft.translations[t.language] ?? t.archive_purpose,
-  }));
-  const added = Object.entries(draft.translations)
-    .filter(
-      ([language, purpose]) =>
-        purpose.trim() !== "" && !kept.some((t) => t.language === language),
-    )
-    .map(([language, purpose]) => ({ language, archive_purpose: purpose }));
-  return {
-    ...stored,
-    archive_purpose: draft.purpose,
-    translations: [...kept, ...added],
-  };
+/** The stored particulars with the purpose words replaced. */
+function archivePurposeBody(particulars: Particulars, draft: Draft) {
+  return particularsBody(
+    particulars,
+    { archive_purpose: draft.purpose },
+    Object.fromEntries(
+      Object.entries(draft.translations).map(([language, purpose]) => [
+        language,
+        { archive_purpose: purpose },
+      ]),
+    ),
+  );
 }
 
 export function ArchivePurposeCard() {
@@ -144,7 +136,7 @@ function ArchivePurposeEditor({
         <Textarea
           {...control}
           rows={2}
-          maxLength={500}
+          maxLength={PURPOSE_MAX_LENGTH}
           disabled={!canEdit || save.isPending}
           value={text}
           onChange={(event) => onChange(event.target.value)}

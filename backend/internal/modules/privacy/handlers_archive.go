@@ -89,6 +89,10 @@ func (h Handlers) DeleteArchivedActivities(w http.ResponseWriter, r *http.Reques
 	out := crmcontracts.ArchiveDeletionResult{
 		Deleted: make([]openapi_types.UUID, 0, len(done.Deleted)),
 		Kept:    make([]crmcontracts.ArchiveKeptActivity, 0, len(done.Kept)),
+		Failed:  make([]openapi_types.UUID, 0, len(done.Failed)),
+	}
+	for _, id := range done.Failed {
+		out.Failed = append(out.Failed, openapi_types.UUID(id))
 	}
 	for _, id := range done.Deleted {
 		out.Deleted = append(out.Deleted, openapi_types.UUID(id))

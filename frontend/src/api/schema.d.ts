@@ -54023,6 +54023,8 @@ export interface components {
             deleted: string[];
             /** @description The activity left as it was, each with the reason. */
             kept: components["schemas"]["ArchiveKeptActivity"][];
+            /** @description The activity whose deletion failed and is left as it was. The other records in the request still ran, so a retry names only these. */
+            failed: string[];
         };
         ArchiveKeptActivity: {
             /** Format: uuid */
@@ -91095,7 +91097,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description What was deleted, and what was kept and why. */
+            /** @description What was deleted, what was kept and why, and what failed. */
             200: {
                 headers: {
                     [name: string]: unknown;

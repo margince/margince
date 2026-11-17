@@ -84,29 +84,45 @@ function draftOf(particulars: Particulars): Draft {
   };
 }
 
-// A translation with nothing in it is not sent, so an empty section saves no
-// row. A save replaces the whole setting, so the fields other screens edit
-// (the privacy page and the archive purpose) go back as they were saved.
-function bodyOf(draft: Draft, saved: Particulars): Particulars {
-  const stated = new Map(
-    (saved.translations ?? []).map((t) => [t.language, t]),
+type TranslationPatch = Partial<Omit<Translation, "language">>;
+
+function hasText(translation: Translation): boolean {
+  return Object.entries(translation).some(
+    ([key, value]) =>
+      key !== "language" && typeof value === "string" && value.trim() !== "",
   );
-  const translations: Translation[] = Object.entries(draft.translations)
-    .map(([language, text]) => ({
-      archive_purpose: stated.get(language)?.archive_purpose,
+}
+
+/** The body of a save: the stored particulars with patch over them. Each
+ * language's translation gets that language's patch. A save replaces the whole
+ * setting. So every field no patch names goes back as it was stored, even one
+ * this screen does not know. A translation with nothing in it is not sent, so
+ * an empty section saves no row. */
+export function particularsBody(
+  stored: Particulars,
+  patch: Partial<Omit<Particulars, "translations">>,
+  translations: Readonly<Record<string, TranslationPatch>>,
+): Particulars {
+  const {
+    locks: _locks,
+    disclosure_languages: _languages,
+    objection_route_means: _means,
+    ...kept
+  } = stored;
+  const byLanguage = new Map(
+    (kept.translations ?? []).map((t) => [t.language, t]),
+  );
+  for (const [language, fields] of Object.entries(translations)) {
+    byLanguage.set(language, {
+      ...byLanguage.get(language),
+      ...fields,
       language,
-      ...text,
-    }))
-    .filter(
-      (translation) =>
-        FIELDS.some((key) => translation[key].trim() !== "") ||
-        (translation.archive_purpose ?? "").trim() !== "",
-    );
+    });
+  }
   return {
-    privacy_page: saved.privacy_page,
-    archive_purpose: saved.archive_purpose,
-    ...draft.text,
-    translations,
+    ...kept,
+    ...patch,
+    translations: [...byLanguage.values()].filter(hasText),
   };
 }
 
@@ -158,7 +174,9 @@ function ParticularsEditor({
   useSaveDraft({
     dirty: JSON.stringify(value) !== JSON.stringify(saved),
     save: async () => {
-      await save.mutateAsync(bodyOf(value, particulars));
+      await save.mutateAsync(
+        particularsBody(particulars, value.text, value.translations),
+      );
       setDraft(null);
     },
     placed: [

@@ -11337,7 +11337,7 @@ export const en = {
 
   "archivePurpose.title": "Archive purpose",
   "archivePurpose.intro":
-    "After its retention period, captured mail and meetings move to an archive with restricted access. The privacy page says why the archive keeps them, and you delete what no longer serves that purpose.",
+    "After its retention period, captured mail, meetings and calls move to an archive with restricted access. The privacy page says why the archive keeps them, and you delete what no longer serves that purpose.",
   "archivePurpose.label": "Purpose of the archive",
   "archivePurpose.translationLabel": "Purpose of the archive in {language}",
   "archivePurpose.hint":
@@ -11364,15 +11364,20 @@ export const en = {
   "archiveReview.deleteShown_other": "Delete {count} shown records",
   "archiveReview.confirmTitle": "Delete archived records?",
   "archiveReview.confirmBody_one":
-    "The content of {count} archived record is erased for good. Who it was with and when stays. Records under a legal hold or kept by law stay as they are.",
+    "The content of {count} archived record is erased for good. Who it was with and when stays. Records under a legal hold, opt-out records and records kept by law stay as they are.",
   "archiveReview.confirmBody_other":
-    "The content of {count} archived records is erased for good. Who they were with and when stays. Records under a legal hold or kept by law stay as they are.",
+    "The content of {count} archived records is erased for good. Who they were with and when stays. Records under a legal hold, opt-out records and records kept by law stay as they are.",
   "archiveReview.confirm": "Delete",
   "archiveReview.doneTitle": "Deletion finished",
+  "archiveReview.partialTitle": "Done before the deletion stopped",
   "archiveReview.deleted_one": "{count} record deleted.",
   "archiveReview.deleted_other": "{count} records deleted.",
   "archiveReview.keptCount_one": "{reason}: {count} record",
   "archiveReview.keptCount_other": "{reason}: {count} records",
+  "archiveReview.failed_one":
+    "{count} record could not be deleted and stays as it was.",
+  "archiveReview.failed_other":
+    "{count} records could not be deleted and stay as they were.",
   "restricted.title": "Restricted records",
   "restricted.sub":
     "Records a statutory retention obligation holds after an erasure: which record, why and until when. The correspondence itself is hidden so that it is not read.",
