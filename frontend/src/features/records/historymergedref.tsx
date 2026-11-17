@@ -32,3 +32,17 @@ export function MergedRecordName({
     </span>
   );
 }
+
+// Where a merged-away record went, for the page an old link still lands on.
+export function MergedIntoLine({
+  kind,
+  id,
+}: Readonly<{ kind: EntityKind; id: string }>) {
+  const t = useT();
+  return (
+    <p>
+      <span>{t("history.field.merged_into_id")}</span>{" "}
+      <MergedRecordName kind={kind} id={id} />
+    </p>
+  );
+}

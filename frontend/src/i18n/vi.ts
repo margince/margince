@@ -3708,6 +3708,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.relType.other": "Khác",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
+  "co.archived.overview":
+    "Công ty này đã được lưu trữ. Lịch sử, tài liệu và thông tin vẫn có ở các thẻ khác.",
   "co.factSuspect.phoneShapedLocation": "Trông giống số điện thoại",
   "co.factSuspect.notAPhone": "Không giống số điện thoại",
   "co.factSuspect.notAYear": "Không giống một năm hợp lệ",

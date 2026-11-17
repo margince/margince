@@ -3759,6 +3759,8 @@ export const en = {
   "company.relType.other": "Other",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
+  "co.archived.overview":
+    "This company is archived. Its history, documents and profile are still on the other tabs.",
   "co.factSuspect.phoneShapedLocation": "Looks like a phone number",
   "co.factSuspect.notAPhone": "Does not look like a phone number",
   "co.factSuspect.notAYear": "Does not look like a year",

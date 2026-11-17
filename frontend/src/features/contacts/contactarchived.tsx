@@ -12,6 +12,7 @@ import { useT } from "../../i18n";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerZone } from "../../lib/viewerzone";
 import { RecordHistoryTab } from "../records/history";
+import { MergedIntoLine } from "../records/historymergedref";
 import { RecordAccess } from "../records/recordaccess";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import { ContactActions } from "./contactactions";
@@ -67,6 +68,9 @@ export function ArchivedContactPage({
       >
         <Panel title={t("record.fullHistory")}>
           <PanelBody>
+            {contact.merged_into_id && (
+              <MergedIntoLine kind="contact" id={contact.merged_into_id} />
+            )}
             <RecordHistoryTab
               kind="contact"
               id={contact.id}
