@@ -19,6 +19,12 @@ const conf = readFileSync(join(frontendRoot, "nginx.conf"), "utf8")
   .map((line) => line.replace(/^\s*#.*$/, ""))
   .join("\n");
 
+// The app's icon, as the shell names it. The Dispact app manifest and the MCP
+// handshake hand this same path to pages on other origins.
+const ICON_PATH = /<link rel="icon" type="image\/svg\+xml" href="([^"]+)"/.exec(
+  readFileSync(join(frontendRoot, "index.html"), "utf8"),
+)?.[1];
+
 type Location = { modifier: string; pattern: string; body: string };
 
 // Each location's own body, up to the brace that closes it.
@@ -204,6 +210,13 @@ describe("every response the web tier sends carries the whole security set", () 
           continue;
         }
         if (
+          name === "Cross-Origin-Resource-Policy" &&
+          where.pattern === ICON_PATH
+        ) {
+          expect(own.get(name), "the icon's own CORP").toBe("cross-origin");
+          continue;
+        }
+        if (
           name === "Cross-Origin-Opener-Policy" &&
           where.pattern === CONSENT_PATH
         ) {
@@ -218,6 +231,26 @@ describe("every response the web tier sends carries the whole security set", () 
       }
     }
   });
+});
+
+// Another origin's page shows the icon in an <img>, which a same-origin CORP
+// blocks. Only the icon is opened up; the shell and the assets stay closed.
+it("lets another origin load the app's icon, and nothing else", () => {
+  expect(ICON_PATH, "the shell names its icon").toBe("/icon.svg");
+  const where = locate(ICON_PATH ?? "");
+  expect(where.modifier).toBe("=");
+  expect(where.body).toContain("try_files $uri =404;");
+  const own = headers(where.body);
+  expect(own.get("Cross-Origin-Resource-Policy")).toBe("cross-origin");
+  expect(own.get("Access-Control-Allow-Origin")).toBe("*");
+  const server = headers(conf.slice(0, conf.search(/^\s*location\s/m)));
+  for (const path of ["/", "/index.html", "/assets/app.js", "/icon.png"]) {
+    expect(
+      headers(locate(path).body).get("Cross-Origin-Resource-Policy") ??
+        server.get("Cross-Origin-Resource-Policy"),
+      path,
+    ).toBe("same-origin");
+  }
 });
 
 // The app's consent path is the one nginx serves with a popup's opener kept.

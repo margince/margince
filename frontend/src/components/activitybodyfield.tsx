@@ -20,6 +20,7 @@ export function ActivityBodyField({
   transcript = false,
   rows,
   grow = false,
+  disabled = false,
   className,
 }: Readonly<{
   label: string;
@@ -30,6 +31,8 @@ export function ActivityBodyField({
   rows: number;
   // Fills the room its host gives it and grows with the text, `rows` the floor.
   grow?: boolean;
+  // Held while the text is being saved, so a word typed then is not dropped.
+  disabled?: boolean;
   className?: string;
 }>) {
   const labels = useRichTextLabels();
@@ -45,6 +48,7 @@ export function ActivityBodyField({
           <Textarea
             {...control}
             rows={rows}
+            disabled={disabled}
             value={value}
             onChange={(event) => onChange(event.target.value)}
           />
@@ -59,6 +63,7 @@ export function ActivityBodyField({
             hint={hint}
             rows={rows}
             grow={grow}
+            disabled={disabled}
           />
         )
       }

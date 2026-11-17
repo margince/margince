@@ -20777,7 +20777,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.promiseSettleFailed":
     "Die Zusage konnte nicht als eingehalten markiert werden. Bitte versuche es erneut.",
   "worklist.verb.meetingSkipNextStep": "Nächsten Schritt überspringen",
-  "worklist.verb.meetingNextStep": "Wie geht es weiter?",
+  "worklist.verb.meetingNotes": "Notizen",
+  "worklist.verb.meetingEditNotes": "Notizen bearbeiten",
+  "worklist.verb.meetingNotesSaved": "Notizen gespeichert",
   "worklist.verb.meetingHowDidItGo": "Wie lief es?",
   "worklist.verb.meetingAddNotes": "Notizen hinzufügen",
   "worklist.verb.meetingUpdateTitle": "Termin",
@@ -20794,6 +20796,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingDayMissing":
     "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
   "worklist.verb.meetingAddNotesFor": "Notizen hinzufügen: {subject}",
+  "worklist.verb.meetingEditNotesFor": "Notizen bearbeiten: {subject}",
   "worklist.verb.meetingHeldFor": "Hat stattgefunden: {subject}",
   "worklist.verb.meetingCanceledFor": "Hat nicht stattgefunden: {subject}",
   "worklist.verb.meetingCancelInCalendar":
