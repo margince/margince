@@ -51,7 +51,7 @@ function ContactName({
     <span className="avatar-row">
       <Avatar identity={contact.id} name={contact.full_name} />
       <span>
-        <strong>{contact.full_name}</strong>
+        <strong title={contact.full_name}>{contact.full_name}</strong>
         {title && <span className="t-caption"> · {title}</span>}
       </span>
       {contact.archived_at && (

@@ -101,6 +101,10 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     );
     render(<ContactsScreen />);
     await waitFor(() => expect(screen.getByText("Anna Weber")).toBeTruthy());
+    // A name the column cuts short reads in full on hover.
+    expect(screen.getByText("Anna Weber").getAttribute("title")).toBe(
+      "Anna Weber",
+    );
     // The owner column answers "whose record is this?". The column it replaced
     // rendered "typed by a person" for every human-captured row — the same
     // string for every colleague, which named nobody.
