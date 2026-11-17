@@ -3403,7 +3403,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.empty": "Noch keine Beziehungen",
   "rel.counterparty": "Verknüpft mit",
   "rel.dates": "Zeitraum",
-  "rel.addConfirm": "Verknüpfung „{kind}“ zu {target} hinzufügen.",
+  "rel.addConfirm.employment": "Anstellungsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.dealStakeholder":
+    "Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.projectStakeholder":
+    "Projekt-Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.partnerOf": "Partner-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.referredBy": "Empfehlungsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.coSellWith": "Co-Selling-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.worksWith": "Kollegen-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.billingContact":
+    "Rechnungskontakt-Verknüpfung zu {target} hinzufügen.",
+  "rel.edit": "Beziehung bearbeiten",
+  "rel.editStakeholder": "Stakeholder bearbeiten",
+  "rel.removeRelationship": "Beziehung entfernen",
+  "rel.removeStakeholder": "Stakeholder entfernen",
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Stakeholder",
   "rel.kind.projectStakeholder": "Projekt-Stakeholder",
