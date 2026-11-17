@@ -103,7 +103,7 @@ func stageContactAndAgent(t *testing.T, e *apptest.AppEnv, fullName, label strin
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": fullName}, nil, &contact); status != 201 {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": fullName}, nil, &contact); status != 201 {
 		t.Fatalf("human create → %d", status)
 	}
 	var minted struct {

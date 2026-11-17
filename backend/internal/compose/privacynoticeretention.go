@@ -25,7 +25,7 @@ func (r privacyNoticeHeld) NoticeHeld(ctx context.Context, subject consent.Notic
 	}
 	out := consent.NoticeHeld{Categories: read.Categories}
 	for _, use := range read.Uses {
-		out.Uses = append(out.Uses, consent.NoticeUse{PurposeKey: use.PurposeKey, Basis: use.Basis})
+		out.Uses = append(out.Uses, consent.NoticeUse{PurposeKey: use.PurposeKey, Basis: use.Basis, Since: use.Since})
 	}
 	for _, rule := range read.Retention {
 		out.Retention = append(out.Retention, consent.RetentionRule{

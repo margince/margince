@@ -55,7 +55,7 @@ func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv) linkedPair {
 	role := seededEdgeRole
 	var contact contactRecord
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"source": "manual", "full_name": "Ada Employed"}, nil, &contact); status != 201 {
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ada Employed"}, nil, &contact); status != 201 {
 		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {

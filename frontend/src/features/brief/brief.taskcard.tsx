@@ -61,6 +61,7 @@ import {
   subjectHref,
   whenText,
 } from "../../lib/worklistcopy";
+import { emailNamesRow } from "../../lib/worklistemailrow";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import { eventLine, useHappenedClock } from "../../lib/worklisthappened";
 import type { WorklistItem } from "../../lib/worklisttypes";
@@ -287,15 +288,15 @@ const CATEGORY_ICONS: Record<WorklistItem["category"], LucideIcon> = {
 };
 
 // A waiting message is named for what it is, an email; its category moves to
-// the state at the end of the line.
+// the state at the end of the line. A promise carrying its email stays a task.
 function kindKey(item: WorklistItem): MessageKey {
   if (item.email_summary?.calendar_change) return "timeline.kind.meeting";
-  return item.email_summary ? "timeline.kind.email" : eyebrowKeyFor(item);
+  return emailNamesRow(item) ? "timeline.kind.email" : eyebrowKeyFor(item);
 }
 
 function kindIcon(item: WorklistItem): LucideIcon {
   if (item.email_summary?.calendar_change) return CalendarClock;
-  return item.email_summary ? Mail : CATEGORY_ICONS[item.category];
+  return emailNamesRow(item) ? Mail : CATEGORY_ICONS[item.category];
 }
 
 type CardStatus = Readonly<{
@@ -311,7 +312,7 @@ function statusOf(item: WorklistItem, titled: boolean): CardStatus | null {
   if (change) return changeBadge(change);
   if (item.email_summary?.calendar_invitation)
     return { key: eyebrowKeyFor(item), tone: "info" };
-  if (item.email_summary && item.band === "now")
+  if (emailNamesRow(item) && item.band === "now")
     return { key: eyebrowKeyFor(item), tone: "warning" };
   return null;
 }
@@ -339,7 +340,7 @@ export function cardWhen(
       ].join(" · ");
   }
   // A waiting message is dated by its arrival, as the row in the queue is.
-  const arrived = item.email_summary;
+  const arrived = emailNamesRow(item) ? item.email_summary : null;
   if (arrived) {
     const { occurred_at: at, occurred_precision: precision } = arrived;
     return [

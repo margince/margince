@@ -144,6 +144,9 @@ func validateOptOutAcknowledgement(
 	default:
 		return unsupported, nil
 	}
+	// Under a pack that follows the recipient, a restriction and a withdrawal
+	// of any purpose are answered too, by the request receipt.
+	_, recipientBound := recipientDataProtection(subject.Country.Code)
 	// KIND ONLY, DELIBERATELY NOT purpose_id. A narrow marketing_objection
 	// (communication_suppression.purpose_id set to one newsletter) still keeps
 	// kind = 'marketing_objection', so this EXISTS already matches it — an
@@ -167,9 +170,9 @@ func validateOptOutAcknowledgement(
 		    WHERE cc.contact_id = $1
 		      AND cc.state = 'withdrawn'
 		      AND cp.archived_at IS NULL
-		      AND cp.class = ANY($3)
-		)`, subject.ID, acknowledgeableKinds(),
-		classesCovering(commsauthz.CategoryMarketing)).Scan(&standing); err != nil {
+		      AND (cp.class = ANY($3) OR $4)
+		)`, subject.ID, receiptEvidenceKinds(recipientBound),
+		classesCovering(commsauthz.CategoryMarketing), recipientBound).Scan(&standing); err != nil {
 		return resolution{}, fmt.Errorf("consent: reading the stop this would acknowledge: %w", err)
 	}
 	if !standing {

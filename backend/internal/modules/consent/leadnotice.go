@@ -98,7 +98,10 @@ func (s *Store) IssueLeadPrivacyNotice(ctx context.Context, in LeadNotice) (bool
 		if err != nil || already {
 			return err
 		}
-		language := s.mailLanguage(ctx, tx)
+		language, err := s.subjectSendLanguage(ctx, tx, ruleSubject{Kind: entityLead, ID: in.LeadID.String()}, "")
+		if err != nil {
+			return err
+		}
 		tokenRowID, expires, err := s.mintLeadNoticeTokenTx(ctx, tx, in.LeadID, address, hashPublicToken(token), language)
 		if err != nil {
 			return err

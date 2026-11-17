@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 type sharedDraft struct {
@@ -26,7 +28,7 @@ type sharedDraft struct {
 // subject and the same body, greeting included.
 func TestDraftEmailAnswersAsItsRouteDoes(t *testing.T) {
 	d := newTwoDoors(t, "draft-write-doors", "read", "write", "draft")
-	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Pat Draft", "source": "manual"})
+	contact := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Pat Draft", "source": "manual"})
 	mail := createdID(t, d.e, "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Quote?", "body": "Can you send a quote", "source": "manual",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},

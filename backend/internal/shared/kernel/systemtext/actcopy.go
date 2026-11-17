@@ -62,6 +62,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.ask_about_company":                  {Words: langcopy.Phrase{En: "Ask about company", De: "Eine Frage zu einer Firma stellen", Vi: "Hỏi một câu về công ty"}},
 	"act.verbs.ask_for_weekly_plan_help":           {Words: langcopy.Phrase{En: "Ask for weekly plan help", De: "Um Hilfe bei einem Vorhaben bitten", Vi: "Nhờ hỗ trợ cho một cam kết"}},
 	"act.verbs.ask_knowledge_corpus":               {Words: langcopy.Phrase{En: "Ask knowledge corpus", De: "Eine Frage an eine Wissenssammlung stellen", Vi: "Hỏi kho tri thức"}},
+	"act.verbs.ask_search_data":                    {Words: langcopy.Phrase{En: "Ask CRM data", De: "CRM-Daten abfragen", Vi: "Hỏi dữ liệu CRM"}},
 	"act.verbs.assess_sales_review":                {Words: langcopy.Phrase{En: "Assess sales review", De: "Einschätzung des Sales-Reviews schreiben", Vi: "Viết đánh giá cho buổi rà soát bán hàng"}},
 	"act.verbs.assign_legal_entity_member":         {Words: langcopy.Phrase{En: "Assign legal entity member", De: "Mitglied einer Rechtseinheit zuordnen", Vi: "Gán thành viên cho pháp nhân"}},
 	"act.verbs.assign_notice_case":                 {Words: langcopy.Phrase{En: "Assign notice case", De: "Informationspflicht zuweisen", Vi: "Giao nghĩa vụ thông báo"}},

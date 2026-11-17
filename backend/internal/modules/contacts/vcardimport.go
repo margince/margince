@@ -74,7 +74,7 @@ type VCardResult struct {
 	// ContactID is the contact created, updated, or — for a review — the
 	// candidate the card resembles.
 	ContactID *ids.ContactID
-	// Reason says why a card was skipped, in words a reader can act on.
+	// Reason names a skip or an incomplete imported identity the reader can correct.
 	Reason string
 	// LeadID is the live lead holding a skipped card's address or profile,
 	// when the caller may read it: convert it instead.

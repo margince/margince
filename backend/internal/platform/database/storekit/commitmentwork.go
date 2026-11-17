@@ -132,7 +132,8 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 		currency: currentByItsWriter, undated: true, generatedDate: true,
 		taskType: crmcontracts.TaskTypeReview,
 	},
-	provenance.WhichDealSource: {currency: currentBySourceMail, taskType: crmcontracts.TaskTypeDecide},
+	provenance.WhichDealSource:          {currency: currentBySourceMail, taskType: crmcontracts.TaskTypeDecide},
+	provenance.PrivacyRequestTaskSource: {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeDo},
 }
 
 // TaskSourceFamilies lists native task sources for the census gate.

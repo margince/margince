@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useMutation } from "@tanstack/react-query";
 import { Settings } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { AiPending } from "../design-system/aipending";
@@ -10,7 +11,32 @@ import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { useVisibleSettingsPages } from "../features/settings/settingsnav";
+import {
+  type Answer,
+  NoDocumentSetsError,
+  useHandbookAsk,
+} from "../features/voice-knowledge/corpusaskqueries";
+import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { grants } from "../lib/accessgrants";
+import { looksLikeDataQuestion } from "../lib/dataquestion";
+import { problemMessageOf } from "../lib/problem";
+import { looksLikeQuestion } from "../lib/question";
+import { navigate } from "../lib/router";
+import { useMe } from "../lib/session";
+import type { SettingsPageId } from "../lib/settingscatalog";
+import { settingsHref } from "../lib/settingsrouting";
+import type { Command } from "./palette";
+
+import {
+  askPaletteQuestion,
+  type HandbookFallback,
+  type PaletteAskAnswer,
+} from "./palettedata.queries";
+
+const PaletteDataAnswer = lazy(async () => ({
+  default: (await import("./palettedata")).PaletteDataAnswer,
+}));
 
 const CitedDocument = lazy(async () => ({
   default: (await import("../features/voice-knowledge/citeddocument"))
@@ -20,20 +46,6 @@ const AnswerView = lazy(async () => ({
   default: (await import("../features/voice-knowledge/corpusanswer"))
     .AnswerView,
 }));
-
-import {
-  type Answer,
-  type HandbookAnswer,
-  NoDocumentSetsError,
-  useHandbookAsk,
-} from "../features/voice-knowledge/corpusaskqueries";
-import { useT } from "../i18n";
-import { problemMessageOf } from "../lib/problem";
-import { looksLikeQuestion } from "../lib/question";
-import { navigate } from "../lib/router";
-import type { SettingsPageId } from "../lib/settingscatalog";
-import { settingsHref } from "../lib/settingsrouting";
-import type { Command } from "./palette";
 
 type Claim = NonNullable<Answer["claims"]>[number];
 
@@ -49,7 +61,19 @@ export function usePaletteAsk(
   const t = useT();
   const trimmed = query.trim();
   const question = looksLikeQuestion(trimmed);
-  const { available, mutation } = useHandbookAsk(question);
+  const handbook = useHandbookAsk(question);
+  const me = useMe(question);
+  const readData =
+    grants(me.data, "installation_settings", "read") &&
+    (grants(me.data, "deal", "read") ||
+      grants(me.data, "contact", "read") ||
+      grants(me.data, "company", "read") ||
+      grants(me.data, "lead", "read") ||
+      grants(me.data, "project", "read") ||
+      grants(me.data, "report_definition", "read"));
+  const available =
+    handbook.available || (readData && looksLikeDataQuestion(trimmed));
+  const mutation = useMutation({ mutationFn: askPaletteQuestion });
   const { reset } = mutation;
   useEffect(() => {
     if (open) {
@@ -60,7 +84,12 @@ export function usePaletteAsk(
     available && destinations === 0 && question
       ? {
           id: "ask-ai",
-          label: t("palette.askRow", { query: trimmed }),
+          label: t(
+            readData && looksLikeDataQuestion(trimmed)
+              ? "palette.askDataRow"
+              : "palette.askRow",
+            { query: trimmed },
+          ),
           type: "action",
         }
       : null;
@@ -69,7 +98,12 @@ export function usePaletteAsk(
   const ask = () => {
     // A second Enter on the same words would pay for the answer on screen again.
     if (!(shown && (mutation.isPending || mutation.isSuccess))) {
-      mutation.mutate({ question: trimmed });
+      mutation.mutate({
+        question: trimmed,
+        readData,
+        askHandbook: handbook.mutation.mutateAsync,
+        handbookAvailable: handbook.available,
+      });
     }
   };
   return { row, shown, ask, mutation };
@@ -88,7 +122,7 @@ export function PaletteAnswer({
 }: Readonly<{
   pending: boolean;
   error: unknown;
-  result: HandbookAnswer | undefined;
+  result: PaletteAskAnswer | undefined;
   // Called before a settings button leaves for its page, so the palette closes.
   onLeave: () => void;
 }>) {
@@ -121,13 +155,42 @@ export function PaletteAnswer({
   if (!result) {
     return null;
   }
+  if ("dataAnswer" in result)
+    return (
+      <Suspense fallback={<AiPending label={t("palette.asking")} lines={2} />}>
+        <PaletteDataAnswer answer={result.dataAnswer} onLeave={onLeave} />
+      </Suspense>
+    );
+  if ("unsupportedData" in result)
+    return (
+      <section className="palette-answer" aria-label={t("palette.answerAria")}>
+        <p>{t("palette.dataUnsupportedOnly")}</p>
+        {result.dataError ? (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("palette.dataUnavailable")}
+          >
+            {problemMessageOf(result.dataError, t)}
+          </Callout>
+        ) : null}
+        <Button
+          onClick={() => {
+            onLeave();
+            navigate({ screen: "analytics" });
+          }}
+        >
+          {t("palette.openAnalytics")}
+        </Button>
+      </section>
+    );
   return <AnsweredQuestion result={result} onLeave={onLeave} />;
 }
 
 function AnsweredQuestion({
   result,
   onLeave,
-}: Readonly<{ result: HandbookAnswer; onLeave: () => void }>) {
+}: Readonly<{ result: HandbookFallback; onLeave: () => void }>) {
   const t = useT();
   const { answer, asked } = result;
   const [openCite, setOpenCite] = useState<number | null>(null);
@@ -152,7 +215,28 @@ function AnsweredQuestion({
           />
         </Suspense>
       </AiReveal>
-      {covered ? null : <p className="t-caption">{t("palette.askNoAnswer")}</p>}
+      {result.dataError ? (
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("palette.dataUnavailable")}
+        >
+          {problemMessageOf(result.dataError, t)}
+        </Callout>
+      ) : null}
+      {result.dataAttempted ? <p>{t("palette.dataUnsupported")}</p> : null}
+      {covered ? null : looksLikeDataQuestion(result.question) ? (
+        <Button
+          onClick={() => {
+            onLeave();
+            navigate({ screen: "analytics" });
+          }}
+        >
+          {t("palette.openAnalytics")}
+        </Button>
+      ) : (
+        <p className="t-caption">{t("palette.askNoAnswer")}</p>
+      )}
       {sections.length > 0 ? (
         <ul className="palette-answer-sections t-caption">
           {sections.map((title) => (

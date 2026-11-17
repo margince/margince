@@ -262,16 +262,6 @@ func (e *promoteConsentEnv) eventReason(t *testing.T, id ids.UUID, status string
 	return reason
 }
 
-// someHandoffReason writes a reason for the transition it applies to.
-//
-// It seeds rather than reading the migration's own rows, because the harness
-// resets every table before each test — a reader here would be asserting that
-// truncation had not happened, which is a fact about the harness rather than
-// about handoffs. That the migration seeds a usable list is a different claim,
-// made where it can be: TestTheSeededHandoffReasonsCoverBothTransitions
-// (backend/migrations/sdrhandoffreasons_integration_test.go) reads the
-// catalogue the migration left, against the transitions the column's own CHECK
-// admits.
 // Reference rows survive resets, so each invocation needs its own label even
 // when go test repeats the same test name.
 func (e *promoteConsentEnv) someHandoffReason(t *testing.T, appliesTo string) ids.UUID {

@@ -26,7 +26,7 @@ func TestAFormPressedTwiceMakesOneRecord(t *testing.T) {
 		list string
 		body AnyMap
 	}{
-		{"contact", "/v1/contacts", "/v1/contacts?q=Twice+Contact", AnyMap{"source": "manual", "full_name": "Twice Contact"}},
+		{"contact", "/v1/contacts", "/v1/contacts?q=Twice+Contact", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Twice Contact"}},
 		{"company", "/v1/companies", "/v1/companies?q=Twice+Company", AnyMap{"source": "manual", "display_name": "Twice Company"}},
 		{"deal", "/v1/deals", "/v1/deals?q=Twice+Deal", AnyMap{
 			"source": "manual", "name": "Twice Deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,

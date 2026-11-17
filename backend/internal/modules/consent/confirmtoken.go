@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -35,6 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
+	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
 // contactIDKey names the subject in an audit payload, and the wire path a
@@ -104,6 +107,13 @@ type ConfirmRef struct {
 	QuestionKey     string
 	QuestionLocale  string
 	QuestionVersion int
+	// AsksNews is false on a details check whose recipient may not be asked
+	// about news there. Its page then shows no news question. Its submit takes
+	// no answer to one.
+	AsksNews bool
+	// SubjectRequest is the contact's own request a consent link answers,
+	// zero when none was on record at mint. A grant keeps it.
+	SubjectRequest ids.UUID
 }
 
 // IssueConfirmToken mints the single-use link for one contact and returns the
@@ -123,7 +133,7 @@ type ConfirmRef struct {
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
 func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane, language)
+	return s.issueLink(ctx, contactID, LinkRecordConfirmation, ids.PurposeID{}, "", refuseWithoutMailLane, userAsks, language)
 }
 
 // IssuePrivacyNotice mints the link that tells a contact what is held about
@@ -142,7 +152,7 @@ func (s *Store) IssueConfirmToken(ctx context.Context, contactID ids.ContactID, 
 // stop, and only CategoryPrivacyNotice survives it in the engine. Before this
 // the duty was owed to exactly those contacts and undeliverable to them.
 func (s *Store) IssuePrivacyNotice(ctx context.Context, contactID ids.ContactID, language string) (IssuedConfirm, error) {
-	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "", refuseWithoutMailLane, language)
+	return s.issueLink(ctx, contactID, LinkPrivacyNotice, ids.PurposeID{}, "", refuseWithoutMailLane, userAsks, language)
 }
 
 // PreviewConsentLink uses the mint's recipient and purpose guards without creating a token.
@@ -153,13 +163,13 @@ func (s *Store) PreviewConsentLink(ctx context.Context, contactID ids.ContactID,
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return "", err
 	}
-	var address string
+	var admitted admittedLink
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		address, err = admitLinkTx(ctx, tx, linkRequest{contactID: contactID, purposeID: purposeID})
+		admitted, err = admitLinkTx(ctx, tx, linkRequest{contactID: contactID, purposeID: purposeID})
 		return err
 	})
-	return address, err
+	return admitted.deliveredTo, err
 }
 
 // IssueConsentLink mints the link a double-opt-in purpose is confirmed by.
@@ -189,22 +199,25 @@ func (s *Store) IssueConsentLink(
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, language)
+	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, refuseWithoutMailLane, userAsks, language)
 }
 
-// IssueBookedConsentLink mints the same double opt-in for the public booking
-// form, which treats an installation that cannot mail as a question not asked.
+// IssueBookedConsentLink mints the same double opt-in for a booking, which
+// treats an installation that cannot mail as a question not asked.
 //
 // The operator's door refuses instead. A seat pressing a button has made a
 // mistake it can act on. A visitor booking a meeting has not, and the slot they
 // came for cannot be handed back over a checkbox.
+//
+// askedBySubject is true only for the public booking page, where the contact
+// ticked the box. A booking a signed-in user makes is that user asking.
 func (s *Store) IssueBookedConsentLink(ctx context.Context, contactID ids.ContactID,
-	purposeID ids.PurposeID, expectedAddress string,
+	purposeID ids.PurposeID, expectedAddress string, askedBySubject bool,
 ) (IssuedConfirm, error) {
 	if err := httperr.RequireBodyID(purposeIDField, purposeID.UUID); err != nil {
 		return IssuedConfirm{}, err
 	}
-	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, mintWithoutMailLane, "")
+	return s.issueLink(ctx, contactID, LinkConsentConfirmation, purposeID, expectedAddress, mintWithoutMailLane, !askedBySubject, "")
 }
 
 // deliveryAddressTx reads the subject's own live primary address, the same way
@@ -256,45 +269,62 @@ func deliveryAddressTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) 
 // resolves only a live purpose, so the subject opens a 404 sent in the
 // installation's own name.
 //
-// A purpose that does not REQUIRE double opt-in is a different mistake — the
-// mail would ask somebody to confirm a subscription whose grant never needed
-// confirming, and the answer would be recorded as mailbox-proven evidence
-// nobody asked for. The endpoint's whole subject is the double-opt-in purpose.
-func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) error {
+// A marketing purpose without double opt-in is refused: its grant never needs
+// confirming. Another class may be asked about, as the no-basis warning asks
+// for consent to correspondence.
+func requireConfirmablePurposeTx(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (askedPurpose, error) {
 	if purposeID.UUID == (ids.UUID{}) {
-		return nil
+		return askedPurpose{}, nil
 	}
-	var requiresDOI, archived bool
+	var asked askedPurpose
+	var archived bool
+	var class string
 	// Read WITHOUT the live filter, so absence and archival stay separable. The
 	// filtered read answered no-rows for both and had to guess which; it always
 	// guessed archived.
 	err := tx.QueryRow(ctx,
-		`SELECT requires_double_opt_in, archived_at IS NOT NULL FROM consent_purpose
-		  WHERE id = $1`, purposeID).Scan(&requiresDOI, &archived)
+		`SELECT requires_double_opt_in, archived_at IS NOT NULL, class FROM consent_purpose
+		  WHERE id = $1`, purposeID).Scan(&asked.requiresDOI, &archived, &class)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return apperrors.ErrNotFound
+		return askedPurpose{}, apperrors.ErrNotFound
 	}
 	if err != nil {
-		return err
+		return askedPurpose{}, err
 	}
+	asked.class = messagingrules.PurposeClass(class)
 	if archived {
-		return &ValidationError{
+		return askedPurpose{}, &ValidationError{
 			Field:  purposeIDField,
 			Reason: "this purpose is archived, so a link asking somebody to confirm it could not be answered",
 		}
 	}
-	if !requiresDOI {
-		return &ValidationError{
+	if !confirmableByMail(asked) {
+		return askedPurpose{}, &ValidationError{
 			Field:  purposeIDField,
 			Reason: "this purpose is not confirmed by double opt-in, so there is nothing for a mailed link to ask",
 		}
 	}
-	return nil
+	return asked, nil
+}
+
+// confirmableByMail reports whether a consent link may ask about a purpose: an
+// advertising one only when it is confirmed by double opt-in.
+func confirmableByMail(purpose askedPurpose) bool {
+	return purpose.requiresDOI || !advertisingClass(purpose.class)
+}
+
+// advertisingClass reports whether a purpose class advertises.
+func advertisingClass(class messagingrules.PurposeClass) bool {
+	return slices.Contains(messaging.AdvertisingPurposeClasses(), class)
 }
 
 // mailLanePolicy says what a mint owes an installation that cannot mail the
 // link.
 //
+// userAsks names an operator door's mint for issueLink: a signed-in user, or
+// their agent, asking on the contact's behalf.
+const userAsks = true
+
 // The operator doors refuse: the plaintext never leaves the server, so an
 // unsendable link is one nobody can pass on. The booking form does not, and
 // reports the unstaged link as a question not asked.
@@ -305,7 +335,7 @@ const (
 	mintWithoutMailLane   mailLanePolicy = false
 )
 
-func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy, language string) (IssuedConfirm, error) {
+func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind string, purposeID ids.PurposeID, expectedAddress string, lane mailLanePolicy, operatorAsks bool, language string) (IssuedConfirm, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return IssuedConfirm{}, err
 	}
@@ -327,6 +357,7 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 			purposeID:       purposeID,
 			expectedAddress: expectedAddress,
 			lane:            lane,
+			operatorAsks:    operatorAsks,
 			language:        language,
 			tokenHash:       hashPublicToken(token),
 			link:            s.confirmLink(token),
@@ -356,23 +387,24 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 //
 // Naming the subject is not authorization. The spend below is what redeems the
 // link, and it runs under the subject lock this read makes possible.
-func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ids.ContactID, string, error) {
+func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ids.ContactID, string, bool, error) {
 	var contactID ids.ContactID
 	var kind string
+	var asksNews bool
 	// The kind comes back with the subject so a submission wider than the mail
 	// can be refused BEFORE the link is spent. Refusing after would burn the
 	// subject's one chance to answer on a request the store was never going to
 	// stand behind — the same reason validateConfirmSubmission runs first.
 	err := tx.QueryRow(ctx, `
-		SELECT ct.contact_id, ct.kind FROM confirm_token ct
+		SELECT ct.contact_id, ct.kind, ct.asks_news FROM confirm_token ct
 		 WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
 		   AND EXISTS (SELECT 1 FROM contact p
 		                WHERE p.id = ct.contact_id AND p.archived_at IS NULL)`,
-		hashPublicToken(token), s.now().UTC()).Scan(&contactID, &kind)
+		hashPublicToken(token), s.now().UTC()).Scan(&contactID, &kind, &asksNews)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ids.ContactID{}, "", fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
+		return ids.ContactID{}, "", false, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
 	}
-	return contactID, kind, err
+	return contactID, kind, asksNews, err
 }
 
 // spendConfirmTokenTx marks the link used, inside the caller's transaction so
@@ -395,10 +427,11 @@ func (s *Store) spendConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string
 		  AND EXISTS (SELECT 1 FROM contact p
 		               WHERE p.id = ct.contact_id AND p.archived_at IS NULL)
 		RETURNING ct.contact_id, ct.id, ct.delivered_to, ct.kind, ct.purpose_id,
-		          ct.question_key, ct.question_locale, ct.question_version`,
+		          ct.question_key, ct.question_locale, ct.question_version, ct.asks_news,
+		          coalesce(ct.subject_request_id, '00000000-0000-0000-0000-000000000000')`,
 		hashPublicToken(token), s.now().UTC()).Scan(
 		&ref.ContactID, &ref.TokenID, &ref.DeliveredTo, &ref.Kind, &purposeID,
-		&questionKey, &questionLocale, &questionVersion)
+		&questionKey, &questionLocale, &questionVersion, &ref.AsksNews, &ref.SubjectRequest)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ConfirmRef{}, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
 	}
