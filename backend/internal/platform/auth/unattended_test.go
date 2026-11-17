@@ -4,6 +4,7 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -16,19 +17,20 @@ import (
 func TestUnattendedSendsWaitWhileDirectedSendsAndUpdatesRun(t *testing.T) {
 	ctx := agentCtxWithPassport(ids.NewV7(), principal.ScopeSend, principal.ScopeWrite)
 	for _, tc := range []struct {
-		name       string
-		scope      principal.Scope
-		unattended bool
-		wait       bool
+		name  string
+		scope principal.Scope
+		mark  func(context.Context) context.Context
+		wait  bool
 	}{
-		{"directed send", principal.ScopeSend, false, false},
-		{"unattended send", principal.ScopeSend, true, true},
-		{"unattended update", principal.ScopeWrite, true, false},
+		{"directed send", principal.ScopeSend, nil, false},
+		{"unattended send", principal.ScopeSend, principal.WithUnattended, true},
+		{"scheduled run send", principal.ScopeSend, scheduledRun, true},
+		{"unattended update", principal.ScopeWrite, principal.WithUnattended, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			callCtx := ctx
-			if tc.unattended {
-				callCtx = principal.WithUnattended(callCtx)
+			if tc.mark != nil {
+				callCtx = tc.mark(callCtx)
 			}
 			spec := mcp.ToolSpec{Name: "action", RequiredScope: tc.scope, Tier: mcp.TierAutoExecute}
 			_, err := fullSeatGate().Admit(callCtx, spec, noResolve)
@@ -41,4 +43,8 @@ func TestUnattendedSendsWaitWhileDirectedSendsAndUpdatesRun(t *testing.T) {
 			}
 		})
 	}
+}
+
+func scheduledRun(ctx context.Context) context.Context {
+	return principal.WithAgentRunID(ctx, ids.NewV7())
 }

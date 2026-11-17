@@ -32,7 +32,10 @@ func TestUnattendedSendPausesAndOneApprovalDoesNotReleaseTheNextSend(t *testing.
 	job := runner.Job{Goal: "Prepare follow-ups", Tools: []string{"send_company_email"}}
 	r := runner.New(registry, brain)
 	ctx := sendCtx()
-	actor, _ := principal.Actor(ctx)
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("sendCtx carries no actor")
+	}
 	actor.SeatType = principal.SeatFull
 	ctx = principal.WithActor(ctx, actor)
 	result, err := r.Run(ctx, job)

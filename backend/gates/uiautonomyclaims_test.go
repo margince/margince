@@ -7,8 +7,31 @@
 
 package gates
 
-// Shipped locale copy must not claim every record update requires approval
-// or that standing send permission approves a message.
+// No shipped UI string promises that nothing sends without a human's approval
+// while the generated policy table says the send verbs auto-execute.
+//
+// This is the defect it exists for, and it shipped. The product moved sending
+// from confirm-first to auto-execute for a good reason — a person who asks their
+// own assistant to send has decided, so a second confirmation made the agent
+// weaker than the person behind it — and the copy did not move with it.
+// Three English strings, plus their German and Vietnamese translations, went on
+// telling users that nothing leaves the building without their say-so. Every
+// other gate was green: the strings were valid, the screens rendered, the
+// translations were complete. A promise about safety that the server does not
+// keep is worse than a missing feature, and nothing in the build could see it.
+//
+// The obligation is DERIVED, not pinned. It reads the tier the generator wrote
+// for the send verbs, and only forbids the absolute claim while that tier is
+// auto-execute. An installation-wide decision to floor sending back to
+// confirm-first would make the old copy true again, and this gate would step
+// aside rather than having to be edited — which is the difference between a
+// fitness function and a second copy of the answer.
+//
+// WHAT IT CANNOT SEE. It matches phrases, so a fourth way of saying the same
+// thing walks past it, and it reads only the locale files. That is the honest
+// limit of a prose check, and the reason the phrases below are shapes rather
+// than whole sentences. It is a backstop for one known-expensive claim, not a
+// proof that the copy is true.
 
 import (
 	"path/filepath"
@@ -16,34 +39,92 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// These phrases wrongly turn routine updates into an approval queue. Each
-// shipped language needs its own patterns; phrasing cannot be derived.
+// sendTools are the tool verbs whose tier decides whether the absolute claim is
+// a lie: the two that put a message outside the installation.
+var sendTools = []string{"send_email", "send_message"}
+
+// contractTiers are the only tiers the contract admits. A tier outside this set
+// means the vocabulary moved under this gate, which must stop it rather than
+// read the unknown word as "not auto-execute".
+var contractTiers = map[string]bool{
+	"auto_execute":          true,
+	"confirmation_required": true,
+	"dynamic":               true,
+}
+
+// absoluteApprovalClaims are the shapes of "we never send without your approval".
+//
+// Written lowercase and without punctuation so a comma or a capital does not
+// smuggle one past, and kept to the CLAIM itself: "waits for your approval" is
+// fine beside a verb that does wait, so a phrase here has to carry the absolute
+// ("never", "nothing", "anything that leaves") that makes it false.
 var absoluteApprovalClaims = map[string][]*regexp.Regexp{
 	"en": {
-		regexp.MustCompile(`every (field )?change (waits|requires approval)`),
-		regexp.MustCompile(`nothing is written until you (approve|accept)`),
-		regexp.MustCompile(`agents only draft[,]? people send`),
-		regexp.MustCompile(`granting the permission is the approval`),
-		regexp.MustCompile(`giving that passport is the approval`),
-		regexp.MustCompile(`send anything or change a record without your approval`),
+		regexp.MustCompile(`never sends? (anything|any message|an email|a message)`),
+		regexp.MustCompile(`without asking you first`),
+		regexp.MustCompile(`anything that leaves the building waits`),
+		regexp.MustCompile(`nothing (is sent|sends|leaves) (without|until)`),
+		regexp.MustCompile(`sends? only what you approve`),
+		regexp.MustCompile(`(is |are )?(ever )?sent without your approval`),
 	},
 	"de": {
-		regexp.MustCompile(`jede änderung (wartet|braucht eine freigabe)`),
-		regexp.MustCompile(`vorher wird nichts geschrieben`),
-		regexp.MustCompile(`nur menschen (senden|verschicken)`),
-		regexp.MustCompile(`mit (der berechtigung|diesem passport) ist die freigabe bereits erteilt`),
-		regexp.MustCompile(`ohne deine freigabe etwas senden oder einen datensatz ändern`),
+		regexp.MustCompile(`(senden|sende|verschickt) nie (etwas|eine e-mail|eine nachricht)`),
+		regexp.MustCompile(`ohne dich vorher zu fragen`),
+		regexp.MustCompile(`nichts wird ohne .{0,20}freigabe`),
+		regexp.MustCompile(`sendet nur, was du freigibst`),
+		regexp.MustCompile(`ohne deine freigabe geht (nie )?(et)?was raus`),
+		regexp.MustCompile(`nichts wird gesendet, bevor du`),
 	},
 	"vi": {
-		regexp.MustCompile(`mọi thay đổi.{0,30}chờ.{0,20}duyệt`),
-		regexp.MustCompile(`chưa duyệt[,]? chưa lưu`),
-		regexp.MustCompile(`chỉ bạn được bấm gửi`),
-		regexp.MustCompile(`cấp (quyền|passport đó) chính là phê duyệt`),
-		regexp.MustCompile(`gửi bất cứ thứ gì hay sửa hồ sơ khi bạn chưa duyệt`),
+		regexp.MustCompile(`(không gì được gửi|không (bao giờ )?(tự )?gửi gì)[^.]{0,40}duyệt`),
+		regexp.MustCompile(`không bao giờ gửi (email|tin nhắn)`),
+		regexp.MustCompile(`mà chưa hỏi bạn trước`),
+		regexp.MustCompile(`chỉ gửi những gì bạn duyệt`),
 	},
+}
+
+// autoExecutingSendVerbs names the send verbs that run without staging an
+// approval, read from the COMPILED policy table.
+//
+// It asks compose.AgentToolTiers() rather than grepping agentpolicy_gen.go,
+// because a text scrape fails short in the one direction that is silent. An
+// earlier version matched the literal `Tier: "auto_execute"` on the generated
+// line; anything changing that spelling — gofmt padding, a multi-line literal, a
+// renamed token — dropped both verbs out of the result, and the gate then logged
+// that the claim was true and read not one locale string. That happened during
+// review, on a tree where both verbs were live at auto_execute.
+//
+// ANY auto-executing verb is enough to make the absolute claim false, so this
+// returns the list rather than one bool over all of them: flooring send_email
+// while send_message still executes must not switch the whole check off.
+func autoExecutingSendVerbs(t *testing.T) []string {
+	t.Helper()
+	declared := compose.AgentToolTiers()
+	if len(declared) == 0 {
+		t.Fatal("the contract declares no tool tiers — this gate is reading a contract shape that is gone")
+	}
+
+	var auto []string
+	for _, tool := range sendTools {
+		tiers, governed := declared[tool]
+		if !governed {
+			t.Fatalf("the contract governs no tool named %q — a send verb was renamed or removed, and this gate must be re-read against that change rather than quietly checking one verb less", tool)
+		}
+		for _, tier := range tiers {
+			if !contractTiers[tier] {
+				t.Fatalf("%s resolves to tier %q, which the contract does not admit — the tier vocabulary moved under this gate", tool, tier)
+			}
+			if tier == "auto_execute" {
+				auto = append(auto, tool)
+				break
+			}
+		}
+	}
+	return auto
 }
 
 // shippedLocales names every locale the app ships, read from the directory
@@ -113,14 +194,24 @@ func shippedCopy(doc string) string {
 	return strings.Join(kept, "\n")
 }
 
-func TestNoLocaleRequiresApprovalForEveryUpdate(t *testing.T) {
+func TestNoLocaleClaimsSendingAlwaysWaitsForAHuman(t *testing.T) {
 	t.Parallel()
+
+	// Not t.Skip: a skipped gate and a passing one read the same in a log, and
+	// this one guards a claim about safety. Say out loud that the obligation
+	// lifted, and why.
+	autoExecuting := autoExecutingSendVerbs(t)
+	if len(autoExecuting) == 0 {
+		t.Log("every send verb stages an approval, so the absolute claim is true and this gate holds nothing today")
+		return
+	}
+	t.Logf("send verbs running at auto_execute: %s", strings.Join(autoExecuting, ", "))
 
 	dir := filepath.Join(repoRoot, "frontend", "src", "i18n")
 	for _, locale := range shippedLocales(t, dir) {
 		claims, covered := absoluteApprovalClaims[locale]
 		if !covered {
-			t.Errorf("frontend/src/i18n/%s.ts ships to users but this gate knows no %s phrasing of the incorrect autonomy claims, so it reads none of that language. Add the shapes to absoluteApprovalClaims — an uncovered locale is where this census goes short", locale, locale)
+			t.Errorf("frontend/src/i18n/%s.ts ships to users but this gate knows no %s phrasing of \"nothing sends without your approval\", so it reads none of that language. Add the shapes to absoluteApprovalClaims — an uncovered locale is where this census goes short", locale, locale)
 			continue
 		}
 
@@ -132,7 +223,7 @@ func TestNoLocaleRequiresApprovalForEveryUpdate(t *testing.T) {
 
 		for _, claim := range claims {
 			if loc := claim.FindStringIndex(body); loc != nil {
-				t.Errorf("frontend/src/i18n/%s.ts promises %q, but routine updates run automatically and a direct instruction authorises a send", locale, strings.TrimSpace(body[loc[0]:loc[1]]))
+				t.Errorf("frontend/src/i18n/%s.ts promises %q, but the contract runs the send verbs at auto_execute — the app is telling a user their approval gates something it does not gate", locale, strings.TrimSpace(body[loc[0]:loc[1]]))
 			}
 		}
 	}

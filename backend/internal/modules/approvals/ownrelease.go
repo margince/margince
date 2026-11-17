@@ -61,10 +61,10 @@ const (
 // ownReleaseFor answers it for one proposal. A credential acts for its human
 // with that human's permissions, so what the human could release in the CRM it
 // may release too — but only an undoable change, because a human who sees it
-// afterwards can still put it back, and only on an attended call: a
-// scheduled run has nobody behind it to have asked.
+// afterwards can still put it back. agentMayDecide refuses any approval from
+// an unattended run before it reads this answer.
 func (s *Service) ownReleaseFor(ctx context.Context, q Queryer, a row) ownRelease {
-	if principal.Unattended(ctx) || s.undoable == nil {
+	if s.undoable == nil {
 		return ownReleaseRefused
 	}
 	call := StagedCall{Kind: a.Kind, Change: a.ProposedChange}

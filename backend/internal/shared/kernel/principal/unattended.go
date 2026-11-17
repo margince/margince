@@ -9,12 +9,14 @@ type unattendedKey struct{}
 
 // WithUnattended marks work with no human present to authorise its sends.
 func WithUnattended(ctx context.Context) context.Context {
-	return context.WithValue(ctx, unattendedKey{}, true)
+	return context.WithValue(ctx, unattendedKey{}, struct{}{})
 }
 
-// Unattended covers runner calls before and after a run ID is assigned.
+// Unattended reports work nobody is watching. A run ID marks a scheduled run;
+// the flag marks the runner even when no run row was written.
 func Unattended(ctx context.Context) bool {
-	value, ok := ctx.Value(unattendedKey{}).(bool)
-	_, running := AgentRunID(ctx)
-	return running || ok && value
+	if _, scheduled := AgentRunID(ctx); scheduled {
+		return true
+	}
+	return ctx.Value(unattendedKey{}) != nil
 }

@@ -13,12 +13,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestUnattendedAgentsCannotApproveHeldMessages(t *testing.T) {
-	actor := principal.Principal{Type: principal.PrincipalAgent, UserID: ids.NewV7(), PassportID: ids.NewV7(), Scopes: principal.NewScopeSet(principal.ScopeWrite, principal.ScopeSend)}
+func TestUnattendedAgentsCannotApproveAnything(t *testing.T) {
+	actor := principal.Principal{Type: principal.PrincipalAgent, UserID: ids.NewV7(), Scopes: principal.NewScopeSet(principal.ScopeWrite, principal.ScopeSend)}
+	kinds := []string{"advance_deal"}
 	for kind := range sendingKinds {
+		kinds = append(kinds, kind)
+	}
+	for _, kind := range kinds {
 		held := row{Kind: kind}
 		if err := agentMayDecide(context.Background(), actor, held, true, ownReleaseRefused); err != nil {
-			t.Fatalf("directed approval of %s: %v", kind, err)
+			t.Fatalf("attended approval of %s: %v", kind, err)
 		}
 		for _, ctx := range []context.Context{principal.WithUnattended(context.Background()), principal.WithAgentRunID(context.Background(), ids.NewV7())} {
 			if err := agentMayDecide(ctx, actor, held, true, ownReleaseAllowed); !errors.Is(err, apperrors.ErrPermissionDenied) {
