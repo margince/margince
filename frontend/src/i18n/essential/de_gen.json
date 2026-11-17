@@ -4332,7 +4332,7 @@
   "common.licenseLapsed": "Die Lizenz dieser Installation ist abgelaufen oder wurde abgelehnt, deshalb wartet diese Änderung auf eine gültige Lizenz. Deine Daten bleiben, wie sie sind.",
   "licensebanner.link": "{tab} öffnen",
   "licensebanner.grace.title": "Lizenz abgelaufen",
-  "licensebanner.grace.body": "Die Lizenz dieser Installation ist abgelaufen und in der Übergangsfrist. Margince läuft weiter, startet nach dem Ende der Übergangsfrist aber nicht mehr. Erneuere die Lizenz vorher.",
+  "licensebanner.grace.body": "Die Lizenz dieser Installation ist abgelaufen. Margince ist gesperrt, bis eine gültige Lizenz eingerichtet ist.",
   "aicalls.reason.provider_error": "Fehler beim Anbieter im Versuch davor",
   "aicalls.reason.schema_invalid": "Antwort davor passte nicht zum Schema",
   "aicalls.reason.budget_degrade": "Vom KI-Budget eine Stufe herabgesetzt",

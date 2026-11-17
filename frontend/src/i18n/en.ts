@@ -15529,7 +15529,7 @@ export const en = {
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":
-    "This installation’s license expired and is in its grace period. Margince keeps running, but it does not start again after the grace period ends. Renew the license before then.",
+    "This installation’s license has expired, so Margince is locked until a valid license is set up.",
 
   "aicalls.title": "AI call trace",
   "aicalls.withheld":

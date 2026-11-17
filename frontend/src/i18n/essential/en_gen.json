@@ -4332,7 +4332,7 @@
   "common.licenseLapsed": "This installation’s license has expired or was refused, so this change waits for a valid license. Your data stays as it is.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
-  "licensebanner.grace.body": "This installation’s license expired and is in its grace period. Margince keeps running, but it does not start again after the grace period ends. Renew the license before then.",
+  "licensebanner.grace.body": "This installation’s license has expired, so Margince is locked until a valid license is set up.",
   "aicalls.reason.provider_error": "Provider error on the attempt before",
   "aicalls.reason.schema_invalid": "Answer before did not match the schema",
   "aicalls.reason.budget_degrade": "Moved down a tier by the AI budget",

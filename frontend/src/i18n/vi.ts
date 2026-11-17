@@ -15213,7 +15213,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "licensebanner.link": "Mở {tab}",
   "licensebanner.grace.title": "Giấy phép đã hết hạn",
   "licensebanner.grace.body":
-    "Giấy phép của bản cài đặt này đã hết hạn và đang trong thời gian ân hạn. Margince vẫn tiếp tục chạy, nhưng sẽ không khởi động lại được sau khi thời gian ân hạn kết thúc. Hãy gia hạn giấy phép trước thời điểm đó.",
+    "Giấy phép của bản cài đặt này đã hết hạn, nên Margince bị khóa cho đến khi có giấy phép hợp lệ.",
 
   "aicalls.title": "Dấu vết lượt gọi AI",
   "aicalls.withheld":

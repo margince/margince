@@ -4332,7 +4332,7 @@
   "common.licenseLapsed": "Giấy phép của bản cài đặt này đã hết hạn hoặc bị từ chối, nên thay đổi này phải chờ có giấy phép hợp lệ. Dữ liệu của bạn vẫn được giữ nguyên.",
   "licensebanner.link": "Mở {tab}",
   "licensebanner.grace.title": "Giấy phép đã hết hạn",
-  "licensebanner.grace.body": "Giấy phép của bản cài đặt này đã hết hạn và đang trong thời gian ân hạn. Margince vẫn tiếp tục chạy, nhưng sẽ không khởi động lại được sau khi thời gian ân hạn kết thúc. Hãy gia hạn giấy phép trước thời điểm đó.",
+  "licensebanner.grace.body": "Giấy phép của bản cài đặt này đã hết hạn, nên Margince bị khóa cho đến khi có giấy phép hợp lệ.",
   "aicalls.reason.provider_error": "Lần thử trước gặp lỗi từ nhà cung cấp",
   "aicalls.reason.schema_invalid": "Câu trả lời trước không khớp schema",
   "aicalls.reason.budget_degrade": "Bị ngân sách AI hạ một bậc",
