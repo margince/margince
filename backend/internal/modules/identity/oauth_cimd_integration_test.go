@@ -91,9 +91,7 @@ func setupCIMD(t *testing.T, slug string) *cimdEnv {
 	}))
 	t.Cleanup(e.docs.Close)
 
-	guarded := cimdClient
-	cimdClient = e.docs.Client()
-	t.Cleanup(func() { cimdClient = guarded })
+	svc.cimdClient = e.docs.Client()
 	return e
 }
 
@@ -116,9 +114,8 @@ func (e *cimdEnv) client(t *testing.T, clientID string) (name, via string, redir
 // integration: oauth_grant carries a foreign key onto this table, and it is
 // what makes a connection revocable — a CIMD client with no row would be a
 // connection its human can see the passport for and never the client.
-//
-//testdb:serial swaps the package-level cimdClient, which its parallel siblings read
 func TestAValidatedDocumentBecomesAnOrdinaryClientRow(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-row")
 	clientID := e.docs.URL + "/client.json"
 
@@ -144,9 +141,8 @@ func TestAValidatedDocumentBecomesAnOrdinaryClientRow(t *testing.T) {
 // A fresh row is NOT refetched. Without the cache every authorize is an
 // outbound request whose rate the client sets, which is the thing the TTL floor
 // exists to bound.
-//
-//testdb:serial swaps the package-level cimdClient, which its parallel siblings read
 func TestAFreshDocumentIsNotFetchedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-cache")
 	clientID := e.docs.URL + "/client.json"
 	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
@@ -169,9 +165,8 @@ func TestAFreshDocumentIsNotFetchedAgain(t *testing.T) {
 // A STALE row is refetched, and what the document says now wins. The other
 // direction of the same property: a client that rotates its redirect list must
 // not be held to the old one forever.
-//
-//testdb:serial swaps the package-level cimdClient, which its parallel siblings read
 func TestAStaleDocumentIsRefetchedAndItsNewContentWins(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-stale")
 	clientID := e.docs.URL + "/client.json"
 	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
@@ -211,9 +206,8 @@ func (e *cimdEnv) expire(t *testing.T, clientID string) {
 // A DISABLED client is not refetched, however stale it is. Refetching would let
 // a client an admin switched off keep this server making outbound requests on
 // its behalf — the switch has to stop the traffic, not only the authorization.
-//
-//testdb:serial swaps the package-level cimdClient, which its parallel siblings read
 func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-disabled")
 	clientID := e.docs.URL + "/client.json"
 	if err := e.svc.resolveCIMDClient(e.ctx, clientID, DefaultUnusedDynamicClientCap); err != nil {
@@ -243,9 +237,8 @@ func TestADisabledClientIsNotFetchedAgain(t *testing.T) {
 // A DCR-registered row is never re-provenanced by a document. The upsert's
 // conflict clause is what holds this: without it, anyone who could serve a
 // document at a registered client's id could rewrite its redirect list.
-//
-//testdb:serial swaps the package-level cimdClient, which its parallel siblings read
 func TestADocumentCannotTakeOverARegisteredClient(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-takeover")
 	clientID := e.docs.URL + "/client.json"
 	err := database.WithWorkspaceTx(e.ctx, e.svc.db.Pool(), func(tx pgx.Tx) error {
@@ -275,9 +268,8 @@ func TestADocumentCannotTakeOverARegisteredClient(t *testing.T) {
 // A client_id that is not a metadata-document URL resolves nothing and says so,
 // which is how the authorize path tells "resolve this from the table" from
 // "this failed".
-//
-//testdb:serial swaps the package-level cimdClient, which its parallel siblings read
 func TestAnOpaqueClientIDIsNotResolvedAsADocument(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-opaque")
 
 	err := e.svc.resolveCIMDClient(e.ctx, "s6BhdRkqt3", DefaultUnusedDynamicClientCap)
@@ -290,9 +282,8 @@ func TestAnOpaqueClientIDIsNotResolvedAsADocument(t *testing.T) {
 // A document the server refuses leaves NO row. A row written before validation
 // would be a client this installation believes in on the strength of a document
 // it rejected.
-//
-//testdb:serial swaps the package-level cimdClient, which its parallel siblings read
 func TestARefusedDocumentLeavesNoRow(t *testing.T) {
+	t.Parallel()
 	e := setupCIMD(t, "cimd-refused")
 	clientID := e.docs.URL + "/client.json"
 	e.body = func(string) string {

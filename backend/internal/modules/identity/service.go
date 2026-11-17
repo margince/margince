@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/http"
 	"sync/atomic"
 	"time"
 
@@ -49,6 +50,9 @@ type Service struct {
 	// without sleeping. Session/passport expiries stay on the database's
 	// now() — they are enforced inside SQL predicates, not Go logic.
 	now func() time.Time
+	// cimdClient fetches client metadata documents. Production shares the one
+	// guarded client of oauth_cimd.go; a test points it at its own server.
+	cimdClient *http.Client
 	// installation caches the singleton workspace id after the first
 	// successful resolution (installation.go) — the id is immutable for
 	// the process lifetime, so no request pays the lookup twice.
@@ -107,7 +111,7 @@ type Service struct {
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
-	svc := &Service{now: time.Now}
+	svc := &Service{now: time.Now, cimdClient: processCIMDClient}
 	svc.db = database.Bind(pool, svc.InstallationWorkspace)
 	return svc
 }
@@ -119,7 +123,7 @@ func NewService(pool *pgxpool.Pool) *Service {
 // identity is the module that refuses when a second one exists — so it names the
 // one it means instead (ADR-0091 §9 step 3).
 func NewServiceFor(db *database.DB) *Service {
-	return &Service{db: db, now: time.Now}
+	return &Service{db: db, now: time.Now, cimdClient: processCIMDClient}
 }
 
 // Identity is the authenticated principal's resolved state — what /me

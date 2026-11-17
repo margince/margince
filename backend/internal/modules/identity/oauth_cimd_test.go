@@ -134,8 +134,8 @@ func TestADocumentListsNoMoreRedirectsThanAnAdminMay(t *testing.T) {
 	}
 }
 
-// useReachableCIMDClient points the package's fetch at the production client
-// with ONLY its transport replaced, and restores it when the test ends.
+// reachableCIMDClient is the production client with only its transport
+// replaced.
 //
 // The dialer is what has to go and the only thing that may: netguard refuses a
 // loopback address in its Control hook and httptest listens on one, so with the
@@ -145,20 +145,17 @@ func TestADocumentListsNoMoreRedirectsThanAnAdminMay(t *testing.T) {
 // mean deleting it from the client changes nothing about the tests that claim
 // to hold it. The address guard keeps its own test, which is the only one in
 // this file that uses the real client whole.
-func useReachableCIMDClient(t *testing.T) {
-	t.Helper()
-	guarded := cimdClient
-	reachable := *guarded
+func reachableCIMDClient() *http.Client {
+	reachable := *processCIMDClient
 	reachable.Transport = &http.Transport{}
-	cimdClient = &reachable
-	t.Cleanup(func() { cimdClient = guarded })
+	return &reachable
 }
 
 // The fetch's guards, against a real server. Each case is an attack rather than
 // a malformed input: an oversized body spends this server's memory, and a
 // non-JSON answer or a 404 is a page that was never a metadata document.
 func TestTheFetchRefusesWhatIsNotAMetadataDocument(t *testing.T) {
-	useReachableCIMDClient(t)
+	reachable := reachableCIMDClient()
 
 	oversized := strings.Repeat("x", cimdMaxDocument+1)
 	cases := map[string]http.HandlerFunc{
@@ -176,7 +173,7 @@ func TestTheFetchRefusesWhatIsNotAMetadataDocument(t *testing.T) {
 	}
 	for name, handler := range cases {
 		srv := httptest.NewServer(handler)
-		if _, _, err := fetchCIMD(t.Context(), srv.URL+"/client.json"); err == nil {
+		if _, _, err := fetchCIMD(t.Context(), reachable, srv.URL+"/client.json"); err == nil {
 			t.Errorf("%s: was accepted as a metadata document", name)
 		}
 		srv.Close()
@@ -192,7 +189,7 @@ func TestTheFetchRefusesWhatIsNotAMetadataDocument(t *testing.T) {
 			`"redirect_uris":["https://a.example/cb"]}`))
 	}))
 	defer valid.Close()
-	if _, _, err := fetchCIMD(t.Context(), valid.URL+"/client.json"); err != nil {
+	if _, _, err := fetchCIMD(t.Context(), reachable, valid.URL+"/client.json"); err != nil {
 		t.Fatalf("a valid document was refused through the same client (%v); every refusal above proves nothing", err)
 	}
 }
@@ -207,7 +204,7 @@ func TestTheFetchRefusesWhatIsNotAMetadataDocument(t *testing.T) {
 // the one the caller presented, not the one that answered — so a document
 // published anywhere would speak for a client id belonging to somewhere else.
 func TestTheFetchDoesNotFollowARedirect(t *testing.T) {
-	useReachableCIMDClient(t)
+	reachable := reachableCIMDClient()
 
 	// The first server is bound but not serving yet, so its own URL is known
 	// before the second server has to name it. A variable written after both are
@@ -229,7 +226,7 @@ func TestTheFetchDoesNotFollowARedirect(t *testing.T) {
 	first.Start()
 	defer first.Close()
 
-	_, _, err := fetchCIMD(t.Context(), clientID)
+	_, _, err := fetchCIMD(t.Context(), reachable, clientID)
 
 	if err == nil {
 		t.Fatal("the fetch followed a redirect: the document that answered was published at a URL the client_id equality check never saw")
@@ -261,7 +258,7 @@ func TestTheFetchRefusesAnAddressInsideTheDeployment(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, _, err := fetchCIMD(t.Context(), srv.URL+"/client.json")
+	_, _, err := fetchCIMD(t.Context(), processCIMDClient, srv.URL+"/client.json")
 
 	if err == nil {
 		t.Fatal("a metadata document on a loopback address was fetched; an unauthenticated caller can probe this deployment's network")
