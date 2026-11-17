@@ -14054,6 +14054,8 @@ export const en = {
     "Extensions in this build, and which roles can access them.",
   "settings.page.reset.sub":
     "Delete this installation’s data. Cannot be undone.",
+  "settings.page.about.sub":
+    "The version, the commit and the license of this build.",
   "settings.scope.self": "Only you",
   "settings.scope.mixed": "Mixed",
   "settings.scope.workspace": "Company",
@@ -14127,6 +14129,7 @@ export const en = {
   "configuration.scope.changed": "Not default",
   "configuration.scope.outside": "Set outside the app",
   "settings.tab.reset": "Reset data",
+  "settings.tab.about": "About Margince",
   "settings.group.me": "You",
   "settings.group.compliance": "Compliance",
   "settings.group.system": "System",

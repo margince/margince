@@ -13725,6 +13725,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tiện ích mở rộng trong bản dựng này, và vai trò nào truy cập được.",
   "settings.page.reset.sub":
     "Xóa dữ liệu của bản cài đặt này. Không thể hoàn tác.",
+  "settings.page.about.sub": "Phiên bản, commit và giấy phép của bản dựng này.",
   "settings.scope.self": "Chỉ bạn",
   "settings.scope.mixed": "H\u1ed7n h\u1ee3p",
   "settings.scope.workspace": "C\u00f4ng ty",
@@ -13799,6 +13800,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "configuration.scope.changed": "Không phải mặc định",
   "configuration.scope.outside": "Đã đặt bên ngoài ứng dụng",
   "settings.tab.reset": "Đặt lại dữ liệu",
+  "settings.tab.about": "Giới thiệu Margince",
   "settings.group.me": "Cá nhân",
   "settings.group.compliance": "Tuân thủ",
   "settings.group.system": "Hệ thống",

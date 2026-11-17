@@ -14103,6 +14103,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erweiterungen in diesem Build und welche Rollen darauf zugreifen können.",
   "settings.page.reset.sub":
     "Daten dieser Installation löschen. Das kann nicht rückgängig gemacht werden.",
+  "settings.page.about.sub": "Version, Commit und Lizenz dieses Builds.",
   "settings.scope.self": "Nur du",
   "settings.scope.mixed": "Gemischt",
   "settings.scope.workspace": "Unternehmen",
@@ -14176,6 +14177,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "configuration.scope.changed": "Nicht Standard",
   "configuration.scope.outside": "Außerhalb der App gesetzt",
   "settings.tab.reset": "Daten zurücksetzen",
+  "settings.tab.about": "Über Margince",
   "settings.group.me": "Du",
   "settings.group.compliance": "Compliance",
   "settings.group.system": "System",
