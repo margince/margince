@@ -5,17 +5,16 @@ package compose
 
 // The litigation-hold seam.
 //
-// `legal_hold` sits on five tables owned by three modules — contact, company
-// and lead in contacts, deal in deals, project in projects — and a module may
-// not write a sibling's table. So the compliance surface asks a port, and this
-// is the edge compose injects: one entity type in, one owner's own gated write
-// out.
+// `legal_hold` sits on five tables owned by three modules: contact, company and
+// lead in contacts, deal in deals, project in projects. A module may not write
+// a sibling's table, so the compliance surface asks a port. This is the edge
+// compose injects: one entity type in, one owner's own gated write out.
 //
-// The dispatch is the whole of the file on purpose. Everything a hold actually
-// DOES — the authority check, the row lock, the refusal of a no-op, the audit
-// row carrying the stated reason, the record's .updated event — is storekit.SetLegalHold, called by each
-// owner. Putting any of it here would make compose a sixth writer of records
-// it does not own.
+// The file holds only the dispatch. Each owner calls storekit.SetLegalHold for
+// everything a hold does. That covers the authority check, the row lock, the
+// refusal of a no-op, the audit row with the stated reason and the record's
+// .updated event. Putting any of it here would make compose a sixth writer of
+// records it does not own.
 
 import (
 	"context"
