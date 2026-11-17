@@ -143,7 +143,6 @@ internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
 internal/compose/installation.go#func seedRoutingBinding
 internal/compose/integration/agentaccess/oauth_integration_test.go#method oauthEnv.postToken
-internal/compose/integration/apptest/appdsn.go#func AppDSN
 internal/compose/integration/auditlog_integration_test.go#func TestAuditLogWithholdsALimitedActivitysImageFromOutsideItsAudience
 internal/compose/integration/channels/telegram_fixture_integration_test.go#method fakeTelegramAPI.sentMessages
 internal/compose/integration/channels/telegram_fixture_integration_test.go#type fakeTelegramAPI.held

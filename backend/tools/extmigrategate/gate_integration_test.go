@@ -171,6 +171,7 @@ func scaffoldDown(ns string) string {
 	return fmt.Sprintf("DROP TABLE IF EXISTS ext.%s_note;\n", ns)
 }
 
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateAcceptsTheScaffoldedShape(t *testing.T) {
 	unit := unitName(t, "ok")
 	ns := namespaceOf(t, unit)
@@ -196,6 +197,8 @@ func TestGateAcceptsTheScaffoldedShape(t *testing.T) {
 // A workspace column is refused rather than ignored. It separates nothing on an
 // installation that holds one workspace, and left in place it reads to the next
 // author as a tenant boundary the tier no longer has.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsTableWithWorkspaceID(t *testing.T) {
 	unit := unitName(t, "ws")
 	ns := namespaceOf(t, unit)
@@ -213,6 +216,8 @@ func TestGateRejectsTableWithWorkspaceID(t *testing.T) {
 // Any policy at all, whatever it says. The gate used to pin the predicate's
 // rendered form and enumerate the ways to get it wrong; with no tenant to key
 // on there is nothing a policy here can mean, so the rule is the simpler one.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsAnyPolicy(t *testing.T) {
 	unit := unitName(t, "pol")
 	ns := namespaceOf(t, unit)
@@ -227,6 +232,8 @@ func TestGateRejectsAnyPolicy(t *testing.T) {
 
 // Row-level security with no policy at all: the shape that denies every row to
 // a non-owner while looking, at a glance, like a table someone protected.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsRowLevelSecurity(t *testing.T) {
 	unit := unitName(t, "rls")
 	ns := namespaceOf(t, unit)
@@ -242,6 +249,8 @@ func TestGateRejectsRowLevelSecurity(t *testing.T) {
 // as ext_<name> makes — as the dev/CI owner (a superuser) this INSERT would
 // succeed and would have to be detected afterwards, which needs a rule per way
 // of writing a core table.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsDMLOnCoreRelations(t *testing.T) {
 	unit := unitName(t, "dml")
 	ns := namespaceOf(t, unit)
@@ -258,6 +267,8 @@ VALUES ('smuggled', 'gate', 'gate');
 // not merely absent, it is impossible. Skipping them in the enumeration — the
 // obvious reading of "check the tables" — is therefore the silent hole, and
 // both are rejected outright.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsForeignTable(t *testing.T) {
 	ctx := context.Background()
 	owner := admin(t)
@@ -307,6 +318,8 @@ func TestGateRejectsForeignTable(t *testing.T) {
 // The namespace is what keeps two units sharing the ext schema from colliding
 // or addressing each other's rows, so an unprefixed name is a tenancy break
 // between EXTENSIONS rather than between workspaces.
+//
+//testdb:serial shares the one throwaway database and role that TestMain makes for the gate
 func TestGateRejectsObjectOutsideNamespace(t *testing.T) {
 	unit := unitName(t, "outns")
 	ns := namespaceOf(t, unit)
