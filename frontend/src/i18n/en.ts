@@ -2927,6 +2927,11 @@ export const en = {
   "action.booking": "Booking page",
 
   "common.fieldInvalid": "Check this value and try again.",
+  "common.phone.needsCountryCode":
+    "Start the number with its country code, such as +49 or 0049.",
+  "common.phone.malformed":
+    "This is not a phone number. Write the country code and 8 to 15 digits, such as +49 30 1234567, with no extension.",
+  "common.phone.empty": "Enter a phone number.",
   "common.fieldTooLongMax": "{field}: at most {max} characters.",
   "common.valueTooLongMax": "This value is at most {max} characters.",
   "common.valueTooLong": "This value is too long.",
@@ -5855,6 +5860,8 @@ export const en = {
   "lead.demoteReason": "Reason (recorded in the audit trail)",
   "lead.demoteReasonRequired": "Enter a reason first.",
   "lead.demoteConfirm": "Reverse",
+  "lead.demoteContactHasDeal":
+    "The contact is on a deal, so this qualification cannot be reversed. Remove them from the deal’s buying committee first, or keep the contact.",
   "lead.reopen": "Reopen",
   "lead.writeRefused": "Change was not saved",
   "lead.reopenDialog": "Reopen this lead?",
@@ -7394,7 +7401,7 @@ export const en = {
   "common.duplicate.leadHolds":
     "A lead already has this email address or LinkedIn profile, so no contact was created.",
   "common.duplicate.contactHolds":
-    "A contact already has this email address or LinkedIn profile, so no lead was created. For new business with them, open a deal on the contact.",
+    "A contact already has this email address or LinkedIn profile, and someone is either a lead or a contact. For new business with them, open a deal on the contact.",
   "contact.leadHeld.title": "This is already a lead.",
   "contact.leadHeld.body":
     "Somebody is a lead or a contact, never both. Convert the lead to make them a contact; the lead’s history moves with them.",

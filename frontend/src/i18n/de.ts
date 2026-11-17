@@ -3020,6 +3020,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Buchungsseite",
 
   "common.fieldInvalid": "Prüfe diesen Wert und versuche es erneut.",
+  "common.phone.needsCountryCode":
+    "Beginne die Nummer mit der Ländervorwahl, etwa +49 oder 0049.",
+  "common.phone.malformed":
+    "Das ist keine Telefonnummer. Schreibe die Ländervorwahl und 8 bis 15 Ziffern, etwa +49 30 1234567, ohne Durchwahl-Zusatz.",
+  "common.phone.empty": "Gib eine Telefonnummer ein.",
   "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
   "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
@@ -5928,6 +5933,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.demoteReason": "Grund (wird im Audit-Log erfasst)",
   "lead.demoteReasonRequired": "Gib zuerst einen Grund ein.",
   "lead.demoteConfirm": "Zurücknehmen",
+  "lead.demoteContactHasDeal":
+    "Der Kontakt ist an einem Deal beteiligt, daher lässt sich diese Qualifizierung nicht zurücknehmen. Entferne ihn zuerst aus dem Buying Center des Deals, oder behalte den Kontakt.",
   "lead.reopen": "Wieder öffnen",
   "lead.writeRefused": "Änderung nicht gespeichert",
   "lead.reopenDialog": "Lead wieder öffnen?",
@@ -7373,7 +7380,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Kontakt angelegt.",
   "common.duplicate.contactHolds":
-    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Lead angelegt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
+    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, und jemand ist entweder Lead oder Kontakt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
   "contact.leadHeld.title": "Das ist schon ein Lead.",
   "contact.leadHeld.body":
     "Jemand ist ein Lead oder ein Kontakt, nie beides. Wandle den Lead in einen Kontakt um; der Verlauf des Leads geht mit.",

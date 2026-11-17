@@ -2928,6 +2928,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Trang đặt lịch",
 
   "common.fieldInvalid": "Kiểm tra giá trị này và thử lại.",
+  "common.phone.needsCountryCode":
+    "Hãy bắt đầu số bằng mã quốc gia, ví dụ +49 hoặc 0049.",
+  "common.phone.malformed":
+    "Đây không phải số điện thoại. Hãy viết mã quốc gia và 8 đến 15 chữ số, ví dụ +49 30 1234567, không kèm số máy lẻ.",
+  "common.phone.empty": "Nhập số điện thoại.",
   "common.fieldTooLongMax": "{field}: tối đa {max} ký tự.",
   "common.valueTooLongMax": "Giá trị này có tối đa {max} ký tự.",
   "common.valueTooLong": "Giá trị này quá dài.",
@@ -5773,6 +5778,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.demoteReason": "Lý do (ghi vào nhật ký hoạt động)",
   "lead.demoteReasonRequired": "Nhập lý do trước.",
   "lead.demoteConfirm": "Hủy xác nhận",
+  "lead.demoteContactHasDeal":
+    "Liên hệ đang gắn với một deal, nên không thể hủy xác nhận này. Hãy gỡ họ khỏi nhóm quyết định mua của deal trước, hoặc giữ liên hệ.",
   "lead.reopen": "Mở lại",
   "lead.writeRefused": "Không thể lưu thay đổi",
   "lead.reopenDialog": "Mở lại lead này?",
@@ -7201,7 +7208,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo liên hệ nào.",
   "common.duplicate.contactHolds":
-    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo lead nào. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
+    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, và mỗi người chỉ là lead hoặc liên hệ. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
   "contact.leadHeld.title": "Đây đã là một lead.",
   "contact.leadHeld.body":
     "Ai cũng chỉ là lead hoặc liên hệ, không bao giờ là cả hai. Hãy chuyển đổi lead thành liên hệ; lịch sử của lead sẽ đi theo.",
