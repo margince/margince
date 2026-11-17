@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { formatSizeBand } from "../../components/companylookups";
 import { Badge, Button } from "../../design-system/atoms";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
@@ -175,9 +176,16 @@ function FactInputRow({ company, input, present, edit, reasonId }: RowProps) {
   const t = useT();
   const [adding, setAdding] = useState(false);
   const facts = useCompanyFacts(company.id).data ?? [];
-  const values = facts
+  const stated = facts
     .filter((fact) => fact.field === input && fact.value.trim())
     .map((fact) => fact.value);
+  // The fit counts the company's own size band when no fact states the size,
+  // so the row shows that band as the recorded value.
+  const band =
+    input === "employee_range" && company.size_band
+      ? formatSizeBand(t, company.size_band)
+      : undefined;
+  const values = stated.length === 0 && band ? [band] : stated;
   const stateable = STATEABLE_FACTS[input];
   let action: ReactNode = null;
   if (stateable && adding) {
