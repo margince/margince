@@ -130,42 +130,6 @@ function EmailValue({
   );
 }
 
-// The number dials, as on a contact; the box around it still edits it.
-function PhoneValue({
-  lead,
-  canEdit,
-  readOnlyReason,
-  onSave,
-}: Readonly<{
-  lead: Lead;
-  canEdit: boolean;
-  readOnlyReason?: string;
-  onSave: (next: string) => Promise<void>;
-}>) {
-  const t = useT();
-  return (
-    <InlineText
-      label={t("create.phone")}
-      value={lead.phone ?? ""}
-      link={
-        lead.phone && (
-          <ContactLink
-            kind="phone"
-            value={lead.phone}
-            record={{ entityType: "lead", entityId: lead.id }}
-            className="link-button lead-row-link"
-            textClassName="lead-row-link"
-          />
-        )
-      }
-      placeholder={t("field.unset")}
-      canEdit={canEdit}
-      readOnlyReason={readOnlyReason}
-      onSave={onSave}
-    />
-  );
-}
-
 // A linked lead's name is the company's own, so it is changed there, not here.
 function useLinkedCompanyRow(lead: Lead): DetailRow | null {
   const t = useT();
@@ -218,7 +182,7 @@ function useAboutRows(
   const text = (
     key: TextKey,
     label: MessageKey,
-    options: { required?: boolean; type?: "email" } = {},
+    options: { required?: boolean; type?: "email"; link?: ReactNode } = {},
   ): DetailRow => ({
     key,
     term: t(label),
@@ -228,6 +192,7 @@ function useAboutRows(
         label={t(label)}
         value={lead[key] ?? ""}
         type={options.type}
+        link={options.link}
         placeholder={t("field.unset")}
         canEdit={canEdit}
         readOnlyReason={reason}
@@ -295,19 +260,18 @@ function useAboutRows(
         />
       ),
     },
-    {
-      key: "phone",
-      term: t("create.phone"),
-      empty: isBlank(lead.phone),
-      value: (
-        <PhoneValue
-          lead={lead}
-          canEdit={canEdit}
-          readOnlyReason={reason}
-          onSave={save("phone")}
+    // The number dials, as on a contact; the box around it still edits it.
+    text("phone", "create.phone", {
+      link: lead.phone && (
+        <ContactLink
+          kind="phone"
+          value={lead.phone}
+          record={{ entityType: "lead", entityId: lead.id }}
+          className="link-button lead-row-link"
+          textClassName="lead-row-link"
         />
       ),
-    },
+    }),
     {
       key: "origin",
       term: t("lead.origin"),
