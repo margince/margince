@@ -65,11 +65,9 @@ func (c systemCompanies) List(ctx context.Context, q extension.CompanyPageQuery)
 	if err != nil {
 		return extension.Page[extension.CompanySummary]{}, err
 	}
-	after := ids.UUID{}
-	if q.Cursor != "" {
-		if after, err = ids.Parse(q.Cursor); err != nil {
-			return extension.Page[extension.CompanySummary]{}, fmt.Errorf("%w: the cursor is not one this read gave", extension.ErrInvalid)
-		}
+	after, err := parseCompanyCursor(q.Cursor)
+	if err != nil {
+		return extension.Page[extension.CompanySummary]{}, err
 	}
 	if err := c.rt.traceSystemRead(ctx, extension.SystemReadCompanies, "company", "list"); err != nil {
 		return extension.Page[extension.CompanySummary]{}, err
@@ -102,12 +100,25 @@ func (c systemCompanies) List(ctx context.Context, q extension.CompanyPageQuery)
 	return page, nil
 }
 
+// parseCompanyCursor reads the id the page before ended at. No cursor is the
+// first page, which starts below every id.
+func parseCompanyCursor(cursor string) (ids.UUID, error) {
+	if cursor == "" {
+		return ids.UUID{}, nil
+	}
+	bad := fmt.Errorf("%w: the cursor is not one this read gave", extension.ErrInvalid)
+	after, err := ids.Parse(cursor)
+	if err != nil {
+		return ids.UUID{}, bad
+	}
+	return after, nil
+}
+
 func scanCompanySummary(row pgx.Row) (extension.CompanySummary, error) {
 	var (
 		id                    ids.UUID
-		name                  string
+		name, lifecycle       string
 		legal, system, source *string
-		lifecycle             string
 		owner                 *ids.UUID
 		updated               time.Time
 		archivedAt            *time.Time
@@ -115,18 +126,13 @@ func scanCompanySummary(row pgx.Row) (extension.CompanySummary, error) {
 	if err := row.Scan(&id, &name, &legal, &lifecycle, &owner, &system, &source, &updated, &archivedAt); err != nil {
 		return extension.CompanySummary{}, err
 	}
-	out := extension.CompanySummary{ID: id.String(), Name: name, Lifecycle: lifecycle, UpdatedAt: updated, Archived: archivedAt != nil}
-	if legal != nil {
-		out.LegalName = *legal
-	}
-	if system != nil {
-		out.SourceSystem = *system
-	}
-	if source != nil {
-		out.SourceID = *source
-	}
+	ownerID := ""
 	if owner != nil {
-		out.OwnerID = extension.UserID(owner.String())
+		ownerID = owner.String()
 	}
-	return out, nil
+	return extension.CompanySummary{
+		ID: id.String(), Name: name, LegalName: derefString(legal), Lifecycle: lifecycle,
+		OwnerID: extension.UserID(ownerID), SourceSystem: derefString(system), SourceID: derefString(source),
+		UpdatedAt: updated, Archived: archivedAt != nil,
+	}, nil
 }
