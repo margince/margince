@@ -195,6 +195,7 @@ func UpWithReport(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) 
 
 	tables := make([]string, len(namespaces))
 	plans := make([]renumberPlan, len(namespaces))
+	baselines := make([]baselinePlan, len(namespaces))
 	for i, ns := range namespaces {
 		if err := ns.CheckBaseline(); err != nil {
 			return report, err
@@ -207,6 +208,9 @@ func UpWithReport(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) 
 			return report, err
 		}
 		if plans[i], err = planRenumbers(ns, done); err != nil {
+			return report, err
+		}
+		if baselines[i], err = planBaseline(ns, plans[i].ledger); err != nil {
 			return report, err
 		}
 	}
@@ -233,14 +237,11 @@ func UpWithReport(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) 
 			}
 		}
 
-		if ns.Baseline != nil {
-			installed, err := settleBaseline(ctx, conn, ns, tables[i], done)
-			if err != nil {
-				return report, err
-			}
-			if installed {
-				report.Applied++
-			}
+		if err := settleBaseline(ctx, conn, ns, tables[i], baselines[i], done); err != nil {
+			return report, err
+		}
+		if baselines[i].apply {
+			report.Applied++
 		}
 
 		for _, m := range ns.Migrations {

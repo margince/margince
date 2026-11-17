@@ -98,19 +98,28 @@ func (ns Namespace) CheckBaseline() error {
 	return nil
 }
 
-// settleBaseline puts the baseline in the ledger. An empty ledger gets it
-// applied, with its row and a row per replaced version, in one transaction. A
-// ledger holding every replaced version gets the baseline's row alone. A ledger
-// holding only some is refused, because the baseline would run over a partial
-// schema. A recorded baseline settles nothing: a replaced version missing
-// beside it was reverted by Down, and Up applies that file again.
-func settleBaseline(ctx context.Context, conn *pgx.Conn, ns Namespace, table string, done map[string]LedgerRow) (installed bool, err error) {
+// baselinePlan is what Up writes for a namespace's baseline. That is nothing
+// once it is recorded, its own row, or every row with the baseline applied.
+type baselinePlan struct {
+	apply bool
+	rows  []LedgerEntry
+}
+
+// planBaseline decides before Up writes anything, renumbers included, so a
+// refused database keeps its ledger. A ledger holding only some replaced
+// versions is refused: the baseline would run over a partial schema. Beside a
+// recorded baseline, a missing replaced version was reverted by Down, and Up
+// applies that file again.
+func planBaseline(ns Namespace, done map[string]LedgerRow) (baselinePlan, error) {
 	b := ns.Baseline
+	if b == nil {
+		return baselinePlan{}, nil
+	}
 	if _, ok := done[b.Migration.Version]; ok {
 		if err := assertLedgerMatches(ns.Name, done, b.Migration); err != nil {
-			return false, err
+			return baselinePlan{}, err
 		}
-		return false, assertContentMatches(ns.Name, done, b.Migration)
+		return baselinePlan{}, assertContentMatches(ns.Name, done, b.Migration)
 	}
 
 	present := 0
@@ -119,32 +128,41 @@ func settleBaseline(ctx context.Context, conn *pgx.Conn, ns Namespace, table str
 			present++
 		}
 	}
-	install := len(done) == 0
-	rows := []LedgerEntry{{Version: b.Migration.Version, Name: b.Migration.Name, Digest: Digest(b.Migration)}}
+	own := LedgerEntry{Version: b.Migration.Version, Name: b.Migration.Name, Digest: Digest(b.Migration)}
 	switch {
-	case install:
-		rows = append(rows, b.Replaces...)
+	case len(done) == 0:
+		return baselinePlan{apply: true, rows: append([]LedgerEntry{own}, b.Replaces...)}, nil
 	case present < len(b.Replaces):
-		return false, fmt.Errorf(
+		return baselinePlan{}, fmt.Errorf(
 			"pgmigrate: %s: this database applied %d of the %d migrations the baseline %s_%s replaces. "+
 				"Upgrade it with release %s first, then run this release again",
 			ns.Name, present, len(b.Replaces), b.Migration.Version, b.Migration.Name, b.Release)
 	}
+	return baselinePlan{rows: []LedgerEntry{own}}, nil
+}
 
-	record, args := recordLedgerRows(table, rows)
-	if install {
+// settleBaseline writes what planBaseline decided, in one transaction, and
+// adds the rows to done.
+func settleBaseline(ctx context.Context, conn *pgx.Conn, ns Namespace, table string, plan baselinePlan, done map[string]LedgerRow) error {
+	if len(plan.rows) == 0 {
+		return nil
+	}
+	b := ns.Baseline
+	record, args := recordLedgerRows(table, plan.rows)
+	var err error
+	if plan.apply {
 		err = apply(ctx, conn, b.Migration, b.Migration.UpSQL, record, args)
 	} else {
 		_, err = conn.Exec(ctx, record, args...)
 	}
 	if err != nil {
-		return false, fmt.Errorf("pgmigrate: %s baseline %s_%s: %w", ns.Name, b.Migration.Version, b.Migration.Name, err)
+		return fmt.Errorf("pgmigrate: %s baseline %s_%s: %w", ns.Name, b.Migration.Version, b.Migration.Name, err)
 	}
-	for _, r := range rows {
+	for _, r := range plan.rows {
 		digest := r.Digest
 		done[r.Version] = LedgerRow{Name: r.Name, Digest: &digest}
 	}
-	return install, nil
+	return nil
 }
 
 // recordLedgerRows is one INSERT for every row, with its arguments.

@@ -12,6 +12,7 @@ package migrations_test
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -140,24 +141,40 @@ func TestADatabaseAtTheReleaseRecordsTheBaselineWithoutRunningIt(t *testing.T) {
 
 // A database part-way through the replaced versions must not get the baseline
 // over a partial schema. Up stops before writing anything, and names the
-// release to upgrade with first.
+// release to upgrade with first. One ledger row still sits under its version
+// from before a renumber. A refusal that came after the renumber was written
+// would show as a moved row.
 func TestADatabasePartWayThroughTheHistoryIsRefused(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	resetSchema(t, conn)
+	ctx := context.Background()
 	core := coreWithBaseline(t)
 	replaced := core.Baseline.Replaces
-	if _, err := dbmigrate.Up(context.Background(), conn, historyThrough(t, replaced[len(replaced)-2].Version)); err != nil {
+	if _, err := dbmigrate.Up(ctx, conn, historyThrough(t, replaced[len(replaced)-2].Version)); err != nil {
 		t.Fatalf("building a database one version short of the release: %v", err)
+	}
+	if len(core.Renumbered) == 0 {
+		t.Fatal("core declares no renumber; the renumbered row below would not exist")
+	}
+	pair := core.Renumbered[len(core.Renumbered)-1]
+	moved, err := conn.Exec(ctx, `UPDATE schema_migrations_core SET version = $1, content_digest = $2 WHERE version = $3`,
+		pair.Old, pair.OldDigest, pair.New)
+	if err != nil || moved.RowsAffected() != 1 {
+		t.Fatalf("recording %s under its old version %s: %v (%d rows)", pair.New, pair.Old, err, moved.RowsAffected())
 	}
 	before := coreLedger(t, conn)
 
-	_, err := dbmigrate.Up(context.Background(), conn, core)
+	_, err = dbmigrate.Up(ctx, conn, core)
 	if err == nil || !strings.Contains(err.Error(), "Upgrade it with release "+core.Baseline.Release+" first") {
 		t.Fatalf("err = %v, want a refusal naming release %s", err, core.Baseline.Release)
 	}
-	if after := coreLedger(t, conn); len(after) != len(before) {
-		t.Fatalf("the refused upgrade wrote %d ledger rows", len(after)-len(before))
+	after := coreLedger(t, conn)
+	if !maps.EqualFunc(before, after, func(a, b dbmigrate.LedgerRow) bool {
+		return a.Name == b.Name && (a.Digest == nil) == (b.Digest == nil) && (a.Digest == nil || *a.Digest == *b.Digest)
+	}) {
+		t.Fatalf("the refused upgrade changed the ledger: %d rows before, %d after, %s now at %v",
+			len(before), len(after), pair.Old, after[pair.Old])
 	}
 }
 

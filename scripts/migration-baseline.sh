@@ -78,10 +78,12 @@ migrate() {
 
 # The text pg_dump writes about the dump rather than the schema: its object
 # headers, the session SETs, and the \restrict guard whose token is random on
-# every run.
+# every run. The SETs are the settings gen-baseline's pgDumpSettings lists, so
+# a SET line inside a function body is still compared.
+PG_DUMP_SETTINGS='statement_timeout|lock_timeout|idle_in_transaction_session_timeout|transaction_timeout|client_encoding|standard_conforming_strings|check_function_bodies|xmloption|client_min_messages|row_security|default_tablespace|default_table_access_method'
 strip_preamble() {
-  sed -E '/^-- (Name|Data for Name): .*; Type: /d; /^-- (PostgreSQL database dump|Dumped (from|by) )/d; /^--$/d;
-          /^SET /d; /^SELECT pg_catalog\.set_config/d; /^\\(un)?restrict /d'
+  sed -E "/^-- (Name|Data for Name): .*; Type: /d; /^-- (PostgreSQL database dump|Dumped (from|by) )/d; /^--\$/d;
+          /^SET ($PG_DUMP_SETTINGS) = /d; /^SELECT pg_catalog\\.set_config/d; /^\\\\(un)?restrict /d"
 }
 
 dump_schema() {

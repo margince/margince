@@ -172,9 +172,17 @@ func manifest(release string, replaced []dbmigrate.Migration) string {
 	return b.String()
 }
 
+// pgDumpSettings are the session settings pg_dump sets in a dump's header and
+// before each table. scripts/migration-baseline.sh strips the same list.
+const pgDumpSettings = `statement_timeout|lock_timeout|idle_in_transaction_session_timeout|transaction_timeout|` +
+	`client_encoding|standard_conforming_strings|check_function_bodies|xmloption|client_min_messages|` +
+	`row_security|default_tablespace|default_table_access_method`
+
 var (
-	dumpComment  = regexp.MustCompile(`^-- (Name|Data for Name): .*; Type: |^-- (PostgreSQL database dump|Dumped (from|by) )`)
-	sessionState = regexp.MustCompile(`^(SET |SELECT pg_catalog\.set_config\(|\\(un)?restrict )`)
+	dumpComment = regexp.MustCompile(`^-- (Name|Data for Name): .*; Type: |^-- (PostgreSQL database dump|Dumped (from|by) )`)
+	// pg_dump's own SET lines name only these settings. A body line such as
+	// `SET status = ...` in a multi-line UPDATE stays in the baseline.
+	sessionState = regexp.MustCompile(`^(SET (` + pgDumpSettings + `) = |SELECT pg_catalog\.set_config\(|\\(un)?restrict )`)
 	privilege    = regexp.MustCompile(`^(GRANT|REVOKE|ALTER DEFAULT PRIVILEGES) `)
 )
 

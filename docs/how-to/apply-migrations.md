@@ -184,7 +184,7 @@ and checksum. `migrate up` reads the core ledger before it applies anything:
 - **The ledger holds only some.** It stops before it changes anything and names the release to upgrade
   with first. Run that release's `migrate up`, then this one.
 
-Migrations after the baseline apply one by one in all three cases. The replaced files stay in
+In the first two cases, migrations after the baseline then apply one by one. The replaced files stay in
 `backend/migrations/core/`, so an installation that applied them upgrades as it always did. `migrate down`
 rolls them back one by one and never rolls back the baseline. After a full `down`, `up` replays the
 history, because the baseline's row stays.
