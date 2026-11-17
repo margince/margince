@@ -68,10 +68,21 @@ write_env() {
 	} >"$state/.env"
 }
 
+# hold_lock lets one run at a time change a settings folder: mkdir is atomic,
+# so a second run that starts meanwhile stops instead of rewriting .env.
+hold_lock() {
+	mkdir -p "$state"
+	if ! mkdir "$state/.lock" 2>/dev/null; then
+		echo "prod: another make prod or prod-stop is using $state. If none is, delete $state/.lock." >&2
+		exit 1
+	fi
+	trap 'rmdir "$state/.lock" 2>/dev/null || true' EXIT
+}
+
 up() {
 	local tag
 	tag="local-$(git -C "$root" rev-parse --short HEAD)"
-	mkdir -p "$state"
+	hold_lock
 	echo "prod: building the api, web and worker images ($tag)"
 	(cd "$root" && REPO=margince-local VERSION="$tag" \
 		MARGINCE_BUILD_REVISION="$(git rev-parse HEAD)" \
@@ -106,6 +117,7 @@ stop() {
 		echo "prod: no stack under $stack, so nothing to stop."
 		return
 	fi
+	hold_lock
 	if [[ "${1:-}" == "--drop" ]]; then
 		compose down --volumes --remove-orphans
 		# A settings folder shared through a symlink is deleted where it lives.
