@@ -3841,10 +3841,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.relType.portfolio_company": "Portfoliounternehmen",
   "company.relType.competitor": "Wettbewerber",
   "company.relType.other": "Sonstiges",
-  // Warum ein Fakt seinem eigenen Feld widerspricht. Der Fakt bleibt mit
-  // seinem Beleg sichtbar — ein Mensch erkennt es, Ausblenden wäre schlechter.
   "co.archived.overview":
     "Dieses Unternehmen ist archiviert. Verlauf, Dokumente und Profil stehen weiter auf den anderen Tabs.",
+  // Warum ein Fakt seinem eigenen Feld widerspricht. Der Fakt bleibt mit
+  // seinem Beleg sichtbar — ein Mensch erkennt es, Ausblenden wäre schlechter.
   "co.factSuspect.phoneShapedLocation": "Sieht wie eine Telefonnummer aus",
   "co.factSuspect.notAPhone": "Sieht nicht wie eine Telefonnummer aus",
   "co.factSuspect.notAYear": "Sieht nicht wie eine Jahreszahl aus",
