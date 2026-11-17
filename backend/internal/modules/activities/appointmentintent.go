@@ -31,9 +31,8 @@ var appointmentChange = regexp.MustCompile(`(?i)` + strings.Join([]string{
 	`(hoãn|lùi)\s+(lịch|cuộc\s+hẹn|cuộc\s+họp|buổi\s+hẹn|buổi\s+họp)`,
 }, "|"))
 
-// draftedReason is what a drafting instruction says the message is: a follow-up
-// on the agreed appointment when it asks to move one, with the anchor as the
-// evidence when the anchor is that meeting. Nothing otherwise, because silence
+// draftedReason is what a drafting instruction says the message is. An ask to
+// move an appointment is a follow-up on it. A meeting anchor is its evidence. Nothing otherwise, because silence
 // leaves the reason to the thread or to the sender.
 func draftedReason(intent string, anchor ids.UUID, kind crmcontracts.ActivityKind) (commsauthz.Category, commsauthz.Evidence) {
 	if !appointmentChange.MatchString(evidencefold.Normalize(intent)) {

@@ -337,8 +337,8 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 }
 
 // A rep holding the grant, like an admin, directs one message past a contact's
-// own stop when they name the refusals they read, and the decision records who
-// gave it. A stale or missing list of what they read is refused.
+// own stop when they name the refusals they read. The decision records who gave
+// it. A stale or missing list of what they read is refused.
 //
 // Mutation: drop the stops' exception in remedies and every case is refused.
 func TestASenderDirectsOneMessagePastAContactsStop(t *testing.T) {

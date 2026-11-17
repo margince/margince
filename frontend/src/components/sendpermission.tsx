@@ -133,6 +133,21 @@ export function sendStatus({
   return previewStatus({ preview, asking, unanswered });
 }
 
+/**
+ * A stop a recorded reason can pass reads as a warning; only one nothing lifts
+ * reads as a danger, under "Message cannot be sent".
+ */
+function calloutLook(kind: RefusalKind, overrulable: boolean) {
+  const hardStop = kind === "restricted" && !overrulable;
+  const title: MessageKey =
+    kind === "restricted" && !hardStop
+      ? "sendPermission.stopWithReason"
+      : TITLE[kind];
+  return hardStop
+    ? { tone: "danger" as const, icon: ShieldAlert, title }
+    : { tone: "warning" as const, icon: ShieldQuestion, title };
+}
+
 const TITLE: Record<RefusalKind, MessageKey> = {
   missingContext: "sendPermission.missingContext",
   missingEvidence: "sendPermission.unproven",
@@ -231,22 +246,19 @@ function PermissionNotice({
       ) : undefined))
     : undefined;
   const surface = { recordable: Boolean(control), picksReason };
-  // A stop a recorded reason can pass is a warning; only one nothing lifts is a danger.
-  const hardStop =
-    status.kind === "restricted" && status.deciding?.canBeOverruled !== true;
+  const look = calloutLook(
+    status.kind,
+    status.deciding?.canBeOverruled === true,
+  );
   return (
     <Callout
-      tone={hardStop ? "danger" : "warning"}
+      tone={look.tone}
       kind={refusal ? "outcome" : "standing"}
       // `status` while the rep writes, so one who does not hear the answer
       // does not meet it at the Send button. A refused Send is an alert.
       live={refusal ? "alert" : "status"}
-      icon={hardStop ? ShieldAlert : ShieldQuestion}
-      title={
-        status.kind === "restricted" && !hardStop
-          ? t("sendPermission.stopWithReason")
-          : t(TITLE[status.kind])
-      }
+      icon={look.icon}
+      title={t(look.title)}
       actions={control ?? refusal?.remedies}
     >
       <RefusalDetail

@@ -65,10 +65,19 @@ func undirectable(refusal RefusedRecipient) bool {
 		!commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyAdminException)
 }
 
+// mayDirect is DirectSend's whole eligibility test: a refusal the caller may
+// direct past (directableBy), as the caller read it (refusalsAsShown).
+func mayDirect(ctx context.Context, shown []string, refusals []RefusedRecipient) error {
+	if !directableBy(ctx, refusals) {
+		return refuseDirection(ctx, refusals)
+	}
+	return refusalsAsShown(ctx, shown, refusals)
+}
+
 // refusalsAsShown holds a decision to the refusals its director read. A resend
 // can rewrite the review's refusals while it waits, so a list that no longer
-// matches is stale. A subject's own stop is passed only by a user who named
-// what they were shown: never on a list left out, and never by an agent.
+// matches is stale. Only a user who named what they read passes a subject's own
+// stop. An agent never does.
 func refusalsAsShown(ctx context.Context, shown []string, refusals []RefusedRecipient) error {
 	if shown != nil {
 		now := make([]string, 0, len(refusals))

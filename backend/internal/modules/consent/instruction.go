@@ -136,9 +136,6 @@ type Instruction struct {
 // already resolved, superseded or answered is a decision about a message that
 // is no longer waiting on one.
 func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInput) (Instruction, error) {
-	if err := requireAUserOrTheirAgent(ctx); err != nil {
-		return Instruction{}, err
-	}
 	if err := requireSomebodyPresent(ctx); err != nil {
 		return Instruction{}, err
 	}
@@ -161,10 +158,7 @@ func (s *Store) DirectSend(ctx context.Context, reviewID ids.UUID, in DirectInpu
 		if err != nil {
 			return err
 		}
-		if !directableBy(ctx, review.Refusals) {
-			return refuseDirection(ctx, review.Refusals)
-		}
-		if err := refusalsAsShown(ctx, in.ShownReasons, review.Refusals); err != nil {
+		if err := mayDirect(ctx, in.ShownReasons, review.Refusals); err != nil {
 			return err
 		}
 		// Recorded so the re-check at staging and dispatch knows which
@@ -448,9 +442,12 @@ func requireAUserOrTheirAgent(ctx context.Context) error {
 	return nil
 }
 
-// requireSomebodyPresent refuses a decision from work nobody is watching. A
-// scheduled run may read a review, but only a user present can decide it.
+// requireSomebodyPresent admits a user or their agent, never work nobody is
+// watching. A scheduled run may read a review, but only a user present decides.
 func requireSomebodyPresent(ctx context.Context) error {
+	if err := requireAUserOrTheirAgent(ctx); err != nil {
+		return err
+	}
 	if principal.Unattended(ctx) {
 		return fmt.Errorf("an unattended agent cannot record its user's decision: %w", apperrors.ErrPermissionDenied)
 	}

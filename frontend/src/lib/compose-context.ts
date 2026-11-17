@@ -49,8 +49,8 @@ export function repliesToTheSubject(anchor: Anchor | undefined): boolean {
  * What the composer should say this message is, or nothing when nobody said.
  *
  * A reply sends a reason too once one was picked or drafted. Where the thread
- * shows it is a reply, a reason other than marketing yields to that reading on
- * the server, so the claim cannot cost a reply the thread already allows.
+ * shows a reply, the server lets any reason but marketing yield to it. So the
+ * claim cannot cost a reply the thread already allows.
  */
 export function contextFor(args: {
   anchor: Anchor | undefined;
@@ -63,7 +63,7 @@ export function contextFor(args: {
  * Whether the composer has to ask the reader why they are writing.
  *
  * Only where nothing else answers it. A reply usually derives its reason from
- * the thread, so it asks only when the check could not (needsReason), and a
+ * the thread, so it asks only when the check could not (needsReason). A
  * question with an obvious answer trains readers to answer without reading.
  */
 export function asksWhy(

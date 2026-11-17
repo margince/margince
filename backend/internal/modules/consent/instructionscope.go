@@ -74,9 +74,9 @@ func everyRefusalWasShown(shown []RefusedRecipient, current commsauthz.DecisionS
 }
 
 // instructionStillAnswers reports whether a decision may stand over the
-// refusals now. Its review must have shown each of them, and no stop or
-// withdrawal may have been recorded for a refused subject since the decision:
-// a new stop can hide behind a reason the review already named.
+// refusals now. Its review must have shown each of them. No stop or withdrawal
+// may be recorded for a refused subject since the decision. A new stop can hide
+// behind a reason the review already named.
 func instructionStillAnswers(ctx context.Context, tx pgx.Tx, shown []RefusedRecipient, directedAt time.Time, current commsauthz.DecisionSet) (bool, error) {
 	refused := refusedRecipientsOf(current)
 	if !everyRefusalWasShown(shown, current) {

@@ -27,10 +27,10 @@ func (e *resolveEnv) livesIn(t *testing.T, code string) {
 	}
 }
 
-// Marketing without consent to a recipient whose country requires prior
-// consent is refused with its own reason, which a rep may still send one
-// message past with a recorded reason. A recipient in a country that keeps the
-// exception keeps the refusal it answers. Codes no pack in the tree claims, so a real pack cannot collide.
+// Marketing without consent where the country requires prior consent is refused
+// with its own reason. A rep may still send one message past it with a reason.
+// A country that keeps the exception keeps the refusal it answers. The codes
+// are ones no pack in the tree claims, so a real pack cannot collide.
 //
 // Mutation: drop the requireConsentWhereNothingStandsIn call from the contact
 // arm of decideOneIn and the consent-only cases keep no_marketing_consent.

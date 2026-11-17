@@ -25,11 +25,11 @@ const (
 // empty. A reason added without one fails TestEveryReasonDeclaresItsRemedy
 // instead of becoming a silent dead end.
 //
-// Every policy refusal takes the one-message exception: a human sender may
-// always send past the engine with a recorded reason, and the refusal and any
-// stop stay on the record. Two refusals are not policy answers. No decision
-// makes a dead address accept mail, and a recipient that resolves to nobody,
-// or to two contacts, was never checked for the stops a reviewer would weigh.
+// Every policy refusal takes the one-message exception. A human sender may
+// always send past the engine with a recorded reason. The refusal and any stop
+// stay on the record. Two refusals are not policy answers. No decision makes a
+// dead address accept mail. A recipient that resolves to nobody, or to two
+// contacts, was never checked for the stops a reviewer would weigh.
 var remedies = map[string][]Remedy{
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonDealNotRequested:               {RemedyAnswer, RemedyFact, RemedyException},
@@ -69,8 +69,8 @@ func HasRemedy(reason string, remedy Remedy) bool {
 }
 
 // ExceptionMayAnswer reports whether a recorded one-message exception may stand
-// over every refusal in this set, so a dead address found after it was given
-// still stops the message. A stop recorded after the decision is the consent
+// over every refusal in this set. A dead address found after it was given still
+// stops the message. A stop recorded after the decision is the consent
 // module's question (instructionStillAnswers). givenByAdmin is the exception's
 // own record of who gave it, never the authority of whoever is sending now.
 func (s DecisionSet) ExceptionMayAnswer(givenByAdmin bool) bool {
