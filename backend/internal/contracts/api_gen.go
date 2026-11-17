@@ -60828,6 +60828,11 @@ type RecordKindOption struct {
 
 	// Unit The extension that declared the kind.
 	Unit string `json:"unit"`
+
+	// View The path segment under the unit's screen that shows one record of the kind, as the unit
+	// declared it. Absent when the unit's screen itself shows it. A link to a record opens
+	// `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+	View string `json:"view"`
 }
 
 // RecordKindOptionActions defines model for RecordKindOption.Actions.

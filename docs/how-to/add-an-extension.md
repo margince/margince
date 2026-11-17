@@ -881,6 +881,7 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `NaturalKey` | The fields that name one record. The table must hold a unique index over these columns and no others, and the index must cover every row. |
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
+| `View` | Optional. The name of the page under your screen that shows one record of the kind, such as `room-page`. A notice about a record of the kind opens `#/ext/<unit>/<view>`, with `record_type` and `record_id` in the query. Leave it out and the notice opens your screen itself. Read both in the screen with `useEntryContext`. |
 
 The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
 tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start

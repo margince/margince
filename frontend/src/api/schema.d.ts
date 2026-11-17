@@ -42717,6 +42717,12 @@ export interface components {
             /** @description The fields that together identify one record. The unit's table holds them unique. */
             natural_key: string[];
             /**
+             * @description The path segment under the unit's screen that shows one record of the kind, as the unit
+             *     declared it. Absent when the unit's screen itself shows it. A link to a record opens
+             *     `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+             */
+            view: string;
+            /**
              * @description What removing a record of the kind means. `archive_only` keeps the row.
              * @enum {string}
              */

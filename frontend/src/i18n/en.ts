@@ -11006,6 +11006,7 @@ export const en = {
   "notifications.action.openDeal": "Open deal",
   "notifications.action.openLead": "Open lead",
   "notifications.action.openProject": "Open project",
+  "notifications.action.openExtensionRecord": "Open record",
   "notifications.action.review": "Review request",
   "notifications.action.systemHealth": "Open System health",
   "notifications.markAllFailed": "Nothing was marked read",

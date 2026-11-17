@@ -59055,7 +59055,7 @@ components:
           items: { $ref: '#/components/schemas/RecordKindOption' }
     RecordKindOption:
       type: object
-      required: [name, unit, kind, display_name, fields, natural_key, delete_policy, actions]
+      required: [name, unit, kind, display_name, fields, natural_key, view, delete_policy, actions]
       properties:
         name:
           type: string
@@ -59079,6 +59079,12 @@ components:
           type: array
           description: The fields that together identify one record. The unit's table holds them unique.
           items: { type: string }
+        view:
+          type: string
+          description: |
+            The path segment under the unit's screen that shows one record of the kind, as the unit
+            declared it. Absent when the unit's screen itself shows it. A link to a record opens
+            `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
         delete_policy:
           type: string
           enum: [archive_only, erasable]

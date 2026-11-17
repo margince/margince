@@ -11022,6 +11022,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.action.openDeal": "Deal öffnen",
   "notifications.action.openLead": "Lead öffnen",
   "notifications.action.openProject": "Projekt öffnen",
+  "notifications.action.openExtensionRecord": "Datensatz öffnen",
   "notifications.action.review": "Anfrage prüfen",
   "notifications.action.systemHealth": "Systemzustand öffnen",
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
