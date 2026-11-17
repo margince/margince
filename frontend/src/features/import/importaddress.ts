@@ -6,11 +6,16 @@ import { IMPORT_RUN_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
 import {
   currentParams,
   hashWithParams,
-  replaceParams,
+  useAddressWriters,
   useUrlParams,
 } from "../../lib/urlstate";
 
 const RUN_PARAM = "run";
+
+/** The run the address names right now, outside a render. */
+export function addressedRunNow(): string | null {
+  return currentParams().get(RUN_PARAM) || null;
+}
 
 /**
  * The run the page is about, held in the address (`?run=`). A reader who
@@ -23,6 +28,7 @@ export function useAddressedRun(): [
 ] {
   const [params] = useUrlParams();
   const id = params.get(RUN_PARAM) || null;
+  const { replaceParams } = useAddressWriters();
   const address = (next: string | null) => {
     const dials = new Map(currentParams());
     if (next) {

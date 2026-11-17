@@ -1,8 +1,19 @@
 /** @vitest-environment happy-dom */
 import { act, cleanup, renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { routeIdentity } from "./routeidentity";
-import { parseHash, routeHash, useRoute, watchAddress } from "./router";
+import {
+  parseHash,
+  routeHash,
+  samePage,
+  takeHashCredential,
+  useHash,
+  useLiveHash,
+  useRoute,
+  watchAddress,
+} from "./router";
+import { ScreenAddress } from "./screenaddress";
 
 // The hash router's parse/serialize round-trip, pinned so a 3rd path segment
 // (the share screen's #/share/<type>/<id>) can be added without silently
@@ -350,5 +361,94 @@ describe("Back and Forward across a path change", () => {
     } finally {
       stop();
     }
+  });
+});
+
+describe("an address read under a routed screen", () => {
+  const drawnFor =
+    (address: string) =>
+    ({ children }: Readonly<{ children: ReactNode }>) =>
+      createElement(ScreenAddress.Provider, { value: address }, children);
+
+  afterEach(() => {
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  it("answers the address the screen was drawn for, not the bar", () => {
+    globalThis.history.replaceState(null, "", "/#/companies?q=Acme");
+    const view = renderHook(
+      () => ({ hash: useHash(), route: useRoute(), live: useLiveHash() }),
+      { wrapper: drawnFor("#/contacts/c1/notes/more?page=3") },
+    );
+
+    expect(view.result.current.hash).toBe("#/contacts/c1/notes/more?page=3");
+    expect(view.result.current.route).toEqual(
+      parseHash("#/contacts/c1/notes/more"),
+    );
+    expect(view.result.current.live).toBe("#/companies?q=Acme");
+  });
+
+  it("rewrites the bar for a former address only when it is the bar's", () => {
+    globalThis.history.replaceState(null, "", "/#/contacts");
+    renderHook(useRoute, { wrapper: drawnFor("#/brief?focus=r1") });
+
+    expect(globalThis.location.hash).toBe("#/contacts");
+  });
+});
+
+describe("samePage", () => {
+  it("counts a dial as the same page and a deeper segment as another", () => {
+    expect(samePage("#/contacts?page=2", "#/contacts")).toBe(true);
+    expect(samePage("#/brief?focus=r1", "#/home")).toBe(true);
+    expect(samePage("#/contacts/c1/notes/a", "#/contacts/c1/notes/b")).toBe(
+      false,
+    );
+  });
+});
+
+describe("a credential taken out of the address", () => {
+  afterEach(() => {
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  it("keeps the entry's own stamps, counted at the address left behind", () => {
+    globalThis.history.replaceState(null, "", "/#/companies");
+    const told = vi.fn();
+    const stop = watchAddress(told);
+    try {
+      globalThis.history.replaceState(
+        { ...globalThis.history.state, marginceEntry: "load-e7" },
+        "",
+        "/#/room?c=secret",
+      );
+
+      expect(takeHashCredential("room")).toBe("secret");
+
+      expect(globalThis.location.hash).toBe("#/room");
+      expect(globalThis.history.state).toMatchObject({
+        marginceEntry: "load-e7",
+        marginceDepth: { depth: 0, at: "#/room" },
+      });
+      expect(told).not.toHaveBeenCalled();
+    } finally {
+      stop();
+    }
+  });
+});
+
+describe("the address a story frame opens at", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    globalThis.history.replaceState(null, "", "/");
+  });
+
+  it("is the screen it names, and a path nobody serves is still not found", () => {
+    vi.stubEnv("STORYBOOK", "true");
+    globalThis.history.replaceState(null, "", "/iframe.html?id=s#/onboarding");
+    expect(renderHook(useRoute).result.current.screen).toBe("onboarding");
+    cleanup();
+
+    globalThis.history.replaceState(null, "", "/settings#/onboarding");
+    expect(renderHook(useRoute).result.current.screen).toBe("not-found");
   });
 });

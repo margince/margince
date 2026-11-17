@@ -18,7 +18,10 @@ import type { components } from "../../api/schema";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { DomainQuestionAnswer } from "./worklist.domainquestion";
+import {
+  DomainQuestionAnswer,
+  DomainQuestionMenu,
+} from "./worklist.domainquestion";
 import { DomainReviewLauncher } from "./worklist.domainreview";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -324,7 +327,12 @@ it("opens review from a forwarded row without implicit company creation", async 
     actions: ["keep", "discard", "reopen"],
     domain_reason_code: "forwarded_identity",
   };
-  mount(<DomainQuestionAnswer item={item} />);
+  mount(
+    <>
+      <DomainQuestionAnswer item={item} />
+      <DomainQuestionMenu item={item} />
+    </>,
+  );
   expect(screen.queryByRole("button", { name: "Create company" })).toBeNull();
   await user.click(
     await screen.findByRole("button", { name: "Choose company" }),
@@ -355,7 +363,12 @@ it("keeps ordinary row decisions separate from forwarded review", async () => {
     actions: ["keep", "discard"],
     domain_reason_code: "unevidenced",
   };
-  mount(<DomainQuestionAnswer item={item} />);
+  mount(
+    <>
+      <DomainQuestionAnswer item={item} />
+      <DomainQuestionMenu item={item} />
+    </>,
+  );
   await user.click(screen.getByRole("button", { name: "Create company" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   const discard = screen.getByRole("button", {
@@ -403,7 +416,12 @@ it("answers a vendor question from the row with create company or keep as vendor
     actions: ["keep", "keep_as_vendor", "discard"],
     domain_reason_code: "vendor_verdict",
   };
-  mount(<DomainQuestionAnswer item={item} />);
+  mount(
+    <>
+      <DomainQuestionAnswer item={item} />
+      <DomainQuestionMenu item={item} />
+    </>,
+  );
   await user.click(screen.getByRole("button", { name: "Keep as vendor" }));
   await waitFor(() => expect(writes).toHaveLength(1));
   const create = screen.getByRole("button", { name: "Create company" });
@@ -435,7 +453,12 @@ it("offers no keep as vendor on a question that is not a vendor question", () =>
     actions: ["keep", "discard", "reopen"],
     domain_reason_code: "unevidenced",
   };
-  mount(<DomainQuestionAnswer item={item} />);
+  mount(
+    <>
+      <DomainQuestionAnswer item={item} />
+      <DomainQuestionMenu item={item} />
+    </>,
+  );
   expect(screen.queryByRole("button", { name: "Keep as vendor" })).toBeNull();
 });
 

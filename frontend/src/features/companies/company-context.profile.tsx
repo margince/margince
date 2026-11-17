@@ -25,8 +25,8 @@ import {
   companySaveMessage,
   storeCompany,
 } from "../../lib/installationcompany";
+import { fromHere } from "../../lib/navigatefrom";
 import { unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import type { CompanyInput } from "./company-context";
 import { PROFILE_GROUPS } from "./companycontextfacts";
 
@@ -65,9 +65,11 @@ export function ManualCompanySetup() {
         }),
       );
     },
-    onSuccess: (profile) => {
+    onMutate: fromHere,
+    // Replacing: the first-run form is spent once the profile exists.
+    onSuccess: (profile, _vars, from) => {
       storeCompany(queryClient, profile);
-      navigate({ screen: "home" });
+      from.navigateReplacing({ screen: "home" });
     },
   });
   return (

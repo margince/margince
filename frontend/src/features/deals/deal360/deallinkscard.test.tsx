@@ -92,6 +92,23 @@ describe("DealLinksCard", () => {
     expect(screen.getByText("To this deal: Follow-up of")).toBeInTheDocument();
   });
 
+  it("links each record under its own address, not the deal's", async () => {
+    history.replaceState(null, "", `/r/deals/${DEAL}#/deals/${DEAL}`);
+    mount(true);
+    const renewal = await screen.findByRole("link", {
+      name: "Warehouse renewal",
+    });
+    expect(renewal).toHaveAttribute(
+      "href",
+      `/r/deals/${RENEWAL}#/deals/${RENEWAL}`,
+    );
+    expect(screen.getByRole("link", { name: "Acme" })).toHaveAttribute(
+      "href",
+      `/r/companies/${ORIGINAL}#/companies/${ORIGINAL}`,
+    );
+    history.replaceState(null, "", "/");
+  });
+
   it("removes a link when the reader may change the deal", async () => {
     const { removed } = mount(true);
     const [first] = await screen.findAllByRole("button", {

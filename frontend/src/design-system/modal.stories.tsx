@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useId, useState } from "react";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { navigateReplacing } from "../lib/router";
 import { useShortcutDispatcher } from "../lib/shortcuts";
+import { replaceDial } from "../lib/urlstate";
 import {
   Button,
   Field,
@@ -215,6 +217,61 @@ export const FormSubmitsOnCommit: Story = {
     await userEvent.click(dialog.getByRole("textbox", { name: "Name" }));
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
     await expect(await screen.findByText("Saved")).toBeInTheDocument();
+  },
+};
+
+function PageChangeDemo() {
+  const [open, setOpen] = useState(true);
+  const titleId = useId();
+  return (
+    <>
+      <Behind onOpen={() => setOpen(true)} />
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        labelledBy={titleId}
+        intent="form"
+      >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
+          Filter Globex deals
+        </Heading>
+        <div className="actions">
+          <Button onClick={() => replaceDial("stage", "won")}>
+            Show won deals
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => navigateReplacing({ screen: "contacts" })}
+          >
+            Go to contacts
+          </Button>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
+/** A dial of the page keeps the dialog; another page closes it. */
+export const ClosesWithPage: Story = {
+  render: () => <PageChangeDemo />,
+  play: async () => {
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Filter Globex deals" }),
+    );
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Show won deals" }),
+    );
+    await expect(
+      screen.getByRole("dialog", { name: "Filter Globex deals" }),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      dialog.getByRole("button", { name: "Go to contacts" }),
+    );
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("dialog", { name: "Filter Globex deals" }),
+      ).not.toBeInTheDocument(),
+    );
   },
 };
 

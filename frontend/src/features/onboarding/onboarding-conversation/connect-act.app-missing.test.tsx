@@ -3,7 +3,15 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type Mock,
+  vi,
+} from "vitest";
 import { stubClipboard } from "../../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../../i18n";
 import type { GrantSpec } from "../../../testing/mefixture";
@@ -66,14 +74,15 @@ async function pick(user: ReturnType<typeof userEvent.setup>, name: RegExp) {
   await user.click(radio);
 }
 
-let assign: ReturnType<typeof vi.fn>;
+let assign: Mock<Location["assign"]>;
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
-  assign = vi.fn();
-  vi.stubGlobal("location", { ...globalThis.location, assign });
+  assign = vi.fn<Location["assign"]>();
+  vi.spyOn(globalThis.location, "assign").mockImplementation(assign);
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   sessionStorage.clear();
 });

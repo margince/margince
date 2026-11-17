@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useEffect } from "react";
-import { navigateReplacing, type Route } from "../../lib/router";
+import type { Route } from "../../lib/router";
 import type { SettingsPage, SettingsTabRow } from "../../lib/settingscatalog";
 import { settingsHref, settingsRouteTarget } from "../../lib/settingsrouting";
-import { currentParams } from "../../lib/urlstate";
+import { currentParams, useAddressWriters } from "../../lib/urlstate";
 import {
   usePageReadOnly,
   useVisibleSettingsPages,
@@ -54,11 +54,12 @@ export function useSettingsDestination(route: Route): SettingsDestination {
   const rewriteTo =
     target.kind === "page" && target.legacy && opens ? named?.id : undefined;
   const rewriteTab = tab === firstTab ? undefined : tab;
+  const { navigateReplacing } = useAddressWriters();
   // The query rides along: an old link to one pipeline still opens that one.
   useEffect(() => {
     if (rewriteTo)
       navigateReplacing(settingsHref(rewriteTo, rewriteTab), currentParams());
-  }, [rewriteTo, rewriteTab]);
+  }, [rewriteTo, rewriteTab, navigateReplacing]);
 
   if (target.kind === "home") return { kind: "home" };
   if (target.kind === "unknown")

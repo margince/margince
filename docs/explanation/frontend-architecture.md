@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -48,6 +48,28 @@ Record links also carry `/r/{kind}/{id}` before the hash so a preview fetcher ca
 The web tier serves the app for a browser and sends other fetches to the public card endpoint.
 `AppLink` keeps app links rooted at the same origin. A hash may carry a query of its own.
 The router removes it, so a `?utm=…` never ends up in a screen name.
+
+A routed screen can stay on screen after the bar has moved, while the next one
+loads or a draft holds it. `ScreenView` (`App.views.tsx`) gives it
+the full address it was drawn for through `ScreenAddress`
+(`lib/screenaddress.ts`). `useHash`, `useRoute` and `useUrlParams` answer with
+that address, so a held screen reads its own page. `useLiveHash` reads the bar,
+for the code that decides what is on screen.
+
+Code that runs after its render (an effect, a settled request, the code after
+an `await`) writes the address through `useAddressWriters()` in
+`lib/urlstate.ts`. Under a routed screen those writers drop the write once the
+bar has left the page.
+`frontend/census/rules/effect-address-writers.census.ts` fails a module-level
+writer reached from such code.
+
+A move that follows an action starts from `fromHere()` in
+`lib/navigatefrom.ts`, called when the reader acts. It moves only a reader
+still on that page. `closeOnto` leaves a record the work closed. It goes back
+through history when the nearest entry outside the record's tabs is the
+target, filters kept, and replaces the entry otherwise. Every move through history
+that the app starts goes through `traverseTo` (`lib/historydepth.ts`), which
+refuses a second one while the first is in flight.
 
 ## The layers
 
@@ -436,6 +458,7 @@ even if the test tree breaks.
 | Design test | `frontend/census/rules/conformance.census.ts`, `design-system/conformance.test.ts` | the same rules read from the AST, not from text, plus copy users see that is written in the code outside the `i18n` catalogs, and a wrong web app manifest |
 | Service worker | `frontend/scripts/vite-pwa.test.ts`, `frontend/census/rules/serviceworker-registrar.census.ts` | the web app build not writing `/sw.js`. The worker answering from `Cache Storage` anything but a failed page load and the offline page with its script. The worker catching a path the API owns, keeping a cache that is not its own, or keeping its cache name when what it holds changed. Any shipped module but `src/lib/pwa.ts`, in any kind of script, reaching for `navigator.serviceWorker` ([pwa.md](pwa.md)) |
 | CSS file owners | `frontend/census/rules/stylesheetnamespace.census.ts` | the class names of a screen declared in a CSS file other than the screen's own, in every `.css` under `frontend/src` and in the frontend layer of each extension |
+| Address writers | `frontend/census/rules/effect-address-writers.census.ts` | a module-level address writer (`replaceParams`, `replaceDial`, `navigateReplacing`) reached from an effect, a settled request or code after an `await` |
 | Timeline rows | `frontend/census/rules/timelinerows.census.ts` | a rule that reaches the `li` of a `.timeline` list by anything but `>` from the `.timeline` part, which also reaches `li` items inside a row; a sibling (`+`, `~`) of such a row passes. It reads every `.css` under `frontend/src` and the frontend of each extension. It fails closed when the selectors it parses and a plain count of the text disagree |
 | Token values | `design-system/tokens.test.ts` | a Ledger-Green value that drifts from the design source |
 | Type check and build | `pnpm build` (`tsc -b && vite build`) | any type error |
@@ -452,7 +475,7 @@ merge gate and needs Node and pnpm.
 | If you are changing… | Start at |
 |---|---|
 | a place on the rail, a rail label, a badge | `src/app/nav.ts`, then `src/app/shell.tsx` and `shell.test.tsx` |
-| what a route renders | `src/App.tsx` (`ScreenView`), then the screen file |
+| what a route renders | `src/App.views.tsx` (`ScreenView`), then the screen file |
 | a colour, a `border-radius`, a spacing step | `src/design-system/tokens.css` (and `tokens.test.ts`), never a call site |
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
 | light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
