@@ -48,7 +48,7 @@ func TestColdStartBudget(t *testing.T) {
 	}
 	boot := coldBoot{
 		binary: buildAPI(t), root: integration.RepositoryRoot(t), work: bootWorkdir(t), appDSN: appDSN, ownerDSN: ownerDSN,
-		redisAddr: testdb.RedisAddr(t) + "/" + strconv.Itoa(testdb.RedisDB(t)),
+		redisAddr: testdb.RedisAddr(t) + "/" + strconv.Itoa(testdb.RedisBusDB(t)),
 	}
 	if _, err := boot.once(t); err != nil {
 		t.Fatalf("the first boot, which writes the installation: %v", err)
