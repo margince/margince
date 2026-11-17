@@ -11,7 +11,7 @@ import { InstallButton } from "./installbutton";
 const unanswered = () => new Promise<never>(() => undefined);
 
 const meta: Meta<typeof InstallButton> = {
-  title: "Components/Install button",
+  title: "Components/Forms and input/Install button",
   component: InstallButton,
   render: (args) => (
     <StoryProviders>

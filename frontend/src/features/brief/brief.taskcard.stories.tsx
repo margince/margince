@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { WorklistItem } from "../../lib/worklisttypes";
 import { taskRow } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import type { WorklistItem } from "../worklist/worklist.queries";
 import { TaskCard } from "./brief.taskcard";
 
 const meta: Meta<typeof TaskCard> = {
