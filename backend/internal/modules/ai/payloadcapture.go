@@ -112,7 +112,7 @@ const maxCapturedEmbedInputs = 200
 func (r *Router) buildEmbedPayload(req model.EmbedRequest, res model.Embeddings) *Payload {
 	budget := r.newCaptureBudget()
 	n := len(req.Inputs)
-	truncatedInputs := n > maxCapturedEmbedInputs
+	truncatedInputs := !r.captureWhole && n > maxCapturedEmbedInputs
 	if truncatedInputs {
 		n = maxCapturedEmbedInputs
 	}
