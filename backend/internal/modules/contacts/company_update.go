@@ -351,7 +351,7 @@ func (s *Store) stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.C
 		if err != nil {
 			return "", err
 		}
-		deduped, err := dedupeExtensionRelationshipTypes(*in.ExtensionRelationshipTypes, live)
+		deduped, err := dedupeExtensionRelationshipTypes(s.companyTypes, *in.ExtensionRelationshipTypes, live)
 		if err != nil {
 			return "", err
 		}

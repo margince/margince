@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 )
 
 // ownerIDColumn is the owner reference column contact and company
@@ -117,6 +118,9 @@ type Store struct {
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
+	// companyTypes is the extension company types the composition declares; the
+	// zero value declares none (company_relationship_types.go).
+	companyTypes companytypes.Registry
 	// employerChanges asks a contact's owner about a newer employer; nil asks nobody.
 	employerChanges EmployerChangeProposer
 }

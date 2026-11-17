@@ -12,7 +12,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/crm"
 )
@@ -34,13 +33,6 @@ func preflightCompanyTypes(exts []extension.Extension) error {
 		}
 	}
 	return nil
-}
-
-// registerCompanyTypes fills the registry the contacts module validates against.
-func registerCompanyTypes(exts []extension.Extension) {
-	for _, e := range exts {
-		companytypes.Register(e.Name, e.CompanyTypes)
-	}
 }
 
 // SetExtensionTypes is the unit's one door onto a company's type field. The unit

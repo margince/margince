@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -48,6 +49,13 @@ func NewProvider(db *database.DB) *Provider {
 // record verbs carry cf_* values exactly like the HTTP handlers.
 func (p *Provider) WithFieldCatalog(catalog storekit.FieldCatalog) *Provider {
 	p.store = p.store.WithFieldCatalog(catalog)
+	return p
+}
+
+// WithCompanyTypes wires the composition's extension company types into the
+// provider's store, so the MCP surface accepts the types the HTTP one does.
+func (p *Provider) WithCompanyTypes(declared companytypes.Registry) *Provider {
+	p.store = p.store.WithCompanyTypes(declared)
 	return p
 }
 

@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
-	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -28,12 +27,14 @@ const (
 	otherType    = "ext:acme-pack:distributor"
 )
 
-func declareAcmeTypes(t *testing.T) {
+// setupTyped is setupDedupe over a store whose composition declares acme-pack's types.
+func setupTyped(t *testing.T) *dedupeEnv {
 	t.Helper()
-	extregistrytest.Reset(t)
-	companytypes.Register("acme-pack", []extension.CompanyType{
+	e := setupDedupe(t)
+	e.store.WithCompanyTypes(companytypes.Of([]extension.Extension{{Name: "acme-pack", CompanyTypes: []extension.CompanyType{
 		{Type: "reseller", Label: "Reseller"}, {Type: "distributor", Label: "Distributor"},
-	})
+	}}}))
+	return e
 }
 
 func newTypedCompany(ctx context.Context, t *testing.T, e *dedupeEnv, name string) ids.CompanyID {
@@ -53,10 +54,9 @@ func wantFieldError(t *testing.T, err error, field, code string) {
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestADeclaredExtensionTypeLandsInItsOwnFieldAndNotCoreList(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Reseller GmbH")
 
@@ -89,10 +89,9 @@ func TestADeclaredExtensionTypeLandsInItsOwnFieldAndNotCoreList(t *testing.T) {
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestAnExtensionTypeNoUnitDeclaredIsRefused(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Undeclared GmbH")
 
@@ -112,10 +111,9 @@ func TestAnExtensionTypeNoUnitDeclaredIsRefused(t *testing.T) {
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestACoreListStillRefusesAnExtensionValue(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Closed List GmbH")
 
@@ -124,10 +122,9 @@ func TestACoreListStillRefusesAnExtensionValue(t *testing.T) {
 	wantFieldError(t, err, "relationship_types", "invalid_enum")
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestEachSetIsReplacedWithoutTouchingTheOther(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Two Sets GmbH")
 
@@ -153,10 +150,9 @@ func TestEachSetIsReplacedWithoutTouchingTheOther(t *testing.T) {
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	id := newTypedCompany(ctx, t, e, "Orphaned GmbH")
 	ext := []string{resellerType}
@@ -164,7 +160,7 @@ func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T
 		t.Fatal(err)
 	}
 
-	companytypes.Reset()
+	e.store.WithCompanyTypes(companytypes.Registry{})
 	if _, err := e.store.UpdateCompany(ctx, id, UpdateCompanyInput{ExtensionRelationshipTypes: &ext}); err != nil {
 		t.Fatalf("re-saving the type the company already carries: %v", err)
 	}
@@ -177,10 +173,9 @@ func TestAnUnchangedSaveKeepsAnExtensionTypeItsUnitNoLongerDeclares(t *testing.T
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestPartnerStillNeedsItsRowWhenAnExtensionTypeIsSet(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := asAdmin(e)
 	id := newTypedCompany(ctx, t, e, "Partner Reseller GmbH")
 	if _, err := e.store.UpsertPartner(ctx, UpsertPartnerInput{CompanyID: id, PartnerRole: "hosting"}); err != nil {
@@ -199,10 +194,9 @@ func TestPartnerStillNeedsItsRowWhenAnExtensionTypeIsSet(t *testing.T) {
 	wantFieldError(t, err, "relationship_types", "partner_row_exists")
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestTheExtensionRelationshipTypeFilterTakesAnExtensionValue(t *testing.T) {
-	declareAcmeTypes(t)
-	e := setupDedupe(t)
+	t.Parallel()
+	e := setupTyped(t)
 	ctx := e.as()
 	typed := newTypedCompany(ctx, t, e, "Filtered In GmbH")
 	other := newTypedCompany(ctx, t, e, "Filtered Out GmbH")

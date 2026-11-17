@@ -10,18 +10,18 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
-	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestTheCompanyTypeDirectoryListsEveryDeclaredType(t *testing.T) {
-	extregistrytest.Reset(t)
-	companytypes.Register("beta", []extension.CompanyType{{Type: "reseller", Label: "Beta reseller"}})
-	companytypes.Register("alpha", []extension.CompanyType{{Type: "holding", Label: "Holding"}})
+	t.Parallel()
+	composed := &Extensions{units: []extension.Extension{
+		{Name: "beta", CompanyTypes: []extension.CompanyType{{Type: "reseller", Label: "Beta reseller"}}},
+		{Name: "alpha", CompanyTypes: []extension.CompanyType{{Type: "holding", Label: "Holding"}}},
+	}}
 
 	rec := httptest.NewRecorder()
-	channelProvidersHandlers{}.ListCompanyTypes(rec, httptest.NewRequest(http.MethodGet, "/v1/company-types", nil))
+	channelProvidersHandlers{extensions: composed}.ListCompanyTypes(rec, httptest.NewRequest(http.MethodGet, "/v1/company-types", nil))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d", rec.Code)
@@ -40,7 +40,7 @@ func TestTheCompanyTypeDirectoryListsEveryDeclaredType(t *testing.T) {
 }
 
 func TestTheCompanyTypeDirectoryIsAnEmptyListWhenNothingIsDeclared(t *testing.T) {
-	extregistrytest.Reset(t)
+	t.Parallel()
 	rec := httptest.NewRecorder()
 	channelProvidersHandlers{}.ListCompanyTypes(rec, httptest.NewRequest(http.MethodGet, "/v1/company-types", nil))
 	if body := rec.Body.String(); body != "{\"data\":[]}\n" && body != "{\"data\":[]}" {

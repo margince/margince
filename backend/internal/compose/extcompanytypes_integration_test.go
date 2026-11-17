@@ -16,7 +16,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/crm"
 )
@@ -29,10 +28,6 @@ func composeTypeUnits(t *testing.T) *Extensions {
 		{Type: "reseller", Label: "Reseller"}, {Type: "distributor", Label: "Distributor"},
 	}}
 	other := extension.Extension{Name: "other", CompanyTypes: []extension.CompanyType{{Type: "reseller", Label: "Other reseller"}}}
-	companytypes.Reset()
-	companytypes.Register(notes.Name, notes.CompanyTypes)
-	companytypes.Register(other.Name, other.CompanyTypes)
-	t.Cleanup(companytypes.Reset)
 	return &Extensions{units: []extension.Extension{notes, other}}
 }
 
@@ -80,8 +75,8 @@ func (e coreEnv) liveTypes(t *testing.T, company ids.UUID) []string {
 	return out
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestAUnitSetsItsDeclaredCompanyTypesUnderItsOwnName(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 	e.composed = composeTypeUnits(t)
 	company := e.seedCompany(t)
@@ -102,8 +97,8 @@ func TestAUnitSetsItsDeclaredCompanyTypesUnderItsOwnName(t *testing.T) {
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestAUnitReplacesOnlyItsOwnValuesAndKeepsAnotherUnits(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 	e.composed = composeTypeUnits(t)
 	company := e.seedCompany(t)
@@ -127,8 +122,8 @@ func TestAUnitReplacesOnlyItsOwnValuesAndKeepsAnotherUnits(t *testing.T) {
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestAUnitCannotSetATypeItDidNotDeclare(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 	e.composed = composeTypeUnits(t)
 	company := e.seedCompany(t)
@@ -143,8 +138,8 @@ func TestAUnitCannotSetATypeItDidNotDeclare(t *testing.T) {
 	}
 }
 
-//testdb:serial declares extension company types in the process-wide companytypes registry
 func TestSettingTypesOnACompanyThatIsNotThereIsNotFound(t *testing.T) {
+	t.Parallel()
 	e := setupCore(t)
 	e.composed = composeTypeUnits(t)
 

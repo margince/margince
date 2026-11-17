@@ -70,11 +70,18 @@ func dedupeRelationshipTypes(desired []string) ([]string, error) {
 	return out, nil
 }
 
+// WithCompanyTypes hands the store the company types the composition's units
+// declare. A store without it refuses every extension type it has not stored.
+func (s *Store) WithCompanyTypes(declared companytypes.Registry) *Store {
+	s.companyTypes = declared
+	return s
+}
+
 // dedupeExtensionRelationshipTypes is dedupeRelationshipTypes for the types
 // extensions declare. A value passes when a composed unit declares it or the
 // company already carries it. An unchanged save must not fail because the unit
 // was taken out.
-func dedupeExtensionRelationshipTypes(desired, live []string) ([]string, error) {
+func dedupeExtensionRelationshipTypes(declared companytypes.Registry, desired, live []string) ([]string, error) {
 	_, liveExt := splitRelationshipTypes(live)
 	carried := make(map[string]bool, len(liveExt))
 	for _, t := range liveExt {
@@ -83,10 +90,10 @@ func dedupeExtensionRelationshipTypes(desired, live []string) ([]string, error) 
 	seen := make(map[string]bool, len(desired))
 	out := make([]string, 0, len(desired))
 	for _, t := range desired {
-		_, declared := companytypes.Lookup(t)
-		if !companytypes.IsExtensionValue(t) || (!declared && !carried[t]) {
+		_, known := declared.Lookup(t)
+		if !companytypes.IsExtensionValue(t) || (!known && !carried[t]) {
 			return nil, httperr.Validation("extension_relationship_types", "invalid_enum",
-				fmt.Sprintf("%q is not a company type an extension declares; %s", t, declaredExtensionTypes()))
+				fmt.Sprintf("%q is not a company type an extension declares; %s", t, declaredExtensionTypes(declared)))
 		}
 		if seen[t] {
 			continue
@@ -99,15 +106,15 @@ func dedupeExtensionRelationshipTypes(desired, live []string) ([]string, error) 
 }
 
 // declaredExtensionTypes renders what a refusal can offer instead.
-func declaredExtensionTypes() string {
-	declared := make(map[string]bool)
-	for _, d := range companytypes.All() {
-		declared[d.Value] = true
+func declaredExtensionTypes(declared companytypes.Registry) string {
+	values := make(map[string]bool)
+	for _, d := range declared.All() {
+		values[d.Value] = true
 	}
-	if len(declared) == 0 {
+	if len(values) == 0 {
 		return "no extension declares one"
 	}
-	return vocabularyOf(declared)
+	return vocabularyOf(values)
 }
 
 // splitRelationshipTypes parts stored types into core's and extensions'.

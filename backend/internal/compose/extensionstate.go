@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -64,6 +65,14 @@ func (x *Extensions) Subscriptions() []ComposedSubscription {
 		return nil
 	}
 	return slices.Clone(x.subs)
+}
+
+// CompanyTypes returns the company types the composition's units declare.
+func (x *Extensions) CompanyTypes() companytypes.Registry {
+	if x == nil {
+		return companytypes.Registry{}
+	}
+	return companytypes.Of(x.units)
 }
 
 func (x *Extensions) servedJobs() []composedJob {

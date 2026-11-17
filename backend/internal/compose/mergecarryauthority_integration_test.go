@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -161,7 +162,7 @@ func TestTheServersContactHandlersAreWiredToCarry(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts/"+retired.String()+"/merge",
 		strings.NewReader(`{"target_id":"`+survivor.String()+`"}`)).WithContext(c.admin)
 	req.Header.Set("Content-Type", "application/json")
-	newContactsHandlers(c.e.Pool).MergeContact(rec, req, openapi_types.UUID(retired.UUID), crmcontracts.MergeContactParams{})
+	newContactsHandlers(c.e.Pool, companytypes.Registry{}).MergeContact(rec, req, openapi_types.UUID(retired.UUID), crmcontracts.MergeContactParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("the merge answered %d: %s", rec.Code, rec.Body.String())
 	}
