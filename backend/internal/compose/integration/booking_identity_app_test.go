@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestBookingPageUsesTheCurrentAccountName(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	if status := e.Call(t, "PUT", "/v1/me/display-name", AnyMap{"display_name": "Account name"}, nil, nil); status != http.StatusOK {

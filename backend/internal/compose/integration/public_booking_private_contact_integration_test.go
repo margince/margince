@@ -17,9 +17,8 @@ import (
 // An anonymous booker who knows the address of a colleague's private contact
 // changes nothing on it. The host cannot see that contact, so the booking is
 // refused, and no owner or employment is written before the refusal.
-//
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestABookingOnAPrivateContactTheHostCannotSeeIsRefusedAndChangesNothing(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)

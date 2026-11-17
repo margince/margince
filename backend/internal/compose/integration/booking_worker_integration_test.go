@@ -17,8 +17,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T) {
+	t.Parallel()
 	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
@@ -32,7 +32,7 @@ func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T
 	if status := publicCall(t, e, "POST", "/v1/public/booking/"+bookingSlug(t, e), body, nil, &result); status != 201 {
 		t.Fatal(status)
 	}
-	runner, completed, failed := startBookingWorker(t, e)
+	runner, completed, failed := startBookingWorker(t, e, provider)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := runner.Enqueue(ctx, compose.MeetingDeliveryArgs{}, nil); err != nil {
@@ -77,9 +77,9 @@ func TestBookingHTTPIntentIsDeliveredAndCanceledByTheComposedWorker(t *testing.T
 	}
 }
 
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestALeadBookingSurvivesReplayPromotionDeliveryAndCancellation(t *testing.T) {
-	e, _ := setupBookingProvider(t)
+	t.Parallel()
+	e, provider := setupBookingProvider(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)
 	const address = "booker@lead.example"
@@ -161,7 +161,7 @@ func TestALeadBookingSurvivesReplayPromotionDeliveryAndCancellation(t *testing.T
 		t.Fatalf("promote booked lead before delivery: %d %+v", status, promoted)
 	}
 
-	runner, completed, failed := startBookingWorker(t, e)
+	runner, completed, failed := startBookingWorker(t, e, provider)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	if err := runner.Enqueue(ctx, compose.MeetingDeliveryArgs{}, nil); err != nil {

@@ -25,8 +25,8 @@ const (
 	cleanBooker  = "neu@visitor.example"
 )
 
-//testdb:serial replaces http.DefaultTransport, which every test's outbound calls use
 func TestAnErasedAddressBooksAndIsAnsweredAsACleanOne(t *testing.T) {
+	t.Parallel()
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
 	apptest.EnableGoogleBookingPage(t, e)

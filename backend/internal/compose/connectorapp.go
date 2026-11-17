@@ -282,7 +282,7 @@ func (h connectorHandlers) gmailApp(ctx context.Context) (oauthApp, bool, error)
 	oauth, err := consentClient(ctx, h.oauth, h.googleCredentials, h.canRunConsent(providerGmail),
 		func(app capture.ConnectorApp) gmail.OAuth {
 			return gmail.NewOAuth(gmail.OAuthConfig{
-				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes,
+				ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, Scopes: gmailScopes, HTTPClient: h.googleHTTP,
 			})
 		})
 	if err != nil {
@@ -322,7 +322,7 @@ func (h connectorHandlers) gcalApp(ctx context.Context) (oauthApp, bool, error) 
 	}
 	oauth, err := consentClient(ctx, h.gcalOAuth, h.googleCredentials, h.canRunConsent(providerGcal),
 		func(app capture.ConnectorApp) gcal.OAuth {
-			return gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+			return gcal.NewOAuth(gcal.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, HTTPClient: h.googleHTTP})
 		})
 	if err != nil {
 		return oauthApp{}, false, err
@@ -350,7 +350,7 @@ func (h connectorHandlers) gdocsApp(ctx context.Context) (oauthApp, bool, error)
 	}
 	oauth, err := consentClient(ctx, h.gdocsOAuth, h.googleCredentials, h.canRunConsent(providerGdocs),
 		func(app capture.ConnectorApp) gdocs.OAuth {
-			return gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef})
+			return gdocs.NewOAuth(gdocs.OAuthConfig{ClientID: app.ClientID, ClientSecret: app.ClientSecretRef, HTTPClient: h.googleHTTP})
 		})
 	if err != nil || oauth == nil {
 		return oauthApp{}, false, err

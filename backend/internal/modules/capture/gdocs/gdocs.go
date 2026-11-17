@@ -56,6 +56,9 @@ type OAuthConfig struct {
 	ClientSecret string
 	AuthURL      string
 	TokenURL     string
+	// HTTPClient carries the token exchange and refresh; nil is oauthflow's
+	// bounded default.
+	HTTPClient *http.Client
 }
 
 // NewOAuth builds the Docs OAuth client on the shared oauthflow handshake. It
@@ -77,6 +80,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Scopes:       ConsentScopes(),
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
+		HTTPClient:   cfg.HTTPClient,
 		// Offline access and a forced consent prompt make Google return a
 		// refresh token.
 		AuthParams: map[string]string{

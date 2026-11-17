@@ -86,6 +86,9 @@ type OAuthConfig struct {
 	ClientSecret string
 	AuthURL      string
 	TokenURL     string
+	// HTTPClient carries the token exchange and refresh; nil is oauthflow's
+	// bounded default.
+	HTTPClient *http.Client
 }
 
 // NewOAuth builds the calendar OAuth client on the shared oauthflow handshake.
@@ -111,6 +114,7 @@ func NewOAuth(cfg OAuthConfig) OAuth {
 		Scopes:       append(ConsentScopes(), googleconn.ProfileScope),
 		AuthURL:      cfg.AuthURL,
 		TokenURL:     cfg.TokenURL,
+		HTTPClient:   cfg.HTTPClient,
 		// Google needs offline access + a forced consent prompt to return a
 		// refresh token. No include_granted_scopes: keep the mail scopes out of
 		// this credential.
