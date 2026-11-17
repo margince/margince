@@ -18,12 +18,9 @@
 #     template's migrations grant the cluster-level margince_app role USAGE + table
 #     privileges (migration 0015), which the clone inherits, so the app role can
 #     connect and query without any per-clone GRANT.
-#   - Redis is a single shared instance, isolated by logical db rather than by
-#     instance: the parallel runner assigns each package its own index through
-#     MARGINCE_TEST_REDIS_DB and every Redis-using fixture reads it through
-#     testdb.RedisDB. More than one package touches Redis now, and the ones that
-#     do FLUSHDB between tests — so a shared index is a corruption, not
-#     contention. See REDIS_DBS in scripts/test-integration-parallel.sh.
+#   - Redis is the redis-test server. Each test leases a logical database of
+#     its own through testdb.RedisDB, so the runner assigns none: the lease
+#     holds across every process that uses the server.
 
 # shellcheck source=scripts/lib-diskspace.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib-diskspace.sh"
@@ -88,13 +85,12 @@ lane_drop_timed_out() { # divergence-file timedout-file
 # this file, so both routes now settle it in one place instead of one of them
 # inheriting it by accident.
 #
-# REDIS_PORT is the same knob the Makefile and the compose file turn, read from
-# the environment so an override reaches both routes. The literal default is the
+# TEST_REDIS_PORT is the same knob the Makefile turns, read from the
+# environment so an override reaches both routes. The literal default is the
 # Makefile's, and test-testdb-redis.sh compares them rather than a comment
 # promising they agree.
 resolve_test_redis() {
-  export MARGINCE_TEST_REDIS="${MARGINCE_TEST_REDIS:-localhost:${REDIS_PORT:-16379}}"
-  export MARGINCE_TEST_REDIS_DB="${MARGINCE_TEST_REDIS_DB:-15}"
+  export MARGINCE_TEST_REDIS="${MARGINCE_TEST_REDIS:-localhost:${TEST_REDIS_PORT:-16380}}"
 }
 
 # parse_test_dsn: split MARGINCE_TEST_DSN (owner) and MARGINCE_TEST_APP_DSN (app)
@@ -538,21 +534,17 @@ stale_repeated_gates() { # seen-file...
   ( cd "$ROOT/backend" && go run ./tools/sql-census stale -allow "$REPEATED_GATES_ALLOW" "$@" )
 }
 
-# A foreground xargs waits for every package before the next batch reuses Redis.
-# Global indices keep clone names, shard filters and logs stable across batches.
+# run_integration_packages WORK JOBS OUTDIR — run each line of WORK as
+# `run_one LINE n OUTDIR`, up to JOBS at once. The line number n names the
+# package's clone, shard filter and log.
 run_integration_packages() {
-  local work="$1" jobs="$2" capacity="$3" outdir="$4"
-  if [[ ! "$jobs" =~ ^[1-9][0-9]*$ || ! "$capacity" =~ ^[1-9][0-9]*$ ]]; then
-    echo "FAIL: integration jobs and Redis capacity must be positive integers" >&2
+  local work="$1" jobs="$2" outdir="$3"
+  if [[ ! "$jobs" =~ ^[1-9][0-9]*$ ]]; then
+    echo "FAIL: integration jobs must be a positive integer" >&2
     return 1
   fi
-  local count first last
-  count=$(wc -l < "$work")
-  for ((first=1; first<=count; first+=capacity)); do
-    last=$((first + capacity - 1))
-    nl -ba -w1 -s'|' "$work" | sed -n "${first},${last}p" \
-      | xargs -P "$jobs" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$outdir" || return
-  done
+  nl -ba -w1 -s'|' "$work" \
+    | xargs -P "$jobs" -I{} bash -c 'line="$1"; idx="${line%%|*}"; rest="${line#*|}"; run_one "$rest" "$idx" "$2"' _ {} "$outdir"
 }
 
 # The migrator holds the composed set; test packages receive that exact source manifest.

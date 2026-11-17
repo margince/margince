@@ -158,8 +158,8 @@ queue_take_cache() {
 # run_queue_packages PARTS GROUPS JOBS OUTDIR CLAIMED — run the parts of every
 # group this shard claims, up to JOBS at once, and append `group part...` to
 # CLAIMED for each claim. Part n is line n of PARTS and runs as
-# `run_one LINE n OUTDIR SLOT`. The slot is the part's Redis database, so no two
-# parts that run at once share one.
+# `run_one LINE n OUTDIR SLOT`. The slot is which of the JOBS places the part
+# holds, so no two parts that run at once hold one.
 #
 # A claim is made only when a slot is free and every claimed part has started,
 # so a shard never holds a group it cannot start. Returns non-zero when the

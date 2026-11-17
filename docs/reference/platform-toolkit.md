@@ -152,7 +152,8 @@ and time. What to pull out of a page, and what to look for, stays with the calle
 The first copy in a process must match the binary's migration ledger and hold no rows. For a ledger that differs, run `make test-db-up` in that worktree, then run the lane again.
 
 The gate `integrationtestdb_test.go` holds two rules. No other code reads the lane's DSNs. Every integration test is parallel, or says `//testdb:serial <reason>`. The gate `integrationmigrateonce_test.go` holds that no suite migrates inline.
-- **Use it when:** you write the setup of a test that runs on a real Postgres.
+`RedisDB` leases a test a Redis database of its own on `redis-test`, for the life of the test, and `RedisAddr` names that server. Use `platform/redistest` for a client on it.
+- **Use it when:** you write the setup of a test that runs on a real Postgres or Redis.
 
 ---
 
