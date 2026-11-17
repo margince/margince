@@ -90,9 +90,12 @@ page the settings link opens. This meets `Law on Protection of Consumers' Rights
 
 `Law on Advertising` Art. 18 asks for advertising content in Vietnamese first. Text in another language
 comes below it, and its size is at most three fourths of the Vietnamese text. Art. 8.11 of that law and
-`Circular 12/2026/TT-BVHTTDL` Art. 3 limit words such as "nhất", "duy nhất", "tốt nhất"
-or "số một". A mail may use one only with a listed proof. The mail must show the name, number and date of the
-proof document.
+`Circular 12/2026/TT-BVHTTDL` Art. 3 cover a claim to be the best or the only one. In any
+language, such a claim needs a listed proof.
+
+In Vietnamese such a claim is `nhất`, `duy nhất`, `tốt nhất`, `số một` or `hàng đầu`. In English it is
+`best`, `No. 1`, `number one`, `leading`, `the only` or `unique`. The mail must show the name, number
+and date of the proof document.
 
 Both are checked while a mail is written, and neither stops the send:
 
@@ -100,20 +103,53 @@ Both are checked while a mail is written, and neither stops the send:
 - A draft that uses a word of `superlatives()` in `vn.go` gets a note, unless a line holds a document
   number and a date.
 
+The check leaves out a sign-off line that holds "best", such as "Best regards" or "Best," above a
+name. The core's sign-off check decides which lines those are. It looks for "the only" and not "only", because a bare "only" most often sets a limit, as in
+"only three days left".
+
 The size of text in another language is not checked. A plain text mail has one size, and the check
 does not read the styles of an HTML part.
 
-## Open questions
+## Advertisers from other countries (Law on Advertising Art. 39.2)
 
-These two need an answer from legal advice. Marketing mail to Vietnamese recipients is not blocked on
-them.
+An organisation from outside Vietnam that does no business there must advertise there through a
+Vietnamese advertising service business. The advertiser is the customer of the installation, and the
+customer must see to this.
 
-- **Where the sending server is.** `Decree 330/2026/ND-CP` Art. 38.3(a) fines product information sent
-  by email from a server outside Vietnam (`VND 40-60 million` for a company). The rule it enforces is
-  not found in the texts in use. An installation that sends from outside Vietnam needs an answer.
-- **Advertisers from other countries.** `Law on Advertising` Art. 39.2 asks a company from another
-  country with no business in Vietnam to use a Vietnamese advertising service business. It is not known
-  if this reaches direct email from an installation outside Vietnam.
+So the pack sets `ForeignAdvertiserNeedsLocalAgency`. Take a legal entity that is not set up in
+Vietnam. A draft of advertising mail it sends to a Vietnamese recipient gets a note that says so.
+The note does not stop the send.
+
+## The sending server
+
+No rule that applies today requires advertising email to be sent from a server in Vietnam, so the pack blocks
+nothing on it. `Decree 330/2026/ND-CP` Art. 38.3(a) fines product information sent by email from a
+server outside Vietnam. The rule it enforces was Art. 17.2(b) of `Decree 90/2008/ND-CP`, as changed
+by `Decree 77/2012/ND-CP`. `Decree 91/2020/ND-CP` replaced that decree from `2020-10-01` (Art. 35.2),
+and it has no such rule.
+
+The installation can send through its own SMTP relay (`email.smtp.*`). For advertising mail to
+Vietnamese recipients, use a relay in Vietnam where one is available.
+
+## When marketing mail to Vietnamese recipients is cleared
+
+Marketing mail to Vietnamese recipients is cleared on these conditions:
+
+1. The `Decree 91/2020/ND-CP` rules in this pack stay on. They are prior consent and the `[QC]`
+   label. They also put the advertiser block directly before the refusal section, and allow at most
+   3 mails in 24 hours.
+2. Content in Vietnamese first, and the check on claims to be the best (`Law on Advertising` Articles 18 and 8.11;
+   `Circular 12/2026/TT-BVHTTDL` Article 3).
+3. The sending server: no rule that applies today requires a server in Vietnam. Use an SMTP relay
+   in Vietnam where there is one.
+4. A customer may be an organisation from outside Vietnam that does no business there. It must
+   advertise in Vietnam through a Vietnamese advertising service business (`Law on Advertising`
+   Article 39.2). The pack warns, and the customer must see to this.
+
+Consent to advertising is asked on its own and never together with another consent. Each page a
+contact grants consent on grants only the consent it asks about.
+
+This is the legal position as of `2026-11-16`.
 
 ## Three per address per day (Art. 13.5)
 
@@ -188,6 +224,12 @@ consent-confirmation mail only when the contact's own request is on record. That
 user logged, a form the contact sent, or a mail the contact wrote. The core keeps that request on the
 link and on the grant's proof row (`consent_event.subject_request_id`). The rule is read in
 `backend/internal/modules/consent/confirmrules.go`.
+
+The decree governs advertising, so the rule covers a request for consent of the
+marketing class only (`ConsentRequestFirstFor`). A request for consent to correspondence advertises
+nothing, so a user may send it without being asked. That is the request the
+**Ask for consent** button of the no-basis warning sends, and its proof row names no request of the
+contact's own.
 
 ## Windows
 

@@ -3,6 +3,7 @@
 
 import type { components } from "../../api/schema";
 import { Callout } from "../../design-system/callout";
+import { jurisdictionName } from "../../format/jurisdiction";
 import { languageName } from "../../format/languagename";
 import { useLocale, useT } from "../../i18n";
 
@@ -101,6 +102,13 @@ export function DraftContentNotice({
       return [
         t("compose.contentFinding.language", {
           language: languageName(finding.language ?? "", locale),
+        }),
+      ];
+    }
+    if (finding.requirement === "foreign_advertiser") {
+      return [
+        t("compose.contentFinding.foreignAdvertiser", {
+          country: jurisdictionName(finding.country ?? "", locale),
         }),
       ];
     }

@@ -110,6 +110,9 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		if d.SupportedAlternatives, err = g.supportedAlternatives(ctx, tx, r, req, d); err != nil {
 			return set, err
 		}
+		if d.ConsentPurpose, err = consentPurposeTx(ctx, tx, d); err != nil {
+			return set, err
+		}
 		set.Decisions = append(set.Decisions, d)
 	}
 	return set, nil

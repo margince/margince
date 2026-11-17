@@ -22,12 +22,15 @@ import (
 //
 // gatekit:fixture the sha256 of each published question body
 var pinnedQuestion = map[string]string{
-	"marketing_question@6@de":    "9d465acdd71805ba27a8e46c7738e012d21334c0c682e3382493ec96d3650b78",
-	"marketing_question@6@en":    "81c5b8d820503d80eab76f2936f7374906a3d940e6d54fc3f75cff6e62e7224d",
-	"marketing_question@6@vi":    "09e932743c70bf1f4489a52d455de5d553a87d90e6822294cc438febc4d1f50c",
-	"subscription_question@6@de": "98a4d7ed1a0a8be667409b73473d9c07ab81726426ddf8a59634349efe25a2a6",
-	"subscription_question@6@en": "f8fab3f8b7b4fc5d6c51cf6ffe5f387f578b0d90cc847dbc0b9407c26f42e231",
-	"subscription_question@6@vi": "6dc15e6c17bb477d6ba49ea99c2a7df3c1ccebe76e9d59095505e7fe26fabcc2",
+	"marketing_question@6@de":                "9d465acdd71805ba27a8e46c7738e012d21334c0c682e3382493ec96d3650b78",
+	"marketing_question@6@en":                "81c5b8d820503d80eab76f2936f7374906a3d940e6d54fc3f75cff6e62e7224d",
+	"marketing_question@6@vi":                "09e932743c70bf1f4489a52d455de5d553a87d90e6822294cc438febc4d1f50c",
+	"subscription_question@6@de":             "98a4d7ed1a0a8be667409b73473d9c07ab81726426ddf8a59634349efe25a2a6",
+	"subscription_question@6@en":             "f8fab3f8b7b4fc5d6c51cf6ffe5f387f578b0d90cc847dbc0b9407c26f42e231",
+	"subscription_question@6@vi":             "6dc15e6c17bb477d6ba49ea99c2a7df3c1ccebe76e9d59095505e7fe26fabcc2",
+	"subscription_question_unscheduled@6@de": "d4fca7c94bc589d5420e609af3ac052108935c8f734931b099b8e2a1ae214b6c",
+	"subscription_question_unscheduled@6@en": "147570456f744be0b8c9c87c723ccee4993d8d1db55d36312ba4f7256a066aca",
+	"subscription_question_unscheduled@6@vi": "3189932b39c52d8780c955264bddcb2bf30587433cd0c93e1c69114510b787dc",
 }
 
 // TestEveryPublishedQuestionIsPinnedToItsVersion fails when a question's words
@@ -36,9 +39,8 @@ var pinnedQuestion = map[string]string{
 func TestEveryPublishedQuestionIsPinnedToItsVersion(t *testing.T) {
 	t.Parallel()
 
-	keys := []string{TemplateMarketingQuestion, TemplateSubscriptionQuestion}
 	seen := map[string]bool{}
-	for _, key := range keys {
+	for _, key := range publishedQuestionKeys() {
 		for _, language := range mailcopy.Languages() {
 			sum := sha256.Sum256([]byte(RenderQuestion(key, string(language))))
 			got := hex.EncodeToString(sum[:])
@@ -56,8 +58,8 @@ func TestEveryPublishedQuestionIsPinnedToItsVersion(t *testing.T) {
 			}
 		}
 	}
-	if len(seen) < 6 {
-		t.Fatalf("pinned %d question bodies, want two questions in three languages: the gate "+
+	if len(seen) < 9 {
+		t.Fatalf("pinned %d question bodies, want three questions in three languages: the gate "+
 			"has stopped seeing its subject", len(seen))
 	}
 	for pin := range pinnedQuestion {
