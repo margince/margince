@@ -8162,6 +8162,7 @@ public.personal_channel_reply.text_bound_update CREATE TRIGGER text_bound_update
 public.personal_channel_reply.thread_id text NOT NULL gen=- def=-
 public.personal_channel_reply.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.personal_channel_reply_activity_idx CREATE INDEX personal_channel_reply_activity_idx ON public.personal_channel_reply USING btree (activity_id)
+public.personal_channel_reply_connection_idx CREATE INDEX personal_channel_reply_connection_idx ON public.personal_channel_reply USING btree (connection_id)
 public.personal_channel_reply_delivery_key CREATE UNIQUE INDEX personal_channel_reply_delivery_key ON public.personal_channel_reply USING btree (delivery_key)
 public.personal_channel_reply_open_idx CREATE INDEX personal_channel_reply_open_idx ON public.personal_channel_reply USING btree (connection_id, created_at) WHERE (state = ANY (ARRAY['waiting'::text, 'pulled'::text]))
 public.personal_channel_reply_pkey CREATE UNIQUE INDEX personal_channel_reply_pkey ON public.personal_channel_reply USING btree (id)

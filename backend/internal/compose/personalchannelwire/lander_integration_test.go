@@ -192,3 +192,19 @@ func TestOnlyTheMemberWhoseChannelBroughtTheChatInMayReply(t *testing.T) {
 		t.Fatal("the member's reply was not queued for their client")
 	}
 }
+
+func TestAReplyToAnAccountAnotherMembersChatAppMetIsNotQueued(t *testing.T) {
+	e := setupPersonalChannels(t)
+	landed := e.push(t, whatsapp("wamid.r2", "8496"))
+	msg := connector.ChannelMessage{
+		ActivityID: ids.From[ids.ActivityKind](*landed[0].ActivityID), Body: "Yes", IdempotencyKey: "delivery-2",
+		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: "whatsapp/8496/" + ids.NewV7().String()},
+	}
+	owner := personalchannelwire.ReplySender{DB: compose.InstallationDB(e.Pool), Member: e.Rep1}
+	if _, err := owner.SendMessage(e.Admin(), connector.Auth{}, msg); !errors.Is(err, connector.ErrRecipientUnreachable) {
+		t.Fatalf("a reply to another connection's account = %v, want ErrRecipientUnreachable", err)
+	}
+	if n := e.count(t, `SELECT count(*) FROM personal_channel_reply WHERE delivery_key = 'delivery-2'`); n != 0 {
+		t.Fatal("a reply to an account the member's own client never pushed was queued")
+	}
+}

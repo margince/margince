@@ -557,6 +557,18 @@ expect "the moved-on base still orders what this branch adds" \
 # The four that decide whether the escape hatch is a gate or a hole.
 expect "a declared consolidation is admitted" \
   0 declared consolidates         "a baseline reset was declared, and admitted"
+extension_retired() {
+  local dir="$1"
+  extension_rename "$dir" || return
+  rm -r "$dir/extensions/notes" || return
+}
+extension_retired_with_drop() {
+  local dir="$1"
+  extension_retired "$dir" || return
+  printf 'DROP TABLE IF EXISTS schema_migrations_ext_notes;\n' > "$dir/backend/migrations/core/0004_notes_retired.up.sql"
+  printf -- '-- probe\n' > "$dir/backend/migrations/core/0004_notes_retired.down.sql"
+}
+
 expect "a declared reset with a survivor is refused" \
   1 declared partial_rewrite      "at the version AND name the base has"
 expect "a declared rename that does not collapse is refused" \
@@ -598,6 +610,8 @@ expect "a sync dropping a namespace only develop has fails" \
 expect "a branch cut from develop stays judged against develop" \
   1 synced   cuts_from_develop_below_its_tip "sorts at or below"
 
+expect "a removed extension whose ledger no core migration drops is refused" 1 plain extension_retired "no longer has it"
+expect "a removed extension whose ledger a core migration drops passes" 0 plain extension_retired_with_drop "is retired"
 expect "an undeclared extension renumber is refused" 1 undeclared extension_rename "renumbered.txt does not declare it"
 expect "a declared unchanged extension renumber passes" 0 undeclared extension_declared "OK: check-migration-versions"
 expect "a declared extension renumber with changed SQL is refused" 1 undeclared extension_changed "its SQL changed"
@@ -614,7 +628,7 @@ expect "a declared extension renumber with changed SQL is refused" 1 undeclared 
 # So the total is also pinned. A literal here is not duplication of the case
 # list: it is the one fact the case list cannot state about itself, which is how
 # many of it there should be.
-expected_cases=38
+expected_cases=40
 
 declared_cases="$(grep -c '^expect "' "$SELF")"
 if [[ "$ran" -ne "$declared_cases" ]]; then

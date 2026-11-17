@@ -58819,7 +58819,6 @@ type PersonalChannelMessage struct {
 	OccurredAt   *time.Time              `json:"occurred_at,omitempty"`
 	Participants *[]PersonalChannelParty `json:"participants,omitempty"`
 	Subject      *string                 `json:"subject,omitempty"`
-	ThreadId     *string                 `json:"thread_id,omitempty"`
 	To           *PersonalChannelParty   `json:"to,omitempty"`
 }
 

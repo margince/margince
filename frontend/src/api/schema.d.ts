@@ -32316,7 +32316,6 @@ export interface components {
         PersonalChannelMessage: {
             /** @description The chat's own id for the message; a resend with the same id lands nothing new. */
             message_id: string;
-            thread_id?: string;
             /** @description The group the message was sent in. No ':'. */
             group_id?: string;
             /** @description The chat it came from: lower-case letters, digits and _. Absent means generic. */

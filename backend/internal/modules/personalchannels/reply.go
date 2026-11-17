@@ -30,6 +30,7 @@ const (
 const (
 	stateWaiting = "waiting"
 	statePulled  = "pulled"
+	stateFailed  = "failed"
 	stateExpired = "expired"
 )
 
@@ -116,16 +117,32 @@ func (s *Store) WithSettler(t Settler) *Store {
 	return &out
 }
 
+// ErrReplyClosed answers a send retried after its reply was already settled as
+// not delivered, so the timeline is not told it was sent.
+var ErrReplyClosed = errors.New("personal channels: this reply was already settled as not delivered")
+
 // QueueReply keeps one reply for the member's client to pull. It runs in the
-// send path, as the rep whose connection carries the thread.
+// send path, as the rep whose connection carries the thread. A retry of a reply
+// already queued keeps it. A retry whose reply failed or expired meanwhile is
+// refused, because the delivery the caller is about to mark sent never arrived.
 func QueueReply(ctx context.Context, tx pgx.Tx, in ReplyInput) error {
-	_, err := tx.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		INSERT INTO personal_channel_reply (connection_id, activity_id, delivery_key, network, thread_id,
 			recipient_account, reply_to, body)
 		VALUES ($1, $2, $3, $4, $5, $6, nullif($7, ''), $8)
 		ON CONFLICT (delivery_key) DO NOTHING`,
 		in.Connection, in.ActivityID, in.DeliveryKey, in.Network, in.GroupID, in.Account, in.ReplyTo, in.Body)
-	return err
+	if err != nil || tag.RowsAffected() == 1 {
+		return err
+	}
+	var state string
+	if err := tx.QueryRow(ctx, `SELECT state FROM personal_channel_reply WHERE delivery_key = $1`, in.DeliveryKey).Scan(&state); err != nil {
+		return err
+	}
+	if state == stateFailed || state == stateExpired {
+		return ErrReplyClosed
+	}
+	return nil
 }
 
 // Pull leases up to limit of the caller's waiting replies, oldest first.
@@ -163,10 +180,13 @@ func leaseReplies(ctx context.Context, tx pgx.Tx, connection ids.UUID, now time.
 			 WHERE connection_id = $1
 			   AND (state = 'waiting' OR (state = 'pulled' AND leased_until <= $2))
 			 ORDER BY created_at, id LIMIT $4 FOR UPDATE SKIP LOCKED)
-		UPDATE personal_channel_reply r
-		   SET state = 'pulled', leased_until = $3, attempt = r.attempt + 1, updated_at = $2
-		 WHERE r.id IN (SELECT id FROM picked)
-		RETURNING r.id, r.network, r.recipient_account, r.thread_id, coalesce(r.reply_to, ''), coalesce(r.body, ''), r.attempt`,
+		, leased AS (
+			UPDATE personal_channel_reply r
+			   SET state = 'pulled', leased_until = $3, attempt = r.attempt + 1, updated_at = $2
+			 WHERE r.id IN (SELECT id FROM picked)
+			RETURNING r.id, r.network, r.recipient_account, r.thread_id, r.reply_to, r.body, r.attempt, r.created_at)
+		SELECT id, network, recipient_account, thread_id, coalesce(reply_to, ''), coalesce(body, ''), attempt
+		  FROM leased ORDER BY created_at, id`,
 		connection, now, now.Add(replyLease), limit)
 	if err != nil {
 		return nil, err

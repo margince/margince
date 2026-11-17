@@ -48,11 +48,17 @@ func (s ReplySender) SendMessage(ctx context.Context, _ connector.Auth, msg conn
 		if err != nil {
 			return err
 		}
+		if personalchannels.IdentityConnection(msg.Recipient.ChannelUserID) != connection.String() {
+			return fmt.Errorf("personal channels: the recipient was met through another member's chat app: %w", connector.ErrRecipientUnreachable)
+		}
 		return personalchannels.QueueReply(ctx, tx, personalchannels.ReplyInput{
 			Connection: connection, ActivityID: msg.ActivityID.UUID, DeliveryKey: msg.IdempotencyKey,
 			Network: network, Account: account, GroupID: group, ReplyTo: msg.ReplyTo, Body: msg.Body,
 		})
 	})
+	if errors.Is(err, personalchannels.ErrReplyClosed) {
+		err = fmt.Errorf("%w: %w", err, connector.ErrRecipientUnreachable)
+	}
 	return connector.SendReceipt{}, err
 }
 

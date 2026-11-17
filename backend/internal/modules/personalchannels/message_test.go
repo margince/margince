@@ -16,7 +16,7 @@ var testConnection = ids.MustParse("019a0000-0000-7000-8000-000000000001")
 
 func inbound() PushMessage {
 	return PushMessage{
-		MessageID: "wamid.1", ThreadID: "chat-1", Network: "whatsapp", Body: "Hi",
+		MessageID: "wamid.1", Network: "whatsapp", Body: "Hi",
 		OccurredAt: time.Date(2026, 11, 16, 9, 0, 0, 0, time.UTC),
 		From:       Party{Account: "8490@s.whatsapp.net", Name: "An Tran"},
 		To:         Party{Account: "me@s.whatsapp.net", Name: "Me"},

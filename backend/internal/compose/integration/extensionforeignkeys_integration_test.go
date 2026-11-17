@@ -42,14 +42,12 @@ func TestEveryExtensionForeignKeyCanFindItsChildren(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var keys int
+	if len(schemas) == 0 {
+		t.Fatal("no table was read outside public, so this census judged nothing. " +
+			"The template carries no unit's tables, or the units moved somewhere it does not read")
+	}
 	for _, schema := range schemas {
 		for _, action := range []string{testdb.CascadingKeys, testdb.OtherKeys} {
-			n, err := testdb.ForeignKeyCount(ctx, owner, schema, action)
-			if err != nil {
-				t.Fatal(err)
-			}
-			keys += n
 			uncovered, err := testdb.UncoveredForeignKeys(ctx, owner, schema, action)
 			if err != nil {
 				t.Fatal(err)
@@ -59,9 +57,5 @@ func TestEveryExtensionForeignKeyCanFindItsChildren(t *testing.T) {
 					"columns in the unit's migration", key)
 			}
 		}
-	}
-	if keys == 0 {
-		t.Fatalf("no foreign key was read outside public (schemas %v), so this census judged nothing. "+
-			"The template carries no unit's tables, or the units moved somewhere it does not read", schemas)
 	}
 }

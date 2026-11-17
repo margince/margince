@@ -36,13 +36,13 @@ type Party struct {
 
 // PushMessage is one chat message a member's client sends in.
 type PushMessage struct {
-	MessageID, ThreadID, GroupID string
-	Network, Direction           string
-	Subject, Body                string
-	OccurredAt                   time.Time
-	From, To                     Party
-	Participants                 []Party
-	UploadIDs                    []ids.UUID
+	MessageID, GroupID string
+	Network, Direction string
+	Subject, Body      string
+	OccurredAt         time.Time
+	From, To           Party
+	Participants       []Party
+	UploadIDs          []ids.UUID
 }
 
 // NormalizedMessage is a PushMessage keyed for capture.
@@ -117,6 +117,11 @@ func SplitIdentity(id string) (network, account string, ok bool) {
 		return "", "", false
 	}
 	return parts[0], strings.Join(parts[1:len(parts)-1], "/"), true
+}
+
+// IdentityConnection is the connection an identity belongs to: the last segment.
+func IdentityConnection(id string) string {
+	return id[strings.LastIndex(id, "/")+1:]
 }
 
 func invalid(format string, args ...any) error {

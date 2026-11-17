@@ -38,7 +38,7 @@ func (h Handlers) PushPersonalChannelMessages(w http.ResponseWriter, r *http.Req
 
 func pushMessageOf(m crmcontracts.PersonalChannelMessage) PushMessage {
 	out := PushMessage{
-		MessageID: m.MessageId, ThreadID: deref(m.ThreadId), GroupID: deref(m.GroupId),
+		MessageID: m.MessageId, GroupID: deref(m.GroupId),
 		Network: deref(m.Network), Subject: deref(m.Subject), Body: deref(m.Body),
 		From: partyOf(m.From),
 	}

@@ -37,6 +37,13 @@ func claimUploadsTx(ctx context.Context, tx pgx.Tx, user ids.UUID, uploads []ids
 	if len(uploads) > maxFilesPerMessage {
 		return nil, nil, invalid("a message carries at most %d files", maxFilesPerMessage)
 	}
+	distinct := make(map[ids.UUID]struct{}, len(uploads))
+	for _, id := range uploads {
+		distinct[id] = struct{}{}
+	}
+	if len(distinct) != len(uploads) {
+		return nil, nil, invalid("a message names each file once")
+	}
 	if err := checkUploadsTx(ctx, tx, user, uploads); err != nil {
 		return nil, nil, err
 	}
@@ -109,11 +116,13 @@ func checkUploadsTx(ctx context.Context, tx pgx.Tx, user ids.UUID, uploads []ids
 
 // restoreUploads puts claimed uploads back on staging after a landing that kept
 // nothing. The client can then send the message again with the same upload ids.
+// It outlives the request: a client that hung up mid-landing must not lose the
+// bytes it staged.
 func restoreUploads(ctx context.Context, db *database.DB, claimed []claimedUpload) error {
 	if len(claimed) == 0 {
 		return nil
 	}
-	return db.Tx(ctx, func(tx pgx.Tx) error {
+	return db.Tx(context.WithoutCancel(ctx), func(tx pgx.Tx) error {
 		for _, c := range claimed {
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO personal_channel_upload (id, connection_id, filename, content_type, byte_size, sha256, content, created_at)

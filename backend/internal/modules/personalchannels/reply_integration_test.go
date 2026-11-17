@@ -183,3 +183,28 @@ func expire(ctx context.Context, e *channelEnv, settler Settler) (int, error) {
 	_, replies, err := Sweep(ctx, e.store.db, settler, e.now)
 	return replies, err
 }
+
+func TestARetriedSendOfAReplyTheClientFailedIsRefusedNotCountedSent(t *testing.T) {
+	e := setupChannels(t)
+	e.settling()
+	e.on(t, e.rep)
+	e.queued(t, e.rep, "d-late")
+	pulled, err := e.store.Pull(e.as(e.rep, repGrant), 10)
+	if err != nil || len(pulled.Replies) != 1 {
+		t.Fatalf("pull = %+v, %v", pulled, err)
+	}
+	if _, err := e.store.Ack(e.as(e.rep, repGrant), []Ack{{DeliveryID: pulled.Replies[0].DeliveryID, Outcome: OutcomeFailed, Reason: "blocked"}}); err != nil {
+		t.Fatal(err)
+	}
+	ctx := e.as(e.rep, repGrant)
+	c, err := e.store.Connection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+		return QueueReply(ctx, tx, ReplyInput{Connection: c.ID, ActivityID: ids.NewV7(), DeliveryKey: "d-late", Network: "whatsapp", Account: "8490", Body: "again"})
+	})
+	if !errors.Is(err, ErrReplyClosed) {
+		t.Fatalf("queueing again under a failed reply's key = %v, want ErrReplyClosed", err)
+	}
+}

@@ -433,6 +433,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// The signature pass's read cursor (PO-F-2a): both ids come from the
 	// pass's own SignatureCandidates query — the contact it just read for and
 	// the activity whose body it just read — never from a request body.
+	"personal_channel_message.activity_id":             "child row: written only by the personal-channels lander, beside the activity the capture sink just created in the same transaction, from that activity's own id",
+	"personal_channel_reply.activity_id":               "gated: the reply is queued by the send path after SendOrigin.resolve put the anchor through auth.EnsureLinkTarget, and only the activity the send itself just wrote is named",
 	"contact_signature_enrich_state.contact_id":        "server-derived: stamped by the enrich pass from its own candidate query, as the system principal — no caller, so no scope clause to apply",
 	"contact_signature_enrich_state.activity_id":       "server-derived: stamped by the enrich pass from the activity that candidate query returned",
 	"contact_signature_enrich_state.retry_activity_id": "server-derived: stamped by the enrich pass from the activity that candidate query returned, when the pass rejected its read",

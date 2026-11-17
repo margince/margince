@@ -223,7 +223,7 @@ describe("what a tool is called on screen", () => {
   // keeps its unit and job as words rather than losing its name.
   it("names an extension dispatcher from its kind", () => {
     expect(tagText("agent:ext_crm_relay_drain", "de")).toBe(
-      "Automatisiert durch crm-relay drain",
+      "Automatisiert durch crm relay drain",
     );
   });
 });
