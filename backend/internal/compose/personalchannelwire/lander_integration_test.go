@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/personalchannelwire"
+	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/personalchannels"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -250,5 +251,41 @@ func TestAContactBroughtInThroughAMembersChatAppIsTheirs(t *testing.T) {
 	if n := e.count(t, `SELECT count(*) FROM contact c JOIN contact_channel_identity i ON i.contact_id = c.id
 		WHERE i.provider = 'personal_channels' AND i.channel_user_id LIKE 'whatsapp/8500/%' AND c.owner_id = $1`, e.Rep1); n != 1 {
 		t.Fatalf("contacts owned by the member for that chat = %d, want 1", n)
+	}
+}
+
+func TestAReplyThatCannotGoToTheMembersChatAppIsRefusedWithItsReason(t *testing.T) {
+	e := setupPersonalChannels(t)
+	landed := e.push(t, whatsapp("wamid.refuse", "8501"))
+	activity := ids.From[ids.ActivityKind](*landed[0].ActivityID)
+	sender := personalchannelwire.ReplySender{DB: compose.InstallationDB(e.Pool), Member: e.Rep1}
+	identity := "whatsapp/8501/" + e.connection(t).String()
+	reply := func(recipient string, files ...connector.OutboundFile) error {
+		_, err := sender.SendMessage(e.Admin(), connector.Auth{}, connector.ChannelMessage{
+			ActivityID: activity, Body: "Yes", IdempotencyKey: "refuse-" + recipient,
+			Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: recipient}, Files: files,
+		})
+		return err
+	}
+	if err := reply(identity, connector.OutboundFile{}); !errors.Is(err, connector.ErrFilesNotCarried) {
+		t.Fatalf("a reply with a file = %v, want ErrFilesNotCarried", err)
+	}
+	if err := reply("8501"); !errors.Is(err, comms.ErrCannotSend) {
+		t.Fatalf("a recipient naming no chat app = %v, want ErrCannotSend", err)
+	}
+	if _, err := sender.SendMessage(e.Admin(), connector.Auth{}, connector.ChannelMessage{
+		ActivityID: ids.From[ids.ActivityKind](ids.NewV7()), Body: "Yes", IdempotencyKey: "refuse-nothread",
+		Recipient: connector.ChannelIdentity{Provider: personalchannels.Provider, ChannelUserID: identity},
+	}); err == nil {
+		t.Fatal("a reply to an activity that exists nowhere was queued")
+	}
+	if _, err := e.store.SetEnabled(e.As(e.Rep1, nil, channelRepPerms), false); err != nil {
+		t.Fatal(err)
+	}
+	if err := reply(identity); !errors.Is(err, connector.ErrRecipientUnreachable) {
+		t.Fatalf("a reply while the member's chats are off = %v, want ErrRecipientUnreachable", err)
+	}
+	if on, err := personalchannelwire.SendCapable(context.Background(), compose.InstallationDB(e.Pool), e.Rep1); err != nil || on {
+		t.Fatalf("send capable while off = %v, %v; want false", on, err)
 	}
 }

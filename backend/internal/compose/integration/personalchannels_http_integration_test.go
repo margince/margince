@@ -151,3 +151,74 @@ func TestAChatClientsFileLandsAndTheMemberCanReplyOnTheChat(t *testing.T) {
 		t.Fatalf("pulling while off → %d %q, want 409 naming the switch and nothing else", status, refused.Detail)
 	}
 }
+
+// What a client does wrong is answered, not swallowed: each refusal names the
+// request's fault, and one bad message never fails the batch around it.
+func TestAChatClientIsToldWhatItAskedWrong(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blobstore.NewMemory()))
+	e.BootstrapWorkspace(t)
+	bridge := apptest.PassportBearer(t, e, "Chat Bridge", "personal_channels")
+	headers := map[string]string{"Authorization": bridge["Authorization"], "Idempotency-Key": "refusals-1"}
+	push := func(msgs ...map[string]any) int {
+		return e.Call(t, "POST", "/v1/personal-channels/chats", map[string]any{"messages": msgs}, headers, nil)
+	}
+	message := map[string]any{
+		"message_id": "wamid.off", "network": "whatsapp", "body": "hi",
+		"from": map[string]any{"account": "84900000001", "name": "An"}, "to": map[string]any{"account": "me"},
+	}
+
+	if status := push(message); status != http.StatusConflict {
+		t.Fatalf("pushing while the connection is off → %d, want 409", status)
+	}
+	form, contentType := apptest.MultipartDocument(t, "a.pdf", "application/pdf", []byte("%PDF-1.4\n%%EOF\n"))
+	if status, _ := apptest.PostUpload(t, e, "/v1/personal-channels/uploads", bridge, form, contentType); status != http.StatusConflict {
+		t.Fatalf("staging a file while off → %d, want 409", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/personal-channels/connection", map[string]any{"enabled": "yes"}, nil, nil); status < 400 {
+		t.Fatalf("a connection switch that is no boolean → %d, want a refusal", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/personal-channels/connection", map[string]any{"enabled": true}, nil, nil); status != http.StatusOK {
+		t.Fatalf("turning on → %d", status)
+	}
+
+	for _, max := range []int{0, 51} {
+		if status := e.Call(t, "POST", "/v1/personal-channels/replies/pull", map[string]any{"max": max}, bridge, nil); status < 400 {
+			t.Fatalf("pulling %d replies → %d, want a refusal", max, status)
+		}
+	}
+	for _, outcome := range []string{"lost", ""} {
+		ack := map[string]any{"acks": []map[string]any{{"delivery_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccff", "outcome": outcome}}}
+		if status := e.Call(t, "POST", "/v1/personal-channels/replies/ack", ack, bridge, nil); status < 400 {
+			t.Fatalf("acking with the outcome %q → %d, want a refusal", outcome, status)
+		}
+	}
+	var acked struct {
+		Results []struct {
+			Result string `json:"result"`
+		} `json:"results"`
+	}
+	unknown := map[string]any{"acks": []map[string]any{{"delivery_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccff", "outcome": "sent"}}}
+	if status := e.Call(t, "POST", "/v1/personal-channels/replies/ack", unknown, bridge, &acked); status != http.StatusOK ||
+		len(acked.Results) != 1 || acked.Results[0].Result != "unknown_delivery" {
+		t.Fatalf("acking a delivery that is not the member's → %d %+v, want unknown_delivery", status, acked)
+	}
+
+	var batch struct {
+		Results []struct {
+			Status string `json:"status"`
+		} `json:"results"`
+	}
+	bad := map[string]any{"message_id": "wamid.bad", "network": "whatsapp", "body": "hi",
+		"from": map[string]any{"account": "has:colon"}, "to": map[string]any{"account": "me"}}
+	twice := map[string]any{"message_id": "wamid.twice", "network": "whatsapp", "body": "hi",
+		"from": map[string]any{"account": "84900000002"}, "to": map[string]any{"account": "me"},
+		"files": []map[string]any{{"upload_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccff"}, {"upload_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccff"}}}
+	missing := map[string]any{"message_id": "wamid.missing", "network": "whatsapp", "body": "hi",
+		"from": map[string]any{"account": "84900000003"}, "to": map[string]any{"account": "me"},
+		"files": []map[string]any{{"upload_id": "01a1e7c4-128b-7c75-aac7-1c8828b9ccf0"}}}
+	if status := e.Call(t, "POST", "/v1/personal-channels/chats", map[string]any{"messages": []map[string]any{bad, twice, missing, message}}, headers, &batch); status != http.StatusOK ||
+		len(batch.Results) != 4 || batch.Results[0].Status != "refused" || batch.Results[1].Status != "refused" ||
+		batch.Results[2].Status != "refused" || batch.Results[3].Status != "landed" {
+		t.Fatalf("a batch with three bad messages → %d %+v, want three refused and the good one landed", status, batch)
+	}
+}
