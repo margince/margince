@@ -199,7 +199,7 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 // ListCompanies answers one page of accounts under the caller's row scope,
 // filtered by the dials the contract declares and ordered by the shared sort.
 func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crmcontracts.Company, storekit.Page, error) {
-	return listPage(ctx, s, in.Sort, in.Limit, companyListSpec(in))
+	return listPage(s.withRollupAsOf(ctx), s, in.Sort, in.Limit, companyListSpec(in))
 }
 
 // ListCompaniesTx is ListCompanies inside a caller-opened transaction. Same
@@ -209,7 +209,7 @@ func (s *Store) ListCompaniesTx(ctx context.Context, tx pgx.Tx, in ListCompanies
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	recs, page, err := listPageTx(ctx, tx, in.Sort, storekit.ClampLimit(in.Limit), active.cols, companyListSpec(in))
+	recs, page, err := listPageTx(s.withRollupAsOf(ctx), tx, in.Sort, storekit.ClampLimit(in.Limit), active.cols, companyListSpec(in))
 	if recs == nil {
 		recs = []crmcontracts.Company{}
 	}
@@ -282,7 +282,7 @@ func companyListSpec(in ListCompaniesInput) listPageSpec[crmcontracts.Company] {
 			if err := stampCompanyCapabilities(ctx, tx, companies); err != nil {
 				return err
 			}
-			return attachCompanyCounts(ctx, tx, companies, rollupAsOf())
+			return attachCompanyCounts(ctx, tx, companies, rollupAsOf(ctx))
 		},
 		cursorKey: func(last crmcontracts.Company) (time.Time, ids.UUID) {
 			return last.CreatedAt, ids.UUID(last.Id)

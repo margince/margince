@@ -15,22 +15,36 @@ package contacts
 // unreproducibly is the worst kind, because the product's own defence against
 // the report is indistinguishable from the bug.
 //
-// So the date is bound by the caller, from ONE clock. A package var rather than
-// a field, matching leadSLAClock beside it: both are read by free functions on
-// a transaction rather than by methods, and threading a clock through them would
-// change every signature to say what one line says here.
+// So the date is bound by the caller, from ONE clock: the store's. Each company
+// read samples it once and pins the day on its context, because the sort
+// expression that reads it is a free function with no store in hand.
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
-// rollupClock is the clock the as-of date comes from. Overridden in tests, and
-// nowhere else — a second production writer would be the second clock again.
-var rollupClock = time.Now
+type rollupAsOfKey struct{}
 
-// rollupAsOf is the date the conversion is asked for.
+// withRollupAsOf pins the day this store's clock reads now for everything
+// built from ctx, so the count, the total and the sort agree on one FX day.
+func (s *Store) withRollupAsOf(ctx context.Context) context.Context {
+	return context.WithValue(ctx, rollupAsOfKey{}, rollupDay(s.clock()))
+}
+
+// rollupAsOf is the pinned day, or today for a caller that pinned none.
+func rollupAsOf(ctx context.Context) time.Time {
+	if pinned, ok := ctx.Value(rollupAsOfKey{}).(time.Time); ok {
+		return pinned
+	}
+	return rollupDay(time.Now())
+}
+
+// rollupDay is the date the conversion is asked for at instant now.
 //
 // UTC, deliberately. The rate table is keyed by date and the alternative is the
 // server's local zone, which would make the same installation convert
 // differently depending on where its process happens to run.
-func rollupAsOf() time.Time {
-	return rollupClock().UTC().Truncate(24 * time.Hour)
+func rollupDay(now time.Time) time.Time {
+	return now.UTC().Truncate(24 * time.Hour)
 }

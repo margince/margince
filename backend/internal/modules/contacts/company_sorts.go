@@ -57,7 +57,7 @@ func orderByContactCount(ctx context.Context, arg func(any) int) (string, error)
 //
 // Held by: TestEveryOpenDealCountComesFromTheRollup (backend/internal/modules/contacts/opendealcount_test.go)
 //
-// The as-of date is rollupAsOf(), which the page's own count already uses and
+// The as-of date is rollupAsOf(ctx), which the page's own count already uses and
 // which truncates to the day: the sort and the figure beside it cannot land on
 // two different instants.
 //
@@ -70,7 +70,7 @@ func orderByOpenDealCount(ctx context.Context, arg func(any) int) (string, error
 	return storekit.SQLf(
 		`(SELECT pipeline_sort.open_deal_count
 		    FROM company_open_pipeline_rollup($%d) pipeline_sort
-		   WHERE pipeline_sort.company_id = company.id)`, arg(rollupAsOf())), nil
+		   WHERE pipeline_sort.company_id = company.id)`, arg(rollupAsOf(ctx))), nil
 }
 
 // withheldSortValue is what a column this caller may not see orders by: NULL,

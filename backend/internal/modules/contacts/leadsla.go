@@ -25,13 +25,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// leadSLAClock is the clock the derived SLA fields are read against. A
-// package variable rather than a Store field because the scanner that
-// derives them has no store in hand; tests pin it.
-var leadSLAClock = time.Now
-
-// slaNowKey carries the instant one list read judges SLA state and the age of
-// qualification evidence against.
+// slaNowKey carries the instant SLA state, response stamps and the age of
+// qualification evidence are judged against. It rides the context because the
+// scanners and SQL builders that read it have no store in hand.
 type slaNowKey struct{}
 
 // withPinnedSLANow fixes the SLA instant for everything built from ctx, so the
@@ -46,7 +42,7 @@ func slaNow(ctx context.Context) time.Time {
 	if pinned, ok := ctx.Value(slaNowKey{}).(time.Time); ok {
 		return pinned
 	}
-	return leadSLAClock().UTC()
+	return time.Now().UTC()
 }
 
 // leadSLAFields derives the wire's sla_deadline_at and sla_state from the
@@ -65,7 +61,7 @@ func leadSLAFields(policy leadSLAPolicy, routedAt *time.Time, createdAt time.Tim
 	if firstResponseAt != nil {
 		return &deadline, nil
 	}
-	now := leadSLAClock().UTC()
+	now := policy.asOf
 	state := crmcontracts.LeadSlaStateLeadSlaStateWithinTarget
 	switch {
 	case now.After(deadline):
@@ -101,7 +97,7 @@ func leadTakesFirstResponseSQL(alias, at string) string {
 // and the row must agree about which leads are overdue.
 //
 // The instant is the application clock, bound as a parameter, never the
-// database's now(): the row's sla_state is derived against leadSLAClock, and
+// database's now(): the row's sla_state is derived against slaNow, and
 // a filter reading a different clock — the container's, seconds adrift, or
 // the other side of a boundary crossed mid-request — would return an at_risk
 // row whose own payload says breached.

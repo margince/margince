@@ -258,7 +258,7 @@ func acceptablePartnerLead(ctx context.Context, tx pgx.Tx, current crmcontracts.
 // row and lead.updated.
 func stampPartnerAcceptance(ctx context.Context, tx pgx.Tx, lock storekit.RowLock, current crmcontracts.Lead, by string) error {
 	p := storekit.NewPatch()
-	now := leadSLAClock().UTC()
+	now := slaNow(ctx)
 	p.Set("partner_accepted_at", current.PartnerAcceptedAt, now)
 	p.Set("partner_accepted_by", current.PartnerAcceptedBy, by)
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {

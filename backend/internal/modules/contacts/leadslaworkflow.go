@@ -66,7 +66,7 @@ func (w leadFirstResponse) Apply(ctx context.Context, ev workflow.Event, eff wor
 	for _, t := range touches {
 		// A day touch dated today is not yet an answer. The SLA scan stamps it
 		// once its date ends (stampDayAnswers).
-		if !isFirstResponseActivity(t) || t.respondedAt.After(leadSLAClock()) {
+		if !isFirstResponseActivity(t) || t.respondedAt.After(slaNow(ctx)) {
 			continue
 		}
 		set, err := w.store.RecordLeadFirstResponse(ctx, t.lead, t.respondedAt)

@@ -41,7 +41,7 @@ func stampHumanFirstResponse(ctx context.Context, p *storekit.Patch, current crm
 		return err
 	}
 	if actor.Type == principal.PrincipalHuman {
-		p.Set(firstResponseColumn, nil, firstResponseStamp(leadSLAClock(), current.CreatedAt))
+		p.Set(firstResponseColumn, nil, firstResponseStamp(slaNow(ctx), current.CreatedAt))
 	}
 	return nil
 }
@@ -108,7 +108,7 @@ func startLeadResponseClockTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error
 	if _, err := tx.Exec(ctx,
 		`UPDATE lead SET routed_at = $2, sla_breached_at = NULL, `+arrivalOwnerColumn+` = owner_id
 		  WHERE id = $1 AND routed_at IS NULL AND archived_at IS NULL`,
-		id, leadSLAClock().UTC()); err != nil {
+		id, slaNow(ctx)); err != nil {
 		return fmt.Errorf("contacts: starting the lead response clock: %w", err)
 	}
 	return nil
