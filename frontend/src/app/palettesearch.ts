@@ -24,12 +24,16 @@ import type { Route } from "../lib/router";
 import {
   bestIdentifierMatch,
   groupSearchHits,
+  type SearchHitType,
   searchGroupHeading,
   searchHitDestination,
+  searchHitGroup,
   searchHitHasCard,
+  searchHitType,
 } from "../lib/searchkinds";
 import { useViewerZone } from "../lib/viewerzone";
 import type { Command } from "./palette";
+import { describeHit } from "./palettestanding";
 
 type SearchResult = components["schemas"]["SearchResult"];
 
@@ -47,6 +51,9 @@ export const SEARCH_PENDING_DELAY_MS = 300;
 // screen; the rest are on the results page, one row away.
 export const PALETTE_PER_TYPE = 3;
 
+// How many hits the palette offers once the reader narrows to one type.
+export const PALETTE_PER_KIND = 8;
+
 // Whether an answer for `asked` still speaks to `typed`: one extends the other,
 // as typing on or backspacing does, rather than the box having changed subject.
 // Case-blind, as the search itself is.
@@ -63,6 +70,9 @@ function sameSubject(asked: string, typed: string): boolean {
 // when the truth was that nobody had asked it.
 type SearchArm = Readonly<{
   commands: Command[];
+  // How many hits of each type the answer carries; a floor where it held more.
+  counts: Partial<Record<SearchHitType, number>>;
+  floors: Partial<Record<SearchHitType, boolean>>;
   pending: boolean;
   failed: boolean;
   // What to tell the reader when it failed: the server's advice for a search
@@ -76,7 +86,10 @@ type SearchArm = Readonly<{
 // GROUPED, a few of each kind: relevance does not compare across kinds, and a
 // short list ranked across them was all mail threads for a word that also
 // named a company — the company was found and never shown.
-export function useSearchCommands(query: string): SearchArm {
+export function useSearchCommands(
+  query: string,
+  kind: SearchHitType | null = null,
+): SearchArm {
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
@@ -88,7 +101,7 @@ export function useSearchCommands(query: string): SearchArm {
   // Hits are records the reader's row scope narrows.
   const readerScope = useHealthScope();
   const result = useQuery({
-    queryKey: ["palette-search", settled, readerScope ?? ""],
+    queryKey: ["palette-search", settled, kind ?? "", readerScope ?? ""],
     enabled: enabled && readerScope !== undefined,
     // The last answer stands while the next is asked: an empty list between
     // two answers reads as "no matches" for a word that has some.
@@ -101,8 +114,9 @@ export function useSearchCommands(query: string): SearchArm {
         params: {
           query: {
             q: settled,
-            per_type: PALETTE_PER_TYPE,
+            per_type: kind ? PALETTE_PER_KIND : PALETTE_PER_TYPE,
             with_employees: true,
+            ...(kind ? { types: [kind] } : {}),
           },
         },
       });
@@ -124,7 +138,12 @@ export function useSearchCommands(query: string): SearchArm {
       }
       // Paired with the words it answered: a kept-over answer is routed by
       // its own query, not by the one still being asked.
-      return { q: settled, hits: data.data };
+      return {
+        q: settled,
+        kind,
+        hits: data.data,
+        more: data.types_with_more ?? [],
+      };
     },
   });
   // The second line says which one of a kind this is; the group heading
@@ -143,13 +162,17 @@ export function useSearchCommands(query: string): SearchArm {
     }
     return hit.snippet ?? undefined;
   };
+  const now = new Date();
   // Every hit with somewhere to go, asked of the one place that knows where
   // each kind lives. An activity goes to the results screen with it open in
   // its panel, the one page that already owns both drawers.
-  // Kept-over hits and failures go once the words change subject: `settled`
+  // Kept-over hits and failures go once the words or the type change: `settled`
   // lags a burst, and another word's answer under the box misleads.
   const answer =
-    enabled && result.data && sameSubject(result.data.q, typed)
+    enabled &&
+    result.data &&
+    result.data.kind === kind &&
+    sameSubject(result.data.q, typed)
       ? result.data
       : undefined;
   const failed = enabled && result.isError && sameSubject(settled, typed);
@@ -164,7 +187,8 @@ export function useSearchCommands(query: string): SearchArm {
           {
             id: `record:${hit.type}:${hit.id}`,
             label: hit.title ?? hit.id,
-            subtitle: secondLine(hit),
+            ...describeHit(hit, secondLine(hit), { t, locale, zone, now }),
+            kind: searchHitGroup(hit),
             // A message is cited the way every surface cites one; this file
             // carries the subject and the date and draws neither.
             cite: hit.email_summary
@@ -209,6 +233,7 @@ export function useSearchCommands(query: string): SearchArm {
 
   return {
     commands,
+    ...hitCounts(answer?.hits ?? [], answer?.more ?? []),
     // `isFetching` rather than `isPending`: a disabled query reports pending
     // forever, and the palette opens with an empty box every time.
     // Not gated by subject: the wait is real, and an empty list beside no bar
@@ -217,6 +242,21 @@ export function useSearchCommands(query: string): SearchArm {
     failed,
     failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
   };
+}
+
+function hitCounts(
+  hits: readonly SearchResult[],
+  more: readonly string[],
+): Pick<SearchArm, "counts" | "floors"> {
+  const counts: Partial<Record<SearchHitType, number>> = {};
+  const floors: Partial<Record<SearchHitType, boolean>> = {};
+  for (const hit of hits) {
+    const type = searchHitType(hit.type);
+    if (!type) continue;
+    counts[type] = (counts[type] ?? 0) + 1;
+    floors[type] = more.includes(type);
+  }
+  return { counts, floors };
 }
 
 function recentRecord(

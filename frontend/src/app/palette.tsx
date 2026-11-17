@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   type ComponentProps,
   useEffect,
@@ -7,7 +7,6 @@ import {
   useState,
 } from "react";
 import {
-  Badge,
   Button,
   EmptyState,
   Kbd,
@@ -19,18 +18,23 @@ import { Callout } from "../design-system/callout";
 import { useDialogFocus } from "../design-system/dialogfocus";
 import { Eyebrow } from "../design-system/eyebrow";
 import { usePresence } from "../design-system/presence";
+import type { StatusKind } from "../design-system/statusbadge";
 import { holdsEveryWord, searchWords } from "../format/collate";
-import { useT } from "../i18n";
-import { ENTITY } from "../lib/entity";
+import { type Translator, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
-import { SEARCH_HIT_KIND_KEY, searchHitHasCard } from "../lib/searchkinds";
+import type { CoreSearchHitType, SearchHitGroup } from "../lib/searchkinds";
 import { openAsk, type UrlParams } from "../lib/urlstate";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
+import {
+  PaletteAskDocuments,
+  PaletteFilter,
+  PaletteKeys,
+} from "./palettechrome";
 import { useBuiltinCommands } from "./palettecommands";
 import { useConfigurationCommand } from "./paletteconfiguration";
 import type { PaletteMode } from "./palettehotkey";
-import { usePaletteRecents } from "./paletterecents";
+import { recentCommand, usePaletteRecents } from "./paletterecents";
 import { type RecentEntry, recentIdentity } from "./paletterecents.storage";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
@@ -72,6 +76,13 @@ export type Command = {
   searchedRecord?: Extract<RecentEntry, { kind: "record" }>;
   recent?: RecentEntry;
   pending?: boolean;
+  // The row's glyph where it has no mark: a screen's own nav icon.
+  icon?: LucideIcon;
+  // The kind of record a hit is, which picks its glyph.
+  kind?: SearchHitGroup;
+  // Where the record stands, drawn on the right: a status, or a quiet fact.
+  status?: Readonly<{ kind: StatusKind; label: string }>;
+  aside?: string;
 };
 
 /** The commands whose label, subtitle and keywords hold every query word. */
@@ -101,6 +112,32 @@ export function isCreateCommand(command: Command): boolean {
   return command.id.startsWith(CREATE_COMMAND_PREFIX);
 }
 
+// The row that lands on the full results screen for the typed words.
+function seeAllCommand(searched: string, t: Translator): Command | null {
+  const words = searched.trim();
+  if (!words) return null;
+  return {
+    id: "search:all",
+    executedQuery: words,
+    label: t("palette.seeAll", { query: words }),
+    type: "action",
+    route: { screen: "search", id: encodeURIComponent(words) },
+  };
+}
+
+function builtinRows(
+  kind: CoreSearchHitType | null,
+  matched: Command[],
+  setting: Command | null,
+): Command[] {
+  if (kind) return [];
+  return setting ? [...matched, setting] : matched;
+}
+
+function present<T>(row: T | null | undefined): T[] {
+  return row ? [row] : [];
+}
+
 export function CommandPalette({
   open,
   onClose,
@@ -117,6 +154,8 @@ export function CommandPalette({
   // The row the reader moved to with the arrows; null until they do, which
   // leaves Enter to defaultSelection.
   const [picked, setPicked] = useState<string | null>(null);
+  // The one type of record the list is narrowed to; null lists every type.
+  const [kind, setKind] = useState<CoreSearchHitType | null>(null);
   const panel = useRef<HTMLDivElement>(null);
   const overlay = useRef<HTMLDivElement>(null);
 
@@ -142,6 +181,7 @@ export function CommandPalette({
     if (open) {
       setQuery("");
       setPicked(null);
+      setKind(null);
     }
   }, [open]);
 
@@ -157,52 +197,32 @@ export function CommandPalette({
     [commands, query],
   );
   const setting = useConfigurationCommand(searched, commands, matched);
-  const filtered = setting ? [...matched, setting] : matched;
+  // Narrowed to one type, the list holds only records of it.
+  const filtered = builtinRows(kind, matched, setting);
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,
   // then records, so the row Enter takes on a half-typed name is one arrow
   // above the hits it summarises.
-  const search = useSearchCommands(searched);
+  // The unnarrowed answer counts every type; a narrowed one fills the list.
+  const every = useSearchCommands(searched);
+  const narrowed = useSearchCommands(kind ? searched : "", kind);
+  const search = kind ? narrowed : every;
   const listsRecents = !creates && !query.trim();
   const recents = usePaletteRecents(open, listsRecents);
-  const recentCommands: Command[] = recents.entries.map((entry) => ({
-    id: `recent:${recentIdentity(entry)}`,
-    label: entry.kind === "query" ? entry.text : entry.label,
-    subtitle:
-      entry.kind === "record"
-        ? t(SEARCH_HIT_KIND_KEY[entry.entity_type])
-        : undefined,
-    type: entry.kind === "query" ? "action" : "record",
-    group: t("palette.recent"),
-    recent: entry,
-    pending: recents.activating === recentIdentity(entry),
-    route:
-      entry.kind === "record"
-        ? ENTITY[entry.entity_type].route(entry.id)
-        : undefined,
-    mark:
-      entry.kind === "record" && searchHitHasCard(entry.entity_type)
-        ? { identity: entry.id, name: entry.label, logo: entry.logo }
-        : undefined,
-  }));
-  const seeAll: Command | null = searched.trim()
-    ? {
-        id: "search:all",
-        executedQuery: searched.trim(),
-        label: t("palette.seeAll", { query: searched.trim() }),
-        type: "action",
-        route: { screen: "search", id: encodeURIComponent(searched.trim()) },
-      }
-    : null;
+  const recentCommands = recents.entries.map((entry) =>
+    recentCommand(entry, t, recents.activating === recentIdentity(entry)),
+  );
+  const seeAll = seeAllCommand(searched, t);
 
   const handbook = usePaletteAsk(searched, open, filtered.length);
+  const askGroup = t("palette.askGroup");
   const rows = [
     ...recentCommands,
-    ...(handbook.row ? [handbook.row] : []),
     ...filtered,
-    ...(seeAll ? [seeAll] : []),
+    ...present(seeAll),
     ...search.commands,
+    ...present(handbook.row).map((row) => ({ ...row, group: askGroup })),
   ];
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
@@ -315,6 +335,17 @@ export function CommandPalette({
               beside the search box are. */}
           <Kbd>{"esc"}</Kbd>
         </div>
+        {!creates && Object.keys(every.counts).length > 0 && (
+          <PaletteFilter
+            value={kind}
+            counts={every.counts}
+            floors={every.floors}
+            onChange={(next) => {
+              setKind(next);
+              setPicked(null);
+            }}
+          />
+        )}
         {handbook.shown ? (
           <PaletteAnswer
             pending={handbook.mutation.isPending}
@@ -342,24 +373,6 @@ export function CommandPalette({
               when one query replaces another under it — a reader typing through
               a slow search should see one steady bar, not one that blinks out
               and returns per letter. */}
-          {/* The drawer that asks one set of the reader's choosing, outside the
-              rows so Enter on a screen name never opens it. It carries what is
-              typed into the box rather than asking it. A question the box can
-              read as one gets its own "Ask Margince" row below instead. */}
-          {!creates && (
-            <button
-              type="button"
-              className="palette-ask t-body"
-              onClick={() => {
-                onClose();
-                openAsk(query.trim());
-              }}
-            >
-              <Sparkles aria-hidden />
-              <span className="label">{t("corpusAsk.title")}</span>
-              <Badge tone="ai">{t("palette.typeAction")}</Badge>
-            </button>
-          )}
           {search.pending && (
             <PendingBody
               label={t("palette.searching")}
@@ -377,7 +390,7 @@ export function CommandPalette({
               className="palette-group"
               action={
                 <Button
-                  variant="ghost"
+                  variant="link"
                   onClick={() => {
                     recents.clear();
                     focusSearch();
@@ -402,7 +415,17 @@ export function CommandPalette({
               onRun={run}
             />
           ))}
+          {!creates && (
+            <PaletteAskDocuments
+              heading={rows.at(-1)?.group === askGroup ? null : askGroup}
+              onAsk={() => {
+                onClose();
+                openAsk(query.trim());
+              }}
+            />
+          )}
         </div>
+        <PaletteKeys />
       </div>
     </div>
   );
@@ -426,8 +449,18 @@ function paletteSelection(
   const named = rows.findIndex(
     (row) => row.type === "record" && row.label.toLowerCase() === needle,
   );
-  return Math.max(named, 0);
+  if (named >= 0) return named;
+  // Then a question to ask, else the first row.
+  for (const preferred of DEFAULT_ROWS) {
+    const index = rows.findIndex(preferred);
+    if (index >= 0) return index;
+  }
+  return 0;
 }
+
+const DEFAULT_ROWS: readonly ((row: Command) => boolean)[] = [
+  (row) => row.id === "ask-ai",
+];
 
 export function BuiltinCommandPalette(
   props: Omit<ComponentProps<typeof CommandPalette>, "commands">,

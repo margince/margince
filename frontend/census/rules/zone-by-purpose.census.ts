@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "app/palettestanding.test.ts",
+    why: "Pins the reader's zone so a hit's close and due dates read the same on every runner: the lines under test print a day.",
+  },
+  {
     file: "features/companies/evidencesource.test.ts",
     why: "Pins the record zone so the meeting's date reads the same on every runner: the line under test prints a day, and the runner's own zone could move it.",
   },

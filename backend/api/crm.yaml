@@ -71230,11 +71230,10 @@ components:
         standing:
           allOf: [{ $ref: '#/components/schemas/SearchHitStanding' }]
           readOnly: true
-          nullable: true
           description: >-
             Where a contact, company, deal, lead or project hit stands, read with the page
             under THIS caller's grants and field masks, so a result list can say it without
-            opening each record. Null on every other hit type.
+            opening each record. Absent on every other hit type.
         is_partner:
           type: [boolean, 'null']
           description: >

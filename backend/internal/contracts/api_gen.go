@@ -65012,7 +65012,7 @@ type SearchResult struct {
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
 
-	// Standing Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Null on every other hit type.
+	// Standing Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
 	Standing *SearchHitStanding `json:"standing,omitempty"`
 
 	// Title Display label (name/subject).
