@@ -184,7 +184,10 @@ export function PrivacyNotice({
       </Card>
 
       <HeldCard card={card} />
-      <RetentionCard retention={card.retention} />
+      <RetentionCard
+        retention={card.retention}
+        archivePurpose={card.controller?.archive_purpose}
+      />
 
       <Card>
         <Heading size="large" className="t-h3">

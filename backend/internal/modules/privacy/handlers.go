@@ -89,6 +89,13 @@ func (h Handlers) WithExtensions(r extprivacy.Registry) Handlers {
 	return h
 }
 
+// WithEdgeInvalidator corrects the relationship graph in the transaction that
+// erases an activity, as the nightly retention does.
+func (h Handlers) WithEdgeInvalidator(fn EdgeInvalidator) Handlers {
+	h.eraser = h.eraser.WithEdgeInvalidator(fn)
+	return h
+}
+
 // WithCountry gives the controller's pin the selected jurisdiction, so it pins
 // to the floor that jurisdiction puts in force.
 func (h Handlers) WithCountry(country CountryReader) Handlers {

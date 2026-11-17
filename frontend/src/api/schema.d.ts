@@ -18470,6 +18470,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/retention/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List archived activity, oldest first, for the controller to review against the archive's purpose. */
+        get: operations["listArchivedActivities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/retention/archive/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept. */
+        post: operations["deleteArchivedActivities"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/retention/legal-holds": {
         parameters: {
             query?: never;
@@ -53977,6 +54011,55 @@ export interface components {
             /** @description The record's own name, so a controller can recognise it without a second read. */
             label: string;
         };
+        /**
+         * @description One archived activity, as the controller reviews it. `kept` says why a deletion would keep
+         *     it; absent means a deletion would erase it.
+         */
+        ArchivedActivity: {
+            /** Format: uuid */
+            activity_id: string;
+            kind: string;
+            /** @description The subject line. Absent when the activity has none, or when the reader may not read its content. */
+            subject?: string;
+            /** Format: date-time */
+            occurred_at: string;
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+            /** Format: date-time */
+            archived_at: string;
+            contacts: components["schemas"]["ArchivedActivityParty"][];
+            companies: components["schemas"]["ArchivedActivityParty"][];
+            kept?: components["schemas"]["ArchiveKeptReason"];
+        };
+        ArchivedActivityParty: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /**
+         * @description Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+         *     `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+         *     `kept_by_law`: business correspondence inside its statutory retention period.
+         *     `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+         * @enum {string}
+         */
+        ArchiveKeptReason: "legal_hold" | "opt_out_record" | "kept_by_law" | "not_archived" | "not_found";
+        ArchiveDeletionRequest: {
+            /** @description The archived activity to delete, at most 100 per request. */
+            activity_ids: string[];
+        };
+        ArchiveDeletionResult: {
+            /** @description The activity whose content was erased. */
+            deleted: string[];
+            /** @description The activity left as it was, each with the reason. */
+            kept: components["schemas"]["ArchiveKeptActivity"][];
+            /** @description The activity whose deletion failed and is left as it was. The other records in the request still ran, so a retry names only these. */
+            failed: string[];
+        };
+        ArchiveKeptActivity: {
+            /** Format: uuid */
+            activity_id: string;
+            reason: components["schemas"]["ArchiveKeptReason"];
+        };
         RestrictedRecord: {
             /** Format: uuid */
             activity_id: string;
@@ -54674,6 +54757,12 @@ export interface components {
             /** @description Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty. */
             privacy_page?: string;
             /**
+             * @description Why captured correspondence is kept in the archive after its retention window, as the
+             *     words that finish the privacy page's sentence about the archive. Empty prints the page's
+             *     default purpose in the reader's language.
+             */
+            archive_purpose?: string;
+            /**
              * @description How to say stop, free and without a barrier. §7(3) UWG requires it on every advertising
              *     message rather than only the first. The one-click unsubscribe this product mints is
              *     usually the honest answer; an installation whose recipients answer by phone says so here.
@@ -54715,6 +54804,7 @@ export interface components {
             privacy_contact?: string;
             objection_route?: string;
             advertiser_contact?: string;
+            archive_purpose?: string;
         };
         /**
          * @description A way of reaching someone that a stated particular must name.
@@ -55413,6 +55503,8 @@ export interface components {
             objection_route?: string;
             /** @description Where the installation publishes its own privacy information. Absent when not stated. */
             privacy_page?: string;
+            /** @description Why archived correspondence is kept, in the language of the link. Absent when not stated, and the page then prints its default purpose. */
+            archive_purpose?: string;
         };
         /** @description One retention rule that acts on the reader's data. */
         PrivacyInformationRetention: {
@@ -90958,6 +91050,102 @@ export interface operations {
                 };
                 content?: never;
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listArchivedActivities: {
+        parameters: {
+            query?: {
+                /** @description Only activity that occurred before this instant. */
+                before?: string;
+                /** @description Only activity linked to this contact. */
+                contact_id?: string;
+                /** @description Only activity linked to this company. */
+                company_id?: string;
+                /**
+                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
+                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
+                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
+                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     together with a `sort` that differs from the one the cursor was minted under returns
+                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
+                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
+                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
+                 */
+                cursor?: components["parameters"]["Cursor"];
+                /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description A page of archived activity, oldest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        data: components["schemas"]["ArchivedActivity"][];
+                        page: components["schemas"]["PageInfo"];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    deleteArchivedActivities: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ArchiveDeletionRequest"];
+            };
+        };
+        responses: {
+            /** @description What was deleted, what was kept and why, and what failed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ArchiveDeletionResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

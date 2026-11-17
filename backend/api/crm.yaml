@@ -27386,6 +27386,73 @@ paths:
         '409':
           description: The record is already restricted. Pinning is not a way to extend a window already running.
         '422': { $ref: '#/components/responses/ValidationError' }
+  /retention/archive:
+    get:
+      tags: [Compliance]
+      operationId: listArchivedActivities
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      # The archive is the restricted-access phase of captured correspondence.
+      # Its review is the controller's: an agent reading it would widen the
+      # access the archive restricts. Requires the retention-policy authority
+      # (read).
+      summary: List archived activity, oldest first, for the controller to review against the archive's purpose.
+      parameters:
+        - name: before
+          in: query
+          required: false
+          description: Only activity that occurred before this instant.
+          schema: { type: string, format: date-time }
+        - { name: contact_id, in: query, required: false, schema: { type: string, format: uuid }, description: Only activity linked to this contact. }
+        - { name: company_id, in: query, required: false, schema: { type: string, format: uuid }, description: Only activity linked to this company. }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of archived activity, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ArchivedActivity' }
+                  page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /retention/archive/delete:
+    post:
+      tags: [Compliance]
+      operationId: deleteArchivedActivities
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      # Deleting erases the content of each archived record, as the retention
+      # erase action does, and records the controller's decision. A legal hold,
+      # an opt-out receipt inside its floor and the statutory floor each keep a
+      # record; the answer names each one kept and why. Requires the
+      # retention-policy authority (delete).
+      summary: Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArchiveDeletionRequest' }
+      responses:
+        '200':
+          description: What was deleted, what was kept and why, and what failed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArchiveDeletionResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /retention/legal-holds:
     get:
       tags: [Compliance]
@@ -74100,6 +74167,82 @@ components:
         label:
           type: string
           description: The record's own name, so a controller can recognise it without a second read.
+    ArchivedActivity:
+      type: object
+      description: |
+        One archived activity, as the controller reviews it. `kept` says why a deletion would keep
+        it; absent means a deletion would erase it.
+      required: [activity_id, kind, occurred_at, occurred_precision, archived_at, contacts, companies]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string }
+        subject: { type: string, description: 'The subject line. Absent when the activity has none, or when the reader may not read its content.' }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+        archived_at: { type: string, format: date-time }
+        contacts:
+          type: array
+          items: { $ref: '#/components/schemas/ArchivedActivityParty' }
+        companies:
+          type: array
+          items: { $ref: '#/components/schemas/ArchivedActivityParty' }
+        kept: { $ref: '#/components/schemas/ArchiveKeptReason' }
+
+    ArchivedActivityParty:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    ArchiveKeptReason:
+      type: string
+      description: |
+        Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+        `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+        `kept_by_law`: business correspondence inside its statutory retention period.
+        `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+      enum: [legal_hold, opt_out_record, kept_by_law, not_archived, not_found]
+      x-extensible-enum: true
+
+    ArchiveDeletionRequest:
+      type: object
+      required: [activity_ids]
+      properties:
+        activity_ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          description: The archived activity to delete, at most 100 per request.
+          items: { type: string, format: uuid }
+
+    ArchiveDeletionResult:
+      type: object
+      required: [deleted, kept, failed]
+      properties:
+        deleted:
+          type: array
+          description: The activity whose content was erased.
+          items: { type: string, format: uuid }
+        kept:
+          type: array
+          description: The activity left as it was, each with the reason.
+          items: { $ref: '#/components/schemas/ArchiveKeptActivity' }
+        failed:
+          type: array
+          description: >-
+            The activity whose deletion failed and is left as it was. The other
+            records in the request still ran, so a retry names only these.
+          items: { type: string, format: uuid }
+
+    ArchiveKeptActivity:
+      type: object
+      required: [activity_id, reason]
+      properties:
+        activity_id: { type: string, format: uuid }
+        reason: { $ref: '#/components/schemas/ArchiveKeptReason' }
+
     RestrictedRecord:
       type: object
       # ADR-0114. What a statutory obligation is holding, stated without
@@ -74898,6 +75041,13 @@ components:
           type: string
           maxLength: 500
           description: 'Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.'
+        archive_purpose:
+          type: string
+          maxLength: 500
+          description: |
+            Why captured correspondence is kept in the archive after its retention window, as the
+            words that finish the privacy page's sentence about the archive. Empty prints the page's
+            default purpose in the reader's language.
         objection_route:
           type: string
           maxLength: 500
@@ -74953,6 +75103,7 @@ components:
         privacy_contact: { type: string, maxLength: 500 }
         objection_route: { type: string, maxLength: 500 }
         advertiser_contact: { type: string, maxLength: 500 }
+        archive_purpose: { type: string, maxLength: 500 }
 
     ContactMeans:
       type: string
@@ -75710,6 +75861,7 @@ components:
         privacy_contact: { type: string, description: 'How to reach whoever answers questions about the data.' }
         objection_route: { type: string, description: 'How to object, where the installation states a way of its own.' }
         privacy_page: { type: string, description: 'Where the installation publishes its own privacy information. Absent when not stated.' }
+        archive_purpose: { type: string, description: 'Why archived correspondence is kept, in the language of the link. Absent when not stated, and the page then prints its default purpose.' }
 
     PrivacyInformationRetention:
       type: object

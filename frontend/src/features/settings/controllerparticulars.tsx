@@ -21,7 +21,7 @@ import { problemFieldSentencesOf, throwProblem } from "../../lib/problem";
 type Particulars = components["schemas"]["ControllerParticulars"];
 type Translation = components["schemas"]["ControllerParticularsTranslation"];
 
-const QUERY_KEY = ["controller-particulars"] as const;
+export const PARTICULARS_QUERY_KEY = ["controller-particulars"] as const;
 
 const FIELDS = [
   "legal_name",
@@ -64,7 +64,7 @@ function textOf(source: Partial<Record<FieldKey, string | null>>): Text {
 
 // The languages the form offers: those a pack in force asks for, then any
 // already stated.
-function languagesOf(particulars: Particulars): string[] {
+export function languagesOf(particulars: Particulars): string[] {
   const stated = (particulars.translations ?? []).map((t) => t.language);
   return [...new Set([...(particulars.disclosure_languages ?? []), ...stated])];
 }
@@ -84,19 +84,52 @@ function draftOf(particulars: Particulars): Draft {
   };
 }
 
-// A translation with nothing in it is not sent, so an empty section saves no
-// row.
-function bodyOf(draft: Draft): Particulars {
-  const translations: Translation[] = Object.entries(draft.translations)
-    .filter(([, text]) => FIELDS.some((key) => text[key].trim() !== ""))
-    .map(([language, text]) => ({ language, ...text }));
-  return { ...draft.text, translations };
+type TranslationPatch = Partial<Omit<Translation, "language">>;
+
+function hasText(translation: Translation): boolean {
+  return Object.entries(translation).some(
+    ([key, value]) =>
+      key !== "language" && typeof value === "string" && value.trim() !== "",
+  );
+}
+
+/** The body of a save: the stored particulars with patch over them. Each
+ * language's translation gets that language's patch. A save replaces the whole
+ * setting. So every field no patch names goes back as it was stored, even one
+ * this screen does not know. A translation with nothing in it is not sent, so
+ * an empty section saves no row. */
+export function particularsBody(
+  stored: Particulars,
+  patch: Partial<Omit<Particulars, "translations">>,
+  translations: Readonly<Record<string, TranslationPatch>>,
+): Particulars {
+  const {
+    locks: _locks,
+    disclosure_languages: _languages,
+    objection_route_means: _means,
+    ...kept
+  } = stored;
+  const byLanguage = new Map(
+    (kept.translations ?? []).map((t) => [t.language, t]),
+  );
+  for (const [language, fields] of Object.entries(translations)) {
+    byLanguage.set(language, {
+      ...byLanguage.get(language),
+      ...fields,
+      language,
+    });
+  }
+  return {
+    ...kept,
+    ...patch,
+    translations: [...byLanguage.values()].filter(hasText),
+  };
 }
 
 export function ControllerParticularsCard() {
   const t = useT();
   const query = useQuery({
-    queryKey: QUERY_KEY,
+    queryKey: PARTICULARS_QUERY_KEY,
     queryFn: async () => {
       const { data, error, response } = await api.GET(
         "/privacy/controller-particulars",
@@ -135,13 +168,15 @@ function ParticularsEditor({
       }
       return data;
     },
-    onSuccess: (data) => client.setQueryData(QUERY_KEY, data),
+    onSuccess: (data) => client.setQueryData(PARTICULARS_QUERY_KEY, data),
   });
   const languages = Object.keys(value.translations);
   useSaveDraft({
     dirty: JSON.stringify(value) !== JSON.stringify(saved),
     save: async () => {
-      await save.mutateAsync(bodyOf(value));
+      await save.mutateAsync(
+        particularsBody(particulars, value.text, value.translations),
+      );
       setDraft(null);
     },
     placed: [
