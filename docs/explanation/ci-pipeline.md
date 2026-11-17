@@ -294,7 +294,7 @@ the longest lane in the pipeline. Running the two slowest jobs one after the oth
 time of a PR. And `deterministic-gates` itself still catches a broken build.
 
 - The lane is **sharded** per test over 8 runners: per package, `compose/integration` sets the floor.
-- The lanes run on `postgres-test`, a Postgres in RAM without disk syncs. Each test copies the template into a database of its own (~30 ms), so tests of one package run at the same time.
+- The lanes run on `postgres-test`, a Postgres in RAM without disk syncs. Each test copies the template into a database of its own (~30 ms), so tests of one package run at the same time. On `redis-test`, each test leases a Redis database of its own.
 - The `integration` fan-in puts them together again, into the single result the `ci` aggregate reads.
 
 The lane **compiles once**: a part picked per test reaches nearly every package. The `integration build`

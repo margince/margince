@@ -22,7 +22,7 @@ import (
 // its own client, not the bus pool.
 func TestCeilingsStillAnswerWhileEveryBusConnectionIsTaken(t *testing.T) {
 	t.Parallel()
-	cfg := workerConfig{redisAddr: testdb.RedisAddr(t) + "/" + strconv.Itoa(testdb.RedisDB(t))}
+	cfg := workerConfig{redisAddr: testdb.RedisAddr(t) + "/" + strconv.Itoa(testdb.RedisBusDB(t))}
 	bus, coordination, err := openBus(t.Context(), cfg)
 	if err != nil {
 		t.Fatalf("open bus: %v", err)

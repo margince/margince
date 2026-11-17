@@ -234,13 +234,13 @@ services:
       timeout: 5s
       retries: 15
 
-  # The integration lanes' Redis. Each test leases a database of its own for
-  # its life (testdb.RedisDB): db 0 holds the leases, 1..64 are leased. The
-  # count also tells a lease this server from `redis` above, so it must differ
-  # from that one's. It keeps nothing on disk.
+  # The integration lanes' Redis, in RAM. Each test leases a database of its
+  # own for its life (testdb.RedisDB): db 0 holds the leases, the rest are
+  # leased. A lease reads this count from here and refuses a server that
+  # serves another, so it must differ from the count of `redis` above.
   redis-test:
     image: redis:7.2@sha256:5b816bb37d9707a70f10ef5002ecf8ee431750d397010fc4314c93dca887962f
-    command: ["redis-server", "--databases", "65", "--save", "", "--appendonly", "no"]
+    command: ["redis-server", "--databases", "1024", "--save", "", "--appendonly", "no"]
     ports:
       - "16380:6379"
     healthcheck:
