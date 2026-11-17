@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -106,7 +107,7 @@ func TestSLAScanEscalatesEachBreachOnce(t *testing.T) {
 func TestAWebsiteFormEnquiryStartsTheFirstResponseClock(t *testing.T) {
 	e := setupPromoteConsent(t)
 	e.enableFirstResponseSLA(t)
-	now := time.Now().UTC()
+	now := clocktest.Now(t)
 	createdAt := now.Add(-DefaultFirstResponseTarget - time.Hour)
 	id := ids.NewV7()
 	ctx := context.Background()
