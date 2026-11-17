@@ -5,26 +5,18 @@ package agents
 
 import (
 	"context"
-
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// WithTrialLock refuses every tool call once the installation's trial has
-// ended, reads included: the agent stops working with the installation.
-func WithTrialLock(ended func(context.Context) (bool, error)) RegistryOption {
-	return func(r *Registry) { r.trialEnded = ended }
+// WithInstallationLock refuses every tool call while the installation is
+// locked, reads included: the agent stops working with the installation. lock
+// answers apperrors.ErrTrialEnded or apperrors.ErrLicenseLapsed when locked.
+func WithInstallationLock(lock func(context.Context) error) RegistryOption {
+	return func(r *Registry) { r.installationLock = lock }
 }
 
-func (r *Registry) refuseAfterTrial(ctx context.Context) error {
-	if r.trialEnded == nil {
+func (r *Registry) refuseWhenLocked(ctx context.Context) error {
+	if r.installationLock == nil {
 		return nil
 	}
-	ended, err := r.trialEnded(ctx)
-	if err != nil {
-		return err
-	}
-	if ended {
-		return apperrors.ErrTrialEnded
-	}
-	return nil
+	return r.installationLock(ctx)
 }

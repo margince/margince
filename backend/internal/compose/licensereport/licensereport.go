@@ -21,8 +21,9 @@ import (
 // LogPosture writes the one boot line an operator greps for. It names the
 // module version, because a refused license and a stale bundled module read
 // alike without it. It names the token's origin, because the environment
-// outranks the deployment file.
-func LogPosture(ctx context.Context, log *slog.Logger, posture licensecheck.Posture, origin string, env runtimeenv.Environment) {
+// outranks the deployment file. remedy is what to correct when the license
+// locks the installation.
+func LogPosture(ctx context.Context, log *slog.Logger, posture licensecheck.Posture, origin, remedy string, env runtimeenv.Environment) {
 	attrs := []any{"state", string(posture.State), "module", licensecheck.ModuleVersion(), "token_from", origin}
 	if posture.Issuer != "" && posture.Issuer != licensecheck.ProductionIssuer {
 		// A license minted by a non-production authority. Only a non-production
@@ -42,6 +43,18 @@ func LogPosture(ctx context.Context, log *slog.Logger, posture licensecheck.Post
 	if posture.State == licensecheck.StateAbsent {
 		log.WarnContext(ctx, "no license configured; this installation runs on its trial and stops working when the trial ends",
 			append(attrs, "trial_days", int(licensecheck.TrialLength/(24*time.Hour)))...)
+		return
+	}
+	if posture.State == licensecheck.StateRejected {
+		log.ErrorContext(ctx, "the license was refused; this installation is locked until a valid one is configured",
+			"state", string(posture.State), "module", licensecheck.ModuleVersion(), "token_from", origin,
+			"reason", posture.Reason, "fix", remedy)
+		return
+	}
+	if posture.License.InGrace {
+		log.ErrorContext(ctx, "the license has expired; this installation is locked until a valid one is configured",
+			"state", string(posture.State), "module", licensecheck.ModuleVersion(), "token_from", origin,
+			"expired", posture.License.Expiry.Format(time.DateOnly), "fix", remedy)
 		return
 	}
 	log.InfoContext(ctx, "license verified", attrs...)

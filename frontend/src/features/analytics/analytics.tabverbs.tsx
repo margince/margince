@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { ChevronDown, FileText } from "lucide-react";
-import { Button } from "../../design-system/atoms";
-import { Popover } from "../../design-system/popover";
+import { Button, OverflowMenu } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import {
   openAnalyticsSection,
@@ -41,19 +40,15 @@ export function TabVerbs({
         </Button>
       )}
       {setup.length > 0 && (
-        <Popover
-          variant="ghost"
-          label={
-            <>
-              {t("analytics.setup")}
-              <ChevronDown aria-hidden="true" />
-            </>
-          }
+        <OverflowMenu
+          label={t("analytics.setup")}
+          text={t("analytics.setup")}
+          face="button"
+          icon={<ChevronDown aria-hidden="true" />}
         >
           {setup.map((candidate) => (
             <Button
               key={candidate}
-              variant="link"
               onClick={() => openAnalyticsSection(candidate)}
             >
               {t(SETUP_LABEL[candidate])}
@@ -62,14 +57,11 @@ export function TabVerbs({
           {/* Revenue goals are set on their own page; whoever reads targets
               reads them. */}
           {setup.includes("targets") && (
-            <Button
-              variant="link"
-              onClick={() => navigate({ screen: "goals" })}
-            >
+            <Button onClick={() => navigate({ screen: "goals" })}>
               {t("nav.salesGoals")}
             </Button>
           )}
-        </Popover>
+        </OverflowMenu>
       )}
     </div>
   );

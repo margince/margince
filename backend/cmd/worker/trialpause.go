@@ -22,10 +22,12 @@ const lockedRecheck = 5 * time.Minute
 type workPauseKey struct{}
 
 // pauseAfterTrial binds the question every lane and job asks before it works:
-// has this unlicensed installation's trial ended? It rides the context because
-// every lane is started on it, and a parameter would thread through each one.
+// is this installation locked? It rides the context because every lane is
+// started on it, and a parameter would thread through each one. The daily
+// re-check is what lets a license that expires while the worker runs lock it.
 func pauseAfterTrial(ctx context.Context, pool *pgxpool.Pool, license *licensecheck.Watcher, env runtimeenv.Environment, log *slog.Logger) context.Context {
 	paused := installtrial.New(pool, env, license.Posture, time.Now).Paused(log)
+	go license.RunRecheck(ctx)
 	go recheckWhileLocked(ctx, license, paused)
 	return context.WithValue(ctx, workPauseKey{}, paused)
 }
