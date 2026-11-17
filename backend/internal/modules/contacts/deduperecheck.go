@@ -132,15 +132,16 @@ var openPairsSQL = `
 
 // lockOpenPairs reads the next batch of open undecided pairs.
 func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, error) {
-	return queryOpenPairs(ctx, tx, openPairsSQL+`
+	return queryOpenPairs(ctx, tx, `
 		   AND d.id > @after
 		 ORDER BY d.id
 		 LIMIT @limit
-		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{"after": after, "limit": dedupeRecheckBatch})
+		   FOR UPDATE OF d SKIP LOCKED`, pgx.StrictNamedArgs{afterCursorArg: after, "limit": dedupeRecheckBatch})
 }
 
-func queryOpenPairs(ctx context.Context, tx pgx.Tx, query string, args pgx.StrictNamedArgs) ([]openPair, error) {
-	rows, err := tx.Query(ctx, query, args)
+// queryOpenPairs narrows openPairsSQL by filter, so the pairs' select list has one reader.
+func queryOpenPairs(ctx context.Context, tx pgx.Tx, filter string, args pgx.StrictNamedArgs) ([]openPair, error) {
+	rows, err := tx.Query(ctx, openPairsSQL+filter, args)
 	if err != nil {
 		return nil, fmt.Errorf("read open dedupe candidates: %w", err)
 	}
@@ -158,7 +159,7 @@ func queryOpenPairs(ctx context.Context, tx pgx.Tx, query string, args pgx.Stric
 // closeRenamedCompanyPairs archives the open pairs of a renamed company that
 // today's rule no longer files. A pair someone is deciding at that moment is skipped.
 func closeRenamedCompanyPairs(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {
-	pairs, err := queryOpenPairs(ctx, tx, openPairsSQL+`
+	pairs, err := queryOpenPairs(ctx, tx, `
 		   AND d.entity_type = '`+entityCompany+`'
 		   AND (d.left_company_id = @company OR d.right_company_id = @company)
 		 ORDER BY d.id
