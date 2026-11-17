@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+
+	"github.com/margince/margince/backend/internal/platform/cldrzone"
 )
 
 // Graph's event create and update are documented to take every Windows zone
@@ -18,8 +20,7 @@ import (
 var (
 	//go:embed data/windowsZones.xml
 	cldrWindowsZones []byte
-	//go:embed data/timezone.xml
-	cldrZoneAliases []byte
+	cldrZoneAliases  = cldrzone.TimezoneXML
 	//go:embed data/moved-windows-zones.txt
 	cldrMovedZones []byte
 
@@ -74,19 +75,14 @@ func windowsZones(mapping, aliases, moved []byte) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	var bcp47 struct {
-		Types []struct {
-			Alias string `xml:"alias,attr"`
-		} `xml:"keyword>key>type"`
-	}
-	if err := xml.Unmarshal(aliases, &bcp47); err != nil {
-		return nil, fmt.Errorf("graphcal: reading CLDR timezone.xml: %w", err)
+	zones, err := cldrzone.Zones(aliases)
+	if err != nil {
+		return nil, err
 	}
 	sameZone := map[string][]string{}
-	for _, zone := range bcp47.Types {
-		names := strings.Fields(zone.Alias)
-		for _, name := range names {
-			sameZone[name] = names
+	for _, zone := range zones {
+		for _, name := range zone.Names {
+			sameZone[name] = zone.Names
 		}
 	}
 	for canonical := range strings.FieldsSeq(string(moved)) {

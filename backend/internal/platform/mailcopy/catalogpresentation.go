@@ -126,6 +126,10 @@ func previewLines(line writeLine) {
 		"No reply or further confirmation is needed.",
 		"Sie müssen weder antworten noch erneut bestätigen.",
 		"Quý khách không cần trả lời hay xác nhận thêm.")
+	line(func(c *Copy) *string { return &c.RequestAckPreview },
+		"We tell you when we will carry out your request.",
+		"Wir teilen Ihnen mit, bis wann wir Ihre Anfrage umsetzen.",
+		"Chúng tôi cho quý khách biết thời hạn thực hiện yêu cầu.")
 	line(func(c *Copy) *string { return &c.RestrictionLiftPreview },
 		"We tell you before the restriction ends.",
 		"Wir informieren Sie, bevor die Einschränkung endet.",
@@ -166,8 +170,16 @@ func controllerPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.SentLinkMarker }, "[Personal link, sent only to the contact]", "[Persönlicher Link, nur an den Kontakt gesendet]", "[Liên kết cá nhân, chỉ gửi cho người liên hệ]")
 	line(func(c *Copy) *string { return &c.ConsentPurposeLabel }, "Subscription", "Thema", "Đăng ký nhận")
 	line(func(c *Copy) *string { return &c.ControllerFrom }, "This message is from %s.", "Diese Nachricht erhalten Sie von %s.", "Email này được gửi từ %s.")
-	line(func(c *Copy) *string { return &c.DisclosureController }, "Controller:", "Verantwortlicher:", "Bên kiểm soát dữ liệu:")
-	line(func(c *Copy) *string { return &c.DisclosurePrivacyContact }, "Data protection contact:", "Kontakt zum Datenschutz:", "Liên hệ về bảo vệ dữ liệu:")
+	line(func(c *Copy) *string { return &c.DisclosureController }, "Controller:", "Verantwortlicher:", "Bên kiểm soát dữ liệu cá nhân:")
+	line(func(c *Copy) *string { return &c.DisclosurePrivacyContact }, "Data protection contact:", "Kontakt zum Datenschutz:", "Liên hệ về bảo vệ dữ liệu cá nhân:")
 	line(func(c *Copy) *string { return &c.DisclosureObjection }, "How to object:", "Widerspruch:", "Cách phản đối:")
 	line(func(c *Copy) *string { return &c.DisclosureAdvertiser }, "Advertiser contact:", "Kontakt des Werbenden:", "Liên hệ bên quảng cáo:")
+	line(func(c *Copy) *string { return &c.AdvertisingRefusal },
+		"You have the right to refuse all advertising from %s. To refuse:",
+		"Sie können jede Werbung von %s ablehnen. So lehnen Sie ab:",
+		"Quý khách có quyền từ chối nhận tất cả quảng cáo của %s. Cách từ chối:")
+	line(func(c *Copy) *string { return &c.AdvertisingDataChoice },
+		"You also choose whether we use your details for advertising: open your preferences below.",
+		"Sie entscheiden auch, ob wir Ihre Daten für Werbung nutzen: Öffnen Sie dazu unten Ihre Einstellungen.",
+		"Quý khách cũng có quyền chọn cho phép hay không cho phép chúng tôi dùng thông tin của quý khách để quảng cáo: mở phần quản lý tùy chọn bên dưới.")
 }

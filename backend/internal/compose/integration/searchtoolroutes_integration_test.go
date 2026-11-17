@@ -15,14 +15,16 @@ import (
 	"net/http"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // GET /context-search answers search_context's ranked records, and
 // POST /workspace-queries answers query_workspace's rows, for one input.
 func TestSearchAndQueryRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "search-routes", "read")
-	turbine := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Annegret Turbinenbau"})
-	createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bernd Unrelated"})
+	turbine := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Annegret Turbinenbau"})
+	createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Bernd Unrelated"})
 
 	ranked := d.rest(t, "GET", "/v1/context-search?query=Turbinenbau&record_types=contact&limit=5", nil)
 	if compacted(t, ranked) != compacted(t, d.tool(t, "search_context", map[string]any{

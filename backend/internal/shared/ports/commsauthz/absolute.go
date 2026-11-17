@@ -76,6 +76,11 @@ const (
 	// ReasonMarketingPermissionRequired is marketing without consent or a
 	// supported statutory route under the applicable rules or limited baseline.
 	ReasonMarketingPermissionRequired = "marketing_permission_required"
+	// ReasonLawfulBasisUnconfirmed is a send to a recipient whose country has
+	// no legitimate-interest basis and who has no basis for the use on record.
+	// The user sending did not confirm it. A recorded human decision may still
+	// direct it.
+	ReasonLawfulBasisUnconfirmed = "lawful_basis_unconfirmed"
 	// ReasonAllowed is the allow path's own code, so every row has one.
 	ReasonAllowed = "allowed"
 	// ReasonAllowedByOverride marks a send allowed because a seat outranked the

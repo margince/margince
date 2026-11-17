@@ -148,6 +148,17 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				writers.links.markRefused(object, row.ExternalID)
 				continue
 			}
+			if object == migration.ObjectContact && (outcome == predictCreate || outcome == predictCollides) {
+				typed, _, _ := writers.landingCells(row)
+				in, err := writers.contactInputForRow(ctx, row, typed)
+				if err != nil {
+					return prediction{}, err
+				}
+				if warning := importedContactChannelWarning(in); warning != nil {
+					warning.ExternalID, warning.Line = row.ExternalID, row.Line
+					p.warnings = append(p.warnings, *warning)
+				}
+			}
 			p.countClosedDeal(writers.dealStages, object, row, outcome)
 			writers.markPredictedRow(row, outcome)
 		}

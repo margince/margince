@@ -40,7 +40,7 @@ func TestContactCreationOverALiveLeadIsRefusedAndItsConvertCarriesHistoryAndCons
 	if err != nil {
 		t.Fatal(err)
 	}
-	purpose, err := consents.CreatePurpose(ctx, "transactional", "Business correspondence", false)
+	purpose, err := consents.CreatePurpose(ctx, "transactional", "Business correspondence", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}

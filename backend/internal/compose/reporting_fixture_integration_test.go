@@ -7,20 +7,33 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"maps"
+	"reflect"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/searchplan"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 type reportingBusinessFixture struct {
@@ -285,5 +298,211 @@ func TestReportingPresetsAnswerEveryMetricTheyAskOnAPopulatedFixture(t *testing.
 				t.Errorf("%s preset drew no %s chart", preset.Id, block)
 			}
 		}
+	}
+}
+
+func TestSearchWonDealsUsesTheReportingCountAndTheMembersScope(t *testing.T) {
+	f := reportingBusiness(t)
+	selection := f.selection()
+	selection.PipelineId = nil
+	selection.Scope = crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(f.env.Rep1)}
+	selection.Metrics = []crmcontracts.ReportingMetricID{reportingBookingsWon}
+	selection.Blocks = []crmcontracts.ReportingBlockKind{}
+	reader := reportingRepSeat(f.env)
+	arguments, err := json.Marshal(selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	plan := searchplan.Plan{Engine: "reporting", Arguments: string(arguments), Count: true}
+	reply, err := json.Marshal(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lane := &assessmentLane{}
+	server := Server{
+		analyticsQueryHandlers:   newAnalyticsQueryHandlers(InstallationDB(f.env.Pool), 0, nil),
+		analyticsContextHandlers: newAnalyticsContextHandlers(InstallationDB(f.env.Pool), func() time.Time { return f.at }),
+		filterProposalHandlers:   filterProposalHandlers{pool: f.env.Pool, lane: lane, now: func() time.Time { return f.at }},
+	}
+	server.reportMetrics = f.service
+	const question = "How many deals did I win this month?"
+	vocabulary, err := server.searchDataVocabulary(reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lane.answer = func(req model.Request) string {
+		return promptref.Rewrite(string(reply), searchplan.Refs(question, vocabulary))
+	}
+	answer, err := server.answerSearchData(reader, question)
+	if err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := f.service.Evaluate(reader, selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if answer.Evaluation == nil || !reflect.DeepEqual(answer.Evaluation.Metrics, baseline.Metrics) || answer.Source == nil || answer.Count == nil || !*answer.Count {
+		t.Fatalf("search answer %+v differs from the reporting count %+v", answer, baseline.Metrics)
+	}
+	own := baseline.Metrics[0].Coverage.EligibleCount
+	workspace := selection
+	workspace.Scope = crmcontracts.ReportingScope{Kind: "workspace"}
+	all, err := f.service.Evaluate(f.human, workspace)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if own == nil || all.Metrics[0].Coverage.EligibleCount == nil || *own >= *all.Metrics[0].Coverage.EligibleCount {
+		t.Fatalf("own=%v, workspace=%v; fixture must contain won deals outside the selected owner lens", own, all.Metrics[0].Coverage.EligibleCount)
+	}
+
+	actor, ok := principal.Actor(reader)
+	if !ok {
+		t.Fatal("reader has no actor")
+	}
+	denied := actor
+	denied.Permissions.Objects = maps.Clone(actor.Permissions.Objects)
+	delete(denied.Permissions.Objects, "deal")
+	noDeals, deniedErr := server.executeSearchData(principal.WithActor(reader, denied), plan)
+	if deniedErr != nil && !errors.Is(deniedErr, apperrors.ErrPermissionDenied) && !errors.Is(deniedErr, apperrors.ErrInvalidArgument) {
+		t.Fatal(deniedErr)
+	}
+	if deniedErr == nil && noDeals.Outcome != "unsupported" {
+		t.Fatalf("a caller without deal read received a count: %+v", noDeals)
+	}
+	actor.Permissions.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskAlways}}
+	masked, err := server.executeSearchData(principal.WithActor(reader, actor), plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	maskedBaseline, err := f.service.Evaluate(principal.WithActor(reader, actor), selection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	amountPlan := plan
+	amountPlan.Count = false
+	hiddenAmount, err := server.executeSearchData(principal.WithActor(reader, actor), amountPlan)
+	if err != nil || hiddenAmount.Outcome != "unsupported" {
+		t.Fatalf("a masked metric must fall back: %+v, %v", hiddenAmount, err)
+	}
+	if maskedBaseline.Metrics[0].Coverage.EligibleCount == nil {
+		if masked.Outcome != "unsupported" {
+			t.Fatalf("an unavailable count must fall back: %+v", masked)
+		}
+		return
+	}
+	if masked.Evaluation == nil {
+		t.Fatalf("an available count lost its reporting evaluation: %+v", masked)
+	}
+	if !reflect.DeepEqual(masked.Evaluation.Metrics, maskedBaseline.Metrics) || (masked.Evaluation.Metrics[0].Value != nil && *masked.Evaluation.Metrics[0].Value != 0) || !masked.Evaluation.Metrics[0].Coverage.Withheld {
+		t.Fatalf("search must preserve the reporting field mask: %+v", masked.Evaluation.Metrics)
+	}
+}
+
+func TestANameOnlyCSVContactLandsWithAChannelWarning(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := importAdmin(e)
+	runs := migration.NewRunStore(e.DB())
+	run, err := runs.Create(ctx, migration.CreateRunInput{Connector: "csv", SourceRef: "channels.csv", Source: "csv:channels"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	blobs := blobstore.NewMemory()
+	const csv = "Name\nName Only\n"
+	if err := blobs.Put(ctx, "channels.csv", strings.NewReader(csv), int64(len(csv)), "text/csv"); err != nil {
+		t.Fatal(err)
+	}
+	source := migration.NewCSVSource(blobs, "channels.csv", migration.ObjectContact, map[string]string{"Name": "full_name"}, "Name")
+	mapping := &migration.RunMapping{Object: migration.ObjectContact, Fields: map[string]string{"Name": "full_name"}, SourceKey: "Name", SourceName: "channels"}
+	bundle, err := newBundleWriters(ctx, e.DB(), run.ID, mapping, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writers := bundle.parts[migration.ObjectContact]
+	preview, err := predictPages(ctx, source, writers, migration.ObjectContact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.created != 1 || len(preview.warnings) != 1 || preview.warnings[0].Code != migration.ReasonContactChannelMissing {
+		t.Fatalf("preview must retain and flag the contact: %+v", preview)
+	}
+	commit, err := newBundleWriters(ctx, e.DB(), run.ID, mapping, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report, err := migration.NewEngine(runs, commit).Run(ctx, run.ID, source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if report.Imported != 1 || len(report.Objects) != 1 || report.Objects[0].Created != 1 || len(report.Objects[0].Warnings) != 1 || report.Objects[0].Warnings[0].Code != migration.ReasonContactChannelMissing {
+		t.Fatalf("import summary must count and flag the created contact: %+v", report)
+	}
+}
+
+func TestSearchRecordsPreserveTheQueryToolsHydratedResults(t *testing.T) {
+	f := reportingBusiness(t)
+	server := Server{toolRegistry: f.env.toolRegistry()}
+	plan, err := searchplan.Admit(searchplan.Plan{Engine: "records", Arguments: `{"plan":{"version":"v1","target":"deal","where":[{"field":"status","op":"eq","value":"open"},{"field":"currency","op":"eq","value":"EUR"},{"field":"amount_minor","op":"gt","value":50000},{"field":"expected_close_date","op":"gte","value":"2026-09-01"},{"field":"expected_close_date","op":"lt","value":"2026-10-01"}]}}`}, "Which deals close this month over EUR 50k?", `{"context":{"base_currency":"EUR"}}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	answer, err := server.executeSearchData(f.human, plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := map[string]bool{}
+	for _, deal := range f.open {
+		if deal.AmountMinor != nil && *deal.AmountMinor > 5000000 {
+			expected[deal.Id.String()] = true
+		}
+	}
+	if len(expected) == 0 || len(expected) == len(f.open) {
+		t.Fatal("fixture must distinguish the amount threshold")
+	}
+	if answer.Records == nil || answer.Records.Notes == nil || len(answer.Records.Rows) != len(expected) || answer.Records.Coverage != "complete_exact" {
+		t.Fatalf("lost query payload or filtering: %+v", answer.Records)
+	}
+	for _, row := range answer.Records.Rows {
+		if !expected[row.Record.Id.String()] || row.Record.RecordType != "deal" || row.Record.Fields["name"] == nil {
+			t.Fatalf("unexpected or unhydrated record: %+v", row.Record)
+		}
+	}
+	if answer.Source == nil {
+		t.Fatal("record answer names no source query")
+	}
+}
+
+func TestSearchAnalyticsUsesTheExistingQueryAndAnswerLabels(t *testing.T) {
+	f := reportingBusiness(t)
+	handler := newAnalyticsQueryHandlers(InstallationDB(f.env.Pool), analyticsquery.DefaultFloor, nil)
+	server := Server{analyticsQueryHandlers: handler}
+	const arguments = `{"entity":"open-deals-per-company","measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace"}`
+	answer, err := server.executeSearchData(f.human, searchplan.Plan{Engine: "analytics", Arguments: arguments})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var query crmcontracts.AnalyticsQuery
+	if err := json.Unmarshal([]byte(arguments), &query); err != nil {
+		t.Fatal(err)
+	}
+	baseline, err := f.env.askAnalytics(f.human, t, queryFromWire(query))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wire := handler.labelledAnswer(f.human, queryFromWire(query), baseline)
+	if answer.Analytics == nil || answer.AnalyticsQuery == nil || !reflect.DeepEqual(answer.Analytics.Rows, wire.Rows) || !reflect.DeepEqual(answer.Analytics.Columns, wire.Columns) {
+		t.Fatalf("search lost the analytics result or labels: %+v", answer)
+	}
+	raw, err := json.Marshal(answer.Analytics.Rows)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rows []struct {
+		Deals int `json:"deals"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 || rows[0].Deals != len(f.open) {
+		t.Fatalf("count=%s, want %d open deals", raw, len(f.open))
 	}
 }

@@ -64,6 +64,7 @@ Records, deals and mail in Margince, by page:
 - How do I give a deal or project its own channel in the team chat? → [Team chat channels](chat-channels.md)
 - How do I attach or upload a file to a contact, company or deal? → [Documents and files](documents-and-files.md)
 - How do I import, export, archive or delete? → [What is kept, what is destroyed](retention-exports-and-deletion.md)
+- Why does the archive keep old mail, and how do I delete what it no longer needs? → [The archive and its purpose](the-archive.md)
 - What does the import preview show, and how do I correct companies with a spreadsheet? → [Importing data](importing-data.md)
 - What happens if I import the same file again? → [Importing data](importing-data.md)
 
@@ -184,6 +185,8 @@ Records, deals and mail in Margince, by page:
   archiving and deleting.
   Erasure and what else it removes, and the legal floor no administrator can
   override. Consent, the audit trail, and what you can export.
+- [The archive and its purpose](the-archive.md): why the archive keeps old
+  mail. How an admin reviews it and deletes what it no longer needs.
 - [Seats, roles and who can see what](seats-roles-and-access.md): full and read
   seats, and the six roles. Why reading a customer record ignores row scope,
   and who can see one record. Teams, sharing, inviting and removing colleagues,

@@ -580,6 +580,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `POST /search/data-answer` | askSearchData | Answer a question through the caller's reporting and record readers. | Read records | at once |
 | `GET /query-vocabulary` | describeQueryVocabulary | Everything a workspace query plan may say, for this caller. | Read records | at once |
 | `GET /catch-up` | catchUpOnRecord | What has been going on with one record, in one cited picture. | Read records | at once |
 | `GET /meeting-prep` | prepForMeeting | Get ready for a meeting about one record. | Read records | at once |

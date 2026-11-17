@@ -72,6 +72,10 @@ const (
 	LeadForContactSource = "lead_for_contact"
 )
 
+// PrivacyRequestTaskSource names the task a data-subject request owes under a
+// pack with deadlines of its own. Its source_id names the request's act.
+const PrivacyRequestTaskSource = "privacy_request"
+
 // WhichDealSource names the one "Which deal is this about?" task capture raises
 // for a mail several open deals fit. Its source_id is the mail's thread, so a
 // thread is asked about once.

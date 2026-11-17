@@ -300,7 +300,7 @@ func TestAnAgentOnAPassportRelinksWithoutAskingWhileAutomaticWorkIsRefusedAProje
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Relink Subject"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	var company struct {

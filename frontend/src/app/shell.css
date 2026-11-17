@@ -1808,6 +1808,9 @@
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--borderSubtle);
 }
+.palette-answer > :is(p, .disclosure) {
+  margin: 0;
+}
 .palette-answer-sections {
   margin: 0;
   padding: 0;

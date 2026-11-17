@@ -11,6 +11,8 @@
 // into a module.
 package commsauthz
 
+import "github.com/margince/margince/backend/pkg/extension/messaging"
+
 // Category is what kind of communication this is. Closed and server-resolved:
 // a caller may CLAIM one, and the engine decides which one the evidence
 // actually supports. There is deliberately no generic "transactional" member —
@@ -122,5 +124,10 @@ func (c Category) ServesTheSubject() bool {
 // marketing. Consent reads a withdrawal through them, and privacy keeps one on
 // the subject's addresses when it anonymizes the record.
 func MarketingPurposeClasses() []string {
-	return []string{"marketing", "phone_outreach"}
+	advertising := messaging.AdvertisingPurposeClasses()
+	out := make([]string, 0, len(advertising))
+	for _, class := range advertising {
+		out = append(out, string(class))
+	}
+	return out
 }

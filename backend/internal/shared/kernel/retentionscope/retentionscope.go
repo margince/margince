@@ -42,6 +42,22 @@ func HeldThroughAnyLink(activityID string) string {
 	           OR coalesce(ld.legal_hold, false) OR coalesce(pj.legal_hold, false)))`
 }
 
+// LockHeldLinks is a statement that share-locks every record whose hold
+// HeldThroughAnyLink reads. A hold is placed by updating the record row. So a
+// caller that runs this first waits for a hold being placed and then reads it.
+// A hold placed later waits for the caller's commit.
+// TestTheArchiveDeletionLocksEveryTableAHoldReachesThrough holds the table
+// list to the schema.
+func LockHeldLinks(activityID string) string {
+	return `WITH locked_contact AS (SELECT 1 FROM contact WHERE id IN (SELECT contact_id FROM activity_link WHERE activity_id = ` + activityID + `) FOR SHARE),
+	     locked_company AS (SELECT 1 FROM company WHERE id IN (SELECT company_id FROM activity_link WHERE activity_id = ` + activityID + `) FOR SHARE),
+	     locked_deal AS (SELECT 1 FROM deal WHERE id IN (SELECT deal_id FROM activity_link WHERE activity_id = ` + activityID + `) FOR SHARE),
+	     locked_lead AS (SELECT 1 FROM lead WHERE id IN (SELECT lead_id FROM activity_link WHERE activity_id = ` + activityID + `) FOR SHARE),
+	     locked_project AS (SELECT 1 FROM project WHERE id IN (SELECT project_id FROM activity_link WHERE activity_id = ` + activityID + `) FOR SHARE)
+	SELECT (SELECT count(*) FROM locked_contact) + (SELECT count(*) FROM locked_company) + (SELECT count(*) FROM locked_deal)
+	     + (SELECT count(*) FROM locked_lead) + (SELECT count(*) FROM locked_project)`
+}
+
 // QualifyingDealLink is true when a deal the activity is linked to qualifies it
 // as commercial correspondence: won, or carrying an offer past draft. A sent
 // offer documents a Handelsgeschäft whether or not the deal closed.

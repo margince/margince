@@ -129,6 +129,9 @@ func (s *Store) createFromCard(
 	}
 	created := ids.From[ids.ContactKind](ids.UUID(contact.Id))
 	result.Outcome = VCardCreated
+	if !HasContactChannel(contactFromVCard(entry)) {
+		result.Reason = "Imported without email, phone or LinkedIn URL; add one to reach this contact."
+	}
 	result.ContactID = &created
 	url, err := s.completeCardCreate(ctx, tx, contact, entry)
 	if err != nil {

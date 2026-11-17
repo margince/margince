@@ -126,7 +126,7 @@ func TestListRoutesAnswerAsReadLists(t *testing.T) {
 	}, nil, &list); status != http.StatusCreated {
 		t.Fatalf("creating the list → %d", status)
 	}
-	member := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Lisbeth Listed"})
+	member := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Lisbeth Listed"})
 	if status := d.e.Call(t, "POST", "/v1/lists/"+list.ID+"/members",
 		AnyMap{"entity_type": "contact", "entity_id": member}, nil, nil); status >= http.StatusBadRequest {
 		t.Fatalf("adding a member → %d", status)

@@ -70,7 +70,7 @@ type requiredIDFixtures struct {
 func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures {
 	t.Helper()
 	var out requiredIDFixtures
-	out.contact = createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Merge Source"})
+	out.contact = createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Merge Source"})
 	out.company = createAndID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Merge Company"})
 	out.activity = createAndID(t, e, "/v1/activities", AnyMap{
 		"kind": "note", "body": "relink probe",

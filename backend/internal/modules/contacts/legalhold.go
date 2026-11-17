@@ -17,9 +17,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -55,8 +57,18 @@ func (s *Store) SetLegalHold(
 			return err
 		}
 		switch table {
-		case HeldContact, HeldCompany, HeldLead:
-			return storekit.SetLegalHold(ctx, tx, object, id, held, reason)
+		case HeldContact:
+			return storekit.SetLegalHold(ctx, tx, object, id, held, reason, func(changed map[string]any) events.Payload {
+				return crmcontracts.PublicEventContactUpdated{ChangedFields: changed}
+			})
+		case HeldCompany:
+			return storekit.SetLegalHold(ctx, tx, object, id, held, reason, func(changed map[string]any) events.Payload {
+				return crmcontracts.PublicEventCompanyUpdated{ChangedFields: changed}
+			})
+		case HeldLead:
+			return storekit.SetLegalHold(ctx, tx, object, id, held, reason, func(changed map[string]any) events.Payload {
+				return crmcontracts.PublicEventLeadUpdated{ChangedFields: changed}
+			})
 		default:
 			// Not reachable through the exported constants, and a fail-closed
 			// answer rather than a statement built from an unknown name.
