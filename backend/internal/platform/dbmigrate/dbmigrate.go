@@ -196,6 +196,9 @@ func UpWithReport(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) 
 	tables := make([]string, len(namespaces))
 	plans := make([]renumberPlan, len(namespaces))
 	for i, ns := range namespaces {
+		if err := ns.CheckBaseline(); err != nil {
+			return report, err
+		}
 		if tables[i], err = trackingTable(ctx, conn, ns.Name); err != nil {
 			return report, err
 		}
@@ -227,6 +230,16 @@ func UpWithReport(ctx context.Context, conn *pgx.Conn, namespaces ...Namespace) 
 			}
 			if err := assertContentMatches(ns.Name, done, m); err != nil {
 				return report, err
+			}
+		}
+
+		if ns.Baseline != nil {
+			installed, err := settleBaseline(ctx, conn, ns, tables[i], done)
+			if err != nil {
+				return report, err
+			}
+			if installed {
+				report.Applied++
 			}
 		}
 

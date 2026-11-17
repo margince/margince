@@ -1,0 +1,14888 @@
+-- SPDX-License-Identifier: BUSL-1.1
+-- SPDX-FileCopyrightText: 2026 Gradion
+
+-- The schema core's 851 versions through 1794412055 build, for a new installation.
+-- dbmigrate applies it only to an empty ledger and records each of those
+-- versions beside it (replaces.txt). Written by scripts/migration-baseline.sh
+-- generate; scripts/migration-baseline.sh verify proves it builds what the
+-- history builds. Regenerate it; never edit it.
+--
+-- The order is pg_dump's restore order: tables and functions, then the
+-- reference rows, then constraints, indexes and triggers, so no row passes
+-- through a trigger the history did not run it through.
+
+-- A LANGUAGE sql body may name a table that a later statement creates.
+SET LOCAL check_function_bodies = false;
+
+CREATE SCHEMA IF NOT EXISTS ext;
+
+COMMENT ON SCHEMA ext IS 'Extension tables (ADR-0120): ext_<name>_<table>, applied by the migrate role from each enabled unit''s own migrations. A unit is bounded by the tables its migrations create and the grants they carry — there is no tenant column and no policy here, because an installation holds one workspace (ADR-0061) and no schema in this database carries either. A per-unit owner role would make the bound a grant rather than a convention; it exists today only in the pre-merge migration gate (issue #628). The core owns public; nothing here is core data.';
+
+CREATE EXTENSION IF NOT EXISTS btree_gist WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA public;
+
+CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
+
+CREATE DOMAIN public.currency_code AS character(3)
+	CONSTRAINT currency_code_shape CHECK ((VALUE ~ '^[A-Z]{3}$'::text));
+
+CREATE FUNCTION public.activity_class_needs_evidence() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM activity a
+              WHERE a.id = OLD.activity_id AND a.retention_class IS NOT NULL)
+     AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                      WHERE e.activity_id = OLD.activity_id) THEN
+    RAISE EXCEPTION 'activity % carries a retention class with no evidence recording what qualified it', OLD.activity_id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_class_needs_evidence';
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.activity_due_time_follows_due_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.due_at IS NULL THEN
+    NEW.due_has_time := false;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.activity_link_refuses_a_company_meeting() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    activity_kind text;
+BEGIN
+    IF NEW.entity_type <> 'company' THEN
+        RETURN NEW;
+    END IF;
+
+    -- LOCKED BEFORE THE CHECK, and the same row the other trigger locks. Read
+    -- unlocked, one transaction can insert this link while the activity is
+    -- still a `note` (the check below passes) while another re-kinds that same
+    -- activity to `meeting` before the link is visible (the check in
+    -- activity_refuses_becoming_a_company_meeting passes too). Both commit, and
+    -- the row neither of them was allowed to make exists.
+    --
+    -- The ORDER is the whole of it: locked first, checked second, and the same
+    -- row the re-kind trigger locks. A BEFORE ROW trigger runs ahead of the
+    -- UPDATE's own row lock, so a re-kind whose check has already run cannot be
+    -- made to look again by blocking it afterwards — it would wake and write on
+    -- the answer it took before waiting. Locking first is what makes each
+    -- check happen after the other transaction has finished or not started.
+    --
+    -- SHARE here and UPDATE there, which is the pairing that conflicts where it
+    -- should: a link and a re-kind queue, while two links onto one activity do
+    -- not — they are not in conflict and have no reason to wait for each other.
+    PERFORM 1 FROM activity WHERE id = NEW.activity_id FOR SHARE;
+    SELECT kind INTO activity_kind FROM activity WHERE id = NEW.activity_id;
+
+    IF activity_kind IN ('meeting', 'call') THEN
+        RAISE EXCEPTION
+            'a % is with a contact, not with a company: link it to the contact who was there, and the company sees it through them',
+            activity_kind
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.activity_link_refuses_past_the_ceiling() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    filed integer;
+BEGIN
+    -- Locked before counted, for the reason the sibling trigger gives about
+    -- order: a count taken before the lock is an answer from before whoever
+    -- else is inserting, and waiting afterwards would not change it.
+    PERFORM 1 FROM activity WHERE id = NEW.activity_id FOR NO KEY UPDATE;
+    SELECT count(*) INTO filed FROM activity_link WHERE activity_id = NEW.activity_id;
+
+    IF filed >= 25 THEN
+        RAISE EXCEPTION
+            'an activity may be filed under at most 25 records; this one already names %', filed
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.activity_refuse_restricted_mutation() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    IF OLD.restricted_at IS NOT NULL THEN
+      RAISE EXCEPTION 'activity % is restricted under a statutory retention obligation until %', OLD.id, OLD.restricted_until
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'activity_restricted_immutable';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  -- The stamp never changes once written — the class OR the timestamp saying
+  -- when it was earned. Leaving the timestamp mutable would let a writer keep
+  -- the class and move the date: the same rewriting of history with an extra
+  -- step, on the field a supervisory authority would be shown.
+  --
+  -- The one exception is the declared undo of a project filing: the class
+  -- clears whole from an unrestricted row that nothing still qualifies, and the
+  -- declaration names this one activity.
+  IF OLD.retention_class IS NOT NULL
+     AND (NEW.retention_class IS DISTINCT FROM OLD.retention_class
+          OR NEW.retention_class_at IS DISTINCT FROM OLD.retention_class_at)
+     AND NOT (coalesce(current_setting('margince.project_filing_undo', true), '') = OLD.id::text
+              AND NEW.retention_class IS NULL AND NEW.retention_class_at IS NULL
+              AND OLD.restricted_at IS NULL AND NEW.restricted_at IS NULL
+              AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                               WHERE e.activity_id = OLD.id)
+              AND NOT EXISTS (SELECT 1 FROM activity_link l
+                               WHERE l.activity_id = OLD.id AND l.entity_type = 'project')
+              AND NOT EXISTS (SELECT 1 FROM activity_link hl
+                               JOIN deal hd ON hd.id = hl.deal_id
+                               WHERE hl.activity_id = OLD.id AND hl.entity_type = 'deal'
+                                 AND (hd.status = 'won'
+                                      OR EXISTS (SELECT 1 FROM offer o
+                                                  WHERE o.deal_id = hd.id AND o.status <> 'draft')))
+              AND NOT EXISTS (SELECT 1 FROM activity_link h
+                               LEFT JOIN contact hp ON hp.id = h.contact_id
+                               LEFT JOIN company hc ON hc.id = h.company_id
+                               LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                               LEFT JOIN lead hld ON hld.id = h.lead_id
+                               LEFT JOIN project hpj ON hpj.id = h.project_id
+                               WHERE h.activity_id = OLD.id
+                                 AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                      OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                      OR coalesce(hpj.legal_hold, false)))) THEN
+    RAISE EXCEPTION 'activity % carries retention class % earned at %, which is stamped once and never re-derived', OLD.id, OLD.retention_class, OLD.retention_class_at
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_retention_class_monotonic';
+  END IF;
+
+  -- A restriction is substantiated at the moment it is written. The table
+  -- CHECK sees only this row, so it can require a class and no more; the
+  -- evidence is in another table and this is the only place that can look.
+  IF OLD.restricted_at IS NULL AND NEW.restricted_at IS NOT NULL
+     AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
+                      WHERE e.activity_id = NEW.id) THEN
+    RAISE EXCEPTION 'activity % cannot be restricted with no retention evidence recording what qualified it', NEW.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_restriction_needs_evidence';
+  END IF;
+
+  -- A deadline already recorded never moves nearer. A pin or a re-restriction
+  -- of a row that still carries its class may only extend it.
+  IF OLD.restricted_until IS NOT NULL AND NEW.restricted_at IS NOT NULL
+     AND NEW.restricted_until < OLD.restricted_until THEN
+    RAISE EXCEPTION 'activity % is held until % and a statutory deadline never shortens', OLD.id, OLD.restricted_until
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_restriction_never_shortens';
+  END IF;
+
+  IF OLD.restricted_at IS NOT NULL THEN
+    -- Still restricted after the write: refused outright.
+    IF NEW.restricted_at IS NOT NULL THEN
+      RAISE EXCEPTION 'activity % is restricted under a statutory retention obligation until %', OLD.id, OLD.restricted_until
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'activity_restricted_immutable';
+    END IF;
+
+    -- Lifting: the content goes with it, in this statement. Both legitimate
+    -- callers erase as they lift, and a lift that leaves the body readable is
+    -- not a completion of the erasure — it is a way to undo the restriction
+    -- and keep the data.
+    IF NEW.body IS NOT NULL OR NEW.raw IS NOT NULL
+       OR NEW.counterparty_email IS NOT NULL
+       -- The byline a record was imported with names a human exactly as the
+       -- body does. Cleared outright by every writer, so null is the test —
+       -- unlike the subject below, which has a tombstone to be replaced by.
+       OR NEW.source_author_name IS NOT NULL
+       -- The subject must not survive AS IT WAS. It may go null or be replaced
+       -- by the erasure's tombstone name — erasuretimeline.go writes the
+       -- placeholder rather than a null, so demanding null here would refuse
+       -- the very statement this guard exists to admit. The test is that it
+       -- CHANGED, which the placeholder satisfies and keeping the original
+       -- does not. Spelling the placeholder's literal value here would be a
+       -- second copy of a Go constant, drifting the first time somebody edits
+       -- one of them.
+       OR (OLD.subject IS NOT NULL AND NEW.subject IS NOT DISTINCT FROM OLD.subject) THEN
+      RAISE EXCEPTION 'activity % may only leave restriction by being erased: clear body, raw, counterparty_email and source_author_name, and replace the subject, in the same statement', OLD.id
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'activity_restriction_lift_erases';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.activity_refuses_becoming_a_company_meeting() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.kind NOT IN ('meeting', 'call') OR OLD.kind = NEW.kind THEN
+        RETURN NEW;
+    END IF;
+
+    -- The other half of the pairing, taken BEFORE the check for the same
+    -- reason: this trigger runs ahead of the UPDATE's own row lock, so waiting
+    -- afterwards would leave it writing on an answer it read before a
+    -- concurrent link landed. FOR UPDATE, so it conflicts with the link side's
+    -- SHARE.
+    PERFORM 1 FROM activity WHERE id = NEW.id FOR UPDATE;
+
+    IF EXISTS (SELECT 1 FROM activity_link
+               WHERE activity_id = NEW.id AND entity_type = 'company') THEN
+        RAISE EXCEPTION
+            'this activity is linked to a company, so it cannot become a %: a % is with a contact',
+            NEW.kind, NEW.kind
+            USING ERRCODE = 'check_violation';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.activity_retention_evidence_is_frozen() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- A row goes only with the activity it substantiates, through the CASCADE.
+  -- A direct delete is refused. The two are distinguishable because the
+  -- CASCADE has already removed the parent by the time this fires, so the
+  -- activity is gone exactly when the delete is legitimate.
+  IF TG_OP = 'DELETE' THEN
+    IF EXISTS (SELECT 1 FROM activity a WHERE a.id = OLD.activity_id) THEN
+      -- Project-filing evidence only, from an activity no statutory or legal
+      -- hold has reached: every other row stays under the freeze.
+      IF OLD.basis = 'project_linked'
+         AND coalesce(current_setting('margince.project_filing_undo', true), '') = OLD.activity_id::text
+         AND NOT EXISTS (SELECT 1 FROM activity a
+                          WHERE a.id = OLD.activity_id AND a.restricted_at IS NOT NULL)
+         AND NOT EXISTS (SELECT 1 FROM activity_link pl
+                          WHERE pl.activity_id = OLD.activity_id AND pl.entity_type = 'project')
+         AND NOT EXISTS (SELECT 1 FROM project fp
+                          WHERE fp.id = OLD.project_id AND fp.legal_hold)
+         AND NOT EXISTS (SELECT 1 FROM activity_link h
+                          LEFT JOIN contact hp ON hp.id = h.contact_id
+                          LEFT JOIN company hc ON hc.id = h.company_id
+                          LEFT JOIN deal hdl ON hdl.id = h.deal_id
+                          LEFT JOIN lead hld ON hld.id = h.lead_id
+                          LEFT JOIN project hpj ON hpj.id = h.project_id
+                          WHERE h.activity_id = OLD.activity_id
+                            AND (coalesce(hp.legal_hold, false) OR coalesce(hc.legal_hold, false)
+                                 OR coalesce(hdl.legal_hold, false) OR coalesce(hld.legal_hold, false)
+                                 OR coalesce(hpj.legal_hold, false))) THEN
+        RETURN OLD;
+      END IF;
+      RAISE EXCEPTION 'retention evidence % is frozen and is removed only with the activity it substantiates', OLD.id
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'activity_retention_evidence_frozen';
+    END IF;
+    RETURN OLD;
+  END IF;
+
+  IF NEW.activity_id     IS DISTINCT FROM OLD.activity_id
+     OR NEW.basis        IS DISTINCT FROM OLD.basis
+     OR NEW.qualified_at IS DISTINCT FROM OLD.qualified_at
+     OR NEW.deal_name    IS DISTINCT FROM OLD.deal_name
+     OR NEW.project_name IS DISTINCT FROM OLD.project_name
+     OR NEW.decided_by_name IS DISTINCT FROM OLD.decided_by_name
+     OR NEW.reason       IS DISTINCT FROM OLD.reason
+     OR NEW.created_at   IS DISTINCT FROM OLD.created_at
+     -- The reference may be cleared BY ITS FK, never repointed and never
+     -- cleared by hand. ON DELETE SET NULL fires once the parent row is
+     -- already gone, so "does the record still exist" is exactly what tells a
+     -- statement somebody wrote from the FK doing its job — the same test the
+     -- DELETE arm above applies to the activity.
+     --
+     -- This is not tidiness. The uniqueness index stops covering a row whose
+     -- reference has been cleared, and that is only safe while clearing means
+     -- "the record is gone": a hand-cleared row leaves the index quietly, and
+     -- the next stamp for the same record inserts beside it instead of being
+     -- deduplicated.
+     --
+     -- decided_by is left as it was. It is ON DELETE SET NULL to app_user and
+     -- carries the same shape, but a pin is outside the index this protects,
+     -- so tightening it here would be a claim about a different invariant.
+     OR (NEW.deal_id IS NOT NULL AND NEW.deal_id IS DISTINCT FROM OLD.deal_id)
+     OR (NEW.deal_id IS NULL AND OLD.deal_id IS NOT NULL
+         AND EXISTS (SELECT 1 FROM deal d WHERE d.id = OLD.deal_id))
+     OR (NEW.project_id IS NOT NULL AND NEW.project_id IS DISTINCT FROM OLD.project_id)
+     OR (NEW.project_id IS NULL AND OLD.project_id IS NOT NULL
+         AND EXISTS (SELECT 1 FROM project p WHERE p.id = OLD.project_id))
+     OR (NEW.decided_by IS NOT NULL AND NEW.decided_by IS DISTINCT FROM OLD.decided_by) THEN
+    RAISE EXCEPTION 'retention evidence % is frozen at the moment it qualified and may not be rewritten', OLD.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_retention_evidence_frozen';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.activity_retention_evidence_names_its_record() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.basis <> 'controller_pin' AND NEW.deal_id IS NULL AND NEW.project_id IS NULL THEN
+    RAISE EXCEPTION 'retention evidence on activity % is derived from a % that it does not name; the qualifying record''s id is what keeps two same-named records apart once either is deleted', NEW.activity_id, NEW.basis
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'activity_retention_evidence_names_its_record';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.activity_ts_config(lang text) RETURNS regconfig
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    RETURN CASE lang WHEN 'de'::text THEN 'german'::regconfig WHEN 'en'::text THEN 'english'::regconfig ELSE 'simple'::regconfig END;
+
+CREATE FUNCTION public.activity_unfolded_counterparty(address text) RETURNS text
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+    SELECT CASE WHEN address <> lower(address) THEN lower(address) END
+$$;
+
+CREATE FUNCTION public.advance_activity_domain_evidence_version() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+ IF ROW(NEW.occurred_at, NEW.occurred_precision, NEW.archived_at, NEW.restricted_at)
+ IS DISTINCT FROM ROW(OLD.occurred_at, OLD.occurred_precision, OLD.archived_at, OLD.restricted_at) THEN
+  NEW.domain_evidence_version := OLD.domain_evidence_version + 1;
+ END IF;
+ RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.advance_home_read_fence() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM advance_home_read_fence_now('access');
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.advance_home_read_fence_now(fence text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF current_setting('margince.home_read_fence_' || fence, true) IS DISTINCT FROM 'on' THEN
+    INSERT INTO home_read_fence_pending (xact, fence) VALUES (pg_current_xact_id(), fence) ON CONFLICT DO NOTHING;
+    PERFORM set_config('margince.home_read_fence_' || fence, 'on', true);
+  END IF;
+END;
+$$;
+
+CREATE FUNCTION public.advance_home_read_fence_on_first_link() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+      FROM (SELECT DISTINCT activity_id FROM added_links) n
+      JOIN activity a ON a.id = n.activity_id AND a.created_at < now()
+     WHERE (SELECT count(*) FROM activity_link l WHERE l.activity_id = n.activity_id)
+         = (SELECT count(*) FROM added_links al WHERE al.activity_id = n.activity_id)
+  ) THEN
+    PERFORM advance_home_read_fence_now('access');
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.advance_last_activity(tbl regclass, rid uuid, at timestamp with time zone) RETURNS void
+    LANGUAGE plpgsql
+    AS $$BEGIN
+  IF rid IS NULL OR at IS NULL THEN RETURN; END IF;
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  CASE tbl
+    WHEN 'contact'::regclass THEN
+      PERFORM 1 FROM contact WHERE id = rid FOR UPDATE;
+      UPDATE contact SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+    WHEN 'deal'::regclass THEN
+      PERFORM 1 FROM deal WHERE id = rid FOR UPDATE;
+      UPDATE deal SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+    WHEN 'company'::regclass THEN
+      PERFORM 1 FROM company WHERE id = rid FOR UPDATE;
+      UPDATE company SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+    WHEN 'project'::regclass THEN
+      PERFORM 1 FROM project WHERE id = rid FOR UPDATE;
+      UPDATE project SET last_activity_at = at WHERE id = rid AND (last_activity_at IS NULL OR last_activity_at < at);
+  END CASE;
+  PERFORM set_config('margince.last_activity_move', 'off', true);
+END;
+$$;
+
+CREATE FUNCTION public.advance_report_projection_authority() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+ UPDATE report_projection_fence SET generation=generation+1 WHERE singleton;
+ RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.ai_task_run_state_rank(state text) RETURNS integer
+    LANGUAGE sql IMMUTABLE STRICT
+    AS $$
+    SELECT CASE state
+      WHEN 'queued'  THEN 0
+      WHEN 'running' THEN 1
+      ELSE 2
+    END
+  $$;
+
+CREATE FUNCTION public.assert_deal_project_same_company() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.project_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+  IF NOT EXISTS (
+    SELECT 1 FROM relationship r
+    WHERE r.kind = 'project_company'
+      AND r.project_id = NEW.project_id
+      AND r.company_id IS NOT DISTINCT FROM NEW.company_id
+      AND r.archived_at IS NULL
+  ) THEN
+    RAISE EXCEPTION 'the deal names a company that is not on this project'
+      USING ERRCODE = 'check_violation', CONSTRAINT = 'deal_project_same_company';
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.audit_evidence_after_erasure(verb text, before_image jsonb, after_image jsonb, payload jsonb) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    AS $$SELECT audit_redacted_evidence(
+ (verb=ANY(audit_redaction_actions()) OR verb IN ('pin','restrict'))
+ AND before_image IS NULL AND after_image IS NULL,payload,verb)$$;
+
+CREATE FUNCTION public.audit_image_only_masked(was jsonb, rewritten jsonb) RETURNS boolean
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+DECLARE
+  field text;
+  item integer;
+BEGIN
+  IF was IS NULL OR rewritten IS NULL THEN
+    RETURN was IS NOT DISTINCT FROM rewritten;
+  END IF;
+  IF jsonb_typeof(was) <> jsonb_typeof(rewritten) THEN
+    RETURN false;
+  END IF;
+  CASE jsonb_typeof(was)
+  WHEN 'object' THEN
+    IF ARRAY(SELECT jsonb_object_keys(was) ORDER BY 1)
+       IS DISTINCT FROM ARRAY(SELECT jsonb_object_keys(rewritten) ORDER BY 1) THEN
+      RETURN false;
+    END IF;
+    FOR field IN SELECT jsonb_object_keys(was) LOOP
+      IF NOT audit_image_only_masked(was -> field, rewritten -> field) THEN
+        RETURN false;
+      END IF;
+    END LOOP;
+    RETURN true;
+  WHEN 'array' THEN
+    IF jsonb_array_length(was) <> jsonb_array_length(rewritten) THEN
+      RETURN false;
+    END IF;
+    FOR item IN 0 .. jsonb_array_length(was) - 1 LOOP
+      IF NOT audit_image_only_masked(was -> item, rewritten -> item) THEN
+        RETURN false;
+      END IF;
+    END LOOP;
+    RETURN true;
+  WHEN 'string' THEN
+    RETURN was = rewritten OR audit_text_only_masked(was #>> '{}', rewritten #>> '{}');
+  ELSE
+    RETURN was = rewritten;
+  END CASE;
+END;
+$$;
+
+CREATE FUNCTION public.audit_log_immutable() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'UPDATE'
+     AND NEW.before IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.before)
+     AND NEW.after IS NOT DISTINCT FROM audit_redacted_image(OLD.entity_type, OLD.after)
+     AND NEW.evidence = audit_evidence_after_erasure(OLD.action,OLD.before,OLD.after,OLD.evidence)
+     AND (to_jsonb(NEW) - ARRAY['before','after','evidence']) =
+         (to_jsonb(OLD) - ARRAY['before','after','evidence'])
+     AND EXISTS (
+       SELECT 1 FROM audit_log certificate
+       WHERE certificate.before IS NULL AND certificate.after IS NULL
+         AND certificate.source_xid = pg_current_xact_id()
+         AND ((certificate.entity_type = OLD.entity_type
+               AND certificate.entity_id = OLD.entity_id
+               AND certificate.action=ANY(audit_redaction_actions()))
+           OR (certificate.action = 'update' AND certificate.entity_type = 'audit_log'
+               AND certificate.entity_id = OLD.id
+               AND EXISTS(SELECT 1 FROM audit_log boundary
+                WHERE boundary.id=audit_redaction_boundary(certificate.evidence)
+                AND certificate.evidence=jsonb_build_object('payload_redaction',true,'legacy_erased_record',true,'boundary',boundary.id::text)
+                AND boundary.action=ANY(audit_redaction_actions()) AND boundary.before IS NULL AND boundary.after IS NULL
+                AND (boundary.evidence ? 'cause' OR boundary.evidence ? 'retention_action' OR boundary.evidence ? 'emails_suppressed')
+                AND (OLD.occurred_at,OLD.id)<=(boundary.occurred_at,boundary.id)))
+           OR (certificate.action = 'update' AND certificate.entity_type = 'audit_log'
+               AND certificate.evidence = '{"payload_redaction":true}'::jsonb
+               AND EXISTS (
+                 SELECT 1 FROM audit_log boundary
+                 WHERE boundary.id = certificate.entity_id
+                   AND boundary.entity_type = OLD.entity_type AND boundary.entity_id = OLD.entity_id
+                   AND boundary.action=ANY(audit_redaction_actions())
+                   AND boundary.before IS NULL AND boundary.after IS NULL
+                   AND (OLD.occurred_at, OLD.id) <= (boundary.occurred_at, boundary.id))))
+     ) THEN
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE'
+     AND current_setting('margince.audit_credential_mask', true) = 'on'
+     AND OLD.entity_type IN ('activity', 'mail_draft', 'scheduled_send')
+     AND NOT EXISTS (SELECT 1 FROM activity held
+                      WHERE OLD.entity_type = 'activity' AND held.id = OLD.entity_id
+                        AND held.restricted_at IS NOT NULL)
+     AND (to_jsonb(NEW) - ARRAY['before','after']) = (to_jsonb(OLD) - ARRAY['before','after'])
+     AND audit_image_only_masked(OLD.before, NEW.before)
+     AND audit_image_only_masked(OLD.after, NEW.after)
+     AND EXISTS (
+       SELECT 1 FROM audit_log certificate
+       WHERE certificate.source_xid = pg_current_xact_id()
+         AND certificate.entity_type = OLD.entity_type AND certificate.entity_id = OLD.entity_id
+         AND certificate.action = 'update' AND certificate.actor_type = 'system'
+         AND certificate.before IS NULL AND certificate.after IS NULL
+         AND certificate.evidence -> 'audit_credentials_masked' = 'true'::jsonb) THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'audit metadata is immutable; payload redaction needs a current privacy certificate'
+    USING ERRCODE = 'check_violation';
+END;
+$$;
+
+CREATE FUNCTION public.audit_privacy_reason_codes() RETURNS text[]
+    LANGUAGE sql IMMUTABLE
+    AS $$SELECT ARRAY['retention','test','dsr_request','restriction_expired','the website lead could not be sent its privacy notice','subject_data_removed','legal hold ended: the postponed content erasure was completed','retention: the record''s content was erased','controller release: the record''s content was erased','noise disposition: the content of the message was erased']::text[]$$;
+
+CREATE FUNCTION public.audit_redacted_evidence(certificate boolean, payload jsonb, verb text DEFAULT ''::text) RETURNS jsonb
+    LANGUAGE plpgsql IMMUTABLE
+    AS $_$DECLARE
+  kept jsonb := '{"redacted":true}'::jsonb;
+  field text;
+  held jsonb;
+  reduced jsonb;
+BEGIN
+  IF NOT certificate OR jsonb_typeof(payload) IS DISTINCT FROM 'object' THEN
+    RETURN kept;
+  END IF;
+  FOR field, held IN SELECT key, value FROM jsonb_each(payload) LOOP
+    IF field = 'rows' AND jsonb_typeof(held) = 'object' THEN
+      SELECT coalesce(jsonb_object_agg(key, value), '{}'::jsonb) INTO reduced
+      FROM jsonb_each(held) WHERE key ~ '^[a-z_][a-z_0-9]*\.(updated|deleted|inserted)$'
+        AND jsonb_typeof(value) = 'number';
+      kept := kept || jsonb_build_object(field, reduced);
+    ELSIF field = 'uncounted' AND jsonb_typeof(held) = 'array' THEN
+      SELECT coalesce(jsonb_agg(arm), '[]'::jsonb) INTO reduced
+      FROM jsonb_array_elements_text(held) arm
+      WHERE arm IN ('attachment_object','controller_delivery_payload','per_table_rows');
+      kept := kept || jsonb_build_object(field, reduced);
+    ELSIF field IN ('emails_suppressed','raw_rows_purged','ai_payloads_purged',
+                    'activities_redacted','activities_restricted','channel_identities_suppressed','retain_days')
+          AND jsonb_typeof(held) = 'number' THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF field IN ('cause','class','basis','retention_action','purge_reason','policy','request_id','restricted_until')
+          AND jsonb_typeof(held) = 'string' THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF field IN ('reason','decided_by_name') AND verb IN ('release','pin','restrict') THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF field = 'reason' AND ((held #>> '{}') = ANY(audit_privacy_reason_codes())
+      OR ((held #>> '{}') ~ '^dsr:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          AND (held #>> '{}') <> 'dsr:00000000-0000-0000-0000-000000000000')) THEN
+      kept := kept || jsonb_build_object(field, held);
+    END IF;
+  END LOOP;
+  RETURN kept;
+END;
+$_$;
+
+CREATE FUNCTION public.audit_redacted_image(kind text, payload jsonb) RETURNS jsonb
+    LANGUAGE plpgsql IMMUTABLE
+    AS $_$DECLARE
+  kept jsonb := '{}'::jsonb;
+  field text;
+  held jsonb;
+  value text;
+BEGIN
+  IF jsonb_typeof(payload) IS DISTINCT FROM 'object' THEN
+    RETURN NULL;
+  END IF;
+  FOR field, held IN SELECT key, item FROM jsonb_each(payload) entry(key, item) LOOP
+    value := held #>> '{}';
+    IF field = 'status' AND jsonb_typeof(held) = 'string'
+       AND ((kind = 'lead' AND value IN ('new','contacted','engaged','promoted','disqualified'))
+         OR (kind = 'data_subject_request' AND value IN ('open','in_progress','fulfilled','rejected'))) THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF kind = 'data_subject_request' AND field IN ('resolution','dispute_open')
+          AND jsonb_typeof(held) = 'boolean' THEN
+      kept := kept || jsonb_build_object(field, held);
+    ELSIF kind = 'activity' THEN
+      IF (field = 'meeting_status' AND value IN ('booked','held','no_show','canceled'))
+         OR (field = 'occurred_precision' AND value IN ('instant','day'))
+         OR (field = 'occurred_at' AND jsonb_typeof(held) = 'string'
+             AND value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.]+(Z|[+-][0-9]{2}:[0-9]{2})$') THEN
+        kept := kept || jsonb_build_object(field, held);
+      ELSIF field = 'commitment_admission_redacted' AND held <> 'null'::jsonb THEN
+        kept := kept || jsonb_build_object(field, true);
+      END IF;
+    END IF;
+  END LOOP;
+  RETURN nullif(kept, '{}'::jsonb);
+END;
+$_$;
+
+CREATE FUNCTION public.audit_redaction_actions() RETURNS text[]
+    LANGUAGE sql IMMUTABLE
+    AS $$SELECT ARRAY['erase','anonymize','expire','release']::text[]$$;
+
+CREATE FUNCTION public.audit_redaction_boundary(payload jsonb) RETURNS uuid
+    LANGUAGE sql IMMUTABLE
+    AS $_$SELECT CASE WHEN jsonb_typeof(payload->'boundary')='string'
+ AND payload->>'boundary' ~ '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+ THEN (payload->>'boundary')::uuid END$_$;
+
+CREATE FUNCTION public.audit_text_only_masked(was text, rewritten text) RETURNS boolean
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+DECLARE
+  pieces text[] := string_to_array(rewritten, '[masked]');
+  piece text;
+  piece_count integer := array_length(pieces, 1);
+  next_at integer;
+  match_at integer;
+BEGIN
+  IF piece_count IS NULL OR piece_count < 2 OR left(was, length(pieces[1])) <> pieces[1] THEN
+    RETURN false;
+  END IF;
+  next_at := length(pieces[1]) + 1;
+  FOR item IN 2 .. piece_count - 1 LOOP
+    piece := pieces[item];
+    match_at := strpos(substr(was, next_at), piece);
+    IF match_at = 0 THEN
+      RETURN false;
+    END IF;
+    next_at := next_at + match_at - 1 + length(piece);
+  END LOOP;
+  RETURN length(was) - length(pieces[piece_count]) + 1 >= next_at
+     AND right(was, length(pieces[piece_count])) = pieces[piece_count];
+END;
+$$;
+
+CREATE FUNCTION public.bind_requests_on_address_move() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    subject uuid;
+BEGIN
+    FOREACH subject IN ARRAY ARRAY[OLD.contact_id, NEW.contact_id] LOOP
+        UPDATE consent_qualifying_event q
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE q.contact_id = subject AND q.recorded_for_addresses IS NULL;
+        UPDATE contact_acquisition_evidence e
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE e.contact_id = subject AND e.recorded_for_addresses IS NULL;
+        UPDATE communication_suppression s
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE s.contact_id = subject AND s.address IS NULL AND s.revoked_at IS NULL
+           AND s.recorded_for_addresses IS NULL;
+        UPDATE contact_consent c
+           SET recorded_for_addresses = (SELECT coalesce(array_agg(ce.email ORDER BY ce.email), '{}')
+                                           FROM contact_email ce
+                                          WHERE ce.contact_id = subject AND ce.archived_at IS NULL)
+         WHERE c.contact_id = subject AND c.state = 'withdrawn' AND c.recorded_for_addresses IS NULL;
+    END LOOP;
+    RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.commit_home_read_fence() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  UPDATE home_read_fence SET generation = generation + 1 WHERE singleton;
+  DELETE FROM home_read_fence_pending WHERE xact = NEW.xact AND fence = NEW.fence;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.comms_outbound_addressed(recipients jsonb, cc jsonb) RETURNS text[]
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+    SELECT array_agg(lower(address))
+      FROM jsonb_array_elements_text(
+          CASE WHEN jsonb_typeof(recipients || cc) = 'array' THEN recipients || cc END) address
+$$;
+
+CREATE FUNCTION public.comms_outbound_attachments_well_formed(files jsonb) RETURNS boolean
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  SELECT jsonb_typeof(files) = 'array'
+     AND NOT EXISTS (
+       SELECT 1 FROM jsonb_array_elements(files) AS f
+        WHERE jsonb_typeof(f) <> 'object'
+           OR f->>'attachment_id' IS NULL
+           OR f->>'filename' IS NULL
+     );
+$$;
+
+CREATE FUNCTION public.communication_instruction_refuse_rewrite() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'a communication instruction is the record of a decision and is never deleted'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  IF NEW.acknowledged_wording IS DISTINCT FROM OLD.acknowledged_wording THEN
+    RAISE EXCEPTION 'a communication instruction records the message that was acknowledged and cannot be re-pointed at another'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  IF OLD.delivery_id IS NOT NULL AND NEW.delivery_id IS DISTINCT FROM OLD.delivery_id THEN
+    RAISE EXCEPTION 'a communication instruction is spent on one message and cannot be re-pointed at another'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  IF NEW.explanation = '[erased]'
+     AND NEW.id IS NOT DISTINCT FROM OLD.id
+     AND NEW.review_id IS NOT DISTINCT FROM OLD.review_id
+     AND NEW.directed_by IS NOT DISTINCT FROM OLD.directed_by
+     AND NEW.directed_by_agent IS NOT DISTINCT FROM OLD.directed_by_agent
+     AND NEW.reason_code IS NOT DISTINCT FROM OLD.reason_code THEN
+    RETURN NEW;
+  END IF;
+  IF NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.review_id IS DISTINCT FROM OLD.review_id
+     OR NEW.directed_by IS DISTINCT FROM OLD.directed_by
+     OR NEW.directed_by_agent IS DISTINCT FROM OLD.directed_by_agent
+     OR NEW.reason_code IS DISTINCT FROM OLD.reason_code
+     OR NEW.explanation IS DISTINCT FROM OLD.explanation
+     OR NEW.warning_version IS DISTINCT FROM OLD.warning_version
+     OR NEW.acknowledged_at IS DISTINCT FROM OLD.acknowledged_at
+     OR NEW.facts_as_of IS DISTINCT FROM OLD.facts_as_of
+     OR NEW.valid_until IS DISTINCT FROM OLD.valid_until
+     OR NEW.directed_at IS DISTINCT FROM OLD.directed_at THEN
+    RAISE EXCEPTION 'a communication instruction records what was decided and cannot be rewritten; only its status, consumption and revocation move'
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'communication_instruction_immutable';
+  END IF;
+  RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.company_address_country_goes_stale() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+  DELETE FROM company_address_country WHERE company_id = NEW.id;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.company_fact_count_revision() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  touched uuid[];
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    touched := ARRAY[NEW.company_id];
+  ELSIF TG_OP = 'DELETE' THEN
+    touched := ARRAY[OLD.company_id];
+  ELSE
+    touched := ARRAY[OLD.company_id, NEW.company_id];
+  END IF;
+  -- A company being deleted takes its facts with it; it has no counter left
+  -- to move.
+  INSERT INTO company_fact_revision AS r (company_id, revision)
+  SELECT c.id, 1 FROM company c WHERE c.id = ANY(touched)
+  ON CONFLICT (company_id) DO UPDATE SET revision = r.revision + 1;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.company_geocode_state_goes_stale() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  UPDATE company_geocode_state SET status = 'stale'
+   WHERE company_id = NEW.id AND status IS NOT NULL AND status <> 'stale';
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.company_no_ancestor_cycle() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  ancestor uuid := NEW.parent_company_id;
+BEGIN
+  WHILE ancestor IS NOT NULL LOOP
+    IF ancestor = NEW.id THEN
+      RAISE EXCEPTION 'company % would become its own ancestor', NEW.id
+        USING ERRCODE = 'check_violation';
+    END IF;
+    SELECT parent_company_id INTO ancestor FROM company WHERE id = ancestor;
+  END LOOP;
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.company_open_pipeline_rollup(as_of date) RETURNS TABLE(company_id uuid, open_pipeline_minor_base bigint, open_deal_count bigint, priced_deal_count bigint)
+    LANGUAGE sql STABLE
+    AS $$
+ SELECT d.company_id,
+    -- The SUM is bounded too, and separately from its summands. sum(bigint)
+    -- answers in numeric, so a set of individually representable deals can add
+    -- to a figure no bigint holds — and the reader scans this column into an
+    -- int64. Guarding one deal and not the total would have moved the same
+    -- failure one level up: the record unreadable because the deals are large
+    -- rather than because one of them is.
+    --
+    -- Out of range answers NULL, which the caller already knows how to report:
+    -- the deals were priced, the total cannot be stated, and a figure nobody
+    -- can represent is not a figure to publish.
+    CASE
+      WHEN sum(conv.minor_base)
+           BETWEEN -9223372036854775808 AND 9223372036854775807
+        THEN sum(conv.minor_base)
+      ELSE NULL
+    END AS open_pipeline_minor_base,
+    count(*) AS open_deal_count,
+    -- How many deals actually reached the sum. SUM ignores a null summand
+    -- silently, so without this a total covering one of two deals is
+    -- indistinguishable from one covering both — a confident figure that is
+    -- quietly short, which is worse than the "not computable" it replaces.
+    --
+    -- It counts the CONVERSION rather than restating when one is possible: a
+    -- deal with no rate and a deal whose converted amount does not fit are both
+    -- deals the sum did not reach, and one predicate answers for both.
+    count(*) FILTER (WHERE conv.minor_base IS NOT NULL) AS priced_deal_count
+   FROM deal d
+   -- LEFT, not CROSS: an installation whose base-currency row is somehow absent
+   -- must still report its open_deal_count. A cross join would return no row at
+   -- all for the company, which reads as "no open deals" — the one answer
+   -- that is definitely wrong. With no base currency nothing converts, every
+   -- deal contributes null, and the sum is null: not computable, honestly.
+   LEFT JOIN LATERAL (
+     SELECT (value #>> '{}')::text AS code
+       FROM setting
+      WHERE key = 'installation.base_currency'
+   ) base ON true
+   LEFT JOIN LATERAL (
+     SELECT r.rate
+       FROM fx_rate r
+      WHERE d.currency IS DISTINCT FROM base.code
+        AND r.from_currency = d.currency
+        AND r.to_currency = base.code
+        AND r.rate_date <= as_of
+      ORDER BY r.rate_date DESC
+      LIMIT 1
+   ) live ON true
+   -- Both currencies' minor-unit scales, each absent for an ordinary two-digit
+   -- code and coalesced to ISO's default below. LEFT so a code the table does
+   -- not name still converts, at two digits, rather than dropping the deal out
+   -- of the sum — an unnamed exception renders wrong for that code, where a
+   -- dropped deal silently shortens a total for every code.
+   LEFT JOIN currency_minor_digits deal_digits ON deal_digits.currency = d.currency
+   LEFT JOIN currency_minor_digits base_digits ON base_digits.currency = base.code
+   -- What this deal contributes to the total, or NULL when it contributes
+   -- nothing. Three cases, and the bound is written once here so the count
+   -- predicate below reads the same answer the sum does.
+   LEFT JOIN LATERAL (
+     SELECT CASE
+       -- Already in the installation's own currency: no rate needed, no scale
+       -- to cross, and none should be looked for. This is the ordinary deal.
+       WHEN d.currency = base.code THEN d.amount_minor
+       -- Converted, and only when the result is a number the column can hold.
+       -- The comparison runs in numeric, where the product already is, so it
+       -- decides the question BEFORE a cast can raise it.
+       --
+       -- amount × rate × 10^digits(base) ÷ 10^digits(deal), as ONE expression
+       -- so the single round() is the only rounding. numeric is exact, so the
+       -- intermediate carries no error to accumulate.
+       WHEN live.rate IS NOT NULL
+        AND round(d.amount_minor * live.rate
+                    * power(10::numeric, coalesce(base_digits.digits, 2))
+                    / power(10::numeric, coalesce(deal_digits.digits, 2)))
+            BETWEEN -9223372036854775808 AND 9223372036854775807
+         THEN round(d.amount_minor * live.rate
+                      * power(10::numeric, coalesce(base_digits.digits, 2))
+                      / power(10::numeric, coalesce(deal_digits.digits, 2)))::bigint
+       -- No usable rate, or a result too large to represent. Nothing is ever
+       -- converted at an invented rate of 1 — that would report ¥5,000,000 as
+       -- €5,000,000 — and nothing is ever clamped to the biggest number that
+       -- fits, which is the same lie with more digits.
+       ELSE NULL
+     END AS minor_base
+   ) conv ON true
+  WHERE ((d.status = 'open'::text) AND (d.company_id IS NOT NULL) AND (d.archived_at IS NULL))
+  GROUP BY d.company_id;
+$$;
+
+COMMENT ON FUNCTION public.company_open_pipeline_rollup(as_of date) IS 'Open pipeline per company in the installation base currency, as of the date the CALLER names. Open deals hold no frozen rate — that happens on close — so each foreign-currency deal converts at the latest fx_rate on or before as_of, across both currencies'' minor-unit scales (currency_minor_digits). The date is a parameter rather than CURRENT_DATE because two readers of one response must not select two different rates: the caller binds it from the same clock every other derived figure reads. A deal with no usable rate, or whose converted amount does not fit a bigint, contributes nothing and is still counted in open_deal_count, so a partial sum is detectable rather than silently short. The total itself answers NULL when it does not fit either.';
+
+CREATE FUNCTION public.company_refuse_anchor_retirement() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.merged_into_id IS NOT NULL
+     AND EXISTS (SELECT 1 FROM company o
+                  WHERE o.id = NEW.merged_into_id AND o.is_anchor) THEN
+    RAISE EXCEPTION 'company % may not be merged into the anchor company', NEW.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'company_anchor_is_permanent';
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.is_anchor AND NOT NEW.is_anchor
+     AND OLD.archived_at IS NULL AND OLD.merged_into_id IS NULL THEN
+    RAISE EXCEPTION 'company % is the anchor company and may not be demoted', NEW.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'company_anchor_is_permanent';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.consent_text_version_is_immutable() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF OLD.published_at IS NULL THEN
+        RETURN NEW;
+    END IF;
+    IF NEW.key IS DISTINCT FROM OLD.key
+       OR NEW.version IS DISTINCT FROM OLD.version
+       OR NEW.subject_line IS DISTINCT FROM OLD.subject_line
+       OR NEW.body IS DISTINCT FROM OLD.body
+       OR NEW.disclosures IS DISTINCT FROM OLD.disclosures
+       OR NEW.content_hash IS DISTINCT FROM OLD.content_hash
+       OR NEW.published_at IS DISTINCT FROM OLD.published_at
+       -- Not only the words: what the version APPLIED TO is evidence too.
+       -- Backdating effective_from makes a version claim it was live on a day
+       -- it was not, which is how a proof row from March is made to resolve
+       -- against wording published in June — retroactive fabrication of the
+       -- evidentiary window, and unlike an edited body it leaves no trace.
+       -- jurisdiction, locale and channel say who it applied to; purpose_id
+       -- says what it is evidence OF.
+       OR NEW.effective_from IS DISTINCT FROM OLD.effective_from
+       OR NEW.jurisdiction IS DISTINCT FROM OLD.jurisdiction
+       OR NEW.locale IS DISTINCT FROM OLD.locale
+       OR NEW.channel IS DISTINCT FROM OLD.channel
+       OR NEW.purpose_id IS DISTINCT FROM OLD.purpose_id THEN
+        RAISE EXCEPTION 'consent_text_version % is published and its wording cannot change; publish a new version instead', OLD.id
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.contact_address_country_goes_stale() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+  DELETE FROM contact_address_country WHERE contact_id = NEW.id;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.deal_clear_partner_attribution_on_company_delete() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  UPDATE deal
+     SET partner_company_id = NULL, partner_attribution = NULL
+   WHERE partner_company_id = OLD.id;
+  RETURN OLD;
+END;
+$$;
+
+CREATE FUNCTION public.f_unaccent(text) RETURNS text
+    LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+    RETURN public.unaccent('public.unaccent'::regdictionary, $1);
+
+CREATE FUNCTION public.f_fold_apostrophes(text) RETURNS text
+    LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+    RETURN replace(public.f_unaccent($1), ''''::text, ''::text);
+
+CREATE FUNCTION public.f_fold_import_name(text) RETURNS text
+    LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+    RETURN lower(btrim(regexp_replace($1, '[[:space:]\u00a0]+'::text, ' '::text, 'g'::text)));
+
+CREATE FUNCTION public.forecast_contribution_is_frozen() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RAISE EXCEPTION 'a forecast contribution is frozen when its snapshot is taken and cannot be changed'
+        USING ERRCODE = 'restrict_violation';
+END
+$$;
+
+CREATE FUNCTION public.forecast_snapshot_is_frozen() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF (to_jsonb(NEW) - 'call_id') IS DISTINCT FROM (to_jsonb(OLD) - 'call_id') THEN
+        RAISE EXCEPTION 'a forecast snapshot is frozen when it is taken and cannot be changed'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN NEW;
+END
+$$;
+
+CREATE FUNCTION public.guard_instruction_wording_correction() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$BEGIN
+  IF NEW.acknowledged_scope IS NOT NULL AND NEW.acknowledged_scope !~ '^[a-f0-9]{64}$' THEN
+    RAISE EXCEPTION 'an instruction scope must be a complete fingerprint' USING ERRCODE='check_violation';
+  END IF;
+  IF NEW.corrected_wording IS NOT NULL AND octet_length(NEW.corrected_wording) <> 32 THEN
+    RAISE EXCEPTION 'a wording correction must be a complete fingerprint' USING ERRCODE='check_violation';
+  END IF;
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.corrected_wording IS NOT NULL THEN
+      RAISE EXCEPTION 'a correction needs an existing decision' USING ERRCODE='check_violation';
+    END IF;
+  ELSE
+    IF NEW.acknowledged_scope IS DISTINCT FROM OLD.acknowledged_scope THEN
+      RAISE EXCEPTION 'an instruction scope is immutable' USING ERRCODE='check_violation';
+    END IF;
+    IF NEW.corrected_wording IS DISTINCT FROM OLD.corrected_wording AND
+       (OLD.status <> 'directed' OR NEW.status <> 'directed' OR OLD.delivery_id IS NOT NULL
+        OR OLD.acknowledged_scope IS NULL OR OLD.acknowledged_wording IS NULL
+        OR NEW.corrected_wording IS NULL) THEN
+      RAISE EXCEPTION 'only an unspent decision with a frozen message can retain a correction'
+        USING ERRCODE='check_violation';
+    END IF;
+  END IF;
+  RETURN NEW;
+END;$_$;
+
+CREATE FUNCTION public.key_shipped_review_questions() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  NEW.questions = (
+    SELECT jsonb_agg(
+             (q - 'label_key')
+             || jsonb_strip_nulls(jsonb_build_object('label_key', label_key_while_shipped(
+                  q ->> 'label', asked.label, 'reviewTemplates.builtin.question.' || asked.key)))
+             ORDER BY ord)
+      FROM jsonb_array_elements(NEW.questions) WITH ORDINALITY AS a (q, ord)
+      LEFT JOIN (VALUES
+        ('win_review', 'why_we_won', 'Why did we win?'),
+        ('win_review', 'competitors', 'Who else were they considering?'),
+        ('win_review', 'decisive_factor', 'What decided it?'),
+        ('loss_review', 'why_we_lost', 'Why did we lose?'),
+        ('loss_review', 'lost_to', 'Who did they choose instead?'),
+        ('loss_review', 'what_would_change_it', 'What would have changed the outcome?')
+      ) AS asked (template, key, label)
+        ON NEW.system AND asked.template = NEW.key AND asked.key = q ->> 'key');
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.label_key_while_shipped(label text, shipped_label text, shipped_label_key text) RETURNS text
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$ SELECT CASE WHEN label = shipped_label THEN shipped_label_key END $$;
+
+CREATE FUNCTION public.last_activity_of_activity(aid uuid) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE
+    AS $$SELECT max(a.occurred_at)
+    FROM activity_link l
+    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+     AND a.audience = 'workspace'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+   WHERE l.activity_id = aid
+$$;
+
+CREATE FUNCTION public.last_activity_of_company(cid uuid) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT max(v) FROM (
+    -- Filed against the account itself.
+    SELECT max(a.occurred_at) AS v
+      FROM activity_link l
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE l.company_id = cid
+    UNION ALL
+    -- Filed against one of its deals.
+    SELECT max(a.occurred_at)
+      FROM deal d
+      JOIN activity_link l ON l.deal_id = d.id
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE d.company_id = cid
+    UNION ALL
+    -- Filed against a contact it currently employs, sent while they worked there.
+    SELECT max(a.occurred_at)
+      FROM relationship r
+      JOIN activity_link l ON l.contact_id = r.contact_id
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE r.company_id = cid AND r.kind = 'employment'
+       AND r.ended_at IS NULL AND r.archived_at IS NULL
+       AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
+		WHEN r.first_observed_at IS NOT NULL THEN (a.occurred_at >= r.first_observed_at AND (a.occurred_precision = 'instant' OR (CASE WHEN a.occurred_precision = 'day'
+		THEN date_trunc('day', a.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')
+		ELSE a.occurred_at END) >= r.first_observed_at)) ELSE true END)
+  ) arms
+$$;
+
+CREATE FUNCTION public.last_activity_of_company_activity(aid uuid, oid uuid) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE
+    AS $$SELECT max(v) FROM (
+    -- Filed against the account itself.
+    SELECT max(a.occurred_at) AS v
+      FROM activity_link l
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE l.activity_id = aid AND l.company_id = oid
+    UNION ALL
+    -- Filed against one of its deals.
+    SELECT max(a.occurred_at)
+      FROM deal d
+      JOIN activity_link l ON l.deal_id = d.id
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE l.activity_id = aid AND d.company_id = oid
+    UNION ALL
+    -- Filed against a contact it currently employs, sent while they worked there.
+    SELECT max(a.occurred_at)
+      FROM relationship r
+      JOIN activity_link l ON l.contact_id = r.contact_id
+      JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+       AND a.audience = 'workspace'
+       AND a.origin NOT IN ('system_remediation', 'system_notice')
+       AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+     WHERE l.activity_id = aid AND r.company_id = oid AND r.kind = 'employment'
+       AND r.ended_at IS NULL AND r.archived_at IS NULL
+       AND (CASE WHEN r.started_at IS NOT NULL THEN (r.started_at::timestamp AT TIME ZONE 'UTC' <= a.occurred_at)
+		WHEN r.first_observed_at IS NOT NULL THEN (a.occurred_at >= r.first_observed_at AND (a.occurred_precision = 'instant' OR (CASE WHEN a.occurred_precision = 'day'
+		THEN date_trunc('day', a.occurred_at AT TIME ZONE 'UTC') AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')
+		ELSE a.occurred_at END) >= r.first_observed_at)) ELSE true END)
+  ) arms
+$$;
+
+CREATE FUNCTION public.last_activity_of_contact(cid uuid) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT max(a.occurred_at)
+    FROM activity_link l
+    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+     AND a.audience = 'workspace'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+   WHERE l.contact_id = cid
+$$;
+
+CREATE FUNCTION public.last_activity_of_deal(did uuid) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT max(a.occurred_at)
+    FROM activity_link l
+    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+     AND a.audience = 'workspace'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+   WHERE l.deal_id = did
+$$;
+
+CREATE FUNCTION public.last_activity_of_project(pid uuid) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT max(a.occurred_at)
+    FROM activity_link l
+    JOIN activity a ON a.id = l.activity_id AND a.archived_at IS NULL
+     AND a.audience = 'workspace'
+     AND a.origin NOT IN ('system_remediation', 'system_notice')
+     AND (a.kind IN ('email','message','meeting','call','note') AND ((a.kind <> 'meeting' OR ((a.meeting_status IS NULL OR a.meeting_status IN ('booked','held')) AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now())))) AND (a.kind <> 'call' OR (a.call_outcome IS NULL OR a.call_outcome IN ('reached','put_through')))) AND NOT (a.kind = 'note' AND a.origin = 'agent') AND ((a.kind = 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' AND a.occurred_at < ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC') OR a.occurred_precision = 'instant' AND a.occurred_at <= now()))) OR (a.kind <> 'meeting' AND (a.occurred_at <= greatest(now(), ((date_trunc('day', CAST(now() AS timestamptz) AT TIME ZONE COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')) + interval '12 hours') AT TIME ZONE 'UTC')) AND (a.occurred_precision = 'day' OR a.occurred_at <= now())))))
+   WHERE l.project_id = pid
+$$;
+
+CREATE FUNCTION public.last_activity_reach(contact_ids uuid[], deal_ids uuid[], company_ids uuid[]) RETURNS TABLE(kind text, id uuid)
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT 'contact', named FROM unnest(contact_ids) named WHERE named IS NOT NULL
+  UNION SELECT 'deal', named FROM unnest(deal_ids) named WHERE named IS NOT NULL
+  UNION SELECT 'company', named FROM unnest(company_ids) named WHERE named IS NOT NULL
+  UNION SELECT 'company', d.company_id FROM deal d
+         WHERE d.id = ANY (deal_ids) AND d.company_id IS NOT NULL
+  UNION SELECT 'company', r.company_id FROM relationship r
+         WHERE r.contact_id = ANY (contact_ids) AND r.kind = 'employment'
+           AND r.ended_at IS NULL AND r.archived_at IS NULL
+$$;
+
+CREATE FUNCTION public.legal_entity_refuse_default_retirement() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP = 'DELETE' AND OLD.is_default THEN
+    RAISE EXCEPTION 'legal entity % is the default entity and may not be deleted', OLD.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'legal_entity_default_is_permanent';
+  END IF;
+  IF TG_OP = 'UPDATE' AND OLD.is_default AND NOT NEW.is_default THEN
+    RAISE EXCEPTION 'legal entity % is the default entity and may not be demoted', OLD.id
+      USING ERRCODE = 'check_violation',
+            CONSTRAINT = 'legal_entity_default_is_permanent';
+  END IF;
+  IF TG_OP = 'DELETE' THEN
+    RETURN OLD;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.lock_last_activity_targets(contact_ids uuid[], deal_ids uuid[], company_ids uuid[], project_ids uuid[]) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  reached record;
+BEGIN
+  FOR reached IN
+     SELECT reach.kind, reach.id FROM last_activity_reach(contact_ids, deal_ids, company_ids) reach
+     UNION SELECT 'project', named FROM unnest(project_ids) named WHERE named IS NOT NULL
+     ORDER BY 1, 2
+  LOOP
+    CASE reached.kind
+      WHEN 'company' THEN PERFORM 1 FROM company WHERE id = reached.id FOR UPDATE;
+      WHEN 'contact' THEN PERFORM 1 FROM contact WHERE id = reached.id FOR UPDATE;
+      WHEN 'deal' THEN PERFORM 1 FROM deal WHERE id = reached.id FOR UPDATE;
+      WHEN 'project' THEN PERFORM 1 FROM project WHERE id = reached.id FOR UPDATE;
+    END CASE;
+  END LOOP;
+END;
+$$;
+
+CREATE FUNCTION public.mail_topic_words(subject text) RETURNS text[]
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+    SELECT coalesce(array_agg(DISTINCT word), ARRAY[]::text[])
+      FROM regexp_split_to_table(lower(upper(regexp_replace(coalesce(subject, '') COLLATE "und-x-icu",
+           '\[[^]]*\]', ' ', 'g'))), '[^[:alnum:]]+') AS word
+     WHERE length(word) > 1 AND word ~ '[[:alpha:]]'
+       AND word <> ALL (ARRAY[
+           're', 'aw', 'antw', 'fwd', 'fw', 'wg', 'sv', 'vs',
+           'the', 'and', 'for', 'with', 'from', 'this', 'that', 'of', 'to', 'in', 'on', 'an', 'is', 'it', 'at', 'by', 'or',
+           'der', 'die', 'das', 'ein', 'eine', 'und', 'oder', 'für', 'mit', 'von', 'zu', 'im', 'am', 'den', 'dem', 'des', 'ist',
+           'và', 'của', 'cho', 'với', 'từ', 'các', 'những', 'là'
+       ]);
+$$;
+
+CREATE FUNCTION public.mail_topics_differ(parent_subject text, reply_subject text) RETURNS boolean
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+    SELECT cardinality(parent_words) > 0 AND cardinality(reply_words) > 0
+           AND NOT parent_words && reply_words
+      FROM (SELECT mail_topic_words(parent_subject) AS parent_words,
+                   mail_topic_words(reply_subject) AS reply_words) AS topics;
+$$;
+
+CREATE FUNCTION public.meeting_invitation_attention_follows_status() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NEW.status <> 'needs_attention' THEN
+    NEW.attention_reason := NULL;
+    NEW.attention_episode := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.member_identity_family(member uuid) RETURNS uuid[]
+    LANGUAGE sql STABLE PARALLEL SAFE
+    AS $$
+  WITH RECURSIVE member_identities(id) AS (
+    SELECT member
+    UNION
+    SELECT retired.id FROM app_user retired JOIN member_identities survivor
+      ON retired.merged_into_user_id = survivor.id
+     WHERE retired.removed_at IS NOT NULL)
+  SELECT array_agg(id) FROM member_identities
+$$;
+
+CREATE FUNCTION public.move_last_activity(tbl regclass, rid uuid) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v timestamptz;
+BEGIN
+  IF rid IS NULL THEN RETURN; END IF;
+  CASE tbl
+    WHEN 'contact'::regclass THEN
+      PERFORM 1 FROM contact WHERE id = rid FOR UPDATE;
+      v := last_activity_of_contact(rid);
+      PERFORM set_config('margince.last_activity_move', 'on', true);
+      UPDATE contact SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
+    WHEN 'deal'::regclass THEN
+      PERFORM 1 FROM deal WHERE id = rid FOR UPDATE;
+      v := last_activity_of_deal(rid);
+      PERFORM set_config('margince.last_activity_move', 'on', true);
+      UPDATE deal SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
+    WHEN 'company'::regclass THEN
+      PERFORM 1 FROM company WHERE id = rid FOR UPDATE;
+      v := last_activity_of_company(rid);
+      PERFORM set_config('margince.last_activity_move', 'on', true);
+      UPDATE company SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
+  END CASE;
+  PERFORM set_config('margince.last_activity_move', 'off', true);
+END;
+$$;
+
+CREATE FUNCTION public.move_project_last_activity(pid uuid) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  v timestamptz;
+BEGIN
+  IF pid IS NULL THEN RETURN; END IF;
+  PERFORM 1 FROM project WHERE id = pid FOR UPDATE;
+  v := last_activity_of_project(pid);
+  PERFORM set_config('margince.last_activity_move', 'on', true);
+  UPDATE project SET last_activity_at = v WHERE id = pid AND last_activity_at IS DISTINCT FROM v;
+  PERFORM set_config('margince.last_activity_move', 'off', true);
+END;
+$$;
+
+CREATE FUNCTION public.project_health_assessment_is_append_only() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- The CASCADE from project is the one legitimate removal, and it is
+  -- distinguishable: by the time this fires the parent is already gone, so a
+  -- surviving project means somebody deleted the assessment directly.
+  IF TG_OP = 'DELETE' THEN
+    IF EXISTS (SELECT 1 FROM project p WHERE p.id = OLD.project_id) THEN
+      RAISE EXCEPTION 'health assessment % is append-only: correct it by superseding it', OLD.id
+        USING ERRCODE = 'check_violation',
+              CONSTRAINT = 'project_health_assessment_append_only';
+    END IF;
+    RETURN OLD;
+  END IF;
+  RAISE EXCEPTION 'health assessment % is append-only: correct it by superseding it', OLD.id
+    USING ERRCODE = 'check_violation',
+          CONSTRAINT = 'project_health_assessment_append_only';
+END;
+$$;
+
+CREATE FUNCTION public.provider_run_release_categories() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  DELETE FROM provider_run_category WHERE run_id = OLD.id;
+  RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.record_stored_object_intent(requested_kind text, requested_key text) RETURNS void
+    LANGUAGE plpgsql
+    AS $$BEGIN
+    INSERT INTO stored_object_intent (storage_key, kind)
+    VALUES (requested_key, requested_kind)
+    ON CONFLICT (storage_key) DO UPDATE
+       SET kind = excluded.kind, recorded_at = now()
+       WHERE stored_object_intent.reaping_since IS NULL;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'The stored file has expired; upload it again' USING ERRCODE = '55000';
+    END IF;
+END;$$;
+
+CREATE FUNCTION public.refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  reached record;
+BEGIN
+  FOR reached IN
+     SELECT reach.kind, reach.id
+       FROM last_activity_reach(ARRAY[cid], ARRAY[did], ARRAY[oid]) reach
+      ORDER BY reach.kind, reach.id
+  LOOP
+    PERFORM move_last_activity(reached.kind::regclass, reached.id);
+  END LOOP;
+END;
+$$;
+
+CREATE FUNCTION public.refuse_retired_member_work() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$DECLARE
+    member_id uuid;
+    retired boolean;
+BEGIN
+    member_id := (to_jsonb(NEW)->>TG_ARGV[0])::uuid;
+    SELECT removed_at IS NOT NULL INTO retired FROM app_user WHERE id = member_id FOR KEY SHARE;
+    IF retired THEN
+        RAISE EXCEPTION 'A retired member cannot receive active work'
+            USING ERRCODE = '23514', CONSTRAINT = 'member_work_reference_retired';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.refuse_service_member_delete() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+    IF OLD.service_extension IS NOT NULL THEN
+        RAISE EXCEPTION 'a service member is archived, never deleted'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN OLD;
+END;
+$$;
+
+CREATE FUNCTION public.reopen_deleted_signature_source() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+    WITH affected AS (
+        SELECT contact_id FROM contact_signature_enrich_state WHERE activity_id=OLD.id
+        UNION SELECT contact_id FROM activity_link WHERE activity_id=OLD.id AND contact_id IS NOT NULL AND OLD.kind='email' AND OLD.direction='inbound'
+        UNION SELECT contact_id FROM activity_participant WHERE activity_id=OLD.id AND contact_id IS NOT NULL AND OLD.kind='email' AND OLD.direction='inbound'
+    ), subjects AS (
+        SELECT c.id FROM contact c JOIN affected a ON a.contact_id=c.id ORDER BY c.id FOR UPDATE OF c
+    )
+    INSERT INTO contact_signature_enrich_state AS st (contact_id,requested_generation,live_generation,attempted_at)
+    SELECT id,1,1,NULL FROM subjects ORDER BY id
+    ON CONFLICT (contact_id) DO UPDATE
+       SET activity_id=NULL,last_activity_at=NULL,history_depth=NULL,
+           requested_generation=st.requested_generation+1,live_generation=st.requested_generation+1,due_at=now(),deferred_run_id=NULL;
+    RETURN OLD;
+END;
+$$;
+
+CREATE FUNCTION public.retire_changed_system_text() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+ IF NEW.subject IS DISTINCT FROM OLD.subject AND
+    NEW.system_text->'subject'->>'digest' IS DISTINCT FROM encode(sha256(convert_to(coalesce(NEW.subject, ''), 'UTF8')), 'hex') THEN
+  NEW.system_text := NEW.system_text - 'subject';
+ END IF;
+ IF NEW.body IS DISTINCT FROM OLD.body AND
+    NEW.system_text->'body'->>'digest' IS DISTINCT FROM encode(sha256(convert_to(coalesce(NEW.body, ''), 'UTF8')), 'hex') THEN
+  NEW.system_text := NEW.system_text - 'body';
+ END IF;
+ IF NOT (NEW.system_text ? 'subject' OR NEW.system_text ? 'body') THEN NEW.system_text := NULL; END IF;
+ RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.retire_raw_original_object() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+    IF TG_OP = 'UPDATE' THEN
+        IF OLD.payload_object IS NOT NULL
+           AND OLD.payload_object->>'key' = NEW.payload_object->>'key'
+           AND (OLD.payload IS DISTINCT FROM NEW.payload
+                OR (OLD.payload_object - 'matched_subjects') IS DISTINCT FROM (NEW.payload_object - 'matched_subjects')) THEN
+            RAISE EXCEPTION 'A stored original rewrite requires a new object reference';
+        END IF;
+        IF OLD.payload_object IS NOT NULL
+           AND (OLD.payload_object->>'key') IS DISTINCT FROM (NEW.payload_object->>'key') THEN
+            PERFORM record_stored_object_intent('raw_original', OLD.payload_object->>'key');
+        END IF;
+        RETURN NEW;
+    END IF;
+    IF OLD.payload_object IS NOT NULL THEN
+        PERFORM record_stored_object_intent('raw_original', OLD.payload_object->>'key');
+    END IF;
+    RETURN OLD;
+END;
+$$;
+
+CREATE FUNCTION public.set_updated_at() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END;
+$$;
+
+CREATE FUNCTION public.set_updated_at_bump_version() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF current_setting('margince.last_activity_move', true) = 'on' THEN
+    RETURN NEW;
+  END IF;
+  NEW.updated_at = now();
+  NEW.version = OLD.version + 1;
+  RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.uuidv7() RETURNS uuid
+    LANGUAGE sql
+    AS $$
+  SELECT encode(
+    set_byte(
+      set_byte(
+        overlay(r PLACING substring(int8send((extract(epoch FROM clock_timestamp()) * 1000)::bigint) FROM 3) FROM 1 FOR 6),
+        6, (get_byte(r, 6) & 15) | 112),
+      8, (get_byte(r, 8) & 63) | 128),
+    'hex')::uuid
+  FROM (SELECT uuid_send(gen_random_uuid()) AS r) AS gen
+$$;
+
+CREATE TABLE public.activity (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    kind text NOT NULL,
+    subject text,
+    body text,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    due_at timestamp with time zone,
+    assignee_id uuid,
+    is_done boolean DEFAULT false NOT NULL,
+    done_at timestamp with time zone,
+    duration_seconds integer,
+    direction text,
+    meeting_status text,
+    source_system text,
+    source_id text,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    raw jsonb,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    host_user_id uuid,
+    remind_at timestamp with time zone,
+    language text,
+    search_tsv tsvector GENERATED ALWAYS AS ((((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(subject, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(subject, ''::text))), 'A'::"char")) || setweight(to_tsvector(public.activity_ts_config(language), public.f_unaccent(((COALESCE(subject, ''::text) || ' '::text) || COALESCE(body, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(body, ''::text))), 'C'::"char"))) STORED,
+    thread_key text,
+    capture_label text,
+    capture_labeled_at timestamp with time zone,
+    counterparty_email text,
+    counterparty_outbound_attested boolean DEFAULT false NOT NULL,
+    bulk_mail_attested boolean DEFAULT false NOT NULL,
+    channel_provider text,
+    retention_class text,
+    retention_class_at timestamp with time zone,
+    restricted_at timestamp with time zone,
+    restricted_reason text,
+    restricted_until timestamp with time zone,
+    redacted_fields text[] DEFAULT '{}'::text[] NOT NULL,
+    audience text DEFAULT 'workspace'::text NOT NULL,
+    audience_reason text,
+    origin text DEFAULT 'human'::text NOT NULL,
+    has_calendar_part boolean DEFAULT false NOT NULL,
+    owed_verdict text,
+    owed_verdict_at timestamp with time zone,
+    reply_verdict text,
+    reply_verdict_at timestamp with time zone,
+    reply_verdict_by text,
+    source_activity_id uuid,
+    owed_verdict_ruleset text,
+    source_author_id uuid,
+    source_author_name text,
+    claims_host_slot boolean DEFAULT false NOT NULL,
+    raw_capture_id uuid,
+    capture_label_declined_at timestamp with time zone,
+    owed_verdict_declined_at timestamp with time zone,
+    capture_label_declined_ruleset text,
+    owed_verdict_declined_ruleset text,
+    booking_interval_exact boolean DEFAULT false NOT NULL,
+    sent_by_colleague uuid,
+    calendar_method text,
+    foreign_link boolean,
+    sender_was_stranger boolean,
+    inbound_sender_authenticated boolean DEFAULT false NOT NULL,
+    body_completeness text DEFAULT 'complete'::text NOT NULL,
+    sender_is_machine boolean DEFAULT false NOT NULL,
+    invitation_sender uuid,
+    occurred_precision text DEFAULT 'instant'::text NOT NULL,
+    guests_left_out integer DEFAULT 0 NOT NULL,
+    agenda_fingerprint text,
+    due_has_time boolean DEFAULT false NOT NULL,
+    call_outcome text,
+    internal_mail_authorization jsonb,
+    domain_evidence_version bigint DEFAULT 0 NOT NULL,
+    deal_topic_digest text,
+    deal_topic_checked_at timestamp with time zone,
+    calendar_uid text,
+    system_text jsonb,
+    legal_entity_id uuid,
+    CONSTRAINT activity_audience_check CHECK ((audience = ANY (ARRAY['workspace'::text, 'participants'::text, 'selected'::text]))),
+    CONSTRAINT activity_body_completeness_check CHECK ((body_completeness = ANY (ARRAY['complete'::text, 'partial'::text, 'unreadable'::text, 'forwarded'::text, 'unassessed'::text, 'unverifiable'::text]))),
+    CONSTRAINT activity_calendar_method_check CHECK ((calendar_method = ANY (ARRAY['PUBLISH'::text, 'REQUEST'::text, 'REPLY'::text, 'ADD'::text, 'CANCEL'::text, 'REFRESH'::text, 'COUNTER'::text, 'DECLINECOUNTER'::text]))),
+    CONSTRAINT activity_call_outcome_check CHECK (((call_outcome IS NULL) OR (call_outcome = ANY (ARRAY['reached'::text, 'not_reached'::text, 'voicemail'::text, 'call_back_later'::text, 'put_through'::text])))),
+    CONSTRAINT activity_call_outcome_kind_check CHECK (((call_outcome IS NULL) OR (kind = 'call'::text))),
+    CONSTRAINT activity_capture_label_check CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment'::text, 'meeting'::text, 'noise'::text])))),
+    CONSTRAINT activity_capture_label_stamped CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL))),
+    CONSTRAINT activity_colleague_mail_is_outbound CHECK (((sent_by_colleague IS NULL) OR (direction = 'outbound'::text))),
+    CONSTRAINT activity_day_holds_no_host_slot CHECK (((occurred_precision = 'instant'::text) OR (NOT claims_host_slot))),
+    CONSTRAINT activity_direction_check CHECK (((direction IS NULL) OR (direction = ANY (ARRAY['inbound'::text, 'outbound'::text])))),
+    CONSTRAINT activity_done_at CHECK (((is_done = false) OR (done_at IS NOT NULL))),
+    CONSTRAINT activity_exact_booking_duration CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0)))),
+    CONSTRAINT activity_guests_left_out_check CHECK ((guests_left_out >= 0)),
+    CONSTRAINT activity_internal_mail_remains_restricted CHECK (((internal_mail_authorization IS NULL) OR ((kind = 'email'::text) AND (audience = ANY (ARRAY['participants'::text, 'selected'::text])) AND (jsonb_typeof(internal_mail_authorization) = 'object'::text) AND (internal_mail_authorization ?& ARRAY['connection_id'::text, 'owner_user_id'::text, 'provider'::text, 'generation'::text, 'enrolled_at'::text, 'enrolled_by'::text, 'policy_since'::text])))),
+    CONSTRAINT activity_language_check CHECK (((language IS NULL) OR (language = ANY (ARRAY['de'::text, 'en'::text, 'vi'::text])))),
+    CONSTRAINT activity_meeting_host CHECK (((host_user_id IS NULL) OR (kind = 'meeting'::text))),
+    CONSTRAINT activity_meeting_status_check CHECK (((meeting_status IS NULL) OR (meeting_status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))),
+    CONSTRAINT activity_message_has_provider CHECK (((kind = 'message'::text) = (channel_provider IS NOT NULL))),
+    CONSTRAINT activity_not_derived_from_itself CHECK (((source_activity_id IS NULL) OR (source_activity_id <> id))),
+    CONSTRAINT activity_occurred_precision_check CHECK ((occurred_precision = ANY (ARRAY['instant'::text, 'day'::text]))),
+    CONSTRAINT activity_origin_check CHECK ((origin = ANY (ARRAY['human'::text, 'agent'::text, 'system_remediation'::text, 'system_notice'::text]))),
+    CONSTRAINT activity_owed_verdict_check CHECK (((owed_verdict IS NULL) OR (owed_verdict = ANY (ARRAY['asks_us'::text, 'informs_us'::text])))),
+    CONSTRAINT activity_owed_verdict_ruleset_shape CHECK (((owed_verdict_ruleset IS NULL) OR (owed_verdict IS NOT NULL))),
+    CONSTRAINT activity_owed_verdict_stamped CHECK (((owed_verdict IS NULL) = (owed_verdict_at IS NULL))),
+    CONSTRAINT activity_reply_verdict_check CHECK (((reply_verdict IS NULL) OR (reply_verdict = ANY (ARRAY['positive'::text, 'negative'::text, 'neutral'::text])))),
+    CONSTRAINT activity_reply_verdict_inbound CHECK (((reply_verdict IS NULL) OR (direction = 'inbound'::text))),
+    CONSTRAINT activity_reply_verdict_stamped CHECK ((((reply_verdict IS NULL) = (reply_verdict_at IS NULL)) AND ((reply_verdict IS NULL) = (reply_verdict_by IS NULL)))),
+    CONSTRAINT activity_restricted_is_archived CHECK (((restricted_at IS NULL) OR (archived_at IS NOT NULL))),
+    CONSTRAINT activity_restriction_complete CHECK ((((restricted_at IS NULL) AND (restricted_reason IS NULL) AND (restricted_until IS NULL)) OR ((restricted_at IS NOT NULL) AND (restricted_reason IS NOT NULL) AND (restricted_until IS NOT NULL)))),
+    CONSTRAINT activity_restriction_needs_class CHECK (((restricted_at IS NULL) OR (retention_class IS NOT NULL))),
+    CONSTRAINT activity_restriction_window CHECK (((restricted_until IS NULL) OR (restricted_until > restricted_at))),
+    CONSTRAINT activity_retention_class_known CHECK (((retention_class IS NULL) OR (retention_class = 'commercial_correspondence'::text))),
+    CONSTRAINT activity_retention_class_stamped CHECK (((retention_class IS NULL) = (retention_class_at IS NULL))),
+    CONSTRAINT activity_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))),
+    CONSTRAINT activity_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192)))),
+    CONSTRAINT activity_task_fields CHECK (((kind = 'task'::text) OR ((due_at IS NULL) AND (assignee_id IS NULL) AND (is_done = false) AND (remind_at IS NULL)))),
+    CONSTRAINT activity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.activity.audience_reason IS 'Why activity.audience is what it is. Withheld from a reader who may not read the content: the reason describes the content.';
+
+COMMENT ON COLUMN public.activity.has_calendar_part IS 'The message carried a text/calendar payload. NULL means the capture predates the column, not that there was none.';
+
+COMMENT ON COLUMN public.activity.owed_verdict IS 'Whether this inbound message asks its recipient side for something. Routes attention only; never hides a row. NULL means unjudged.';
+
+COMMENT ON COLUMN public.activity.reply_verdict IS 'Whether this inbound reply was positive, negative or neutral. NULL means unjudged, which enters neither half of a positive-reply rate.';
+
+COMMENT ON COLUMN public.activity.reply_verdict_by IS 'The classifier version that judged it, so a model change is distinguishable from the world changing.';
+
+COMMENT ON COLUMN public.activity.owed_verdict_ruleset IS 'Digest of the classifier prompt that produced owed_verdict. NULL beside a verdict is a judgement made before rulesets were recorded, and is stale by definition.';
+
+COMMENT ON COLUMN public.activity.source_author_id IS 'Who wrote this where it came from, when that is a seat here. captured_by stays who recorded it in this installation.';
+
+COMMENT ON COLUMN public.activity.source_author_name IS 'Who wrote this where it came from, when they hold no seat here. Free text from the source system.';
+
+COMMENT ON COLUMN public.activity.claims_host_slot IS 'The row holds a slot on host_user_id''s calendar, which is what activity_meeting_no_overlap refuses a second of. Set by the scheduling doors alone; a hand-logged or captured meeting records that a meeting happened and claims nothing.';
+
+COMMENT ON COLUMN public.activity.capture_label_declined_ruleset IS 'Digest of the capture-classify prompt every rung declined. A sweep under a different digest offers the message again.';
+
+COMMENT ON COLUMN public.activity.owed_verdict_declined_ruleset IS 'Digest of the owed-verdict prompt every rung declined. A sweep under a different digest offers the message again.';
+
+CREATE FUNCTION public.settlement_evidence_activity_keys(row_value public.activity) RETURNS bigint[]
+    LANGUAGE sql IMMUTABLE
+    AS $$
+    SELECT CASE WHEN row_value.kind IN ('email', 'message', 'call', 'meeting') THEN ARRAY[
+        settlement_evidence_key('thread', row_value.thread_key),
+        settlement_evidence_key('address', lower(btrim(row_value.counterparty_email)))] END
+$$;
+
+CREATE TABLE public.contact_email (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    email text NOT NULL,
+    email_type text DEFAULT 'work'::text NOT NULL,
+    is_primary boolean DEFAULT false NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    from_correspondence boolean DEFAULT true NOT NULL,
+    email_domain_folded text,
+    CONSTRAINT contact_email_email_type_check CHECK ((email_type = ANY (ARRAY['work'::text, 'personal'::text, 'other'::text]))),
+    CONSTRAINT contact_email_norm CHECK ((email = lower(email))),
+    CONSTRAINT contact_email_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE FUNCTION public.settlement_evidence_contact_email_keys(row_value public.contact_email) RETURNS bigint[]
+    LANGUAGE sql IMMUTABLE
+    AS $$
+    SELECT ARRAY[settlement_evidence_key('contact', row_value.contact_id::text),
+                 settlement_evidence_key('address', lower(btrim(row_value.email)))]
+$$;
+
+CREATE FUNCTION public.settlement_evidence_key(scope text, value text) RETURNS bigint
+    LANGUAGE sql IMMUTABLE
+    AS $$ SELECT hashtextextended('margince.settlement.' || scope || ':' || value, 0) $$;
+
+CREATE TABLE public.activity_participant (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    user_id uuid,
+    contact_id uuid,
+    address text,
+    role text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    display_name text,
+    channel_user_id text,
+    address_domain_folded text,
+    roster_seat uuid,
+    response text,
+    past_party_cap boolean DEFAULT false NOT NULL,
+    domain_evidence_parent_version bigint,
+    domain_evidence_at timestamp with time zone,
+    domain_evidence_precision text,
+    domain_evidence_visible boolean,
+    CONSTRAINT activity_participant_identity CHECK (((user_id IS NOT NULL) OR (contact_id IS NOT NULL) OR (address IS NOT NULL) OR (channel_user_id IS NOT NULL))),
+    CONSTRAINT activity_participant_past_party_cap_unresolved CHECK (((NOT past_party_cap) OR ((user_id IS NULL) AND (contact_id IS NULL)))),
+    CONSTRAINT activity_participant_response_check CHECK ((response = ANY (ARRAY['accepted'::text, 'declined'::text, 'tentative'::text, 'needs_action'::text]))),
+    CONSTRAINT activity_participant_role_check CHECK ((role = ANY (ARRAY['from'::text, 'to'::text, 'cc'::text, 'bcc'::text, 'attendee'::text, 'organizer'::text])))
+);
+
+COMMENT ON COLUMN public.activity_participant.display_name IS 'The name the provider gave this attendee: a name, '''' when it named nobody, NULL when the row predates the column. Subject data — cleared by the Art. 17 erasure and the retention anonymizer, and served by the Art. 15 export.';
+
+COMMENT ON COLUMN public.activity_participant.channel_user_id IS 'The provider''s own account id for this party, for a chat that names people by account and carries no address. Read against activity.channel_provider, which names the transport. Never resolves to a seat: nothing in this database attests an account to a member.';
+
+CREATE FUNCTION public.settlement_evidence_participant_keys(row_value public.activity_participant) RETURNS bigint[]
+    LANGUAGE sql IMMUTABLE
+    AS $$
+    SELECT ARRAY[settlement_evidence_key('contact', row_value.contact_id::text),
+                 settlement_evidence_key('address', lower(btrim(row_value.address)))]
+$$;
+
+CREATE FUNCTION public.settlement_evidence_share(keys bigint[]) RETURNS void
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    k bigint;
+BEGIN
+    FOR k IN SELECT DISTINCT u FROM unnest(keys) u WHERE u IS NOT NULL ORDER BY u LOOP
+        PERFORM pg_advisory_xact_lock_shared(k);
+    END LOOP;
+END $$;
+
+CREATE FUNCTION public.settlement_evidence_share_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(OLD));
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(OLD) || settlement_evidence_activity_keys(NEW));
+    ELSE
+        PERFORM settlement_evidence_share(settlement_evidence_activity_keys(NEW));
+    END IF;
+    RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.settlement_evidence_share_contact_email() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_contact_email_keys(OLD));
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_contact_email_keys(OLD) || settlement_evidence_contact_email_keys(NEW));
+    ELSE
+        PERFORM settlement_evidence_share(settlement_evidence_contact_email_keys(NEW));
+    END IF;
+    RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.settlement_evidence_share_link() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(ARRAY[settlement_evidence_key('contact', OLD.contact_id::text)]);
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(ARRAY[settlement_evidence_key('contact', OLD.contact_id::text),
+                                                settlement_evidence_key('contact', NEW.contact_id::text)]);
+    ELSE
+        PERFORM settlement_evidence_share(ARRAY[settlement_evidence_key('contact', NEW.contact_id::text)]);
+    END IF;
+    RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.settlement_evidence_share_participant() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_participant_keys(OLD));
+        RETURN OLD;
+    END IF;
+    IF TG_OP = 'UPDATE' THEN
+        PERFORM settlement_evidence_share(settlement_evidence_participant_keys(OLD) || settlement_evidence_participant_keys(NEW));
+    ELSE
+        PERFORM settlement_evidence_share(settlement_evidence_participant_keys(NEW));
+    END IF;
+    RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.stamp_participant_domain_evidence() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+ IF TG_OP='INSERT' OR NEW.activity_id IS DISTINCT FROM OLD.activity_id
+ OR ROW(NEW.domain_evidence_parent_version, NEW.domain_evidence_at, NEW.domain_evidence_precision, NEW.domain_evidence_visible)
+ IS DISTINCT FROM ROW(OLD.domain_evidence_parent_version, OLD.domain_evidence_at, OLD.domain_evidence_precision, OLD.domain_evidence_visible)
+ OR NEW.domain_evidence_parent_version IS NULL OR NEW.domain_evidence_at IS NULL
+ OR NEW.domain_evidence_precision IS NULL OR NEW.domain_evidence_visible IS NULL THEN
+  SELECT a.domain_evidence_version, a.occurred_at, a.occurred_precision,
+         a.archived_at IS NULL AND a.restricted_at IS NULL
+   INTO NEW.domain_evidence_parent_version, NEW.domain_evidence_at,
+        NEW.domain_evidence_precision, NEW.domain_evidence_visible
+   FROM activity a WHERE a.id=NEW.activity_id FOR KEY SHARE;
+ END IF;
+ RETURN NEW;
+END;
+$$;
+
+CREATE FUNCTION public.system_log_immutable() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $_$
+BEGIN
+  IF TG_OP = 'UPDATE' AND OLD.action = 'login'
+     AND OLD.detail ? 'email_hash' AND NOT OLD.detail ? 'email_key_id'
+     AND NEW.detail->>'email_hash' ~ '^[0-9a-f]{64}$'
+     AND NEW.detail->>'email_key_id' ~ '^[0-9a-f]{16}$'
+     AND (NEW.detail - ARRAY['email_hash','email_key_id']) = (OLD.detail - 'email_hash')
+     AND (to_jsonb(NEW) - 'detail') = (to_jsonb(OLD) - 'detail') THEN
+    RETURN NEW;
+  END IF;
+  RAISE EXCEPTION 'system_log is append-only (attempted % on row %)', TG_OP, OLD.id
+    USING ERRCODE = 'check_violation';
+END;
+$_$;
+
+CREATE FUNCTION public.tax_rate_refuse_change() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    RAISE EXCEPTION 'a tax rate is added and never changed or removed; record a new rate from a later day'
+        USING ERRCODE = 'check_violation';
+END;
+$$;
+
+CREATE FUNCTION public.trg_activity_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  l record;
+BEGIN
+  FOR l IN
+     SELECT contact_id, deal_id, company_id FROM activity_link
+      WHERE activity_id = NEW.id
+      ORDER BY contact_id, deal_id, company_id
+  LOOP
+    PERFORM refresh_last_activity_for_link(l.contact_id, l.deal_id, l.company_id);
+  END LOOP;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.trg_activity_link_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  at timestamptz;
+  reached record;
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.contact_id IS NULL AND NEW.deal_id IS NULL AND NEW.company_id IS NULL THEN
+      RETURN NULL;
+    END IF;
+    at := last_activity_of_activity(NEW.activity_id);
+    IF at IS NOT NULL THEN
+      FOR reached IN
+         SELECT reach.kind, reach.id
+           FROM last_activity_reach(ARRAY[NEW.contact_id], ARRAY[NEW.deal_id], ARRAY[NEW.company_id]) reach
+          ORDER BY reach.kind, reach.id
+      LOOP
+        PERFORM advance_last_activity(reached.kind::regclass, reached.id,
+          CASE reached.kind WHEN 'company' THEN last_activity_of_company_activity(NEW.activity_id, reached.id) ELSE at END);
+      END LOOP;
+    END IF;
+    RETURN NULL;
+  END IF;
+  PERFORM refresh_last_activity_for_link(OLD.contact_id, OLD.deal_id, OLD.company_id);
+  IF TG_OP = 'UPDATE' THEN
+    PERFORM refresh_last_activity_for_link(NEW.contact_id, NEW.deal_id, NEW.company_id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.trg_activity_link_project_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.project_id IS NOT NULL THEN
+      PERFORM advance_last_activity('project'::regclass, NEW.project_id, last_activity_of_activity(NEW.activity_id));
+    END IF;
+    RETURN NULL;
+  END IF;
+  PERFORM move_project_last_activity(OLD.project_id);
+  IF TG_OP = 'UPDATE' THEN
+    PERFORM move_project_last_activity(NEW.project_id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.trg_activity_project_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM move_project_last_activity(l.project_id)
+     FROM activity_link l WHERE l.activity_id = NEW.id AND l.project_id IS NOT NULL;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.trg_assurance_task_item_subject_keys() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		NEW.subject_unkeyed := false;
+	ELSE
+		NEW.subject_unkeyed := OLD.subject_unkeyed;
+	END IF;
+	IF NOT NEW.subject_unkeyed THEN
+		NEW.subject_deal_id     := CASE WHEN NEW.subject_kind = 'deal'     THEN NEW.subject_id END;
+		NEW.subject_signal_id   := CASE WHEN NEW.subject_kind = 'signal'   THEN NEW.subject_id END;
+		NEW.subject_offer_id    := CASE WHEN NEW.subject_kind = 'offer'    THEN NEW.subject_id END;
+		NEW.subject_contract_id := CASE WHEN NEW.subject_kind = 'contract' THEN NEW.subject_id END;
+	END IF;
+	RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.trg_deal_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM move_last_activity('company', OLD.company_id);
+  PERFORM move_last_activity('company', NEW.company_id);
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.trg_relationship_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF TG_OP IN ('DELETE', 'UPDATE') AND OLD.kind = 'employment' THEN
+    PERFORM move_last_activity('company', OLD.company_id);
+  END IF;
+  IF TG_OP IN ('INSERT', 'UPDATE') AND NEW.kind = 'employment' THEN
+    PERFORM move_last_activity('company', NEW.company_id);
+  END IF;
+  RETURN NULL;
+END;
+$$;
+
+CREATE FUNCTION public.trg_signal_entity_keys() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		NEW.entity_unkeyed := false;
+	ELSE
+		NEW.entity_unkeyed := OLD.entity_unkeyed AND NEW.entity_unkeyed;
+	END IF;
+	IF NOT NEW.entity_unkeyed THEN
+		NEW.entity_deal_id    := CASE WHEN NEW.entity_type = 'deal'    THEN NEW.entity_id END;
+		NEW.entity_company_id := CASE WHEN NEW.entity_type = 'company' THEN NEW.entity_id END;
+		NEW.entity_contact_id := CASE WHEN NEW.entity_type = 'contact' THEN NEW.entity_id END;
+		NEW.entity_project_id := CASE WHEN NEW.entity_type = 'project' THEN NEW.entity_id END;
+	END IF;
+	RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.trg_user_record_view_entity_keys() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		NEW.entity_unkeyed := false;
+	ELSE
+		NEW.entity_unkeyed := OLD.entity_unkeyed AND NEW.entity_unkeyed;
+	END IF;
+	IF NOT NEW.entity_unkeyed THEN
+		NEW.entity_company_id := CASE WHEN NEW.entity_type = 'company' THEN NEW.entity_id END;
+		NEW.entity_contact_id := CASE WHEN NEW.entity_type = 'contact' THEN NEW.entity_id END;
+	END IF;
+	RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.trg_weekly_plan_commitment_linked_keys() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+	IF TG_OP = 'INSERT' THEN
+		NEW.linked_record_unkeyed := false;
+	ELSE
+		NEW.linked_record_unkeyed := OLD.linked_record_unkeyed AND NEW.linked_record_unkeyed;
+	END IF;
+	IF NOT NEW.linked_record_unkeyed THEN
+		-- Only the SET NULL of a deleted record clears a key and leaves the pair.
+		IF TG_OP = 'UPDATE' AND NEW.linked_record_id IS NOT DISTINCT FROM OLD.linked_record_id
+		   AND num_nonnulls(OLD.linked_deal_id, OLD.linked_lead_id, OLD.linked_contact_id,
+		                    OLD.linked_company_id, OLD.linked_project_id) = 1
+		   AND num_nonnulls(NEW.linked_deal_id, NEW.linked_lead_id, NEW.linked_contact_id,
+		                    NEW.linked_company_id, NEW.linked_project_id) = 0 THEN
+			NEW.linked_record_type := NULL;
+			NEW.linked_record_id := NULL;
+		END IF;
+		NEW.linked_deal_id    := CASE WHEN NEW.linked_record_type = 'deal'    THEN NEW.linked_record_id END;
+		NEW.linked_lead_id    := CASE WHEN NEW.linked_record_type = 'lead'    THEN NEW.linked_record_id END;
+		NEW.linked_contact_id := CASE WHEN NEW.linked_record_type = 'contact' THEN NEW.linked_record_id END;
+		NEW.linked_company_id := CASE WHEN NEW.linked_record_type = 'company' THEN NEW.linked_record_id END;
+		NEW.linked_project_id := CASE WHEN NEW.linked_record_type = 'project' THEN NEW.linked_record_id END;
+	END IF;
+	RETURN NEW;
+END $$;
+
+CREATE FUNCTION public.weekly_plan_commitment_forget_manager() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    UPDATE weekly_plan_commitment
+       SET manager_response = '', manager_user_id = NULL, responded_at = NULL
+     WHERE manager_user_id = OLD.id;
+    RETURN OLD;
+END;
+$$;
+
+CREATE TABLE public.activity_audience_member (
+    activity_id uuid NOT NULL,
+    subject_type text NOT NULL,
+    subject_id uuid NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT activity_audience_member_subject_type_check CHECK ((subject_type = ANY (ARRAY['user'::text, 'team'::text])))
+);
+
+CREATE TABLE public.activity_calendar_method_backfill (
+    activity_id uuid NOT NULL,
+    activity_created_at timestamp with time zone NOT NULL,
+    checked_at timestamp with time zone DEFAULT now() NOT NULL,
+    outcome text NOT NULL,
+    direction text DEFAULT 'inbound'::text NOT NULL,
+    CONSTRAINT activity_calendar_method_backfill_direction_check CHECK ((direction = ANY (ARRAY['inbound'::text, 'outbound'::text]))),
+    CONSTRAINT activity_calendar_method_backfill_outcome_check CHECK ((outcome = ANY (ARRAY['set'::text, 'none'::text, 'unreadable'::text])))
+);
+
+CREATE TABLE public.activity_clock_refold_mark (
+    singleton boolean DEFAULT true NOT NULL,
+    passed_up_to timestamp with time zone NOT NULL,
+    passed_id uuid NOT NULL,
+    CONSTRAINT activity_clock_refold_mark_singleton_check CHECK (singleton)
+);
+
+CREATE TABLE public.activity_commitment_admission (
+    source_activity_id uuid NOT NULL,
+    locator text NOT NULL,
+    summary text NOT NULL,
+    source_quote text NOT NULL,
+    outcome text NOT NULL,
+    current_work boolean NOT NULL,
+    rule_version text NOT NULL,
+    evidence_ids uuid[] NOT NULL,
+    evaluated_at timestamp with time zone NOT NULL,
+    renewed_by uuid,
+    renewed_at timestamp with time zone,
+    captured_by text NOT NULL,
+    meaning jsonb,
+    CONSTRAINT activity_commitment_admission_check CHECK (((renewed_by IS NULL) = (renewed_at IS NULL)))
+);
+
+CREATE TABLE public.activity_identity (
+    identity_kind text NOT NULL,
+    identity_key text NOT NULL,
+    activity_id uuid NOT NULL,
+    attested_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT activity_identity_kind_check CHECK ((identity_kind = ANY (ARRAY['mail'::text, 'meeting'::text])))
+);
+
+CREATE TABLE public.activity_kind (
+    kind text NOT NULL
+);
+
+CREATE TABLE public.activity_link (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    entity_type text NOT NULL,
+    contact_id uuid,
+    company_id uuid,
+    deal_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    lead_id uuid,
+    project_id uuid,
+    CONSTRAINT activity_link_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT activity_link_shape CHECK ((((entity_type = 'contact'::text) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company'::text) AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal'::text) AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead'::text) AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project'::text) AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))
+);
+
+CREATE TABLE public.activity_mail_reference (
+    activity_id uuid NOT NULL,
+    referenced_id text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.activity_meeting_attendee_repair (
+    activity_id uuid NOT NULL,
+    repaired_at timestamp with time zone DEFAULT now() NOT NULL,
+    outcome text NOT NULL,
+    rule_version integer DEFAULT 1 NOT NULL,
+    CONSTRAINT activity_meeting_attendee_repair_outcome_check CHECK ((outcome = ANY (ARRAY['attendees'::text, 'none'::text, 'capped'::text, 'capped_seats'::text, 'unreadable'::text])))
+);
+
+CREATE TABLE public.activity_meeting_history (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    status text NOT NULL,
+    effective_at timestamp with time zone NOT NULL,
+    scheduled_start timestamp with time zone,
+    actor text NOT NULL,
+    source_system text,
+    source_id text,
+    partial_pre_history boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    host_id_at_change uuid,
+    customer_eligible_at_change boolean,
+    scheduled_precision text,
+    CONSTRAINT activity_meeting_history_source_pairing CHECK (((source_id IS NULL) = (source_system IS NULL))),
+    CONSTRAINT activity_meeting_history_status_check CHECK ((status = ANY (ARRAY['booked'::text, 'held'::text, 'no_show'::text, 'canceled'::text])))
+);
+
+CREATE TABLE public.activity_meeting_rsvp_backfill (
+    activity_id uuid NOT NULL,
+    settled_at timestamp with time zone DEFAULT now() NOT NULL,
+    outcome text NOT NULL,
+    CONSTRAINT activity_meeting_rsvp_backfill_outcome_check CHECK ((outcome = ANY (ARRAY['closed'::text, 'still_on'::text, 'answered'::text, 'unreadable'::text])))
+);
+
+CREATE TABLE public.activity_own_sent_mail_repair (
+    activity_id uuid NOT NULL,
+    settled_at timestamp with time zone DEFAULT now() NOT NULL,
+    outcome text NOT NULL,
+    CONSTRAINT activity_own_sent_mail_repair_outcome_check CHECK ((outcome = ANY (ARRAY['claimed'::text, 'unchanged'::text, 'delivered'::text, 'not_the_seats'::text, 'no_recipient'::text, 'unreadable'::text, 'erased'::text])))
+);
+
+CREATE TABLE public.activity_own_sent_mail_repair_cutoff (
+    singleton boolean DEFAULT true NOT NULL,
+    captured_before timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT activity_own_sent_mail_repair_cutoff_singleton_check CHECK (singleton)
+);
+
+CREATE TABLE public.activity_participant_replay (
+    activity_id uuid NOT NULL,
+    replayed_at timestamp with time zone DEFAULT now() NOT NULL,
+    outcome text NOT NULL,
+    CONSTRAINT activity_participant_replay_outcome_check CHECK ((outcome = ANY (ARRAY['participants'::text, 'none'::text, 'capped'::text, 'unreadable'::text, 'no_owner'::text])))
+);
+
+CREATE TABLE public.activity_reader_state (
+    activity_id uuid NOT NULL,
+    reader_id uuid NOT NULL,
+    state text NOT NULL,
+    snoozed_until timestamp with time zone,
+    set_by text NOT NULL,
+    set_at timestamp with time zone DEFAULT now() NOT NULL,
+    reopen_on text,
+    reopen_ref uuid,
+    CONSTRAINT activity_reader_state_known CHECK ((state = ANY (ARRAY['snoozed'::text, 'not_mine'::text, 'handled'::text]))),
+    CONSTRAINT activity_reader_state_reopen_known CHECK (((reopen_on IS NULL) OR (reopen_on = ANY (ARRAY['time'::text, 'reply'::text, 'meeting'::text])))),
+    CONSTRAINT activity_reader_state_reopen_ref_shaped CHECK ((NOT ((reopen_ref IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'meeting'::text))))),
+    CONSTRAINT activity_reader_state_shaped CHECK ((((state = 'snoozed'::text) AND (reopen_on IS NOT NULL) AND (NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (reopen_on = 'time'::text)))) OR ((state = ANY (ARRAY['not_mine'::text, 'handled'::text])) AND (snoozed_until IS NULL) AND (reopen_on IS NULL) AND (reopen_ref IS NULL))))
+);
+
+CREATE TABLE public.activity_reminder_delivery (
+    activity_id uuid NOT NULL,
+    delivered_for timestamp with time zone NOT NULL,
+    delivered_to uuid NOT NULL
+);
+
+CREATE TABLE public.activity_reply_verdict_history (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    verdict text,
+    decided_by text NOT NULL,
+    is_human boolean NOT NULL,
+    decided_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT activity_reply_verdict_history_verdict CHECK (((verdict IS NULL) OR (verdict = ANY (ARRAY['positive'::text, 'negative'::text, 'neutral'::text]))))
+);
+
+COMMENT ON TABLE public.activity_reply_verdict_history IS 'Append-only record of how a reply verdict came to be what it is: the classifier''s own judgement and every human correction after it.';
+
+CREATE TABLE public.activity_request_settlement (
+    request_activity_id uuid NOT NULL,
+    judged_through_activity_id uuid NOT NULL,
+    verdict text NOT NULL,
+    remaining text,
+    due_at timestamp with time zone,
+    confidence numeric(4,3) NOT NULL,
+    decided_at timestamp with time zone DEFAULT now() NOT NULL,
+    decided_by text NOT NULL,
+    judged_evidence text,
+    revalidation_requested_at timestamp with time zone,
+    rule_version text DEFAULT ''::text NOT NULL,
+    CONSTRAINT activity_request_settlement_confidence CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))),
+    CONSTRAINT activity_request_settlement_remaining CHECK (((verdict = 'still_owed'::text) OR ((remaining IS NULL) AND (due_at IS NULL)))),
+    CONSTRAINT activity_request_settlement_verdict CHECK ((verdict = ANY (ARRAY['settled'::text, 'still_owed'::text, 'unsure'::text])))
+);
+
+COMMENT ON TABLE public.activity_request_settlement IS 'Whether our own reply settled the request an inbound message made, judged over the thread once we have written back.';
+
+CREATE TABLE public.activity_retention_evidence (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    basis text NOT NULL,
+    qualified_at timestamp with time zone NOT NULL,
+    deal_id uuid,
+    deal_name text,
+    decided_by uuid,
+    decided_by_name text,
+    reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    project_id uuid,
+    project_name text,
+    CONSTRAINT activity_retention_evidence_basis_check CHECK ((basis = ANY (ARRAY['deal_won'::text, 'offer_beyond_draft'::text, 'project_linked'::text, 'controller_pin'::text]))),
+    CONSTRAINT are_deal_name_with_id CHECK (((deal_id IS NULL) OR (deal_name IS NOT NULL))),
+    CONSTRAINT are_derived_names_its_record CHECK (((basis = 'controller_pin'::text) OR ((decided_by IS NULL) AND (decided_by_name IS NULL) AND (reason IS NULL) AND
+CASE basis
+    WHEN 'project_linked'::text THEN ((project_name IS NOT NULL) AND (deal_name IS NULL))
+    ELSE ((deal_name IS NOT NULL) AND (project_name IS NULL))
+END))),
+    CONSTRAINT are_pin_is_attributed CHECK (((basis <> 'controller_pin'::text) OR ((length(btrim(decided_by_name)) > 0) AND (length(btrim(reason)) > 0)))),
+    CONSTRAINT are_project_name_with_id CHECK (((project_id IS NULL) OR (project_name IS NOT NULL)))
+);
+
+CREATE TABLE public.activity_review_response (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    closing_occurrence_id uuid NOT NULL,
+    outcome text NOT NULL,
+    template_key text NOT NULL,
+    template_version integer NOT NULL,
+    questions jsonb NOT NULL,
+    answers jsonb NOT NULL,
+    revision integer DEFAULT 1 NOT NULL,
+    submission_id uuid NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    choice_answers jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT activity_review_response_answers_shape CHECK ((jsonb_typeof(answers) = 'object'::text)),
+    CONSTRAINT activity_review_response_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text]))),
+    CONSTRAINT activity_review_response_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0))),
+    CONSTRAINT activity_review_response_revision_check CHECK ((revision >= 1))
+);
+
+CREATE TABLE public.activity_review_template (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    outcome text NOT NULL,
+    questions jsonb NOT NULL,
+    version integer DEFAULT 1 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    shipped_label text,
+    shipped_label_key text,
+    label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
+    CONSTRAINT activity_review_template_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,62}$'::text)),
+    CONSTRAINT activity_review_template_label_shape CHECK (((btrim(label) <> ''::text) AND (char_length(label) <= 200))),
+    CONSTRAINT activity_review_template_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text]))),
+    CONSTRAINT activity_review_template_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0)))
+);
+
+CREATE TABLE public.activity_sales_state (
+    thread_key text NOT NULL,
+    kind text NOT NULL,
+    channel_provider text DEFAULT ''::text NOT NULL,
+    set_by text NOT NULL,
+    set_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.activity_waiting_horizon (
+    singleton boolean DEFAULT true NOT NULL,
+    horizon_days integer NOT NULL,
+    measured_at timestamp with time zone NOT NULL,
+    CONSTRAINT activity_waiting_horizon_days_check CHECK ((horizon_days > 0)),
+    CONSTRAINT activity_waiting_horizon_singleton_check CHECK (singleton)
+);
+
+CREATE TABLE public.agent_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    agent_spec text NOT NULL,
+    goal text NOT NULL,
+    trigger_ref text NOT NULL,
+    passport_id uuid,
+    status text DEFAULT 'running'::text NOT NULL,
+    approval_id uuid,
+    pending jsonb,
+    result jsonb,
+    trace jsonb DEFAULT '[]'::jsonb NOT NULL,
+    degrade_reason text,
+    steps_used integer DEFAULT 0 NOT NULL,
+    output_tokens integer DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    attempt integer DEFAULT 1 NOT NULL,
+    CONSTRAINT agent_run_attempt_check CHECK ((attempt >= 1)),
+    CONSTRAINT agent_run_awaiting_shape CHECK (((status <> 'awaiting_approval'::text) OR ((approval_id IS NOT NULL) AND (pending IS NOT NULL)))),
+    CONSTRAINT agent_run_settled_shape CHECK (((status <> ALL (ARRAY['completed'::text, 'degraded'::text, 'failed'::text])) OR (finished_at IS NOT NULL))),
+    CONSTRAINT agent_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'awaiting_approval'::text, 'completed'::text, 'degraded'::text, 'failed'::text])))
+);
+
+CREATE TABLE public.agent_standing_grant (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    agent_spec text NOT NULL,
+    state text DEFAULT 'granted'::text NOT NULL,
+    passport_id uuid,
+    decided_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT agent_standing_grant_passport_shape CHECK ((((state = 'granted'::text) AND (passport_id IS NOT NULL)) OR ((state <> 'granted'::text) AND (passport_id IS NULL)))),
+    CONSTRAINT agent_standing_grant_state_check CHECK ((state = ANY (ARRAY['granted'::text, 'declined'::text])))
+);
+
+CREATE TABLE public.agent_task (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    approval_id uuid NOT NULL,
+    passport_id uuid NOT NULL,
+    tool text NOT NULL,
+    status text DEFAULT 'working'::text NOT NULL,
+    status_message text,
+    result jsonb,
+    error jsonb,
+    served_records integer,
+    claimed_at timestamp with time zone,
+    expires_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT agent_task_expires_after_creation CHECK ((expires_at > created_at)),
+    CONSTRAINT agent_task_served_records CHECK (((served_records IS NULL) OR (result IS NOT NULL))),
+    CONSTRAINT agent_task_status_check CHECK ((status = ANY (ARRAY['working'::text, 'completed'::text, 'failed'::text, 'cancelled'::text]))),
+    CONSTRAINT agent_task_terminal_payload CHECK ((((status = 'completed'::text) AND (result IS NOT NULL) AND (error IS NULL)) OR ((status = 'failed'::text) AND (error IS NOT NULL) AND (result IS NULL)) OR ((status = ANY (ARRAY['working'::text, 'cancelled'::text])) AND (result IS NULL) AND (error IS NULL))))
+);
+
+CREATE TABLE public.ai_call (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    correlation_id uuid,
+    task text NOT NULL,
+    tier text DEFAULT ''::text NOT NULL,
+    provider text DEFAULT ''::text NOT NULL,
+    model_id text DEFAULT ''::text NOT NULL,
+    request_fingerprint text NOT NULL,
+    tokens_in bigint DEFAULT 0 NOT NULL,
+    tokens_out bigint DEFAULT 0 NOT NULL,
+    reasoning_tokens bigint DEFAULT 0 NOT NULL,
+    cached_tokens bigint DEFAULT 0 NOT NULL,
+    latency_ms bigint DEFAULT 0 NOT NULL,
+    cache_hit boolean DEFAULT false NOT NULL,
+    degraded boolean DEFAULT false NOT NULL,
+    error_sentinel text,
+    agent_run_id uuid,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    logical_call_id uuid NOT NULL,
+    attempt integer DEFAULT 1 NOT NULL,
+    is_terminal boolean DEFAULT true NOT NULL,
+    attempt_reason text DEFAULT ''::text NOT NULL,
+    kind text DEFAULT 'completion'::text NOT NULL,
+    served_model text DEFAULT ''::text NOT NULL,
+    served_identity_source text DEFAULT 'configured'::text NOT NULL,
+    cache_off boolean DEFAULT false NOT NULL,
+    config_hash text,
+    context_scopes text[] DEFAULT '{}'::text[] NOT NULL,
+    context_fingerprint text DEFAULT ''::text NOT NULL,
+    context_bytes bigint DEFAULT 0 NOT NULL,
+    context_tokens_estimate bigint DEFAULT 0 NOT NULL,
+    cache_write_tokens bigint DEFAULT 0 NOT NULL,
+    served_provider text DEFAULT ''::text NOT NULL,
+    finish_reason text DEFAULT ''::text NOT NULL,
+    secrets_removed bigint DEFAULT 0 NOT NULL,
+    secret_kinds text[] DEFAULT '{}'::text[] NOT NULL,
+    subject_type text,
+    subject_id uuid,
+    schema_downgrade text DEFAULT ''::text NOT NULL,
+    decision_choice text,
+    decision_confidence numeric(4,3),
+    CONSTRAINT ai_call_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_call_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_call_context_bytes_check CHECK ((context_bytes >= 0)),
+    CONSTRAINT ai_call_context_fingerprint_check CHECK (((context_fingerprint = ''::text) OR (context_fingerprint ~ '^[0-9a-f]{64}$'::text))),
+    CONSTRAINT ai_call_context_scopes_check CHECK ((context_scopes <@ ARRAY['identity'::text, 'positioning'::text, 'sales'::text, 'offer'::text, 'market'::text, 'proof'::text, 'administrative'::text])),
+    CONSTRAINT ai_call_context_tokens_estimate_check CHECK ((context_tokens_estimate >= 0)),
+    CONSTRAINT ai_call_decision_answer_kind CHECK (((decision_choice IS NULL) OR (kind = 'decision'::text))),
+    CONSTRAINT ai_call_decision_answer_shape CHECK (((decision_choice IS NULL) = (decision_confidence IS NULL))),
+    CONSTRAINT ai_call_decision_confidence_range CHECK (((decision_confidence IS NULL) OR ((decision_confidence >= (0)::numeric) AND (decision_confidence <= (1)::numeric)))),
+    CONSTRAINT ai_call_kind_check CHECK ((kind = ANY (ARRAY['completion'::text, 'embedding'::text, 'decision'::text]))),
+    CONSTRAINT ai_call_latency_ms_js_safe CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_call_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_call_schema_downgrade_check CHECK ((schema_downgrade = ANY (ARRAY[''::text, 'relaxed'::text, 'unenforced'::text, 'dropped'::text]))),
+    CONSTRAINT ai_call_secrets_removed_check CHECK ((secrets_removed >= 0)),
+    CONSTRAINT ai_call_source_check CHECK ((served_identity_source = ANY (ARRAY['response'::text, 'echo'::text, 'configured'::text]))),
+    CONSTRAINT ai_call_subject_shape CHECK (((subject_type IS NULL) = (subject_id IS NULL))),
+    CONSTRAINT ai_call_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_call_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.ai_call_config (
+    hash text NOT NULL,
+    task_contract_hash text NOT NULL,
+    routing_config_hash text NOT NULL,
+    prompt_version text DEFAULT ''::text NOT NULL,
+    provider_params jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.ai_call_payload (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    ai_call_id uuid NOT NULL,
+    request_payload jsonb NOT NULL,
+    response_payload jsonb NOT NULL,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.ai_feedback (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    subject_type text NOT NULL,
+    subject_id uuid NOT NULL,
+    claim_kind text NOT NULL,
+    claim_key text NOT NULL,
+    verdict text NOT NULL,
+    corrected_value text,
+    note text,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    value_captured_at timestamp with time zone,
+    value_shown text,
+    CONSTRAINT ai_feedback_claim_kind_check CHECK ((claim_kind = ANY (ARRAY['profile_field'::text, 'inferred_kpi'::text, 'next_step'::text, 'signal'::text, 'research_claim'::text]))),
+    CONSTRAINT ai_feedback_corrected_carries_a_value CHECK (((verdict = 'corrected'::text) = (corrected_value IS NOT NULL))),
+    CONSTRAINT ai_feedback_subject_type_check CHECK ((subject_type = ANY (ARRAY['company'::text, 'contact'::text, 'deal'::text, 'lead'::text]))),
+    CONSTRAINT ai_feedback_verdict_check CHECK ((verdict = ANY (ARRAY['corrected'::text, 'suppressed'::text, 'confirmed'::text]))),
+    CONSTRAINT ai_feedback_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.ai_model_rate (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    provider text NOT NULL,
+    model_id text NOT NULL,
+    input_per_mtok_microusd bigint NOT NULL,
+    output_per_mtok_microusd bigint NOT NULL,
+    cache_read_per_mtok_microusd bigint DEFAULT 0 NOT NULL,
+    cache_write_per_mtok_microusd bigint DEFAULT 0 NOT NULL,
+    effective_date date NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    lane text DEFAULT 'chat'::text NOT NULL,
+    source text DEFAULT 'manual'::text NOT NULL,
+    long_context_above_tokens integer,
+    long_context_input_per_mtok_microusd bigint,
+    long_context_output_per_mtok_microusd bigint,
+    long_context_cache_read_per_mtok_microusd bigint,
+    long_context_cache_write_per_mtok_microusd bigint,
+    CONSTRAINT ai_model_rate_cache_read_per_mtok_microusd_check CHECK ((cache_read_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_cache_write_per_mtok_microusd_check CHECK ((cache_write_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_input_per_mtok_microusd_check CHECK ((input_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_lane_check CHECK ((lane = ANY (ARRAY['chat'::text, 'embeddings'::text, 'decisions'::text]))),
+    CONSTRAINT ai_model_rate_long_context_above_tokens_check CHECK ((long_context_above_tokens > 0)),
+    CONSTRAINT ai_model_rate_long_context_cache_read_check CHECK ((long_context_cache_read_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_long_context_cache_write_check CHECK ((long_context_cache_write_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_long_context_complete_check CHECK ((((long_context_above_tokens IS NULL) = (long_context_input_per_mtok_microusd IS NULL)) AND ((long_context_above_tokens IS NULL) = (long_context_output_per_mtok_microusd IS NULL)) AND ((long_context_above_tokens IS NULL) = (long_context_cache_read_per_mtok_microusd IS NULL)) AND ((long_context_above_tokens IS NULL) = (long_context_cache_write_per_mtok_microusd IS NULL)))),
+    CONSTRAINT ai_model_rate_long_context_input_check CHECK ((long_context_input_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_long_context_output_check CHECK ((long_context_output_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_output_per_mtok_microusd_check CHECK ((output_per_mtok_microusd >= 0)),
+    CONSTRAINT ai_model_rate_source_check CHECK ((source = ANY (ARRAY['manual'::text, 'catalogue'::text, 'seed'::text])))
+);
+
+CREATE SEQUENCE public.ai_task_run_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+COMMENT ON SEQUENCE public.ai_task_run_seq IS 'Monotonic ordering for ai_task_run: the delta cursor and the stream id.';
+
+CREATE TABLE public.ai_task_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    source text NOT NULL,
+    occurrence_key text NOT NULL,
+    kind text NOT NULL,
+    ai_task text,
+    attempt integer DEFAULT 1 NOT NULL,
+    actor_scope text NOT NULL,
+    actor_user_id uuid,
+    passport_id uuid,
+    state text NOT NULL,
+    queued_at timestamp with time zone NOT NULL,
+    started_at timestamp with time zone,
+    finished_at timestamp with time zone,
+    stale_after timestamp with time zone,
+    subject_type text,
+    subject_id uuid,
+    quantity integer,
+    quantity_unit text,
+    degrade_reason text,
+    summary text,
+    seq bigint DEFAULT nextval('public.ai_task_run_seq'::regclass) NOT NULL,
+    last_event_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    subject_label text,
+    CONSTRAINT ai_task_run_actor_scope_check CHECK ((actor_scope = ANY (ARRAY['personal'::text, 'workspace'::text]))),
+    CONSTRAINT ai_task_run_attempt_check CHECK ((attempt >= 1)),
+    CONSTRAINT ai_task_run_quantity_check CHECK (((quantity IS NULL) OR (quantity >= 0))),
+    CONSTRAINT ai_task_run_quantity_unit_check CHECK (((quantity_unit IS NULL) OR (quantity_unit = ANY (ARRAY['messages'::text, 'records'::text, 'contacts'::text, 'documents'::text])))),
+    CONSTRAINT ai_task_run_queued_has_no_start CHECK (((state = 'queued'::text) = (started_at IS NULL))),
+    CONSTRAINT ai_task_run_settled_has_finish CHECK (((state = ANY (ARRAY['done'::text, 'degraded'::text, 'failed'::text])) = (finished_at IS NOT NULL))),
+    CONSTRAINT ai_task_run_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text]))),
+    CONSTRAINT ai_task_run_subject_label_check CHECK (((subject_label IS NULL) OR (length(subject_label) <= 120))),
+    CONSTRAINT ai_task_run_workspace_scope_has_no_actor CHECK (((actor_scope = 'personal'::text) OR (actor_user_id IS NULL)))
+);
+
+COMMENT ON COLUMN public.ai_task_run.subject_label IS 'What the subject is called, as the source knew it when it emitted. A snapshot: never re-resolved and never re-gated on read.';
+
+CREATE TABLE public.ai_usage (
+    day date NOT NULL,
+    task text NOT NULL,
+    tier text NOT NULL,
+    calls bigint DEFAULT 0 NOT NULL,
+    cached_hits bigint DEFAULT 0 NOT NULL,
+    tokens_in bigint DEFAULT 0 NOT NULL,
+    tokens_out bigint DEFAULT 0 NOT NULL,
+    reasoning_tokens bigint DEFAULT 0 NOT NULL,
+    cached_tokens bigint DEFAULT 0 NOT NULL,
+    cache_write_tokens bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT ai_usage_cache_write_tokens_js_safe CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_usage_cached_tokens_js_safe CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_usage_calls_js_safe CHECK (((calls >= '-9007199254740991'::bigint) AND (calls <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_usage_reasoning_tokens_js_safe CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_usage_tokens_in_js_safe CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint))),
+    CONSTRAINT ai_usage_tokens_out_js_safe CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.analytics_share (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    kind text NOT NULL,
+    target text NOT NULL,
+    scope_kind text NOT NULL,
+    scope_id uuid,
+    snapshot_id uuid,
+    token_hash text NOT NULL,
+    created_by uuid NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    revoked_at timestamp with time zone,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    scope_team_id uuid GENERATED ALWAYS AS (
+CASE
+    WHEN (scope_kind = 'team'::text) THEN scope_id
+    ELSE NULL::uuid
+END) STORED,
+    scope_user_id uuid GENERATED ALWAYS AS (
+CASE
+    WHEN (scope_kind = 'owner'::text) THEN scope_id
+    ELSE NULL::uuid
+END) STORED,
+    CONSTRAINT analytics_share_expires_after_creation CHECK ((expires_at > created_at)),
+    CONSTRAINT analytics_share_kind_check CHECK ((kind = ANY (ARRAY['live'::text, 'snapshot'::text]))),
+    CONSTRAINT analytics_share_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL))),
+    CONSTRAINT analytics_share_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text]))),
+    CONSTRAINT analytics_share_scope_shape CHECK (((scope_id IS NULL) OR (num_nonnulls(scope_team_id, scope_user_id) = 1))),
+    CONSTRAINT analytics_share_snapshot_matches_kind CHECK (((kind = 'snapshot'::text) = (snapshot_id IS NOT NULL))),
+    CONSTRAINT analytics_share_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.app_user (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    email text NOT NULL,
+    password_hash text,
+    display_name text NOT NULL,
+    timezone text,
+    status text DEFAULT 'active'::text NOT NULL,
+    is_agent boolean DEFAULT false NOT NULL,
+    seat_type text DEFAULT 'full'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    failed_login_count integer DEFAULT 0 NOT NULL,
+    locked_until timestamp with time zone,
+    must_change_password boolean DEFAULT false NOT NULL,
+    locale text,
+    morning_brief_delivery text,
+    weekly_delivery text,
+    quiet_day_notice boolean,
+    delivery_hour_local integer,
+    work_start_minute smallint,
+    work_end_minute smallint,
+    work_days smallint[],
+    greeting_name text,
+    greeting_name_chosen_at timestamp with time zone,
+    last_active_at timestamp with time zone,
+    routine_mail_scope text,
+    routine_mail_team_id uuid,
+    weekly_delivery_day integer,
+    combine_routine_email boolean,
+    routine_delivery_time text,
+    email_domain_folded text,
+    service_extension text,
+    removed_at timestamp with time zone,
+    merged_into_user_id uuid,
+    timezone_chosen boolean DEFAULT false NOT NULL,
+    timezone_set_by text,
+    avatar_object_key text,
+    avatar_origin text,
+    avatar_removed_at timestamp with time zone,
+    CONSTRAINT app_user_agent_is_full CHECK (((NOT is_agent) OR (seat_type = 'full'::text))),
+    CONSTRAINT app_user_agent_never_forced CHECK ((NOT (is_agent AND must_change_password))),
+    CONSTRAINT app_user_avatar_names_its_origin CHECK (((avatar_object_key IS NULL) = (avatar_origin IS NULL))),
+    CONSTRAINT app_user_avatar_origin_check CHECK ((avatar_origin = ANY (ARRAY['upload'::text, 'google'::text]))),
+    CONSTRAINT app_user_delivery_hour_check CHECK (((delivery_hour_local IS NULL) OR ((delivery_hour_local >= 0) AND (delivery_hour_local <= 23)))),
+    CONSTRAINT app_user_does_not_merge_into_itself CHECK (((merged_into_user_id IS NULL) OR (merged_into_user_id <> id))),
+    CONSTRAINT app_user_failed_login_count_check CHECK ((failed_login_count >= 0)),
+    CONSTRAINT app_user_forced_rotation_needs_a_password CHECK ((NOT (must_change_password AND (password_hash IS NULL)))),
+    CONSTRAINT app_user_greeting_name_length CHECK (((greeting_name IS NULL) OR ((char_length(greeting_name) >= 1) AND (char_length(greeting_name) <= 100)))),
+    CONSTRAINT app_user_locale_shipped CHECK ((locale = ANY (ARRAY['en'::text, 'de'::text, 'vi'::text]))),
+    CONSTRAINT app_user_merge_is_retired CHECK (((merged_into_user_id IS NULL) OR (removed_at IS NOT NULL))),
+    CONSTRAINT app_user_morning_brief_delivery_check CHECK (((morning_brief_delivery IS NULL) OR (morning_brief_delivery = ANY (ARRAY['none'::text, 'email'::text])))),
+    CONSTRAINT app_user_removed_is_deactivated CHECK (((removed_at IS NULL) OR (status = 'deactivated'::text))),
+    CONSTRAINT app_user_routine_delivery_time_check CHECK ((routine_delivery_time ~ '^(working|([01][0-9]|2[0-3]):00)$'::text)),
+    CONSTRAINT app_user_routine_mail_scope_check CHECK ((routine_mail_scope = ANY (ARRAY['personal'::text, 'team'::text, 'combined'::text]))),
+    CONSTRAINT app_user_seat_type_check CHECK ((seat_type = ANY (ARRAY['read'::text, 'full'::text]))),
+    CONSTRAINT app_user_service_is_a_passwordless_agent CHECK (((service_extension IS NULL) OR (is_agent AND (password_hash IS NULL) AND (service_extension <> ''::text)))),
+    CONSTRAINT app_user_status_check CHECK ((status = ANY (ARRAY['invited'::text, 'active'::text, 'suspended'::text, 'deactivated'::text]))),
+    CONSTRAINT app_user_weekly_delivery_check CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none'::text, 'email'::text])))),
+    CONSTRAINT app_user_weekly_delivery_day_check CHECK (((weekly_delivery_day >= 1) AND (weekly_delivery_day <= 7))),
+    CONSTRAINT app_user_work_days_are_weekdays CHECK (work_days IS NULL OR (cardinality(work_days) BETWEEN 1 AND 7 AND work_days <@ ARRAY[1,2,3,4,5,6,7]::smallint[])),
+    CONSTRAINT app_user_work_end_minute_of_day CHECK (((work_end_minute IS NULL) OR ((work_end_minute >= 1) AND (work_end_minute <= 1440)))),
+    CONSTRAINT app_user_work_range_is_a_range CHECK ((((work_start_minute IS NULL) = (work_end_minute IS NULL)) AND ((work_start_minute IS NULL) OR (work_start_minute < work_end_minute)))),
+    CONSTRAINT app_user_work_start_minute_of_day CHECK (((work_start_minute IS NULL) OR ((work_start_minute >= 0) AND (work_start_minute <= 1439))))
+);
+
+CREATE TABLE public.approval (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    kind text NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    proposed_by text NOT NULL,
+    on_behalf_of uuid,
+    passport_id uuid,
+    target_entity_type text,
+    target_entity_id uuid,
+    target_version bigint,
+    summary text,
+    proposed_change jsonb NOT NULL,
+    diff_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    decided_by uuid,
+    decided_at timestamp with time zone,
+    decision_reason text,
+    consumed_at timestamp with time zone,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    bundle_id uuid,
+    evidence jsonb,
+    decided_by_system boolean DEFAULT false NOT NULL,
+    effect_failed_at timestamp with time zone,
+    effect_failure text,
+    target_label text,
+    co_target_entity_type text,
+    co_target_entity_id uuid,
+    co_target_version bigint,
+    staged_by_connection uuid,
+    acknowledged_effect_failed_at timestamp with time zone,
+    effect_ran_at timestamp with time zone,
+    requested_decider_id uuid,
+    requested_decider_source text,
+    staged_in_conversation_of uuid,
+    context_digest text,
+    summary_parts jsonb,
+    plan_footprint jsonb,
+    CONSTRAINT approval_co_target_whole CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL)))),
+    CONSTRAINT approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL)))),
+    CONSTRAINT approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))),
+    CONSTRAINT approval_pending_names_decider CHECK (((status <> 'pending'::text) OR ((requested_decider_id IS NOT NULL) AND (requested_decider_source IS NOT NULL)))),
+    CONSTRAINT approval_requested_decider_source_check CHECK ((requested_decider_source = ANY (ARRAY['payload_owner'::text, 'on_behalf_of'::text, 'stager'::text, 'record_owner'::text]))),
+    CONSTRAINT approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text]))),
+    CONSTRAINT approval_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.approval.diff_hash IS 'Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect.';
+
+CREATE TABLE public.approval_autonomy_policy (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    kind text NOT NULL,
+    mode text DEFAULT 'manual'::text NOT NULL,
+    veto_window interval,
+    approved_clean integer DEFAULT 0 NOT NULL,
+    approved_edited integer DEFAULT 0 NOT NULL,
+    rejected integer DEFAULT 0 NOT NULL,
+    promoted_at timestamp with time zone,
+    demoted_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT approval_autonomy_policy_counts_nonnegative CHECK (((approved_clean >= 0) AND (approved_edited >= 0) AND (rejected >= 0))),
+    CONSTRAINT approval_autonomy_policy_kind_grammar CHECK (((kind ~ '^[a-z][a-z0-9_]*$'::text) AND (char_length(kind) <= 64))),
+    CONSTRAINT approval_autonomy_policy_mode_check CHECK ((mode = ANY (ARRAY['manual'::text, 'veto'::text, 'auto'::text]))),
+    CONSTRAINT approval_autonomy_policy_window_positive CHECK (((veto_window IS NULL) OR (veto_window > '00:00:00'::interval))),
+    CONSTRAINT approval_autonomy_policy_window_shape CHECK ((((mode = 'veto'::text) AND (veto_window IS NOT NULL)) OR ((mode <> 'veto'::text) AND (veto_window IS NULL))))
+);
+
+CREATE TABLE public.approval_preference (
+    user_id uuid NOT NULL,
+    kind text NOT NULL,
+    muted boolean DEFAULT false NOT NULL
+);
+
+CREATE TABLE public.assurance_cycle (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    scope text NOT NULL,
+    opened_by text NOT NULL,
+    opened_at timestamp with time zone DEFAULT now() NOT NULL,
+    closed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT assurance_cycle_closes_after_opening CHECK (((closed_at IS NULL) OR (closed_at >= opened_at))),
+    CONSTRAINT assurance_cycle_scope_present CHECK ((length(btrim(scope)) > 0))
+);
+
+COMMENT ON TABLE public.assurance_cycle IS 'One pass of assurance over a scope. Findings inside it bundle into one task per subject.';
+
+CREATE TABLE public.assurance_deal_receipt (
+    deal_id uuid NOT NULL,
+    run_id uuid,
+    outcome text NOT NULL,
+    reasons text[] DEFAULT '{}'::text[] NOT NULL,
+    silent_days integer NOT NULL,
+    policy_version text NOT NULL,
+    input_fingerprint text NOT NULL,
+    assessed_at timestamp with time zone NOT NULL,
+    valid_until timestamp with time zone NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    verdict_input_checksum text,
+    verdict_basis_digest text,
+    verdict_prompt_version text,
+    verdict_assessed_at timestamp with time zone,
+    verdict_next_due_at timestamp with time zone,
+    verdict_actions jsonb,
+    CONSTRAINT assurance_deal_receipt_outcome_check CHECK ((outcome = ANY (ARRAY['eligible'::text, 'review_required'::text, 'unsupported'::text, 'waiting'::text, 'unknown'::text]))),
+    CONSTRAINT assurance_deal_receipt_valid_after_assessed CHECK ((valid_until >= assessed_at))
+);
+
+CREATE TABLE public.assurance_exception (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    logical_key text NOT NULL,
+    type text NOT NULL,
+    subject_kind text NOT NULL,
+    subject_id uuid NOT NULL,
+    claim jsonb DEFAULT '{}'::jsonb NOT NULL,
+    observed jsonb DEFAULT '{}'::jsonb NOT NULL,
+    evidence_refs jsonb DEFAULT '[]'::jsonb NOT NULL,
+    severity text NOT NULL,
+    affected_minor bigint,
+    currency public.currency_code,
+    owner_id uuid,
+    first_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    status text DEFAULT 'open'::text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    episode integer DEFAULT 1 NOT NULL,
+    task_activity_id uuid,
+    delivery_state text,
+    delivery_attempts integer DEFAULT 0 NOT NULL,
+    delivered_assignee_id uuid,
+    CONSTRAINT assurance_exception_affected_minor_js_safe CHECK (((affected_minor >= '-9007199254740991'::bigint) AND (affected_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT assurance_exception_amount_currency_pair CHECK (((affected_minor IS NULL) = (currency IS NULL))),
+    CONSTRAINT assurance_exception_delivery_state_check CHECK ((delivery_state = ANY (ARRAY['pending'::text, 'failed'::text, 'delivered'::text]))),
+    CONSTRAINT assurance_exception_seen_ordered CHECK ((last_seen_at >= first_seen_at)),
+    CONSTRAINT assurance_exception_severity_check CHECK ((severity = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text]))),
+    CONSTRAINT assurance_exception_status_check CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'expired'::text, 'condition_cleared'::text, 'subject_departed'::text]))),
+    CONSTRAINT assurance_exception_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text, 'forecast_call'::text]))),
+    CONSTRAINT assurance_exception_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.assurance_input_change (
+    subject_kind text NOT NULL,
+    subject_id uuid NOT NULL,
+    generation bigint NOT NULL,
+    changed_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT assurance_input_change_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'workspace'::text])))
+);
+
+CREATE SEQUENCE public.assurance_input_generation_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE TABLE public.assurance_resolution (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    exception_id uuid NOT NULL,
+    outcome text NOT NULL,
+    reason text,
+    evidence_ref text,
+    remind_at timestamp with time zone,
+    expires_at timestamp with time zone,
+    actor_id uuid NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT assurance_resolution_deferral_returns CHECK (((outcome <> 'remind_later'::text) OR (remind_at IS NOT NULL))),
+    CONSTRAINT assurance_resolution_expiry_after_creation CHECK (((expires_at IS NULL) OR (expires_at > created_at))),
+    CONSTRAINT assurance_resolution_outcome_check CHECK ((outcome = ANY (ARRAY['fixed_record'::text, 'added_evidence'::text, 'value_correct'::text, 'not_relevant'::text, 'remind_later'::text, 'reassign'::text, 'condition_cleared'::text]))),
+    CONSTRAINT assurance_resolution_suppression_expires CHECK (((outcome <> ALL (ARRAY['value_correct'::text, 'not_relevant'::text])) OR (expires_at IS NOT NULL))),
+    CONSTRAINT assurance_resolution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.assurance_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    as_of timestamp with time zone NOT NULL,
+    rule_versions jsonb DEFAULT '{}'::jsonb NOT NULL,
+    eligible_deals integer DEFAULT 0 NOT NULL,
+    eligible_signals integer DEFAULT 0 NOT NULL,
+    status text DEFAULT 'running'::text NOT NULL,
+    readiness text,
+    digest text,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    requested_by text,
+    read_through_generation bigint,
+    subject_deal_id uuid,
+    outbox_inputs_tracked boolean DEFAULT false NOT NULL,
+    CONSTRAINT assurance_run_counts_are_tallies CHECK (((eligible_deals >= 0) AND (eligible_signals >= 0))),
+    CONSTRAINT assurance_run_readiness_check CHECK (((readiness IS NULL) OR (readiness = ANY (ARRAY['ready'::text, 'ready_with_exceptions'::text, 'needs_review'::text, 'checks_incomplete'::text])))),
+    CONSTRAINT assurance_run_readiness_matches_status CHECK (((status = 'running'::text) = (readiness IS NULL))),
+    CONSTRAINT assurance_run_requester_is_named CHECK (((requested_by IS NULL) OR (length(btrim(requested_by)) > 0))),
+    CONSTRAINT assurance_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text]))),
+    CONSTRAINT assurance_run_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.assurance_run_finding (
+    run_id uuid NOT NULL,
+    exception_id uuid NOT NULL,
+    observed_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.assurance_source_coverage (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    run_id uuid NOT NULL,
+    source text NOT NULL,
+    state text NOT NULL,
+    checked_through timestamp with time zone,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT assurance_source_coverage_date_matches_state CHECK (((state = 'checked'::text) OR (checked_through IS NULL))),
+    CONSTRAINT assurance_source_coverage_source_check CHECK ((source = ANY (ARRAY['mail'::text, 'calendar'::text, 'documents'::text, 'contracts'::text, 'offers'::text, 'incumbent'::text]))),
+    CONSTRAINT assurance_source_coverage_state_check CHECK ((state = ANY (ARRAY['checked'::text, 'stale'::text, 'unavailable'::text, 'permission_limited'::text, 'not_connected'::text]))),
+    CONSTRAINT assurance_source_coverage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.assurance_task_item (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    cycle_id uuid NOT NULL,
+    exception_id uuid NOT NULL,
+    task_activity_id uuid NOT NULL,
+    subject_kind text NOT NULL,
+    subject_id uuid NOT NULL,
+    state text DEFAULT 'open'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    subject_unkeyed boolean DEFAULT false NOT NULL,
+    subject_deal_id uuid,
+    subject_signal_id uuid,
+    subject_offer_id uuid,
+    subject_contract_id uuid,
+    CONSTRAINT assurance_task_item_state CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text, 'dismissed'::text]))),
+    CONSTRAINT assurance_task_item_subject_contract_id_bound CHECK ((subject_unkeyed OR (NOT (subject_contract_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'contract'::text) THEN subject_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT assurance_task_item_subject_deal_id_bound CHECK ((subject_unkeyed OR (NOT (subject_deal_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'deal'::text) THEN subject_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT assurance_task_item_subject_kind CHECK ((subject_kind = ANY (ARRAY['deal'::text, 'signal'::text, 'offer'::text, 'contract'::text]))),
+    CONSTRAINT assurance_task_item_subject_offer_id_bound CHECK ((subject_unkeyed OR (NOT (subject_offer_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'offer'::text) THEN subject_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT assurance_task_item_subject_shape CHECK ((subject_unkeyed OR (num_nonnulls(subject_deal_id, subject_signal_id, subject_offer_id, subject_contract_id) = 1))),
+    CONSTRAINT assurance_task_item_subject_signal_id_bound CHECK ((subject_unkeyed OR (NOT (subject_signal_id IS DISTINCT FROM
+CASE
+    WHEN (subject_kind = 'signal'::text) THEN subject_id
+    ELSE NULL::uuid
+END))))
+);
+
+COMMENT ON TABLE public.assurance_task_item IS 'What one exception contributed to one cycle''s task. The unique constraint on (exception_id, cycle_id) is the minting idempotency.';
+
+CREATE TABLE public.attachment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    filename text NOT NULL,
+    content_type text,
+    byte_size bigint,
+    storage_key text NOT NULL,
+    checksum text,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    category text DEFAULT 'other'::text NOT NULL,
+    title text,
+    doc_state text DEFAULT 'current'::text NOT NULL,
+    pinned boolean DEFAULT false NOT NULL,
+    supersedes_id uuid,
+    company_id uuid,
+    deal_id uuid,
+    project_id uuid,
+    activity_id uuid,
+    external_source_id text,
+    external_part_id text,
+    declared_type text,
+    contract_id uuid,
+    bytes_withheld boolean DEFAULT false NOT NULL,
+    url text,
+    CONSTRAINT attachment_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint))),
+    CONSTRAINT attachment_category_check CHECK ((category = ANY (ARRAY['contract'::text, 'offer'::text, 'legal'::text, 'email_attachment'::text, 'message_attachment'::text, 'other'::text, 'link'::text]))),
+    CONSTRAINT attachment_doc_state_check CHECK ((doc_state = ANY (ARRAY['draft'::text, 'current'::text, 'final'::text, 'superseded'::text]))),
+    CONSTRAINT attachment_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text]))),
+    CONSTRAINT attachment_external_identity_complete CHECK (((external_source_id IS NULL) = (external_part_id IS NULL))),
+    CONSTRAINT attachment_link_shape CHECK ((((category = 'link'::text) = (url IS NOT NULL)) AND ((category <> 'link'::text) OR ((storage_key = ''::text) AND bytes_withheld AND (url ~ '^https?://'::text) AND (length(url) <= 2048))))),
+    CONSTRAINT attachment_supersedes_not_self CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))
+);
+
+COMMENT ON COLUMN public.attachment.doc_state IS 'Asserted, never inferred (DOC-DDL-1): a human or the producing source sets it.';
+
+COMMENT ON COLUMN public.attachment.company_id IS 'Account roll-up read path, NOT a second parent — visibility stays the primary parent''s.';
+
+COMMENT ON COLUMN public.attachment.contract_id IS 'The agreement this document is about (ADR-0109). A roll-up read path, not a second parent: visibility stays the primary parent''s.';
+
+CREATE TABLE public.attachment_extraction (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    attachment_id uuid NOT NULL,
+    status text DEFAULT 'queued'::text NOT NULL,
+    status_detail text,
+    fields jsonb DEFAULT '[]'::jsonb NOT NULL,
+    requested_by text NOT NULL,
+    started_at timestamp with time zone,
+    finished_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    attempt integer DEFAULT 1 NOT NULL,
+    attempt_at timestamp with time zone DEFAULT now() NOT NULL,
+    activity_announced_at timestamp with time zone,
+    question text DEFAULT 'deal_facts'::text NOT NULL,
+    CONSTRAINT attachment_extraction_attempt_check CHECK ((attempt >= 1)),
+    CONSTRAINT attachment_extraction_fields_shape CHECK ((jsonb_typeof(fields) = 'array'::text)),
+    CONSTRAINT attachment_extraction_question_check CHECK ((question = ANY (ARRAY['deal_facts'::text, 'chat_capture'::text]))),
+    CONSTRAINT attachment_extraction_started_shape CHECK ((((status = 'queued'::text) AND (started_at IS NULL)) OR ((status <> 'queued'::text) AND (started_at IS NOT NULL)))),
+    CONSTRAINT attachment_extraction_status CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text]))),
+    CONSTRAINT attachment_extraction_terminal_shape CHECK ((((status = ANY (ARRAY['done'::text, 'failed'::text])) AND (finished_at IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text])) AND (finished_at IS NULL))))
+);
+
+CREATE TABLE public.audit_log (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    actor_type text NOT NULL,
+    actor_id text NOT NULL,
+    passport_id uuid,
+    on_behalf_of uuid,
+    action text NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    before jsonb,
+    after jsonb,
+    authorization_rule text,
+    evidence jsonb,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    batch_id uuid,
+    source_xid xid8 DEFAULT pg_current_xact_id(),
+    CONSTRAINT audit_log_action_check CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'archive'::text, 'merge'::text, 'promote'::text, 'restore'::text, 'export'::text, 'erase'::text, 'assign'::text, 'advance_stage'::text, 'advance_phase'::text, 'approve'::text, 'reject'::text, 'consent_grant'::text, 'consent_withdraw'::text, 'activity_relink'::text, 'record_share'::text, 'record_unshare'::text, 'resolve'::text, 'demote'::text, 'import'::text, 'import_undo'::text, 'disqualify'::text, 'anonymize'::text, 'send_email'::text, 'reset_data'::text, 'password_link_issued'::text, 'connect'::text, 'disconnect'::text, 'schedule'::text, 'reschedule'::text, 'cancel'::text, 'release'::text, 'hold'::text, 'expire'::text, 'restrict'::text, 'pin'::text, 'accrue'::text, 'pay'::text, 'publish'::text, 'pause'::text, 'resume'::text, 'close'::text, 'invite'::text, 'revoke'::text, 'delete'::text, 'place_legal_hold'::text, 'lift_legal_hold'::text, 'request_legal_review'::text, 'withdraw_legal_review'::text, 'mfa_removed'::text]))),
+    CONSTRAINT audit_log_actor_type_check CHECK ((actor_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text, 'buyer'::text]))),
+    CONSTRAINT audit_log_images_are_absent_or_present CHECK (((before <> 'null'::jsonb) AND (after <> 'null'::jsonb)))
+);
+
+CREATE TABLE public.auth_token (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    purpose text NOT NULL,
+    token_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    used_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    mail_queued_at timestamp with time zone,
+    mail_sent_at timestamp with time zone,
+    mail_failed_at timestamp with time zone,
+    CONSTRAINT auth_token_expires_after_creation CHECK ((expires_at > created_at)),
+    CONSTRAINT auth_token_purpose_check CHECK ((purpose = ANY (ARRAY['password_reset'::text, 'email_verify'::text, 'invite'::text])))
+);
+
+CREATE TABLE public.automation (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    name text NOT NULL,
+    origin text DEFAULT 'catalog'::text NOT NULL,
+    trigger jsonb NOT NULL,
+    action jsonb NOT NULL,
+    params jsonb DEFAULT '{}'::jsonb NOT NULL,
+    owner_id uuid,
+    enabled boolean DEFAULT false NOT NULL,
+    tier text DEFAULT 'confirmation_required'::text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    paused_reason text,
+    setter_passport_id uuid,
+    CONSTRAINT automation_origin_check CHECK ((origin = ANY (ARRAY['catalog'::text, 'agent_authored'::text]))),
+    CONSTRAINT automation_paused_reason_check CHECK ((paused_reason = ANY (ARRAY['list_archived'::text, 'list_invalid'::text, 'list_unavailable'::text, 'burst'::text, 'passport_revoked'::text]))),
+    CONSTRAINT automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text]))),
+    CONSTRAINT automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.automation_effect_claim (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    handler text NOT NULL,
+    occurrence_key text NOT NULL,
+    effect_fingerprint text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    applied_at timestamp with time zone
+);
+
+CREATE TABLE public.booking_alias (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    alias text NOT NULL,
+    host_user_id uuid,
+    booking_page_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    retired_at timestamp with time zone,
+    CONSTRAINT booking_alias_alias_shape CHECK ((alias ~ '^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$'::text))
+);
+
+CREATE TABLE public.booking_page (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    host_user_id uuid NOT NULL,
+    slug text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    scheduling_policy jsonb,
+    first_used_at timestamp with time zone
+);
+
+CREATE TABLE public.brief_item (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    brief_run_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    rank integer NOT NULL,
+    composite double precision NOT NULL,
+    feature_vector jsonb NOT NULL,
+    evidence_ids uuid[] NOT NULL,
+    state text DEFAULT 'new'::text NOT NULL,
+    state_at timestamp with time zone,
+    snoozed_until timestamp with time zone,
+    finding text,
+    returned_after_dismissal_on date,
+    returned_with_activity_at timestamp with time zone,
+    reopen_on text,
+    reopen_ref uuid,
+    CONSTRAINT brief_item_composite_check CHECK (((composite >= (0)::double precision) AND (composite <= (1)::double precision))),
+    CONSTRAINT brief_item_finding_length CHECK (((finding IS NULL) OR (char_length(finding) <= 600))),
+    CONSTRAINT brief_item_lineage_whole CHECK (((returned_after_dismissal_on IS NULL) = (returned_with_activity_at IS NULL))),
+    CONSTRAINT brief_item_rank_check CHECK ((rank >= 1)),
+    CONSTRAINT brief_item_reopen_belongs_to_a_snooze CHECK ((NOT ((reopen_on IS NOT NULL) IS DISTINCT FROM (state = 'snoozed'::text)))),
+    CONSTRAINT brief_item_reopen_known CHECK (((reopen_on IS NULL) OR (reopen_on = ANY (ARRAY['time'::text, 'reply'::text, 'meeting'::text])))),
+    CONSTRAINT brief_item_reopen_ref_shaped CHECK ((NOT ((reopen_ref IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'meeting'::text))))),
+    CONSTRAINT brief_item_snooze_shape CHECK ((NOT ((snoozed_until IS NOT NULL) IS DISTINCT FROM (NOT (reopen_on IS DISTINCT FROM 'time'::text))))),
+    CONSTRAINT brief_item_state_check CHECK ((state = ANY (ARRAY['new'::text, 'acted'::text, 'dismissed'::text, 'snoozed'::text]))),
+    CONSTRAINT brief_item_state_stamped CHECK (((state = 'new'::text) = (state_at IS NULL)))
+);
+
+CREATE TABLE public.brief_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    as_of timestamp with time zone NOT NULL,
+    candidate_count integer NOT NULL,
+    revenue_norm_minor bigint NOT NULL,
+    local_day date NOT NULL,
+    narrative text,
+    annotated_at timestamp with time zone,
+    revenue_norm_currency text DEFAULT ''::text NOT NULL,
+    mail_attempted_at timestamp with time zone,
+    mail_error text,
+    factors_omitted text[] DEFAULT '{}'::text[] NOT NULL,
+    CONSTRAINT brief_run_candidate_count_check CHECK ((candidate_count >= 0)),
+    CONSTRAINT brief_run_factors_omitted_vocabulary CHECK ((factors_omitted <@ ARRAY['warmth'::text])),
+    CONSTRAINT brief_run_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500))),
+    CONSTRAINT brief_run_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL))),
+    CONSTRAINT brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600))),
+    CONSTRAINT brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL))),
+    CONSTRAINT brief_run_revenue_norm_currency_check CHECK (((revenue_norm_currency = ''::text) OR (revenue_norm_currency ~ '^[A-Z]{3}$'::text))),
+    CONSTRAINT brief_run_revenue_norm_minor_check CHECK ((revenue_norm_minor > 0)),
+    CONSTRAINT brief_run_revenue_norm_minor_js_safe CHECK (((revenue_norm_minor >= '-9007199254740991'::bigint) AND (revenue_norm_minor <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.bulk_confirmation (
+    token_hash bytea NOT NULL,
+    requested_by text NOT NULL,
+    binding bytea NOT NULL,
+    affected uuid[] NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    consumed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT bulk_confirmation_expiry_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.bulk_operation (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    record_type text NOT NULL,
+    verb text NOT NULL,
+    params jsonb DEFAULT '{}'::jsonb NOT NULL,
+    requested_by text NOT NULL,
+    passport_id uuid,
+    changed_count integer NOT NULL,
+    skipped_count integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    result jsonb DEFAULT '{}'::jsonb NOT NULL,
+    undo_of uuid,
+    undone_by uuid,
+    requested_for uuid,
+    CONSTRAINT bulk_operation_counts_check CHECK (((changed_count >= 0) AND (skipped_count >= 0))),
+    CONSTRAINT bulk_operation_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'worklist_item'::text]))),
+    CONSTRAINT bulk_operation_verb_check CHECK ((verb = ANY (ARRAY['reassign_owner'::text, 'archive'::text, 'add_to_list'::text, 'remove_from_list'::text, 'add_tag'::text, 'remove_tag'::text, 'create_task'::text, 'complete'::text])))
+);
+
+CREATE TABLE public.capture_alias_refused (
+    user_id uuid NOT NULL,
+    value text NOT NULL,
+    refused_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_alias_refused_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+);
+
+CREATE TABLE public.capture_alias_sighting (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    value text NOT NULL,
+    source text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_alias_sighting_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+);
+
+CREATE TABLE public.capture_answered_sweep_cursor (
+    singleton boolean DEFAULT true NOT NULL,
+    after_contact_id uuid,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_answered_sweep_cursor_one_row CHECK (singleton)
+);
+
+CREATE TABLE public.capture_auto_enrich_budget (
+    budget_date date NOT NULL,
+    enqueued integer DEFAULT 0 NOT NULL
+);
+
+CREATE TABLE public.capture_auto_enrich_state (
+    company_id uuid NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_attempt_at timestamp with time zone,
+    next_attempt_at timestamp with time zone DEFAULT now(),
+    last_outcome text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_auto_enrich_state_last_outcome_check CHECK (((last_outcome IS NULL) OR (last_outcome = ANY (ARRAY['queued'::text, 'applied'::text, 'empty'::text, 'failed'::text, 'exhausted'::text]))))
+);
+
+CREATE TABLE public.capture_backfill (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    connection_id uuid NOT NULL,
+    window_months integer NOT NULL,
+    after_date date NOT NULL,
+    status text DEFAULT 'queued'::text NOT NULL,
+    cursor jsonb,
+    total_estimate integer,
+    scanned integer DEFAULT 0 NOT NULL,
+    captured integer DEFAULT 0 NOT NULL,
+    skipped integer DEFAULT 0 NOT NULL,
+    contacts_created integer DEFAULT 0 NOT NULL,
+    companies_created integer DEFAULT 0 NOT NULL,
+    dedupe_candidates integer DEFAULT 0 NOT NULL,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    last_error_class text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    consecutive_failures integer DEFAULT 0 NOT NULL,
+    inflight_scanned integer DEFAULT 0 NOT NULL,
+    inflight_captured integer DEFAULT 0 NOT NULL,
+    inflight_skipped integer DEFAULT 0 NOT NULL,
+    total_estimate_is_floor boolean DEFAULT false NOT NULL,
+    failed integer DEFAULT 0 NOT NULL,
+    window_restarts integer DEFAULT 0 NOT NULL,
+    execution_generation bigint DEFAULT 0 NOT NULL,
+    admission_slot integer,
+    execution_owner_pid integer,
+    execution_due_at timestamp with time zone,
+    backoff_is_mailbox_scoped boolean DEFAULT false NOT NULL,
+    internal_mail_authorization jsonb,
+    CONSTRAINT capture_backfill_admission_slot_check CHECK ((admission_slot > 0)),
+    CONSTRAINT capture_backfill_internal_mail_authorization CHECK (((internal_mail_authorization IS NULL) OR ((jsonb_typeof(internal_mail_authorization) = 'object'::text) AND (internal_mail_authorization ?& ARRAY['admission'::text, 'after'::text, 'before'::text, 'authorized_by'::text])))),
+    CONSTRAINT capture_backfill_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'error'::text, 'cancelled'::text]))),
+    CONSTRAINT capture_backfill_window_months_check CHECK ((window_months = ANY (ARRAY[3, 6, 12, 24, 36, 60, 84, 120])))
+);
+
+CREATE TABLE public.capture_backfill_creation (
+    backfill_id uuid NOT NULL,
+    kind text NOT NULL,
+    subject text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_backfill_creation_kind CHECK ((kind = ANY (ARRAY['contact'::text, 'company_queued'::text])))
+);
+
+CREATE TABLE public.capture_connection (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    provider text NOT NULL,
+    user_id uuid NOT NULL,
+    scopes text[] DEFAULT '{}'::text[] NOT NULL,
+    status text DEFAULT 'disconnected'::text NOT NULL,
+    auth bytea,
+    sync_cursor jsonb,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    credential_ref text,
+    watch_expires_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    account_label text,
+    provider_scopes text[],
+    generation integer DEFAULT 0 NOT NULL,
+    account_bound_at timestamp with time zone,
+    share_acknowledged_at timestamp with time zone,
+    signature_enrich_enabled boolean,
+    mail_posture text DEFAULT 'classified'::text NOT NULL,
+    watch_ref text,
+    context_tag_id uuid,
+    history_baseline_date date,
+    history_baseline_tz text,
+    history_baseline_set_by text,
+    history_baseline_set_at timestamp with time zone,
+    sync_anchor timestamp with time zone,
+    unread_from timestamp with time zone,
+    unread_to timestamp with time zone,
+    sync_revision bigint DEFAULT 0 NOT NULL,
+    connected_at timestamp with time zone DEFAULT now() NOT NULL,
+    silence_dismissed_since timestamp with time zone,
+    legal_entity_id uuid,
+    CONSTRAINT capture_connection_history_baseline_check CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL)))),
+    CONSTRAINT capture_connection_mail_posture_check CHECK ((mail_posture = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text]))),
+    CONSTRAINT capture_connection_provider_check CHECK ((provider = ANY (ARRAY['gmail'::text, 'gcal'::text, 'gdocs'::text, 'imap'::text, 'graph'::text, 'graphcal'::text, 'whatsapp'::text, 'telegram'::text, 'offline_demo'::text, 'test_mailbox'::text]))),
+    CONSTRAINT capture_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text]))),
+    CONSTRAINT capture_connection_unread_period_whole CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))
+);
+
+COMMENT ON COLUMN public.capture_connection.share_acknowledged_at IS 'When the mail-provider grant landed for this connection; re-stamped on rebind. NOT a record of consent: nothing is shown to the user at connect time and no agreement is captured. Consent, where the law requires it, is a document the customer holds — see docs/handbook/compliance.md.';
+
+COMMENT ON COLUMN public.capture_connection.signature_enrich_enabled IS 'Per-mailbox switch for the nightly signature pass. NULL inherits the workspace setting (capture.signature_enrich); false means no mail from this mailbox is ever selected for enrichment.';
+
+COMMENT ON COLUMN public.capture_connection.mail_posture IS 'What this mailbox asks of the mail it brings in: shared (colleagues read it), classified (held until a verdict opens it), held (no verdict opens it). Default classified; a rebind resets to held.';
+
+COMMENT ON COLUMN public.capture_connection.sync_revision IS 'Successful sync revision; advances even when the provider cursor stays unchanged.';
+
+CREATE TABLE public.capture_counterparty_hold (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    kind text NOT NULL,
+    value text NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_counterparty_hold_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text]))),
+    CONSTRAINT capture_counterparty_hold_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+);
+
+CREATE TABLE public.capture_digest (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    digest_date date NOT NULL,
+    payload jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.capture_exclusion (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    scope text NOT NULL,
+    user_id uuid,
+    kind text NOT NULL,
+    value text NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_exclusion_container_is_personal CHECK (((kind <> 'container'::text) OR (scope = 'user'::text) OR (value = ANY (ARRAY['gmail:CATEGORY_PROMOTIONS'::text, 'gmail:CATEGORY_SOCIAL'::text, 'gmail:CATEGORY_UPDATES'::text, 'gmail:CATEGORY_FORUMS'::text])))),
+    CONSTRAINT capture_exclusion_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text, 'container'::text]))),
+    CONSTRAINT capture_exclusion_scope_check CHECK ((scope = ANY (ARRAY['workspace'::text, 'user'::text]))),
+    CONSTRAINT capture_exclusion_scope_user CHECK (((scope = 'user'::text) = (user_id IS NOT NULL))),
+    CONSTRAINT capture_exclusion_value_check CHECK (((value <> ''::text) AND ((kind = 'container'::text) OR (value = lower(value)))))
+);
+
+CREATE TABLE public.capture_freemail_domain (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    domain text NOT NULL,
+    kind text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    created_by uuid,
+    CONSTRAINT capture_freemail_domain_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text))),
+    CONSTRAINT capture_freemail_domain_kind_check CHECK ((kind = ANY (ARRAY['extra'::text, 'never'::text])))
+);
+
+CREATE TABLE public.capture_import (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    posture_at_import text,
+    verdict_status text,
+    verdict_reason text,
+    imported_at timestamp with time zone DEFAULT now() NOT NULL,
+    verdict_reasons text[],
+    provider_received_at timestamp with time zone,
+    source_occurred_at timestamp with time zone,
+    delivered_by text[] DEFAULT '{}'::text[] NOT NULL,
+    bcc_only boolean,
+    provider_message_ids text[] DEFAULT '{}'::text[] NOT NULL,
+    legal_entity_id uuid,
+    CONSTRAINT capture_import_posture_check CHECK (((posture_at_import IS NULL) OR (posture_at_import = ANY (ARRAY['shared'::text, 'classified'::text, 'held'::text])))),
+    CONSTRAINT capture_import_verdict_status_check CHECK (((verdict_status IS NULL) OR (verdict_status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text]))))
+);
+
+COMMENT ON COLUMN public.capture_import.verdict_reasons IS 'Every birth rule that matched this import, strictest first. verdict_reason stays as the first of them — the one that decided the audience — because the recompute and the API both read a single reason and neither is asking this question. NULL on a row written before this column existed, which is not the same as a one-element list: a backfilled row is not PROVABLY counterparty-only, so the widening path refuses it.';
+
+CREATE TABLE public.capture_owner_identity (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    kind text NOT NULL,
+    value text NOT NULL,
+    source text DEFAULT 'user'::text NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_owner_identity_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text]))),
+    CONSTRAINT capture_owner_identity_source_check CHECK ((source = ANY (ARRAY['user'::text, 'provider'::text, 'delivered_to'::text]))),
+    CONSTRAINT capture_owner_identity_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+);
+
+CREATE TABLE public.capture_owner_identity_withdrawn (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    audit_id uuid NOT NULL,
+    withdrawn_by text NOT NULL,
+    user_id uuid NOT NULL,
+    kind text NOT NULL,
+    value text NOT NULL,
+    source text NOT NULL,
+    created_by text NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    withdrawn_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT capture_owner_identity_withdrawn_kind_check CHECK ((kind = ANY (ARRAY['address'::text, 'domain'::text]))),
+    CONSTRAINT capture_owner_identity_withdrawn_source_check CHECK ((source = ANY (ARRAY['user'::text, 'provider'::text, 'delivered_to'::text]))),
+    CONSTRAINT capture_owner_identity_withdrawn_value_check CHECK (((value = lower(value)) AND (value <> ''::text)))
+);
+
+CREATE TABLE public.capture_party_admission_cursor (
+    singleton boolean DEFAULT true NOT NULL,
+    after_activity uuid NOT NULL,
+    after_user uuid NOT NULL,
+    ceiling uuid NOT NULL,
+    CONSTRAINT capture_party_admission_cursor_singleton_check CHECK (singleton)
+);
+
+CREATE TABLE public.capture_party_source (
+    activity_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    provider text NOT NULL,
+    raw_capture_id uuid,
+    sent_by_owner boolean NOT NULL,
+    containers text[] NOT NULL,
+    containers_known boolean NOT NULL,
+    recipients text[] NOT NULL,
+    policy_addresses text[] NOT NULL,
+    admission_blocked boolean NOT NULL,
+    admission_pending boolean DEFAULT true NOT NULL,
+    admission_generation bigint DEFAULT 1 NOT NULL
+);
+
+CREATE TABLE public.capture_party_source_replay (
+    activity_id uuid NOT NULL,
+    outcome text NOT NULL
+);
+
+CREATE TABLE public.capture_pending_counterparty (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    email text NOT NULL,
+    domain text,
+    display_name text,
+    activity_id uuid NOT NULL,
+    owner_id uuid NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    disposition_reason text,
+    claimed_until timestamp with time zone,
+    claimed_by uuid,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_attempt_at timestamp with time zone,
+    proposal_id uuid,
+    resolved_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    kind text,
+    resolved_by_owner boolean DEFAULT false NOT NULL,
+    confidence numeric(4,3),
+    served_model text,
+    withheld_from_workspace boolean DEFAULT false NOT NULL,
+    backfill_id uuid,
+    CONSTRAINT capture_pending_counterparty_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))),
+    CONSTRAINT capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text, 'vendor_pitch'::text])))),
+    CONSTRAINT capture_pending_counterparty_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'unsure'::text, 'real'::text, 'noise'::text, 'suppressed'::text, 'rejected'::text])))
+);
+
+COMMENT ON COLUMN public.capture_pending_counterparty.kind IS 'What kind of sender this address turned out to be. Orthogonal to status, which is the row lifecycle.';
+
+COMMENT ON COLUMN public.capture_pending_counterparty.resolved_by_owner IS 'Whether a person reached this verdict rather than the classifier. Gates how long the personal-mail purge waits before destroying.';
+
+COMMENT ON COLUMN public.capture_pending_counterparty.withheld_from_workspace IS 'The verdict said person, and the contact was still kept to the mailbox owner. Every reader that treats a person verdict as permission to publish or share must exclude these.';
+
+CREATE TABLE public.capture_sender_override (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    address text NOT NULL,
+    decision text NOT NULL,
+    overruled_kind text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    captured_by text,
+    CONSTRAINT capture_sender_override_decision_check CHECK ((decision = ANY (ARRAY['business'::text, 'keep_out'::text])))
+);
+
+CREATE TABLE public.capture_sweep_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    sweep text NOT NULL,
+    started_at timestamp with time zone NOT NULL,
+    finished_at timestamp with time zone NOT NULL,
+    outcome text NOT NULL,
+    processed integer DEFAULT 0 NOT NULL,
+    cap_hit boolean DEFAULT false NOT NULL,
+    error_class text,
+    CONSTRAINT capture_sweep_run_cap_names_the_outcome CHECK (((outcome <> ALL (ARRAY['ok'::text, 'partial'::text])) OR ((outcome = 'partial'::text) = cap_hit))),
+    CONSTRAINT capture_sweep_run_error_class_is_a_token CHECK ((error_class ~ '^[a-z][a-z_]{0,63}$'::text)),
+    CONSTRAINT capture_sweep_run_failure_carries_a_class CHECK (((outcome = 'failed'::text) = (error_class IS NOT NULL))),
+    CONSTRAINT capture_sweep_run_finish_after_start CHECK ((finished_at >= started_at)),
+    CONSTRAINT capture_sweep_run_outcome_check CHECK ((outcome = ANY (ARRAY['ok'::text, 'partial'::text, 'failed'::text, 'skipped'::text]))),
+    CONSTRAINT capture_sweep_run_processed_is_a_tally CHECK ((processed >= 0)),
+    CONSTRAINT capture_sweep_run_skipped_did_nothing CHECK (((outcome <> 'skipped'::text) OR ((processed = 0) AND (NOT cap_hit)))),
+    CONSTRAINT capture_sweep_run_sweep_check CHECK ((sweep = ANY (ARRAY['settled_thread_verdicts'::text, 'stranded_contacts'::text, 'filed_meeting_holds'::text])))
+);
+
+CREATE TABLE public.capture_sync_state (
+    connection_id uuid NOT NULL,
+    next_sync_at timestamp with time zone DEFAULT now() NOT NULL,
+    consecutive_failures integer DEFAULT 0 NOT NULL,
+    last_synced_at timestamp with time zone,
+    last_success_at timestamp with time zone,
+    last_error_class text,
+    backfill_active boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    failing_since timestamp with time zone,
+    last_delivery_at timestamp with time zone,
+    CONSTRAINT capture_sync_state_last_error_class_check CHECK (((last_error_class IS NULL) OR (last_error_class = ANY (ARRAY['rate_limited'::text, 'unreachable'::text, 'auth'::text, 'history_gone'::text, 'forbidden'::text, 'internal'::text]))))
+);
+
+CREATE TABLE public.capture_test_mailbox_sent (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    message_id text NOT NULL,
+    to_addresses jsonb NOT NULL,
+    cc_addresses jsonb DEFAULT '[]'::jsonb NOT NULL,
+    subject text NOT NULL,
+    sent_at timestamp with time zone DEFAULT now() NOT NULL,
+    echoed_at timestamp with time zone,
+    CONSTRAINT capture_test_mailbox_sent_message_id_check CHECK (((length(message_id) > 0) AND (char_length(message_id) <= 512)))
+);
+
+CREATE TABLE public.capture_thread_verdict (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    thread_key text NOT NULL,
+    user_id uuid NOT NULL,
+    first_activity_id uuid,
+    status text DEFAULT 'pending'::text NOT NULL,
+    kind text,
+    confidence numeric(4,3),
+    attempts integer DEFAULT 0 NOT NULL,
+    claimed_by uuid,
+    claimed_until timestamp with time zone,
+    next_attempt_at timestamp with time zone,
+    disposition_reason text,
+    seen_addresses text[] DEFAULT '{}'::text[] NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    resolved_at timestamp with time zone,
+    CONSTRAINT capture_thread_verdict_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))),
+    CONSTRAINT capture_thread_verdict_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'cleared'::text, 'held'::text, 'unsure'::text, 'shared_by_owner'::text, 'held_by_owner'::text])))
+);
+
+CREATE TABLE public.capture_trace (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid,
+    connector text NOT NULL,
+    source_system text NOT NULL,
+    source_id text NOT NULL,
+    outcome text NOT NULL,
+    reason text,
+    activity_id uuid,
+    counterparty text,
+    subject text,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    stage text NOT NULL,
+    CONSTRAINT capture_trace_connector_check CHECK (((connector ~ '^[a-z][a-z0-9_:.-]*$'::text) AND (char_length(connector) <= 96))),
+    CONSTRAINT capture_trace_counterparty_check CHECK (((counterparty IS NULL) OR (char_length(counterparty) <= 320))),
+    CONSTRAINT capture_trace_source_id_check CHECK (((length(source_id) > 0) AND (char_length(source_id) <= 512))),
+    CONSTRAINT capture_trace_source_system_check CHECK (((length(source_system) > 0) AND (char_length(source_system) <= 128))),
+    CONSTRAINT capture_trace_stage_outcome_check CHECK ((((stage = 'internal_drop'::text) AND (outcome = ANY (ARRAY['internal'::text, 'suppressed'::text]))) OR ((stage = 'activity_write'::text) AND (outcome = 'fault'::text)) OR ((stage = 'tier_ladder'::text) AND (outcome = ANY (ARRAY['captured'::text, 'suppressed'::text, 'deferred'::text, 'fault'::text]))))),
+    CONSTRAINT capture_trace_subject_check CHECK (((subject IS NULL) OR (char_length(subject) <= 300)))
+);
+
+CREATE TABLE public.channel_connection (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    provider text NOT NULL,
+    channel_id text NOT NULL,
+    channel_label text NOT NULL,
+    credential_ref text NOT NULL,
+    status text NOT NULL,
+    poll_offset bigint DEFAULT 0 NOT NULL,
+    connected_by uuid NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT channel_connection_provider_check CHECK ((provider = 'telegram'::text)),
+    CONSTRAINT channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text]))),
+    CONSTRAINT channel_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.channel_provider (
+    provider text NOT NULL,
+    transport text NOT NULL,
+    label text DEFAULT ''::text NOT NULL,
+    credential_model text DEFAULT 'workspace_bot'::text NOT NULL,
+    supplies_transport boolean DEFAULT true NOT NULL,
+    CONSTRAINT channel_provider_credential_model_check CHECK ((credential_model = ANY (ARRAY['workspace_bot'::text, 'per_member'::text]))),
+    CONSTRAINT channel_provider_provider_grammar CHECK (((provider ~ '^[a-z][a-z0-9_]*$'::text) AND (char_length(provider) <= 32))),
+    CONSTRAINT channel_provider_transport_check CHECK ((transport = ANY (ARRAY['core'::text, 'unit'::text])))
+);
+
+CREATE TABLE public.close_date_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    as_of date NOT NULL,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    status text DEFAULT 'running'::text NOT NULL,
+    eligible integer DEFAULT 0 NOT NULL,
+    checked integer DEFAULT 0 NOT NULL,
+    corrected integer DEFAULT 0 NOT NULL,
+    staged integer DEFAULT 0 NOT NULL,
+    cursor_created_at timestamp with time zone,
+    cursor_id uuid,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    CONSTRAINT close_date_run_counts_are_tallies CHECK (((eligible >= 0) AND (checked >= 0) AND (corrected >= 0) AND (staged >= 0))),
+    CONSTRAINT close_date_run_cursor_is_whole CHECK (((cursor_created_at IS NULL) = (cursor_id IS NULL))),
+    CONSTRAINT close_date_run_finish_matches_status CHECK (((status = 'running'::text) = (finished_at IS NULL))),
+    CONSTRAINT close_date_run_status_check CHECK ((status = ANY (ARRAY['running'::text, 'complete'::text, 'incomplete'::text]))),
+    CONSTRAINT close_date_run_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.close_date_run_member (
+    run_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    deal_created_at timestamp with time zone NOT NULL,
+    outcome text DEFAULT 'pending'::text NOT NULL,
+    settled_at timestamp with time zone,
+    CONSTRAINT close_date_run_member_outcome_check CHECK ((outcome = ANY (ARRAY['pending'::text, 'checked'::text, 'changed'::text, 'staged'::text, 'skipped'::text, 'failed'::text]))),
+    CONSTRAINT close_date_run_member_settled_matches_outcome CHECK (((outcome = 'pending'::text) = (settled_at IS NULL)))
+);
+
+CREATE TABLE public.commission_entry (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    partner_company_id uuid NOT NULL,
+    status text DEFAULT 'accrued'::text NOT NULL,
+    trigger_event_id uuid,
+    attribution_at_accrual text NOT NULL,
+    margin_tier_at_accrual text,
+    rate_bps integer NOT NULL,
+    basis_amount_minor bigint NOT NULL,
+    currency public.currency_code NOT NULL,
+    fx_rate_to_base numeric(20,10),
+    amount_minor bigint NOT NULL,
+    reversal_of uuid,
+    void_reason text,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT commission_entry_amount_minor_check CHECK ((amount_minor >= 0)),
+    CONSTRAINT commission_entry_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT commission_entry_attribution_at_accrual_check CHECK ((attribution_at_accrual = ANY (ARRAY['sourced'::text, 'influenced'::text]))),
+    CONSTRAINT commission_entry_basis_amount_minor_check CHECK ((basis_amount_minor >= 0)),
+    CONSTRAINT commission_entry_basis_amount_minor_js_safe CHECK (((basis_amount_minor >= '-9007199254740991'::bigint) AND (basis_amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT commission_entry_rate_bps_check CHECK (((rate_bps >= 0) AND (rate_bps <= 10000))),
+    CONSTRAINT commission_entry_status_check CHECK ((status = ANY (ARRAY['accrued'::text, 'approved'::text, 'paid'::text, 'void'::text]))),
+    CONSTRAINT commission_entry_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT commission_reversal_is_void CHECK (((reversal_of IS NULL) OR (status = 'void'::text))),
+    CONSTRAINT commission_void_has_reason CHECK (((status <> 'void'::text) OR (void_reason IS NOT NULL)))
+);
+
+COMMENT ON TABLE public.commission_entry IS 'What one partner earned on one won deal. Append-forward: a clawback is a reversal row plus a void, never an edit.';
+
+CREATE TABLE public.comms_outbound (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    user_id uuid,
+    provider text NOT NULL,
+    message_id text,
+    recipients jsonb,
+    cc jsonb DEFAULT '[]'::jsonb,
+    subject text,
+    body text NOT NULL,
+    consent_purpose text,
+    in_reply_to text,
+    references_chain jsonb DEFAULT '[]'::jsonb,
+    thread_key text,
+    list_unsubscribe text,
+    status text DEFAULT 'pending'::text NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    reason text,
+    provider_message_id text,
+    sent_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    channel_user_id text,
+    inflight_at timestamp with time zone,
+    attachments jsonb DEFAULT '[]'::jsonb NOT NULL,
+    html_body text,
+    from_name text,
+    bcc jsonb,
+    redacted_fields text[] DEFAULT '{}'::text[] NOT NULL,
+    bounced_at timestamp with time zone,
+    bounce_kind text,
+    bounce_reason text,
+    bounce_recipient text,
+    parked_at timestamp with time zone,
+    sender_kind text DEFAULT 'user'::text NOT NULL,
+    template_key text,
+    template_version integer,
+    payload_ref text,
+    payload_expires_at timestamp with time zone,
+    link_id uuid,
+    execution_authority text DEFAULT 'supported'::text NOT NULL,
+    instruction_id uuid,
+    inline_logo_key text,
+    delivery_due_at timestamp with time zone,
+    from_address text,
+    party_admission_pending boolean DEFAULT true NOT NULL,
+    CONSTRAINT comms_outbound_attachments_shape CHECK (public.comms_outbound_attachments_well_formed(attachments)),
+    CONSTRAINT comms_outbound_bounce_is_stated CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL)))),
+    CONSTRAINT comms_outbound_bounce_kind_named CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard'::text, 'soft'::text])))),
+    CONSTRAINT comms_outbound_bounce_recipient_stated CHECK (((bounce_recipient IS NULL) OR (bounced_at IS NOT NULL))),
+    CONSTRAINT comms_outbound_cc_array CHECK ((jsonb_typeof(cc) = 'array'::text)),
+    CONSTRAINT comms_outbound_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text]))),
+    CONSTRAINT comms_outbound_inflight_cannot_detect_prior_send CHECK (((inflight_at IS NULL) OR (channel_user_id IS NOT NULL) OR (sender_kind = 'controller'::text))),
+    CONSTRAINT comms_outbound_instruction_shape CHECK (((execution_authority = 'instruction'::text) = (instruction_id IS NOT NULL))),
+    CONSTRAINT comms_outbound_payload_expires CHECK (((payload_ref IS NULL) OR (payload_expires_at IS NOT NULL))),
+    CONSTRAINT comms_outbound_payload_is_controllers CHECK (((payload_ref IS NULL) OR (sender_kind = 'controller'::text))),
+    CONSTRAINT comms_outbound_purpose_is_users CHECK (((sender_kind = 'user'::text) = (consent_purpose IS NOT NULL))),
+    CONSTRAINT comms_outbound_recipients_array CHECK ((jsonb_typeof(recipients) = 'array'::text)),
+    CONSTRAINT comms_outbound_references_array CHECK ((jsonb_typeof(references_chain) = 'array'::text)),
+    CONSTRAINT comms_outbound_sender_kind CHECK ((sender_kind = ANY (ARRAY['user'::text, 'controller'::text]))),
+    CONSTRAINT comms_outbound_sender_stated CHECK (((sender_kind = 'user'::text) = (user_id IS NOT NULL))),
+    CONSTRAINT comms_outbound_shape CHECK ((((channel_user_id IS NULL) AND (message_id IS NOT NULL) AND (recipients IS NOT NULL) AND (cc IS NOT NULL) AND (subject IS NOT NULL) AND (references_chain IS NOT NULL)) OR ((channel_user_id IS NOT NULL) AND (message_id IS NULL) AND (recipients IS NULL) AND (cc IS NULL) AND (subject IS NULL) AND (references_chain IS NULL) AND (thread_key IS NULL) AND (list_unsubscribe IS NULL) AND ((channel_user_id <> ''::text) OR (status <> 'pending'::text))))),
+    CONSTRAINT comms_outbound_status CHECK ((status = ANY (ARRAY['pending'::text, 'sent'::text, 'parked'::text]))),
+    CONSTRAINT comms_outbound_template_is_controllers CHECK (((sender_kind = 'controller'::text) = ((template_key IS NOT NULL) AND (template_version IS NOT NULL))))
+);
+
+COMMENT ON COLUMN public.comms_outbound.attachments IS 'Immutable snapshot of what was attached (ADR-0086 §4): filename, type, size, checksum. Never rewritten by a later change to the document.';
+
+CREATE TABLE public.communication_basis (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    lead_id uuid,
+    kind text NOT NULL,
+    thread_key text,
+    source_activity_id uuid,
+    valid_from timestamp with time zone DEFAULT now() NOT NULL,
+    valid_until timestamp with time zone,
+    note text,
+    captured_by text NOT NULL,
+    captured_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    CONSTRAINT communication_basis_kind CHECK ((kind = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'existing_customer_exception'::text, 'vn_subject_agreement'::text]))),
+    CONSTRAINT communication_basis_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL))),
+    CONSTRAINT communication_basis_window CHECK (((valid_until IS NULL) OR (valid_until > valid_from)))
+);
+
+CREATE TABLE public.communication_decision (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    delivery_id uuid NOT NULL,
+    attempt integer DEFAULT 0 NOT NULL,
+    decision_set_id uuid NOT NULL,
+    recipient_address text NOT NULL,
+    subject_kind text,
+    subject_id uuid,
+    phase text NOT NULL,
+    requested_category text,
+    resolved_category text NOT NULL,
+    verdict text NOT NULL,
+    reason_code text NOT NULL,
+    basis text,
+    evidence jsonb DEFAULT '{}'::jsonb NOT NULL,
+    suppression text,
+    content_fingerprint bytea,
+    legacy_verdict text,
+    mode text NOT NULL,
+    actor text NOT NULL,
+    decided_at timestamp with time zone DEFAULT now() NOT NULL,
+    execution_authority text DEFAULT 'supported'::text NOT NULL,
+    instruction_id uuid,
+    ruleset_version integer,
+    ruleset_codes text[],
+    legal_entity_id uuid,
+    purpose_key text,
+    existing_customer_notice_id uuid,
+    existing_customer_offer_id uuid,
+    existing_customer_sold_at timestamp with time zone,
+    data_protection_country text,
+    CONSTRAINT communication_decision_basis CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['contract'::text, 'precontract_request'::text, 'subject_initiated_correspondence'::text, 'legitimate_interests'::text, 'legal_obligation'::text, 'vital_or_security_interest'::text, 'consent'::text, 'existing_customer_exception'::text, 'vn_subject_agreement'::text])))),
+    CONSTRAINT communication_decision_category CHECK ((resolved_category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text]))),
+    CONSTRAINT communication_decision_execution_authority CHECK ((execution_authority = ANY (ARRAY['supported'::text, 'instruction'::text]))),
+    CONSTRAINT communication_decision_existing_customer_shape CHECK ((((existing_customer_notice_id IS NULL) = (existing_customer_offer_id IS NULL)) AND ((existing_customer_notice_id IS NULL) = (existing_customer_sold_at IS NULL)))),
+    CONSTRAINT communication_decision_instruction_shape CHECK (((execution_authority = 'instruction'::text) = (instruction_id IS NOT NULL))),
+    CONSTRAINT communication_decision_mode CHECK ((mode = ANY (ARRAY['observe'::text, 'warn'::text, 'enforce'::text]))),
+    CONSTRAINT communication_decision_phase CHECK ((phase = ANY (ARRAY['staging'::text, 'transmit'::text]))),
+    CONSTRAINT communication_decision_ruleset_shape CHECK ((((ruleset_codes IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) > 0)) AND ((ruleset_version IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) = 1)))),
+    CONSTRAINT communication_decision_subject_kind CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['contact'::text, 'lead'::text])))),
+    CONSTRAINT communication_decision_subject_shape CHECK (((subject_kind IS NULL) = (subject_id IS NULL))),
+    CONSTRAINT communication_decision_verdict CHECK ((verdict = ANY (ARRAY['allow'::text, 'deny'::text, 'review'::text])))
+);
+
+CREATE TABLE public.communication_instruction (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    review_id uuid NOT NULL,
+    directed_by uuid NOT NULL,
+    reason_code text NOT NULL,
+    explanation text NOT NULL,
+    warning_version text NOT NULL,
+    acknowledged_at timestamp with time zone NOT NULL,
+    facts_as_of timestamp with time zone NOT NULL,
+    valid_until timestamp with time zone NOT NULL,
+    directed_at timestamp with time zone DEFAULT now() NOT NULL,
+    status text DEFAULT 'directed'::text NOT NULL,
+    consumed_at timestamp with time zone,
+    revoked_at timestamp with time zone,
+    revoked_by uuid,
+    revoked_reason text,
+    acknowledged_wording bytea,
+    delivery_id uuid,
+    given_by_admin boolean DEFAULT false NOT NULL,
+    directed_by_agent text,
+    acknowledged_scope character varying(64),
+    corrected_wording bytea,
+    CONSTRAINT communication_instruction_consumption_shape CHECK (((status = 'consumed'::text) = (consumed_at IS NOT NULL))),
+    CONSTRAINT communication_instruction_explained CHECK ((length(btrim(explanation)) > 0)),
+    CONSTRAINT communication_instruction_reason CHECK ((reason_code = ANY (ARRAY['customer_requested_outside_crm'::text, 'contractual_necessity'::text, 'legal_obligation'::text, 'other'::text]))),
+    CONSTRAINT communication_instruction_revocation_shape CHECK (((status = 'revoked'::text) = ((revoked_at IS NOT NULL) AND (revoked_by IS NOT NULL) AND (revoked_reason IS NOT NULL)))),
+    CONSTRAINT communication_instruction_revocation_whole CHECK ((num_nonnulls(revoked_at, revoked_by, revoked_reason) = ANY (ARRAY[0, 3]))),
+    CONSTRAINT communication_instruction_spent_on_shape CHECK (((status = 'consumed'::text) = (delivery_id IS NOT NULL))),
+    CONSTRAINT communication_instruction_status CHECK ((status = ANY (ARRAY['directed'::text, 'consumed'::text, 'revoked'::text, 'expired'::text]))),
+    CONSTRAINT communication_instruction_window CHECK ((valid_until > facts_as_of))
+);
+
+CREATE TABLE public.communication_override (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    lead_id uuid,
+    category text NOT NULL,
+    reason text NOT NULL,
+    decided_by_level text NOT NULL,
+    captured_by text NOT NULL,
+    recorded_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    carried_from uuid,
+    legal_entity_id uuid NOT NULL,
+    recorded_directly boolean,
+    CONSTRAINT communication_override_category CHECK ((category = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'security_notice'::text, 'privacy_notice'::text, 'record_confirmation'::text, 'consent_confirmation'::text, 'optout_confirmation'::text, 'marketing'::text]))),
+    CONSTRAINT communication_override_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['user'::text, 'admin'::text]))),
+    CONSTRAINT communication_override_names_a_target CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+);
+
+CREATE TABLE public.communication_review (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    state text DEFAULT 'needs_context'::text NOT NULL,
+    kind text DEFAULT 'single'::text NOT NULL,
+    delivery_intent_id uuid,
+    initiated_by uuid,
+    refusals jsonb DEFAULT '[]'::jsonb NOT NULL,
+    reason_code text NOT NULL,
+    opened_at timestamp with time zone DEFAULT now() NOT NULL,
+    resolved_at timestamp with time zone,
+    superseded_by uuid,
+    CONSTRAINT communication_review_kind CHECK ((kind = 'single'::text)),
+    CONSTRAINT communication_review_resolution_shape CHECK (((state = ANY (ARRAY['resolved'::text, 'superseded'::text, 'cancelled'::text])) = (resolved_at IS NOT NULL))),
+    CONSTRAINT communication_review_state CHECK ((state = ANY (ARRAY['needs_context'::text, 'needs_repair'::text, 'resolved'::text, 'superseded'::text, 'cancelled'::text]))),
+    CONSTRAINT communication_review_supersession_shape CHECK (((state = 'superseded'::text) = (superseded_by IS NOT NULL)))
+);
+
+CREATE TABLE public.communication_suppression (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    lead_id uuid,
+    address text,
+    kind text NOT NULL,
+    source text NOT NULL,
+    recorded_at timestamp with time zone DEFAULT now() NOT NULL,
+    captured_by text NOT NULL,
+    revoked_at timestamp with time zone,
+    decided_by_level text NOT NULL,
+    carried_from uuid,
+    purpose_id uuid,
+    address_hash text,
+    recorded_for_addresses text[],
+    recorded_through text DEFAULT 'unknown'::text NOT NULL,
+    address_key_id text,
+    CONSTRAINT communication_suppression_decided_by_level CHECK ((decided_by_level = ANY (ARRAY['machine'::text, 'user'::text, 'admin'::text, 'subject'::text]))),
+    CONSTRAINT communication_suppression_kind CHECK ((kind = ANY (ARRAY['marketing_objection'::text, 'processing_restriction'::text, 'hard_bounce'::text, 'subject_request'::text]))),
+    CONSTRAINT communication_suppression_names_a_target CHECK (((contact_id IS NOT NULL) OR (lead_id IS NOT NULL) OR (address IS NOT NULL) OR (address_hash IS NOT NULL))),
+    CONSTRAINT communication_suppression_recorded_through CHECK ((recorded_through = ANY (ARRAY['colleague'::text, 'agent'::text, 'subject'::text, 'machine'::text, 'unknown'::text])))
+);
+
+COMMENT ON COLUMN public.communication_suppression.carried_from IS 'The stop this one was copied from when a merge or promotion retired its subject. NULL when recorded directly.';
+
+CREATE TABLE public.company (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    display_name text NOT NULL,
+    legal_name text,
+    industry text,
+    size_band text,
+    owner_id uuid,
+    logo_object_key text,
+    logo_origin text,
+    parent_company_id uuid,
+    merged_into_id uuid,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    legal_hold boolean DEFAULT false NOT NULL,
+    address_line1 text,
+    address_line2 text,
+    address_city text,
+    address_region text,
+    address_postal_code text,
+    address_country text,
+    search_tsv tsvector GENERATED ALWAYS AS ((((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(display_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(display_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(((COALESCE(legal_name, ''::text) || ' '::text) || COALESCE(industry, ''::text)))), 'B'::"char"))) STORED,
+    is_anchor boolean DEFAULT false NOT NULL,
+    visibility text DEFAULT 'workspace'::text NOT NULL,
+    quarantined_at timestamp with time zone,
+    name_source text DEFAULT 'human'::text NOT NULL,
+    lifecycle text DEFAULT 'unknown'::text NOT NULL,
+    linkedin_url text,
+    description text,
+    last_activity_at timestamp with time zone,
+    geocode_lat double precision,
+    geocode_lon double precision,
+    geocoded_at timestamp with time zone,
+    geocode_provider text,
+    geocode_status text,
+    geocode_input_hash text,
+    logo_icon_object_key text,
+    logo_icon_origin text,
+    source_author_id uuid,
+    source_author_name text,
+    source_system text,
+    assess_against_entity_id uuid,
+    source_id text,
+    phone text,
+    email text,
+    CONSTRAINT company_anchor_is_permanent CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL)))),
+    CONSTRAINT company_description_length CHECK (((description IS NULL) OR (length(description) <= 500))),
+    CONSTRAINT company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision))))),
+    CONSTRAINT company_geocode_status_check CHECK (((geocode_status IS NULL) OR (geocode_status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text])))),
+    CONSTRAINT company_lifecycle_check CHECK ((lifecycle = ANY (ARRAY['unknown'::text, 'target'::text, 'prospect'::text, 'opportunity'::text, 'onboarding'::text, 'live'::text, 'customer'::text, 'former_customer'::text, 'disqualified'::text]))),
+    CONSTRAINT company_linkedin_url_shape CHECK (((linkedin_url IS NULL) OR (linkedin_url ~ '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+$'::text))),
+    CONSTRAINT company_logo_icon_names_its_origin CHECK (((logo_icon_object_key IS NULL) = (logo_icon_origin IS NULL))),
+    CONSTRAINT company_logo_names_its_origin CHECK (((logo_object_key IS NULL) = (logo_origin IS NULL))),
+    CONSTRAINT company_name_source_check CHECK ((name_source = ANY (ARRAY['human'::text, 'dossier'::text, 'signature'::text, 'domain'::text]))),
+    CONSTRAINT company_not_own_parent CHECK (((parent_company_id IS NULL) OR (parent_company_id <> id))),
+    CONSTRAINT company_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL))),
+    CONSTRAINT company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text])))),
+    CONSTRAINT company_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))),
+    CONSTRAINT company_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128)))),
+    CONSTRAINT company_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL))),
+    CONSTRAINT company_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
+);
+
+COMMENT ON COLUMN public.company.linkedin_url IS 'Canonical LinkedIn company URL (PO-DDL-N-2). Unique among live rows per workspace.';
+
+COMMENT ON COLUMN public.company.source_system IS 'Which system this record was imported from. Null on a record created here, which is most of them. It is what makes an author other than the recorder a checkable claim rather than an assertion.';
+
+COMMENT ON COLUMN public.company.source_id IS 'The id this record has in source_system. Null on a record created here. Unique with source_system.';
+
+CREATE TABLE public.company_address_country (
+    company_id uuid NOT NULL,
+    countries text[] NOT NULL,
+    checked_at timestamp with time zone NOT NULL,
+    CONSTRAINT company_address_country_codes_are_alpha2 CHECK ((array_to_string(countries, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+);
+
+CREATE TABLE public.company_brief (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    fingerprint text NOT NULL,
+    generated_at timestamp with time zone NOT NULL,
+    generated_by text NOT NULL,
+    payload jsonb NOT NULL,
+    CONSTRAINT company_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+);
+
+CREATE TABLE public.company_domain (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid NOT NULL,
+    domain text NOT NULL,
+    is_primary boolean DEFAULT false NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    domain_folded text,
+    CONSTRAINT company_domain_norm CHECK ((domain = lower(domain))),
+    CONSTRAINT company_domain_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.company_domain_disposition (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    domain text NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    source text,
+    evidence text,
+    owner_id uuid,
+    site_read_id uuid,
+    company_id uuid,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_attempt_at timestamp with time zone,
+    next_attempt_at timestamp with time zone DEFAULT now(),
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    pending_reason text,
+    admission text,
+    admission_reason text,
+    admission_source text,
+    admission_at timestamp with time zone,
+    last_evidence_at timestamp with time zone,
+    admission_reason_code text,
+    admission_sender_kind text,
+    admission_reason_coded_at timestamp with time zone,
+    candidate_company_id uuid,
+    site_unreadable boolean DEFAULT false NOT NULL,
+    CONSTRAINT company_domain_disposition_admission_check CHECK (((admission IS NULL) OR (admission = ANY (ARRAY['suppressed'::text, 'admitted'::text])))),
+    CONSTRAINT company_domain_disposition_admission_shape CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL)))),
+    CONSTRAINT company_domain_disposition_admission_source_check CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict'::text, 'heuristic'::text, 'human'::text, 'agent'::text])))),
+    CONSTRAINT company_domain_disposition_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text))),
+    CONSTRAINT company_domain_disposition_pending_reason_check CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced'::text, 'stale_evidence'::text, 'near_duplicate'::text, 'forwarded_identity'::text, 'vendor_verdict'::text, 'reserved_domain'::text])))),
+    CONSTRAINT company_domain_disposition_pending_reason_shape CHECK (((pending_reason IS NULL) OR ((status = 'pending'::text) AND (admission IS DISTINCT FROM 'suppressed'::text)))),
+    CONSTRAINT company_domain_disposition_settled_shape CHECK ((((status = 'pending'::text) AND (source IS NULL)) OR ((status = 'company'::text) AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal'::text, 'provider'::text, 'no_site'::text])) AND (source IS NOT NULL)))),
+    CONSTRAINT company_domain_disposition_source_check CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read'::text, 'heuristic'::text, 'human'::text, 'agent'::text])))),
+    CONSTRAINT company_domain_disposition_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'company'::text, 'personal'::text, 'provider'::text, 'no_site'::text])))
+);
+
+CREATE TABLE public.company_domain_question_reader (
+    domain text NOT NULL,
+    reader_id uuid NOT NULL,
+    evidence_at timestamp with time zone
+);
+
+CREATE TABLE public.company_dossier (
+    user_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    fingerprint text NOT NULL,
+    payload jsonb NOT NULL,
+    generated_by text NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT company_dossier_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+);
+
+COMMENT ON TABLE public.company_dossier IS 'Read-model cache (DOSS-DDL-1). Keyed per READER: no assembly crosses readers, whatever their masks.';
+
+COMMENT ON COLUMN public.company_dossier.user_id IS 'The reader this assembly was generated for. Written into every read explicitly: the reader key is what keeps two readers'' assemblies apart, and the installation is the one workspace (ADR-0061).';
+
+CREATE TABLE public.company_fact (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid NOT NULL,
+    category text NOT NULL,
+    field text NOT NULL,
+    value text NOT NULL,
+    value_key text DEFAULT ''::text NOT NULL,
+    evidence_snippet text,
+    source_url text,
+    confidence numeric(4,3),
+    source text DEFAULT 'site_read'::text NOT NULL,
+    captured_by text NOT NULL,
+    site_read_id uuid,
+    captured_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    retrieved_at timestamp with time zone,
+    verified_at timestamp with time zone,
+    verified_by uuid,
+    CONSTRAINT company_fact_category_check CHECK ((category = ANY (ARRAY['company'::text, 'offering'::text, 'market'::text, 'signal'::text]))),
+    CONSTRAINT company_fact_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision)))),
+    CONSTRAINT company_fact_field_vocab CHECK ((((category = 'company'::text) AND (field = ANY (ARRAY['founded_year'::text, 'employee_range'::text, 'phone'::text, 'contact_email'::text, 'location'::text]))) OR ((category = 'offering'::text) AND (field = ANY (ARRAY['service'::text, 'product'::text, 'capability'::text]))) OR ((category = 'market'::text) AND (field = ANY (ARRAY['served_industry'::text, 'company_size'::text, 'geography'::text, 'language'::text]))) OR ((category = 'signal'::text) AND (field = ANY (ARRAY['certification'::text, 'partner'::text, 'named_customer'::text, 'technology'::text, 'quantified_outcome'::text, 'mail_provider'::text, 'email_security'::text, 'hosting_provider'::text, 'operated_service'::text]))))),
+    CONSTRAINT company_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL)))),
+    CONSTRAINT company_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text]))),
+    CONSTRAINT company_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL)))),
+    CONSTRAINT company_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text)))),
+    CONSTRAINT company_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL))),
+    CONSTRAINT company_fact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.company_fact.retrieved_at IS 'When the source was last actually read (PO-DDL-N-2); distinct from captured_at.';
+
+COMMENT ON COLUMN public.company_fact.verified_at IS 'When a human last confirmed this claim (PO-DDL-N-2). Paired with verified_by.';
+
+CREATE TABLE public.company_fact_revision (
+    company_id uuid NOT NULL,
+    revision bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT company_fact_revision_js_safe CHECK (((revision >= 0) AND (revision <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.company_geocode_state (
+    company_id uuid NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_outcome text,
+    next_attempt_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    lat double precision,
+    lon double precision,
+    status text,
+    provider text,
+    input_hash text,
+    geocoded_at timestamp with time zone,
+    CONSTRAINT company_geocode_state_status_check CHECK (((status IS NULL) OR (status = ANY (ARRAY['ok'::text, 'failed'::text, 'no_match'::text, 'stale'::text]))))
+);
+
+CREATE TABLE public.company_growth_fit (
+    user_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    fingerprint text NOT NULL,
+    payload jsonb NOT NULL,
+    generated_by text NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT company_growth_fit_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+);
+
+COMMENT ON TABLE public.company_growth_fit IS 'Read-model cache (DOSS-DDL-2). Per reader: it folds seat-dependent workspace context and makes recommendations.';
+
+CREATE TABLE public.company_offered_value (
+    company_id uuid NOT NULL,
+    source_system text NOT NULL,
+    field_key text NOT NULL,
+    offered_value text NOT NULL,
+    offered_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT company_offered_value_field_known CHECK ((field_key = ANY (ARRAY['legal_name'::text, 'industry'::text, 'description'::text])))
+);
+
+CREATE TABLE public.company_profile_field (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid NOT NULL,
+    field text NOT NULL,
+    value text NOT NULL,
+    evidence_snippet text,
+    source_url text,
+    confidence numeric(4,3),
+    source text DEFAULT 'site_read'::text NOT NULL,
+    captured_by text NOT NULL,
+    captured_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    retrieved_at timestamp with time zone,
+    verified_at timestamp with time zone,
+    verified_by uuid,
+    CONSTRAINT company_profile_field_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision)))),
+    CONSTRAINT company_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text]))),
+    CONSTRAINT company_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'agent'::text, 'site_read'::text, 'connector'::text, 'migration'::text]))),
+    CONSTRAINT company_profile_field_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL))),
+    CONSTRAINT company_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT company_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
+);
+
+COMMENT ON COLUMN public.company_profile_field.retrieved_at IS 'When the source was last actually read (PO-DDL-N-2); distinct from captured_at.';
+
+COMMENT ON COLUMN public.company_profile_field.verified_at IS 'When a human last confirmed this claim (PO-DDL-N-2). Paired with verified_by.';
+
+CREATE TABLE public.company_relationship_type (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid NOT NULL,
+    relationship_type text NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT company_relationship_type_relationship_type_check CHECK ((relationship_type = ANY (ARRAY['customer'::text, 'partner'::text, 'supplier'::text, 'investor'::text, 'portfolio_company'::text, 'competitor'::text, 'other'::text]))),
+    CONSTRAINT company_relationship_type_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.company_scan (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    status text NOT NULL,
+    attempt integer DEFAULT 1 NOT NULL,
+    requested_at timestamp with time zone DEFAULT now() NOT NULL,
+    started_at timestamp with time zone,
+    finished_at timestamp with time zone,
+    next_attempt_at timestamp with time zone,
+    fingerprint text,
+    generated_at timestamp with time zone,
+    generated_by text,
+    degrade_reason text,
+    read_exchanges integer,
+    read_deals integer,
+    findings jsonb DEFAULT '[]'::jsonb NOT NULL,
+    CONSTRAINT company_scan_attempt_check CHECK ((attempt >= 1)),
+    CONSTRAINT company_scan_generated_by_check CHECK (((generated_by IS NULL) OR (generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))),
+    CONSTRAINT company_scan_read_deals_check CHECK (((read_deals IS NULL) OR (read_deals >= 0))),
+    CONSTRAINT company_scan_read_exchanges_check CHECK (((read_exchanges IS NULL) OR (read_exchanges >= 0))),
+    CONSTRAINT company_scan_running_has_started CHECK (((status <> 'running'::text) OR (started_at IS NOT NULL))),
+    CONSTRAINT company_scan_settled_has_finish CHECK (((status = ANY (ARRAY['done'::text, 'degraded'::text, 'failed'::text])) = (finished_at IS NOT NULL))),
+    CONSTRAINT company_scan_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'degraded'::text, 'failed'::text])))
+);
+
+COMMENT ON COLUMN public.company_scan.status IS 'Where the CURRENT read stands, in the AI activity rail''s own vocabulary. The findings columns describe the last read that settled, which may be an earlier one.';
+
+COMMENT ON COLUMN public.company_scan.next_attempt_at IS 'When a read the AI budget deferred will try again. NULL unless the read is waiting on budget.';
+
+COMMENT ON COLUMN public.company_scan.fingerprint IS 'The input the stored findings were read from: the reader''s composite read, the message words, the prompt and the routing. NULL until a read has settled. A mismatch is what makes a stored scan stale.';
+
+CREATE TABLE public.company_technical_state (
+    company_id uuid NOT NULL,
+    lane text NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_outcome text,
+    last_success_at timestamp with time zone,
+    next_attempt_at timestamp with time zone,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT company_technical_state_lane_check CHECK ((lane = ANY (ARRAY['dns'::text, 'certlog'::text, 'homepage'::text]))),
+    CONSTRAINT company_technical_state_outcome_check CHECK (((last_outcome IS NULL) OR (last_outcome = ANY (ARRAY['applied'::text, 'empty'::text, 'failed'::text, 'refused'::text]))))
+);
+
+COMMENT ON TABLE public.company_technical_state IS 'Per-lane attempt ledger for technical enrichment: what was last read for this company from which public source, and when to ask again.';
+
+CREATE TABLE public.company_vat_check (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid NOT NULL,
+    vat_number text NOT NULL,
+    status text NOT NULL,
+    consultation_number text,
+    registered_name text,
+    registered_address text,
+    checked_at timestamp with time zone DEFAULT now() NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT company_vat_check_number_not_blank CHECK ((btrim(vat_number) <> ''::text)),
+    CONSTRAINT company_vat_check_receipt_needs_an_answer CHECK (((consultation_number IS NULL) OR (status <> 'unavailable'::text))),
+    CONSTRAINT company_vat_check_status_check CHECK ((status = ANY (ARRAY['valid'::text, 'invalid'::text, 'unavailable'::text]))),
+    CONSTRAINT company_vat_check_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.confirm_token (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    token_hash text NOT NULL,
+    delivered_to text NOT NULL,
+    issued_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    opened_at timestamp with time zone,
+    consumed_at timestamp with time zone,
+    kind text DEFAULT 'record_confirmation'::text NOT NULL,
+    purpose_id uuid,
+    first_fetched_at timestamp with time zone,
+    fetch_count integer DEFAULT 0 NOT NULL,
+    question_key text,
+    question_locale text,
+    question_version integer,
+    lead_id uuid,
+    CONSTRAINT confirm_token_expires_after_creation CHECK ((expires_at > issued_at)),
+    CONSTRAINT confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text, 'privacy_notice'::text]))),
+    CONSTRAINT confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice'::text))),
+    CONSTRAINT confirm_token_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL))),
+    CONSTRAINT confirm_token_purpose_is_consents CHECK (((kind = 'consent_confirmation'::text) = (purpose_id IS NOT NULL)))
+);
+
+COMMENT ON TABLE public.confirm_token IS 'Single-use, hashed, short-lived capability for the confirm-your-details page. Delivered to one address, which is what makes a consent granted through it demonstrable.';
+
+COMMENT ON COLUMN public.confirm_token.delivered_to IS 'The address this link was mailed to, recorded because a grant made through it rests on the link having reached that mailbox.';
+
+COMMENT ON COLUMN public.confirm_token.opened_at IS 'When a PERSON first opened this page, which is evidence and so is written only where a machine fetch can be told apart from a human one. A scanner prefetching the link leaves first_fetched_at and not this.';
+
+COMMENT ON COLUMN public.confirm_token.first_fetched_at IS 'When anything first retrieved this link — a person, a scanner, a proxy. Claims nothing about who.';
+
+COMMENT ON COLUMN public.confirm_token.fetch_count IS 'How many times this link has been retrieved. A link fetched many times in seconds was not read that many times by a human.';
+
+COMMENT ON COLUMN public.confirm_token.question_key IS 'Which published question the confirm page will ask — the generic marketing one, or the dedicated subscription one that names its purpose. NULL on links minted before this was recorded.';
+
+COMMENT ON COLUMN public.confirm_token.question_locale IS 'The language the confirm page will ask its subscription question in, recorded when the link is minted so a grant can name the published wording the subject actually read. NULL on links minted before this was recorded.';
+
+COMMENT ON COLUMN public.confirm_token.question_version IS 'The version of that question, pinned at mint so a link answered after a redeploy names what the subject saw rather than what is deployed when they click. NULL on links minted before this was recorded.';
+
+CREATE TABLE public.consent_doi_token (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    purpose_id uuid NOT NULL,
+    token_hash text NOT NULL,
+    issued_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    consumed_at timestamp with time zone,
+    CONSTRAINT consent_doi_token_expires_after_issue CHECK ((expires_at > issued_at))
+);
+
+CREATE TABLE public.consent_event (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    purpose_id uuid NOT NULL,
+    new_state text NOT NULL,
+    lawful_basis text,
+    source text NOT NULL,
+    policy_text text,
+    policy_version text,
+    double_opt_in_confirmed_at timestamp with time zone,
+    captured_at timestamp with time zone NOT NULL,
+    captured_by text NOT NULL,
+    lead_id uuid,
+    issuance_trigger text,
+    confirm_ip text,
+    confirm_user_agent text,
+    consent_text_version_id uuid,
+    CONSTRAINT consent_event_new_state_check CHECK ((new_state = ANY (ARRAY['granted'::text, 'withdrawn'::text]))),
+    CONSTRAINT consent_event_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL))),
+    CONSTRAINT consent_event_wording_pairs CHECK (((policy_text IS NULL) = (policy_version IS NULL)))
+);
+
+COMMENT ON COLUMN public.consent_event.issuance_trigger IS 'What caused the confirmation mail to be sent (ADR-0098 D5), so the whole chain — ask → mail → click — is provable.';
+
+CREATE TABLE public.consent_purpose (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    requires_double_opt_in boolean DEFAULT false NOT NULL,
+    archived_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    class text DEFAULT 'marketing'::text NOT NULL,
+    CONSTRAINT consent_purpose_class_check CHECK ((class = ANY (ARRAY['business_correspondence'::text, 'transactional'::text, 'marketing'::text, 'phone_outreach'::text])))
+);
+
+COMMENT ON COLUMN public.consent_purpose.class IS 'Which gate this purpose answers to (ADR-0098 D1). business_correspondence and transactional are never consent-gated; marketing needs DOI proof or the §7(3) flag.';
+
+CREATE TABLE public.consent_qualifying_event (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    kind text NOT NULL,
+    source_entity_type text,
+    source_entity_id uuid,
+    note text,
+    occurred_at timestamp with time zone NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    retracted_at timestamp with time zone,
+    retracted_by text,
+    asks_for_quote boolean DEFAULT false NOT NULL,
+    about_deal_id uuid,
+    recorded_for_addresses text[],
+    recorded_for_entities uuid[],
+    lead_id uuid,
+    CONSTRAINT consent_qualifying_event_evidence CHECK ((((kind = ANY (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (note IS NOT NULL)) OR ((kind <> ALL (ARRAY['in_person'::text, 'requested_by_subject'::text])) AND (source_entity_type IS NOT NULL) AND (source_entity_id IS NOT NULL)))),
+    CONSTRAINT consent_qualifying_event_kind_check CHECK ((kind = ANY (ARRAY['inbound_message'::text, 'inquiry'::text, 'active_deal'::text, 'in_person'::text, 'meeting'::text, 'requested_by_subject'::text]))),
+    CONSTRAINT consent_qualifying_event_one_subject CHECK ((num_nonnulls(contact_id, lead_id) = 1)),
+    CONSTRAINT consent_qualifying_event_source_entity_type_check CHECK ((source_entity_type = ANY (ARRAY['activity'::text, 'deal'::text])))
+);
+
+COMMENT ON TABLE public.consent_qualifying_event IS 'The recorded event that flipped business correspondence to allowed (ADR-0098 D2). Recording it is what makes the Art 6(1)(f) balancing accountable.';
+
+CREATE TABLE public.consent_text_version (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    version text NOT NULL,
+    jurisdiction text,
+    locale text,
+    channel text,
+    purpose_id uuid,
+    subject_line text,
+    body text NOT NULL,
+    disclosures jsonb DEFAULT '{}'::jsonb NOT NULL,
+    effective_from timestamp with time zone,
+    effective_until timestamp with time zone,
+    published_at timestamp with time zone,
+    content_hash text,
+    CONSTRAINT consent_text_version_published_shape CHECK (((published_at IS NULL) OR (content_hash IS NOT NULL))),
+    CONSTRAINT consent_text_version_window CHECK (((effective_until IS NULL) OR (effective_from IS NULL) OR (effective_until > effective_from)))
+);
+
+CREATE TABLE public.contact (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    first_name text,
+    last_name text,
+    full_name text NOT NULL,
+    title text,
+    owner_id uuid,
+    merged_into_id uuid,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    converted_from_lead_id uuid,
+    legal_hold boolean DEFAULT false NOT NULL,
+    address_line1 text,
+    address_line2 text,
+    address_city text,
+    address_region text,
+    address_postal_code text,
+    address_country text,
+    search_tsv tsvector GENERATED ALWAYS AS ((((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))) STORED,
+    visibility text DEFAULT 'workspace'::text NOT NULL,
+    quarantined_at timestamp with time zone,
+    photo_object_key text,
+    photo_origin text,
+    last_activity_at timestamp with time zone,
+    source_author_id uuid,
+    source_author_name text,
+    source_system text,
+    entered_at timestamp with time zone DEFAULT now() NOT NULL,
+    narrowing_reason text,
+    relationship_mark text,
+    relationship_mark_set_by text,
+    source_id text,
+    anonymized_address_hashes text[],
+    created_from_activity_id uuid,
+    anonymized_address_key_id text,
+    CONSTRAINT contact_narrowing_reason_check CHECK ((narrowing_reason = ANY (ARRAY['awaiting_verdict'::text, 'outbound_no_answer'::text, 'confidentiality_hold'::text, 'advisor'::text, 'human_decided'::text]))),
+    CONSTRAINT contact_narrowing_reason_only_when_owner CHECK (((narrowing_reason IS NULL) OR (visibility = 'owner'::text))),
+    CONSTRAINT contact_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL))),
+    CONSTRAINT contact_relationship_mark_check CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'::text]))),
+    CONSTRAINT contact_relationship_mark_set_by_pairs CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL))),
+    CONSTRAINT contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))),
+    CONSTRAINT contact_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128)))),
+    CONSTRAINT contact_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL))),
+    CONSTRAINT contact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
+);
+
+COMMENT ON COLUMN public.contact.photo_origin IS 'How the photo got here (ADR-0096 D5). Human upload is the only writer — never a connector, never Gravatar.';
+
+COMMENT ON COLUMN public.contact.source_system IS 'Which system this record was imported from. Null on a record created here, which is most of them. It is what makes an author other than the recorder a checkable claim rather than an assertion.';
+
+COMMENT ON COLUMN public.contact.narrowing_reason IS 'Why an owner-scoped contact is its owner''s alone. A verdict widens awaiting_verdict and outbound_no_answer, a reply only outbound_no_answer; NULL is an unrecorded legacy narrowing and widens on neither.';
+
+COMMENT ON COLUMN public.contact.relationship_mark IS 'What the workspace''s relationship to the contact is when it is not an ordinary one: vendor_marketing means a named sender who only pitches and was never answered. NULL is not marked.';
+
+COMMENT ON COLUMN public.contact.source_id IS 'The id this record has in source_system. Null on a record created here. Unique with source_system.';
+
+CREATE TABLE public.contact_acquisition_evidence (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    kind text NOT NULL,
+    source_entity_type text,
+    source_entity_id uuid,
+    purpose_claimed text,
+    occurred_at timestamp with time zone,
+    note text,
+    captured_by text NOT NULL,
+    captured_at timestamp with time zone DEFAULT now() NOT NULL,
+    request_retracted_at timestamp with time zone,
+    request_retracted_by text,
+    recorded_for_addresses text[],
+    legal_entity_id uuid,
+    CONSTRAINT contact_acquisition_evidence_kind CHECK ((kind = ANY (ARRAY['subject_initiated'::text, 'customer_contract'::text, 'requested_quote_or_meeting'::text, 'in_person_permission'::text, 'referral'::text, 'event_or_form'::text, 'public_or_business_source'::text, 'purchased_or_imported'::text, 'unknown_legacy'::text, 'crm_migration'::text, 'mailbox_history'::text]))),
+    CONSTRAINT contact_acquisition_evidence_source_shape CHECK (((source_entity_type IS NULL) = (source_entity_id IS NULL)))
+);
+
+CREATE TABLE public.contact_address_country (
+    contact_id uuid NOT NULL,
+    countries text[] NOT NULL,
+    checked_at timestamp with time zone NOT NULL,
+    CONSTRAINT contact_address_country_codes_are_alpha2 CHECK ((array_to_string(countries, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+);
+
+CREATE TABLE public.contact_brief (
+    user_id uuid NOT NULL,
+    contact_id uuid NOT NULL,
+    fingerprint text NOT NULL,
+    payload jsonb NOT NULL,
+    generated_by text NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT contact_brief_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+);
+
+COMMENT ON TABLE public.contact_brief IS 'Read-model cache (ADR-0097 D4), keyed per READER: no brief crosses readers, whatever their masks.';
+
+CREATE TABLE public.contact_channel_identity (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    provider text NOT NULL,
+    channel_user_id text NOT NULL,
+    username text,
+    blocked_at timestamp with time zone,
+    membership_bot_id text,
+    membership_update_id bigint,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT contact_channel_identity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.contact_confirm_submission (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    token_id uuid NOT NULL,
+    kind text NOT NULL,
+    field text,
+    proposed_value text,
+    submitted_at timestamp with time zone DEFAULT now() NOT NULL,
+    resolved_at timestamp with time zone,
+    resolved_by text,
+    resolution text,
+    note text,
+    CONSTRAINT contact_confirm_submission_field_matches_kind CHECK ((((kind = 'correction'::text) AND (field IS NOT NULL)) OR ((kind = 'erasure_request'::text) AND (field IS NULL)))),
+    CONSTRAINT contact_confirm_submission_kind_check CHECK ((kind = ANY (ARRAY['correction'::text, 'erasure_request'::text]))),
+    CONSTRAINT contact_confirm_submission_note_length CHECK (((note IS NULL) OR (char_length(note) <= 500))),
+    CONSTRAINT contact_confirm_submission_note_shape CHECK (((note IS NULL) OR (resolution IS NOT NULL))),
+    CONSTRAINT contact_confirm_submission_resolution_check CHECK (((resolution IS NULL) OR (resolution = ANY (ARRAY['accepted'::text, 'rejected'::text])))),
+    CONSTRAINT contact_confirm_submission_resolved_together CHECK ((num_nonnulls(resolved_at, resolved_by, resolution) = ANY (ARRAY[0, 3])))
+);
+
+COMMENT ON TABLE public.contact_confirm_submission IS 'What a data subject sent back through their confirm link, held for a human to accept. The subject holds a bearer token and no principal, so a correction is a proposal and never a write.';
+
+CREATE TABLE public.contact_consent (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid,
+    purpose_id uuid NOT NULL,
+    state text DEFAULT 'unknown'::text NOT NULL,
+    lawful_basis text,
+    captured_at timestamp with time zone,
+    source text,
+    policy_version text,
+    lead_id uuid,
+    recorded_for_addresses text[],
+    CONSTRAINT contact_consent_state_check CHECK ((state = ANY (ARRAY['unknown'::text, 'granted'::text, 'withdrawn'::text]))),
+    CONSTRAINT contact_consent_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
+);
+
+CREATE TABLE public.contact_moment_dismissal (
+    user_id uuid NOT NULL,
+    contact_id uuid NOT NULL,
+    claim_key text NOT NULL,
+    evidence_fingerprint text NOT NULL,
+    dismissed_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+COMMENT ON TABLE public.contact_moment_dismissal IS 'Per-viewer view state (ADR-0096 D3). Held against an evidence fingerprint so a dismissal re-arms when the evidence moves.';
+
+CREATE TABLE public.contact_phone (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    phone text NOT NULL,
+    phone_type text DEFAULT 'work'::text NOT NULL,
+    is_primary boolean DEFAULT false NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    observed_at timestamp with time zone DEFAULT now() NOT NULL,
+    superseded_phone_id uuid,
+    CONSTRAINT contact_phone_e164 CHECK ((phone ~ '^\+[1-9][0-9]{7,14}$'::text)),
+    CONSTRAINT contact_phone_phone_type_check CHECK ((phone_type = ANY (ARRAY['work'::text, 'mobile'::text, 'home'::text, 'other'::text]))),
+    CONSTRAINT contact_phone_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.contact_phone.superseded_phone_id IS 'The archived row this number replaced. Identity and not value, because several live numbers of one type are permitted.';
+
+CREATE TABLE public.contact_profile_field (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    field text NOT NULL,
+    value text NOT NULL,
+    evidence_snippet text NOT NULL,
+    source_ref text NOT NULL,
+    confidence numeric(4,3),
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    observed_at timestamp with time zone DEFAULT now() NOT NULL,
+    superseded_value text,
+    superseded_captured_by text,
+    superseded_observed_at timestamp with time zone,
+    value_key text DEFAULT ''::text NOT NULL,
+    CONSTRAINT contact_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))),
+    CONSTRAINT contact_profile_field_field_check CHECK ((field = ANY (ARRAY['title'::text, 'phone'::text, 'role'::text, 'linkedin'::text, 'company_name'::text, 'address'::text, 'website'::text, 'first_name'::text, 'last_name'::text]))),
+    CONSTRAINT contact_profile_field_value_key_cardinality CHECK (((field = 'phone'::text) = (value_key <> ''::text))),
+    CONSTRAINT contact_profile_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.contact_profile_field.observed_at IS 'When the source stated this value, not when the pass read it. A newer observation replaces the row; an older or equal one leaves it alone.';
+
+COMMENT ON COLUMN public.contact_profile_field.superseded_value IS 'The value this row replaced, kept so a human can restore it. Null when this row answered an empty field.';
+
+CREATE TABLE public.contact_provider_claim (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    provider text NOT NULL,
+    claim_key text NOT NULL,
+    value_json jsonb NOT NULL,
+    confidence numeric(4,3),
+    validation_status text,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    retrieved_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    employment_processed_at timestamp with time zone,
+    employment_retry_at timestamp with time zone,
+    employment_retry_count integer DEFAULT 0 NOT NULL,
+    employment_processing_error text,
+    CONSTRAINT contact_provider_claim_claim_key_check CHECK ((claim_key = ANY (ARRAY['professional_emails'::text, 'personal_emails'::text, 'mobile_phones'::text, 'linkedin_profile'::text, 'current_employment'::text, 'job_history'::text, 'location'::text, 'departments'::text, 'seniorities'::text]))),
+    CONSTRAINT contact_provider_claim_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))
+);
+
+CREATE TABLE public.contact_signature_enrich_state (
+    contact_id uuid NOT NULL,
+    activity_id uuid,
+    last_activity_at timestamp with time zone,
+    attempted_at timestamp with time zone DEFAULT now(),
+    history_depth smallint,
+    requested_generation bigint DEFAULT 0 NOT NULL,
+    processed_generation bigint DEFAULT 0 NOT NULL,
+    live_generation bigint DEFAULT 0 NOT NULL,
+    due_at timestamp with time zone DEFAULT now() NOT NULL,
+    deferred_run_id uuid,
+    read_snapshot pg_snapshot,
+    CONSTRAINT signature_work_generations CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation) AND (live_generation >= 0) AND (live_generation <= requested_generation)))
+);
+
+CREATE TABLE public.contact_social (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    platform text NOT NULL,
+    handle text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.contract (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid NOT NULL,
+    deal_id uuid,
+    project_id uuid,
+    contract_number text,
+    title text NOT NULL,
+    value_minor bigint,
+    currency public.currency_code,
+    value_basis text DEFAULT 'total'::text NOT NULL,
+    fx_rate_to_base numeric(20,10),
+    fx_rate_date date,
+    starts_on date,
+    ends_on date,
+    renewal_on date,
+    auto_renew boolean DEFAULT false NOT NULL,
+    notice_period_days integer,
+    status text DEFAULT 'draft'::text NOT NULL,
+    signed_on date,
+    cancellation_notice_on date,
+    cancellation_effective_on date,
+    superseded_by_id uuid,
+    source text DEFAULT 'manual'::text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    payment_term_days integer,
+    arr_minor bigint,
+    CONSTRAINT contract_arr_minor_js_safe CHECK (((arr_minor >= '-9007199254740991'::bigint) AND (arr_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT contract_arr_nonnegative CHECK (((arr_minor IS NULL) OR (arr_minor >= 0))),
+    CONSTRAINT contract_cancellation_order CHECK (((cancellation_notice_on IS NULL) OR (cancellation_effective_on IS NULL) OR (cancellation_effective_on >= cancellation_notice_on))),
+    CONSTRAINT contract_cancellation_within_term CHECK (((cancellation_effective_on IS NULL) OR (ends_on IS NULL) OR (cancellation_effective_on <= ends_on))),
+    CONSTRAINT contract_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL))),
+    CONSTRAINT contract_money_currency_pair CHECK ((((value_minor IS NULL) AND (arr_minor IS NULL)) = (currency IS NULL))),
+    CONSTRAINT contract_notice_period_days_check CHECK (((notice_period_days IS NULL) OR (notice_period_days >= 0))),
+    CONSTRAINT contract_payment_term_days_nonnegative CHECK (((payment_term_days IS NULL) OR (payment_term_days >= 0))),
+    CONSTRAINT contract_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'active'::text, 'expired'::text, 'cancelled'::text, 'superseded'::text]))),
+    CONSTRAINT contract_superseded_agrees CHECK (((status = 'superseded'::text) = (superseded_by_id IS NOT NULL))),
+    CONSTRAINT contract_supersedes_not_self CHECK (((superseded_by_id IS NULL) OR (superseded_by_id <> id))),
+    CONSTRAINT contract_term_order CHECK (((starts_on IS NULL) OR (ends_on IS NULL) OR (ends_on >= starts_on))),
+    CONSTRAINT contract_value_basis_check CHECK ((value_basis = ANY (ARRAY['total'::text, 'annualized_12m'::text]))),
+    CONSTRAINT contract_value_minor_js_safe CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT contract_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.contract.captured_by IS 'The principal that recorded this agreement, prefixed by kind ("human:<id>" / "agent:<id>") exactly as every other table spells it. Never a bare user id: an agent under a passport is not a row in app_user.';
+
+COMMENT ON COLUMN public.contract.arr_minor IS 'Annual recurring revenue in minor units of contract.currency. Null means the contract carries no recurring component, which is different from zero.';
+
+CREATE TABLE public.conversation_claim (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    kind text NOT NULL,
+    body text NOT NULL,
+    source_activity_id uuid NOT NULL,
+    source_quote text NOT NULL,
+    status text DEFAULT 'open'::text NOT NULL,
+    due_at timestamp with time zone,
+    corrected_by_user_id uuid,
+    corrected_at timestamp with time zone,
+    evidence_fingerprint text NOT NULL,
+    needs_review boolean DEFAULT false NOT NULL,
+    task_activity_id uuid,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    taken_by_user_id uuid,
+    taken_at timestamp with time zone,
+    CONSTRAINT conversation_claim_kind_check CHECK ((kind = ANY (ARRAY['commitment_ours'::text, 'commitment_theirs'::text, 'open_question'::text, 'decision'::text, 'priority'::text, 'objection'::text, 'success_criterion'::text, 'decision_process'::text]))),
+    CONSTRAINT conversation_claim_status_check CHECK ((status = ANY (ARRAY['open'::text, 'done'::text, 'dismissed'::text]))),
+    CONSTRAINT conversation_claim_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON TABLE public.conversation_claim IS 'What was promised, asked and decided in captured conversations (ADR-0097 D1). A business entity, written through the audited write shape — not a cache.';
+
+COMMENT ON COLUMN public.conversation_claim.evidence_fingerprint IS 'Pins the evidence a correction was made against. Unchanged fingerprint → the correction holds; changed → it re-arms.';
+
+CREATE TABLE public.currency_minor_digits (
+    currency public.currency_code NOT NULL,
+    digits smallint NOT NULL,
+    CONSTRAINT currency_minor_digits_digits_check CHECK (((digits >= 0) AND (digits <= 4)))
+);
+
+COMMENT ON TABLE public.currency_minor_digits IS 'How many minor units a currency has, for the codes where that is not two. A MIRROR of internal/shared/kernel/values.currencyMinorDigits, not a second source: the minor-unit parity test fails in both directions when either side moves. A code absent here carries ISO 4217''s default of two.';
+
+CREATE TABLE public.custom_field (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    object text NOT NULL,
+    slug text NOT NULL,
+    label text NOT NULL,
+    type text NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    column_name text NOT NULL,
+    currency public.currency_code,
+    options jsonb,
+    created_by uuid NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    show_in_create boolean DEFAULT true NOT NULL,
+    reportable boolean DEFAULT false NOT NULL,
+    activity_kinds text[],
+    CONSTRAINT custom_field_activity_kinds_check CHECK (((activity_kinds IS NULL) OR ((object = 'activity'::text) AND (cardinality(activity_kinds) > 0)))),
+    CONSTRAINT custom_field_object_check CHECK ((object = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'contract'::text]))),
+    CONSTRAINT custom_field_reportable_type_check CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal'::text, 'company'::text])) AND (type = ANY (ARRAY['picklist'::text, 'boolean'::text]))))),
+    CONSTRAINT custom_field_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text]))),
+    CONSTRAINT custom_field_type_check CHECK ((type = ANY (ARRAY['text'::text, 'number'::text, 'date'::text, 'currency'::text, 'picklist'::text, 'multiselect'::text, 'boolean'::text]))),
+    CONSTRAINT custom_field_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.data_subject_request (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    kind text NOT NULL,
+    status text DEFAULT 'open'::text NOT NULL,
+    subject_ref text NOT NULL,
+    assignee_id uuid,
+    due_at timestamp with time zone NOT NULL,
+    resolution text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    contact_id uuid,
+    received_at timestamp with time zone,
+    channel text,
+    source_submission_id uuid,
+    receipt_reference text,
+    due_rule text,
+    due_overridden boolean DEFAULT false NOT NULL,
+    dispute_open boolean DEFAULT false NOT NULL,
+    CONSTRAINT data_subject_request_channel CHECK (((channel IS NULL) OR (channel = ANY (ARRAY['confirm_link'::text, 'email'::text, 'phone'::text, 'letter'::text, 'in_person'::text, 'operator_ui'::text])))),
+    CONSTRAINT data_subject_request_kind_check CHECK ((kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text]))),
+    CONSTRAINT data_subject_request_status_check CHECK ((status = ANY (ARRAY['open'::text, 'in_progress'::text, 'fulfilled'::text, 'rejected'::text]))),
+    CONSTRAINT dsr_resolution_shape CHECK (((status <> ALL (ARRAY['fulfilled'::text, 'rejected'::text])) OR (resolution IS NOT NULL)))
+);
+
+CREATE TABLE public.data_task_review (
+    token_hash bytea NOT NULL,
+    task_id text NOT NULL,
+    operator text NOT NULL,
+    review jsonb NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT data_task_review_expires_after_creation CHECK ((expires_at > created_at)),
+    CONSTRAINT data_task_review_token_hash_check CHECK ((octet_length(token_hash) = 32))
+);
+
+CREATE TABLE public.data_task_run (
+    task_id text NOT NULL,
+    step text NOT NULL,
+    run_id uuid NOT NULL,
+    task_version integer NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    cursor jsonb,
+    batch_limit integer NOT NULL,
+    scanned bigint DEFAULT 0 NOT NULL,
+    changed bigint DEFAULT 0 NOT NULL,
+    batches bigint DEFAULT 0 NOT NULL,
+    estimate bigint,
+    estimate_capped boolean DEFAULT false NOT NULL,
+    estimated_at timestamp with time zone,
+    consecutive_failures integer DEFAULT 0 NOT NULL,
+    last_error_class text,
+    next_attempt_at timestamp with time zone,
+    last_progress_at timestamp with time zone,
+    first_release text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    activation jsonb,
+    CONSTRAINT data_task_run_batch_limit_check CHECK ((batch_limit > 0)),
+    CONSTRAINT data_task_run_batches_check CHECK (((batches >= 0) AND (batches <= '9007199254740991'::bigint))),
+    CONSTRAINT data_task_run_changed_check CHECK (((changed >= 0) AND (changed <= '9007199254740991'::bigint))),
+    CONSTRAINT data_task_run_consecutive_failures_check CHECK ((consecutive_failures >= 0)),
+    CONSTRAINT data_task_run_estimate_check CHECK (((estimate >= 0) AND (estimate <= '9007199254740991'::bigint))),
+    CONSTRAINT data_task_run_scanned_check CHECK (((scanned >= 0) AND (scanned <= '9007199254740991'::bigint))),
+    CONSTRAINT data_task_run_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'paused'::text, 'done'::text, 'failed'::text]))),
+    CONSTRAINT data_task_run_task_version_check CHECK ((task_version > 0)),
+    CONSTRAINT data_task_run_version_check CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.data_task_run_history (
+    run_id uuid NOT NULL,
+    task_id text NOT NULL,
+    step text NOT NULL,
+    progress jsonb NOT NULL,
+    preserved_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.deal (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    amount_minor bigint,
+    currency public.currency_code,
+    fx_rate_to_base numeric(20,10),
+    fx_rate_date date,
+    pipeline_id uuid NOT NULL,
+    stage_id uuid NOT NULL,
+    company_id uuid,
+    owner_id uuid,
+    partner_company_id uuid,
+    status text DEFAULT 'open'::text NOT NULL,
+    lost_reason text,
+    expected_close_date date,
+    closed_at timestamp with time zone,
+    wait_until date,
+    last_activity_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    legal_hold boolean DEFAULT false NOT NULL,
+    close_date_provisional boolean DEFAULT false NOT NULL,
+    project_id uuid,
+    won_without_contract_reason text,
+    won_without_contract_detail text,
+    partner_attribution text,
+    amount_minor_base bigint,
+    description text,
+    commercial_motion text,
+    priority text,
+    acquisition_source text,
+    priority_rank smallint GENERATED ALWAYS AS (
+CASE priority
+    WHEN 'high'::text THEN 3
+    WHEN 'medium'::text THEN 2
+    WHEN 'low'::text THEN 1
+    ELSE NULL::integer
+END) STORED,
+    search_tsv tsvector GENERATED ALWAYS AS (((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(description, ''::text))), 'B'::"char"))) STORED,
+    expected_arr_minor bigint,
+    arr_source_offer_id uuid,
+    source_author_id uuid,
+    source_author_name text,
+    source_system text,
+    entered_at timestamp with time zone DEFAULT now() NOT NULL,
+    source_id text,
+    lost_reason_code text,
+    lost_reason_basis text,
+    win_probability_override smallint,
+    win_probability_set_by text,
+    commercial_mode text DEFAULT 'estimate'::text NOT NULL,
+    commercial_revision bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT deal_amount_minor_base_js_safe CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_closed_at CHECK (((status = 'open'::text) OR (closed_at IS NOT NULL))),
+    CONSTRAINT deal_closed_fx CHECK (((status = 'open'::text) OR (amount_minor IS NULL) OR (fx_rate_to_base IS NOT NULL))),
+    CONSTRAINT deal_commercial_mode_check CHECK ((commercial_mode = ANY (ARRAY['estimate'::text, 'lines'::text, 'legacy'::text]))),
+    CONSTRAINT deal_commercial_motion_check CHECK (((commercial_motion IS NULL) OR (commercial_motion = ANY (ARRAY['new_business'::text, 'renewal'::text, 'upsell'::text, 'cross_sell'::text, 'expansion'::text, 'existing_business'::text])))),
+    CONSTRAINT deal_commercial_revision_js_safe CHECK (((commercial_revision >= 0) AND (commercial_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_description_bounded CHECK (((description IS NULL) OR (length(description) <= 20000))),
+    CONSTRAINT deal_expected_arr_minor_js_safe CHECK (((expected_arr_minor >= '-9007199254740991'::bigint) AND (expected_arr_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_expected_arr_nonnegative CHECK (((expected_arr_minor IS NULL) OR (expected_arr_minor >= 0))),
+    CONSTRAINT deal_lost_reason CHECK (((status <> 'lost'::text) OR (lost_reason IS NOT NULL) OR (lost_reason_code IS NOT NULL))),
+    CONSTRAINT deal_lost_reason_basis_check CHECK ((((lost_reason_code IS NULL) = (lost_reason_basis IS NULL)) AND ((lost_reason_basis IS NULL) OR (lost_reason_basis = ANY (ARRAY['recorded'::text, 'mapped'::text]))))),
+    CONSTRAINT deal_lost_reason_code_only_when_lost CHECK (((lost_reason_code IS NULL) OR (status = 'lost'::text))),
+    CONSTRAINT deal_lost_reason_only_when_lost CHECK (((lost_reason IS NULL) OR (status = 'lost'::text))),
+    CONSTRAINT deal_money_currency_pair CHECK ((((amount_minor IS NULL) AND (expected_arr_minor IS NULL)) = (currency IS NULL))),
+    CONSTRAINT deal_partner_attribution_check CHECK (((partner_attribution IS NULL) OR (partner_attribution = ANY (ARRAY['sourced'::text, 'influenced'::text])))),
+    CONSTRAINT deal_partner_attribution_pairing CHECK (((partner_company_id IS NULL) = (partner_attribution IS NULL))),
+    CONSTRAINT deal_priority_check CHECK (((priority IS NULL) OR (priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))),
+    CONSTRAINT deal_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))),
+    CONSTRAINT deal_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128)))),
+    CONSTRAINT deal_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL))),
+    CONSTRAINT deal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))),
+    CONSTRAINT deal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_win_probability_override_range CHECK (((win_probability_override IS NULL) OR ((win_probability_override >= 0) AND (win_probability_override <= 100)))),
+    CONSTRAINT deal_win_probability_pairing CHECK (((win_probability_override IS NULL) = (win_probability_set_by IS NULL))),
+    CONSTRAINT deal_win_probability_set_by_known CHECK (((win_probability_set_by IS NULL) OR (win_probability_set_by = ANY (ARRAY['human'::text, 'margince'::text])))),
+    CONSTRAINT deal_won_without_contract_detail CHECK (((won_without_contract_reason IS DISTINCT FROM 'other'::text) OR ((won_without_contract_detail IS NOT NULL) AND (btrim(won_without_contract_detail) <> ''::text)))),
+    CONSTRAINT deal_won_without_contract_only_when_won CHECK (((won_without_contract_reason IS NULL) OR (status = 'won'::text))),
+    CONSTRAINT deal_won_without_contract_reason CHECK (((won_without_contract_reason IS NULL) OR (won_without_contract_reason = ANY (ARRAY['imported'::text, 'purchase_order'::text, 'verbal'::text, 'renewal_by_email'::text, 'other'::text]))))
+);
+
+COMMENT ON COLUMN public.deal.won_without_contract_reason IS 'Why this deal was won with no contract record behind it (ADR-0109 §6). NULL on a deal that has one — the two are distinguishable, which is the point.';
+
+COMMENT ON COLUMN public.deal.partner_attribution IS 'What the partner named by partner_company_id did for this deal: sourced (they brought it) or influenced (they helped one we already had). Commission accrues on sourced only.';
+
+COMMENT ON COLUMN public.deal.amount_minor_base IS 'The deal amount in the installation base currency, frozen at close. Written by the freeze writer (deals.freezeBaseRate) across both currencies minor-unit scales, never generated: a generated expression cannot read currency_minor_digits or the installation base. NULL while a deal is open — an open deal converts at the latest rate instead, and deal_closed_fx requires a frozen rate only once it closes.';
+
+COMMENT ON COLUMN public.deal.expected_arr_minor IS 'Expected annual recurring revenue in minor units of deal.currency. Null means the deal carries no recurring component, which is different from zero.';
+
+COMMENT ON COLUMN public.deal.arr_source_offer_id IS 'The accepted offer this deal''s expected_arr_minor came from, or null where a human set the figure. A deal whose ARR has a source refuses manual edits to it.';
+
+COMMENT ON COLUMN public.deal.source_system IS 'Which system this record was imported from. Null on a record created here, which is most of them. It is what makes an author other than the recorder a checkable claim rather than an assertion.';
+
+COMMENT ON COLUMN public.deal.source_id IS 'The id this record has in source_system. Null on a record created here. Unique with source_system.';
+
+CREATE TABLE public.deal_acquisition_source (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shipped_label text,
+    shipped_label_key text,
+    label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
+    CONSTRAINT deal_acquisition_source_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0))),
+    CONSTRAINT deal_acquisition_source_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT deal_acquisition_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_authorship_sweep_cursor (
+    singleton boolean DEFAULT true NOT NULL,
+    after_evidence_id uuid,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_authorship_sweep_cursor_one_row CHECK (singleton)
+);
+
+CREATE TABLE public.deal_correction (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    run_id uuid,
+    audit_log_id uuid NOT NULL,
+    correction text NOT NULL,
+    fields text[] NOT NULL,
+    remaining_open_stages text NOT NULL,
+    asking text NOT NULL,
+    standing_close_date text NOT NULL,
+    applied_at timestamp with time zone DEFAULT now() NOT NULL,
+    reversed_at timestamp with time zone,
+    reversed_by text,
+    reversal_audit_id uuid,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    accepted_at timestamp with time zone,
+    stage_history_id uuid,
+    CONSTRAINT deal_correction_moves_something CHECK ((cardinality(fields) > 0)),
+    CONSTRAINT deal_correction_reversal_is_whole CHECK (((reversed_at IS NULL) = (reversed_by IS NULL))),
+    CONSTRAINT deal_correction_tier_check CHECK ((correction = ANY (ARRAY['auto_apply'::text, 'provisional_confirm'::text, 'downgrade_and_review'::text, 'close_lost'::text, 'deal_close_date'::text, 'deal_amount'::text, 'deal_probability'::text, 'stage_move'::text, 'deal_open'::text, 'deal_revive'::text]))),
+    CONSTRAINT deal_correction_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_document_hide (
+    deal_id uuid NOT NULL,
+    attachment_id uuid NOT NULL,
+    hidden_by text NOT NULL,
+    hidden_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.deal_line_item (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    "position" integer NOT NULL,
+    product_id uuid,
+    catalog_name text,
+    sku text,
+    description text NOT NULL,
+    unit text DEFAULT 'piece'::text NOT NULL,
+    quantity numeric(14,3),
+    unit_price_minor bigint,
+    currency public.currency_code NOT NULL,
+    discount_pct numeric(5,2) DEFAULT 0 NOT NULL,
+    tax_rate numeric(5,2),
+    tax_category text,
+    billing_model text,
+    billing_interval_months integer,
+    interval_count integer,
+    component_kind text,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_line_item_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12])))),
+    CONSTRAINT deal_line_item_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text])))),
+    CONSTRAINT deal_line_item_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'one_time'::text) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((billing_model = 'recurring'::text) AND (billing_interval_months IS NOT NULL)))),
+    CONSTRAINT deal_line_item_bounded CHECK (((length(unit) <= 100) AND ((catalog_name IS NULL) OR (length(catalog_name) <= 500)) AND ((sku IS NULL) OR (length(sku) <= 200)))),
+    CONSTRAINT deal_line_item_component_kind_check CHECK (((component_kind IS NULL) OR (component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text])))),
+    CONSTRAINT deal_line_item_description_present CHECK (((btrim(description) <> ''::text) AND (length(description) <= 2000))),
+    CONSTRAINT deal_line_item_discount_pct_check CHECK (((discount_pct >= (0)::numeric) AND (discount_pct <= (100)::numeric))),
+    CONSTRAINT deal_line_item_interval_count_check CHECK (((interval_count IS NULL) OR (interval_count > 0))),
+    CONSTRAINT deal_line_item_one_tax_source CHECK (((tax_rate IS NULL) <> (tax_category IS NULL))),
+    CONSTRAINT deal_line_item_position_check CHECK (("position" >= 1)),
+    CONSTRAINT deal_line_item_quantity_check CHECK (((quantity IS NULL) OR (quantity > (0)::numeric))),
+    CONSTRAINT deal_line_item_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text])))),
+    CONSTRAINT deal_line_item_tax_rate_check CHECK (((tax_rate IS NULL) OR (tax_rate >= (0)::numeric))),
+    CONSTRAINT deal_line_item_unit_price_minor_check CHECK (((unit_price_minor IS NULL) OR (unit_price_minor >= 0))),
+    CONSTRAINT deal_line_item_unit_price_minor_js_safe CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_line_item_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_loss_reason (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    shipped_label text,
+    shipped_label_key text,
+    label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_loss_reason_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text)),
+    CONSTRAINT deal_loss_reason_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT deal_loss_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_loss_reason_mapping (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    note_key text NOT NULL,
+    reason_key text NOT NULL,
+    decided_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_loss_reason_mapping_key_shape CHECK ((note_key ~ '^[0-9a-f]{32}$'::text)),
+    CONSTRAINT deal_loss_reason_mapping_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_move_dismissal (
+    user_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    fingerprint text NOT NULL,
+    dismissed_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_move_dismissal_fingerprint_shape CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text))
+);
+
+COMMENT ON TABLE public.deal_move_dismissal IS 'Per-reader view state: the deal card move this reader set aside, held against the move fingerprint so a different move shows again.';
+
+CREATE TABLE public.deal_product (
+    deal_id uuid NOT NULL,
+    product_id uuid NOT NULL,
+    source text NOT NULL,
+    offer_line_item_id uuid,
+    amount_minor bigint,
+    currency public.currency_code,
+    component_kind text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    known_amount_minor bigint,
+    commercial_revision bigint,
+    CONSTRAINT deal_product_amount_currency_pair CHECK ((((amount_minor IS NULL) OR (currency IS NOT NULL)) AND ((known_amount_minor IS NULL) OR (currency IS NOT NULL)) AND ((currency IS NULL) OR (amount_minor IS NOT NULL) OR (known_amount_minor IS NOT NULL)))),
+    CONSTRAINT deal_product_amount_minor_check CHECK (((amount_minor IS NULL) OR (amount_minor >= 0))),
+    CONSTRAINT deal_product_amount_minor_exact CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_product_commercial_revision_js_safe CHECK (((commercial_revision >= 0) AND (commercial_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text]))),
+    CONSTRAINT deal_product_known_amount_minor_check CHECK (((known_amount_minor IS NULL) OR (known_amount_minor >= 0))),
+    CONSTRAINT deal_product_known_amount_minor_exact CHECK (((known_amount_minor >= '-9007199254740991'::bigint) AND (known_amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT deal_product_line_shape CHECK (((source = 'line'::text) = (commercial_revision IS NOT NULL))),
+    CONSTRAINT deal_product_source_check CHECK ((source = ANY (ARRAY['offer'::text, 'manual'::text, 'line'::text])))
+);
+
+CREATE TABLE public.deal_risk_day (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    local_day date NOT NULL,
+    day_start timestamp with time zone NOT NULL,
+    day_end timestamp with time zone NOT NULL,
+    judged_at timestamp with time zone NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_risk_day_bounds_ordered CHECK ((day_end > day_start)),
+    CONSTRAINT deal_risk_day_judged_within CHECK (((judged_at >= day_start) AND (judged_at < day_end)))
+);
+
+CREATE TABLE public.deal_risk_verdict (
+    day_id uuid NOT NULL,
+    deal_id uuid NOT NULL
+);
+
+CREATE TABLE public.deal_room (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    title text NOT NULL,
+    welcome_message text,
+    state text DEFAULT 'live'::text NOT NULL,
+    steward_user_id uuid,
+    expires_at timestamp with time zone,
+    closed_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT deal_room_archived_agrees CHECK (((state = 'archived'::text) = (archived_at IS NOT NULL))),
+    CONSTRAINT deal_room_expires_after_creation CHECK ((expires_at > created_at)),
+    CONSTRAINT deal_room_state_check CHECK ((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text, 'closed'::text, 'expired'::text, 'archived'::text]))),
+    CONSTRAINT deal_room_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_room_comment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    room_id uuid NOT NULL,
+    thread_id uuid NOT NULL,
+    body text NOT NULL,
+    author_participant_id uuid,
+    author_user_id uuid,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    request_id uuid,
+    CONSTRAINT deal_room_comment_body_check CHECK ((length(btrim(body)) > 0)),
+    CONSTRAINT deal_room_comment_one_author CHECK (((author_participant_id IS NOT NULL) <> (author_user_id IS NOT NULL)))
+);
+
+CREATE TABLE public.deal_room_document (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    room_id uuid NOT NULL,
+    attachment_id uuid NOT NULL,
+    group_key text NOT NULL,
+    title text NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    archived_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_room_document_group_check CHECK ((group_key = ANY (ARRAY['commercial'::text, 'legal'::text, 'security_privacy'::text, 'delivery_operations'::text]))),
+    CONSTRAINT deal_room_document_title_check CHECK ((length(btrim(title)) > 0)),
+    CONSTRAINT deal_room_document_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_room_engagement (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    room_id uuid NOT NULL,
+    participant_id uuid NOT NULL,
+    document_id uuid,
+    kind text NOT NULL,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_room_engagement_document_matches_kind CHECK (((kind = 'document_downloaded'::text) = (document_id IS NOT NULL))),
+    CONSTRAINT deal_room_engagement_kind_check CHECK ((kind = ANY (ARRAY['signed_in'::text, 'document_downloaded'::text])))
+);
+
+CREATE TABLE public.deal_room_invitation (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    participant_id uuid NOT NULL,
+    attempt_no integer DEFAULT 1 NOT NULL,
+    token_hash bytea NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    sent_at timestamp with time zone,
+    delivered_at timestamp with time zone,
+    failed_at timestamp with time zone,
+    failure_reason text,
+    consumed_at timestamp with time zone,
+    superseded_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_room_invitation_expires_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.deal_room_participant (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    room_id uuid NOT NULL,
+    full_name text NOT NULL,
+    email text NOT NULL,
+    capability text DEFAULT 'view'::text NOT NULL,
+    invited_by uuid,
+    revoked_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    link_requested_at timestamp with time zone,
+    preview boolean DEFAULT false NOT NULL,
+    CONSTRAINT deal_room_participant_capability_check CHECK ((capability = ANY (ARRAY['view'::text, 'comment'::text]))),
+    CONSTRAINT deal_room_participant_email_norm CHECK ((email = lower(email))),
+    CONSTRAINT deal_room_participant_preview_named CHECK (((NOT preview) OR (invited_by IS NOT NULL))),
+    CONSTRAINT deal_room_participant_preview_reads_only CHECK (((NOT preview) OR (capability = 'view'::text)))
+);
+
+CREATE TABLE public.deal_room_session (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    participant_id uuid NOT NULL,
+    room_id uuid NOT NULL,
+    token_hash bytea NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    revoked_at timestamp with time zone,
+    last_seen_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_room_session_expires_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.deal_room_thread (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    room_id uuid NOT NULL,
+    document_id uuid,
+    attachment_id uuid,
+    required_change boolean DEFAULT false NOT NULL,
+    state text DEFAULT 'open'::text NOT NULL,
+    author_participant_id uuid,
+    author_user_id uuid,
+    resolved_at timestamp with time zone,
+    resolved_by_user_id uuid,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    request_id uuid,
+    CONSTRAINT deal_room_thread_document_has_version CHECK (((document_id IS NULL) = (attachment_id IS NULL))),
+    CONSTRAINT deal_room_thread_one_author CHECK (((author_participant_id IS NOT NULL) <> (author_user_id IS NOT NULL))),
+    CONSTRAINT deal_room_thread_resolution_complete CHECK ((((state = 'open'::text) AND (resolved_at IS NULL) AND (resolved_by_user_id IS NULL)) OR ((state = 'resolved'::text) AND (resolved_at IS NOT NULL)))),
+    CONSTRAINT deal_room_thread_state_check CHECK ((state = ANY (ARRAY['open'::text, 'resolved'::text]))),
+    CONSTRAINT deal_room_thread_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_stage_evidence (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    criterion_id uuid NOT NULL,
+    source_type text NOT NULL,
+    source_id uuid NOT NULL,
+    source_lines integer[],
+    snippet text,
+    author_side text NOT NULL,
+    commitment text NOT NULL,
+    met boolean NOT NULL,
+    confidence numeric(4,3),
+    observed_at timestamp with time zone NOT NULL,
+    extracted_by text NOT NULL,
+    contradicted_by uuid,
+    refuted_at timestamp with time zone,
+    refuted_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    CONSTRAINT deal_stage_evidence_author_side_check CHECK ((author_side = ANY (ARRAY['buyer'::text, 'seller'::text, 'unknown'::text]))),
+    CONSTRAINT deal_stage_evidence_commitment_check CHECK ((commitment = ANY (ARRAY['agreed'::text, 'proposed'::text, 'none'::text]))),
+    CONSTRAINT deal_stage_evidence_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))),
+    CONSTRAINT deal_stage_evidence_deterministic_is_certain CHECK (((extracted_by <> 'deterministic'::text) OR (confidence IS NULL))),
+    CONSTRAINT deal_stage_evidence_refutation_whole CHECK (((refuted_at IS NULL) = (refuted_by IS NULL))),
+    CONSTRAINT deal_stage_evidence_snippet_len CHECK (((snippet IS NULL) OR (length(snippet) <= 500))),
+    CONSTRAINT deal_stage_evidence_source_type_check CHECK ((source_type = ANY (ARRAY['activity'::text, 'contract'::text, 'legal_review'::text]))),
+    CONSTRAINT deal_stage_evidence_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.deal_stage_evidence.author_side IS 'Who authored the cited thing, computed by the engine from direction, participants and the installation''s own domains. A model never writes this: a buyer milestone settled by seller-authored text is the defect this column exists to make visible.';
+
+COMMENT ON COLUMN public.deal_stage_evidence.commitment IS 'Whether the cited text AGREED to the thing or merely proposed it. "We could meet Thursday" is proposed; "Thursday works" is agreed.';
+
+COMMENT ON COLUMN public.deal_stage_evidence.extracted_by IS 'Which writer made this claim — ''deterministic'' for a record-derived one, otherwise the model task that read it.';
+
+COMMENT ON COLUMN public.deal_stage_evidence.refuted_at IS 'When a human marked this claim incorrect. The row stays: why a stage move was reversed is a question asked later.';
+
+CREATE TABLE public.deal_stage_history (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    from_stage_id uuid,
+    to_stage_id uuid NOT NULL,
+    changed_by text NOT NULL,
+    changed_at timestamp with time zone DEFAULT now() NOT NULL,
+    amount_minor_at_change bigint,
+    currency_at_change public.currency_code,
+    win_probability_at_change smallint,
+    approval_id uuid,
+    reversal_of uuid,
+    semantic_at_change text,
+    owner_id_at_change uuid,
+    pipeline_id_at_change uuid,
+    base_minor_at_change bigint,
+    base_currency_at_change public.currency_code,
+    fx_rate_at_change numeric,
+    fx_date_at_change date,
+    valuation_provenance text,
+    lost_reason_code_at_change text,
+    from_position_at_change integer,
+    to_position_at_change integer,
+    write_seq bigint,
+    provenance text,
+    import_run_id uuid,
+    CONSTRAINT deal_stage_history_import_run_pairing CHECK (
+CASE provenance
+    WHEN 'imported'::text THEN (import_run_id IS NOT NULL)
+    ELSE (import_run_id IS NULL)
+END),
+    CONSTRAINT deal_stage_history_provenance_check CHECK (((provenance IS NULL) OR (provenance = ANY (ARRAY['recorded'::text, 'imported'::text, 'synced'::text])))),
+    CONSTRAINT deal_stage_history_semantic_at_change_check CHECK (((semantic_at_change IS NULL) OR (semantic_at_change = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text])))),
+    CONSTRAINT deal_stage_history_win_probability_at_change_check CHECK (((win_probability_at_change IS NULL) OR ((win_probability_at_change >= 0) AND (win_probability_at_change <= 100))))
+);
+
+COMMENT ON COLUMN public.deal_stage_history.approval_id IS 'The approval this move was applied under, when it was proposed rather than typed. NULL for a human''s own move.';
+
+COMMENT ON COLUMN public.deal_stage_history.reversal_of IS 'The move this one undid. Set by the revert path and by a human moving the deal back inside the undo window.';
+
+COMMENT ON COLUMN public.deal_stage_history.semantic_at_change IS 'What the target stage meant WHEN the deal moved there. Null on rows written before this column existed. A stage semantic is configuration and can be edited afterwards; what the deal did cannot.';
+
+COMMENT ON COLUMN public.deal_stage_history.from_position_at_change IS 'The position of from_stage_id in its pipeline at the move; null on a first entry and on rows written before positions were kept.';
+
+COMMENT ON COLUMN public.deal_stage_history.to_position_at_change IS 'The position of to_stage_id in its pipeline at the move; null on rows written before positions were kept.';
+
+COMMENT ON COLUMN public.deal_stage_history.write_seq IS 'The order the moves were written in, for moves that share an instant; null on rows written before it was kept.';
+
+CREATE SEQUENCE public.deal_stage_history_write_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+ALTER SEQUENCE public.deal_stage_history_write_seq OWNED BY public.deal_stage_history.write_seq;
+
+CREATE TABLE public.deal_status_card (
+    user_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    fingerprint text NOT NULL,
+    payload jsonb NOT NULL,
+    generated_by text NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_status_card_generated_by_check CHECK ((generated_by = ANY (ARRAY['model'::text, 'deterministic'::text])))
+);
+
+COMMENT ON TABLE public.deal_status_card IS 'Read-model cache for the deal status card, keyed per READER: no card crosses readers, whatever their scope.';
+
+CREATE TABLE public.deal_suggestion (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    kind text DEFAULT 'open_deal'::text NOT NULL,
+    state text DEFAULT 'open'::text NOT NULL,
+    company_id uuid NOT NULL,
+    pipeline_id uuid NOT NULL,
+    proposed_stage_id uuid NOT NULL,
+    name_hint text NOT NULL,
+    proposed_amount_minor bigint,
+    currency public.currency_code,
+    proposed_close_date date,
+    confidence numeric(4,3) NOT NULL,
+    fingerprint text NOT NULL,
+    evidence_count integer NOT NULL,
+    evidence_through timestamp with time zone NOT NULL,
+    accepted_deal_id uuid,
+    decided_by uuid,
+    decided_at timestamp with time zone,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT deal_suggestion_accepted_names_deal CHECK (((accepted_deal_id IS NULL) OR (state = 'accepted'::text))),
+    CONSTRAINT deal_suggestion_amount_nonnegative CHECK (((proposed_amount_minor IS NULL) OR (proposed_amount_minor >= 0))),
+    CONSTRAINT deal_suggestion_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))),
+    CONSTRAINT deal_suggestion_decided_shape CHECK (((state = 'open'::text) = (decided_at IS NULL))),
+    CONSTRAINT deal_suggestion_evidence_count_check CHECK ((evidence_count > 0)),
+    CONSTRAINT deal_suggestion_kind_check CHECK ((kind = ANY (ARRAY['open_deal'::text, 'advance_stage'::text, 'revive'::text]))),
+    CONSTRAINT deal_suggestion_money_pair CHECK (((proposed_amount_minor IS NULL) = (currency IS NULL))),
+    CONSTRAINT deal_suggestion_name_hint_check CHECK ((name_hint = ANY (ARRAY['proposal_sent'::text, 'opportunity_signalled'::text, 'meeting_held'::text]))),
+    CONSTRAINT deal_suggestion_state_check CHECK ((state = ANY (ARRAY['open'::text, 'accepted'::text, 'dismissed'::text, 'superseded'::text]))),
+    CONSTRAINT deal_suggestion_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.deal_suggestion_evidence (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    suggestion_id uuid NOT NULL,
+    kind text NOT NULL,
+    activity_id uuid,
+    signal_id uuid,
+    attachment_id uuid,
+    occurred_at timestamp with time zone NOT NULL,
+    CONSTRAINT deal_suggestion_evidence_kind_check CHECK ((kind = ANY (ARRAY['meeting'::text, 'signal'::text, 'attachment'::text]))),
+    CONSTRAINT deal_suggestion_evidence_shape CHECK ((((kind = 'meeting'::text) AND (activity_id IS NOT NULL) AND (signal_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'signal'::text) AND (signal_id IS NOT NULL) AND (activity_id IS NULL) AND (attachment_id IS NULL)) OR ((kind = 'attachment'::text) AND (attachment_id IS NOT NULL) AND (activity_id IS NULL) AND (signal_id IS NULL))))
+);
+
+CREATE TABLE public.dedupe_candidate (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    entity_type text NOT NULL,
+    left_contact_id uuid,
+    right_contact_id uuid,
+    left_company_id uuid,
+    right_company_id uuid,
+    confidence numeric(4,3) NOT NULL,
+    evidence jsonb NOT NULL,
+    disposition text DEFAULT 'open'::text NOT NULL,
+    disposed_by uuid,
+    disposed_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    left_lead_id uuid,
+    right_lead_id uuid,
+    CONSTRAINT dedupe_candidate_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))),
+    CONSTRAINT dedupe_candidate_disposed_shape CHECK (((disposition = 'open'::text) = (disposed_at IS NULL))),
+    CONSTRAINT dedupe_candidate_disposition_check CHECK ((disposition = ANY (ARRAY['open'::text, 'merged'::text, 'not_a_duplicate'::text]))),
+    CONSTRAINT dedupe_candidate_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'lead'::text]))),
+    CONSTRAINT dedupe_candidate_ordered CHECK ((COALESCE(left_contact_id, left_company_id, left_lead_id) < COALESCE(right_contact_id, right_company_id, right_lead_id))),
+    CONSTRAINT dedupe_candidate_shape CHECK ((((entity_type = 'contact'::text) AND (left_contact_id IS NOT NULL) AND (right_contact_id IS NOT NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'company'::text) AND (left_company_id IS NOT NULL) AND (right_company_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_lead_id IS NULL) AND (right_lead_id IS NULL)) OR ((entity_type = 'lead'::text) AND (left_lead_id IS NOT NULL) AND (right_lead_id IS NOT NULL) AND (left_contact_id IS NULL) AND (right_contact_id IS NULL) AND (left_company_id IS NULL) AND (right_company_id IS NULL)))),
+    CONSTRAINT dedupe_candidate_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.dedupe_scan_state (
+    stream text NOT NULL,
+    scanned_through_at timestamp with time zone NOT NULL,
+    scanned_through_id uuid NOT NULL,
+    CONSTRAINT dedupe_scan_state_stream_check CHECK ((stream = ANY (ARRAY['company'::text, 'company_domain'::text, 'contact'::text, 'contact_email'::text, 'contact_phone'::text, 'company_fact'::text, 'relationship'::text])))
+);
+
+CREATE TABLE public.email_signature (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_id uuid NOT NULL,
+    body text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    title text DEFAULT ''::text NOT NULL,
+    phone text DEFAULT ''::text NOT NULL,
+    html text DEFAULT ''::text NOT NULL,
+    CONSTRAINT email_signature_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.embed_store_binding (
+    singleton boolean DEFAULT true NOT NULL,
+    populated_identity text NOT NULL,
+    status text DEFAULT 'idle'::text NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    reembedding_run uuid,
+    reembedding_identity text,
+    CONSTRAINT embed_store_binding_run_shape CHECK ((((status = 'reembedding'::text) = (reembedding_run IS NOT NULL)) AND ((reembedding_run IS NULL) = (reembedding_identity IS NULL)))),
+    CONSTRAINT embed_store_binding_singleton_check CHECK (singleton),
+    CONSTRAINT embed_store_binding_status_check CHECK ((status = ANY (ARRAY['idle'::text, 'reembedding'::text])))
+);
+
+CREATE TABLE public.embedding (
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    chunk_ix integer DEFAULT 0 NOT NULL,
+    chunk_hash text NOT NULL,
+    model text NOT NULL,
+    embedding public.vector NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT embedding_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
+);
+
+CREATE TABLE public.erasure_suppression (
+    kind text NOT NULL,
+    value_hash text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    key_id text,
+    CONSTRAINT erasure_suppression_kind_check CHECK ((kind = ANY (ARRAY['email'::text, 'channel_identity'::text])))
+);
+
+CREATE TABLE public.event_outbox (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    stream text NOT NULL,
+    envelope jsonb NOT NULL,
+    published_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    seq bigint NOT NULL,
+    assurance_inputs_read boolean DEFAULT false NOT NULL
+);
+
+ALTER TABLE public.event_outbox ALTER COLUMN seq ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.event_outbox_seq_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+CREATE TABLE public.existing_customer_notice (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    legal_entity_id uuid NOT NULL,
+    customer_group text NOT NULL,
+    collection_channel text NOT NULL,
+    notice_text text NOT NULL,
+    effective_from timestamp with time zone NOT NULL,
+    effective_until timestamp with time zone,
+    evidence_reference text,
+    evidence_dated_at timestamp with time zone,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    withdrawn_at timestamp with time zone,
+    withdrawn_by text,
+    withdrawn_reason text,
+    CONSTRAINT existing_customer_notice_channel_bounded CHECK (((length(btrim(collection_channel)) >= 1) AND (length(btrim(collection_channel)) <= 200))),
+    CONSTRAINT existing_customer_notice_evidence_bounded CHECK (((evidence_reference IS NULL) OR ((length(btrim(evidence_reference)) >= 1) AND (length(btrim(evidence_reference)) <= 500)))),
+    CONSTRAINT existing_customer_notice_evidence_shape CHECK (((evidence_reference IS NULL) = (evidence_dated_at IS NULL))),
+    CONSTRAINT existing_customer_notice_group_bounded CHECK (((length(btrim(customer_group)) >= 1) AND (length(btrim(customer_group)) <= 500))),
+    CONSTRAINT existing_customer_notice_period_ordered CHECK (((effective_until IS NULL) OR (effective_until > effective_from))),
+    CONSTRAINT existing_customer_notice_reason_bounded CHECK (((withdrawn_reason IS NULL) OR ((length(btrim(withdrawn_reason)) >= 1) AND (length(btrim(withdrawn_reason)) <= 500)))),
+    CONSTRAINT existing_customer_notice_text_bounded CHECK (((length(btrim(notice_text)) >= 1) AND (length(btrim(notice_text)) <= 4000))),
+    CONSTRAINT existing_customer_notice_withdrawal_shape CHECK ((((withdrawn_at IS NULL) = (withdrawn_by IS NULL)) AND ((withdrawn_at IS NULL) = (withdrawn_reason IS NULL))))
+);
+
+CREATE TABLE public.existing_customer_notice_purpose (
+    notice_id uuid NOT NULL,
+    purpose_id uuid NOT NULL
+);
+
+CREATE TABLE public.extension_ingest_position (
+    unit text NOT NULL,
+    source_system text NOT NULL,
+    "position" text NOT NULL,
+    saved_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT extension_ingest_position_size CHECK ((("position" <> ''::text) AND (octet_length("position") <= 512)))
+);
+
+CREATE TABLE public.extension_ingest_refusal (
+    unit text NOT NULL,
+    refusal text NOT NULL,
+    day date NOT NULL,
+    refused bigint NOT NULL,
+    first_at timestamp with time zone NOT NULL,
+    last_at timestamp with time zone NOT NULL,
+    CONSTRAINT extension_ingest_refusal_class CHECK ((refusal = ANY (ARRAY['key'::text, 'activity'::text, 'addresses'::text, 'counterparty'::text, 'participants'::text, 'size'::text]))),
+    CONSTRAINT extension_ingest_refusal_counted CHECK ((refused > 0))
+);
+
+CREATE TABLE public.extension_secret (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    extension_name text NOT NULL,
+    user_id uuid,
+    key text NOT NULL,
+    vault_ref text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+COMMENT ON COLUMN public.extension_secret.vault_ref IS 'An opaque keyvault handle (ADR-0120): safe to log, never the secret itself.';
+
+CREATE TABLE public.federated_identity (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    provider text NOT NULL,
+    subject text NOT NULL,
+    email_at_link text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.field_mask (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    role_key text NOT NULL,
+    object text NOT NULL,
+    field text NOT NULL,
+    condition text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT field_mask_condition_check CHECK ((condition = ANY (ARRAY['always'::text, 'outside_write_authority'::text])))
+);
+
+CREATE TABLE public.field_provenance (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    object_type text NOT NULL,
+    object_id uuid NOT NULL,
+    field_name text NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    captured_at timestamp with time zone DEFAULT now() NOT NULL,
+    confidence numeric(4,3),
+    evidence_ref text,
+    CONSTRAINT field_provenance_confidence_check CHECK (((confidence IS NULL) OR (((confidence)::double precision >= (0)::double precision) AND ((confidence)::double precision <= (1)::double precision)))),
+    CONSTRAINT field_provenance_object_type_check CHECK ((object_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'activity'::text, 'project'::text, 'relationship'::text, 'partner'::text, 'product'::text, 'offer_template'::text, 'offer'::text, 'commission'::text, 'deal_room'::text, 'deal_room_thread'::text, 'deal_room_comment'::text, 'deal_room_document'::text, 'deal_room_participant'::text])))
+);
+
+CREATE TABLE public.finance_connection (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    provider text NOT NULL,
+    status text DEFAULT 'connecting'::text NOT NULL,
+    capabilities jsonb DEFAULT '{}'::jsonb NOT NULL,
+    credential_ref text NOT NULL,
+    sync_cursor text,
+    last_attempt_at timestamp with time zone,
+    last_success_at timestamp with time zone,
+    last_error_code text,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT finance_connection_status_check CHECK ((status = ANY (ARRAY['connecting'::text, 'active'::text, 'error'::text, 'disconnected'::text]))),
+    CONSTRAINT finance_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.finance_customer_link (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    connection_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    external_customer_id text NOT NULL,
+    source_updated_at timestamp with time zone,
+    sync_hash text NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT finance_customer_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.finance_external_customer (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    connection_id uuid NOT NULL,
+    external_customer_id text NOT NULL,
+    display_name text NOT NULL,
+    source_updated_at timestamp with time zone,
+    sync_hash text NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT finance_external_customer_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.finance_invoice (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    connection_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    external_id text NOT NULL,
+    number text,
+    issued_at date NOT NULL,
+    due_at date,
+    status text NOT NULL,
+    raw_status text,
+    currency public.currency_code NOT NULL,
+    net_minor bigint NOT NULL,
+    tax_minor bigint DEFAULT 0 NOT NULL,
+    gross_minor bigint NOT NULL,
+    open_minor bigint DEFAULT 0 NOT NULL,
+    credited_minor bigint DEFAULT 0 NOT NULL,
+    fx_rate_to_base numeric(20,10),
+    fx_rate_date date,
+    fully_paid_at timestamp with time zone,
+    disputed_at timestamp with time zone,
+    void_at timestamp with time zone,
+    credits_invoice_id uuid,
+    source_updated_at timestamp with time zone,
+    sync_hash text NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT finance_invoice_credits_not_self CHECK (((credits_invoice_id IS NULL) OR (credits_invoice_id <> id))),
+    CONSTRAINT finance_invoice_fx_pair CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL))),
+    CONSTRAINT finance_invoice_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT finance_invoice_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT finance_invoice_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT finance_invoice_paid_status CHECK (((fully_paid_at IS NULL) OR (status = ANY (ARRAY['paid'::text, 'credited'::text, 'void'::text])))),
+    CONSTRAINT finance_invoice_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'open'::text, 'partially_paid'::text, 'paid'::text, 'overdue'::text, 'disputed'::text, 'credited'::text, 'void'::text]))),
+    CONSTRAINT finance_invoice_tax_minor_js_safe CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT finance_invoice_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT finance_invoice_void_agrees CHECK (((void_at IS NULL) = (status <> 'void'::text)))
+);
+
+CREATE TABLE public.finance_payment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    connection_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    external_id text NOT NULL,
+    invoice_id uuid,
+    paid_at timestamp with time zone NOT NULL,
+    currency public.currency_code NOT NULL,
+    amount_minor bigint NOT NULL,
+    source_updated_at timestamp with time zone,
+    sync_hash text NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT finance_payment_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT finance_payment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.forecast_call (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    period_start date NOT NULL,
+    period_end date NOT NULL,
+    scope_kind text NOT NULL,
+    scope_id uuid,
+    amount_minor bigint NOT NULL,
+    currency public.currency_code NOT NULL,
+    note text,
+    author_id uuid NOT NULL,
+    supersedes_id uuid,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT forecast_call_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_call_amount_not_negative CHECK ((amount_minor >= 0)),
+    CONSTRAINT forecast_call_period_ordered CHECK ((period_end >= period_start)),
+    CONSTRAINT forecast_call_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL))),
+    CONSTRAINT forecast_call_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text]))),
+    CONSTRAINT forecast_call_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.forecast_capture_status (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    context_key text NOT NULL,
+    last_attempt_at timestamp with time zone NOT NULL,
+    last_success_at timestamp with time zone,
+    failure text,
+    next_capture_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.forecast_contribution (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    snapshot_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    owner_id uuid,
+    amount_minor bigint,
+    currency public.currency_code,
+    base_minor bigint,
+    fx_rate numeric(20,10),
+    fx_date date,
+    effective_close_date date,
+    close_provisional boolean DEFAULT false NOT NULL,
+    category text,
+    stage_probability integer,
+    weighted_minor bigint,
+    in_won boolean DEFAULT false NOT NULL,
+    in_evidence boolean DEFAULT false NOT NULL,
+    in_best_case boolean DEFAULT false NOT NULL,
+    in_open boolean DEFAULT false NOT NULL,
+    exclusion_reason text,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    audit_id uuid,
+    approval_id uuid,
+    stage_id uuid,
+    in_lost boolean DEFAULT false NOT NULL,
+    qualification text,
+    typed_probability integer,
+    evidence_n integer,
+    risk_signals text[],
+    risk_signal_facts jsonb,
+    risk_effect numeric,
+    qualified_policy_version text,
+    viability_assessed_at timestamp with time zone,
+    viability_disposition text,
+    qualification_complete boolean,
+    probability_source text,
+    CONSTRAINT forecast_contribution_amount_currency_pair CHECK (((amount_minor IS NULL) = (currency IS NULL))),
+    CONSTRAINT forecast_contribution_amount_minor_js_safe CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_contribution_base_minor_js_safe CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_contribution_evidence_n_is_a_tally CHECK (((evidence_n IS NULL) OR (evidence_n >= 0))),
+    CONSTRAINT forecast_contribution_exclusion_reason_check CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced'::text, 'fx_missing'::text, 'out_of_period'::text, 'not_eligible'::text])))),
+    CONSTRAINT forecast_contribution_probability_is_a_percent CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100)))),
+    CONSTRAINT forecast_contribution_probability_source_known CHECK (((probability_source IS NULL) OR (probability_source = ANY (ARRAY['stage'::text, 'human'::text, 'margince'::text])))),
+    CONSTRAINT forecast_contribution_qualification_check CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible'::text, 'excluded'::text, 'unsupported'::text, 'unknown'::text])))),
+    CONSTRAINT forecast_contribution_rate_dated CHECK (((fx_rate IS NULL) = (fx_date IS NULL))),
+    CONSTRAINT forecast_contribution_rate_positive CHECK (((fx_rate IS NULL) OR (fx_rate > (0)::numeric))),
+    CONSTRAINT forecast_contribution_risk_effect_positive CHECK (((risk_effect IS NULL) OR (risk_effect > (0)::numeric))),
+    CONSTRAINT forecast_contribution_risk_signal_facts_list CHECK (((risk_signal_facts IS NULL) OR (jsonb_typeof(risk_signal_facts) = 'array'::text))),
+    CONSTRAINT forecast_contribution_risk_signals_known CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed'::text, 'no_next_step'::text, 'quiet'::text, 'stuck'::text]))),
+    CONSTRAINT forecast_contribution_typed_probability_is_a_percent CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100)))),
+    CONSTRAINT forecast_contribution_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_contribution_viability_disposition_known CHECK (((viability_disposition IS NULL) OR (viability_disposition = ANY (ARRAY['none'::text, 'open_review'::text, 'override'::text, 'unsupported'::text])))),
+    CONSTRAINT forecast_contribution_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_contribution_weighted_needs_a_base CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))
+);
+
+COMMENT ON COLUMN public.forecast_contribution.stage_id IS 'The stage the deal stood in when this snapshot was taken. NULL on rows written before the column existed, and on any deal whose stage could not be read; never backfilled from the deal''s current stage, which is a different fact.';
+
+CREATE TABLE public.forecast_snapshot (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    period_start date NOT NULL,
+    period_end date NOT NULL,
+    scope_kind text NOT NULL,
+    scope_id uuid,
+    taken_at timestamp with time zone DEFAULT now() NOT NULL,
+    local_day date NOT NULL,
+    trigger text NOT NULL,
+    definition_version text NOT NULL,
+    base_currency public.currency_code NOT NULL,
+    won_minor bigint NOT NULL,
+    evidence_minor bigint NOT NULL,
+    best_case_minor bigint,
+    open_minor bigint NOT NULL,
+    weighted_minor bigint NOT NULL,
+    eligible_count integer NOT NULL,
+    priced_count integer NOT NULL,
+    confirmed_date_count integer NOT NULL,
+    fx_missing_count integer NOT NULL,
+    call_id uuid,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    pipeline_id uuid,
+    population_fingerprint text DEFAULT ''::text NOT NULL,
+    forward_measure text,
+    qualified_policy_version text,
+    input_fingerprint text,
+    self_correcting boolean,
+    evidence_cutoff timestamp with time zone,
+    risk_signals_version text,
+    range_low_minor bigint,
+    range_high_minor bigint,
+    range_runs integer,
+    range_quantiles text,
+    range_version text,
+    landing_measure text,
+    landing_call_minor bigint,
+    likely_threshold smallint,
+    CONSTRAINT forecast_snapshot_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_counts_are_tallies CHECK (((eligible_count >= 0) AND (priced_count >= 0) AND (confirmed_date_count >= 0) AND (fx_missing_count >= 0) AND (priced_count <= eligible_count) AND (confirmed_date_count <= eligible_count) AND (fx_missing_count <= eligible_count))),
+    CONSTRAINT forecast_snapshot_evidence_minor_js_safe CHECK (((evidence_minor >= '-9007199254740991'::bigint) AND (evidence_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_forward_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text])))),
+    CONSTRAINT forecast_snapshot_landing_call_is_the_landing CHECK (((landing_call_minor IS NOT NULL) = (NOT (landing_measure IS DISTINCT FROM 'manager_call'::text)))),
+    CONSTRAINT forecast_snapshot_landing_call_minor_js_safe CHECK (((landing_call_minor >= '-9007199254740991'::bigint) AND (landing_call_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_landing_measure_known CHECK (((landing_measure IS NULL) OR (landing_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text])))),
+    CONSTRAINT forecast_snapshot_likely_threshold_range CHECK (((likely_threshold IS NULL) OR ((likely_threshold >= 1) AND (likely_threshold <= 100)))),
+    CONSTRAINT forecast_snapshot_open_minor_js_safe CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_period_ordered CHECK ((period_end >= period_start)),
+    CONSTRAINT forecast_snapshot_qualified_policy_present CHECK (((qualified_policy_version IS NULL) OR (btrim(qualified_policy_version) <> ''::text))),
+    CONSTRAINT forecast_snapshot_range_high_minor_js_safe CHECK (((range_high_minor >= '-9007199254740991'::bigint) AND (range_high_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_range_low_minor_js_safe CHECK (((range_low_minor >= '-9007199254740991'::bigint) AND (range_low_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_range_ordered CHECK (((range_low_minor IS NULL) OR ((range_low_minor >= 0) AND (range_low_minor <= range_high_minor)))),
+    CONSTRAINT forecast_snapshot_range_quantiles_known CHECK (((range_quantiles IS NULL) OR (range_quantiles = 'nearest_rank'::text))),
+    CONSTRAINT forecast_snapshot_range_runs_counted CHECK (((range_runs IS NULL) OR (range_runs >= 1))),
+    CONSTRAINT forecast_snapshot_range_version_present CHECK (((range_version IS NULL) OR (btrim(range_version) <> ''::text))),
+    CONSTRAINT forecast_snapshot_range_whole CHECK ((((range_low_minor IS NULL) = (range_high_minor IS NULL)) AND ((range_low_minor IS NULL) = (range_runs IS NULL)) AND ((range_low_minor IS NULL) = (range_quantiles IS NULL)) AND ((range_low_minor IS NULL) = (range_version IS NULL)))),
+    CONSTRAINT forecast_snapshot_readings_not_negative CHECK (((won_minor >= 0) AND (evidence_minor >= 0) AND (best_case_minor >= 0) AND (open_minor >= 0) AND (weighted_minor >= 0))),
+    CONSTRAINT forecast_snapshot_risk_signals_version_present CHECK (((risk_signals_version IS NULL) OR (btrim(risk_signals_version) <> ''::text))),
+    CONSTRAINT forecast_snapshot_scope_id_matches_kind CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL))),
+    CONSTRAINT forecast_snapshot_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['workspace'::text, 'team'::text, 'owner'::text]))),
+    CONSTRAINT forecast_snapshot_trigger_check CHECK ((trigger = ANY (ARRAY['daily'::text, 'call'::text, 'period_close'::text, 'recheck'::text]))),
+    CONSTRAINT forecast_snapshot_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT forecast_snapshot_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.fx_rate (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    from_currency public.currency_code NOT NULL,
+    to_currency public.currency_code NOT NULL,
+    rate numeric(20,10) NOT NULL,
+    rate_date date NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.geocode_cache (
+    query text NOT NULL,
+    lat double precision NOT NULL,
+    lon double precision NOT NULL,
+    provider text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.geocode_country_cache (
+    query text NOT NULL,
+    country_codes text[] NOT NULL,
+    provider text NOT NULL,
+    resolved_at timestamp with time zone NOT NULL,
+    CONSTRAINT geocode_country_cache_codes_are_alpha2 CHECK ((array_to_string(country_codes, ','::text) ~ '^([A-Z]{2}(,[A-Z]{2})*)?$'::text))
+);
+
+CREATE TABLE public.graph_contact_edge (
+    contact_a uuid NOT NULL,
+    contact_b uuid NOT NULL,
+    last_at timestamp with time zone NOT NULL,
+    count_90d integer DEFAULT 0 NOT NULL,
+    count_total integer DEFAULT 0 NOT NULL,
+    computed_at timestamp with time zone DEFAULT now() NOT NULL,
+    requested_generation bigint DEFAULT 0 NOT NULL,
+    processed_generation bigint DEFAULT 0 NOT NULL,
+    deferred_run_id uuid,
+    read_snapshot pg_snapshot,
+    CONSTRAINT graph_contact_edge_ordered CHECK ((contact_a < contact_b)),
+    CONSTRAINT graph_contact_edge_work_generations CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))
+);
+
+CREATE TABLE public.graph_interaction_edge (
+    user_id uuid NOT NULL,
+    contact_id uuid NOT NULL,
+    last_at timestamp with time zone NOT NULL,
+    last_inbound_at timestamp with time zone,
+    last_outbound_at timestamp with time zone,
+    count_90d integer DEFAULT 0 NOT NULL,
+    in_count_90d integer DEFAULT 0 NOT NULL,
+    out_count_90d integer DEFAULT 0 NOT NULL,
+    count_total integer DEFAULT 0 NOT NULL,
+    computed_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_met_at timestamp with time zone,
+    late_count_90d integer,
+    late_out_count_90d integer,
+    sent_count_90d integer,
+    requested_generation bigint DEFAULT 0 NOT NULL,
+    processed_generation bigint DEFAULT 0 NOT NULL,
+    deferred_run_id uuid,
+    read_snapshot pg_snapshot,
+    CONSTRAINT graph_interaction_edge_work_generations CHECK (((processed_generation >= 0) AND (requested_generation >= processed_generation)))
+);
+
+CREATE TABLE public.home_read_cache (
+    reader_id uuid NOT NULL,
+    read text NOT NULL,
+    request_key text NOT NULL,
+    fence bigint NOT NULL,
+    computed_at timestamp with time zone NOT NULL,
+    valid_until timestamp with time zone NOT NULL,
+    walk_id uuid,
+    payload jsonb NOT NULL,
+    CONSTRAINT home_read_cache_read_check CHECK ((read = ANY (ARRAY['worklist'::text, 'magic'::text])))
+);
+
+CREATE TABLE public.home_read_fence (
+    singleton boolean DEFAULT true NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT home_read_fence_singleton_check CHECK (singleton)
+);
+
+CREATE TABLE public.home_read_fence_pending (
+    xact xid8 NOT NULL,
+    fence text NOT NULL,
+    CONSTRAINT home_read_fence_pending_fence_check CHECK ((fence = ANY (ARRAY['access'::text, 'receipt'::text])))
+);
+
+CREATE TABLE public.home_read_forgotten (
+    reader_id uuid NOT NULL,
+    at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.idempotency_key (
+    principal_id text NOT NULL,
+    key text NOT NULL,
+    endpoint text NOT NULL,
+    request_digest text NOT NULL,
+    response_status integer,
+    response_body text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    response_content_type text DEFAULT 'application/json'::text NOT NULL,
+    response_records integer DEFAULT 0 NOT NULL,
+    attempt_id uuid DEFAULT public.uuidv7() NOT NULL
+);
+
+CREATE TABLE public.intro_request (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    requester_user_id uuid NOT NULL,
+    introducer_user_id uuid NOT NULL,
+    route_type text NOT NULL,
+    through_contact_id uuid,
+    internal_reason text,
+    value_for_target text DEFAULT ''::text NOT NULL,
+    forwardable_note text DEFAULT ''::text NOT NULL,
+    note_generated_by text DEFAULT 'human'::text NOT NULL,
+    note_ai_generated boolean DEFAULT false NOT NULL,
+    fallback_policy text DEFAULT 'none'::text NOT NULL,
+    name_drop_allowed boolean DEFAULT false NOT NULL,
+    status text DEFAULT 'requested'::text NOT NULL,
+    decision_reason text,
+    suggested_user_id uuid,
+    due_at timestamp with time zone,
+    requested_at timestamp with time zone DEFAULT now() NOT NULL,
+    decided_at timestamp with time zone,
+    introduced_at timestamp with time zone,
+    name_dropped_at timestamp with time zone,
+    replied_at timestamp with time zone,
+    closed_at timestamp with time zone,
+    source_activity_id uuid,
+    version integer DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    origin text DEFAULT 'asked'::text NOT NULL,
+    recorded_channel text,
+    CONSTRAINT intro_request_asked_has_due CHECK (((origin <> 'asked'::text) OR (due_at IS NOT NULL))),
+    CONSTRAINT intro_request_channel_iff_recorded CHECK (((origin = 'recorded'::text) = (recorded_channel IS NOT NULL))),
+    CONSTRAINT intro_request_distinct_seats CHECK ((requester_user_id <> introducer_user_id)),
+    CONSTRAINT intro_request_fallback CHECK ((fallback_policy = ANY (ARRAY['name_drop'::text, 'next_route'::text, 'none'::text]))),
+    CONSTRAINT intro_request_note_origin CHECK ((note_generated_by = ANY (ARRAY['human'::text, 'model'::text, 'deterministic'::text]))),
+    CONSTRAINT intro_request_origin_known CHECK ((origin = ANY (ARRAY['asked'::text, 'recorded'::text]))),
+    CONSTRAINT intro_request_reason_by_origin CHECK ((((origin = 'asked'::text) AND (internal_reason IS NOT NULL) AND (internal_reason <> ''::text)) OR ((origin = 'recorded'::text) AND (internal_reason IS NULL)))),
+    CONSTRAINT intro_request_recorded_channel_known CHECK (((recorded_channel IS NULL) OR (recorded_channel = ANY (ARRAY['in_person'::text, 'email'::text, 'call'::text, 'other'::text])))),
+    CONSTRAINT intro_request_recorded_is_introduced CHECK (((origin <> 'recorded'::text) OR ((status = 'introduced'::text) AND (introduced_at IS NOT NULL) AND (through_contact_id IS NULL) AND (decision_reason IS NULL) AND (suggested_user_id IS NULL) AND (decided_at IS NULL) AND (name_dropped_at IS NULL) AND (replied_at IS NULL) AND (source_activity_id IS NULL) AND (closed_at IS NULL)))),
+    CONSTRAINT intro_request_route_shape CHECK (((route_type = 'through_contact'::text) = (through_contact_id IS NOT NULL))),
+    CONSTRAINT intro_request_route_type CHECK ((route_type = ANY (ARRAY['direct'::text, 'through_contact'::text]))),
+    CONSTRAINT intro_request_status CHECK ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text, 'suggest_other'::text, 'declined'::text, 'introduced'::text, 'name_dropped'::text, 'replied'::text, 'expired'::text, 'cancelled'::text]))),
+    CONSTRAINT intro_request_suggestion_named CHECK (((status <> 'suggest_other'::text) OR (suggested_user_id IS NOT NULL)))
+);
+
+CREATE TABLE public.knowledge_chunk (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    corpus_id uuid NOT NULL,
+    document_id uuid NOT NULL,
+    chunk_ix integer NOT NULL,
+    text text NOT NULL,
+    chunk_hash text NOT NULL,
+    start_line integer,
+    embed_identity text,
+    embedding public.vector,
+    embedded_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    CONSTRAINT knowledge_chunk_embed_pairing CHECK (((embed_identity IS NULL) = (embedding IS NULL))),
+    CONSTRAINT knowledge_chunk_start_line_positive CHECK (((start_line IS NULL) OR (start_line > 0)))
+);
+
+CREATE TABLE public.knowledge_corpus (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    description text,
+    topic_statement text NOT NULL,
+    min_similarity double precision,
+    default_ask boolean DEFAULT false NOT NULL,
+    reindexing boolean DEFAULT false NOT NULL,
+    managed_source text,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT knowledge_corpus_managed_source_known CHECK (((managed_source IS NULL) OR (managed_source = 'handbook'::text))),
+    CONSTRAINT knowledge_corpus_min_similarity_range CHECK (((min_similarity >= (0)::double precision) AND (min_similarity <= (1)::double precision)))
+);
+
+CREATE TABLE public.knowledge_document (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    corpus_id uuid NOT NULL,
+    filename text NOT NULL,
+    content_type text NOT NULL,
+    byte_size bigint NOT NULL,
+    storage_key text NOT NULL,
+    checksum text NOT NULL,
+    ingest_status text DEFAULT 'queued'::text NOT NULL,
+    ingest_started_at timestamp with time zone,
+    ingest_detail text,
+    chunk_count integer DEFAULT 0 NOT NULL,
+    managed_source text,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT knowledge_document_byte_size_js_safe CHECK (((byte_size >= '-9007199254740991'::bigint) AND (byte_size <= '9007199254740991'::bigint))),
+    CONSTRAINT knowledge_document_detail_shape CHECK (((ingest_status = 'failed'::text) = (ingest_detail IS NOT NULL))),
+    CONSTRAINT knowledge_document_managed_source_known CHECK (((managed_source IS NULL) OR (managed_source = 'handbook'::text))),
+    CONSTRAINT knowledge_document_status_check CHECK ((ingest_status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
+);
+
+CREATE TABLE public.lead (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    full_name text,
+    email text,
+    title text,
+    company_name text,
+    candidate_company_key text,
+    status text DEFAULT 'new'::text NOT NULL,
+    score smallint DEFAULT 0 NOT NULL,
+    owner_id uuid,
+    source_system text,
+    source_id text,
+    promoted_contact_id uuid,
+    promoted_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    legal_hold boolean DEFAULT false NOT NULL,
+    score_override_reason text,
+    score_computed smallint,
+    linkedin_url text,
+    search_tsv tsvector GENERATED ALWAYS AS ((((((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(company_name, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(company_name, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))) STORED,
+    project_id uuid,
+    merged_into_id uuid,
+    routed_at timestamp with time zone,
+    first_response_at timestamp with time zone,
+    sla_breached_at timestamp with time zone,
+    disqualify_reason_id uuid,
+    disqualify_note text,
+    status_set_by text,
+    qualified_deal_id uuid,
+    source_author_id uuid,
+    source_author_name text,
+    entered_at timestamp with time zone DEFAULT now() NOT NULL,
+    from_contact_id uuid,
+    phone text,
+    origin text,
+    origin_detail text,
+    company_id uuid,
+    email_domain_folded text,
+    industry text,
+    arrival_owner_id uuid,
+    partner_company_id uuid,
+    partner_accepted_at timestamp with time zone,
+    partner_accepted_by text,
+    product_id uuid,
+    CONSTRAINT lead_email_norm CHECK (((email IS NULL) OR (email = lower(email)))),
+    CONSTRAINT lead_first_response_follows_creation CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at))),
+    CONSTRAINT lead_origin_detail_bounded CHECK (((origin_detail IS NULL) OR (length(origin_detail) <= 500))),
+    CONSTRAINT lead_override_retains_the_computed_score CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL))),
+    CONSTRAINT lead_partner_acceptance_pairing CHECK (((partner_accepted_at IS NULL) = (partner_accepted_by IS NULL))),
+    CONSTRAINT lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL)))),
+    CONSTRAINT lead_score_computed_range CHECK (((score_computed IS NULL) OR ((score_computed >= 0) AND (score_computed <= 100)))),
+    CONSTRAINT lead_score_override_reason_check CHECK (((score_override_reason IS NULL) OR (length(btrim(score_override_reason)) > 0))),
+    CONSTRAINT lead_score_range CHECK (((score >= 0) AND (score <= 100))),
+    CONSTRAINT lead_sla_breach_follows_creation CHECK (((sla_breached_at IS NULL) OR (sla_breached_at >= created_at))),
+    CONSTRAINT lead_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))),
+    CONSTRAINT lead_status_check CHECK ((status = ANY (ARRAY['new'::text, 'contacted'::text, 'engaged'::text, 'promoted'::text, 'disqualified'::text]))),
+    CONSTRAINT lead_status_set_by_check CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human'::text, 'system'::text])))),
+    CONSTRAINT lead_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.lead.arrival_owner_id IS 'The owner at the instant COALESCE(routed_at, created_at); null when the lead arrived unowned or before this was recorded.';
+
+CREATE TABLE public.lead_disqualify_reason (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    label text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shipped_label text,
+    shipped_label_key text,
+    label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
+    CONSTRAINT lead_disqualify_reason_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT lead_disqualify_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.lead_manual_signal (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    lead_id uuid NOT NULL,
+    factor text NOT NULL,
+    band text NOT NULL,
+    points smallint NOT NULL,
+    signal_kind text NOT NULL,
+    confidence numeric(4,3),
+    reason text NOT NULL,
+    set_by uuid NOT NULL,
+    set_at timestamp with time zone DEFAULT now() NOT NULL,
+    superseded_at timestamp with time zone,
+    superseded_by text,
+    CONSTRAINT lead_manual_signal_band_check CHECK ((length(btrim(band)) > 0)),
+    CONSTRAINT lead_manual_signal_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))),
+    CONSTRAINT lead_manual_signal_factor_check CHECK ((factor = ANY (ARRAY['web_traffic'::text, 'employees'::text, 'budget_hint'::text]))),
+    CONSTRAINT lead_manual_signal_reason_check CHECK ((length(btrim(reason)) > 0)),
+    CONSTRAINT lead_manual_signal_signal_kind_check CHECK ((signal_kind = ANY (ARRAY['fact'::text, 'assumption'::text, 'judgement'::text]))),
+    CONSTRAINT lead_manual_signal_superseded_by_check CHECK (((superseded_by IS NULL) OR (length(btrim(superseded_by)) > 0))),
+    CONSTRAINT lead_manual_signal_superseded_shape CHECK (((superseded_at IS NULL) = (superseded_by IS NULL)))
+);
+
+CREATE TABLE public.lead_origin (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    intent text DEFAULT 'neutral'::text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shipped_label text,
+    shipped_label_key text,
+    label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
+    CONSTRAINT lead_origin_intent_check CHECK ((intent = ANY (ARRAY['high'::text, 'neutral'::text, 'low'::text]))),
+    CONSTRAINT lead_origin_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0))),
+    CONSTRAINT lead_origin_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT lead_origin_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.lead_privacy_notice (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    lead_id uuid,
+    approval_id uuid,
+    delivery_id uuid,
+    template_key text NOT NULL,
+    template_version integer NOT NULL,
+    locale text,
+    state text NOT NULL,
+    failure text,
+    queued_at timestamp with time zone,
+    failed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT lead_privacy_notice_failed_shape CHECK (((state = 'failed'::text) = ((failure IS NOT NULL) AND (failed_at IS NOT NULL)))),
+    CONSTRAINT lead_privacy_notice_failure CHECK (((failure IS NULL) OR (failure = ANY (ARRAY['no_address'::text, 'collision'::text, 'refused'::text, 'bounced'::text])))),
+    CONSTRAINT lead_privacy_notice_state CHECK ((state = ANY (ARRAY['queued'::text, 'failed'::text])))
+);
+
+CREATE TABLE public.lead_score_history (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    lead_id uuid NOT NULL,
+    score smallint NOT NULL,
+    score_computed smallint NOT NULL,
+    override_reason text,
+    factors jsonb NOT NULL,
+    raw_sum numeric(8,3) NOT NULL,
+    rounded_sum smallint NOT NULL,
+    computed_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT lead_score_history_override_reason_check CHECK (((override_reason IS NULL) OR (length(btrim(override_reason)) > 0))),
+    CONSTRAINT lead_score_history_override_shape CHECK (((override_reason IS NOT NULL) OR (score = score_computed))),
+    CONSTRAINT lead_score_history_score_check CHECK (((score >= 0) AND (score <= 100))),
+    CONSTRAINT lead_score_history_score_computed_check CHECK (((score_computed >= 0) AND (score_computed <= 100)))
+);
+
+CREATE TABLE public.lead_source (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    intent text DEFAULT 'neutral'::text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT lead_source_intent_check CHECK ((intent = ANY (ARRAY['high'::text, 'neutral'::text, 'low'::text]))),
+    CONSTRAINT lead_source_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0))),
+    CONSTRAINT lead_source_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT lead_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.legal_entity (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    is_default boolean DEFAULT false NOT NULL,
+    display_name text,
+    legal_name text,
+    address_line1 text,
+    address_line2 text,
+    address_postal_code text,
+    address_city text,
+    address_region text,
+    vat_id text,
+    register_court text,
+    register_number text,
+    logo_object_key text,
+    country text,
+    default_language text,
+    bank_account_holder text,
+    iban text,
+    bic text,
+    imprint text,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    offer_summary text,
+    icp text,
+    value_proposition text,
+    usp text,
+    signature_template text,
+    CONSTRAINT legal_entity_bic_shape CHECK (((bic IS NULL) OR (bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'::text))),
+    CONSTRAINT legal_entity_country_shape CHECK (((country IS NULL) OR (country ~ '^[a-z]{2}$'::text))),
+    CONSTRAINT legal_entity_default_has_no_offering CHECK (((NOT is_default) OR ((offer_summary IS NULL) AND (icp IS NULL) AND (value_proposition IS NULL) AND (usp IS NULL)))),
+    CONSTRAINT legal_entity_default_is_permanent CHECK (((NOT is_default) OR (archived_at IS NULL))),
+    CONSTRAINT legal_entity_default_reads_the_anchor CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL)))),
+    CONSTRAINT legal_entity_default_signs_with_the_installation CHECK (((NOT is_default) OR (signature_template IS NULL))),
+    CONSTRAINT legal_entity_iban_shape CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'::text))),
+    CONSTRAINT legal_entity_imprint_bounded CHECK (((imprint IS NULL) OR (length(imprint) <= 4000))),
+    CONSTRAINT legal_entity_language_shape CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$'::text))),
+    CONSTRAINT legal_entity_names_itself CHECK ((is_default OR ((btrim(COALESCE(display_name, ''::text)) <> ''::text) AND (btrim(COALESCE(legal_name, ''::text)) <> ''::text) AND (country IS NOT NULL)))),
+    CONSTRAINT legal_entity_offering_bounded CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000))),
+    CONSTRAINT legal_entity_signature_template_bounded CHECK (((signature_template IS NULL) OR (length(signature_template) <= 4000))),
+    CONSTRAINT legal_entity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.legal_entity_member (
+    user_id uuid NOT NULL,
+    legal_entity_id uuid NOT NULL,
+    assigned_at timestamp with time zone DEFAULT now() NOT NULL,
+    assigned_by text NOT NULL
+);
+
+CREATE TABLE public.legal_review (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    status text DEFAULT 'requested'::text NOT NULL,
+    requested_by uuid,
+    note text,
+    previous_review_id uuid,
+    packet jsonb NOT NULL,
+    value_minor bigint,
+    value_currency public.currency_code,
+    expected_close_date date,
+    decided_by uuid,
+    decided_at timestamp with time zone,
+    comments text,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT legal_review_comments_bounded CHECK (((comments IS NULL) OR (length(comments) <= 8000))),
+    CONSTRAINT legal_review_decided_shape CHECK (((status = ANY (ARRAY['approved'::text, 'changes_needed'::text])) = (decided_at IS NOT NULL))),
+    CONSTRAINT legal_review_note_bounded CHECK (((note IS NULL) OR (length(note) <= 4000))),
+    CONSTRAINT legal_review_status_check CHECK ((status = ANY (ARRAY['requested'::text, 'approved'::text, 'changes_needed'::text, 'withdrawn'::text]))),
+    CONSTRAINT legal_review_value_minor_js_safe CHECK (((value_minor >= '-9007199254740991'::bigint) AND (value_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT legal_review_value_pair CHECK (((value_minor IS NULL) = (value_currency IS NULL))),
+    CONSTRAINT legal_review_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.linkedin_account (
+    user_id uuid NOT NULL,
+    profile_url text,
+    connected_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    reach_visible_to_team boolean DEFAULT true NOT NULL
+);
+
+CREATE TABLE public.linkedin_connection (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_user_id uuid NOT NULL,
+    full_name text NOT NULL,
+    normalized_name text NOT NULL,
+    "position" text,
+    company_name text,
+    normalized_company text,
+    connected_on date,
+    provider_member_ref text,
+    email text,
+    matched_contact_id uuid,
+    matched_company_id uuid,
+    match_status text DEFAULT 'unmatched'::text NOT NULL,
+    source text NOT NULL,
+    synced_at timestamp with time zone DEFAULT now() NOT NULL,
+    tombstoned_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    profile_url text,
+    CONSTRAINT linkedin_connection_match_shape CHECK (((match_status <> 'confirmed'::text) OR (matched_contact_id IS NOT NULL))),
+    CONSTRAINT linkedin_connection_match_status_check CHECK ((match_status = ANY (ARRAY['unmatched'::text, 'suggested'::text, 'confirmed'::text, 'rejected'::text]))),
+    CONSTRAINT linkedin_connection_source_check CHECK ((source = ANY (ARRAY['portability_api'::text, 'csv_export'::text])))
+);
+
+CREATE TABLE public.list (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    entity_type text NOT NULL,
+    list_type text DEFAULT 'static'::text NOT NULL,
+    definition jsonb,
+    owner_id uuid,
+    team_id uuid,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    purpose text,
+    steward_id uuid,
+    sharing text DEFAULT 'team'::text NOT NULL,
+    CONSTRAINT list_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT list_list_type_check CHECK ((list_type = ANY (ARRAY['static'::text, 'dynamic'::text]))),
+    CONSTRAINT list_sharing_check CHECK ((sharing = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text]))),
+    CONSTRAINT list_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.list_evaluation (
+    list_id uuid NOT NULL,
+    definition_version bigint NOT NULL,
+    evaluated_at timestamp with time zone NOT NULL,
+    member_count integer NOT NULL,
+    outcome text NOT NULL,
+    snapshot_version bigint,
+    CONSTRAINT list_evaluation_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint))),
+    CONSTRAINT list_evaluation_outcome_check CHECK ((outcome = ANY (ARRAY['complete'::text, 'too_large'::text, 'invalid'::text])))
+);
+
+CREATE TABLE public.list_live_member (
+    list_id uuid NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    member_since timestamp with time zone NOT NULL,
+    definition_version bigint NOT NULL,
+    CONSTRAINT list_live_member_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint))),
+    CONSTRAINT list_live_member_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+);
+
+CREATE TABLE public.list_member (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    list_id uuid NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    added_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    note text,
+    CONSTRAINT list_member_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+);
+
+CREATE TABLE public.list_member_event (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    list_id uuid NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    action text NOT NULL,
+    reason text NOT NULL,
+    actor text NOT NULL,
+    note text,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    definition_version bigint,
+    member_note text,
+    CONSTRAINT list_member_event_action_check CHECK ((action = ANY (ARRAY['added'::text, 'removed'::text, 'entered'::text, 'left'::text]))),
+    CONSTRAINT list_member_event_definition_version_js_safe CHECK (((definition_version >= '-9007199254740991'::bigint) AND (definition_version <= '9007199254740991'::bigint))),
+    CONSTRAINT list_member_event_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT list_member_event_reason_check CHECK ((reason = ANY (ARRAY['chosen'::text, 'bulk'::text, 'record_archived'::text, 'record_restored'::text, 'evaluated'::text, 'filter_changed'::text, 'automation'::text])))
+);
+
+CREATE TABLE public.list_revision (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    list_id uuid NOT NULL,
+    version bigint NOT NULL,
+    name text NOT NULL,
+    purpose text,
+    definition jsonb,
+    sharing text NOT NULL,
+    team_id uuid,
+    steward_id uuid,
+    changed_by text NOT NULL,
+    changed_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT list_revision_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.list_visit (
+    user_id uuid NOT NULL,
+    list_id uuid NOT NULL,
+    visited_at timestamp with time zone NOT NULL,
+    previous_visited_at timestamp with time zone
+);
+
+CREATE TABLE public.mail_draft (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    author_id uuid NOT NULL,
+    anchor_type text NOT NULL,
+    anchor_id uuid NOT NULL,
+    to_addresses text[] DEFAULT '{}'::text[] NOT NULL,
+    cc_addresses text[] DEFAULT '{}'::text[] NOT NULL,
+    bcc_addresses text[] DEFAULT '{}'::text[] NOT NULL,
+    subject text DEFAULT ''::text NOT NULL,
+    body text DEFAULT ''::text NOT NULL,
+    html_body text,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    agent_drafted boolean DEFAULT false NOT NULL,
+    grounding jsonb DEFAULT '[]'::jsonb NOT NULL,
+    attachment_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    communication_context text,
+    scheduled_at timestamp with time zone,
+    scheduled_tz text,
+    editor_state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT mail_draft_communication_context CHECK (((communication_context IS NULL) OR (communication_context = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'marketing'::text])))),
+    CONSTRAINT mail_draft_schedule_pair CHECK (((scheduled_at IS NULL) = (scheduled_tz IS NULL))),
+    CONSTRAINT mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.maskable_field (
+    object text NOT NULL,
+    field text NOT NULL
+);
+
+CREATE TABLE public.meeting_calendar_episode (
+    host_user_id uuid NOT NULL,
+    provider text NOT NULL,
+    episode uuid NOT NULL,
+    started_at timestamp with time zone NOT NULL,
+    resumed_at timestamp with time zone,
+    CONSTRAINT meeting_calendar_episode_provider_check CHECK ((provider = ANY (ARRAY['gcal'::text, 'graphcal'::text])))
+);
+
+CREATE TABLE public.meeting_invitation (
+    activity_id uuid NOT NULL,
+    host_user_id uuid NOT NULL,
+    provider text NOT NULL,
+    calendar_id text NOT NULL,
+    appointment jsonb NOT NULL,
+    receipt jsonb,
+    status text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    command text DEFAULT 'create'::text NOT NULL,
+    public_intent jsonb,
+    cleanup_complete boolean DEFAULT false NOT NULL,
+    reminder_status text DEFAULT 'off'::text NOT NULL,
+    management_hash text NOT NULL,
+    management_ref text NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    next_attempt_at timestamp with time zone DEFAULT now() NOT NULL,
+    lease_until timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    attention_reason text,
+    attention_episode uuid,
+    CONSTRAINT meeting_invitation_attention_reason_check CHECK ((attention_reason = ANY (ARRAY['delivery_failed'::text, 'calendar_disconnected'::text]))),
+    CONSTRAINT meeting_invitation_command_check CHECK ((command = ANY (ARRAY['create'::text, 'update'::text, 'cancel'::text]))),
+    CONSTRAINT meeting_invitation_provider_check CHECK ((provider = ANY (ARRAY['gcal'::text, 'graphcal'::text]))),
+    CONSTRAINT meeting_invitation_reminder_status_check CHECK ((reminder_status = ANY (ARRAY['off'::text, 'pending'::text, 'queued'::text, 'unavailable'::text]))),
+    CONSTRAINT meeting_invitation_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'rescheduling'::text, 'canceling'::text, 'needs_attention'::text, 'canceled'::text, 'erased'::text]))),
+    CONSTRAINT meeting_invitation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.meeting_proposal (
+    activity_id uuid NOT NULL,
+    host_user_id uuid NOT NULL,
+    request jsonb NOT NULL,
+    link_ref text NOT NULL,
+    token_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    invitation_id uuid,
+    used_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT meeting_proposal_expires_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.meeting_readiness (
+    attendee_id uuid NOT NULL,
+    activity_id uuid NOT NULL,
+    revision text NOT NULL,
+    starts_at timestamp with time zone NOT NULL,
+    starts_on_day boolean NOT NULL,
+    agenda_fingerprint text NOT NULL,
+    participants_fingerprint text NOT NULL,
+    captured_by text NOT NULL,
+    confirmed_at timestamp with time zone NOT NULL,
+    CONSTRAINT meeting_readiness_revision_present CHECK ((revision <> ''::text))
+);
+
+COMMENT ON TABLE public.meeting_readiness IS 'One attendee''s confirmation that they are ready for one meeting, at the preparation revision they confirmed.';
+
+CREATE TABLE public.mfa_challenge_spent (
+    jti text NOT NULL,
+    expires_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.mfa_recovery_code (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    code_hash text NOT NULL,
+    used_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.notice (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    recipient_user_id uuid NOT NULL,
+    kind text NOT NULL,
+    subject text NOT NULL,
+    body text DEFAULT ''::text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    read_at timestamp with time zone,
+    dedupe_key text,
+    target_type text,
+    target_id uuid,
+    origin jsonb,
+    email_attempted_at timestamp with time zone,
+    email_error text,
+    retracted_at timestamp with time zone,
+    subject_parts jsonb,
+    system_text jsonb,
+    CONSTRAINT notice_content_bounded CHECK (((length(subject) <= 200) AND (length(body) <= 2000))),
+    CONSTRAINT notice_email_error_after_attempt CHECK (((email_error IS NULL) OR (email_attempted_at IS NOT NULL))),
+    CONSTRAINT notice_email_error_bounded CHECK ((length(email_error) <= 500)),
+    CONSTRAINT notice_subject_present CHECK ((subject <> ''::text)),
+    CONSTRAINT notice_system_text_shape CHECK (((system_text IS NULL) OR ((jsonb_typeof(system_text) = 'object'::text) AND (((system_text ->> 'schema_version'::text) = '1'::text) IS TRUE) AND (octet_length((system_text)::text) <= 8192)))),
+    CONSTRAINT notice_target_paired CHECK (((target_type IS NULL) = (target_id IS NULL)))
+);
+
+CREATE TABLE public.notification_digest_run (
+    user_id uuid NOT NULL,
+    digest_date date NOT NULL,
+    mail_attempted_at timestamp with time zone DEFAULT now() NOT NULL,
+    mail_error text,
+    CONSTRAINT notification_digest_error_bounded CHECK ((length(mail_error) <= 500))
+);
+
+CREATE TABLE public.notification_preference (
+    user_id uuid NOT NULL,
+    class text NOT NULL,
+    delivery text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT notification_preference_delivery_check CHECK ((delivery = ANY (ARRAY['off'::text, 'in_app'::text, 'email'::text, 'digest'::text])))
+);
+
+CREATE TABLE public.oauth_authorization_code (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    code_hash text NOT NULL,
+    client_id text NOT NULL,
+    user_id uuid NOT NULL,
+    scopes text[] NOT NULL,
+    code_challenge text NOT NULL,
+    redirect_uri text NOT NULL,
+    resource text,
+    expires_at timestamp with time zone NOT NULL,
+    consumed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    lent_passport_id uuid,
+    work_areas text[],
+    CONSTRAINT oauth_authorization_code_expires_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.oauth_client (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    client_id text NOT NULL,
+    client_name text NOT NULL,
+    redirect_uris text[] NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    disabled_at timestamp with time zone,
+    deleted_at timestamp with time zone,
+    created_via text DEFAULT 'dcr'::text NOT NULL,
+    last_used_at timestamp with time zone,
+    metadata_expires_at timestamp with time zone,
+    client_secret_hash text,
+    CONSTRAINT oauth_client_created_via_check CHECK ((created_via = ANY (ARRAY['dcr'::text, 'admin'::text, 'cimd'::text]))),
+    CONSTRAINT oauth_client_secret_is_admin_only CHECK (((client_secret_hash IS NULL) OR (created_via = 'admin'::text)))
+);
+
+CREATE TABLE public.oauth_grant (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    client_id text NOT NULL,
+    user_id uuid NOT NULL,
+    scopes text[] NOT NULL,
+    refresh_allowed boolean DEFAULT false NOT NULL,
+    resource text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    lent_passport_id uuid,
+    work_areas text[]
+);
+
+CREATE TABLE public.oauth_refresh_token (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    grant_id uuid NOT NULL,
+    token_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    consumed_at timestamp with time zone,
+    replaced_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT oauth_refresh_token_expires_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.offer (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    deal_id uuid NOT NULL,
+    offer_number text NOT NULL,
+    revision integer DEFAULT 1 NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    currency public.currency_code NOT NULL,
+    buyer_company_id uuid,
+    buyer_snapshot jsonb,
+    issuer_snapshot jsonb,
+    valid_until date,
+    intro_text text,
+    terms_text text,
+    net_minor bigint DEFAULT 0 NOT NULL,
+    tax_minor bigint DEFAULT 0 NOT NULL,
+    gross_minor bigint DEFAULT 0 NOT NULL,
+    fx_rate_to_base numeric(20,10),
+    fx_rate_date date,
+    pdf_asset_ref text,
+    accepted_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    template_id uuid,
+    legal_entity_id uuid,
+    language text,
+    source_commercial_revision bigint,
+    CONSTRAINT offer_accepted_at CHECK (((status <> 'accepted'::text) OR (accepted_at IS NOT NULL))),
+    CONSTRAINT offer_gross_is_net_plus_tax CHECK ((gross_minor = (net_minor + tax_minor))),
+    CONSTRAINT offer_gross_minor_js_safe CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT offer_language_shape CHECK (((language IS NULL) OR (language ~ '^[a-z]{2}$'::text))),
+    CONSTRAINT offer_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT offer_number_shape CHECK ((offer_number ~ '^A-[0-9]+$'::text)),
+    CONSTRAINT offer_revision_check CHECK ((revision >= 1)),
+    CONSTRAINT offer_source_commercial_revision_js_safe CHECK (((source_commercial_revision >= 0) AND (source_commercial_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT offer_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'superseded'::text]))),
+    CONSTRAINT offer_tax_minor_js_safe CHECK (((tax_minor >= '-9007199254740991'::bigint) AND (tax_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT offer_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.offer_line_item (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    offer_id uuid NOT NULL,
+    "position" integer NOT NULL,
+    product_id uuid,
+    description text NOT NULL,
+    unit text DEFAULT 'unit'::text NOT NULL,
+    quantity numeric(14,3) NOT NULL,
+    unit_price_minor bigint NOT NULL,
+    discount_pct numeric(5,2) DEFAULT 0 NOT NULL,
+    tax_rate numeric(5,2) DEFAULT 0 NOT NULL,
+    evidence jsonb,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    proposal_state text DEFAULT 'accepted'::text NOT NULL,
+    price_grounded boolean DEFAULT true NOT NULL,
+    billing_model text,
+    billing_interval_months integer,
+    interval_count integer,
+    tax_category text,
+    source_deal_line_id uuid,
+    CONSTRAINT offer_line_item_discount_pct_check CHECK (((discount_pct >= (0)::numeric) AND (discount_pct <= (100)::numeric))),
+    CONSTRAINT offer_line_item_position_check CHECK (("position" >= 1)),
+    CONSTRAINT offer_line_item_proposal_state_check CHECK ((proposal_state = ANY (ARRAY['staged'::text, 'accepted'::text]))),
+    CONSTRAINT offer_line_item_quantity_check CHECK ((quantity > (0)::numeric)),
+    CONSTRAINT offer_line_item_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text])))),
+    CONSTRAINT offer_line_item_tax_rate_check CHECK ((tax_rate >= (0)::numeric)),
+    CONSTRAINT offer_line_item_ungrounded_price_zero CHECK ((price_grounded OR (unit_price_minor = 0))),
+    CONSTRAINT offer_line_item_unit_price_minor_check CHECK ((unit_price_minor >= 0)),
+    CONSTRAINT offer_line_item_unit_price_minor_js_safe CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT offer_line_item_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT oli_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12])))),
+    CONSTRAINT oli_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text])))),
+    CONSTRAINT oli_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL) AND (interval_count IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL)))),
+    CONSTRAINT oli_interval_count_check CHECK (((interval_count IS NULL) OR (interval_count > 0)))
+);
+
+COMMENT ON COLUMN public.offer_line_item.interval_count IS 'How many billing periods the buyer commits to. Null on a recurring line means nobody has settled the term yet, which send refuses.';
+
+CREATE TABLE public.offer_template (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    locale text DEFAULT 'de-DE'::text NOT NULL,
+    is_default boolean DEFAULT false NOT NULL,
+    layout jsonb NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    search_tsv tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))) STORED,
+    CONSTRAINT offer_template_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.onboarding_wizard_state (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    path text NOT NULL,
+    step text NOT NULL,
+    source_mode text,
+    website_url text,
+    site_read_id uuid,
+    company_draft jsonb DEFAULT '{}'::jsonb NOT NULL,
+    selected_fact_keys text[] DEFAULT '{}'::text[] NOT NULL,
+    voice_skipped boolean DEFAULT false NOT NULL,
+    connect_skipped boolean DEFAULT false NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT onboarding_wizard_state_company_draft_check CHECK ((jsonb_typeof(company_draft) = 'object'::text)),
+    CONSTRAINT onboarding_wizard_state_path_check CHECK ((path = ANY (ARRAY['creator'::text, 'member'::text]))),
+    CONSTRAINT onboarding_wizard_state_source_mode_check CHECK ((source_mode = ANY (ARRAY['website'::text, 'manual'::text]))),
+    CONSTRAINT onboarding_wizard_state_step_check CHECK ((step = ANY (ARRAY['read'::text, 'confirm'::text, 'basis'::text, 'invite'::text, 'team'::text, 'voice'::text, 'results'::text, 'connect'::text, 'complete'::text]))),
+    CONSTRAINT onboarding_wizard_state_version_check CHECK ((version >= 1)),
+    CONSTRAINT onboarding_wizard_state_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.partner (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid NOT NULL,
+    cert_status text DEFAULT 'applied'::text NOT NULL,
+    margin_tier text,
+    certified_staff smallint DEFAULT 0 NOT NULL,
+    retention_rate smallint,
+    joined_at date,
+    renews_at date,
+    relationship_stage text NOT NULL,
+    partner_fit_score smallint,
+    relationship_health numeric(3,2),
+    last_contact_at timestamp with time zone,
+    next_step text,
+    next_step_due_at date,
+    served_segments text[],
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    partner_fit_score_computed smallint,
+    partner_fit_override_reason text,
+    partner_kinds text[] DEFAULT '{}'::text[] NOT NULL,
+    activated_at timestamp with time zone,
+    activation_basis text,
+    activated_by text,
+    activation_lead_id uuid,
+    activation_deal_id uuid,
+    CONSTRAINT partner_activation_basis_check CHECK (((activation_basis IS NULL) OR (activation_basis = ANY (ARRAY['lead_accepted'::text, 'customer_won'::text, 'recorded_before_ladder'::text])))),
+    CONSTRAINT partner_activation_pairing CHECK ((((activation_basis IS NULL) AND (activated_at IS NULL) AND (activated_by IS NULL) AND (activation_lead_id IS NULL) AND (activation_deal_id IS NULL)) OR ((activation_basis = 'recorded_before_ladder'::text) AND (activated_at IS NULL) AND (activation_lead_id IS NULL) AND (activation_deal_id IS NULL)) OR ((activation_basis = 'lead_accepted'::text) AND (activated_at IS NOT NULL) AND (activation_lead_id IS NOT NULL)) OR ((activation_basis = 'customer_won'::text) AND (activated_at IS NOT NULL) AND (activation_deal_id IS NOT NULL)))),
+    CONSTRAINT partner_cert_status_check CHECK ((cert_status = ANY (ARRAY['applied'::text, 'certified'::text, 'suspended'::text]))),
+    CONSTRAINT partner_certified_staff_check CHECK ((certified_staff >= 0)),
+    CONSTRAINT partner_margin_tier_check CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15'::text, 'tier2_20'::text, 'tier3_25'::text])))),
+    CONSTRAINT partner_partner_fit_override_reason_check CHECK (((partner_fit_override_reason IS NULL) OR (length(btrim(partner_fit_override_reason)) > 0))),
+    CONSTRAINT partner_partner_fit_score_check CHECK (((partner_fit_score IS NULL) OR ((partner_fit_score >= 0) AND (partner_fit_score <= 100)))),
+    CONSTRAINT partner_partner_fit_score_computed_check CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100)))),
+    CONSTRAINT partner_partner_kinds_check CHECK ((partner_kinds <@ ARRAY['hosting'::text, 'consulting'::text, 'strategic'::text, 'referral'::text])),
+    CONSTRAINT partner_relationship_health_check CHECK (((relationship_health IS NULL) OR ((relationship_health >= (0)::numeric) AND (relationship_health <= (1)::numeric)))),
+    CONSTRAINT partner_retention_rate_check CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100)))),
+    CONSTRAINT partner_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.partner_stage (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    meaning text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    shipped_label text,
+    shipped_label_key text,
+    label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT partner_stage_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text)),
+    CONSTRAINT partner_stage_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT partner_stage_meaning_check CHECK ((meaning = ANY (ARRAY['candidate'::text, 'signed'::text, 'ready'::text, 'active'::text, 'dormant'::text, 'ended'::text]))),
+    CONSTRAINT partner_stage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.passport (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    on_behalf_of uuid NOT NULL,
+    granted_by uuid NOT NULL,
+    label text,
+    scopes text[] NOT NULL,
+    token_hash text NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    revoked_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    oauth_grant_id uuid,
+    last_used_at timestamp with time zone,
+    work_areas text[],
+    CONSTRAINT passport_expires_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.pipeline (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    is_default boolean DEFAULT false NOT NULL,
+    "position" integer DEFAULT 0 NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT pipeline_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.preference_token (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    token text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    revoked_at timestamp with time zone,
+    expires_at timestamp with time zone NOT NULL,
+    contact_email_id uuid,
+    revoked_reason text,
+    token_hash text,
+    CONSTRAINT preference_token_expires_after_creation CHECK ((expires_at > created_at)),
+    CONSTRAINT preference_token_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL))),
+    CONSTRAINT preference_token_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['rotated'::text, 'expired'::text, 'erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'merged_into_survivor'::text])))
+);
+
+COMMENT ON COLUMN public.preference_token.revoked_reason IS 'Why the token was retired. A withdrawal made with a legacy preference token is honoured for rotated/expired/merged_into_survivor and refused for erasure/compromise/merged_predecessor. A merged_into_survivor token also still opens the survivor''s preference centre.';
+
+CREATE TABLE public.privacy_notice_case (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    acquisition_id uuid NOT NULL,
+    rule text NOT NULL,
+    due_at timestamp with time zone,
+    allowed_routes text[] DEFAULT '{}'::text[] NOT NULL,
+    state text DEFAULT 'open'::text NOT NULL,
+    owner_user_id uuid,
+    attempts integer DEFAULT 0 NOT NULL,
+    completed_at timestamp with time zone,
+    blocked_reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    resolution_note text,
+    resolved_by uuid,
+    assigned_at timestamp with time zone,
+    delivery_id uuid,
+    last_sent_at timestamp with time zone,
+    source_kind text,
+    source_obtained_at timestamp with time zone,
+    source_review_note text,
+    source_evidence_kind text,
+    source_evidence_id uuid,
+    CONSTRAINT privacy_notice_case_blocked_shape CHECK (((state = 'blocked'::text) = (blocked_reason IS NOT NULL))),
+    CONSTRAINT privacy_notice_case_completion_shape CHECK (((state = ANY (ARRAY['completed'::text, 'not_required'::text, 'exempt_with_reason'::text, 'provided_elsewhere'::text])) = (completed_at IS NOT NULL))),
+    CONSTRAINT privacy_notice_case_due_shape CHECK (((state <> ALL (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text])) OR (due_at IS NOT NULL))),
+    CONSTRAINT privacy_notice_case_none_shape CHECK (((rule <> 'none'::text) OR ((due_at IS NULL) AND (completed_at IS NOT NULL) AND (cardinality(allowed_routes) = 0)))),
+    CONSTRAINT privacy_notice_case_queued_names_its_delivery CHECK (((state <> 'queued'::text) OR (delivery_id IS NOT NULL))),
+    CONSTRAINT privacy_notice_case_resolution_note_length CHECK (((resolution_note IS NULL) OR (char_length(resolution_note) <= 500))),
+    CONSTRAINT privacy_notice_case_resolution_shape CHECK (((state = ANY (ARRAY['exempt_with_reason'::text, 'provided_elsewhere'::text])) = (resolution_note IS NOT NULL))),
+    CONSTRAINT privacy_notice_case_review_shape CHECK ((((state = 'source_review'::text) = (rule = 'unassessed'::text)) AND ((state <> 'source_review'::text) OR ((source_kind IS NULL) AND (due_at IS NULL) AND (cardinality(allowed_routes) = 0))))),
+    CONSTRAINT privacy_notice_case_rule CHECK ((rule = ANY (ARRAY['unassessed'::text, 'none'::text, 'art13'::text, 'art14'::text]))),
+    CONSTRAINT privacy_notice_case_source_evidence_shape CHECK ((((source_evidence_kind IS NULL) AND (source_evidence_id IS NULL)) OR ((source_evidence_kind = ANY (ARRAY['acquisition'::text, 'activity'::text])) AND (source_evidence_kind IS NOT NULL) AND (source_evidence_id IS NOT NULL)))),
+    CONSTRAINT privacy_notice_case_source_note CHECK ((((source_kind IS NULL) = (source_review_note IS NULL)) AND ((source_review_note IS NULL) OR ((char_length(btrim(source_review_note)) <= 500) AND ((char_length(btrim(source_review_note)) > 0) OR (source_evidence_id IS NOT NULL)))))),
+    CONSTRAINT privacy_notice_case_state CHECK ((state = ANY (ARRAY['source_review'::text, 'open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'completed'::text, 'provided_elsewhere'::text, 'exempt_with_reason'::text, 'blocked'::text, 'not_required'::text])))
+);
+
+CREATE TABLE public.privacy_request_proof (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    request_id uuid NOT NULL,
+    request_number text NOT NULL,
+    requester_email text,
+    received_at timestamp with time zone NOT NULL,
+    request_kind text NOT NULL,
+    identity_check text NOT NULL,
+    result text NOT NULL,
+    erased_counts jsonb DEFAULT '{}'::jsonb NOT NULL,
+    erased_uncounted text[] DEFAULT '{}'::text[] NOT NULL,
+    erased_counts_known boolean DEFAULT true NOT NULL,
+    completed_by_type text,
+    completed_by_id text,
+    answered_at timestamp with time zone NOT NULL,
+    keep_until timestamp with time zone NOT NULL,
+    CONSTRAINT privacy_request_proof_actor_type CHECK ((completed_by_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text]))),
+    CONSTRAINT privacy_request_proof_counts_object CHECK ((jsonb_typeof(erased_counts) = 'object'::text)),
+    CONSTRAINT privacy_request_proof_identity_check CHECK ((identity_check = ANY (ARRAY['confirm_link'::text, 'address_on_file'::text, 'id_document'::text, 'in_person'::text, 'not_verified'::text, 'unknown'::text]))),
+    CONSTRAINT privacy_request_proof_kind CHECK ((request_kind = ANY (ARRAY['access'::text, 'rectify'::text, 'erasure'::text]))),
+    CONSTRAINT privacy_request_proof_result CHECK ((result = ANY (ARRAY['fulfilled'::text, 'rejected'::text])))
+);
+
+CREATE TABLE public.product (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    sku text,
+    description text,
+    unit text DEFAULT 'unit'::text NOT NULL,
+    unit_price_minor bigint NOT NULL,
+    currency public.currency_code NOT NULL,
+    default_tax_rate numeric(5,2) DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    search_tsv tsvector GENERATED ALWAYS AS (((((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(sku, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(description, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(description, ''::text))), 'B'::"char"))) STORED,
+    billing_model text,
+    billing_interval_months integer,
+    component_kind text,
+    tax_category text,
+    CONSTRAINT product_billing_interval_check CHECK (((billing_interval_months IS NULL) OR (billing_interval_months = ANY (ARRAY[1, 3, 6, 12])))),
+    CONSTRAINT product_billing_model_check CHECK (((billing_model IS NULL) OR (billing_model = ANY (ARRAY['one_time'::text, 'recurring'::text])))),
+    CONSTRAINT product_billing_shape CHECK ((((billing_model IS NULL) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'one_time'::text)) AND (billing_interval_months IS NULL)) OR ((NOT (billing_model IS DISTINCT FROM 'recurring'::text)) AND (billing_interval_months IS NOT NULL)))),
+    CONSTRAINT product_component_kind_check CHECK ((component_kind = ANY (ARRAY['software'::text, 'implementation'::text, 'other'::text]))),
+    CONSTRAINT product_default_tax_rate_check CHECK ((default_tax_rate >= (0)::numeric)),
+    CONSTRAINT product_tax_category_check CHECK (((tax_category IS NULL) OR (tax_category = ANY (ARRAY['standard'::text, 'reduced'::text, 'exempt'::text])))),
+    CONSTRAINT product_unit_price_minor_check CHECK ((unit_price_minor >= 0)),
+    CONSTRAINT product_unit_price_minor_js_safe CHECK (((unit_price_minor >= '-9007199254740991'::bigint) AND (unit_price_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT product_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.product.billing_model IS 'one_time, recurring, or null for a product nobody has classified. Null is not one_time: it is the absence of an answer, and every row written before this column existed carries it.';
+
+CREATE TABLE public.product_translation (
+    product_id uuid NOT NULL,
+    language text NOT NULL,
+    name text NOT NULL,
+    description text,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT product_translation_bounded CHECK (((length(name) <= 500) AND ((description IS NULL) OR (length(description) <= 4000)))),
+    CONSTRAINT product_translation_language_shape CHECK ((language ~ '^[a-z]{2}$'::text)),
+    CONSTRAINT product_translation_name_present CHECK ((btrim(name) <> ''::text)),
+    CONSTRAINT product_translation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.project (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    key text,
+    company_id uuid,
+    owner_id uuid,
+    phase text DEFAULT 'initiative'::text NOT NULL,
+    closed_reason text,
+    description text,
+    started_at date,
+    target_end_date date,
+    ended_at date,
+    last_activity_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    search_tsv tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))) STORED,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    legal_hold boolean DEFAULT false NOT NULL,
+    source_author_id uuid,
+    source_author_name text,
+    source_system text,
+    source_id text,
+    CONSTRAINT project_closed_reason CHECK (((phase <> 'closed'::text) OR (closed_reason IS NOT NULL))),
+    CONSTRAINT project_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR (ended_at >= started_at))),
+    CONSTRAINT project_key_shape CHECK (((key IS NULL) OR (key ~ '^[A-Za-z][A-Za-z0-9_-]{1,23}$'::text))),
+    CONSTRAINT project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text, 'pursuing'::text, 'delivering'::text, 'closed'::text]))),
+    CONSTRAINT project_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL))),
+    CONSTRAINT project_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128)))),
+    CONSTRAINT project_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL))),
+    CONSTRAINT project_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.project.source_system IS 'Which system this record was imported from. Null on a record created here, which is most of them. It is what makes an author other than the recorder a checkable claim rather than an assertion.';
+
+COMMENT ON COLUMN public.project.source_id IS 'The id this record has in source_system. Null on a record created here. Unique with source_system.';
+
+CREATE TABLE public.project_health_assessment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    project_id uuid NOT NULL,
+    state text NOT NULL,
+    note text,
+    assessed_at timestamp with time zone NOT NULL,
+    source text NOT NULL,
+    source_author text,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    supersedes_assessment_id uuid,
+    CONSTRAINT project_health_not_its_own_successor CHECK ((supersedes_assessment_id IS DISTINCT FROM id)),
+    CONSTRAINT project_health_note_bounded CHECK (((note IS NULL) OR (length(note) <= 4000))),
+    CONSTRAINT project_health_state_known CHECK ((state = ANY (ARRAY['on_track'::text, 'at_risk'::text, 'off_track'::text]))),
+    CONSTRAINT project_health_trouble_is_explained CHECK (((state = 'on_track'::text) OR ((note IS NOT NULL) AND (length(btrim(note)) > 0))))
+);
+
+CREATE TABLE public.project_phase_history (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    project_id uuid NOT NULL,
+    from_phase text,
+    to_phase text NOT NULL,
+    reason text,
+    changed_by text NOT NULL,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    audit_log_id uuid
+);
+
+CREATE TABLE public.provider_applied_field (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    run_id uuid NOT NULL,
+    provider text NOT NULL,
+    target_table text NOT NULL,
+    target_row_id uuid,
+    target_field text NOT NULL,
+    applied_value text,
+    captured_by text NOT NULL,
+    applied_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT provider_applied_field_identity_shape CHECK (((target_row_id IS NULL) <> (applied_value IS NULL))),
+    CONSTRAINT provider_applied_field_target_check CHECK ((target_table = ANY (ARRAY['contact'::text, 'contact_social'::text, 'contact_email'::text, 'contact_phone'::text, 'relationship'::text])))
+);
+
+CREATE TABLE public.provider_connection (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    provider text NOT NULL,
+    status text NOT NULL,
+    mode text NOT NULL,
+    preset text NOT NULL,
+    automatic_individual_create boolean DEFAULT true NOT NULL,
+    automatic_import boolean DEFAULT false NOT NULL,
+    categories text[] NOT NULL,
+    refresh_after_days integer,
+    daily_run_limit integer,
+    credential_ref text,
+    execution_epoch bigint DEFAULT 1 NOT NULL,
+    connected_by uuid,
+    connected_at timestamp with time zone,
+    last_verified_at timestamp with time zone,
+    last_used_at timestamp with time zone,
+    last_safe_status_code text,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT provider_connection_categories_check CHECK ((cardinality(categories) > 0)),
+    CONSTRAINT provider_connection_daily_run_limit_check CHECK ((daily_run_limit > 0)),
+    CONSTRAINT provider_connection_disconnected_shape CHECK ((((status = 'disconnected'::text) AND (credential_ref IS NULL)) OR (status <> 'disconnected'::text))),
+    CONSTRAINT provider_connection_mode_check CHECK ((mode = ANY (ARRAY['automatic_on_create'::text, 'on_demand'::text]))),
+    CONSTRAINT provider_connection_refresh_after_days_check CHECK ((refresh_after_days > 0)),
+    CONSTRAINT provider_connection_status_check CHECK ((status = ANY (ARRAY['disconnected'::text, 'validating'::text, 'connected'::text, 'invalid_credentials'::text, 'insufficient_credits'::text, 'rate_limited'::text, 'provider_error'::text]))),
+    CONSTRAINT provider_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.provider_connection_budget (
+    connection_id uuid NOT NULL,
+    pool text NOT NULL,
+    monthly_ceiling integer,
+    pause_below_balance integer,
+    last_known_balance integer,
+    balance_read_at timestamp with time zone,
+    CONSTRAINT provider_connection_budget_balance_shape CHECK (((last_known_balance IS NULL) = (balance_read_at IS NULL))),
+    CONSTRAINT provider_connection_budget_last_known_balance_check CHECK ((last_known_balance >= 0)),
+    CONSTRAINT provider_connection_budget_monthly_ceiling_check CHECK ((monthly_ceiling >= 0)),
+    CONSTRAINT provider_connection_budget_pause_below_balance_check CHECK ((pause_below_balance >= 0))
+);
+
+CREATE TABLE public.provider_employment_resolution (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    contact_id uuid NOT NULL,
+    claim_id uuid NOT NULL,
+    episode_key text NOT NULL,
+    state text NOT NULL,
+    company_id uuid,
+    relationship_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT provider_employment_resolution_state_check CHECK ((state = ANY (ARRAY['linked'::text, 'needs_match'::text, 'needs_review'::text, 'dismissed'::text])))
+);
+
+CREATE TABLE public.provider_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    subject_kind text NOT NULL,
+    contact_id uuid,
+    provider text NOT NULL,
+    trigger text NOT NULL,
+    state text NOT NULL,
+    skip_reason text,
+    claims_unwritten boolean DEFAULT false NOT NULL,
+    input_fingerprint text NOT NULL,
+    external_correlation_id uuid NOT NULL,
+    provider_job_id text,
+    connection_version bigint NOT NULL,
+    connection_epoch bigint NOT NULL,
+    configuration_snapshot jsonb NOT NULL,
+    requested_categories text[] NOT NULL,
+    requested_by uuid,
+    attempt_count integer DEFAULT 0 NOT NULL,
+    next_attempt_at timestamp with time zone,
+    inflight_at timestamp with time zone,
+    last_safe_status_code text,
+    submitted_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    applied_at timestamp with time zone,
+    CONSTRAINT provider_run_attempt_count_check CHECK ((attempt_count >= 0)),
+    CONSTRAINT provider_run_claims_unwritten_shape CHECK (((NOT claims_unwritten) OR (state = 'completed'::text))),
+    CONSTRAINT provider_run_connection_version_js_safe CHECK (((connection_version >= '-9007199254740991'::bigint) AND (connection_version <= '9007199254740991'::bigint))),
+    CONSTRAINT provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text, 'no_identifiers'::text, 'category_in_flight'::text])))),
+    CONSTRAINT provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL))),
+    CONSTRAINT provider_run_state_check CHECK ((state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text, 'no_match'::text, 'skipped'::text, 'submission_unknown'::text, 'failed'::text, 'cancelled'::text]))),
+    CONSTRAINT provider_run_subject_kind_check CHECK ((subject_kind = ANY (ARRAY['contact'::text, 'scrubbed'::text]))),
+    CONSTRAINT provider_run_subject_shape CHECK ((((subject_kind = 'contact'::text) AND (contact_id IS NOT NULL)) OR ((subject_kind = 'scrubbed'::text) AND (contact_id IS NULL)))),
+    CONSTRAINT provider_run_trigger_check CHECK ((trigger = ANY (ARRAY['automatic_create'::text, 'automatic_import'::text, 'automatic_backfill'::text, 'scheduled_refresh'::text, 'manual'::text])))
+);
+
+CREATE TABLE public.provider_run_category (
+    run_id uuid NOT NULL,
+    contact_id uuid NOT NULL,
+    provider text NOT NULL,
+    category text NOT NULL
+);
+
+CREATE TABLE public.provider_run_reservation (
+    run_id uuid NOT NULL,
+    pool text NOT NULL,
+    reserved_credits integer NOT NULL,
+    actual_credits integer,
+    reserved_at timestamp with time zone DEFAULT now() NOT NULL,
+    reconciled_at timestamp with time zone,
+    CONSTRAINT provider_run_reservation_actual_credits_check CHECK ((actual_credits >= 0)),
+    CONSTRAINT provider_run_reservation_reserved_credits_check CHECK ((reserved_credits >= 0))
+);
+
+CREATE TABLE public.raw_capture (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    source_system text NOT NULL,
+    source_id text NOT NULL,
+    payload jsonb NOT NULL,
+    received_at timestamp with time zone DEFAULT now() NOT NULL,
+    parts_slimmed_at timestamp with time zone,
+    parts_slim_outcome text,
+    payload_object jsonb,
+    payload_offload_checked_at timestamp with time zone,
+    CONSTRAINT raw_capture_parts_slim_outcome_known CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed'::text, 'no_proved_parts'::text, 'unreadable_spelling'::text, 'unrewritable_original'::text, 'nothing_came_out'::text, 'unencodable_result'::text, 'no_bytes_saved'::text])))),
+    CONSTRAINT raw_capture_payload_object_shape CHECK (((payload_object IS NULL) OR (((jsonb_typeof(payload_object) = 'object'::text) AND (jsonb_typeof((payload_object -> 'key'::text)) = 'string'::text) AND (jsonb_typeof((payload_object -> 'sha256'::text)) = 'string'::text) AND ((payload_object ->> 'sha256'::text) ~ '^[0-9a-f]{64}$'::text) AND (jsonb_typeof((payload_object -> 'bytes'::text)) = 'number'::text) AND (((payload_object ->> 'bytes'::text))::numeric > (0)::numeric)) IS TRUE)))
+);
+
+CREATE TABLE public.record_assignment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid,
+    deal_id uuid,
+    project_id uuid,
+    user_id uuid,
+    team_id uuid,
+    role_id uuid NOT NULL,
+    source text,
+    captured_by text,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT record_assignment_one_assignee CHECK ((num_nonnulls(user_id, team_id) = 1)),
+    CONSTRAINT record_assignment_one_parent CHECK ((num_nonnulls(company_id, deal_id, project_id) = 1)),
+    CONSTRAINT record_assignment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.record_grant (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    record_type text NOT NULL,
+    record_id uuid NOT NULL,
+    subject_type text NOT NULL,
+    subject_id uuid NOT NULL,
+    access text NOT NULL,
+    granted_by uuid NOT NULL,
+    reason text,
+    expires_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    contact_id uuid GENERATED ALWAYS AS (
+CASE
+    WHEN (record_type = 'contact'::text) THEN record_id
+    ELSE NULL::uuid
+END) STORED,
+    company_id uuid GENERATED ALWAYS AS (
+CASE
+    WHEN (record_type = 'company'::text) THEN record_id
+    ELSE NULL::uuid
+END) STORED,
+    deal_id uuid GENERATED ALWAYS AS (
+CASE
+    WHEN (record_type = 'deal'::text) THEN record_id
+    ELSE NULL::uuid
+END) STORED,
+    lead_id uuid GENERATED ALWAYS AS (
+CASE
+    WHEN (record_type = 'lead'::text) THEN record_id
+    ELSE NULL::uuid
+END) STORED,
+    project_id uuid GENERATED ALWAYS AS (
+CASE
+    WHEN (record_type = 'project'::text) THEN record_id
+    ELSE NULL::uuid
+END) STORED,
+    CONSTRAINT record_grant_access_check CHECK ((access = ANY (ARRAY['read'::text, 'write'::text]))),
+    CONSTRAINT record_grant_expires_after_creation CHECK ((expires_at > created_at)),
+    CONSTRAINT record_grant_record_shape CHECK ((num_nonnulls(contact_id, company_id, deal_id, lead_id, project_id) = 1)),
+    CONSTRAINT record_grant_record_type_check CHECK ((record_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text]))),
+    CONSTRAINT record_grant_subject_type_check CHECK ((subject_type = ANY (ARRAY['user'::text, 'team'::text]))),
+    CONSTRAINT record_grant_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.record_role (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    record_types text[] NOT NULL,
+    assignee_kinds text[] NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    shipped_label text,
+    shipped_label_key text,
+    label_key text GENERATED ALWAYS AS (public.label_key_while_shipped(label, shipped_label, shipped_label_key)) STORED,
+    CONSTRAINT record_role_assignee_kinds_bounded CHECK (((cardinality(assignee_kinds) > 0) AND (assignee_kinds <@ ARRAY['user'::text, 'team'::text]))),
+    CONSTRAINT record_role_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0))),
+    CONSTRAINT record_role_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT record_role_record_types_bounded CHECK (((cardinality(record_types) > 0) AND (record_types <@ ARRAY['company'::text, 'deal'::text, 'project'::text]))),
+    CONSTRAINT record_role_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.relationship (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    kind text NOT NULL,
+    contact_id uuid,
+    company_id uuid,
+    counterparty_company_id uuid,
+    deal_id uuid,
+    role text,
+    is_current_primary boolean DEFAULT false NOT NULL,
+    started_at date,
+    ended_at date,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    project_id uuid,
+    counterparty_contact_id uuid,
+    employment_status text,
+    started_precision text,
+    ended_precision text,
+    first_observed_at timestamp with time zone,
+    CONSTRAINT rel_billing_contact_role CHECK (((kind <> 'billing_contact'::text) OR ((role IS NOT NULL) AND (role = ANY (ARRAY['recipient'::text, 'approver'::text, 'accounts_payable'::text]))))),
+    CONSTRAINT rel_billing_contact_shape CHECK (((kind <> 'billing_contact'::text) OR ((contact_id IS NOT NULL) AND (company_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL) AND (counterparty_company_id IS NULL)))),
+    CONSTRAINT rel_dates CHECK (((ended_at IS NULL) OR (started_at IS NULL) OR
+CASE
+    WHEN (ended_precision = 'month'::text) THEN (((date_trunc('month'::text, (ended_at)::timestamp with time zone) + '1 mon'::interval))::date > started_at)
+    ELSE (ended_at >= started_at)
+END)),
+    CONSTRAINT rel_employment_primary_status CHECK (((NOT is_current_primary) OR (COALESCE(employment_status, 'current'::text) = 'current'::text))),
+    CONSTRAINT rel_employment_shape CHECK (((kind <> 'employment'::text) OR ((contact_id IS NOT NULL) AND (company_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL)))),
+    CONSTRAINT rel_employment_status_kind CHECK (((employment_status IS NULL) OR (kind = 'employment'::text))),
+    CONSTRAINT rel_partner_shape CHECK (((kind <> ALL (ARRAY['partner_of'::text, 'referred_by'::text, 'co_sell_with'::text])) OR ((company_id IS NOT NULL) AND (counterparty_company_id IS NOT NULL) AND (company_id <> counterparty_company_id) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL)))),
+    CONSTRAINT rel_project_company_shape CHECK (((kind <> 'project_company'::text) OR ((project_id IS NOT NULL) AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (counterparty_company_id IS NULL) AND (deal_id IS NULL) AND (counterparty_contact_id IS NULL)))),
+    CONSTRAINT rel_project_stakeholder_shape CHECK (((kind <> 'project_stakeholder'::text) OR ((project_id IS NOT NULL) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (counterparty_company_id IS NULL) AND (deal_id IS NULL) AND (counterparty_contact_id IS NULL)))),
+    CONSTRAINT rel_stakeholder_shape CHECK (((kind <> 'deal_stakeholder'::text) OR ((deal_id IS NOT NULL) AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (project_id IS NULL) AND (counterparty_contact_id IS NULL)))),
+    CONSTRAINT rel_works_with_shape CHECK (((kind <> 'works_with'::text) OR ((contact_id IS NOT NULL) AND (counterparty_contact_id IS NOT NULL) AND (contact_id <> counterparty_contact_id) AND (company_id IS NULL) AND (counterparty_company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)))),
+    CONSTRAINT relationship_employment_status_check CHECK ((employment_status = ANY (ARRAY['current'::text, 'former'::text, 'unknown'::text]))),
+    CONSTRAINT relationship_ended_precision_check CHECK ((ended_precision = ANY (ARRAY['day'::text, 'month'::text]))),
+    CONSTRAINT relationship_kind_check CHECK ((kind = ANY (ARRAY['employment'::text, 'deal_stakeholder'::text, 'partner_of'::text, 'referred_by'::text, 'co_sell_with'::text, 'project_stakeholder'::text, 'project_company'::text, 'works_with'::text, 'billing_contact'::text]))),
+    CONSTRAINT relationship_started_precision_check CHECK ((started_precision = ANY (ARRAY['day'::text, 'month'::text]))),
+    CONSTRAINT relationship_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.relationship_nudge_dismissal (
+    contact_id uuid NOT NULL,
+    reader_id uuid NOT NULL,
+    dismissed_until timestamp with time zone,
+    set_by text NOT NULL,
+    set_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT relationship_nudge_dismissal_forward CHECK ((dismissed_until > set_at))
+);
+
+COMMENT ON TABLE public.relationship_nudge_dismissal IS 'A relationship nudge one reader has dismissed until a moment, or for good (NULL). Per reader, reversible.';
+
+CREATE TABLE public.report_definition (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_id uuid NOT NULL,
+    name text NOT NULL,
+    audience text NOT NULL,
+    audience_team_id uuid,
+    revision bigint NOT NULL,
+    version bigint NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    archived_at timestamp with time zone,
+    draft_revision bigint,
+    description text,
+    CONSTRAINT report_definition_audience_check CHECK ((audience = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text]))),
+    CONSTRAINT report_definition_check CHECK (((audience = 'team'::text) = (audience_team_id IS NOT NULL))),
+    CONSTRAINT report_definition_draft_after_published CHECK (((draft_revision IS NULL) OR ((draft_revision >= (revision + 1)) AND (draft_revision <= '9007199254740991'::bigint)))),
+    CONSTRAINT report_definition_draft_revision_js_safe CHECK (((draft_revision >= '-9007199254740991'::bigint) AND (draft_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT report_definition_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint))),
+    CONSTRAINT report_definition_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.report_definition_revision (
+    report_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    selection jsonb NOT NULL,
+    framework_revision bigint NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    created_by uuid NOT NULL,
+    question_bindings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    metric_versions jsonb,
+    CONSTRAINT report_definition_revision_framework_revision_js_safe CHECK (((framework_revision >= '-9007199254740991'::bigint) AND (framework_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT report_definition_revision_question_bindings_is_an_object CHECK ((jsonb_typeof(question_bindings) = 'object'::text)),
+    CONSTRAINT report_definition_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.report_definition_revision.metric_versions IS 'Each selected metric''s definition version when the revision was saved; null on revisions saved before it was kept.';
+
+CREATE TABLE public.report_edition (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    execution_id uuid NOT NULL,
+    report_id uuid NOT NULL,
+    report_revision bigint NOT NULL,
+    publication_audience text NOT NULL,
+    publication_team_id uuid,
+    owner_id uuid NOT NULL,
+    captured_at timestamp with time zone NOT NULL,
+    intended_due_at timestamp with time zone NOT NULL,
+    manifest jsonb NOT NULL,
+    redacted_at timestamp with time zone,
+    expired_at timestamp with time zone,
+    CONSTRAINT report_edition_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.report_edition_contribution (
+    edition_id uuid NOT NULL,
+    metric text NOT NULL,
+    context_id text NOT NULL,
+    contribution_key text NOT NULL,
+    group_key text NOT NULL,
+    source_type text NOT NULL,
+    source_id uuid NOT NULL,
+    owner_id uuid,
+    fact jsonb NOT NULL
+);
+
+CREATE TABLE public.report_edition_question (
+    edition_id uuid NOT NULL,
+    card_id text NOT NULL,
+    entity text NOT NULL,
+    answer jsonb,
+    reason text,
+    CONSTRAINT report_edition_question_kept_or_reasoned CHECK (((answer IS NULL) <> (reason IS NULL))),
+    CONSTRAINT report_edition_question_reason_known CHECK ((reason = ANY (ARRAY['retention_unconfigured'::text, 'too_many_records'::text, 'unanswered'::text, 'counts_other_records'::text])))
+);
+
+CREATE TABLE public.report_edition_question_source (
+    edition_id uuid NOT NULL,
+    card_id text NOT NULL,
+    row_index integer NOT NULL,
+    source_type text NOT NULL,
+    source_id uuid NOT NULL
+);
+
+CREATE TABLE public.report_execution (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    report_id uuid NOT NULL,
+    report_revision bigint NOT NULL,
+    schedule_id uuid,
+    schedule_version bigint,
+    owner_id uuid NOT NULL,
+    intended_due_at timestamp with time zone NOT NULL,
+    interval_start timestamp with time zone NOT NULL,
+    interval_end timestamp with time zone NOT NULL,
+    status text NOT NULL,
+    attempt bigint DEFAULT 0 NOT NULL,
+    fence bigint DEFAULT 0 NOT NULL,
+    lease_until timestamp with time zone,
+    retry_at timestamp with time zone,
+    execution_key text NOT NULL,
+    request_hash text NOT NULL,
+    reason text,
+    edition_id uuid,
+    retry_base_attempt bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT report_execution_attempt_js_safe CHECK (((attempt >= '-9007199254740991'::bigint) AND (attempt <= '9007199254740991'::bigint))),
+    CONSTRAINT report_execution_check CHECK (((retry_base_attempt >= 0) AND (retry_base_attempt <= attempt))),
+    CONSTRAINT report_execution_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT report_execution_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'running'::text, 'succeeded'::text, 'partial'::text, 'failed'::text, 'suspended'::text, 'skipped'::text])))
+);
+
+CREATE TABLE public.report_projection_fence (
+    singleton boolean DEFAULT true NOT NULL,
+    generation bigint DEFAULT 0 NOT NULL,
+    CONSTRAINT report_projection_fence_singleton_check CHECK (singleton)
+);
+
+CREATE TABLE public.report_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    query jsonb NOT NULL,
+    result_columns jsonb NOT NULL,
+    result_rows jsonb NOT NULL,
+    withheld boolean NOT NULL,
+    total_safe boolean NOT NULL,
+    schema_version text NOT NULL,
+    asked_by uuid NOT NULL,
+    group_floor integer NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT report_run_floor_is_not_negative CHECK ((group_floor >= 0)),
+    CONSTRAINT report_run_result_columns_is_a_list CHECK ((jsonb_typeof(result_columns) = 'array'::text)),
+    CONSTRAINT report_run_result_rows_is_a_list CHECK ((jsonb_typeof(result_rows) = 'array'::text))
+);
+
+CREATE TABLE public.report_schedule (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    report_id uuid NOT NULL,
+    report_revision bigint NOT NULL,
+    owner_id uuid NOT NULL,
+    definition jsonb NOT NULL,
+    timezone text NOT NULL,
+    enabled boolean NOT NULL,
+    version bigint NOT NULL,
+    next_due_at timestamp with time zone NOT NULL,
+    last_status text,
+    CONSTRAINT report_schedule_report_revision_js_safe CHECK (((report_revision >= '-9007199254740991'::bigint) AND (report_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT report_schedule_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.reporting_framework (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    singleton boolean DEFAULT true NOT NULL,
+    revision bigint NOT NULL,
+    version bigint NOT NULL,
+    CONSTRAINT reporting_framework_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint))),
+    CONSTRAINT reporting_framework_singleton_check CHECK (singleton),
+    CONSTRAINT reporting_framework_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.reporting_framework_revision (
+    revision bigint NOT NULL,
+    definition jsonb NOT NULL,
+    effective_at timestamp with time zone NOT NULL,
+    created_by uuid NOT NULL,
+    CONSTRAINT reporting_framework_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.restore_drill (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    finished_at timestamp with time zone,
+    restored_to timestamp with time zone NOT NULL,
+    outcome text DEFAULT 'running'::text NOT NULL,
+    operator text NOT NULL,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT restore_drill_finishes_after_it_starts CHECK (((finished_at IS NULL) OR (finished_at >= started_at))),
+    CONSTRAINT restore_drill_outcome_check CHECK ((outcome = ANY (ARRAY['running'::text, 'passed'::text, 'failed'::text]))),
+    CONSTRAINT restore_drill_outcome_follows_completion CHECK (((finished_at IS NULL) = (outcome = 'running'::text))),
+    CONSTRAINT restore_drill_restores_to_the_past CHECK ((restored_to <= started_at))
+);
+
+CREATE TABLE public.retention_policy (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    object_type text NOT NULL,
+    category text,
+    retain_days integer NOT NULL,
+    action text NOT NULL,
+    lawful_basis text,
+    enabled boolean DEFAULT true NOT NULL,
+    CONSTRAINT retention_policy_action_check CHECK ((action = ANY (ARRAY['archive'::text, 'anonymize'::text, 'erase'::text]))),
+    CONSTRAINT retention_policy_retain_days_check CHECK (((retain_days >= 1) AND (retain_days <= 36500)))
+);
+
+CREATE TABLE public.role (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    key text NOT NULL,
+    name text NOT NULL,
+    is_system boolean DEFAULT false NOT NULL,
+    permissions jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    version bigint DEFAULT 1 NOT NULL,
+    CONSTRAINT role_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.role_assignment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    role_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    team_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.runner_job (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    agent_spec text NOT NULL,
+    trigger_ref text NOT NULL,
+    passport_id uuid,
+    due_at timestamp with time zone NOT NULL,
+    status text DEFAULT 'queued'::text NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_error text,
+    agent_run_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT runner_job_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
+);
+
+CREATE TABLE public.sales_goal_plan (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_id uuid NOT NULL,
+    year integer NOT NULL,
+    currency public.currency_code NOT NULL,
+    version bigint NOT NULL,
+    draft_revision bigint,
+    published_revision bigint,
+    withdrawn_revision bigint,
+    created_at timestamp with time zone NOT NULL,
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT sales_goal_plan_draft_revision_js_safe CHECK (((draft_revision >= 1) AND (draft_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_goal_plan_one_publication_state CHECK (((published_revision IS NULL) OR (withdrawn_revision IS NULL))),
+    CONSTRAINT sales_goal_plan_published_revision_js_safe CHECK (((published_revision >= 1) AND (published_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_goal_plan_version_js_safe CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_goal_plan_withdrawn_revision_js_safe CHECK (((withdrawn_revision >= 1) AND (withdrawn_revision <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_goal_plan_year_check CHECK (((year >= 2000) AND (year <= 2200)))
+);
+
+CREATE TABLE public.sales_goal_plan_revision (
+    plan_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    kind text NOT NULL,
+    months jsonb NOT NULL,
+    declared_total bigint,
+    origin text NOT NULL,
+    reason text NOT NULL,
+    targets jsonb,
+    created_by uuid NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT sales_goal_plan_revision_declared_total_js_safe CHECK (((declared_total >= 0) AND (declared_total <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_goal_plan_revision_kind_check CHECK ((kind = ANY (ARRAY['draft'::text, 'published'::text, 'discarded'::text, 'withdrawn'::text]))),
+    CONSTRAINT sales_goal_plan_revision_months_shape CHECK (((jsonb_typeof(months) = 'array'::text) AND (jsonb_array_length(months) = 12))),
+    CONSTRAINT sales_goal_plan_revision_origin_check CHECK ((origin = ANY (ARRAY['manual'::text, 'ai'::text, 'adopted'::text]))),
+    CONSTRAINT sales_goal_plan_revision_reason_bounded CHECK (((length(btrim(reason)) >= 1) AND (length(btrim(reason)) <= 1000))),
+    CONSTRAINT sales_goal_plan_revision_revision_js_safe CHECK (((revision >= 1) AND (revision <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_goal_plan_revision_targets_shape CHECK (((kind = 'published'::text) = (targets IS NOT NULL)))
+);
+
+CREATE TABLE public.sales_initiative (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    description text,
+    owner_id uuid NOT NULL,
+    objective_metric text NOT NULL,
+    target_value bigint,
+    deadline date NOT NULL,
+    status text DEFAULT 'draft'::text NOT NULL,
+    launch_at timestamp with time zone,
+    lead_rule jsonb,
+    deal_rule jsonb,
+    include_future boolean DEFAULT true NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT sales_initiative_live_has_launch CHECK (((status = 'draft'::text) OR (launch_at IS NOT NULL))),
+    CONSTRAINT sales_initiative_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'live'::text, 'ended'::text]))),
+    CONSTRAINT sales_initiative_target_value_check CHECK (((target_value IS NULL) OR (target_value > 0))),
+    CONSTRAINT sales_initiative_target_value_exact CHECK (((target_value >= '-9007199254740991'::bigint) AND (target_value <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_initiative_version_exact CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.sales_initiative_baseline (
+    initiative_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    amount_minor_base bigint,
+    status text NOT NULL,
+    stage_id uuid,
+    captured_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT sales_initiative_baseline_amount_exact CHECK (((amount_minor_base >= '-9007199254740991'::bigint) AND (amount_minor_base <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.sales_initiative_member (
+    initiative_id uuid NOT NULL,
+    record_type text NOT NULL,
+    record_id uuid NOT NULL,
+    reason text NOT NULL,
+    entered_at timestamp with time zone DEFAULT now() NOT NULL,
+    captured_by text NOT NULL,
+    CONSTRAINT sales_initiative_member_reason_check CHECK ((reason = ANY (ARRAY['picked'::text, 'excluded'::text]))),
+    CONSTRAINT sales_initiative_member_type_check CHECK ((record_type = ANY (ARRAY['lead'::text, 'deal'::text])))
+);
+
+CREATE TABLE public.sales_initiative_revision (
+    initiative_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    definition jsonb NOT NULL,
+    reason text,
+    created_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT sales_initiative_revision_exact CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.sales_target (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    metric text NOT NULL,
+    scope_kind text NOT NULL,
+    scope_id uuid,
+    pipeline_id uuid,
+    period_kind text NOT NULL,
+    period_start timestamp with time zone NOT NULL,
+    period_end timestamp with time zone NOT NULL,
+    unit text NOT NULL,
+    revision bigint NOT NULL,
+    version bigint NOT NULL,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT sales_target_check CHECK ((period_end > period_start)),
+    CONSTRAINT sales_target_check1 CHECK (((scope_kind = 'workspace'::text) = (scope_id IS NULL))),
+    CONSTRAINT sales_target_period_kind_check CHECK ((period_kind = ANY (ARRAY['month'::text, 'fiscal_quarter'::text]))),
+    CONSTRAINT sales_target_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint))),
+    CONSTRAINT sales_target_scope_kind_check CHECK ((scope_kind = ANY (ARRAY['owner'::text, 'team'::text, 'workspace'::text]))),
+    CONSTRAINT sales_target_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.sales_target_revision (
+    target_id uuid NOT NULL,
+    revision bigint NOT NULL,
+    definition jsonb NOT NULL,
+    effective_at timestamp with time zone NOT NULL,
+    created_by uuid NOT NULL,
+    CONSTRAINT sales_target_revision_revision_js_safe CHECK (((revision >= '-9007199254740991'::bigint) AND (revision <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.saved_view (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_id uuid NOT NULL,
+    shared_scope text DEFAULT 'private'::text NOT NULL,
+    resource text NOT NULL,
+    name text NOT NULL,
+    query jsonb NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT saved_view_resource_check CHECK ((resource = ANY (ARRAY['contacts'::text, 'companies'::text, 'deals'::text, 'activities'::text, 'leads'::text, 'partners'::text, 'projects'::text]))),
+    CONSTRAINT saved_view_shared_scope_check CHECK ((shared_scope = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text]))),
+    CONSTRAINT saved_view_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.scheduled_send (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    status text DEFAULT 'scheduled'::text NOT NULL,
+    scheduled_at timestamp with time zone NOT NULL,
+    scheduled_tz text NOT NULL,
+    origin_kind text NOT NULL,
+    anchor_activity_id uuid,
+    origin_links jsonb,
+    payload jsonb NOT NULL,
+    payload_version integer DEFAULT 1 NOT NULL,
+    scheduled_by uuid NOT NULL,
+    principal_kind text NOT NULL,
+    activity_id uuid,
+    delivery_id uuid,
+    held_reason text,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    agent_actor_id text,
+    agent_passport_id uuid,
+    agent_on_behalf_of uuid,
+    also_links jsonb,
+    CONSTRAINT scheduled_send_agent_provenance_shape CHECK ((((principal_kind = 'agent'::text) AND (agent_actor_id IS NOT NULL) AND (length(btrim(agent_actor_id)) > 0)) OR ((principal_kind <> 'agent'::text) AND (agent_actor_id IS NULL) AND (agent_passport_id IS NULL) AND (agent_on_behalf_of IS NULL)))),
+    CONSTRAINT scheduled_send_also_links_shape CHECK (((also_links IS NULL) OR ((origin_kind = 'reply'::text) AND (jsonb_typeof(also_links) = 'array'::text)))),
+    CONSTRAINT scheduled_send_held_shape CHECK ((((status = 'held'::text) AND (held_reason IS NOT NULL)) OR ((status <> 'held'::text) AND (held_reason IS NULL)))),
+    CONSTRAINT scheduled_send_origin_kind CHECK ((origin_kind = ANY (ARRAY['reply'::text, 'account'::text]))),
+    CONSTRAINT scheduled_send_origin_links_shape CHECK (((origin_links IS NULL) OR (jsonb_typeof(origin_links) = 'array'::text))),
+    CONSTRAINT scheduled_send_origin_shape CHECK ((((origin_kind = 'reply'::text) AND (anchor_activity_id IS NOT NULL) AND (origin_links IS NULL)) OR ((origin_kind = 'account'::text) AND (anchor_activity_id IS NULL) AND (origin_links IS NOT NULL)))),
+    CONSTRAINT scheduled_send_principal_kind CHECK ((principal_kind = ANY (ARRAY['human'::text, 'agent'::text]))),
+    CONSTRAINT scheduled_send_released_shape CHECK ((((status = 'released'::text) AND (activity_id IS NOT NULL) AND (delivery_id IS NOT NULL)) OR ((status <> 'released'::text) AND (activity_id IS NULL) AND (delivery_id IS NULL)))),
+    CONSTRAINT scheduled_send_status CHECK ((status = ANY (ARRAY['scheduled'::text, 'released'::text, 'cancelled'::text, 'held'::text]))),
+    CONSTRAINT scheduled_send_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.sdr_handoff (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    lead_id uuid,
+    contact_id uuid,
+    company_id uuid,
+    submitted_by uuid NOT NULL,
+    assigned_to uuid,
+    status text DEFAULT 'submitted'::text NOT NULL,
+    reason_id uuid,
+    reason_applies_to text,
+    note text,
+    deal_id uuid,
+    submitted_at timestamp with time zone DEFAULT now() NOT NULL,
+    decided_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    CONSTRAINT sdr_handoff_deal_when_accepted CHECK (((status = 'accepted'::text) = (deal_id IS NOT NULL))),
+    CONSTRAINT sdr_handoff_decided_stamped CHECK (((status = ANY (ARRAY['accepted'::text, 'rejected'::text])) = (decided_at IS NOT NULL))),
+    CONSTRAINT sdr_handoff_one_subject CHECK (((lead_id IS NULL) <> (contact_id IS NULL))),
+    CONSTRAINT sdr_handoff_reason_matches_status CHECK (((reason_applies_to IS NULL) OR (reason_applies_to = status))),
+    CONSTRAINT sdr_handoff_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL))),
+    CONSTRAINT sdr_handoff_reason_when_refused CHECK (((status = ANY (ARRAY['rejected'::text, 'recycled'::text])) = (reason_id IS NOT NULL))),
+    CONSTRAINT sdr_handoff_status CHECK ((status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text]))),
+    CONSTRAINT sdr_handoff_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON TABLE public.sdr_handoff IS 'One SDR-to-AE handoff of a prospect, carrying its current state. Not the delivery briefing the agent surface calls a handoff.';
+
+COMMENT ON COLUMN public.sdr_handoff.deal_id IS 'The deal an acceptance created or linked. The anchor held-meeting conversion reads, so credit rests on the acceptance rather than on a deal that merely shares a company.';
+
+CREATE TABLE public.sdr_handoff_event (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    handoff_id uuid NOT NULL,
+    to_status text NOT NULL,
+    reason_id uuid,
+    reason_applies_to text,
+    note text,
+    actor text NOT NULL,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    deal_id_at_change uuid,
+    submitter_id_at_change uuid,
+    CONSTRAINT sdr_handoff_event_reason_matches CHECK (((reason_applies_to IS NULL) OR (reason_applies_to = to_status))),
+    CONSTRAINT sdr_handoff_event_reason_pair CHECK (((reason_id IS NULL) = (reason_applies_to IS NULL))),
+    CONSTRAINT sdr_handoff_event_status CHECK ((to_status = ANY (ARRAY['submitted'::text, 'accepted'::text, 'rejected'::text, 'recycled'::text])))
+);
+
+COMMENT ON TABLE public.sdr_handoff_event IS 'Append-only record of how a handoff reached its current state, including every rejection and recycle along the way.';
+
+CREATE TABLE public.sdr_handoff_reason (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    label text NOT NULL,
+    applies_to text NOT NULL,
+    sort_order integer DEFAULT 0 NOT NULL,
+    active boolean DEFAULT true NOT NULL,
+    system boolean DEFAULT false NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT sdr_handoff_reason_applies_to CHECK ((applies_to = ANY (ARRAY['rejected'::text, 'recycled'::text]))),
+    CONSTRAINT sdr_handoff_reason_label_present CHECK ((length(btrim(label)) > 0)),
+    CONSTRAINT sdr_handoff_reason_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.session (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    token_hash text NOT NULL,
+    idle_expires_at timestamp with time zone NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    last_seen_at timestamp with time zone DEFAULT now() NOT NULL,
+    user_agent text,
+    ip inet,
+    revoked_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    provider_authenticated boolean DEFAULT false NOT NULL,
+    CONSTRAINT session_expires_after_creation CHECK ((expires_at > created_at))
+);
+
+CREATE TABLE public.setting (
+    key text NOT NULL,
+    value jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT setting_key_check CHECK ((key ~ '^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$'::text))
+);
+
+COMMENT ON TABLE public.setting IS 'Installation settings, one row per setting (ADR-0090/A135). Non-tenant by design. The catalog is platform/settings; an unregistered key here is a fitness-test failure.';
+
+CREATE TABLE public.setup_token (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    token_hash text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    consumed_at timestamp with time zone
+);
+
+CREATE TABLE public.signal (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    kind text NOT NULL,
+    source_channel text DEFAULT 'derived'::text NOT NULL,
+    raw_ref text,
+    entity_type text,
+    entity_id uuid,
+    resolution_state text DEFAULT 'resolved'::text NOT NULL,
+    resolution_confidence numeric(4,3),
+    resolved_company_id uuid,
+    resolved_contact_id uuid,
+    severity text DEFAULT 'info'::text NOT NULL,
+    summary text NOT NULL,
+    evidence jsonb DEFAULT '[]'::jsonb NOT NULL,
+    status text DEFAULT 'open'::text NOT NULL,
+    detected_at timestamp with time zone DEFAULT now() NOT NULL,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    fingerprint text,
+    visibility text DEFAULT 'workspace'::text NOT NULL,
+    owner_id uuid,
+    entity_unkeyed boolean DEFAULT false NOT NULL,
+    entity_deal_id uuid,
+    entity_company_id uuid,
+    entity_contact_id uuid,
+    entity_project_id uuid,
+    summary_params jsonb,
+    CONSTRAINT signal_entity_company_id_bound CHECK ((entity_unkeyed OR (NOT (entity_company_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'company'::text) THEN entity_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT signal_entity_contact_id_bound CHECK ((entity_unkeyed OR (NOT (entity_contact_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'contact'::text) THEN entity_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT signal_entity_deal_id_bound CHECK ((entity_unkeyed OR (NOT (entity_deal_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'deal'::text) THEN entity_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT signal_entity_pair CHECK (((entity_type IS NULL) = (entity_id IS NULL))),
+    CONSTRAINT signal_entity_project_id_bound CHECK ((entity_unkeyed OR (NOT (entity_project_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'project'::text) THEN entity_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT signal_entity_shape CHECK ((entity_unkeyed OR (entity_id IS NULL) OR (num_nonnulls(entity_deal_id, entity_company_id, entity_contact_id, entity_project_id) = 1))),
+    CONSTRAINT signal_entity_type_check CHECK (((entity_type IS NULL) OR (entity_type = ANY (ARRAY['deal'::text, 'company'::text, 'contact'::text, 'project'::text])))),
+    CONSTRAINT signal_kind_check CHECK ((kind = ANY (ARRAY['stalled_deal'::text, 'champion_left'::text, 'reengagement'::text, 'buying_intent'::text, 'risk'::text, 'other'::text, 'contract_ended'::text, 'new_opportunity'::text, 'commitment_made'::text, 'ghosted_thread'::text, 'project_gone_quiet'::text, 'funding'::text, 'leadership_change'::text, 'expansion'::text, 'product_launch'::text, 'technical_change'::text]))),
+    CONSTRAINT signal_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL))),
+    CONSTRAINT signal_resolution_confidence_check CHECK (((resolution_confidence IS NULL) OR ((resolution_confidence >= (0)::numeric) AND (resolution_confidence <= (1)::numeric)))),
+    CONSTRAINT signal_resolution_state_check CHECK ((resolution_state = ANY (ARRAY['resolved'::text, 'low_confidence'::text, 'unresolved'::text, 'dropped'::text]))),
+    CONSTRAINT signal_resolved_has_entity CHECK (((resolution_state <> 'resolved'::text) OR (entity_type IS NOT NULL))),
+    CONSTRAINT signal_severity_check CHECK ((severity = ANY (ARRAY['info'::text, 'warn'::text, 'urgent'::text]))),
+    CONSTRAINT signal_source_channel_check CHECK ((source_channel = ANY (ARRAY['derived'::text, 'inbound'::text, 'web'::text, 'social'::text, 'deal_room_engagement'::text]))),
+    CONSTRAINT signal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'acknowledged'::text, 'resolved'::text, 'dismissed'::text]))),
+    CONSTRAINT signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT signal_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
+);
+
+CREATE TABLE public.signal_resolution (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    signal_id uuid NOT NULL,
+    matched_on text,
+    matched_company_id uuid,
+    match_confidence numeric(4,3),
+    match_detail jsonb,
+    outcome text,
+    note text,
+    resolved_by uuid,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT signal_resolution_match_confidence_check CHECK (((match_confidence IS NULL) OR ((match_confidence >= (0)::numeric) AND (match_confidence <= (1)::numeric)))),
+    CONSTRAINT signal_resolution_matched_on_check CHECK (((matched_on IS NULL) OR (matched_on = ANY (ARRAY['domain'::text, 'name'::text, 'prior_interaction'::text, 'manual'::text, 'none'::text])))),
+    CONSTRAINT signal_resolution_outcome_check CHECK (((outcome IS NULL) OR (outcome = ANY (ARRAY['acknowledged'::text, 'resolved'::text, 'dismissed'::text]))))
+);
+
+CREATE TABLE public.signal_thread_scan (
+    thread_key text NOT NULL,
+    last_activity_at timestamp with time zone NOT NULL,
+    scanned_at timestamp with time zone DEFAULT now() NOT NULL,
+    message_count integer DEFAULT 0 NOT NULL,
+    refusals integer DEFAULT 0 NOT NULL,
+    refused_activity_at timestamp with time zone,
+    refused_message_count integer,
+    resolved_company_id uuid,
+    scanned_from timestamp with time zone,
+    scanned_from_id uuid,
+    CONSTRAINT signal_thread_scan_scanned_from_shape CHECK (((scanned_from IS NULL) = (scanned_from_id IS NULL)))
+);
+
+CREATE TABLE public.site_read (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    company_id uuid,
+    seed_url text NOT NULL,
+    status text DEFAULT 'queued'::text NOT NULL,
+    pages jsonb DEFAULT '[]'::jsonb NOT NULL,
+    skipped jsonb DEFAULT '[]'::jsonb NOT NULL,
+    stopped_reason text,
+    fact_count integer DEFAULT 0 NOT NULL,
+    proposal_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    requested_by text NOT NULL,
+    started_at timestamp with time zone,
+    finished_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    phase text,
+    pages_read integer DEFAULT 0 NOT NULL,
+    target_kind text DEFAULT 'company'::text NOT NULL,
+    profile_fields jsonb DEFAULT '[]'::jsonb NOT NULL,
+    facts jsonb DEFAULT '[]'::jsonb NOT NULL,
+    contacts jsonb DEFAULT '[]'::jsonb NOT NULL,
+    warnings jsonb DEFAULT '[]'::jsonb NOT NULL,
+    draft_version integer DEFAULT 1 NOT NULL,
+    proposal_hash text DEFAULT ''::text NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    confirmed_at timestamp with time zone,
+    status_code text,
+    status_detail text,
+    next_attempt_at timestamp with time zone,
+    first_grounded_at timestamp with time zone,
+    legal_entities jsonb DEFAULT '[]'::jsonb NOT NULL,
+    logo_object_key text,
+    logo_origin text,
+    attempt integer DEFAULT 1 NOT NULL,
+    attempt_at timestamp with time zone DEFAULT now() NOT NULL,
+    logo_icon_object_key text,
+    logo_icon_origin text,
+    conversation_offer jsonb,
+    CONSTRAINT site_read_attempt_check CHECK ((attempt >= 1)),
+    CONSTRAINT site_read_draft_version_check CHECK ((draft_version > 0)),
+    CONSTRAINT site_read_outcome_shape CHECK ((((status = 'deferred'::text) AND (status_code = 'budget_deferred'::text) AND (status_detail IS NOT NULL) AND (next_attempt_at IS NOT NULL)) OR ((status = 'failed'::text) AND (status_code IS NOT NULL) AND (status_code = ANY (ARRAY['bot_blocked'::text, 'http_client_error'::text, 'http_server_error'::text, 'timeout'::text, 'dns'::text, 'tls'::text, 'robots_disallowed'::text, 'unreadable'::text, 'internal'::text, 'stale_reclaim'::text])) AND (status_detail IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'partial'::text, 'cancelled'::text])) AND (status_code IS NULL) AND (status_detail IS NULL) AND (next_attempt_at IS NULL)))),
+    CONSTRAINT site_read_phase_check CHECK ((phase = ANY (ARRAY['crawling'::text, 'extracting'::text]))),
+    CONSTRAINT site_read_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text, 'done'::text, 'partial'::text, 'failed'::text, 'cancelled'::text]))),
+    CONSTRAINT site_read_stopped_reason_check CHECK (((stopped_reason IS NULL) OR (stopped_reason = ANY (ARRAY['budget'::text, 'page_cap'::text, 'byte_cap'::text, 'deadline'::text])))),
+    CONSTRAINT site_read_target_kind_check CHECK ((target_kind = ANY (ARRAY['onboarding'::text, 'company'::text, 'domain_triage'::text]))),
+    CONSTRAINT site_read_target_shape CHECK ((((target_kind = 'onboarding'::text) AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL)))) OR ((target_kind = 'company'::text) AND (company_id IS NOT NULL)) OR ((target_kind = 'domain_triage'::text) AND ((company_id IS NULL) OR ((company_id IS NOT NULL) AND (confirmed_at IS NOT NULL))))))
+);
+
+CREATE TABLE public.stage (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    pipeline_id uuid NOT NULL,
+    name text NOT NULL,
+    "position" integer NOT NULL,
+    semantic text DEFAULT 'open'::text NOT NULL,
+    win_probability smallint DEFAULT 0 NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT stage_semantic_check CHECK ((semantic = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text]))),
+    CONSTRAINT stage_terminal_prob CHECK ((((semantic = 'won'::text) AND (win_probability = 100)) OR ((semantic = 'lost'::text) AND (win_probability = 0)) OR (semantic = 'open'::text))),
+    CONSTRAINT stage_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT stage_win_probability_check CHECK (((win_probability >= 0) AND (win_probability <= 100)))
+);
+
+CREATE TABLE public.stage_exit_criterion (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    stage_id uuid NOT NULL,
+    key text NOT NULL,
+    label text NOT NULL,
+    kind text NOT NULL,
+    required boolean DEFAULT true NOT NULL,
+    hint text,
+    "position" integer NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT stage_exit_criterion_hint_len CHECK (((hint IS NULL) OR (length(hint) <= 500))),
+    CONSTRAINT stage_exit_criterion_key_shape CHECK ((key ~ '^[a-z][a-z0-9_]{0,63}$'::text)),
+    CONSTRAINT stage_exit_criterion_kind_check CHECK ((kind = ANY (ARRAY['buyer_confirmed'::text, 'event_held'::text, 'document_signed'::text, 'role_identified'::text, 'terms_accepted'::text, 'custom'::text, 'legal_reviewed'::text]))),
+    CONSTRAINT stage_exit_criterion_label_len CHECK (((length(label) >= 1) AND (length(label) <= 120))),
+    CONSTRAINT stage_exit_criterion_position_check CHECK (("position" >= 0)),
+    CONSTRAINT stage_exit_criterion_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.stage_exit_criterion.key IS 'The stable machine name an evidence extractor cites. Unique among a stage''s live criteria; freed for reuse by archiving.';
+
+COMMENT ON COLUMN public.stage_exit_criterion.kind IS 'What KIND of fact settles this criterion. It decides which evidence sources may satisfy it — a buyer milestone is never settled by the seller''s own mail.';
+
+COMMENT ON COLUMN public.stage_exit_criterion.required IS 'Whether a deal must meet this criterion to leave the stage. An optional criterion is shown and gathered but never blocks.';
+
+CREATE TABLE public.stage_progression_outcome (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    approval_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    pipeline_id uuid NOT NULL,
+    from_stage_id uuid NOT NULL,
+    to_stage_id uuid NOT NULL,
+    evidence_kinds text[] DEFAULT '{}'::text[] NOT NULL,
+    outcome text NOT NULL,
+    rejection_reason text,
+    evidence_corrected boolean DEFAULT false NOT NULL,
+    decided_by_system boolean DEFAULT false NOT NULL,
+    decided_at timestamp with time zone DEFAULT now() NOT NULL,
+    reversed_at timestamp with time zone,
+    reversed_by uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    undo_window_hours integer,
+    accepted_at timestamp with time zone,
+    CONSTRAINT stage_progression_outcome_kind CHECK ((outcome = ANY (ARRAY['proposed'::text, 'approved_clean'::text, 'approved_edited'::text, 'rejected'::text, 'auto_applied'::text, 'reversed'::text, 'expired'::text, 'superseded'::text]))),
+    CONSTRAINT stage_progression_outcome_reason_is_a_rejections CHECK (((rejection_reason IS NULL) OR (outcome = 'rejected'::text))),
+    CONSTRAINT stage_progression_outcome_reversal_is_timed CHECK (((reversed_by IS NULL) OR (reversed_at IS NOT NULL))),
+    CONSTRAINT stage_progression_outcome_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.stage_progression_outcome.undo_window_hours IS 'The undo window in force when this move was applied, frozen so a later policy edit cannot extend or close it. NULL on rows written before this column existed, which read the rule live as they always did.';
+
+CREATE TABLE public.stage_progression_policy (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    pipeline_id uuid NOT NULL,
+    from_stage_id uuid NOT NULL,
+    to_stage_id uuid NOT NULL,
+    mode text DEFAULT 'propose'::text NOT NULL,
+    clean_acceptance_threshold numeric(4,3) DEFAULT 0.950 NOT NULL,
+    correction_reversal_threshold numeric(4,3) DEFAULT 0.010 NOT NULL,
+    min_reviewed integer DEFAULT 200 NOT NULL,
+    min_observation_days integer DEFAULT 28 NOT NULL,
+    window_days integer DEFAULT 30 NOT NULL,
+    undo_window_hours integer DEFAULT 72 NOT NULL,
+    enabled_by uuid,
+    enabled_at timestamp with time zone,
+    suspended_at timestamp with time zone,
+    suspended_reason text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    CONSTRAINT stage_progression_policy_enabling_is_timed CHECK (((enabled_by IS NULL) OR (enabled_at IS NOT NULL))),
+    CONSTRAINT stage_progression_policy_mode CHECK ((mode = ANY (ARRAY['propose'::text, 'auto'::text]))),
+    CONSTRAINT stage_progression_policy_suspension_whole CHECK (((suspended_at IS NULL) = (suspended_reason IS NULL))),
+    CONSTRAINT stage_progression_policy_thresholds_are_shares CHECK (((clean_acceptance_threshold >= (0)::numeric) AND (clean_acceptance_threshold <= (1)::numeric) AND (correction_reversal_threshold >= (0)::numeric) AND (correction_reversal_threshold <= (1)::numeric))),
+    CONSTRAINT stage_progression_policy_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT stage_progression_policy_volume_is_a_bar CHECK (((min_reviewed > 0) AND (min_observation_days > 0) AND (window_days > 0) AND (undo_window_hours > 0)))
+);
+
+COMMENT ON TABLE public.stage_progression_policy IS 'Per-transition governance for automatic stage moves. mode is what an admin ASKED for; the thresholds are what the apply path re-checks every time.';
+
+COMMENT ON COLUMN public.stage_progression_policy.suspended_at IS 'Set by the product when the measured record goes bad, never by an admin. Kept apart from mode so an admin''s setting survives a suspension.';
+
+CREATE TABLE public.stored_object_intent (
+    storage_key text NOT NULL,
+    recorded_at timestamp with time zone DEFAULT now() NOT NULL,
+    kind text NOT NULL,
+    reaping_since timestamp with time zone,
+    reaped_at timestamp with time zone
+);
+
+CREATE TABLE public.suggestion_dismissal (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    company_id uuid NOT NULL,
+    fingerprint text NOT NULL,
+    CONSTRAINT suggestion_dismissal_fingerprint_shape CHECK ((fingerprint ~ '^[0-9a-f]{64}$'::text))
+);
+
+CREATE TABLE public.system_log (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    actor_type text NOT NULL,
+    actor_id text NOT NULL,
+    passport_id uuid,
+    on_behalf_of uuid,
+    action text NOT NULL,
+    detail jsonb,
+    occurred_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT system_log_actor_type_check CHECK ((actor_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text, 'buyer'::text])))
+);
+
+CREATE TABLE public.tag (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    color text,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    description text,
+    search_tsv tsvector GENERATED ALWAYS AS ((setweight(to_tsvector('simple'::regconfig, public.f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, public.f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))) STORED,
+    suggestible boolean DEFAULT false NOT NULL,
+    CONSTRAINT tag_color_check CHECK (((color IS NULL) OR (color = ANY (ARRAY['teal'::text, 'amber'::text, 'rose'::text, 'slate'::text, 'sky'::text, 'violet'::text, 'lime'::text, 'orange'::text])))),
+    CONSTRAINT tag_suggestible_is_described CHECK (((NOT suggestible) OR ((description IS NOT NULL) AND (btrim(description) <> ''::text)))),
+    CONSTRAINT tag_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.tag_interest_read (
+    activity_id uuid NOT NULL,
+    vocabulary_digest text NOT NULL,
+    content_digest text NOT NULL,
+    tag_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    read_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.tag_suggestion (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    tag_id uuid NOT NULL,
+    contact_id uuid,
+    company_id uuid,
+    state text DEFAULT 'open'::text NOT NULL,
+    evidence_count integer NOT NULL,
+    evidence_through timestamp with time zone NOT NULL,
+    decided_by uuid,
+    decided_at timestamp with time zone,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tag_suggestion_decided_shape CHECK (((state = 'open'::text) = (decided_at IS NULL))),
+    CONSTRAINT tag_suggestion_evidence_count_check CHECK ((evidence_count > 0)),
+    CONSTRAINT tag_suggestion_one_record CHECK (((contact_id IS NULL) <> (company_id IS NULL))),
+    CONSTRAINT tag_suggestion_state_check CHECK ((state = ANY (ARRAY['open'::text, 'accepted'::text, 'dismissed'::text, 'superseded'::text])))
+);
+
+CREATE TABLE public.tag_suggestion_evidence (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    suggestion_id uuid NOT NULL,
+    activity_id uuid NOT NULL,
+    occurred_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.taggable (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    tag_id uuid NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    assigned_by uuid,
+    assigned_by_kind text,
+    assigned_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT taggable_assigned_by_kind_check CHECK (((assigned_by_kind IS NULL) OR (assigned_by_kind = ANY (ARRAY['human'::text, 'agent'::text, 'import'::text])))),
+    CONSTRAINT taggable_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+);
+
+CREATE TABLE public.tax_rate (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    country text NOT NULL,
+    category text NOT NULL,
+    rate numeric(5,2) NOT NULL,
+    valid_from date NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT tax_rate_category_check CHECK ((category = ANY (ARRAY['standard'::text, 'reduced'::text]))),
+    CONSTRAINT tax_rate_country_shape CHECK ((country ~ '^[a-z]{2}$'::text)),
+    CONSTRAINT tax_rate_rate_range CHECK (((rate >= (0)::numeric) AND (rate < (100)::numeric)))
+);
+
+CREATE TABLE public.team (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    parent_team_id uuid,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone
+);
+
+CREATE TABLE public.team_membership (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.team_weekly_review (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_id uuid NOT NULL,
+    local_week_start date NOT NULL,
+    team_name text NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    as_of timestamp with time zone NOT NULL,
+    reps_counted integer DEFAULT 0 NOT NULL,
+    deals_won integer DEFAULT 0 NOT NULL,
+    deals_lost integer DEFAULT 0 NOT NULL,
+    leads_routed integer DEFAULT 0 NOT NULL,
+    leads_answered_in_target integer DEFAULT 0 NOT NULL,
+    leads_breached integer DEFAULT 0 NOT NULL,
+    meetings_held integer DEFAULT 0 NOT NULL,
+    meetings_with_next_step integer DEFAULT 0 NOT NULL,
+    commitments_due integer DEFAULT 0 NOT NULL,
+    commitments_kept integer DEFAULT 0 NOT NULL,
+    pipeline_created_minor bigint,
+    pipeline_won_minor bigint,
+    pipeline_lost_minor bigint,
+    base_currency public.currency_code,
+    reps_unread integer DEFAULT 0 NOT NULL,
+    deals_moved integer DEFAULT 0 NOT NULL,
+    numeric_summary jsonb,
+    proposals_accepted integer,
+    proposals_rejected integer,
+    auto_change_reversals integer,
+    summary text,
+    summary_language text,
+    leads_withheld boolean DEFAULT false NOT NULL,
+    CONSTRAINT team_weekly_review_counts_are_tallies CHECK (((reps_counted >= 0) AND (reps_unread >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (deals_moved >= 0) AND (leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0)))),
+    CONSTRAINT team_weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL)))),
+    CONSTRAINT team_weekly_review_name_present CHECK ((btrim(team_name) <> ''::text)),
+    CONSTRAINT team_weekly_review_quality_tallies CHECK ((((proposals_accepted IS NULL) OR (proposals_accepted >= 0)) AND ((proposals_rejected IS NULL) OR (proposals_rejected >= 0)) AND ((auto_change_reversals IS NULL) OR (auto_change_reversals >= 0)))),
+    CONSTRAINT team_weekly_review_subsets CHECK (((meetings_with_next_step <= meetings_held) AND (commitments_kept <= commitments_due) AND (leads_answered_in_target <= leads_routed) AND (leads_breached <= leads_routed)))
+);
+
+CREATE TABLE public.team_weekly_review_coverage (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_weekly_review_id uuid NOT NULL,
+    period_kind text NOT NULL,
+    basis text,
+    absent text,
+    reference_landing_minor bigint,
+    needed_open_minor bigint,
+    current_open_minor bigint,
+    remaining_to_support_minor bigint,
+    coverage_bp bigint,
+    base_currency public.currency_code NOT NULL,
+    replan_recommended boolean NOT NULL,
+    call_needs_review boolean,
+    CONSTRAINT team_weekly_review_coverage_absent_bare CHECK (((absent IS NULL) OR ((reference_landing_minor IS NULL) AND (needed_open_minor IS NULL) AND (current_open_minor IS NULL) AND (remaining_to_support_minor IS NULL) AND (coverage_bp IS NULL)))),
+    CONSTRAINT team_weekly_review_coverage_absent_check CHECK (((absent IS NULL) OR (absent = ANY (ARRAY['insufficient_basis'::text, 'insufficient_history'::text, 'not_authorized'::text])))),
+    CONSTRAINT team_weekly_review_coverage_basis_check CHECK (((basis IS NULL) OR (basis = ANY (ARRAY['manager_call'::text, 'historical_median'::text])))),
+    CONSTRAINT team_weekly_review_coverage_basis_or_absent CHECK (((basis IS NULL) <> (absent IS NULL))),
+    CONSTRAINT team_weekly_review_coverage_basis_whole CHECK (((basis IS NULL) OR ((reference_landing_minor IS NOT NULL) AND (needed_open_minor IS NOT NULL) AND (current_open_minor IS NOT NULL) AND (remaining_to_support_minor IS NOT NULL) AND (coverage_bp IS NOT NULL)))),
+    CONSTRAINT team_weekly_review_coverage_coverage_bp_js_safe CHECK (((coverage_bp >= '-9007199254740991'::bigint) AND (coverage_bp <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_coverage_currency_check CHECK (((base_currency)::bpchar ~ '^[A-Z]{3}$'::text)),
+    CONSTRAINT team_weekly_review_coverage_current_open_minor_js_safe CHECK (((current_open_minor >= '-9007199254740991'::bigint) AND (current_open_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_coverage_needed_open_minor_js_safe CHECK (((needed_open_minor >= '-9007199254740991'::bigint) AND (needed_open_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_coverage_period_kind_check CHECK ((period_kind = ANY (ARRAY['month'::text, 'quarter'::text]))),
+    CONSTRAINT team_weekly_review_coverage_reference_landing_minor_js_safe CHECK (((reference_landing_minor >= '-9007199254740991'::bigint) AND (reference_landing_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_coverage_remaining_to_support_minor_js_safe CHECK (((remaining_to_support_minor >= '-9007199254740991'::bigint) AND (remaining_to_support_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_coverage_replan_follows CHECK ((NOT (replan_recommended IS DISTINCT FROM ((basis IS NOT NULL) AND (coverage_bp IS NOT NULL) AND (coverage_bp < 8000)))))
+);
+
+CREATE TABLE public.team_weekly_review_member (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_weekly_review_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    display_name text NOT NULL,
+    measured boolean NOT NULL,
+    CONSTRAINT team_weekly_review_member_name_present CHECK ((btrim(display_name) <> ''::text))
+);
+
+CREATE TABLE public.team_weekly_review_outlook (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_weekly_review_id uuid NOT NULL,
+    period_kind text NOT NULL,
+    period_start date NOT NULL,
+    period_end date NOT NULL,
+    opening_snapshot_id uuid,
+    closing_snapshot_id uuid,
+    opening_landing_minor bigint,
+    closing_landing_minor bigint,
+    won_minor bigint,
+    commit_minor bigint,
+    best_case_minor bigint,
+    weighted_minor bigint,
+    forward_measure text,
+    base_currency public.currency_code NOT NULL,
+    CONSTRAINT team_weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text)),
+    CONSTRAINT team_weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text])))),
+    CONSTRAINT team_weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL)))),
+    CONSTRAINT team_weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_outlook_opening_whole CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL)))),
+    CONSTRAINT team_weekly_review_outlook_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text]))),
+    CONSTRAINT team_weekly_review_outlook_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT team_weekly_review_outlook_window_ordered CHECK ((period_end >= period_start)),
+    CONSTRAINT team_weekly_review_outlook_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.team_weekly_review_rep (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_weekly_review_id uuid NOT NULL,
+    user_id uuid NOT NULL,
+    display_name text NOT NULL,
+    deals_won integer DEFAULT 0 NOT NULL,
+    leads_breached integer DEFAULT 0 NOT NULL,
+    meetings_held integer DEFAULT 0 NOT NULL,
+    commitments_due integer DEFAULT 0 NOT NULL,
+    commitments_kept integer DEFAULT 0 NOT NULL,
+    help_requested integer DEFAULT 0 NOT NULL,
+    focus_kind text NOT NULL,
+    focus_label text NOT NULL,
+    CONSTRAINT team_weekly_review_rep_counts_are_tallies CHECK (((deals_won >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (commitments_due >= 0) AND (commitments_kept >= 0) AND (help_requested >= 0) AND (commitments_kept <= commitments_due))),
+    CONSTRAINT team_weekly_review_rep_focus_kind_check CHECK ((focus_kind = ANY (ARRAY['help_requested'::text, 'leads_breached'::text, 'commitments_missed'::text, 'meetings_without_next_step'::text, 'deals_at_risk'::text, 'strong_week'::text, 'quiet_week'::text, 'no_next_step_coverage'::text, 'close_dates_provisional'::text, 'forecast_downgrades'::text, 'stage_regressions'::text]))),
+    CONSTRAINT team_weekly_review_rep_focus_present CHECK ((btrim(focus_label) <> ''::text)),
+    CONSTRAINT team_weekly_review_rep_name_present CHECK ((btrim(display_name) <> ''::text))
+);
+
+CREATE TABLE public.team_weekly_review_rep_funnel (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_weekly_review_rep_id uuid NOT NULL,
+    "position" integer NOT NULL,
+    pipeline_id uuid NOT NULL,
+    pipeline_name text NOT NULL,
+    stage_id uuid NOT NULL,
+    stage_name text NOT NULL,
+    next_stage_name text,
+    rep_entered integer NOT NULL,
+    rep_converted integer NOT NULL,
+    team_entered integer NOT NULL,
+    team_converted integer NOT NULL,
+    deviation_bp integer NOT NULL,
+    CONSTRAINT team_weekly_review_rep_funnel_deviation_check CHECK (((deviation_bp >= '-10000'::integer) AND (deviation_bp <= 10000))),
+    CONSTRAINT team_weekly_review_rep_funnel_names_present CHECK (((btrim(pipeline_name) <> ''::text) AND (btrim(stage_name) <> ''::text))),
+    CONSTRAINT team_weekly_review_rep_funnel_position_check CHECK ((("position" >= 1) AND ("position" <= 3))),
+    CONSTRAINT team_weekly_review_rep_funnel_subsets CHECK (((rep_converted >= 0) AND (rep_converted <= rep_entered) AND (team_converted >= 0) AND (team_converted <= team_entered) AND (rep_entered <= team_entered) AND (rep_converted <= team_converted)))
+);
+
+CREATE TABLE public.team_weekly_review_rep_pattern (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    team_weekly_review_rep_id uuid NOT NULL,
+    "position" integer NOT NULL,
+    kind text NOT NULL,
+    label text NOT NULL,
+    CONSTRAINT team_weekly_review_rep_pattern_kind_check CHECK ((kind = ANY (ARRAY['help_requested'::text, 'leads_breached'::text, 'commitments_missed'::text, 'meetings_without_next_step'::text, 'deals_at_risk'::text, 'strong_week'::text, 'quiet_week'::text, 'no_next_step_coverage'::text, 'close_dates_provisional'::text, 'forecast_downgrades'::text, 'stage_regressions'::text]))),
+    CONSTRAINT team_weekly_review_rep_pattern_label_present CHECK ((btrim(label) <> ''::text)),
+    CONSTRAINT team_weekly_review_rep_pattern_position_check CHECK (("position" >= 0))
+);
+
+CREATE TABLE public.technical_lookup_cache (
+    query text NOT NULL,
+    record_kind text NOT NULL,
+    answer jsonb NOT NULL,
+    found boolean NOT NULL,
+    fetched_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    CONSTRAINT technical_lookup_cache_expires_after_creation CHECK ((expires_at > fetched_at)),
+    CONSTRAINT technical_lookup_cache_kind_check CHECK ((record_kind = ANY (ARRAY['mx'::text, 'txt'::text, 'dmarc'::text, 'dkim'::text, 'address'::text, 'cname'::text, 'reverse'::text, 'certlog'::text])))
+);
+
+COMMENT ON TABLE public.technical_lookup_cache IS 'Installation-global, EXPIRING cache of public technical lookups. Holds classified answers only — never a raw certificate hostname, which can carry a personal name.';
+
+CREATE TABLE public.transcript_read (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    activity_id uuid NOT NULL,
+    status text DEFAULT 'queued'::text NOT NULL,
+    status_detail text,
+    line_count integer DEFAULT 0 NOT NULL,
+    proposal_ids uuid[] DEFAULT '{}'::uuid[] NOT NULL,
+    requested_by text NOT NULL,
+    started_at timestamp with time zone,
+    finished_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    attempt integer DEFAULT 1 NOT NULL,
+    attempt_at timestamp with time zone DEFAULT now() NOT NULL,
+    outcome jsonb,
+    CONSTRAINT transcript_read_attempt_positive CHECK ((attempt >= 1)),
+    CONSTRAINT transcript_read_started_shape CHECK ((((status = 'queued'::text) AND (started_at IS NULL)) OR ((status <> 'queued'::text) AND (started_at IS NOT NULL)))),
+    CONSTRAINT transcript_read_status CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text]))),
+    CONSTRAINT transcript_read_terminal_shape CHECK ((((status = ANY (ARRAY['done'::text, 'failed'::text])) AND (finished_at IS NOT NULL)) OR ((status = ANY (ARRAY['queued'::text, 'running'::text])) AND (finished_at IS NULL))))
+);
+
+CREATE TABLE public.user_mfa (
+    user_id uuid NOT NULL,
+    secret_ref text NOT NULL,
+    confirmed_at timestamp with time zone,
+    last_used_step bigint DEFAULT 0 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.user_record_view (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    entity_type text NOT NULL,
+    entity_id uuid NOT NULL,
+    last_viewed_at timestamp with time zone NOT NULL,
+    entity_unkeyed boolean DEFAULT false NOT NULL,
+    entity_company_id uuid,
+    entity_contact_id uuid,
+    CONSTRAINT user_record_view_entity_company_id_bound CHECK ((entity_unkeyed OR (NOT (entity_company_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'company'::text) THEN entity_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT user_record_view_entity_contact_id_bound CHECK ((entity_unkeyed OR (NOT (entity_contact_id IS DISTINCT FROM
+CASE
+    WHEN (entity_type = 'contact'::text) THEN entity_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT user_record_view_entity_shape CHECK ((entity_unkeyed OR (num_nonnulls(entity_company_id, entity_contact_id) = 1))),
+    CONSTRAINT user_record_view_entity_type_check CHECK ((entity_type = ANY (ARRAY['company'::text, 'contact'::text])))
+);
+
+CREATE TABLE public.vault_secret (
+    ref text NOT NULL,
+    ciphertext bytea NOT NULL,
+    key_version integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+CREATE TABLE public.voice_build (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    voice_profile_id uuid NOT NULL,
+    requested_by uuid,
+    reason text NOT NULL,
+    status text NOT NULL,
+    stage text,
+    source_hash text NOT NULL,
+    source_count integer NOT NULL,
+    result_version integer,
+    candidate_action text DEFAULT 'none'::text NOT NULL,
+    status_code text,
+    status_detail text,
+    next_attempt_at timestamp with time zone,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    attempt integer DEFAULT 1 NOT NULL,
+    attempt_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT voice_build_attempt_check CHECK ((attempt >= 1)),
+    CONSTRAINT voice_build_candidate_action_check CHECK ((candidate_action = ANY (ARRAY['none'::text, 'auto_activated'::text, 'review_required'::text]))),
+    CONSTRAINT voice_build_deferral_check CHECK ((((status = 'deferred'::text) AND (status_code = 'budget_deferred'::text) AND (next_attempt_at IS NOT NULL)) OR ((status <> 'deferred'::text) AND (status_code IS DISTINCT FROM 'budget_deferred'::text) AND (next_attempt_at IS NULL)))),
+    CONSTRAINT voice_build_reason_check CHECK ((reason = ANY (ARRAY['onboarding'::text, 'manual'::text, 'automatic'::text]))),
+    CONSTRAINT voice_build_result_version_check CHECK ((result_version >= 1)),
+    CONSTRAINT voice_build_source_count_check CHECK ((source_count >= 0)),
+    CONSTRAINT voice_build_stage_check CHECK ((stage = ANY (ARRAY['snapshot'::text, 'extract'::text, 'evaluate'::text, 'activate'::text]))),
+    CONSTRAINT voice_build_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text, 'succeeded'::text, 'failed'::text]))),
+    CONSTRAINT voice_build_status_code_check CHECK ((status_code = ANY (ARRAY['budget_deferred'::text, 'model_unavailable'::text, 'invalid_output'::text, 'quality_regression'::text, 'material_drift'::text, 'internal'::text]))),
+    CONSTRAINT voice_build_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.voice_corpus_source (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    voice_profile_id uuid NOT NULL,
+    kind text NOT NULL,
+    register text NOT NULL,
+    weight numeric(4,3) DEFAULT 1.0 NOT NULL,
+    source_label text NOT NULL,
+    source_ref text NOT NULL,
+    content text,
+    word_count integer NOT NULL,
+    excluded boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
+    origin text DEFAULT 'manual'::text NOT NULL,
+    content_hash text NOT NULL,
+    exclusion_reason text,
+    extractor_version text DEFAULT 'voice-v1'::text NOT NULL,
+    occurred_at timestamp with time zone NOT NULL,
+    retention_until timestamp with time zone,
+    content_erased_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    archived_at timestamp with time zone,
+    CONSTRAINT voice_corpus_source_exclusion_check CHECK (((excluded AND (exclusion_reason IS NOT NULL)) OR (NOT excluded))),
+    CONSTRAINT voice_corpus_source_kind_check CHECK ((kind = ANY (ARRAY['email'::text, 'linkedin'::text, 'proposal'::text, 'transcript'::text, 'document'::text, 'other'::text]))),
+    CONSTRAINT voice_corpus_source_origin_check CHECK ((origin = ANY (ARRAY['manual'::text, 'capture'::text, 'draft_signal'::text]))),
+    CONSTRAINT voice_corpus_source_register_check CHECK ((register = ANY (ARRAY['email'::text, 'social'::text, 'long_form'::text, 'spoken'::text, 'general'::text]))),
+    CONSTRAINT voice_corpus_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT voice_corpus_source_weight_check CHECK (((weight >= (0)::numeric) AND (weight <= (2)::numeric))),
+    CONSTRAINT voice_corpus_source_word_count_check CHECK ((word_count >= 0))
+);
+
+CREATE TABLE public.voice_learning_signal (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    voice_profile_id uuid NOT NULL,
+    profile_version integer,
+    draft_ref_hash bytea NOT NULL,
+    outcome text NOT NULL,
+    generated_original text,
+    final_text text,
+    final_captured_by text,
+    qualifies_as_source boolean DEFAULT false NOT NULL,
+    similarity numeric(5,4),
+    transformations jsonb DEFAULT '[]'::jsonb NOT NULL,
+    retention_until timestamp with time zone NOT NULL,
+    content_erased_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    CONSTRAINT voice_learning_signal_outcome_check CHECK ((outcome = ANY (ARRAY['drafted'::text, 'accepted'::text, 'edited_sent'::text, 'rejected'::text]))),
+    CONSTRAINT voice_learning_signal_profile_version_check CHECK ((profile_version >= 1)),
+    CONSTRAINT voice_learning_signal_qualifies_check CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent'::text) AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'::text)))),
+    CONSTRAINT voice_learning_signal_similarity_check CHECK (((similarity >= (0)::numeric) AND (similarity <= (1)::numeric))),
+    CONSTRAINT voice_learning_signal_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.voice_profile (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_id uuid,
+    scope text DEFAULT 'user'::text NOT NULL,
+    model_ref text,
+    status text DEFAULT 'collecting'::text NOT NULL,
+    voice_profile_md text DEFAULT ''::text NOT NULL,
+    profile_version integer DEFAULT 0 NOT NULL,
+    personality_md text DEFAULT ''::text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    team_id uuid,
+    auto_learning_enabled boolean DEFAULT false NOT NULL,
+    active_source_hash text,
+    last_built_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    CONSTRAINT voice_profile_derived_versioned CHECK (((voice_profile_md = ''::text) OR (profile_version >= 1))),
+    CONSTRAINT voice_profile_scope_check CHECK ((scope = ANY (ARRAY['user'::text, 'team'::text, 'workspace'::text]))),
+    CONSTRAINT voice_profile_scope_owner_check CHECK ((((scope = 'user'::text) AND (owner_id IS NOT NULL) AND (team_id IS NULL)) OR ((scope = 'team'::text) AND (owner_id IS NULL) AND (team_id IS NOT NULL)) OR ((scope = 'workspace'::text) AND (owner_id IS NULL) AND (team_id IS NULL)))),
+    CONSTRAINT voice_profile_status_check CHECK ((status = ANY (ARRAY['collecting'::text, 'ready'::text, 'stale'::text]))),
+    CONSTRAINT voice_profile_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint))),
+    CONSTRAINT voice_profile_version_nonnegative CHECK ((profile_version >= 0))
+);
+
+CREATE TABLE public.voice_profile_delta (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    voice_profile_id uuid NOT NULL,
+    from_version integer,
+    to_version integer NOT NULL,
+    classification text NOT NULL,
+    activation_outcome text NOT NULL,
+    delta_json jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    CONSTRAINT voice_profile_delta_activation_outcome_check CHECK ((activation_outcome = ANY (ARRAY['auto_activated'::text, 'review_required'::text, 'manually_activated'::text, 'rejected'::text, 'rollback'::text]))),
+    CONSTRAINT voice_profile_delta_classification_check CHECK ((classification = ANY (ARRAY['routine'::text, 'material'::text]))),
+    CONSTRAINT voice_profile_delta_from_version_check CHECK ((from_version >= 1)),
+    CONSTRAINT voice_profile_delta_to_version_check CHECK ((to_version >= 1))
+);
+
+CREATE TABLE public.voice_profile_version (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    voice_profile_id uuid NOT NULL,
+    profile_version integer NOT NULL,
+    status text NOT NULL,
+    voice_profile_md text NOT NULL,
+    profile_json jsonb NOT NULL,
+    stats_json jsonb NOT NULL,
+    source_hash text NOT NULL,
+    source_count integer NOT NULL,
+    reason text NOT NULL,
+    predecessor_version integer,
+    model_provider text NOT NULL,
+    model_name text NOT NULL,
+    builder_version text NOT NULL,
+    activation_policy_version text NOT NULL,
+    evaluation_json jsonb NOT NULL,
+    review_reasons text[] DEFAULT '{}'::text[] NOT NULL,
+    activated_at timestamp with time zone,
+    source text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone,
+    archived_at timestamp with time zone,
+    CONSTRAINT voice_profile_version_predecessor_version_check CHECK ((predecessor_version >= 1)),
+    CONSTRAINT voice_profile_version_profile_version_check CHECK ((profile_version >= 1)),
+    CONSTRAINT voice_profile_version_reason_check CHECK ((reason = ANY (ARRAY['onboarding'::text, 'manual'::text, 'automatic'::text, 'rollback'::text]))),
+    CONSTRAINT voice_profile_version_source_count_check CHECK ((source_count >= 0)),
+    CONSTRAINT voice_profile_version_status_check CHECK ((status = ANY (ARRAY['candidate'::text, 'active'::text, 'superseded'::text, 'rejected'::text]))),
+    CONSTRAINT voice_profile_version_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.web_form (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    name text NOT NULL,
+    form_key text NOT NULL,
+    sender text NOT NULL,
+    allowed_origins text[] DEFAULT '{}'::text[] NOT NULL,
+    secret_ref text,
+    lead_origin text,
+    owner_id uuid,
+    field_map jsonb DEFAULT '{}'::jsonb NOT NULL,
+    consent_required boolean DEFAULT false NOT NULL,
+    consent_policy_version text,
+    consent_wording text,
+    redirect_url text,
+    success_message text,
+    state text DEFAULT 'active'::text NOT NULL,
+    captured_by text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    privacy_notice text,
+    privacy_notice_url text,
+    product_id uuid,
+    CONSTRAINT web_form_admission CHECK ((((sender = 'browser'::text) AND (secret_ref IS NULL) AND (cardinality(allowed_origins) > 0)) OR ((sender <> 'browser'::text) AND ((secret_ref IS NOT NULL) OR (sender = 'webflow'::text)) AND (cardinality(allowed_origins) = 0)))),
+    CONSTRAINT web_form_consent_wording_bounded CHECK (((consent_wording IS NULL) OR (length(consent_wording) <= 2000))),
+    CONSTRAINT web_form_field_map_object CHECK ((jsonb_typeof(field_map) = 'object'::text)),
+    CONSTRAINT web_form_key_shape CHECK ((form_key ~ '^[A-Za-z0-9_-]{16,64}$'::text)),
+    CONSTRAINT web_form_name_present CHECK (((length(btrim(name)) > 0) AND (length(name) <= 200))),
+    CONSTRAINT web_form_privacy_notice_bounded CHECK (((privacy_notice IS NULL) OR (length(privacy_notice) <= 500))),
+    CONSTRAINT web_form_privacy_notice_url_https CHECK (((privacy_notice_url IS NULL) OR ((privacy_notice_url ~* '^https://[^/?#:@][^/?#@]*([/?#]|$)'::text) AND (length(privacy_notice_url) <= 2000)))),
+    CONSTRAINT web_form_redirect_https CHECK (((redirect_url IS NULL) OR (redirect_url ~ '^https://'::text))),
+    CONSTRAINT web_form_sender_check CHECK ((sender = ANY (ARRAY['browser'::text, 'server'::text, 'webflow'::text, 'typeform'::text, 'tally'::text]))),
+    CONSTRAINT web_form_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text]))),
+    CONSTRAINT web_form_success_message_bounded CHECK (((success_message IS NULL) OR (length(success_message) <= 500))),
+    CONSTRAINT web_form_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.web_form_last_post (
+    form_id uuid NOT NULL,
+    last_post_at timestamp with time zone NOT NULL
+);
+
+CREATE TABLE public.webhook_delivery (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    subscription_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    event_type text NOT NULL,
+    payload text NOT NULL,
+    status text NOT NULL,
+    attempts integer DEFAULT 0 NOT NULL,
+    last_status_code integer,
+    last_error text,
+    next_retry_at timestamp with time zone,
+    delivered_at timestamp with time zone,
+    dead_lettered_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    entity_type text,
+    entity_id uuid,
+    content_type text,
+    claimed_until timestamp with time zone,
+    payload_pruned_at timestamp with time zone,
+    CONSTRAINT webhook_delivery_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'delivered'::text, 'retrying'::text, 'dead_lettered'::text, 'visibility_revoked'::text])))
+);
+
+COMMENT ON COLUMN public.webhook_delivery.entity_type IS 'The subject record this delivery carries, written at enqueue. NULL on rows that predate this column, and NULL means unknown means the retry refuses: a row whose subject cannot be identified cannot be re-checked against its audience, and shipping it would be exactly the disclosure this closes.';
+
+COMMENT ON COLUMN public.webhook_delivery.content_type IS 'The Content-Type of the stored payload, fixed at enqueue with it; NULL means application/json.';
+
+COMMENT ON COLUMN public.webhook_delivery.claimed_until IS 'While in the future, one sweep or replay is sending this delivery and no other may. Recording the outcome clears it; a claim left by a crashed worker runs out.';
+
+CREATE TABLE public.webhook_subscription (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_id uuid NOT NULL,
+    target_url text NOT NULL,
+    event_types text[] NOT NULL,
+    signing_secret_ref text NOT NULL,
+    state text DEFAULT 'active'::text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone,
+    custom_headers jsonb DEFAULT '[]'::jsonb NOT NULL,
+    body_template text,
+    body_content_type text,
+    CONSTRAINT webhook_subscription_event_types_check CHECK ((cardinality(event_types) > 0)),
+    CONSTRAINT webhook_subscription_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text]))),
+    CONSTRAINT webhook_subscription_target_url_check CHECK ((target_url ~ '^https://'::text)),
+    CONSTRAINT webhook_subscription_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+COMMENT ON COLUMN public.webhook_subscription.custom_headers IS 'Headers sent with every delivery, as [{name, sealed_value}]. Each value is sealed under the webhook key and bound to this subscription and header name.';
+
+COMMENT ON COLUMN public.webhook_subscription.body_template IS 'The template each delivery body is rendered from at enqueue; NULL sends the standard envelope.';
+
+COMMENT ON COLUMN public.webhook_subscription.body_content_type IS 'The Content-Type of a templated body; NULL means application/json.';
+
+CREATE TABLE public.weekly_plan (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    owner_id uuid NOT NULL,
+    local_week_start date NOT NULL,
+    status text DEFAULT 'open'::text NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    commitments_due integer,
+    commitments_kept integer,
+    risks text,
+    capacity_note text,
+    CONSTRAINT weekly_plan_capacity_note_bounded CHECK (((capacity_note IS NULL) OR (length(capacity_note) <= 2000))),
+    CONSTRAINT weekly_plan_outcome_is_a_tally CHECK (((commitments_due IS NULL) OR ((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due)))),
+    CONSTRAINT weekly_plan_outcome_matches_status CHECK ((((status = 'closed'::text) = (commitments_due IS NOT NULL)) AND ((commitments_due IS NULL) = (commitments_kept IS NULL)))),
+    CONSTRAINT weekly_plan_risks_bounded CHECK (((risks IS NULL) OR (length(risks) <= 2000))),
+    CONSTRAINT weekly_plan_status_check CHECK ((status = ANY (ARRAY['open'::text, 'closed'::text]))),
+    CONSTRAINT weekly_plan_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.weekly_plan_commitment (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    plan_id uuid NOT NULL,
+    label text NOT NULL,
+    linked_record_type text,
+    linked_record_id uuid,
+    due_on date,
+    state text DEFAULT 'open'::text NOT NULL,
+    help_requested text DEFAULT ''::text NOT NULL,
+    manager_response text DEFAULT ''::text NOT NULL,
+    manager_user_id uuid,
+    responded_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    "position" integer DEFAULT 0 NOT NULL,
+    version bigint DEFAULT 1 NOT NULL,
+    captured_by text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    linked_record_unkeyed boolean DEFAULT false NOT NULL,
+    linked_deal_id uuid,
+    linked_lead_id uuid,
+    linked_contact_id uuid,
+    linked_company_id uuid,
+    linked_project_id uuid,
+    CONSTRAINT weekly_plan_commitment_done_at CHECK (((state = 'done'::text) = (completed_at IS NOT NULL))),
+    CONSTRAINT weekly_plan_commitment_help_bound CHECK ((length(help_requested) <= 2000)),
+    CONSTRAINT weekly_plan_commitment_label_bound CHECK ((length(label) <= 500)),
+    CONSTRAINT weekly_plan_commitment_label_present CHECK ((btrim(label) <> ''::text)),
+    CONSTRAINT weekly_plan_commitment_link_type_check CHECK (((linked_record_type IS NULL) OR (linked_record_type = ANY (ARRAY['deal'::text, 'lead'::text, 'contact'::text, 'company'::text, 'project'::text])))),
+    CONSTRAINT weekly_plan_commitment_link_whole CHECK (((linked_record_type IS NULL) = (linked_record_id IS NULL))),
+    CONSTRAINT weekly_plan_commitment_linked_company_id_bound CHECK ((linked_record_unkeyed OR (NOT (linked_company_id IS DISTINCT FROM
+CASE
+    WHEN (linked_record_type = 'company'::text) THEN linked_record_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT weekly_plan_commitment_linked_contact_id_bound CHECK ((linked_record_unkeyed OR (NOT (linked_contact_id IS DISTINCT FROM
+CASE
+    WHEN (linked_record_type = 'contact'::text) THEN linked_record_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT weekly_plan_commitment_linked_deal_id_bound CHECK ((linked_record_unkeyed OR (NOT (linked_deal_id IS DISTINCT FROM
+CASE
+    WHEN (linked_record_type = 'deal'::text) THEN linked_record_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT weekly_plan_commitment_linked_lead_id_bound CHECK ((linked_record_unkeyed OR (NOT (linked_lead_id IS DISTINCT FROM
+CASE
+    WHEN (linked_record_type = 'lead'::text) THEN linked_record_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT weekly_plan_commitment_linked_project_id_bound CHECK ((linked_record_unkeyed OR (NOT (linked_project_id IS DISTINCT FROM
+CASE
+    WHEN (linked_record_type = 'project'::text) THEN linked_record_id
+    ELSE NULL::uuid
+END)))),
+    CONSTRAINT weekly_plan_commitment_linked_record_shape CHECK ((linked_record_unkeyed OR (linked_record_id IS NULL) OR (num_nonnulls(linked_deal_id, linked_lead_id, linked_contact_id, linked_company_id, linked_project_id) = 1))),
+    CONSTRAINT weekly_plan_commitment_response_bound CHECK ((length(manager_response) <= 2000)),
+    CONSTRAINT weekly_plan_commitment_response_whole CHECK ((((btrim(manager_response) = ''::text) = (manager_user_id IS NULL)) AND ((manager_user_id IS NULL) = (responded_at IS NULL)))),
+    CONSTRAINT weekly_plan_commitment_state_check CHECK ((state = ANY (ARRAY['open'::text, 'done'::text, 'missed'::text, 'dropped'::text]))),
+    CONSTRAINT weekly_plan_commitment_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.weekly_review (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    user_id uuid NOT NULL,
+    local_week_start date NOT NULL,
+    generated_at timestamp with time zone DEFAULT now() NOT NULL,
+    as_of timestamp with time zone NOT NULL,
+    tasks_due integer DEFAULT 0 NOT NULL,
+    tasks_done integer DEFAULT 0 NOT NULL,
+    tasks_carried_over integer DEFAULT 0 NOT NULL,
+    deals_moved integer DEFAULT 0 NOT NULL,
+    deals_won integer DEFAULT 0 NOT NULL,
+    deals_lost integer DEFAULT 0 NOT NULL,
+    proposals_accepted integer DEFAULT 0 NOT NULL,
+    proposals_rejected integer DEFAULT 0 NOT NULL,
+    brief_items_acted integer DEFAULT 0 NOT NULL,
+    brief_items_dismissed integer DEFAULT 0 NOT NULL,
+    narrative text,
+    narrated_at timestamp with time zone,
+    mail_attempted_at timestamp with time zone,
+    mail_error text,
+    leads_routed integer DEFAULT 0 NOT NULL,
+    leads_answered_in_target integer DEFAULT 0 NOT NULL,
+    leads_breached integer DEFAULT 0 NOT NULL,
+    meetings_held integer DEFAULT 0 NOT NULL,
+    meetings_with_next_step integer DEFAULT 0 NOT NULL,
+    pipeline_created_minor bigint,
+    pipeline_won_minor bigint,
+    pipeline_lost_minor bigint,
+    base_currency public.currency_code,
+    prior_review_id uuid,
+    commitments_due integer DEFAULT 0 NOT NULL,
+    commitments_kept integer DEFAULT 0 NOT NULL,
+    learnings_state text DEFAULT 'not_run'::text NOT NULL,
+    learned_at timestamp with time zone,
+    tasks_completed integer,
+    numeric_summary jsonb,
+    daily_activity jsonb,
+    leads_withheld boolean DEFAULT false NOT NULL,
+    CONSTRAINT weekly_review_commitments_are_tallies CHECK (((commitments_due >= 0) AND (commitments_kept >= 0) AND (commitments_kept <= commitments_due))),
+    CONSTRAINT weekly_review_counts_are_tallies CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0))),
+    CONSTRAINT weekly_review_learned_at_matches_state CHECK (((NOT (learnings_state IS DISTINCT FROM 'not_run'::text)) = (learned_at IS NULL))),
+    CONSTRAINT weekly_review_learnings_state_check CHECK ((learnings_state = ANY (ARRAY['not_run'::text, 'insufficient_evidence'::text, 'synthesized'::text]))),
+    CONSTRAINT weekly_review_mail_error_length CHECK (((mail_error IS NULL) OR (char_length(mail_error) <= 500))),
+    CONSTRAINT weekly_review_mail_error_needs_an_attempt CHECK (((mail_error IS NULL) OR (mail_attempted_at IS NOT NULL))),
+    CONSTRAINT weekly_review_money_names_its_currency CHECK (((base_currency IS NULL) = ((pipeline_created_minor IS NULL) AND (pipeline_won_minor IS NULL) AND (pipeline_lost_minor IS NULL)))),
+    CONSTRAINT weekly_review_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600))),
+    CONSTRAINT weekly_review_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (narrated_at IS NOT NULL))),
+    CONSTRAINT weekly_review_new_counts_are_tallies CHECK (((leads_routed >= 0) AND (leads_answered_in_target >= 0) AND (leads_breached >= 0) AND (meetings_held >= 0) AND (meetings_with_next_step >= 0) AND ((pipeline_created_minor IS NULL) OR (pipeline_created_minor >= 0)) AND ((pipeline_won_minor IS NULL) OR (pipeline_won_minor >= 0)) AND ((pipeline_lost_minor IS NULL) OR (pipeline_lost_minor >= 0)))),
+    CONSTRAINT weekly_review_next_steps_were_meetings CHECK ((meetings_with_next_step <= meetings_held)),
+    CONSTRAINT weekly_review_tasks_completed_check CHECK ((tasks_completed >= 0))
+);
+
+CREATE TABLE public.weekly_review_deal (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    weekly_review_id uuid NOT NULL,
+    deal_id uuid NOT NULL,
+    deal_label text NOT NULL,
+    outcome text NOT NULL,
+    to_stage_label text,
+    amount_minor_at_close bigint,
+    currency_at_close public.currency_code,
+    occurred_at timestamp with time zone NOT NULL,
+    CONSTRAINT weekly_review_deal_amount_minor_at_close_js_safe CHECK (((amount_minor_at_close >= '-9007199254740991'::bigint) AND (amount_minor_at_close <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_deal_label_present CHECK ((btrim(deal_label) <> ''::text)),
+    CONSTRAINT weekly_review_deal_money_whole CHECK (((amount_minor_at_close IS NULL) = (currency_at_close IS NULL))),
+    CONSTRAINT weekly_review_deal_outcome_check CHECK ((outcome = ANY (ARRAY['moved'::text, 'won'::text, 'lost'::text])))
+);
+
+CREATE TABLE public.weekly_review_driver (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    weekly_review_id uuid NOT NULL,
+    period_kind text NOT NULL,
+    bar text NOT NULL,
+    deal_id uuid NOT NULL,
+    deal_label text NOT NULL,
+    delta_minor bigint NOT NULL,
+    CONSTRAINT weekly_review_driver_bar_check CHECK ((bar = ANY (ARRAY['created'::text, 'advanced'::text, 'slipped'::text, 'excluded'::text, 'reinstated'::text, 'not_checked'::text, 'won'::text, 'lost'::text, 'other'::text]))),
+    CONSTRAINT weekly_review_driver_delta_minor_js_safe CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_driver_label_present CHECK ((btrim(deal_label) <> ''::text)),
+    CONSTRAINT weekly_review_driver_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
+);
+
+CREATE TABLE public.weekly_review_learning (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    weekly_review_id uuid NOT NULL,
+    kind text NOT NULL,
+    text text NOT NULL,
+    "position" integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT weekly_review_learning_kind_check CHECK ((kind = ANY (ARRAY['worked'::text, 'did_not_work'::text, 'pattern'::text, 'experiment'::text]))),
+    CONSTRAINT weekly_review_learning_position_sane CHECK (("position" >= 0)),
+    CONSTRAINT weekly_review_learning_text_bound CHECK ((length(text) <= 400)),
+    CONSTRAINT weekly_review_learning_text_present CHECK ((btrim(text) <> ''::text))
+);
+
+CREATE TABLE public.weekly_review_learning_citation (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    learning_id uuid NOT NULL,
+    subject_type text NOT NULL,
+    subject_id uuid NOT NULL,
+    label text NOT NULL,
+    CONSTRAINT weekly_review_learning_citation_label_present CHECK ((btrim(label) <> ''::text)),
+    CONSTRAINT weekly_review_learning_citation_subject_check CHECK ((subject_type = ANY (ARRAY['deal'::text, 'commitment'::text])))
+);
+
+CREATE TABLE public.weekly_review_movement (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    weekly_review_id uuid NOT NULL,
+    period_kind text NOT NULL,
+    bar text NOT NULL,
+    delta_minor bigint NOT NULL,
+    CONSTRAINT weekly_review_movement_bar_check CHECK ((bar = ANY (ARRAY['created'::text, 'advanced'::text, 'slipped'::text, 'excluded'::text, 'reinstated'::text, 'not_checked'::text, 'won'::text, 'lost'::text, 'other'::text]))),
+    CONSTRAINT weekly_review_movement_delta_minor_js_safe CHECK (((delta_minor >= '-9007199254740991'::bigint) AND (delta_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_movement_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text])))
+);
+
+CREATE TABLE public.weekly_review_outlook (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    weekly_review_id uuid NOT NULL,
+    period_kind text NOT NULL,
+    period_start date NOT NULL,
+    period_end date NOT NULL,
+    opening_snapshot_id uuid,
+    closing_snapshot_id uuid,
+    opening_landing_minor bigint,
+    closing_landing_minor bigint,
+    won_minor bigint,
+    commit_minor bigint,
+    best_case_minor bigint,
+    weighted_minor bigint,
+    forward_measure text,
+    base_currency public.currency_code NOT NULL,
+    CONSTRAINT weekly_review_outlook_best_case_minor_js_safe CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_outlook_closing_landing_minor_js_safe CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_outlook_commit_minor_js_safe CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_outlook_currency_present CHECK ((btrim((base_currency)::text) <> ''::text)),
+    CONSTRAINT weekly_review_outlook_measure_known CHECK (((forward_measure IS NULL) OR (forward_measure = ANY (ARRAY['likely'::text, 'qualified_likely'::text, 'commit_evidence'::text, 'qualified_commit_evidence'::text, 'weighted'::text, 'qualified_weighted'::text, 'manager_call'::text])))),
+    CONSTRAINT weekly_review_outlook_measure_with_landing CHECK ((NOT ((forward_measure IS NULL) IS DISTINCT FROM (closing_landing_minor IS NULL)))),
+    CONSTRAINT weekly_review_outlook_opening_landing_minor_js_safe CHECK (((opening_landing_minor >= '-9007199254740991'::bigint) AND (opening_landing_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_outlook_opening_whole CHECK ((NOT ((opening_snapshot_id IS NULL) IS DISTINCT FROM (opening_landing_minor IS NULL)))),
+    CONSTRAINT weekly_review_outlook_period_kind_check CHECK ((period_kind = ANY (ARRAY['week'::text, 'month'::text, 'quarter'::text]))),
+    CONSTRAINT weekly_review_outlook_weighted_minor_js_safe CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint))),
+    CONSTRAINT weekly_review_outlook_window_ordered CHECK ((period_end >= period_start)),
+    CONSTRAINT weekly_review_outlook_won_minor_js_safe CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))
+);
+
+CREATE TABLE public.weekly_review_scorecard (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    weekly_review_id uuid NOT NULL,
+    has_lead_block boolean NOT NULL,
+    lead_advanced integer,
+    lead_disqualified integer,
+    lead_promoted integer,
+    lead_answered_in_target integer,
+    lead_breached integer,
+    meetings_booked integer,
+    meetings_held integer,
+    meetings_no_show integer,
+    meetings_partial_history integer,
+    has_deal_block boolean NOT NULL,
+    deal_advances integer,
+    deal_regressions integer,
+    deal_median_days_in_stage integer,
+    deal_with_next_step integer,
+    deal_open integer,
+    deal_multi_threaded integer,
+    deal_close_date_sound integer,
+    deal_forecast_up integer,
+    deal_forecast_down integer,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    deal_unreconstructible integer,
+    deal_close_date_provisional integer,
+    lead_arrived integer,
+    CONSTRAINT weekly_review_scorecard_counts_nonnegative CHECK (((COALESCE(lead_advanced, 0) >= 0) AND (COALESCE(lead_disqualified, 0) >= 0) AND (COALESCE(lead_promoted, 0) >= 0) AND (COALESCE(lead_answered_in_target, 0) >= 0) AND (COALESCE(lead_breached, 0) >= 0) AND (COALESCE(meetings_booked, 0) >= 0) AND (COALESCE(meetings_held, 0) >= 0) AND (COALESCE(meetings_no_show, 0) >= 0) AND (COALESCE(meetings_partial_history, 0) >= 0) AND (COALESCE(deal_advances, 0) >= 0) AND (COALESCE(deal_regressions, 0) >= 0) AND (COALESCE(deal_median_days_in_stage, 0) >= 0) AND (COALESCE(deal_with_next_step, 0) >= 0) AND (COALESCE(deal_open, 0) >= 0) AND (COALESCE(deal_multi_threaded, 0) >= 0) AND (COALESCE(deal_close_date_sound, 0) >= 0) AND (COALESCE(deal_forecast_up, 0) >= 0) AND (COALESCE(deal_forecast_down, 0) >= 0))),
+    CONSTRAINT weekly_review_scorecard_deal_block_shape CHECK ((((NOT (has_deal_block IS DISTINCT FROM true)) = (deal_advances IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_regressions IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_with_next_step IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_open IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_multi_threaded IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_close_date_sound IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_up IS NOT NULL)) AND ((deal_advances IS NOT NULL) = (deal_forecast_down IS NOT NULL)))),
+    CONSTRAINT weekly_review_scorecard_lead_block_shape CHECK ((((NOT (has_lead_block IS DISTINCT FROM true)) = (lead_advanced IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_disqualified IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_promoted IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_answered_in_target IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (lead_breached IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_booked IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_held IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_no_show IS NOT NULL)) AND ((lead_advanced IS NOT NULL) = (meetings_partial_history IS NOT NULL)))),
+    CONSTRAINT weekly_review_scorecard_lead_cohort_fits CHECK (((lead_arrived IS NULL) OR ((lead_arrived >= 0) AND has_lead_block AND (lead_answered_in_target <= lead_arrived) AND (lead_breached <= lead_arrived)))),
+    CONSTRAINT weekly_review_scorecard_median_needs_block CHECK (((deal_median_days_in_stage IS NULL) OR (NOT (has_deal_block IS DISTINCT FROM true)))),
+    CONSTRAINT weekly_review_scorecard_provisional_fits CHECK (((deal_close_date_provisional IS NULL) OR ((deal_close_date_provisional >= 0) AND (deal_open IS NOT NULL) AND (deal_close_date_provisional <= deal_open)))),
+    CONSTRAINT weekly_review_scorecard_subsets_fit CHECK (((deal_open IS NULL) OR ((deal_with_next_step <= deal_open) AND (deal_multi_threaded <= deal_open) AND (deal_close_date_sound <= deal_open))))
+);
+
+CREATE TABLE public.withdrawal_credential (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    token_hash text NOT NULL,
+    address text NOT NULL,
+    contact_id uuid,
+    lead_id uuid,
+    scope text NOT NULL,
+    purpose_id uuid,
+    issued_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_used_at timestamp with time zone,
+    expires_at timestamp with time zone NOT NULL,
+    revoked_at timestamp with time zone,
+    revoked_reason text,
+    CONSTRAINT withdrawal_credential_expires_after_creation CHECK ((expires_at > issued_at)),
+    CONSTRAINT withdrawal_credential_names_at_most_one_subject CHECK ((NOT ((contact_id IS NOT NULL) AND (lead_id IS NOT NULL)))),
+    CONSTRAINT withdrawal_credential_revocation_is_reasoned CHECK (((revoked_at IS NULL) = (revoked_reason IS NULL))),
+    CONSTRAINT withdrawal_credential_revoked_reason_check CHECK ((revoked_reason = ANY (ARRAY['erasure'::text, 'compromise'::text, 'merged_predecessor'::text, 'superseded'::text]))),
+    CONSTRAINT withdrawal_credential_scope_check CHECK ((scope = ANY (ARRAY['named_purpose'::text, 'all_marketing'::text]))),
+    CONSTRAINT withdrawal_credential_scope_names_its_target CHECK (((scope = 'named_purpose'::text) = (purpose_id IS NOT NULL)))
+);
+
+COMMENT ON TABLE public.withdrawal_credential IS 'Withdrawal-only bearer credentials for public unsubscribe links. Holds no read or grant authority, so it can safely outlive the preference token that opens the preference centre.';
+
+CREATE TABLE public.workflow_run (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    handler text NOT NULL,
+    idempotency_key text NOT NULL,
+    trigger_event uuid NOT NULL,
+    status text DEFAULT 'applied'::text NOT NULL,
+    planned jsonb NOT NULL,
+    applied jsonb,
+    error text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    detail jsonb,
+    CONSTRAINT workflow_run_status_check CHECK ((status = ANY (ARRAY['applied'::text, 'skipped'::text, 'failed'::text, 'requires_approval'::text, 'blocked'::text])))
+);
+
+CREATE TABLE public.worklist_done (
+    reader_id uuid NOT NULL,
+    source text NOT NULL,
+    row_id text NOT NULL,
+    done_at timestamp with time zone NOT NULL,
+    set_by text NOT NULL,
+    CONSTRAINT worklist_done_identified CHECK (((row_id <> ''::text) AND (source <> ''::text)))
+);
+
+COMMENT ON TABLE public.worklist_done IS 'A worklist row one reader marked done. It returns once its subject moves after done_at.';
+
+CREATE TABLE public.worklist_pin (
+    reader_id uuid NOT NULL,
+    source text NOT NULL,
+    row_id text NOT NULL,
+    pinned_at timestamp with time zone DEFAULT now() NOT NULL,
+    set_by text NOT NULL,
+    CONSTRAINT worklist_pin_identified CHECK (((row_id <> ''::text) AND (source <> ''::text)))
+);
+
+COMMENT ON TABLE public.worklist_pin IS 'A worklist row one reader pinned to the top of their own day. Keyed on the row identity the client uses: source and id together.';
+
+CREATE TABLE public.worklist_snapshot (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    reader_id uuid NOT NULL,
+    params_fingerprint text NOT NULL,
+    as_of timestamp with time zone NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    buckets jsonb NOT NULL,
+    rows jsonb NOT NULL,
+    CONSTRAINT worklist_snapshot_forward CHECK ((expires_at > created_at))
+);
+
+COMMENT ON TABLE public.worklist_snapshot IS 'One reader''s walk through their worklist, frozen at the instant it started. Identity and order only — never display text, which every page re-reads live under the caller''s own gates.';
+
+CREATE TABLE public.workspace (
+    id uuid DEFAULT public.uuidv7() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    archived_at timestamp with time zone
+);
+
+CREATE TABLE public.workspace_email_domain (
+    domain text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    source text DEFAULT 'mailbox'::text NOT NULL,
+    verified boolean DEFAULT false NOT NULL,
+    CONSTRAINT workspace_email_domain_domain_check CHECK (((domain = lower(domain)) AND (domain <> ''::text))),
+    CONSTRAINT workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
+);
+
+ALTER TABLE ONLY public.deal_stage_history ALTER COLUMN write_seq SET DEFAULT nextval('public.deal_stage_history_write_seq'::regclass);
+
+INSERT INTO public.activity_kind (kind) VALUES ('email');
+INSERT INTO public.activity_kind (kind) VALUES ('call');
+INSERT INTO public.activity_kind (kind) VALUES ('meeting');
+INSERT INTO public.activity_kind (kind) VALUES ('note');
+INSERT INTO public.activity_kind (kind) VALUES ('task');
+INSERT INTO public.activity_kind (kind) VALUES ('message');
+INSERT INTO public.channel_provider (provider, transport, label, credential_model, supplies_transport) VALUES ('telegram', 'core', 'Telegram', 'workspace_bot', true);
+INSERT INTO public.channel_provider (provider, transport, label, credential_model, supplies_transport) VALUES ('whatsapp', 'core', 'WhatsApp', 'workspace_bot', false);
+INSERT INTO public.legal_entity (id, is_default, display_name, legal_name, address_line1, address_line2, address_postal_code, address_city, address_region, vat_id, register_court, register_number, logo_object_key, country, default_language, bank_account_holder, iban, bic, imprint, captured_by, version, created_at, updated_at, archived_at, offer_summary, icp, value_proposition, usp, signature_template) VALUES (public.uuidv7(), true, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'system:migration', 1, now(), now(), NULL, NULL, NULL, NULL, NULL, NULL);
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'inbound', 'Inbound', 10, true, true, 2, now(), now(), 'Inbound', 'acqSources.builtin.inbound');
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'outbound', 'Outbound', 20, true, true, 2, now(), now(), 'Outbound', 'acqSources.builtin.outbound');
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'referral', 'Referral', 30, true, true, 2, now(), now(), 'Referral', 'acqSources.builtin.referral');
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'partner', 'Partner', 40, true, true, 2, now(), now(), 'Partner', 'acqSources.builtin.partner');
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'event', 'Event', 50, true, true, 2, now(), now(), 'Event', 'acqSources.builtin.event');
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'existing_customer', 'Existing customer', 60, true, true, 2, now(), now(), 'Existing customer', 'acqSources.builtin.existing_customer');
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'employee_referral', 'Employee referral', 70, true, true, 2, now(), now(), 'Employee referral', 'acqSources.builtin.employee_referral');
+INSERT INTO public.deal_acquisition_source (id, key, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'other', 'Other', 80, true, true, 2, now(), now(), 'Other', 'acqSources.builtin.other');
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'price', 'Price', 10, true, true, 'Price', 'lossReasons.builtin.price', 1, now(), now());
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'competitor', 'Chose a competitor', 20, true, true, 'Chose a competitor', 'lossReasons.builtin.competitor', 1, now(), now());
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'no_budget', 'No budget', 30, true, true, 'No budget', 'lossReasons.builtin.no_budget', 1, now(), now());
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'no_decision', 'No decision', 40, true, true, 'No decision', 'lossReasons.builtin.no_decision', 1, now(), now());
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'timing', 'Bad timing', 50, true, true, 'Bad timing', 'lossReasons.builtin.timing', 1, now(), now());
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'product_fit', 'Product did not fit', 60, true, true, 'Product did not fit', 'lossReasons.builtin.product_fit', 1, now(), now());
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'went_silent', 'Stopped responding', 70, true, true, 'Stopped responding', 'lossReasons.builtin.went_silent', 1, now(), now());
+INSERT INTO public.deal_loss_reason (id, key, label, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'other', 'Other', 80, true, true, 'Other', 'lossReasons.builtin.other', 1, now(), now());
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'Not a good fit', 10, true, true, 2, now(), now(), 'Not a good fit', 'leadReasons.builtin.not_a_good_fit');
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'Bad timing', 20, true, true, 2, now(), now(), 'Bad timing', 'leadReasons.builtin.bad_timing');
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'No budget', 30, true, true, 2, now(), now(), 'No budget', 'leadReasons.builtin.no_budget');
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'No decision power', 40, true, true, 2, now(), now(), 'No decision power', 'leadReasons.builtin.no_decision_power');
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'Chose a competitor', 50, true, true, 2, now(), now(), 'Chose a competitor', 'leadReasons.builtin.chose_a_competitor');
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'No interest', 60, true, true, 2, now(), now(), 'No interest', 'leadReasons.builtin.no_interest');
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'Not reachable', 70, true, true, 2, now(), now(), 'Not reachable', 'leadReasons.builtin.not_reachable');
+INSERT INTO public.lead_disqualify_reason (id, label, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'Duplicate or spam', 80, true, true, 2, now(), now(), 'Duplicate or spam', 'leadReasons.builtin.duplicate_or_spam');
+INSERT INTO public.lead_origin (id, key, label, intent, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'event', 'Event', 'neutral', 10, true, true, 2, now(), now(), 'Event', 'leadOrigins.builtin.event');
+INSERT INTO public.lead_origin (id, key, label, intent, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'linkedin', 'LinkedIn', 'neutral', 20, true, true, 2, now(), now(), 'LinkedIn', 'leadOrigins.builtin.linkedin');
+INSERT INTO public.lead_origin (id, key, label, intent, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'referral', 'Referral', 'high', 30, true, true, 2, now(), now(), 'Referral', 'leadOrigins.builtin.referral');
+INSERT INTO public.lead_origin (id, key, label, intent, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'partner', 'Partner', 'high', 40, true, true, 2, now(), now(), 'Partner', 'leadOrigins.builtin.partner');
+INSERT INTO public.lead_origin (id, key, label, intent, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'website', 'Website', 'high', 50, true, true, 2, now(), now(), 'Website', 'leadOrigins.builtin.website');
+INSERT INTO public.lead_origin (id, key, label, intent, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'cold_outreach', 'Cold outreach', 'low', 60, true, true, 2, now(), now(), 'Cold outreach', 'leadOrigins.builtin.cold_outreach');
+INSERT INTO public.lead_origin (id, key, label, intent, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'other', 'Other', 'neutral', 70, true, true, 2, now(), now(), 'Other', 'leadOrigins.builtin.other');
+INSERT INTO public.activity_own_sent_mail_repair_cutoff (singleton, captured_before) VALUES (true, now());
+INSERT INTO public.activity_review_template (id, key, label, outcome, questions, version, active, system, source, captured_by, created_at, updated_at, archived_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'win_review', 'Win review', 'won', '[{"key": "why_we_won", "type": "text", "label": "Why did we win?", "required": true, "label_key": "reviewTemplates.builtin.question.why_we_won"}, {"key": "competitors", "type": "text", "label": "Who else were they considering?", "required": false, "label_key": "reviewTemplates.builtin.question.competitors"}, {"key": "decisive_factor", "type": "text", "label": "What decided it?", "required": false, "label_key": "reviewTemplates.builtin.question.decisive_factor"}]', 3, true, true, 'system', 'system', now(), now(), NULL, 'Win review', 'reviewTemplates.builtin.win_review');
+INSERT INTO public.activity_review_template (id, key, label, outcome, questions, version, active, system, source, captured_by, created_at, updated_at, archived_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'loss_review', 'Loss review', 'lost', '[{"key": "why_we_lost", "type": "text", "label": "Why did we lose?", "required": true, "label_key": "reviewTemplates.builtin.question.why_we_lost"}, {"key": "lost_to", "type": "text", "label": "Who did they choose instead?", "required": false, "label_key": "reviewTemplates.builtin.question.lost_to"}, {"key": "what_would_change_it", "type": "text", "label": "What would have changed the outcome?", "required": false, "label_key": "reviewTemplates.builtin.question.what_would_change_it"}]', 3, true, true, 'system', 'system', now(), now(), NULL, 'Loss review', 'reviewTemplates.builtin.loss_review');
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('BHD', 3);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('BIF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('CLF', 4);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('CLP', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('DJF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('GNF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('IQD', 3);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('ISK', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('JOD', 3);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('JPY', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('KMF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('KRW', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('KWD', 3);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('LYD', 3);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('OMR', 3);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('PYG', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('RWF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('TND', 3);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('UGX', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('UYI', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('UYW', 4);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('VND', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('VUV', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XAF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XAG', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XAU', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XDR', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XOF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XPD', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XPF', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XPT', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XTS', 0);
+INSERT INTO public.currency_minor_digits (currency, digits) VALUES ('XXX', 0);
+INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'amount_minor');
+INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'expected_arr_minor');
+INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'currency');
+INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'company_id');
+INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'project_id');
+INSERT INTO public.maskable_field (object, field) VALUES ('deal', 'partner_company_id');
+INSERT INTO public.maskable_field (object, field) VALUES ('partner', 'margin_tier');
+INSERT INTO public.home_read_fence (singleton, generation) VALUES (true, 2);
+INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'manual', 'Created manually', 'neutral', 10, true, true, 1, now(), now());
+INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'inbound', 'Inbound', 'high', 20, true, true, 1, now(), now());
+INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'webform', 'Web form', 'high', 30, true, true, 1, now(), now());
+INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'referral', 'Referral', 'high', 40, true, true, 1, now(), now());
+INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'import', 'Import', 'low', 50, true, true, 1, now(), now());
+INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'crawl', 'Crawl', 'low', 60, true, true, 1, now(), now());
+INSERT INTO public.lead_source (id, key, label, intent, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'siteread', 'Website read', 'low', 70, true, true, 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'research', 'Research', 'candidate', 10, true, true, 'Research', 'partnerStages.builtin.research', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'identified', 'Identified', 'candidate', 20, true, true, 'Identified', 'partnerStages.builtin.identified', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'contacted', 'Contacted', 'candidate', 30, true, true, 'Contacted', 'partnerStages.builtin.contacted', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'in_conversation', 'In conversation', 'candidate', 40, true, true, 'In conversation', 'partnerStages.builtin.in_conversation', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'fit_confirmed', 'Fit confirmed', 'candidate', 50, true, true, 'Fit confirmed', 'partnerStages.builtin.fit_confirmed', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'agreement_pending', 'Contract pending', 'candidate', 60, true, true, 'Contract pending', 'partnerStages.builtin.agreement_pending', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'contract_signed', 'Contract signed', 'signed', 70, true, true, 'Contract signed', 'partnerStages.builtin.contract_signed', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'ready', 'Ready', 'ready', 80, true, true, 'Ready', 'partnerStages.builtin.ready', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'activated', 'Activated', 'active', 90, true, true, 'Activated', 'partnerStages.builtin.activated', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'active', 'Active', 'active', 100, true, true, 'Active', 'partnerStages.builtin.active', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'active_referring', 'Active, referring', 'active', 110, true, true, 'Active, referring', 'partnerStages.builtin.active_referring', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'dormant', 'Dormant', 'dormant', 120, true, true, 'Dormant', 'partnerStages.builtin.dormant', 1, now(), now());
+INSERT INTO public.partner_stage (id, key, label, meaning, sort_order, active, system, shipped_label, shipped_label_key, version, created_at, updated_at) VALUES (public.uuidv7(), 'no_fit', 'No fit', 'ended', 130, true, true, 'No fit', 'partnerStages.builtin.no_fit', 1, now(), now());
+INSERT INTO public.record_role (id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'account_manager', 'Account manager', '{company,deal,project}', '{user}', 10, true, true, 2, now(), now(), 'Account manager', 'recordRoles.builtin.account_manager');
+INSERT INTO public.record_role (id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'sales_engineer', 'Sales engineer', '{deal}', '{user}', 20, true, true, 2, now(), now(), 'Sales engineer', 'recordRoles.builtin.sales_engineer');
+INSERT INTO public.record_role (id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'delivery_lead', 'Delivery lead', '{project}', '{user}', 30, true, true, 2, now(), now(), 'Delivery lead', 'recordRoles.builtin.delivery_lead');
+INSERT INTO public.record_role (id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'project_manager', 'Project manager', '{project}', '{user}', 40, true, true, 2, now(), now(), 'Project manager', 'recordRoles.builtin.project_manager');
+INSERT INTO public.record_role (id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'technical_contact', 'Technical contact', '{company,deal,project}', '{user,team}', 50, true, true, 2, now(), now(), 'Technical contact', 'recordRoles.builtin.technical_contact');
+INSERT INTO public.record_role (id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'executive_sponsor', 'Executive sponsor', '{company,deal}', '{user}', 60, true, true, 2, now(), now(), 'Executive sponsor', 'recordRoles.builtin.executive_sponsor');
+INSERT INTO public.record_role (id, key, label, record_types, assignee_kinds, sort_order, active, system, version, created_at, updated_at, shipped_label, shipped_label_key) VALUES (public.uuidv7(), 'support_team', 'Support team', '{company,project}', '{team}', 70, true, true, 2, now(), now(), 'Support team', 'recordRoles.builtin.support_team');
+INSERT INTO public.report_projection_fence (singleton, generation) VALUES (true, 15);
+INSERT INTO public.sdr_handoff_reason (id, label, applies_to, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'Not qualified', 'rejected', 10, true, true, 1, now(), now());
+INSERT INTO public.sdr_handoff_reason (id, label, applies_to, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'Wrong territory or segment', 'rejected', 20, true, true, 1, now(), now());
+INSERT INTO public.sdr_handoff_reason (id, label, applies_to, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'Already worked by someone else', 'rejected', 30, true, true, 1, now(), now());
+INSERT INTO public.sdr_handoff_reason (id, label, applies_to, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'Not enough information to act on', 'rejected', 40, true, true, 1, now(), now());
+INSERT INTO public.sdr_handoff_reason (id, label, applies_to, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'Timing is wrong, worth another try later', 'recycled', 10, true, true, 1, now(), now());
+INSERT INTO public.sdr_handoff_reason (id, label, applies_to, sort_order, active, system, version, created_at, updated_at) VALUES (public.uuidv7(), 'Needs more qualification first', 'recycled', 20, true, true, 1, now(), now());
+
+ALTER TABLE ONLY public.activity_audience_member
+    ADD CONSTRAINT activity_audience_member_pkey PRIMARY KEY (activity_id, subject_type, subject_id);
+
+ALTER TABLE ONLY public.activity_calendar_method_backfill
+    ADD CONSTRAINT activity_calendar_method_backfill_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.activity_clock_refold_mark
+    ADD CONSTRAINT activity_clock_refold_mark_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.activity_commitment_admission
+    ADD CONSTRAINT activity_commitment_admission_pkey PRIMARY KEY (source_activity_id, locator);
+
+ALTER TABLE ONLY public.activity_identity
+    ADD CONSTRAINT activity_identity_pkey PRIMARY KEY (identity_kind, identity_key);
+
+ALTER TABLE ONLY public.activity_kind
+    ADD CONSTRAINT activity_kind_pkey PRIMARY KEY (kind);
+
+ALTER TABLE ONLY public.activity_link
+    ADD CONSTRAINT activity_link_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_mail_reference
+    ADD CONSTRAINT activity_mail_reference_pkey PRIMARY KEY (activity_id, referenced_id);
+
+ALTER TABLE ONLY public.activity_meeting_attendee_repair
+    ADD CONSTRAINT activity_meeting_attendee_repair_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.activity_meeting_history
+    ADD CONSTRAINT activity_meeting_history_pkey PRIMARY KEY (id);
+
+ALTER TABLE public.activity_meeting_history
+    ADD CONSTRAINT activity_meeting_history_start_precision CHECK (
+CASE
+    WHEN (scheduled_start IS NULL) THEN (scheduled_precision IS NULL)
+    ELSE ((scheduled_precision IS NOT NULL) AND (scheduled_precision = ANY (ARRAY['instant'::text, 'day'::text])))
+END) NOT VALID;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_meeting_no_overlap EXCLUDE USING gist (host_user_id WITH =, tsrange(timezone('UTC'::text, occurred_at), (timezone('UTC'::text, occurred_at) + ((
+CASE
+    WHEN booking_interval_exact THEN duration_seconds
+    ELSE 3600
+END)::double precision * '00:00:01'::interval)), '[)'::text) WITH &&) WHERE (((kind = 'meeting'::text) AND (host_user_id IS NOT NULL) AND (archived_at IS NULL) AND claims_host_slot AND (meeting_status IS DISTINCT FROM 'canceled'::text)));
+
+ALTER TABLE ONLY public.activity_meeting_rsvp_backfill
+    ADD CONSTRAINT activity_meeting_rsvp_backfill_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.activity_own_sent_mail_repair_cutoff
+    ADD CONSTRAINT activity_own_sent_mail_repair_cutoff_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.activity_own_sent_mail_repair
+    ADD CONSTRAINT activity_own_sent_mail_repair_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.activity_participant
+    ADD CONSTRAINT activity_participant_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_participant_replay
+    ADD CONSTRAINT activity_participant_replay_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_reader_state
+    ADD CONSTRAINT activity_reader_state_pkey PRIMARY KEY (activity_id, reader_id);
+
+ALTER TABLE ONLY public.activity_reminder_delivery
+    ADD CONSTRAINT activity_reminder_delivery_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.activity_reply_verdict_history
+    ADD CONSTRAINT activity_reply_verdict_history_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_request_settlement
+    ADD CONSTRAINT activity_request_settlement_pkey PRIMARY KEY (request_activity_id);
+
+ALTER TABLE ONLY public.activity_retention_evidence
+    ADD CONSTRAINT activity_retention_evidence_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_review_response
+    ADD CONSTRAINT activity_review_response_activity_id_key UNIQUE (activity_id);
+
+ALTER TABLE ONLY public.activity_review_response
+    ADD CONSTRAINT activity_review_response_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_review_template
+    ADD CONSTRAINT activity_review_template_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.activity_sales_state
+    ADD CONSTRAINT activity_sales_state_pkey PRIMARY KEY (thread_key, kind, channel_provider);
+
+ALTER TABLE ONLY public.activity_waiting_horizon
+    ADD CONSTRAINT activity_waiting_horizon_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.agent_run
+    ADD CONSTRAINT agent_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.agent_run
+    ADD CONSTRAINT agent_run_trigger_unique UNIQUE (trigger_ref);
+
+ALTER TABLE ONLY public.agent_standing_grant
+    ADD CONSTRAINT agent_standing_grant_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.agent_task
+    ADD CONSTRAINT agent_task_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.ai_call_config
+    ADD CONSTRAINT ai_call_config_pkey PRIMARY KEY (hash);
+
+ALTER TABLE ONLY public.ai_call_payload
+    ADD CONSTRAINT ai_call_payload_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.ai_call
+    ADD CONSTRAINT ai_call_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.ai_feedback
+    ADD CONSTRAINT ai_feedback_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.ai_feedback
+    ADD CONSTRAINT ai_feedback_subject_type_subject_id_claim_kind_key UNIQUE (subject_type, subject_id, claim_kind, claim_key);
+
+ALTER TABLE ONLY public.ai_model_rate
+    ADD CONSTRAINT ai_model_rate_key UNIQUE (provider, model_id, effective_date);
+
+ALTER TABLE ONLY public.ai_model_rate
+    ADD CONSTRAINT ai_model_rate_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.ai_task_run
+    ADD CONSTRAINT ai_task_run_identity UNIQUE (source, occurrence_key);
+
+ALTER TABLE ONLY public.ai_task_run
+    ADD CONSTRAINT ai_task_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.ai_task_run
+    ADD CONSTRAINT ai_task_run_seq_unique UNIQUE (seq);
+
+ALTER TABLE ONLY public.ai_usage
+    ADD CONSTRAINT ai_usage_pkey PRIMARY KEY (day, task, tier);
+
+ALTER TABLE ONLY public.analytics_share
+    ADD CONSTRAINT analytics_share_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.app_user
+    ADD CONSTRAINT app_user_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.approval_autonomy_policy
+    ADD CONSTRAINT approval_autonomy_policy_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.approval
+    ADD CONSTRAINT approval_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.approval_preference
+    ADD CONSTRAINT approval_preference_pkey PRIMARY KEY (user_id, kind);
+
+ALTER TABLE ONLY public.assurance_cycle
+    ADD CONSTRAINT assurance_cycle_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.assurance_deal_receipt
+    ADD CONSTRAINT assurance_deal_receipt_pkey PRIMARY KEY (deal_id);
+
+ALTER TABLE ONLY public.assurance_exception
+    ADD CONSTRAINT assurance_exception_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.assurance_input_change
+    ADD CONSTRAINT assurance_input_change_pkey PRIMARY KEY (subject_kind, subject_id);
+
+ALTER TABLE ONLY public.assurance_resolution
+    ADD CONSTRAINT assurance_resolution_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.assurance_run_finding
+    ADD CONSTRAINT assurance_run_finding_pkey PRIMARY KEY (run_id, exception_id);
+
+ALTER TABLE ONLY public.assurance_run
+    ADD CONSTRAINT assurance_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.assurance_source_coverage
+    ADD CONSTRAINT assurance_source_coverage_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_once UNIQUE (exception_id, cycle_id);
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_one_task_per_subject EXCLUDE USING gist (cycle_id WITH =, subject_kind WITH =, subject_id WITH =, task_activity_id WITH <>);
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.attachment_extraction
+    ADD CONSTRAINT attachment_extraction_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.attachment
+    ADD CONSTRAINT attachment_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.audit_log
+    ADD CONSTRAINT audit_log_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.auth_token
+    ADD CONSTRAINT auth_token_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.automation_effect_claim
+    ADD CONSTRAINT automation_effect_claim_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.automation_effect_claim
+    ADD CONSTRAINT automation_effect_claim_unique UNIQUE (handler, occurrence_key, effect_fingerprint);
+
+ALTER TABLE ONLY public.automation
+    ADD CONSTRAINT automation_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.booking_alias
+    ADD CONSTRAINT booking_alias_alias_key UNIQUE (alias);
+
+ALTER TABLE ONLY public.booking_alias
+    ADD CONSTRAINT booking_alias_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.booking_page
+    ADD CONSTRAINT booking_page_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.booking_page
+    ADD CONSTRAINT booking_page_slug_key UNIQUE (slug);
+
+ALTER TABLE ONLY public.brief_item
+    ADD CONSTRAINT brief_item_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.brief_run
+    ADD CONSTRAINT brief_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.bulk_confirmation
+    ADD CONSTRAINT bulk_confirmation_pkey PRIMARY KEY (token_hash);
+
+ALTER TABLE ONLY public.bulk_operation
+    ADD CONSTRAINT bulk_operation_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_alias_refused
+    ADD CONSTRAINT capture_alias_refused_pkey PRIMARY KEY (user_id, value);
+
+ALTER TABLE ONLY public.capture_alias_sighting
+    ADD CONSTRAINT capture_alias_sighting_once_per_message UNIQUE (user_id, value, source);
+
+ALTER TABLE ONLY public.capture_alias_sighting
+    ADD CONSTRAINT capture_alias_sighting_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_answered_sweep_cursor
+    ADD CONSTRAINT capture_answered_sweep_cursor_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.capture_auto_enrich_budget
+    ADD CONSTRAINT capture_auto_enrich_budget_pkey PRIMARY KEY (budget_date);
+
+ALTER TABLE ONLY public.capture_auto_enrich_state
+    ADD CONSTRAINT capture_auto_enrich_state_pkey PRIMARY KEY (company_id);
+
+ALTER TABLE ONLY public.capture_backfill_creation
+    ADD CONSTRAINT capture_backfill_creation_pkey PRIMARY KEY (backfill_id, kind, subject);
+
+ALTER TABLE ONLY public.capture_backfill
+    ADD CONSTRAINT capture_backfill_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT capture_connection_unique UNIQUE (user_id, provider);
+
+ALTER TABLE ONLY public.capture_counterparty_hold
+    ADD CONSTRAINT capture_counterparty_hold_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_counterparty_hold
+    ADD CONSTRAINT capture_counterparty_hold_user_value_key UNIQUE (user_id, kind, value);
+
+ALTER TABLE ONLY public.capture_digest
+    ADD CONSTRAINT capture_digest_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_digest
+    ADD CONSTRAINT capture_digest_user_id_digest_date_key UNIQUE (user_id, digest_date);
+
+ALTER TABLE ONLY public.capture_exclusion
+    ADD CONSTRAINT capture_exclusion_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_freemail_domain
+    ADD CONSTRAINT capture_freemail_domain_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_import
+    ADD CONSTRAINT capture_import_activity_user_key UNIQUE (activity_id, user_id);
+
+ALTER TABLE ONLY public.capture_import
+    ADD CONSTRAINT capture_import_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_owner_identity
+    ADD CONSTRAINT capture_owner_identity_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_owner_identity
+    ADD CONSTRAINT capture_owner_identity_user_value_key UNIQUE (user_id, kind, value);
+
+ALTER TABLE ONLY public.capture_owner_identity_withdrawn
+    ADD CONSTRAINT capture_owner_identity_withdrawn_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_party_admission_cursor
+    ADD CONSTRAINT capture_party_admission_cursor_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.capture_party_source
+    ADD CONSTRAINT capture_party_source_pkey PRIMARY KEY (activity_id, user_id, provider);
+
+ALTER TABLE ONLY public.capture_party_source_replay
+    ADD CONSTRAINT capture_party_source_replay_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.capture_pending_counterparty
+    ADD CONSTRAINT capture_pending_counterparty_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_sender_override
+    ADD CONSTRAINT capture_sender_override_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_sender_override
+    ADD CONSTRAINT capture_sender_override_user_address_key UNIQUE (user_id, address);
+
+ALTER TABLE ONLY public.capture_sweep_run
+    ADD CONSTRAINT capture_sweep_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_sync_state
+    ADD CONSTRAINT capture_sync_state_pkey PRIMARY KEY (connection_id);
+
+ALTER TABLE ONLY public.capture_test_mailbox_sent
+    ADD CONSTRAINT capture_test_mailbox_sent_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_test_mailbox_sent
+    ADD CONSTRAINT capture_test_mailbox_sent_user_message_unique UNIQUE (user_id, message_id);
+
+ALTER TABLE ONLY public.capture_thread_verdict
+    ADD CONSTRAINT capture_thread_verdict_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_thread_verdict
+    ADD CONSTRAINT capture_thread_verdict_thread_user_key UNIQUE (thread_key, user_id);
+
+ALTER TABLE ONLY public.capture_trace
+    ADD CONSTRAINT capture_trace_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.channel_connection
+    ADD CONSTRAINT channel_connection_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.channel_provider
+    ADD CONSTRAINT channel_provider_pkey PRIMARY KEY (provider);
+
+ALTER TABLE ONLY public.close_date_run_member
+    ADD CONSTRAINT close_date_run_member_pkey PRIMARY KEY (run_id, deal_id);
+
+ALTER TABLE ONLY public.close_date_run
+    ADD CONSTRAINT close_date_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.commission_entry
+    ADD CONSTRAINT commission_entry_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.comms_outbound
+    ADD CONSTRAINT comms_outbound_message_unique UNIQUE (message_id);
+
+ALTER TABLE ONLY public.comms_outbound
+    ADD CONSTRAINT comms_outbound_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.communication_basis
+    ADD CONSTRAINT communication_basis_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.communication_decision
+    ADD CONSTRAINT communication_decision_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.communication_instruction
+    ADD CONSTRAINT communication_instruction_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.communication_instruction
+    ADD CONSTRAINT communication_instruction_review_id_key UNIQUE (review_id);
+
+ALTER TABLE ONLY public.communication_override
+    ADD CONSTRAINT communication_override_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.communication_review
+    ADD CONSTRAINT communication_review_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.communication_suppression
+    ADD CONSTRAINT communication_suppression_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_address_country
+    ADD CONSTRAINT company_address_country_pkey PRIMARY KEY (company_id);
+
+ALTER TABLE ONLY public.company_brief
+    ADD CONSTRAINT company_brief_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_brief
+    ADD CONSTRAINT company_brief_user_id_company_id_key UNIQUE (user_id, company_id);
+
+ALTER TABLE ONLY public.company_domain_disposition
+    ADD CONSTRAINT company_domain_disposition_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_domain
+    ADD CONSTRAINT company_domain_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_domain_question_reader
+    ADD CONSTRAINT company_domain_question_reader_pkey PRIMARY KEY (domain, reader_id);
+
+ALTER TABLE ONLY public.company_dossier
+    ADD CONSTRAINT company_dossier_pkey PRIMARY KEY (user_id, company_id);
+
+ALTER TABLE ONLY public.company_fact
+    ADD CONSTRAINT company_fact_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_fact_revision
+    ADD CONSTRAINT company_fact_revision_pkey PRIMARY KEY (company_id);
+
+ALTER TABLE ONLY public.company_geocode_state
+    ADD CONSTRAINT company_geocode_state_pkey PRIMARY KEY (company_id);
+
+ALTER TABLE ONLY public.company_growth_fit
+    ADD CONSTRAINT company_growth_fit_pkey PRIMARY KEY (user_id, company_id);
+
+ALTER TABLE ONLY public.company_offered_value
+    ADD CONSTRAINT company_offered_value_pkey PRIMARY KEY (company_id, source_system, field_key);
+
+ALTER TABLE ONLY public.company
+    ADD CONSTRAINT company_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_profile_field
+    ADD CONSTRAINT company_profile_field_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_relationship_type
+    ADD CONSTRAINT company_relationship_type_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_scan
+    ADD CONSTRAINT company_scan_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.company_scan
+    ADD CONSTRAINT company_scan_user_id_company_id_key UNIQUE (user_id, company_id);
+
+ALTER TABLE ONLY public.company_technical_state
+    ADD CONSTRAINT company_technical_state_pkey PRIMARY KEY (company_id, lane);
+
+ALTER TABLE ONLY public.company_vat_check
+    ADD CONSTRAINT company_vat_check_one_per_company UNIQUE (company_id);
+
+ALTER TABLE ONLY public.company_vat_check
+    ADD CONSTRAINT company_vat_check_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.confirm_token
+    ADD CONSTRAINT confirm_token_hash_key UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.confirm_token
+    ADD CONSTRAINT confirm_token_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT connector_connection_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.consent_doi_token
+    ADD CONSTRAINT consent_doi_token_hash_unique UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.consent_doi_token
+    ADD CONSTRAINT consent_doi_token_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.consent_event
+    ADD CONSTRAINT consent_event_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.consent_purpose
+    ADD CONSTRAINT consent_purpose_key_unique UNIQUE (key);
+
+ALTER TABLE ONLY public.consent_purpose
+    ADD CONSTRAINT consent_purpose_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.consent_qualifying_event
+    ADD CONSTRAINT consent_qualifying_event_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.consent_text_version
+    ADD CONSTRAINT consent_text_version_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_acquisition_evidence
+    ADD CONSTRAINT contact_acquisition_evidence_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_address_country
+    ADD CONSTRAINT contact_address_country_pkey PRIMARY KEY (contact_id);
+
+ALTER TABLE ONLY public.contact_brief
+    ADD CONSTRAINT contact_brief_pkey PRIMARY KEY (user_id, contact_id);
+
+ALTER TABLE ONLY public.contact_channel_identity
+    ADD CONSTRAINT contact_channel_identity_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_confirm_submission
+    ADD CONSTRAINT contact_confirm_submission_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_consent
+    ADD CONSTRAINT contact_consent_lead_unique UNIQUE (lead_id, purpose_id);
+
+ALTER TABLE ONLY public.contact_consent
+    ADD CONSTRAINT contact_consent_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_consent
+    ADD CONSTRAINT contact_consent_unique UNIQUE (contact_id, purpose_id);
+
+ALTER TABLE ONLY public.contact_email
+    ADD CONSTRAINT contact_email_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_moment_dismissal
+    ADD CONSTRAINT contact_moment_dismissal_pkey PRIMARY KEY (user_id, contact_id, claim_key);
+
+ALTER TABLE ONLY public.contact_phone
+    ADD CONSTRAINT contact_phone_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact
+    ADD CONSTRAINT contact_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_profile_field
+    ADD CONSTRAINT contact_profile_field_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_provider_claim
+    ADD CONSTRAINT contact_provider_claim_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contact_provider_claim
+    ADD CONSTRAINT contact_provider_claim_run_id_claim_key_key UNIQUE (run_id, claim_key);
+
+ALTER TABLE ONLY public.contact_signature_enrich_state
+    ADD CONSTRAINT contact_signature_enrich_state_pkey PRIMARY KEY (contact_id);
+
+ALTER TABLE ONLY public.contact_social
+    ADD CONSTRAINT contact_social_contact_id_platform_key UNIQUE (contact_id, platform);
+
+ALTER TABLE ONLY public.contact_social
+    ADD CONSTRAINT contact_social_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.contract
+    ADD CONSTRAINT contract_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.conversation_claim
+    ADD CONSTRAINT conversation_claim_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.currency_minor_digits
+    ADD CONSTRAINT currency_minor_digits_pkey PRIMARY KEY (currency);
+
+ALTER TABLE ONLY public.custom_field
+    ADD CONSTRAINT custom_field_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.data_subject_request
+    ADD CONSTRAINT data_subject_request_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.data_task_review
+    ADD CONSTRAINT data_task_review_pkey PRIMARY KEY (token_hash);
+
+ALTER TABLE ONLY public.data_task_run_history
+    ADD CONSTRAINT data_task_run_history_pkey PRIMARY KEY (run_id);
+
+ALTER TABLE ONLY public.data_task_run
+    ADD CONSTRAINT data_task_run_pkey PRIMARY KEY (task_id, step);
+
+ALTER TABLE ONLY public.data_task_run
+    ADD CONSTRAINT data_task_run_run_id_key UNIQUE (run_id);
+
+ALTER TABLE ONLY public.deal_acquisition_source
+    ADD CONSTRAINT deal_acquisition_source_key_key UNIQUE (key);
+
+ALTER TABLE ONLY public.deal_acquisition_source
+    ADD CONSTRAINT deal_acquisition_source_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_authorship_sweep_cursor
+    ADD CONSTRAINT deal_authorship_sweep_cursor_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.deal_correction
+    ADD CONSTRAINT deal_correction_audit_once UNIQUE (audit_log_id);
+
+ALTER TABLE ONLY public.deal_correction
+    ADD CONSTRAINT deal_correction_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_document_hide
+    ADD CONSTRAINT deal_document_hide_pkey PRIMARY KEY (deal_id, attachment_id);
+
+ALTER TABLE ONLY public.deal_line_item
+    ADD CONSTRAINT deal_line_item_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_line_item
+    ADD CONSTRAINT deal_line_item_position_unique UNIQUE (deal_id, "position");
+
+ALTER TABLE ONLY public.deal_loss_reason
+    ADD CONSTRAINT deal_loss_reason_key_key UNIQUE (key);
+
+ALTER TABLE ONLY public.deal_loss_reason_mapping
+    ADD CONSTRAINT deal_loss_reason_mapping_note_key_key UNIQUE (note_key);
+
+ALTER TABLE ONLY public.deal_loss_reason_mapping
+    ADD CONSTRAINT deal_loss_reason_mapping_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_loss_reason
+    ADD CONSTRAINT deal_loss_reason_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_move_dismissal
+    ADD CONSTRAINT deal_move_dismissal_pkey PRIMARY KEY (user_id, deal_id);
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_product
+    ADD CONSTRAINT deal_product_pkey PRIMARY KEY (deal_id, product_id);
+
+ALTER TABLE ONLY public.deal_risk_day
+    ADD CONSTRAINT deal_risk_day_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_risk_verdict
+    ADD CONSTRAINT deal_risk_verdict_pkey PRIMARY KEY (day_id, deal_id);
+
+ALTER TABLE ONLY public.deal_room_comment
+    ADD CONSTRAINT deal_room_comment_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_room_document
+    ADD CONSTRAINT deal_room_document_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_room_engagement
+    ADD CONSTRAINT deal_room_engagement_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_room_invitation
+    ADD CONSTRAINT deal_room_invitation_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_room
+    ADD CONSTRAINT deal_room_one_open_room_per_deal EXCLUDE USING gist (deal_id WITH =, tstzrange(created_at, expires_at) WITH &&) WHERE (((state = ANY (ARRAY['draft'::text, 'building'::text, 'ready'::text, 'publishing'::text, 'live'::text, 'paused'::text])) AND (archived_at IS NULL)));
+
+ALTER TABLE ONLY public.deal_room_participant
+    ADD CONSTRAINT deal_room_participant_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_room
+    ADD CONSTRAINT deal_room_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_room_session
+    ADD CONSTRAINT deal_room_session_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_room_thread
+    ADD CONSTRAINT deal_room_thread_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_stage_evidence
+    ADD CONSTRAINT deal_stage_evidence_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_stage_history
+    ADD CONSTRAINT deal_stage_history_deal_id_id_key UNIQUE (deal_id, id);
+
+ALTER TABLE ONLY public.deal_stage_history
+    ADD CONSTRAINT deal_stage_history_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_status_card
+    ADD CONSTRAINT deal_status_card_pkey PRIMARY KEY (user_id, deal_id);
+
+ALTER TABLE ONLY public.deal_suggestion_evidence
+    ADD CONSTRAINT deal_suggestion_evidence_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.deal_suggestion
+    ADD CONSTRAINT deal_suggestion_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.dedupe_scan_state
+    ADD CONSTRAINT dedupe_scan_state_pkey PRIMARY KEY (stream);
+
+ALTER TABLE ONLY public.email_signature
+    ADD CONSTRAINT email_signature_owner_id_key UNIQUE (owner_id);
+
+ALTER TABLE ONLY public.email_signature
+    ADD CONSTRAINT email_signature_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.embed_store_binding
+    ADD CONSTRAINT embed_store_binding_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.embedding
+    ADD CONSTRAINT embedding_pkey PRIMARY KEY (entity_type, entity_id, chunk_ix);
+
+ALTER TABLE ONLY public.erasure_suppression
+    ADD CONSTRAINT erasure_suppression_pkey PRIMARY KEY (kind, value_hash);
+
+ALTER TABLE ONLY public.event_outbox
+    ADD CONSTRAINT event_outbox_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.existing_customer_notice
+    ADD CONSTRAINT existing_customer_notice_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.existing_customer_notice_purpose
+    ADD CONSTRAINT existing_customer_notice_purpose_pkey PRIMARY KEY (notice_id, purpose_id);
+
+ALTER TABLE ONLY public.extension_ingest_position
+    ADD CONSTRAINT extension_ingest_position_pkey PRIMARY KEY (unit, source_system);
+
+ALTER TABLE ONLY public.extension_ingest_refusal
+    ADD CONSTRAINT extension_ingest_refusal_pkey PRIMARY KEY (unit, refusal, day);
+
+ALTER TABLE ONLY public.extension_secret
+    ADD CONSTRAINT extension_secret_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.federated_identity
+    ADD CONSTRAINT federated_identity_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.federated_identity
+    ADD CONSTRAINT federated_identity_provider_subject_key UNIQUE (provider, subject);
+
+ALTER TABLE ONLY public.federated_identity
+    ADD CONSTRAINT federated_identity_user_provider_key UNIQUE (user_id, provider);
+
+ALTER TABLE ONLY public.field_mask
+    ADD CONSTRAINT field_mask_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.field_mask
+    ADD CONSTRAINT field_mask_role_key_object_field_key UNIQUE (role_key, object, field);
+
+ALTER TABLE ONLY public.field_provenance
+    ADD CONSTRAINT field_provenance_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.finance_connection
+    ADD CONSTRAINT finance_connection_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.finance_customer_link
+    ADD CONSTRAINT finance_customer_link_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.finance_external_customer
+    ADD CONSTRAINT finance_external_customer_connection_id_extern_key UNIQUE (connection_id, external_customer_id);
+
+ALTER TABLE ONLY public.finance_external_customer
+    ADD CONSTRAINT finance_external_customer_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_connection_id_external_id_key UNIQUE (connection_id, external_id);
+
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.finance_payment
+    ADD CONSTRAINT finance_payment_connection_id_external_id_key UNIQUE (connection_id, external_id);
+
+ALTER TABLE ONLY public.finance_payment
+    ADD CONSTRAINT finance_payment_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.forecast_call
+    ADD CONSTRAINT forecast_call_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.forecast_capture_status
+    ADD CONSTRAINT forecast_capture_status_context_key_key UNIQUE (context_key);
+
+ALTER TABLE ONLY public.forecast_capture_status
+    ADD CONSTRAINT forecast_capture_status_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.forecast_contribution
+    ADD CONSTRAINT forecast_contribution_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.forecast_snapshot
+    ADD CONSTRAINT forecast_snapshot_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.fx_rate
+    ADD CONSTRAINT fx_rate_pair_day UNIQUE (from_currency, to_currency, rate_date);
+
+ALTER TABLE ONLY public.fx_rate
+    ADD CONSTRAINT fx_rate_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.geocode_cache
+    ADD CONSTRAINT geocode_cache_pkey PRIMARY KEY (query);
+
+ALTER TABLE ONLY public.geocode_country_cache
+    ADD CONSTRAINT geocode_country_cache_pkey PRIMARY KEY (query);
+
+ALTER TABLE ONLY public.graph_contact_edge
+    ADD CONSTRAINT graph_contact_edge_pkey PRIMARY KEY (contact_a, contact_b);
+
+ALTER TABLE ONLY public.graph_interaction_edge
+    ADD CONSTRAINT graph_interaction_edge_pkey PRIMARY KEY (user_id, contact_id);
+
+ALTER TABLE ONLY public.home_read_cache
+    ADD CONSTRAINT home_read_cache_pkey PRIMARY KEY (reader_id, read, request_key);
+
+ALTER TABLE ONLY public.home_read_fence_pending
+    ADD CONSTRAINT home_read_fence_pending_pkey PRIMARY KEY (xact, fence);
+
+ALTER TABLE ONLY public.home_read_fence
+    ADD CONSTRAINT home_read_fence_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.home_read_forgotten
+    ADD CONSTRAINT home_read_forgotten_pkey PRIMARY KEY (reader_id);
+
+ALTER TABLE ONLY public.idempotency_key
+    ADD CONSTRAINT idempotency_key_pkey PRIMARY KEY (principal_id, key, endpoint);
+
+ALTER TABLE ONLY public.intro_request
+    ADD CONSTRAINT intro_request_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.knowledge_chunk
+    ADD CONSTRAINT knowledge_chunk_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.knowledge_corpus
+    ADD CONSTRAINT knowledge_corpus_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.knowledge_document
+    ADD CONSTRAINT knowledge_document_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lead_disqualify_reason
+    ADD CONSTRAINT lead_disqualify_reason_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lead_manual_signal
+    ADD CONSTRAINT lead_manual_signal_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lead_origin
+    ADD CONSTRAINT lead_origin_key_key UNIQUE (key);
+
+ALTER TABLE ONLY public.lead_origin
+    ADD CONSTRAINT lead_origin_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lead_privacy_notice
+    ADD CONSTRAINT lead_privacy_notice_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lead_score_history
+    ADD CONSTRAINT lead_score_history_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.lead_source
+    ADD CONSTRAINT lead_source_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.legal_entity_member
+    ADD CONSTRAINT legal_entity_member_pkey PRIMARY KEY (user_id);
+
+ALTER TABLE ONLY public.legal_entity
+    ADD CONSTRAINT legal_entity_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.legal_review
+    ADD CONSTRAINT legal_review_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.linkedin_account
+    ADD CONSTRAINT linkedin_account_pkey PRIMARY KEY (user_id);
+
+ALTER TABLE ONLY public.linkedin_connection
+    ADD CONSTRAINT linkedin_connection_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.list_evaluation
+    ADD CONSTRAINT list_evaluation_pkey PRIMARY KEY (list_id);
+
+ALTER TABLE ONLY public.list_live_member
+    ADD CONSTRAINT list_live_member_pkey PRIMARY KEY (list_id, entity_id);
+
+ALTER TABLE ONLY public.list_member_event
+    ADD CONSTRAINT list_member_event_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.list_member
+    ADD CONSTRAINT list_member_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.list_member
+    ADD CONSTRAINT list_member_unique UNIQUE (list_id, entity_type, entity_id);
+
+ALTER TABLE ONLY public.list
+    ADD CONSTRAINT list_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.list_revision
+    ADD CONSTRAINT list_revision_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.list_revision
+    ADD CONSTRAINT list_revision_version_key UNIQUE (list_id, version);
+
+ALTER TABLE ONLY public.list_visit
+    ADD CONSTRAINT list_visit_pkey PRIMARY KEY (user_id, list_id);
+
+ALTER TABLE ONLY public.mail_draft
+    ADD CONSTRAINT mail_draft_one_per_anchor UNIQUE (author_id, anchor_type, anchor_id);
+
+ALTER TABLE ONLY public.mail_draft
+    ADD CONSTRAINT mail_draft_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.maskable_field
+    ADD CONSTRAINT maskable_field_pkey PRIMARY KEY (object, field);
+
+ALTER TABLE ONLY public.meeting_calendar_episode
+    ADD CONSTRAINT meeting_calendar_episode_pkey PRIMARY KEY (host_user_id, provider);
+
+ALTER TABLE ONLY public.meeting_invitation
+    ADD CONSTRAINT meeting_invitation_management_hash_key UNIQUE (management_hash);
+
+ALTER TABLE ONLY public.meeting_invitation
+    ADD CONSTRAINT meeting_invitation_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.meeting_proposal
+    ADD CONSTRAINT meeting_proposal_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.meeting_proposal
+    ADD CONSTRAINT meeting_proposal_token_hash_key UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.meeting_readiness
+    ADD CONSTRAINT meeting_readiness_pkey PRIMARY KEY (attendee_id, activity_id);
+
+ALTER TABLE ONLY public.mfa_challenge_spent
+    ADD CONSTRAINT mfa_challenge_spent_pkey PRIMARY KEY (jti);
+
+ALTER TABLE ONLY public.mfa_recovery_code
+    ADD CONSTRAINT mfa_recovery_code_hash_key UNIQUE (code_hash);
+
+ALTER TABLE ONLY public.mfa_recovery_code
+    ADD CONSTRAINT mfa_recovery_code_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.notice
+    ADD CONSTRAINT notice_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.notification_digest_run
+    ADD CONSTRAINT notification_digest_run_pkey PRIMARY KEY (user_id, digest_date);
+
+ALTER TABLE ONLY public.notification_preference
+    ADD CONSTRAINT notification_preference_pkey PRIMARY KEY (user_id, class);
+
+ALTER TABLE ONLY public.oauth_authorization_code
+    ADD CONSTRAINT oauth_authorization_code_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.oauth_client
+    ADD CONSTRAINT oauth_client_client_id_key UNIQUE (client_id);
+
+ALTER TABLE ONLY public.oauth_client
+    ADD CONSTRAINT oauth_client_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.oauth_authorization_code
+    ADD CONSTRAINT oauth_code_unique UNIQUE (code_hash);
+
+ALTER TABLE ONLY public.oauth_grant
+    ADD CONSTRAINT oauth_grant_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.oauth_refresh_token
+    ADD CONSTRAINT oauth_refresh_token_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.oauth_refresh_token
+    ADD CONSTRAINT oauth_refresh_unique UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.offer
+    ADD CONSTRAINT offer_deal_id_id_key UNIQUE (deal_id, id);
+
+ALTER TABLE ONLY public.offer_line_item
+    ADD CONSTRAINT offer_line_item_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.offer
+    ADD CONSTRAINT offer_number_rev_unique UNIQUE (offer_number, revision);
+
+ALTER TABLE ONLY public.offer
+    ADD CONSTRAINT offer_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.offer_template
+    ADD CONSTRAINT offer_template_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.onboarding_wizard_state
+    ADD CONSTRAINT onboarding_wizard_state_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.onboarding_wizard_state
+    ADD CONSTRAINT onboarding_wizard_state_user_id_key UNIQUE (user_id);
+
+ALTER TABLE ONLY public.partner
+    ADD CONSTRAINT partner_company_id_key UNIQUE (company_id);
+
+ALTER TABLE ONLY public.partner
+    ADD CONSTRAINT partner_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.partner_stage
+    ADD CONSTRAINT partner_stage_key_key UNIQUE (key);
+
+ALTER TABLE ONLY public.partner_stage
+    ADD CONSTRAINT partner_stage_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.passport
+    ADD CONSTRAINT passport_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.passport
+    ADD CONSTRAINT passport_token_hash_key UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.pipeline
+    ADD CONSTRAINT pipeline_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.preference_token
+    ADD CONSTRAINT preference_token_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.preference_token
+    ADD CONSTRAINT preference_token_token_key UNIQUE (token);
+
+ALTER TABLE ONLY public.privacy_notice_case
+    ADD CONSTRAINT privacy_notice_case_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.privacy_request_proof
+    ADD CONSTRAINT privacy_request_proof_one_per_request UNIQUE (request_id);
+
+ALTER TABLE ONLY public.privacy_request_proof
+    ADD CONSTRAINT privacy_request_proof_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.product
+    ADD CONSTRAINT product_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.product_translation
+    ADD CONSTRAINT product_translation_pkey PRIMARY KEY (product_id, language);
+
+ALTER TABLE ONLY public.project_health_assessment
+    ADD CONSTRAINT project_health_assessment_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.project_health_assessment
+    ADD CONSTRAINT project_health_assessment_project_id_key UNIQUE (project_id, id);
+
+ALTER TABLE ONLY public.project_phase_history
+    ADD CONSTRAINT project_phase_history_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.project
+    ADD CONSTRAINT project_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.provider_applied_field
+    ADD CONSTRAINT provider_applied_field_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.provider_connection_budget
+    ADD CONSTRAINT provider_connection_budget_pkey PRIMARY KEY (connection_id, pool);
+
+ALTER TABLE ONLY public.provider_connection
+    ADD CONSTRAINT provider_connection_credential_ref_key UNIQUE (credential_ref);
+
+ALTER TABLE ONLY public.provider_connection
+    ADD CONSTRAINT provider_connection_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.provider_connection
+    ADD CONSTRAINT provider_connection_provider_key UNIQUE (provider);
+
+ALTER TABLE ONLY public.provider_employment_resolution
+    ADD CONSTRAINT provider_employment_resolution_claim_id_episode_key_key UNIQUE (claim_id, episode_key);
+
+ALTER TABLE ONLY public.provider_employment_resolution
+    ADD CONSTRAINT provider_employment_resolution_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.provider_run_category
+    ADD CONSTRAINT provider_run_category_one_live_buyer UNIQUE (contact_id, provider, category);
+
+ALTER TABLE ONLY public.provider_run_category
+    ADD CONSTRAINT provider_run_category_pkey PRIMARY KEY (run_id, contact_id, provider, category);
+
+ALTER TABLE ONLY public.provider_run
+    ADD CONSTRAINT provider_run_external_correlation_id_key UNIQUE (external_correlation_id);
+
+ALTER TABLE ONLY public.provider_run
+    ADD CONSTRAINT provider_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.provider_run_reservation
+    ADD CONSTRAINT provider_run_reservation_pkey PRIMARY KEY (run_id, pool);
+
+ALTER TABLE ONLY public.provider_run
+    ADD CONSTRAINT provider_run_subject_identity UNIQUE (id, contact_id, provider);
+
+ALTER TABLE ONLY public.raw_capture
+    ADD CONSTRAINT raw_capture_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.raw_capture
+    ADD CONSTRAINT raw_capture_source_unique UNIQUE (source_system, source_id);
+
+ALTER TABLE ONLY public.record_assignment
+    ADD CONSTRAINT record_assignment_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_unique UNIQUE (record_type, record_id, subject_type, subject_id);
+
+ALTER TABLE ONLY public.record_role
+    ADD CONSTRAINT record_role_key_key UNIQUE (key);
+
+ALTER TABLE ONLY public.record_role
+    ADD CONSTRAINT record_role_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.relationship_nudge_dismissal
+    ADD CONSTRAINT relationship_nudge_dismissal_pkey PRIMARY KEY (contact_id, reader_id);
+
+ALTER TABLE ONLY public.relationship
+    ADD CONSTRAINT relationship_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.report_definition
+    ADD CONSTRAINT report_definition_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.report_definition_revision
+    ADD CONSTRAINT report_definition_revision_pkey PRIMARY KEY (report_id, revision);
+
+ALTER TABLE ONLY public.report_edition_contribution
+    ADD CONSTRAINT report_edition_contribution_pkey PRIMARY KEY (edition_id, metric, context_id, contribution_key);
+
+ALTER TABLE ONLY public.report_edition
+    ADD CONSTRAINT report_edition_execution_id_key UNIQUE (execution_id);
+
+ALTER TABLE ONLY public.report_edition
+    ADD CONSTRAINT report_edition_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.report_edition_question
+    ADD CONSTRAINT report_edition_question_pkey PRIMARY KEY (edition_id, card_id);
+
+ALTER TABLE ONLY public.report_edition_question_source
+    ADD CONSTRAINT report_edition_question_source_pkey PRIMARY KEY (edition_id, card_id, row_index, source_id);
+
+ALTER TABLE ONLY public.report_execution
+    ADD CONSTRAINT report_execution_execution_key_key UNIQUE (execution_key);
+
+ALTER TABLE ONLY public.report_execution
+    ADD CONSTRAINT report_execution_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.report_projection_fence
+    ADD CONSTRAINT report_projection_fence_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.report_run
+    ADD CONSTRAINT report_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.report_schedule
+    ADD CONSTRAINT report_schedule_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.reporting_framework
+    ADD CONSTRAINT reporting_framework_id_key UNIQUE (id);
+
+ALTER TABLE ONLY public.reporting_framework
+    ADD CONSTRAINT reporting_framework_pkey PRIMARY KEY (singleton);
+
+ALTER TABLE ONLY public.reporting_framework_revision
+    ADD CONSTRAINT reporting_framework_revision_pkey PRIMARY KEY (revision);
+
+ALTER TABLE ONLY public.restore_drill
+    ADD CONSTRAINT restore_drill_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.retention_policy
+    ADD CONSTRAINT retention_policy_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.retention_policy
+    ADD CONSTRAINT retention_policy_unique UNIQUE NULLS NOT DISTINCT (object_type, category);
+
+ALTER TABLE ONLY public.role_assignment
+    ADD CONSTRAINT role_assignment_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.role
+    ADD CONSTRAINT role_key_unique UNIQUE (key);
+
+ALTER TABLE ONLY public.role
+    ADD CONSTRAINT role_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.runner_job
+    ADD CONSTRAINT runner_job_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.runner_job
+    ADD CONSTRAINT runner_job_trigger_unique UNIQUE (agent_spec, trigger_ref);
+
+ALTER TABLE ONLY public.sales_goal_plan
+    ADD CONSTRAINT sales_goal_plan_owner_year UNIQUE (owner_id, year);
+
+ALTER TABLE ONLY public.sales_goal_plan
+    ADD CONSTRAINT sales_goal_plan_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.sales_goal_plan_revision
+    ADD CONSTRAINT sales_goal_plan_revision_pkey PRIMARY KEY (plan_id, revision);
+
+ALTER TABLE ONLY public.sales_initiative_baseline
+    ADD CONSTRAINT sales_initiative_baseline_pkey PRIMARY KEY (initiative_id, deal_id);
+
+ALTER TABLE ONLY public.sales_initiative_member
+    ADD CONSTRAINT sales_initiative_member_pkey PRIMARY KEY (initiative_id, record_type, record_id);
+
+ALTER TABLE ONLY public.sales_initiative
+    ADD CONSTRAINT sales_initiative_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.sales_initiative_revision
+    ADD CONSTRAINT sales_initiative_revision_pkey PRIMARY KEY (initiative_id, revision);
+
+ALTER TABLE ONLY public.sales_target
+    ADD CONSTRAINT sales_target_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.sales_target_revision
+    ADD CONSTRAINT sales_target_revision_pkey PRIMARY KEY (target_id, revision);
+
+ALTER TABLE ONLY public.saved_view
+    ADD CONSTRAINT saved_view_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.scheduled_send
+    ADD CONSTRAINT scheduled_send_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.sdr_handoff_event
+    ADD CONSTRAINT sdr_handoff_event_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.sdr_handoff_reason
+    ADD CONSTRAINT sdr_handoff_reason_id_kind UNIQUE (id, applies_to);
+
+ALTER TABLE ONLY public.sdr_handoff_reason
+    ADD CONSTRAINT sdr_handoff_reason_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.session
+    ADD CONSTRAINT session_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.session
+    ADD CONSTRAINT session_token_hash_key UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.setting
+    ADD CONSTRAINT setting_pkey PRIMARY KEY (key);
+
+ALTER TABLE ONLY public.setup_token
+    ADD CONSTRAINT setup_token_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.setup_token
+    ADD CONSTRAINT setup_token_token_hash_key UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.signal_resolution
+    ADD CONSTRAINT signal_resolution_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.signal_thread_scan
+    ADD CONSTRAINT signal_thread_scan_pkey PRIMARY KEY (thread_key);
+
+ALTER TABLE ONLY public.site_read
+    ADD CONSTRAINT site_read_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.stage_exit_criterion
+    ADD CONSTRAINT stage_exit_criterion_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.stage
+    ADD CONSTRAINT stage_id_pipeline_unique UNIQUE (id, pipeline_id);
+
+COMMENT ON CONSTRAINT stage_id_pipeline_unique ON public.stage IS 'Backs deal_stage_in_pipeline. Not a duplicate of stage_pkey: a composite foreign key needs a unique key over both columns.';
+
+ALTER TABLE ONLY public.stage
+    ADD CONSTRAINT stage_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.stage_progression_outcome
+    ADD CONSTRAINT stage_progression_outcome_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.stage_progression_policy
+    ADD CONSTRAINT stage_progression_policy_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.stored_object_intent
+    ADD CONSTRAINT stored_object_intent_pkey PRIMARY KEY (storage_key);
+
+ALTER TABLE ONLY public.suggestion_dismissal
+    ADD CONSTRAINT suggestion_dismissal_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.suggestion_dismissal
+    ADD CONSTRAINT suggestion_dismissal_user_id_company_id_f_key UNIQUE (user_id, company_id, fingerprint);
+
+ALTER TABLE ONLY public.system_log
+    ADD CONSTRAINT system_log_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.tag_interest_read
+    ADD CONSTRAINT tag_interest_read_pkey PRIMARY KEY (activity_id);
+
+ALTER TABLE ONLY public.tag
+    ADD CONSTRAINT tag_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.tag_suggestion_evidence
+    ADD CONSTRAINT tag_suggestion_evidence_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.tag_suggestion
+    ADD CONSTRAINT tag_suggestion_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.taggable
+    ADD CONSTRAINT taggable_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.taggable
+    ADD CONSTRAINT taggable_unique UNIQUE (tag_id, entity_type, entity_id);
+
+ALTER TABLE ONLY public.tax_rate
+    ADD CONSTRAINT tax_rate_once_per_day UNIQUE (country, category, valid_from);
+
+ALTER TABLE ONLY public.tax_rate
+    ADD CONSTRAINT tax_rate_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_membership
+    ADD CONSTRAINT team_membership_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_membership
+    ADD CONSTRAINT team_membership_unique UNIQUE (team_id, user_id);
+
+ALTER TABLE ONLY public.team
+    ADD CONSTRAINT team_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_weekly_review_coverage
+    ADD CONSTRAINT team_weekly_review_coverage_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_weekly_review_member
+    ADD CONSTRAINT team_weekly_review_member_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_weekly_review_outlook
+    ADD CONSTRAINT team_weekly_review_outlook_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_weekly_review
+    ADD CONSTRAINT team_weekly_review_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_weekly_review_rep_funnel
+    ADD CONSTRAINT team_weekly_review_rep_funnel_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_weekly_review_rep_pattern
+    ADD CONSTRAINT team_weekly_review_rep_pattern_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.team_weekly_review_rep
+    ADD CONSTRAINT team_weekly_review_rep_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.technical_lookup_cache
+    ADD CONSTRAINT technical_lookup_cache_pkey PRIMARY KEY (query, record_kind);
+
+ALTER TABLE ONLY public.transcript_read
+    ADD CONSTRAINT transcript_read_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.agent_standing_grant
+    ADD CONSTRAINT uq_agent_standing_grant_user_spec UNIQUE (user_id, agent_spec);
+
+ALTER TABLE ONLY public.analytics_share
+    ADD CONSTRAINT uq_analytics_share_token UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.approval_autonomy_policy
+    ADD CONSTRAINT uq_approval_autonomy_policy_user_kind UNIQUE (user_id, kind);
+
+ALTER TABLE ONLY public.assurance_exception
+    ADD CONSTRAINT uq_assurance_exception_logical_key UNIQUE (logical_key);
+
+ALTER TABLE ONLY public.assurance_source_coverage
+    ADD CONSTRAINT uq_assurance_source_coverage_run_source UNIQUE (run_id, source);
+
+ALTER TABLE ONLY public.brief_item
+    ADD CONSTRAINT uq_brief_item_run_deal UNIQUE (brief_run_id, deal_id);
+
+ALTER TABLE ONLY public.brief_item
+    ADD CONSTRAINT uq_brief_item_run_rank UNIQUE (brief_run_id, rank);
+
+ALTER TABLE ONLY public.brief_run
+    ADD CONSTRAINT uq_brief_run_user_day UNIQUE (user_id, local_day);
+
+ALTER TABLE ONLY public.company_fact
+    ADD CONSTRAINT uq_company_fact UNIQUE (company_id, category, field, value_key);
+
+ALTER TABLE ONLY public.company_profile_field
+    ADD CONSTRAINT uq_company_profile_field UNIQUE (company_id, field);
+
+ALTER TABLE ONLY public.contact_profile_field
+    ADD CONSTRAINT uq_contact_profile_field UNIQUE (contact_id, field, value_key);
+
+ALTER TABLE ONLY public.deal_risk_day
+    ADD CONSTRAINT uq_deal_risk_day UNIQUE (local_day);
+
+ALTER TABLE ONLY public.deal_room_document
+    ADD CONSTRAINT uq_deal_room_document_in_room UNIQUE (id, room_id);
+
+ALTER TABLE ONLY public.deal_room_invitation
+    ADD CONSTRAINT uq_deal_room_invitation_attempt UNIQUE (participant_id, attempt_no);
+
+ALTER TABLE ONLY public.deal_room_invitation
+    ADD CONSTRAINT uq_deal_room_invitation_token UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.deal_room_participant
+    ADD CONSTRAINT uq_deal_room_participant_in_room UNIQUE (id, room_id);
+
+ALTER TABLE ONLY public.deal_room_session
+    ADD CONSTRAINT uq_deal_room_session_token UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.deal_suggestion
+    ADD CONSTRAINT uq_deal_suggestion_fingerprint UNIQUE (fingerprint);
+
+ALTER TABLE ONLY public.forecast_contribution
+    ADD CONSTRAINT uq_forecast_contribution_deal UNIQUE (snapshot_id, deal_id);
+
+ALTER TABLE ONLY public.offer_line_item
+    ADD CONSTRAINT uq_oli_position UNIQUE (offer_id, "position");
+
+ALTER TABLE ONLY public.passport
+    ADD CONSTRAINT uq_passport_id_owner UNIQUE (id, on_behalf_of);
+
+ALTER TABLE ONLY public.tag_suggestion_evidence
+    ADD CONSTRAINT uq_tag_suggestion_evidence UNIQUE (suggestion_id, activity_id);
+
+ALTER TABLE ONLY public.team_weekly_review_coverage
+    ADD CONSTRAINT uq_team_weekly_review_coverage_period UNIQUE (team_weekly_review_id, period_kind);
+
+ALTER TABLE ONLY public.team_weekly_review_member
+    ADD CONSTRAINT uq_team_weekly_review_member UNIQUE (team_weekly_review_id, user_id);
+
+ALTER TABLE ONLY public.team_weekly_review_rep
+    ADD CONSTRAINT uq_team_weekly_review_rep UNIQUE (team_weekly_review_id, user_id);
+
+ALTER TABLE ONLY public.team_weekly_review_rep_funnel
+    ADD CONSTRAINT uq_team_weekly_review_rep_funnel_position UNIQUE (team_weekly_review_rep_id, "position");
+
+ALTER TABLE ONLY public.team_weekly_review_rep_pattern
+    ADD CONSTRAINT uq_team_weekly_review_rep_pattern_kind UNIQUE (team_weekly_review_rep_id, kind);
+
+ALTER TABLE ONLY public.team_weekly_review_rep_pattern
+    ADD CONSTRAINT uq_team_weekly_review_rep_pattern_position UNIQUE (team_weekly_review_rep_id, "position");
+
+ALTER TABLE ONLY public.team_weekly_review
+    ADD CONSTRAINT uq_team_weekly_review_team_week UNIQUE (team_id, local_week_start);
+
+ALTER TABLE ONLY public.voice_corpus_source
+    ADD CONSTRAINT uq_voice_corpus_source_ref UNIQUE (voice_profile_id, source_ref);
+
+ALTER TABLE ONLY public.voice_learning_signal
+    ADD CONSTRAINT uq_voice_learning_signal_draft UNIQUE (draft_ref_hash);
+
+ALTER TABLE ONLY public.voice_profile_delta
+    ADD CONSTRAINT uq_voice_profile_delta_version UNIQUE (voice_profile_id, to_version);
+
+ALTER TABLE ONLY public.voice_profile_version
+    ADD CONSTRAINT uq_voice_profile_version_number UNIQUE (voice_profile_id, profile_version);
+
+ALTER TABLE ONLY public.weekly_plan
+    ADD CONSTRAINT uq_weekly_plan_owner_week UNIQUE (owner_id, local_week_start);
+
+ALTER TABLE ONLY public.weekly_review_learning_citation
+    ADD CONSTRAINT uq_weekly_review_learning_citation UNIQUE (learning_id, subject_type, subject_id);
+
+ALTER TABLE ONLY public.weekly_review_learning
+    ADD CONSTRAINT uq_weekly_review_learning_slot UNIQUE (weekly_review_id, "position");
+
+ALTER TABLE ONLY public.weekly_review
+    ADD CONSTRAINT uq_weekly_review_user_week UNIQUE (user_id, local_week_start);
+
+ALTER TABLE ONLY public.user_mfa
+    ADD CONSTRAINT user_mfa_pkey PRIMARY KEY (user_id);
+
+ALTER TABLE ONLY public.user_record_view
+    ADD CONSTRAINT user_record_view_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.user_record_view
+    ADD CONSTRAINT user_record_view_user_id_entity_type_entity_id_key UNIQUE (user_id, entity_type, entity_id);
+
+ALTER TABLE ONLY public.vault_secret
+    ADD CONSTRAINT vault_secret_pkey PRIMARY KEY (ref);
+
+ALTER TABLE ONLY public.voice_build
+    ADD CONSTRAINT voice_build_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.voice_corpus_source
+    ADD CONSTRAINT voice_corpus_source_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.voice_learning_signal
+    ADD CONSTRAINT voice_learning_signal_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.voice_profile_delta
+    ADD CONSTRAINT voice_profile_delta_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.voice_profile
+    ADD CONSTRAINT voice_profile_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.voice_profile_version
+    ADD CONSTRAINT voice_profile_version_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.web_form
+    ADD CONSTRAINT web_form_form_key_key UNIQUE (form_key);
+
+ALTER TABLE ONLY public.web_form_last_post
+    ADD CONSTRAINT web_form_last_post_pkey PRIMARY KEY (form_id);
+
+ALTER TABLE ONLY public.web_form
+    ADD CONSTRAINT web_form_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.webhook_delivery
+    ADD CONSTRAINT webhook_delivery_dedupe_key UNIQUE (subscription_id, event_id);
+
+ALTER TABLE ONLY public.webhook_delivery
+    ADD CONSTRAINT webhook_delivery_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.webhook_subscription
+    ADD CONSTRAINT webhook_subscription_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_plan
+    ADD CONSTRAINT weekly_plan_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review_deal
+    ADD CONSTRAINT weekly_review_deal_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review_driver
+    ADD CONSTRAINT weekly_review_driver_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review_learning_citation
+    ADD CONSTRAINT weekly_review_learning_citation_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review_learning
+    ADD CONSTRAINT weekly_review_learning_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review_movement
+    ADD CONSTRAINT weekly_review_movement_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review_outlook
+    ADD CONSTRAINT weekly_review_outlook_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review
+    ADD CONSTRAINT weekly_review_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.weekly_review_scorecard
+    ADD CONSTRAINT weekly_review_scorecard_one_per_review UNIQUE (weekly_review_id);
+
+ALTER TABLE ONLY public.weekly_review_scorecard
+    ADD CONSTRAINT weekly_review_scorecard_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.withdrawal_credential
+    ADD CONSTRAINT withdrawal_credential_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.withdrawal_credential
+    ADD CONSTRAINT withdrawal_credential_token_hash_key UNIQUE (token_hash);
+
+ALTER TABLE ONLY public.workflow_run
+    ADD CONSTRAINT workflow_run_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.workflow_run
+    ADD CONSTRAINT workflow_run_unique UNIQUE (handler, idempotency_key);
+
+ALTER TABLE ONLY public.worklist_done
+    ADD CONSTRAINT worklist_done_pkey PRIMARY KEY (reader_id, source, row_id);
+
+ALTER TABLE ONLY public.worklist_pin
+    ADD CONSTRAINT worklist_pin_pkey PRIMARY KEY (reader_id, source, row_id);
+
+ALTER TABLE ONLY public.worklist_snapshot
+    ADD CONSTRAINT worklist_snapshot_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.workspace_email_domain
+    ADD CONSTRAINT workspace_email_domain_pkey PRIMARY KEY (domain);
+
+ALTER TABLE ONLY public.workspace
+    ADD CONSTRAINT workspace_pkey PRIMARY KEY (id);
+
+CREATE INDEX activity_calendar_method_backfill_resume ON public.activity_calendar_method_backfill USING btree (direction, activity_created_at, activity_id);
+
+CREATE INDEX activity_calendar_method_unread ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'inbound'::text));
+
+CREATE INDEX activity_calendar_method_unread_outbound ON public.activity USING btree (created_at, id) WHERE ((calendar_method IS NULL) AND (kind = 'email'::text) AND (direction = 'outbound'::text));
+
+CREATE INDEX activity_identity_activity_idx ON public.activity_identity USING btree (activity_id, identity_kind, identity_key);
+
+CREATE INDEX activity_identity_meeting_uid ON public.activity_identity USING btree ("left"(identity_key, (length(identity_key) - strpos(reverse(identity_key), '/'::text)))) WHERE (identity_kind = 'meeting'::text);
+
+CREATE INDEX activity_mail_reference_referenced_idx ON public.activity_mail_reference USING btree (referenced_id, activity_id);
+
+CREATE INDEX activity_meeting_history_by_activity ON public.activity_meeting_history USING btree (activity_id, effective_at);
+
+CREATE INDEX activity_meeting_history_by_status_time ON public.activity_meeting_history USING btree (status, effective_at);
+
+CREATE UNIQUE INDEX activity_meeting_history_source_once ON public.activity_meeting_history USING btree (source_system, source_id, status) WHERE (source_system IS NOT NULL);
+
+CREATE INDEX activity_reader_state_by_reader ON public.activity_reader_state USING btree (reader_id, activity_id);
+
+CREATE INDEX activity_reminder_delivery_delivered_to_idx ON public.activity_reminder_delivery USING btree (delivered_to);
+
+CREATE INDEX activity_review_response_by_occurrence ON public.activity_review_response USING btree (deal_id, closing_occurrence_id);
+
+CREATE UNIQUE INDEX activity_review_response_submission ON public.activity_review_response USING btree (captured_by, submission_id);
+
+CREATE UNIQUE INDEX activity_review_template_live_key ON public.activity_review_template USING btree (key) WHERE (archived_at IS NULL);
+
+CREATE INDEX ai_call_logical_idx ON public.ai_call USING btree (logical_call_id);
+
+CREATE INDEX ai_call_payload_call ON public.ai_call_payload USING btree (ai_call_id);
+
+CREATE INDEX ai_call_payload_ws_time ON public.ai_call_payload USING btree (occurred_at);
+
+CREATE INDEX ai_call_subject_idx ON public.ai_call USING btree (subject_type, subject_id) WHERE (subject_id IS NOT NULL);
+
+CREATE INDEX ai_call_terminal_trace_idx ON public.ai_call USING btree (occurred_at DESC, id DESC) WHERE is_terminal;
+
+CREATE INDEX ai_task_run_cursor ON public.ai_task_run USING btree (actor_user_id, seq DESC);
+
+CREATE INDEX ai_task_run_live ON public.ai_task_run USING btree (actor_user_id, queued_at DESC, id DESC) WHERE (state = ANY (ARRAY['queued'::text, 'running'::text]));
+
+CREATE INDEX ai_task_run_settled ON public.ai_task_run USING btree (actor_user_id, finished_at DESC, id DESC) WHERE (state = ANY (ARRAY['done'::text, 'degraded'::text, 'failed'::text]));
+
+CREATE INDEX approval_effect_failed_idx ON public.approval USING btree (effect_failed_at DESC) WHERE (effect_failed_at IS NOT NULL);
+
+CREATE UNIQUE INDEX assurance_cycle_one_open_per_scope ON public.assurance_cycle USING btree (scope) WHERE (closed_at IS NULL);
+
+CREATE INDEX assurance_deal_receipt_by_run ON public.assurance_deal_receipt USING btree (run_id);
+
+CREATE INDEX assurance_input_change_by_generation ON public.assurance_input_change USING btree (generation);
+
+CREATE INDEX assurance_run_finding_by_exception ON public.assurance_run_finding USING btree (exception_id, observed_at DESC);
+
+CREATE INDEX assurance_task_item_by_task ON public.assurance_task_item USING btree (task_activity_id);
+
+CREATE INDEX assurance_task_item_open_in_cycle ON public.assurance_task_item USING btree (cycle_id, subject_kind, subject_id) WHERE (state = 'open'::text);
+
+CREATE INDEX attachment_account_ix ON public.attachment USING btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX attachment_activity_ix ON public.attachment USING btree (activity_id) WHERE (activity_id IS NOT NULL);
+
+CREATE INDEX attachment_contract_ix ON public.attachment USING btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX attachment_external_part_key ON public.attachment USING btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL);
+
+CREATE INDEX attachment_supersedes_ix ON public.attachment USING btree (supersedes_id) WHERE (supersedes_id IS NOT NULL);
+
+CREATE INDEX automation_effect_claim_unapplied ON public.automation_effect_claim USING btree (created_at) WHERE (applied_at IS NULL);
+
+CREATE INDEX booking_alias_booking_page_idx ON public.booking_alias USING btree (booking_page_id);
+
+CREATE UNIQUE INDEX booking_alias_one_live_per_host ON public.booking_alias USING btree (host_user_id) WHERE (retired_at IS NULL);
+
+CREATE INDEX capture_import_user_idx ON public.capture_import USING btree (user_id, activity_id);
+
+CREATE INDEX capture_owner_identity_withdrawn_at_idx ON public.capture_owner_identity_withdrawn USING btree (withdrawn_at);
+
+CREATE INDEX capture_owner_identity_withdrawn_user_idx ON public.capture_owner_identity_withdrawn USING btree (user_id);
+
+CREATE INDEX capture_party_source_original ON public.capture_party_source USING btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL);
+
+CREATE INDEX capture_party_source_pending ON public.capture_party_source USING btree (activity_id, user_id) WHERE admission_pending;
+
+CREATE INDEX capture_party_source_recipients ON public.capture_party_source USING gin (recipients) WHERE sent_by_owner;
+
+CREATE INDEX capture_party_source_user ON public.capture_party_source USING btree (user_id);
+
+CREATE INDEX capture_pending_counterparty_backfill_idx ON public.capture_pending_counterparty USING btree (backfill_id) WHERE (backfill_id IS NOT NULL);
+
+CREATE INDEX capture_pending_counterparty_email_ix ON public.capture_pending_counterparty USING btree (email);
+
+CREATE INDEX capture_sender_override_user_idx ON public.capture_sender_override USING btree (user_id, created_at DESC);
+
+CREATE INDEX capture_sweep_run_latest ON public.capture_sweep_run USING btree (sweep, finished_at DESC, id DESC);
+
+CREATE INDEX capture_thread_verdict_due_idx ON public.capture_thread_verdict USING btree (next_attempt_at) WHERE ((status = 'pending'::text) AND (next_attempt_at IS NOT NULL));
+
+CREATE INDEX capture_thread_verdict_held_by_seat_idx ON public.capture_thread_verdict USING btree (user_id, status) WHERE (status <> ALL (ARRAY['cleared'::text, 'shared_by_owner'::text]));
+
+CREATE INDEX capture_trace_counterparty ON public.capture_trace USING btree (counterparty) WHERE (counterparty IS NOT NULL);
+
+CREATE INDEX capture_trace_message ON public.capture_trace USING btree (source_system, source_id);
+
+CREATE UNIQUE INDEX capture_trace_natural_key ON public.capture_trace USING btree (user_id, source_system, source_id, stage, outcome) NULLS NOT DISTINCT;
+
+CREATE INDEX capture_trace_user_window ON public.capture_trace USING btree (user_id, occurred_at DESC);
+
+CREATE INDEX capture_trace_window ON public.capture_trace USING btree (occurred_at DESC);
+
+CREATE INDEX close_date_run_member_walk ON public.close_date_run_member USING btree (run_id, deal_created_at, deal_id) WHERE (outcome = 'pending'::text);
+
+CREATE INDEX close_date_run_open ON public.close_date_run USING btree (as_of DESC) WHERE (status = 'running'::text);
+
+CREATE INDEX comms_outbound_bounced_idx ON public.comms_outbound USING btree (bounced_at DESC) WHERE (bounced_at IS NOT NULL);
+
+CREATE INDEX comms_outbound_controller_payload ON public.comms_outbound USING btree (payload_expires_at) WHERE (payload_ref IS NOT NULL);
+
+CREATE INDEX comms_outbound_due ON public.comms_outbound USING btree (delivery_due_at) WHERE ((delivery_due_at IS NOT NULL) AND (status <> 'sent'::text));
+
+CREATE INDEX comms_outbound_link_ix ON public.comms_outbound USING btree (link_id) WHERE (link_id IS NOT NULL);
+
+CREATE UNIQUE INDEX comms_outbound_one_delivery_per_instruction ON public.comms_outbound USING btree (instruction_id) WHERE (instruction_id IS NOT NULL);
+
+CREATE INDEX comms_outbound_party_admission ON public.comms_outbound USING btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent'::text) AND (sender_kind = 'user'::text) AND (channel_user_id IS NULL));
+
+CREATE INDEX comms_outbound_provider_message ON public.comms_outbound USING btree (user_id, provider, provider_message_id) WHERE (provider_message_id IS NOT NULL);
+
+CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id, id);
+
+CREATE INDEX communication_basis_live_contact ON public.communication_basis USING btree (contact_id, kind) WHERE ((contact_id IS NOT NULL) AND (revoked_at IS NULL));
+
+CREATE INDEX communication_basis_live_lead ON public.communication_basis USING btree (lead_id, kind) WHERE ((lead_id IS NOT NULL) AND (revoked_at IS NULL));
+
+CREATE INDEX communication_decision_by_subject ON public.communication_decision USING btree (subject_id) WHERE (subject_id IS NOT NULL);
+
+CREATE INDEX communication_decision_disagreements ON public.communication_decision USING btree (decided_at) WHERE ((legacy_verdict IS NOT NULL) AND (legacy_verdict <> verdict));
+
+CREATE UNIQUE INDEX communication_decision_one_per_decision ON public.communication_decision USING btree (decision_set_id, recipient_address, phase);
+
+CREATE INDEX communication_instruction_by_director ON public.communication_instruction USING btree (directed_by, directed_at DESC);
+
+CREATE INDEX communication_instruction_live ON public.communication_instruction USING btree (valid_until) WHERE (status = 'directed'::text);
+
+CREATE INDEX communication_override_carried_from ON public.communication_override USING btree (carried_from) WHERE (carried_from IS NOT NULL);
+
+CREATE INDEX communication_override_contact_cascade ON public.communication_override USING btree (contact_id) WHERE (contact_id IS NOT NULL);
+
+CREATE INDEX communication_override_lead_cascade ON public.communication_override USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE INDEX communication_override_legal_entity ON public.communication_override USING btree (legal_entity_id);
+
+CREATE INDEX communication_override_live_contact ON public.communication_override USING btree (contact_id, legal_entity_id, category) WHERE (revoked_at IS NULL);
+
+CREATE INDEX communication_override_live_lead ON public.communication_override USING btree (lead_id, category) WHERE (revoked_at IS NULL);
+
+CREATE INDEX communication_review_by_initiator ON public.communication_review USING btree (initiated_by, opened_at DESC);
+
+CREATE UNIQUE INDEX communication_review_one_live_per_intent ON public.communication_review USING btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL));
+
+CREATE INDEX communication_review_open ON public.communication_review USING btree (opened_at) WHERE (resolved_at IS NULL);
+
+CREATE INDEX communication_suppression_carried_from_ix ON public.communication_suppression USING btree (carried_from) WHERE (carried_from IS NOT NULL);
+
+CREATE INDEX communication_suppression_live_address ON public.communication_suppression USING btree (lower(address)) WHERE ((address IS NOT NULL) AND (revoked_at IS NULL));
+
+CREATE INDEX communication_suppression_live_address_hash ON public.communication_suppression USING btree (address_hash) WHERE ((address_hash IS NOT NULL) AND (revoked_at IS NULL));
+
+CREATE UNIQUE INDEX communication_suppression_one_live_bounce ON public.communication_suppression USING btree (lower(address)) WHERE ((kind = 'hard_bounce'::text) AND (address IS NOT NULL) AND (revoked_at IS NULL));
+
+CREATE INDEX company_brief_company_ix ON public.company_brief USING btree (company_id);
+
+CREATE INDEX company_domain_question_reader_reader_idx ON public.company_domain_question_reader USING btree (reader_id, domain);
+
+CREATE INDEX company_dossier_company_ix ON public.company_dossier USING btree (company_id);
+
+CREATE INDEX company_growth_fit_company_ix ON public.company_growth_fit USING btree (company_id);
+
+CREATE UNIQUE INDEX company_linkedin_url_key ON public.company USING btree (lower(linkedin_url)) WHERE ((linkedin_url IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX company_scan_company_ix ON public.company_scan USING btree (company_id);
+
+CREATE INDEX confirm_token_live_by_kind ON public.confirm_token USING btree (contact_id, kind, purpose_id) WHERE (consumed_at IS NULL);
+
+CREATE INDEX consent_qualifying_event_contact_ix ON public.consent_qualifying_event USING btree (contact_id, occurred_at DESC);
+
+CREATE INDEX consent_qualifying_event_lead_idx ON public.consent_qualifying_event USING btree (lead_id, occurred_at DESC) WHERE (lead_id IS NOT NULL);
+
+CREATE UNIQUE INDEX consent_qualifying_event_source_unique ON public.consent_qualifying_event USING btree (contact_id, source_entity_type, source_entity_id) WHERE (source_entity_id IS NOT NULL);
+
+CREATE UNIQUE INDEX consent_text_version_published ON public.consent_text_version USING btree (key, version, locale) NULLS NOT DISTINCT WHERE (published_at IS NOT NULL);
+
+CREATE INDEX contact_acquisition_evidence_by_contact ON public.contact_acquisition_evidence USING btree (contact_id, captured_at DESC);
+
+CREATE INDEX contact_brief_contact_ix ON public.contact_brief USING btree (contact_id);
+
+CREATE INDEX contact_confidentiality_hold_ix ON public.contact USING btree (id) WHERE (narrowing_reason = 'confidentiality_hold'::text);
+
+CREATE INDEX contact_moment_dismissal_contact_ix ON public.contact_moment_dismissal USING btree (contact_id);
+
+CREATE INDEX contact_phone_superseded_phone_ix ON public.contact_phone USING btree (superseded_phone_id) WHERE (superseded_phone_id IS NOT NULL);
+
+CREATE INDEX contact_provider_claim_latest ON public.contact_provider_claim USING btree (contact_id, provider, retrieved_at DESC);
+
+CREATE INDEX contract_account_ix ON public.contract USING btree (company_id, starts_on DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX contract_deal_ix ON public.contract USING btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX contract_renewal_due_ix ON public.contract USING btree (renewal_on) WHERE ((renewal_on IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL);
+
+CREATE INDEX conversation_claim_task_ix ON public.conversation_claim USING btree (task_activity_id) WHERE ((task_activity_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX data_subject_request_one_case_per_submission ON public.data_subject_request USING btree (source_submission_id) WHERE (source_submission_id IS NOT NULL);
+
+CREATE UNIQUE INDEX data_subject_request_receipt_reference ON public.data_subject_request USING btree (receipt_reference) WHERE (receipt_reference IS NOT NULL);
+
+CREATE INDEX data_task_review_expiry ON public.data_task_review USING btree (expires_at);
+
+CREATE INDEX deal_correction_live ON public.deal_correction USING btree (deal_id, applied_at DESC) WHERE (reversed_at IS NULL);
+
+CREATE INDEX deal_correction_reversed ON public.deal_correction USING btree (deal_id, reversed_at DESC) WHERE (reversed_at IS NOT NULL);
+
+CREATE INDEX deal_line_item_product_idx ON public.deal_line_item USING btree (product_id) WHERE (product_id IS NOT NULL);
+
+CREATE INDEX deal_move_dismissal_deal_ix ON public.deal_move_dismissal USING btree (deal_id);
+
+CREATE INDEX deal_product_offer_line_item_idx ON public.deal_product USING btree (offer_line_item_id) WHERE (offer_line_item_id IS NOT NULL);
+
+CREATE INDEX deal_product_product_idx ON public.deal_product USING btree (product_id);
+
+CREATE INDEX deal_room_document_attachment_ix ON public.deal_room_document USING btree (attachment_id);
+
+CREATE INDEX deal_room_thread_attachment_ix ON public.deal_room_thread USING btree (attachment_id) WHERE (attachment_id IS NOT NULL);
+
+CREATE INDEX deal_stage_evidence_deal_ix ON public.deal_stage_evidence USING btree (deal_id, criterion_id) WHERE (refuted_at IS NULL);
+
+CREATE UNIQUE INDEX deal_stage_evidence_one_per_source_ux ON public.deal_stage_evidence USING btree (deal_id, criterion_id, source_type, source_id, extracted_by);
+
+CREATE INDEX deal_status_card_deal_ix ON public.deal_status_card USING btree (deal_id);
+
+CREATE INDEX deal_won_without_contract_ix ON public.deal USING btree (won_without_contract_reason) WHERE (won_without_contract_reason IS NOT NULL);
+
+CREATE INDEX event_outbox_assurance_unread ON public.event_outbox USING btree (((envelope ->> 'type'::text))) WHERE (NOT assurance_inputs_read);
+
+CREATE INDEX event_outbox_audit_record ON public.event_outbox USING btree ((((envelope -> 'trace'::text) ->> 'audit_log_id'::text)));
+
+CREATE INDEX event_outbox_entity_record ON public.event_outbox USING btree ((((envelope -> 'entity'::text) ->> 'type'::text)), (((envelope -> 'entity'::text) ->> 'id'::text)));
+
+CREATE INDEX event_outbox_event_id ON public.event_outbox USING btree (((envelope ->> 'event_id'::text)));
+
+CREATE INDEX extension_ingest_refusal_day_idx ON public.extension_ingest_refusal USING btree (day DESC, unit);
+
+CREATE UNIQUE INDEX extension_secret_user_key ON public.extension_secret USING btree (extension_name, user_id, key) WHERE (user_id IS NOT NULL);
+
+CREATE UNIQUE INDEX extension_secret_workspace_key ON public.extension_secret USING btree (extension_name, key) WHERE (user_id IS NULL);
+
+CREATE INDEX extension_secret_workspace_user ON public.extension_secret USING btree (user_id);
+
+CREATE INDEX finance_customer_link_company_ix ON public.finance_customer_link USING btree (connection_id, company_id) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX finance_customer_link_external_ux ON public.finance_customer_link USING btree (connection_id, external_customer_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX finance_invoice_account_ix ON public.finance_invoice USING btree (company_id, issued_at DESC);
+
+CREATE INDEX finance_invoice_credits_ix ON public.finance_invoice USING btree (credits_invoice_id) WHERE (credits_invoice_id IS NOT NULL);
+
+CREATE INDEX finance_invoice_open_ix ON public.finance_invoice USING btree (company_id) WHERE ((open_minor > 0) AND (void_at IS NULL));
+
+CREATE INDEX finance_payment_account_ix ON public.finance_payment USING btree (company_id, paid_at DESC);
+
+CREATE INDEX finance_payment_invoice_ix ON public.finance_payment USING btree (invoice_id) WHERE (invoice_id IS NOT NULL);
+
+CREATE INDEX idx_aam_subject ON public.activity_audience_member USING btree (subject_type, subject_id);
+
+CREATE INDEX idx_activity_answer_mail_subject ON public.activity USING btree (counterparty_email, kind, lower(btrim(regexp_replace(regexp_replace(COALESCE(subject, ''::text), '^(\s*(re|aw|antw)\s*:)+\s*'::text, ''::text, 'i'::text), '\s+'::text, ' '::text, 'g'::text))), occurred_at) WHERE ((direction = 'outbound'::text) AND counterparty_outbound_attested AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_answer_touch ON public.activity USING btree (id, occurred_at) WHERE (((kind = 'call'::text) OR ((kind = 'meeting'::text) AND (meeting_status = 'held'::text))) AND (restricted_at IS NULL) AND (audience = 'workspace'::text) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_attested_counterparty ON public.activity USING btree (counterparty_email) WHERE counterparty_outbound_attested;
+
+CREATE INDEX idx_activity_channel_thread ON public.activity USING btree (channel_provider, thread_key) WHERE (channel_provider IS NOT NULL);
+
+CREATE INDEX idx_activity_counterparty_email ON public.activity USING btree (counterparty_email) WHERE (counterparty_email IS NOT NULL);
+
+CREATE INDEX idx_activity_direction ON public.activity USING btree (direction, occurred_at DESC) WHERE ((direction IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_kind ON public.activity USING btree (kind, occurred_at DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_activity_labeled ON public.activity USING btree (capture_labeled_at) WHERE (capture_labeled_at IS NOT NULL);
+
+CREATE INDEX idx_activity_meeting_host ON public.activity USING btree (host_user_id, occurred_at) WHERE ((kind = 'meeting'::text) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_occurred_live ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_activity_owed_ruleset ON public.activity USING btree (owed_verdict_ruleset, occurred_at) WHERE ((owed_verdict IS NOT NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL));
+
+CREATE INDEX idx_activity_participants_by_reason ON public.activity USING btree (audience_reason, occurred_at DESC, id) WHERE ((audience = 'participants'::text) AND (restricted_at IS NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_raw_capture ON public.activity USING btree (raw_capture_id) WHERE (raw_capture_id IS NOT NULL);
+
+CREATE INDEX idx_activity_receipt_order ON public.activity USING btree (created_at, id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_activity_reminders ON public.activity USING btree (remind_at) WHERE ((kind = 'task'::text) AND (remind_at IS NOT NULL) AND (is_done = false) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_reply_verdict_history_activity ON public.activity_reply_verdict_history USING btree (activity_id, decided_at DESC);
+
+CREATE INDEX idx_activity_request_settlement_judged_through_activity ON public.activity_request_settlement USING btree (judged_through_activity_id);
+
+CREATE INDEX idx_activity_restricted_until ON public.activity USING btree (restricted_until) WHERE (restricted_at IS NOT NULL);
+
+CREATE INDEX idx_activity_search ON public.activity USING gin (search_tsv);
+
+CREATE INDEX idx_activity_source_activity ON public.activity USING btree (source_activity_id) WHERE (source_activity_id IS NOT NULL);
+
+CREATE INDEX idx_activity_tasks ON public.activity USING btree (assignee_id, due_at) WHERE ((kind = 'task'::text) AND (is_done = false) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_thread ON public.activity USING btree (thread_key) WHERE (thread_key IS NOT NULL);
+
+CREATE INDEX idx_activity_thread_reply_seek ON public.activity USING btree (thread_key, kind, channel_provider, direction, occurred_at, id) WHERE ((thread_key IS NOT NULL) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL));
+
+CREATE INDEX idx_activity_unfolded_counterparty ON public.activity USING btree (public.activity_unfolded_counterparty(counterparty_email)) WHERE (public.activity_unfolded_counterparty(counterparty_email) IS NOT NULL);
+
+CREATE INDEX idx_activity_unjudged ON public.activity USING btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL));
+
+CREATE INDEX idx_activity_unjudged_reply ON public.activity USING btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL));
+
+CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text));
+
+CREATE INDEX idx_agent_run_awaiting ON public.agent_run USING btree (approval_id) WHERE (status = 'awaiting_approval'::text);
+
+CREATE INDEX idx_agent_standing_grant_live ON public.agent_standing_grant USING btree (agent_spec, user_id) WHERE ((state = 'granted'::text) AND (passport_id IS NOT NULL));
+
+CREATE UNIQUE INDEX idx_agent_task_approval ON public.agent_task USING btree (approval_id);
+
+CREATE INDEX idx_agent_task_expiry ON public.agent_task USING btree (expires_at);
+
+CREATE INDEX idx_agent_task_passport ON public.agent_task USING btree (passport_id);
+
+CREATE INDEX idx_ai_call_agent_run ON public.ai_call USING btree (agent_run_id);
+
+CREATE INDEX idx_ai_call_correlation ON public.ai_call USING btree (correlation_id);
+
+CREATE INDEX idx_ai_call_occurred ON public.ai_call USING btree (occurred_at DESC);
+
+CREATE INDEX idx_alink_company ON public.activity_link USING btree (company_id) WHERE (company_id IS NOT NULL);
+
+CREATE INDEX idx_alink_contact ON public.activity_link USING btree (contact_id) WHERE (contact_id IS NOT NULL);
+
+CREATE INDEX idx_alink_deal ON public.activity_link USING btree (deal_id) WHERE (deal_id IS NOT NULL);
+
+CREATE INDEX idx_alink_lead ON public.activity_link USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE INDEX idx_alink_project ON public.activity_link USING btree (project_id) WHERE (project_id IS NOT NULL);
+
+CREATE INDEX idx_analytics_share_creator ON public.analytics_share USING btree (created_by, created_at DESC);
+
+CREATE INDEX idx_analytics_share_scope_team ON public.analytics_share USING btree (scope_team_id) WHERE (scope_team_id IS NOT NULL);
+
+CREATE INDEX idx_analytics_share_scope_user ON public.analytics_share USING btree (scope_user_id) WHERE (scope_user_id IS NOT NULL);
+
+CREATE INDEX idx_analytics_share_snapshot ON public.analytics_share USING btree (snapshot_id);
+
+CREATE INDEX idx_aparticipant_address ON public.activity_participant USING btree (lower(address)) WHERE (address IS NOT NULL);
+
+CREATE INDEX idx_aparticipant_contact ON public.activity_participant USING btree (contact_id, activity_id) WHERE (contact_id IS NOT NULL);
+
+CREATE INDEX idx_aparticipant_sender_domain_reversed ON public.activity_participant USING btree (reverse(address_domain_folded) COLLATE "C") WHERE ((role = 'from'::text) AND (address_domain_folded IS NOT NULL));
+
+CREATE INDEX idx_aparticipant_user ON public.activity_participant USING btree (user_id, activity_id) WHERE (user_id IS NOT NULL);
+
+CREATE INDEX idx_aparticipant_waiting_address_time ON public.activity_participant USING btree (lower(address), domain_evidence_at DESC) WHERE ((role = 'to'::text) AND (address IS NOT NULL));
+
+CREATE INDEX idx_app_user_live ON public.app_user USING btree (created_at, id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_app_user_login_folded ON public.app_user USING btree (email_domain_folded, lower(regexp_replace(email, '@[^@]*$'::text, ''::text)));
+
+CREATE INDEX idx_app_user_merge_target ON public.app_user USING btree (merged_into_user_id) WHERE (merged_into_user_id IS NOT NULL);
+
+CREATE INDEX idx_approval_bundle ON public.approval USING btree (bundle_id, created_at) WHERE (bundle_id IS NOT NULL);
+
+CREATE INDEX idx_approval_expiry_due ON public.approval USING btree (expires_at) WHERE (status = 'pending'::text);
+
+CREATE INDEX idx_approval_inbox ON public.approval USING btree (created_at) WHERE (status = 'pending'::text);
+
+CREATE INDEX idx_approval_target ON public.approval USING btree (target_entity_id) WHERE (target_entity_id IS NOT NULL);
+
+CREATE INDEX idx_are_activity ON public.activity_retention_evidence USING btree (activity_id);
+
+CREATE INDEX idx_are_deal ON public.activity_retention_evidence USING btree (deal_id) WHERE (deal_id IS NOT NULL);
+
+CREATE INDEX idx_are_decided_by ON public.activity_retention_evidence USING btree (decided_by) WHERE (decided_by IS NOT NULL);
+
+CREATE INDEX idx_are_project ON public.activity_retention_evidence USING btree (project_id) WHERE (project_id IS NOT NULL);
+
+CREATE INDEX idx_assurance_exception_open ON public.assurance_exception USING btree (status, severity, last_seen_at DESC) WHERE (status = 'open'::text);
+
+CREATE INDEX idx_assurance_exception_owner ON public.assurance_exception USING btree (owner_id) WHERE (owner_id IS NOT NULL);
+
+CREATE INDEX idx_assurance_exception_subject ON public.assurance_exception USING btree (subject_kind, subject_id);
+
+CREATE INDEX idx_assurance_resolution_exception ON public.assurance_resolution USING btree (exception_id, created_at DESC);
+
+CREATE INDEX idx_assurance_run_as_of ON public.assurance_run USING btree (as_of DESC);
+
+CREATE INDEX idx_assurance_task_item_subject_contract ON public.assurance_task_item USING btree (subject_contract_id) WHERE (subject_contract_id IS NOT NULL);
+
+CREATE INDEX idx_assurance_task_item_subject_deal ON public.assurance_task_item USING btree (subject_deal_id) WHERE (subject_deal_id IS NOT NULL);
+
+CREATE INDEX idx_assurance_task_item_subject_offer ON public.assurance_task_item USING btree (subject_offer_id) WHERE (subject_offer_id IS NOT NULL);
+
+CREATE INDEX idx_assurance_task_item_subject_signal ON public.assurance_task_item USING btree (subject_signal_id) WHERE (subject_signal_id IS NOT NULL);
+
+CREATE INDEX idx_attachment_entity ON public.attachment USING btree (entity_type, entity_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_attachment_extraction_activity_live ON public.attachment_extraction USING btree (activity_announced_at NULLS FIRST) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]));
+
+CREATE INDEX idx_attachment_extraction_activity_settled ON public.attachment_extraction USING btree (finished_at DESC) WHERE (status = ANY (ARRAY['done'::text, 'failed'::text]));
+
+CREATE INDEX idx_attachment_extraction_latest ON public.attachment_extraction USING btree (attachment_id, created_at DESC);
+
+CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC);
+
+CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC);
+
+CREATE INDEX idx_audit_erasure_reason ON public.audit_log USING btree (((evidence ->> 'reason'::text))) WHERE ((action = 'erase'::text) AND (entity_type = 'contact'::text));
+
+CREATE INDEX idx_audit_log_batch ON public.audit_log USING btree (batch_id) WHERE (batch_id IS NOT NULL);
+
+CREATE INDEX idx_audit_scrub_boundary ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC, id DESC) WHERE (action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]));
+
+CREATE INDEX idx_audit_time ON public.audit_log USING btree (occurred_at DESC);
+
+CREATE UNIQUE INDEX idx_auth_token_hash ON public.auth_token USING btree (token_hash);
+
+CREATE INDEX idx_auth_token_user ON public.auth_token USING btree (user_id, purpose) WHERE (used_at IS NULL);
+
+CREATE INDEX idx_auth_token_user_cascade ON public.auth_token USING btree (user_id);
+
+CREATE INDEX idx_automation_key_live ON public.automation USING btree (key) WHERE (enabled AND (archived_at IS NULL));
+
+CREATE INDEX idx_booking_page_host_user ON public.booking_page USING btree (host_user_id);
+
+CREATE INDEX idx_brief_item_deal ON public.brief_item USING btree (deal_id);
+
+CREATE INDEX idx_brief_item_state ON public.brief_item USING btree (brief_run_id, state, state_at);
+
+CREATE INDEX idx_brief_run_user ON public.brief_run USING btree (user_id, generated_at DESC);
+
+CREATE INDEX idx_bulk_confirmation_expires ON public.bulk_confirmation USING btree (expires_at);
+
+CREATE INDEX idx_bulk_operation_created ON public.bulk_operation USING btree (created_at);
+
+CREATE INDEX idx_bulk_operation_requested_by ON public.bulk_operation USING btree (requested_by, created_at);
+
+CREATE INDEX idx_capture_auto_enrich_due ON public.capture_auto_enrich_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL);
+
+CREATE INDEX idx_capture_backfill_conn ON public.capture_backfill USING btree (connection_id, created_at DESC);
+
+CREATE INDEX idx_capture_connection ON public.capture_connection USING btree (provider, status) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_capture_exclusion_user ON public.capture_exclusion USING btree (user_id);
+
+CREATE INDEX idx_capture_exclusion_value ON public.capture_exclusion USING btree (kind, value);
+
+CREATE INDEX idx_capture_import_provider_messages ON public.capture_import USING gin (provider_message_ids);
+
+CREATE INDEX idx_capture_pending_counterparty_activity ON public.capture_pending_counterparty USING btree (activity_id);
+
+CREATE INDEX idx_capture_pending_counterparty_due ON public.capture_pending_counterparty USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL);
+
+CREATE UNIQUE INDEX idx_capture_pending_counterparty_live ON public.capture_pending_counterparty USING btree (email) WHERE (status = ANY (ARRAY['pending'::text, 'unsure'::text]));
+
+CREATE INDEX idx_capture_pending_counterparty_noise ON public.capture_pending_counterparty USING btree (email) WHERE (status = 'noise'::text);
+
+CREATE INDEX idx_capture_pending_counterparty_owner ON public.capture_pending_counterparty USING btree (owner_id);
+
+CREATE UNIQUE INDEX idx_capture_pending_counterparty_suppressed ON public.capture_pending_counterparty USING btree (email) WHERE (status = 'suppressed'::text);
+
+CREATE INDEX idx_capture_sync_due ON public.capture_sync_state USING btree (next_sync_at);
+
+CREATE INDEX idx_capture_test_mailbox_sent_unechoed ON public.capture_test_mailbox_sent USING btree (user_id, sent_at) WHERE (echoed_at IS NULL);
+
+CREATE INDEX idx_capture_watch_renew ON public.capture_connection USING btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'::text));
+
+CREATE INDEX idx_close_date_run_member_deal ON public.close_date_run_member USING btree (deal_id);
+
+CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id);
+
+CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status);
+
+CREATE INDEX idx_comms_outbound_addressed ON public.comms_outbound USING gin (public.comms_outbound_addressed(recipients, cc)) WHERE ((sender_kind = 'user'::text) AND (status = 'sent'::text) AND (user_id IS NOT NULL) AND (channel_user_id IS NULL));
+
+CREATE INDEX idx_comms_outbound_parked ON public.comms_outbound USING btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL);
+
+CREATE INDEX idx_communication_basis_contact ON public.communication_basis USING btree (contact_id);
+
+CREATE INDEX idx_communication_basis_lead ON public.communication_basis USING btree (lead_id);
+
+CREATE INDEX idx_communication_decision_delivery ON public.communication_decision USING btree (delivery_id);
+
+CREATE INDEX idx_communication_review_delivery_intent ON public.communication_review USING btree (delivery_intent_id);
+
+CREATE INDEX idx_communication_suppression_contact ON public.communication_suppression USING btree (contact_id);
+
+CREATE INDEX idx_communication_suppression_lead ON public.communication_suppression USING btree (lead_id);
+
+CREATE INDEX idx_company_assess_against_entity ON public.company USING btree (assess_against_entity_id) WHERE (assess_against_entity_id IS NOT NULL);
+
+CREATE INDEX idx_company_created_keyset ON public.company USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_dedupe_scan ON public.company USING btree (updated_at, id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id);
+
+CREATE INDEX idx_company_domain_dedupe_scan ON public.company_domain USING btree (updated_at, id);
+
+CREATE INDEX idx_company_domain_disposition_candidate ON public.company_domain_disposition USING btree (candidate_company_id) WHERE (candidate_company_id IS NOT NULL);
+
+CREATE INDEX idx_company_domain_disposition_company ON public.company_domain_disposition USING btree (company_id);
+
+CREATE INDEX idx_company_domain_disposition_due ON public.company_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL);
+
+CREATE INDEX idx_company_domain_trgm ON public.company_domain USING gin (public.f_fold_apostrophes(lower(domain)) public.gin_trgm_ops) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_exact_legal_name_key ON public.company USING btree (btrim(regexp_replace(replace(public.f_fold_apostrophes(lower(legal_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_exact_name_key ON public.company USING btree (btrim(regexp_replace(replace(public.f_fold_apostrophes(lower(display_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_fact_dedupe_scan ON public.company_fact USING btree (updated_at, id);
+
+CREATE INDEX idx_company_fact_lookup ON public.company_fact USING btree (category, field, value_key);
+
+CREATE INDEX idx_company_geocode_state_point ON public.company_geocode_state USING btree (lat, lon) WHERE (status = 'ok'::text);
+
+CREATE INDEX idx_company_import_display_name ON public.company USING btree (public.f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL));
+
+CREATE INDEX idx_company_import_legal_name ON public.company USING btree (public.f_fold_import_name(legal_name)) WHERE ((legal_name IS NOT NULL) AND (archived_at IS NULL) AND (merged_into_id IS NULL));
+
+CREATE INDEX idx_company_last_activity_keyset ON public.company USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_legal_name_trgm ON public.company USING gin (public.f_fold_apostrophes(lower(legal_name)) public.gin_trgm_ops);
+
+CREATE INDEX idx_company_lifecycle ON public.company USING btree (lifecycle) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_name_keyset ON public.company USING btree ("left"(display_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_name_keyset_desc ON public.company USING btree ("left"(display_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_name_trgm ON public.company USING gin (public.f_fold_apostrophes(lower(display_name)) public.gin_trgm_ops);
+
+CREATE INDEX idx_company_owner ON public.company USING btree (owner_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_company_parent ON public.company USING btree (parent_company_id) WHERE (parent_company_id IS NOT NULL);
+
+CREATE INDEX idx_company_rel_type_cascade ON public.company_relationship_type USING btree (company_id);
+
+CREATE INDEX idx_company_search ON public.company USING gin (search_tsv);
+
+CREATE INDEX idx_company_technical_state_due ON public.company_technical_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL);
+
+CREATE INDEX idx_company_updated_keyset ON public.company USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_consent_doi_token_contact ON public.consent_doi_token USING btree (contact_id, purpose_id);
+
+CREATE INDEX idx_consent_event_contact ON public.consent_event USING btree (contact_id, captured_at DESC);
+
+CREATE INDEX idx_consent_event_lead ON public.consent_event USING btree (lead_id, captured_at DESC) WHERE (lead_id IS NOT NULL);
+
+CREATE INDEX idx_contact_channel_identity_contact ON public.contact_channel_identity USING btree (contact_id);
+
+CREATE INDEX idx_contact_confirm_submission_token ON public.contact_confirm_submission USING btree (token_id);
+
+CREATE INDEX idx_contact_created_from ON public.contact USING btree (created_from_activity_id) WHERE (created_from_activity_id IS NOT NULL);
+
+CREATE INDEX idx_contact_created_keyset ON public.contact USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_dedupe_scan ON public.contact USING btree (updated_at, id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_email_contact ON public.contact_email USING btree (contact_id);
+
+CREATE INDEX idx_contact_email_correspondence ON public.contact_email USING btree (email) WHERE (from_correspondence AND (archived_at IS NULL));
+
+CREATE INDEX idx_contact_email_dedupe_scan ON public.contact_email USING btree (updated_at, id);
+
+CREATE INDEX idx_contact_email_domain_reversed ON public.contact_email USING btree (reverse(email_domain_folded) COLLATE "C") WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_email_every_holder ON public.contact_email USING btree (email, contact_id);
+
+CREATE INDEX idx_contact_email_mailbox_base ON public.contact_email USING btree ((
+CASE
+    WHEN (regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text) ~ '^[^@]*@(gmail|googlemail)\.com$'::text) THEN (replace(regexp_replace(regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text), '@(gmail|googlemail)\.com$'::text, ''::text), '.'::text, ''::text) || '@gmail.com'::text)
+    ELSE regexp_replace(btrim(lower(email)), '^([^+@]+)\+[^@]*@'::text, '\1@'::text)
+END)) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_email_trgm ON public.contact_email USING gin (public.f_fold_apostrophes(lower(email)) public.gin_trgm_ops) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(public.f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(public.f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL);
+
+CREATE INDEX idx_contact_keyed_address_hashes ON public.contact USING btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL);
+
+CREATE INDEX idx_contact_last_activity_keyset ON public.contact USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_merged_into ON public.contact USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL);
+
+CREATE INDEX idx_contact_name_keyset ON public.contact USING btree ("left"(full_name, 256), created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_name_keyset_desc ON public.contact USING btree ("left"(full_name, 256) DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_name_trgm ON public.contact USING gin (public.f_fold_apostrophes(lower(full_name)) public.gin_trgm_ops);
+
+CREATE INDEX idx_contact_name_trigram_candidates ON public.contact USING btree (hash_array_extended(public.show_trgm(public.f_fold_apostrophes(lower(full_name))), (0)::bigint), id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id);
+
+CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id);
+
+CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv);
+
+CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id);
+
+CREATE INDEX idx_contact_social_linkedin_profile ON public.contact_social USING btree ("substring"(lower(handle), '^(?:https?://)?(?:[a-z0-9-]+\.)*linkedin\.com/in/([^/?#]+)'::text)) WHERE (platform = 'linkedin'::text);
+
+CREATE INDEX idx_contact_unkeyed_address_hashes ON public.contact USING btree (id) WHERE ((anonymized_address_hashes IS NOT NULL) AND (anonymized_address_key_id IS NULL));
+
+CREATE INDEX idx_contact_updated_keyset ON public.contact USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_conversation_claim_contact ON public.conversation_claim USING btree (contact_id);
+
+CREATE INDEX idx_conversation_claim_source_activity ON public.conversation_claim USING btree (source_activity_id);
+
+CREATE INDEX idx_custom_field_object ON public.custom_field USING btree (object, status);
+
+CREATE INDEX idx_deal_acquisition_source ON public.deal USING btree (acquisition_source) WHERE ((archived_at IS NULL) AND (acquisition_source IS NOT NULL));
+
+CREATE INDEX idx_deal_close ON public.deal USING btree (expected_close_date) WHERE ((status = 'open'::text) AND (archived_at IS NULL));
+
+CREATE INDEX idx_deal_commercial_motion ON public.deal USING btree (commercial_motion) WHERE ((archived_at IS NULL) AND (commercial_motion IS NOT NULL));
+
+CREATE INDEX idx_deal_company ON public.deal USING btree (company_id) WHERE ((company_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_deal_correction_deal ON public.deal_correction USING btree (deal_id);
+
+CREATE INDEX idx_deal_correction_stage_history ON public.deal_correction USING btree (stage_history_id);
+
+CREATE INDEX idx_deal_document_hide_attachment ON public.deal_document_hide USING btree (attachment_id);
+
+CREATE INDEX idx_deal_loss_reason_mapping_reason ON public.deal_loss_reason_mapping USING btree (reason_key);
+
+CREATE INDEX idx_deal_lost_reason_code ON public.deal USING btree (lost_reason_code) WHERE (lost_reason_code IS NOT NULL);
+
+CREATE INDEX idx_deal_lost_reason_note_key ON public.deal USING btree (md5(lower(btrim(lost_reason)))) WHERE (lost_reason IS NOT NULL);
+
+CREATE INDEX idx_deal_name_trgm ON public.deal USING gin (public.f_fold_apostrophes(lower(name)) public.gin_trgm_ops);
+
+CREATE INDEX idx_deal_owner ON public.deal USING btree (owner_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_deal_partner ON public.deal USING btree (partner_company_id) WHERE ((partner_company_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_deal_partner_attribution ON public.deal USING btree (partner_attribution) WHERE ((partner_attribution IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_deal_pipeline ON public.deal USING btree (pipeline_id, stage_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_deal_priority_rank ON public.deal USING btree (priority_rank DESC NULLS LAST) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_deal_project ON public.deal USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_deal_risk_day_start ON public.deal_risk_day USING btree (day_start);
+
+CREATE INDEX idx_deal_risk_verdict_deal ON public.deal_risk_verdict USING btree (deal_id);
+
+CREATE INDEX idx_deal_room_comment_room ON public.deal_room_comment USING btree (room_id);
+
+CREATE INDEX idx_deal_room_comment_thread ON public.deal_room_comment USING btree (thread_id, created_at);
+
+CREATE INDEX idx_deal_room_deal ON public.deal_room USING btree (deal_id);
+
+CREATE INDEX idx_deal_room_document_room ON public.deal_room_document USING btree (room_id, group_key, "position") WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_deal_room_document_room_cascade ON public.deal_room_document USING btree (room_id);
+
+CREATE INDEX idx_deal_room_engagement_participant_room ON public.deal_room_engagement USING btree (participant_id, room_id);
+
+CREATE INDEX idx_deal_room_participant_room ON public.deal_room_participant USING btree (room_id);
+
+CREATE INDEX idx_deal_room_session_participant ON public.deal_room_session USING btree (participant_id) WHERE (revoked_at IS NULL);
+
+CREATE INDEX idx_deal_room_session_participant_room ON public.deal_room_session USING btree (participant_id, room_id);
+
+CREATE INDEX idx_deal_room_session_room ON public.deal_room_session USING btree (room_id);
+
+CREATE INDEX idx_deal_room_thread_document ON public.deal_room_thread USING btree (document_id);
+
+CREATE INDEX idx_deal_room_thread_document_open ON public.deal_room_thread USING btree (document_id) WHERE ((state = 'open'::text) AND required_change);
+
+CREATE INDEX idx_deal_room_thread_room ON public.deal_room_thread USING btree (room_id, created_at);
+
+CREATE INDEX idx_deal_search ON public.deal USING gin (search_tsv);
+
+CREATE INDEX idx_deal_stage ON public.deal USING btree (stage_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_deal_stage_history_changed ON public.deal_stage_history USING btree (changed_at);
+
+CREATE INDEX idx_deal_stage_history_lost_reason_code ON public.deal_stage_history USING btree (lost_reason_code_at_change) WHERE (lost_reason_code_at_change IS NOT NULL);
+
+CREATE INDEX idx_deal_stalled ON public.deal USING btree (last_activity_at) WHERE ((status = 'open'::text) AND (archived_at IS NULL));
+
+CREATE INDEX idx_deal_suggestion_accepted_deal ON public.deal_suggestion USING btree (accepted_deal_id) WHERE (accepted_deal_id IS NOT NULL);
+
+CREATE INDEX idx_deal_suggestion_company ON public.deal_suggestion USING btree (company_id, decided_at);
+
+CREATE INDEX idx_deal_suggestion_decided_by ON public.deal_suggestion USING btree (decided_by) WHERE (decided_by IS NOT NULL);
+
+CREATE INDEX idx_deal_suggestion_evidence_activity ON public.deal_suggestion_evidence USING btree (activity_id) WHERE (activity_id IS NOT NULL);
+
+CREATE INDEX idx_deal_suggestion_evidence_attachment ON public.deal_suggestion_evidence USING btree (attachment_id) WHERE (attachment_id IS NOT NULL);
+
+CREATE INDEX idx_deal_suggestion_evidence_signal ON public.deal_suggestion_evidence USING btree (signal_id) WHERE (signal_id IS NOT NULL);
+
+CREATE INDEX idx_deal_suggestion_evidence_suggestion ON public.deal_suggestion_evidence USING btree (suggestion_id);
+
+CREATE INDEX idx_deal_suggestion_open ON public.deal_suggestion USING btree (created_at DESC, id DESC) WHERE (state = 'open'::text);
+
+CREATE INDEX idx_deal_suggestion_pipeline ON public.deal_suggestion USING btree (pipeline_id);
+
+CREATE INDEX idx_deal_suggestion_stage ON public.deal_suggestion USING btree (proposed_stage_id);
+
+CREATE INDEX idx_dedupe_candidate_left_company ON public.dedupe_candidate USING btree (left_company_id);
+
+CREATE INDEX idx_dedupe_candidate_left_contact ON public.dedupe_candidate USING btree (left_contact_id);
+
+CREATE INDEX idx_dedupe_candidate_left_lead ON public.dedupe_candidate USING btree (left_lead_id);
+
+CREATE INDEX idx_dedupe_candidate_open ON public.dedupe_candidate USING btree (confidence DESC) WHERE ((disposition = 'open'::text) AND (archived_at IS NULL));
+
+CREATE INDEX idx_dedupe_candidate_right_company ON public.dedupe_candidate USING btree (right_company_id);
+
+CREATE INDEX idx_dedupe_candidate_right_contact ON public.dedupe_candidate USING btree (right_contact_id);
+
+CREATE INDEX idx_dedupe_candidate_right_lead ON public.dedupe_candidate USING btree (right_lead_id);
+
+CREATE INDEX idx_domain_disposition_admission ON public.company_domain_disposition USING btree (admission_at DESC) WHERE (admission IS NOT NULL);
+
+CREATE INDEX idx_domain_disposition_unevidenced ON public.company_domain_disposition USING btree (updated_at DESC) WHERE (pending_reason = 'unevidenced'::text);
+
+CREATE INDEX idx_dsr_open ON public.data_subject_request USING btree (due_at) WHERE (status = ANY (ARRAY['open'::text, 'in_progress'::text]));
+
+CREATE INDEX idx_event_outbox_unpublished ON public.event_outbox USING btree (seq) WHERE (published_at IS NULL);
+
+CREATE INDEX idx_existing_customer_notice_legal_entity ON public.existing_customer_notice USING btree (legal_entity_id);
+
+CREATE INDEX idx_existing_customer_notice_purpose_purpose ON public.existing_customer_notice_purpose USING btree (purpose_id);
+
+CREATE INDEX idx_field_provenance_object ON public.field_provenance USING btree (object_type, object_id, field_name, captured_at DESC);
+
+CREATE INDEX idx_forecast_call_period ON public.forecast_call USING btree (period_start, period_end, scope_kind, scope_id);
+
+CREATE INDEX idx_forecast_contribution_audit ON public.forecast_contribution USING btree (audit_id) WHERE (audit_id IS NOT NULL);
+
+CREATE INDEX idx_forecast_contribution_deal ON public.forecast_contribution USING btree (deal_id, created_at DESC);
+
+CREATE INDEX idx_forecast_snapshot_call ON public.forecast_snapshot USING btree (call_id) WHERE (call_id IS NOT NULL);
+
+CREATE INDEX idx_forecast_snapshot_context ON public.forecast_snapshot USING btree (scope_kind, scope_id, pipeline_id, taken_at DESC);
+
+CREATE INDEX idx_forecast_snapshot_period ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, taken_at DESC);
+
+CREATE INDEX idx_graph_contact_edge_b ON public.graph_contact_edge USING btree (contact_b);
+
+CREATE INDEX idx_graph_contact_edge_deferred ON public.graph_contact_edge USING btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL);
+
+CREATE INDEX idx_graph_contact_edge_work ON public.graph_contact_edge USING btree (contact_a, contact_b) WHERE ((requested_generation > processed_generation) AND (deferred_run_id IS NULL));
+
+CREATE INDEX idx_graph_edge_contact ON public.graph_interaction_edge USING btree (contact_id, last_at DESC);
+
+CREATE INDEX idx_graph_edge_user ON public.graph_interaction_edge USING btree (user_id, last_at DESC);
+
+CREATE INDEX idx_graph_interaction_edge_deferred ON public.graph_interaction_edge USING btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL);
+
+CREATE INDEX idx_graph_interaction_edge_work ON public.graph_interaction_edge USING btree (user_id, contact_id) WHERE ((requested_generation > processed_generation) AND (deferred_run_id IS NULL));
+
+CREATE INDEX idx_idempotency_key_created ON public.idempotency_key USING btree (created_at);
+
+CREATE INDEX idx_lead_candidate_company ON public.lead USING btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_lead_company ON public.lead USING btree (company_id) WHERE (company_id IS NOT NULL);
+
+CREATE INDEX idx_lead_disqualify_reason ON public.lead USING btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL);
+
+CREATE INDEX idx_lead_email_trgm ON public.lead USING gin (public.f_fold_apostrophes(lower(email)) public.gin_trgm_ops) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_lead_from_contact ON public.lead USING btree (from_contact_id) WHERE (from_contact_id IS NOT NULL);
+
+CREATE INDEX idx_lead_linkedin ON public.lead USING btree (linkedin_url) WHERE (linkedin_url IS NOT NULL);
+
+CREATE INDEX idx_lead_manual_signal_lead ON public.lead_manual_signal USING btree (lead_id, set_at DESC);
+
+CREATE INDEX idx_lead_merged_into ON public.lead USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL);
+
+CREATE INDEX idx_lead_name_trgm ON public.lead USING gin (public.f_fold_apostrophes(lower(((COALESCE(full_name, ''::text) || ' '::text) || COALESCE(company_name, ''::text)))) public.gin_trgm_ops);
+
+CREATE INDEX idx_lead_origin ON public.lead USING btree (origin);
+
+CREATE INDEX idx_lead_owner ON public.lead USING btree (owner_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_lead_partner_company ON public.lead USING btree (partner_company_id) WHERE (partner_company_id IS NOT NULL);
+
+CREATE INDEX idx_lead_project ON public.lead USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_lead_promoted_contact ON public.lead USING btree (promoted_contact_id) WHERE (promoted_contact_id IS NOT NULL);
+
+CREATE INDEX idx_lead_qualified_deal ON public.lead USING btree (qualified_deal_id) WHERE (qualified_deal_id IS NOT NULL);
+
+CREATE INDEX idx_lead_score ON public.lead USING btree (score DESC) WHERE ((archived_at IS NULL) AND (status = ANY (ARRAY['new'::text, 'contacted'::text, 'engaged'::text])));
+
+CREATE INDEX idx_lead_score_history_series ON public.lead_score_history USING btree (lead_id, computed_at DESC, id DESC);
+
+CREATE INDEX idx_lead_search ON public.lead USING gin (search_tsv);
+
+CREATE INDEX idx_lead_sla_open ON public.lead USING btree (created_at) WHERE ((archived_at IS NULL) AND (first_response_at IS NULL) AND (sla_breached_at IS NULL));
+
+CREATE INDEX idx_lead_status_live ON public.lead USING btree (status) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_legal_entity_member_entity ON public.legal_entity_member USING btree (legal_entity_id);
+
+CREATE INDEX idx_legal_review_deal ON public.legal_review USING btree (deal_id, created_at DESC);
+
+CREATE INDEX idx_legal_review_decided ON public.legal_review USING btree (decided_at DESC, id DESC) WHERE (decided_at IS NOT NULL);
+
+CREATE INDEX idx_legal_review_decided_by ON public.legal_review USING btree (decided_by) WHERE (decided_by IS NOT NULL);
+
+CREATE INDEX idx_legal_review_previous ON public.legal_review USING btree (previous_review_id) WHERE (previous_review_id IS NOT NULL);
+
+CREATE INDEX idx_legal_review_queue ON public.legal_review USING btree (value_minor DESC NULLS LAST, expected_close_date, created_at, id) WHERE (status = 'requested'::text);
+
+CREATE INDEX idx_legal_review_requested_by ON public.legal_review USING btree (requested_by) WHERE (requested_by IS NOT NULL);
+
+CREATE INDEX idx_linkedin_connection_company ON public.linkedin_connection USING btree (matched_company_id) WHERE ((matched_company_id IS NOT NULL) AND (tombstoned_at IS NULL));
+
+CREATE INDEX idx_linkedin_connection_email ON public.linkedin_connection USING btree (lower(email)) WHERE ((email IS NOT NULL) AND (tombstoned_at IS NULL));
+
+CREATE INDEX idx_linkedin_connection_match ON public.linkedin_connection USING btree (normalized_name, normalized_company) WHERE (tombstoned_at IS NULL);
+
+CREATE INDEX idx_linkedin_connection_matched_contact ON public.linkedin_connection USING btree (matched_contact_id);
+
+CREATE INDEX idx_linkedin_connection_owner_user ON public.linkedin_connection USING btree (owner_user_id);
+
+CREATE INDEX idx_list_evaluation_due ON public.list_evaluation USING btree (evaluated_at);
+
+CREATE INDEX idx_list_live_member_entity ON public.list_live_member USING btree (entity_type, entity_id);
+
+CREATE INDEX idx_list_member_entity ON public.list_member USING btree (entity_type, entity_id);
+
+CREATE INDEX idx_list_member_event_entity ON public.list_member_event USING btree (entity_type, entity_id);
+
+CREATE INDEX idx_list_member_event_list ON public.list_member_event USING btree (list_id, occurred_at DESC, id DESC);
+
+CREATE INDEX idx_list_steward ON public.list USING btree (steward_id);
+
+CREATE INDEX idx_list_visit_list ON public.list_visit USING btree (list_id);
+
+CREATE INDEX idx_meeting_readiness_activity ON public.meeting_readiness USING btree (activity_id);
+
+CREATE INDEX idx_mfa_challenge_spent_expires ON public.mfa_challenge_spent USING btree (expires_at);
+
+CREATE INDEX idx_mfa_recovery_code_user ON public.mfa_recovery_code USING btree (user_id);
+
+CREATE INDEX idx_oauth_authorization_code_user ON public.oauth_authorization_code USING btree (user_id);
+
+CREATE INDEX idx_oauth_grant_user ON public.oauth_grant USING btree (user_id);
+
+CREATE INDEX idx_offer_deal ON public.offer USING btree (deal_id, revision DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_offer_legal_entity ON public.offer USING btree (legal_entity_id) WHERE (legal_entity_id IS NOT NULL);
+
+CREATE INDEX idx_offer_status ON public.offer USING btree (status) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_offer_template_fk ON public.offer USING btree (template_id) WHERE (template_id IS NOT NULL);
+
+CREATE INDEX idx_offer_template_search ON public.offer_template USING gin (search_tsv);
+
+CREATE INDEX idx_participant_domain_evidence_incomplete ON public.activity_participant USING btree (id) WHERE ((domain_evidence_parent_version IS NULL) OR (domain_evidence_at IS NULL) OR (domain_evidence_precision IS NULL) OR (domain_evidence_visible IS NULL));
+
+CREATE INDEX idx_participant_domain_evidence_latest ON public.activity_participant USING gist (reverse(address_domain_folded) COLLATE "C", domain_evidence_precision, domain_evidence_at) WHERE (domain_evidence_visible AND (NOT past_party_cap) AND (address_domain_folded IS NOT NULL));
+
+CREATE INDEX idx_participant_domain_evidence_parent ON public.activity_participant USING btree (activity_id, domain_evidence_parent_version);
+
+CREATE INDEX idx_partner_kinds ON public.partner USING gin (partner_kinds);
+
+CREATE INDEX idx_partner_stage ON public.partner USING btree (relationship_stage);
+
+CREATE INDEX idx_partner_tier ON public.partner USING btree (margin_tier) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_passport_on_behalf_of ON public.passport USING btree (on_behalf_of);
+
+CREATE INDEX idx_pph_project ON public.project_phase_history USING btree (project_id, occurred_at DESC);
+
+CREATE INDEX idx_preference_token_contact ON public.preference_token USING btree (contact_id);
+
+CREATE INDEX idx_privacy_notice_case_contact ON public.privacy_notice_case USING btree (contact_id);
+
+CREATE INDEX idx_product_active ON public.product USING btree (active) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_product_search ON public.product USING gin (search_tsv);
+
+CREATE INDEX idx_project_company ON public.project USING btree (company_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_project_health_current ON public.project_health_assessment USING btree (project_id, assessed_at DESC, created_at DESC, id DESC);
+
+CREATE INDEX idx_project_last_activity_keyset ON public.project USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_project_owner ON public.project USING btree (owner_id) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_project_quickfind_trgm ON public.project USING gin (public.f_fold_apostrophes(lower(((COALESCE(name, ''::text) || ' '::text) || COALESCE(key, ''::text)))) public.gin_trgm_ops);
+
+CREATE INDEX idx_project_search ON public.project USING gin (search_tsv);
+
+CREATE INDEX idx_provider_applied_field_run_contact_provider ON public.provider_applied_field USING btree (run_id, contact_id, provider);
+
+CREATE INDEX idx_provider_run_contact ON public.provider_run USING btree (contact_id);
+
+CREATE INDEX idx_record_assignment_company ON public.record_assignment USING btree (company_id);
+
+CREATE INDEX idx_record_assignment_deal ON public.record_assignment USING btree (deal_id);
+
+CREATE INDEX idx_record_assignment_project ON public.record_assignment USING btree (project_id);
+
+CREATE INDEX idx_record_assignment_team ON public.record_assignment USING btree (team_id) WHERE ((team_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_record_assignment_user ON public.record_assignment USING btree (user_id) WHERE ((user_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_record_grant_company ON public.record_grant USING btree (company_id) WHERE (company_id IS NOT NULL);
+
+CREATE INDEX idx_record_grant_contact ON public.record_grant USING btree (contact_id) WHERE (contact_id IS NOT NULL);
+
+CREATE INDEX idx_record_grant_deal ON public.record_grant USING btree (deal_id) WHERE (deal_id IS NOT NULL);
+
+CREATE INDEX idx_record_grant_lead ON public.record_grant USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE INDEX idx_record_grant_project ON public.record_grant USING btree (project_id) WHERE (project_id IS NOT NULL);
+
+CREATE INDEX idx_record_grant_subject ON public.record_grant USING btree (subject_type, subject_id);
+
+CREATE INDEX idx_rel_employer_contacts ON public.relationship USING btree (company_id, contact_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL));
+
+CREATE INDEX idx_rel_history_company ON public.relationship USING btree (company_id);
+
+CREATE INDEX idx_rel_history_contact ON public.relationship USING btree (contact_id);
+
+CREATE INDEX idx_rel_history_counterparty ON public.relationship USING btree (counterparty_company_id);
+
+CREATE INDEX idx_rel_history_deal ON public.relationship USING btree (deal_id);
+
+CREATE INDEX idx_rel_history_project ON public.relationship USING btree (project_id);
+
+CREATE INDEX idx_relationship_counterparty_contact ON public.relationship USING btree (counterparty_contact_id);
+
+CREATE INDEX idx_relationship_dedupe_scan ON public.relationship USING btree (updated_at, id) WHERE ((kind = 'employment'::text) AND (company_id IS NOT NULL));
+
+CREATE INDEX idx_report_run_asker ON public.report_run USING btree (asked_by, created_at DESC, id DESC);
+
+CREATE INDEX idx_restore_drill_recent ON public.restore_drill USING btree (started_at DESC);
+
+CREATE INDEX idx_role_assignment_team ON public.role_assignment USING btree (team_id);
+
+CREATE INDEX idx_role_assignment_user ON public.role_assignment USING btree (user_id);
+
+CREATE INDEX idx_runner_job_due ON public.runner_job USING btree (status, due_at);
+
+CREATE INDEX idx_sales_goal_plan_revision_created_by ON public.sales_goal_plan_revision USING btree (created_by);
+
+CREATE INDEX idx_saved_view_owner ON public.saved_view USING btree (owner_id, resource) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_saved_view_owner_cascade ON public.saved_view USING btree (owner_id);
+
+CREATE INDEX idx_scheduled_send_anchor ON public.scheduled_send USING btree (anchor_activity_id) WHERE (anchor_activity_id IS NOT NULL);
+
+CREATE INDEX idx_scheduled_send_due ON public.scheduled_send USING btree (scheduled_at) WHERE (status = 'scheduled'::text);
+
+CREATE INDEX idx_scheduled_send_owner ON public.scheduled_send USING btree (scheduled_by, status, scheduled_at DESC);
+
+CREATE INDEX idx_sdr_handoff_awaiting ON public.sdr_handoff USING btree (assigned_to, submitted_at) WHERE (status = 'submitted'::text);
+
+CREATE INDEX idx_sdr_handoff_contact ON public.sdr_handoff USING btree (contact_id) WHERE (contact_id IS NOT NULL);
+
+CREATE INDEX idx_sdr_handoff_event_handoff ON public.sdr_handoff_event USING btree (handoff_id, occurred_at DESC);
+
+CREATE INDEX idx_sdr_handoff_lead ON public.sdr_handoff USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE INDEX idx_sdr_handoff_submitter ON public.sdr_handoff USING btree (submitted_by, submitted_at DESC);
+
+CREATE INDEX idx_session_user ON public.session USING btree (user_id);
+
+CREATE INDEX idx_signal_entity_company ON public.signal USING btree (entity_company_id) WHERE (entity_company_id IS NOT NULL);
+
+CREATE INDEX idx_signal_entity_contact ON public.signal USING btree (entity_contact_id) WHERE (entity_contact_id IS NOT NULL);
+
+CREATE INDEX idx_signal_entity_deal ON public.signal USING btree (entity_deal_id) WHERE (entity_deal_id IS NOT NULL);
+
+CREATE INDEX idx_signal_entity_project ON public.signal USING btree (entity_project_id) WHERE (entity_project_id IS NOT NULL);
+
+CREATE INDEX idx_signal_open ON public.signal USING btree (status, severity, detected_at DESC);
+
+CREATE INDEX idx_signal_owner_private ON public.signal USING btree (owner_id) WHERE ((visibility = 'owner'::text) AND (archived_at IS NULL));
+
+CREATE INDEX idx_signal_unresolved ON public.signal USING btree (resolution_state, detected_at DESC);
+
+CREATE INDEX idx_signature_live_work_due ON public.contact_signature_enrich_state USING btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation > processed_generation));
+
+CREATE INDEX idx_signature_work_deferred ON public.contact_signature_enrich_state USING btree (deferred_run_id) WHERE (deferred_run_id IS NOT NULL);
+
+CREATE INDEX idx_signature_work_due ON public.contact_signature_enrich_state USING btree (due_at, contact_id) WHERE ((requested_generation > processed_generation) AND (live_generation <= processed_generation) AND (deferred_run_id IS NULL));
+
+CREATE INDEX idx_sigres_signal ON public.signal_resolution USING btree (signal_id, created_at DESC);
+
+CREATE INDEX idx_site_read_company ON public.site_read USING btree (company_id, created_at DESC);
+
+CREATE INDEX idx_site_read_retry_due ON public.site_read USING btree (next_attempt_at, id) WHERE ((status = ANY (ARRAY['deferred'::text, 'failed'::text])) AND (next_attempt_at IS NOT NULL));
+
+CREATE INDEX idx_stage_pipeline ON public.stage USING btree (pipeline_id);
+
+CREATE INDEX idx_stage_progression_outcome_deal_target ON public.stage_progression_outcome USING btree (deal_id, to_stage_id, decided_at DESC);
+
+CREATE INDEX idx_stage_progression_outcome_from_stage ON public.stage_progression_outcome USING btree (from_stage_id);
+
+CREATE INDEX idx_stage_progression_outcome_to_stage ON public.stage_progression_outcome USING btree (to_stage_id);
+
+CREATE INDEX idx_stage_progression_outcome_transition ON public.stage_progression_outcome USING btree (pipeline_id, from_stage_id, to_stage_id, decided_at DESC);
+
+CREATE INDEX idx_stage_progression_policy_from_stage ON public.stage_progression_policy USING btree (from_stage_id);
+
+CREATE INDEX idx_stage_progression_policy_to_stage ON public.stage_progression_policy USING btree (to_stage_id);
+
+CREATE INDEX idx_system_log_action ON public.system_log USING btree (action, occurred_at DESC);
+
+CREATE INDEX idx_system_log_actor ON public.system_log USING btree (actor_id, occurred_at DESC);
+
+CREATE INDEX idx_system_log_mirror_conflict_class ON public.system_log USING btree (((detail ->> 'object_class'::text)), occurred_at DESC) WHERE (action = 'mirror.conflict'::text);
+
+CREATE INDEX idx_system_log_time ON public.system_log USING btree (occurred_at DESC);
+
+CREATE INDEX idx_system_log_unkeyed_email ON public.system_log USING btree (id) WHERE ((action = 'login'::text) AND (detail ? 'email_hash'::text) AND (NOT (detail ? 'email_key_id'::text)));
+
+CREATE INDEX idx_tag_search ON public.tag USING gin (search_tsv);
+
+CREATE INDEX idx_tag_suggestion_company ON public.tag_suggestion USING btree (company_id, tag_id, decided_at) WHERE (company_id IS NOT NULL);
+
+CREATE INDEX idx_tag_suggestion_contact ON public.tag_suggestion USING btree (contact_id, tag_id, decided_at) WHERE (contact_id IS NOT NULL);
+
+CREATE INDEX idx_tag_suggestion_decided_by ON public.tag_suggestion USING btree (decided_by) WHERE (decided_by IS NOT NULL);
+
+CREATE INDEX idx_tag_suggestion_evidence_activity ON public.tag_suggestion_evidence USING btree (activity_id);
+
+CREATE INDEX idx_tag_suggestion_open ON public.tag_suggestion USING btree (created_at DESC, id DESC) WHERE (state = 'open'::text);
+
+CREATE INDEX idx_tag_suggestion_tag ON public.tag_suggestion USING btree (tag_id);
+
+CREATE INDEX idx_taggable_entity ON public.taggable USING btree (entity_type, entity_id);
+
+CREATE INDEX idx_team_membership_user ON public.team_membership USING btree (user_id);
+
+CREATE INDEX idx_team_weekly_review_rep_review ON public.team_weekly_review_rep USING btree (team_weekly_review_id, display_name);
+
+CREATE INDEX idx_team_weekly_review_team ON public.team_weekly_review USING btree (team_id, local_week_start DESC);
+
+CREATE INDEX idx_technical_lookup_cache_expiry ON public.technical_lookup_cache USING btree (expires_at);
+
+CREATE INDEX idx_transcript_read_latest ON public.transcript_read USING btree (activity_id, created_at DESC);
+
+CREATE INDEX idx_user_record_view_entity_company ON public.user_record_view USING btree (entity_company_id) WHERE (entity_company_id IS NOT NULL);
+
+CREATE INDEX idx_user_record_view_entity_contact ON public.user_record_view USING btree (entity_contact_id) WHERE (entity_contact_id IS NOT NULL);
+
+CREATE INDEX idx_voice_corpus_profile ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC);
+
+CREATE INDEX idx_web_form_lead_origin ON public.web_form USING btree (lead_origin) WHERE (lead_origin IS NOT NULL);
+
+CREATE INDEX idx_web_form_owner ON public.web_form USING btree (owner_id) WHERE (owner_id IS NOT NULL);
+
+CREATE INDEX idx_webhook_delivery_body_kept ON public.webhook_delivery USING btree (id) WHERE ((payload_pruned_at IS NULL) AND (payload <> ''::text) AND (status = ANY (ARRAY['delivered'::text, 'dead_lettered'::text, 'visibility_revoked'::text])));
+
+CREATE INDEX idx_webhook_delivery_by_subscription ON public.webhook_delivery USING btree (subscription_id, created_at DESC);
+
+CREATE INDEX idx_webhook_delivery_due ON public.webhook_delivery USING btree (next_retry_at) WHERE (status = 'retrying'::text);
+
+CREATE INDEX idx_webhook_subscription_live ON public.webhook_subscription USING btree (state) WHERE (archived_at IS NULL);
+
+CREATE INDEX idx_webhook_subscription_owner ON public.webhook_subscription USING btree (owner_id);
+
+CREATE INDEX idx_weekly_plan_commitment_help ON public.weekly_plan_commitment USING btree (plan_id) WHERE (btrim(help_requested) <> ''::text);
+
+CREATE INDEX idx_weekly_plan_commitment_linked_company ON public.weekly_plan_commitment USING btree (linked_company_id) WHERE (linked_company_id IS NOT NULL);
+
+CREATE INDEX idx_weekly_plan_commitment_linked_contact ON public.weekly_plan_commitment USING btree (linked_contact_id) WHERE (linked_contact_id IS NOT NULL);
+
+CREATE INDEX idx_weekly_plan_commitment_linked_deal ON public.weekly_plan_commitment USING btree (linked_deal_id) WHERE (linked_deal_id IS NOT NULL);
+
+CREATE INDEX idx_weekly_plan_commitment_linked_lead ON public.weekly_plan_commitment USING btree (linked_lead_id) WHERE (linked_lead_id IS NOT NULL);
+
+CREATE INDEX idx_weekly_plan_commitment_linked_project ON public.weekly_plan_commitment USING btree (linked_project_id) WHERE (linked_project_id IS NOT NULL);
+
+CREATE INDEX idx_weekly_plan_commitment_plan ON public.weekly_plan_commitment USING btree (plan_id, "position", created_at);
+
+CREATE INDEX idx_weekly_plan_owner ON public.weekly_plan USING btree (owner_id, local_week_start DESC);
+
+CREATE INDEX idx_weekly_review_deal_review ON public.weekly_review_deal USING btree (weekly_review_id, occurred_at DESC);
+
+CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC);
+
+CREATE INDEX idx_withdrawal_credential_contact ON public.withdrawal_credential USING btree (contact_id) WHERE (contact_id IS NOT NULL);
+
+CREATE INDEX idx_withdrawal_credential_lead ON public.withdrawal_credential USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE INDEX idx_withdrawal_credential_live ON public.withdrawal_credential USING btree (lower(address), scope) WHERE (revoked_at IS NULL);
+
+CREATE INDEX idx_withdrawal_credential_purpose ON public.withdrawal_credential USING btree (purpose_id);
+
+CREATE INDEX idx_workflow_run_failed_trigger ON public.workflow_run USING btree (trigger_event) WHERE (status = 'failed'::text);
+
+CREATE INDEX intro_request_awaiting_decision ON public.intro_request USING btree (introducer_user_id, due_at) WHERE ((status = 'requested'::text) AND (archived_at IS NULL));
+
+CREATE INDEX intro_request_due ON public.intro_request USING btree (due_at) WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL));
+
+CREATE INDEX intro_request_for_contact ON public.intro_request USING btree (contact_id, requested_at DESC);
+
+CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX intro_request_recorded_pair ON public.intro_request USING btree (contact_id, introducer_user_id, requester_user_id) WHERE ((origin = 'recorded'::text) AND (archived_at IS NULL));
+
+CREATE INDEX ix_confirm_token_contact ON public.confirm_token USING btree (contact_id);
+
+CREATE INDEX ix_confirm_token_lead ON public.confirm_token USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id);
+
+CREATE INDEX ix_contact_confirm_submission_open ON public.contact_confirm_submission USING btree (submitted_at) WHERE (resolved_at IS NULL);
+
+CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC);
+
+CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC);
+
+CREATE INDEX ix_lead_privacy_notice_approval ON public.lead_privacy_notice USING btree (approval_id) WHERE (approval_id IS NOT NULL);
+
+CREATE UNIQUE INDEX knowledge_chunk_one_per_span ON public.knowledge_chunk USING btree (document_id, chunk_ix);
+
+CREATE INDEX knowledge_chunk_retrieval ON public.knowledge_chunk USING btree (corpus_id, embed_identity) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX knowledge_corpus_one_default ON public.knowledge_corpus USING btree (default_ask) WHERE (default_ask AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX knowledge_corpus_one_per_managed_source ON public.knowledge_corpus USING btree (managed_source) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE INDEX knowledge_document_by_corpus ON public.knowledge_document USING btree (corpus_id, archived_at);
+
+CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_document USING btree (corpus_id, checksum) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX knowledge_document_one_per_managed_page ON public.knowledge_document USING btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX lead_disqualify_reason_label_once ON public.lead_disqualify_reason USING btree (lower(btrim(label)));
+
+CREATE INDEX lead_product_idx ON public.lead USING btree (product_id) WHERE (product_id IS NOT NULL);
+
+CREATE INDEX meeting_invitation_due ON public.meeting_invitation USING btree (next_attempt_at) WHERE (status = ANY (ARRAY['pending'::text, 'rescheduling'::text, 'canceling'::text]));
+
+CREATE UNIQUE INDEX meeting_invitation_public_intent ON public.meeting_invitation USING btree (((public_intent ->> 'key_hash'::text))) WHERE (public_intent IS NOT NULL);
+
+CREATE INDEX notice_dedupe_key ON public.notice USING btree (dedupe_key) WHERE (dedupe_key IS NOT NULL);
+
+CREATE INDEX notice_history ON public.notice USING btree (recipient_user_id, created_at DESC, id DESC);
+
+CREATE INDEX notice_outstanding_kind_id ON public.notice USING btree (kind, id) WHERE (retracted_at IS NULL);
+
+CREATE INDEX notice_unread ON public.notice USING btree (recipient_user_id, created_at DESC) WHERE (read_at IS NULL);
+
+CREATE INDEX oauth_code_lent_passport_ix ON public.oauth_authorization_code USING btree (lent_passport_id);
+
+CREATE INDEX oauth_grant_lent_passport_ix ON public.oauth_grant USING btree (lent_passport_id);
+
+CREATE INDEX oauth_grant_user_live_ix ON public.oauth_grant USING btree (user_id, id) WHERE (revoked_at IS NULL);
+
+CREATE INDEX oauth_refresh_token_grant_ix ON public.oauth_refresh_token USING btree (grant_id);
+
+CREATE UNIQUE INDEX offer_template_name_unique ON public.offer_template USING btree (name) WHERE (archived_at IS NULL);
+
+CREATE INDEX passport_oauth_grant_ix ON public.passport USING btree (oauth_grant_id);
+
+CREATE UNIQUE INDEX pipeline_name_unique ON public.pipeline USING btree (name) WHERE (archived_at IS NULL);
+
+CREATE INDEX preference_token_contact_email_ix ON public.preference_token USING btree (contact_email_id) WHERE (contact_email_id IS NOT NULL);
+
+CREATE UNIQUE INDEX preference_token_token_hash_key ON public.preference_token USING btree (token_hash) WHERE (token_hash IS NOT NULL);
+
+CREATE UNIQUE INDEX privacy_notice_case_acquisition ON public.privacy_notice_case USING btree (acquisition_id);
+
+CREATE INDEX privacy_notice_case_delivery ON public.privacy_notice_case USING btree (delivery_id) WHERE (delivery_id IS NOT NULL);
+
+CREATE INDEX privacy_notice_case_due ON public.privacy_notice_case USING btree (due_at, id) WHERE (state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text]));
+
+CREATE INDEX privacy_notice_case_review_queue ON public.privacy_notice_case USING btree (COALESCE(due_at, created_at), id);
+
+CREATE INDEX privacy_request_proof_keep_until ON public.privacy_request_proof USING btree (keep_until, id);
+
+CREATE INDEX provider_applied_field_by_contact ON public.provider_applied_field USING btree (contact_id, provider);
+
+CREATE INDEX provider_applied_field_by_provider ON public.provider_applied_field USING btree (provider);
+
+CREATE UNIQUE INDEX provider_applied_field_once ON public.provider_applied_field USING btree (run_id, target_table, target_field, COALESCE(target_row_id, contact_id));
+
+CREATE INDEX provider_employment_contact ON public.provider_employment_resolution USING btree (contact_id, episode_key);
+
+CREATE INDEX provider_employment_pending ON public.contact_provider_claim USING btree (contact_id) WHERE ((employment_processed_at IS NULL) AND (claim_key = ANY (ARRAY['current_employment'::text, 'job_history'::text])));
+
+CREATE INDEX provider_run_contact_history ON public.provider_run USING btree (contact_id, provider, created_at DESC) WHERE (subject_kind = 'contact'::text);
+
+CREATE INDEX provider_run_due ON public.provider_run USING btree (state, next_attempt_at) WHERE (state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'completed'::text]));
+
+CREATE UNIQUE INDEX provider_run_one_live_contact_fingerprint ON public.provider_run USING btree (contact_id, provider, input_fingerprint) WHERE ((subject_kind = 'contact'::text) AND (state = ANY (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'submission_unknown'::text])));
+
+CREATE INDEX raw_capture_original_legacy_hints ON public.raw_capture USING btree (id) WHERE ((payload_object IS NOT NULL) AND ((((payload_object -> 'subjects'::text) ->> 'version'::text) IS DISTINCT FROM '1'::text) OR (jsonb_typeof(((payload_object -> 'subjects'::text) -> 'email_bits'::text)) IS DISTINCT FROM 'array'::text) OR (COALESCE(((payload_object -> 'subjects'::text) ->> 'email_saturated'::text), 'false'::text) <> 'false'::text)));
+
+CREATE INDEX raw_capture_original_subject_hints ON public.raw_capture USING gin (payload_object jsonb_path_ops) WHERE (payload_object IS NOT NULL);
+
+CREATE INDEX raw_capture_payload_object_key ON public.raw_capture USING btree (((payload_object ->> 'key'::text))) WHERE (payload_object IS NOT NULL);
+
+CREATE INDEX raw_capture_payload_offload_unchecked ON public.raw_capture USING btree (id) WHERE ((payload_offload_checked_at IS NULL) AND (payload_object IS NULL));
+
+CREATE INDEX raw_capture_unslimmed_idx ON public.raw_capture USING btree (received_at) WHERE (parts_slimmed_at IS NULL);
+
+CREATE INDEX relationship_nudge_dismissal_by_reader ON public.relationship_nudge_dismissal USING btree (reader_id, contact_id);
+
+CREATE INDEX report_contribution_source ON public.report_edition_contribution USING btree (source_type, source_id);
+
+CREATE INDEX report_definition_library ON public.report_definition USING btree (owner_id, audience, name, id) WHERE (archived_at IS NULL);
+
+CREATE INDEX report_edition_archive ON public.report_edition USING btree (report_id, intended_due_at DESC, id DESC);
+
+CREATE INDEX report_execution_pending ON public.report_execution USING btree (status, retry_at, intended_due_at, id);
+
+CREATE INDEX report_execution_report_history ON public.report_execution USING btree (report_id, id DESC);
+
+CREATE INDEX report_question_source ON public.report_edition_question_source USING btree (source_type, source_id);
+
+CREATE INDEX report_schedule_due ON public.report_schedule USING btree (next_due_at, id) WHERE enabled;
+
+CREATE INDEX reporting_primary_credit ON public.sdr_handoff_event USING btree (deal_id_at_change, occurred_at, id) WHERE (to_status = 'accepted'::text);
+
+CREATE INDEX reporting_stage_events ON public.deal_stage_history USING btree (deal_id, changed_at, id);
+
+CREATE INDEX sales_initiative_baseline_deal_idx ON public.sales_initiative_baseline USING btree (deal_id);
+
+CREATE INDEX sales_initiative_member_record_idx ON public.sales_initiative_member USING btree (record_type, record_id);
+
+CREATE INDEX sales_initiative_status_idx ON public.sales_initiative USING btree (status) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX sales_target_identity ON public.sales_target USING btree (metric, scope_kind, scope_id, pipeline_id, period_kind, period_start) NULLS NOT DISTINCT;
+
+CREATE UNIQUE INDEX scheduled_send_one_held_message_per_seat ON public.scheduled_send USING btree (held_reason, scheduled_by, principal_kind, payload_version, origin_kind, agent_actor_id, agent_passport_id, anchor_activity_id, md5((COALESCE(origin_links, '[]'::jsonb))::text), md5((COALESCE(also_links, '[]'::jsonb))::text), md5((payload)::text)) NULLS NOT DISTINCT WHERE ((status = 'held'::text) AND (held_reason = 'send_refused'::text));
+
+CREATE UNIQUE INDEX sdr_handoff_reason_label_once ON public.sdr_handoff_reason USING btree (applies_to, lower(btrim(label)));
+
+CREATE UNIQUE INDEX setup_token_one_outstanding ON public.setup_token USING btree (((consumed_at IS NULL))) WHERE (consumed_at IS NULL);
+
+CREATE INDEX signal_entity_ix ON public.signal USING btree (entity_type, entity_id) WHERE (entity_id IS NOT NULL);
+
+CREATE INDEX signal_resolved_company_ix ON public.signal USING btree (resolved_company_id) WHERE (resolved_company_id IS NOT NULL);
+
+CREATE INDEX stage_exit_criterion_stage_ix ON public.stage_exit_criterion USING btree (stage_id);
+
+CREATE UNIQUE INDEX stage_exit_criterion_stage_key_live_ux ON public.stage_exit_criterion USING btree (stage_id, key) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX stage_progression_outcome_approval_ux ON public.stage_progression_outcome USING btree (approval_id);
+
+CREATE UNIQUE INDEX stage_progression_policy_transition_key ON public.stage_progression_policy USING btree (pipeline_id, from_stage_id, to_stage_id);
+
+CREATE INDEX stored_object_intent_pending_idx ON public.stored_object_intent USING btree (COALESCE(reaping_since, recorded_at), storage_key) WHERE (reaped_at IS NULL);
+
+CREATE INDEX stored_object_intent_recorded_idx ON public.stored_object_intent USING btree (recorded_at);
+
+CREATE INDEX suggestion_dismissal_company_ix ON public.suggestion_dismissal USING btree (company_id);
+
+CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_activity_domain_evidence_version ON public.activity USING btree (id, domain_evidence_version);
+
+CREATE UNIQUE INDEX uq_activity_link ON public.activity_link USING btree (activity_id, entity_type, COALESCE(contact_id, company_id, deal_id, lead_id, project_id));
+
+CREATE UNIQUE INDEX uq_activity_link_project ON public.activity_link USING btree (activity_id) WHERE (entity_type = 'project'::text);
+
+CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT;
+
+CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE ((basis <> 'controller_pin'::text) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)));
+
+CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_app_user_email ON public.app_user USING btree (lower(email));
+
+CREATE UNIQUE INDEX uq_attachment_extraction_inflight ON public.attachment_extraction USING btree (attachment_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]));
+
+CREATE UNIQUE INDEX uq_bulk_operation_undo_of ON public.bulk_operation USING btree (undo_of) WHERE (undo_of IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_capture_backfill_admission_slot ON public.capture_backfill USING btree (admission_slot) WHERE ((status = 'running'::text) AND (admission_slot IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_capture_backfill_live ON public.capture_backfill USING btree (connection_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]));
+
+CREATE UNIQUE INDEX uq_capture_exclusion ON public.capture_exclusion USING btree (scope, user_id, kind, value) NULLS NOT DISTINCT;
+
+CREATE UNIQUE INDEX uq_capture_freemail_domain ON public.capture_freemail_domain USING btree (domain);
+
+CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_close_date_run_one_running ON public.close_date_run USING btree (status) WHERE (status = 'running'::text);
+
+CREATE UNIQUE INDEX uq_commission_live_per_deal ON public.commission_entry USING btree (deal_id) WHERE ((status <> 'void'::text) AND (reversal_of IS NULL));
+
+CREATE UNIQUE INDEX uq_commission_trigger_event ON public.commission_entry USING btree (trigger_event_id) WHERE (trigger_event_id IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_company_anchor ON public.company USING btree ((true)) WHERE (is_anchor AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_company_domain ON public.company_domain USING btree (domain) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_company_domain_disposition ON public.company_domain_disposition USING btree (domain);
+
+CREATE UNIQUE INDEX uq_company_domain_primary ON public.company_domain USING btree (company_id) WHERE (is_primary AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_company_rel_type ON public.company_relationship_type USING btree (company_id, relationship_type) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_company_source ON public.company USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_contact_channel_identity ON public.contact_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_contact_email_dedupe ON public.contact_email USING btree (email) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_contact_source ON public.contact USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name);
+
+CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug);
+
+CREATE UNIQUE INDEX uq_deal_room_comment_request ON public.deal_room_comment USING btree (room_id, request_id) WHERE (request_id IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_deal_room_document_live ON public.deal_room_document USING btree (room_id, attachment_id) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_deal_room_invitation_live ON public.deal_room_invitation USING btree (participant_id) WHERE ((consumed_at IS NULL) AND (superseded_at IS NULL));
+
+CREATE UNIQUE INDEX uq_deal_room_participant_email ON public.deal_room_participant USING btree (room_id, email) WHERE ((revoked_at IS NULL) AND (NOT preview));
+
+CREATE UNIQUE INDEX uq_deal_room_preview_per_rep ON public.deal_room_participant USING btree (room_id, invited_by) WHERE ((revoked_at IS NULL) AND preview);
+
+CREATE UNIQUE INDEX uq_deal_room_thread_request ON public.deal_room_thread USING btree (room_id, request_id) WHERE (request_id IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_deal_source ON public.deal USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text);
+
+CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id));
+
+CREATE UNIQUE INDEX uq_forecast_snapshot_daily ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE ((trigger = 'daily'::text) AND (pipeline_id IS NULL) AND (population_fingerprint = ''::text));
+
+CREATE UNIQUE INDEX uq_forecast_snapshot_daily_context ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, pipeline_id, population_fingerprint, base_currency, definition_version, local_day) NULLS NOT DISTINCT WHERE ((trigger = 'daily'::text) AND (population_fingerprint <> ''::text));
+
+CREATE UNIQUE INDEX uq_forecast_snapshot_daily_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'daily'::text) AND (scope_id IS NULL) AND (pipeline_id IS NULL) AND (population_fingerprint = ''::text));
+
+CREATE UNIQUE INDEX uq_forecast_snapshot_period_close ON public.forecast_snapshot USING btree (period_start, period_end, scope_kind, scope_id, local_day) WHERE (trigger = 'period_close'::text);
+
+CREATE UNIQUE INDEX uq_forecast_snapshot_period_close_workspace ON public.forecast_snapshot USING btree (period_start, period_end, local_day) WHERE ((trigger = 'period_close'::text) AND (scope_id IS NULL));
+
+CREATE UNIQUE INDEX uq_lead_email_dedupe ON public.lead USING btree (email) WHERE ((email IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_lead_from_contact_live ON public.lead USING btree (from_contact_id) WHERE ((from_contact_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_lead_manual_signal_live ON public.lead_manual_signal USING btree (lead_id, factor) WHERE (superseded_at IS NULL);
+
+CREATE UNIQUE INDEX uq_lead_privacy_notice_delivery ON public.lead_privacy_notice USING btree (delivery_id) WHERE (delivery_id IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_lead_privacy_notice_lead ON public.lead_privacy_notice USING btree (lead_id) WHERE (lead_id IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key);
+
+CREATE UNIQUE INDEX uq_legal_entity_default ON public.legal_entity USING btree ((true)) WHERE is_default;
+
+CREATE UNIQUE INDEX uq_legal_entity_live_name ON public.legal_entity USING btree (lower(display_name)) WHERE ((archived_at IS NULL) AND (NOT is_default));
+
+CREATE UNIQUE INDEX uq_legal_review_open_deal ON public.legal_review USING btree (deal_id) WHERE (status = 'requested'::text);
+
+CREATE UNIQUE INDEX uq_linkedin_connection_natural ON public.linkedin_connection USING btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL);
+
+CREATE UNIQUE INDEX uq_linkedin_connection_provider ON public.linkedin_connection USING btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_notice_dedupe ON public.notice USING btree (recipient_user_id, dedupe_key) WHERE (dedupe_key IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_offer_template_default ON public.offer_template USING btree (locale) WHERE (is_default AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_pipeline_default ON public.pipeline USING btree ((true)) WHERE (is_default AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_preference_token_contact_address ON public.preference_token USING btree (contact_id, contact_email_id) NULLS NOT DISTINCT WHERE (revoked_at IS NULL);
+
+CREATE UNIQUE INDEX uq_product_sku ON public.product USING btree (sku) WHERE ((sku IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_project_health_one_successor ON public.project_health_assessment USING btree (supersedes_assessment_id) WHERE (supersedes_assessment_id IS NOT NULL);
+
+CREATE UNIQUE INDEX uq_project_key ON public.project USING btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_project_source ON public.project USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_record_assignment_company_team ON public.record_assignment USING btree (company_id, role_id, team_id) WHERE ((company_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_record_assignment_company_user ON public.record_assignment USING btree (company_id, role_id, user_id) WHERE ((company_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_record_assignment_deal_team ON public.record_assignment USING btree (deal_id, role_id, team_id) WHERE ((deal_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_record_assignment_deal_user ON public.record_assignment USING btree (deal_id, role_id, user_id) WHERE ((deal_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_record_assignment_project_team ON public.record_assignment USING btree (project_id, role_id, team_id) WHERE ((project_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_record_assignment_project_user ON public.record_assignment USING btree (project_id, role_id, user_id) WHERE ((project_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_rel_billing_contact ON public.relationship USING btree (company_id, contact_id, role) WHERE ((kind = 'billing_contact'::text) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_rel_current_primary_employer ON public.relationship USING btree (contact_id) WHERE ((kind = 'employment'::text) AND is_current_primary AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_rel_deal_contact_role ON public.relationship USING btree (deal_id, contact_id, role) WHERE ((kind = 'deal_stakeholder'::text) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_rel_employment ON public.relationship USING btree (contact_id, company_id) WHERE ((kind = 'employment'::text) AND (ended_at IS NULL) AND (archived_at IS NULL) AND (COALESCE(employment_status, 'current'::text) = 'current'::text));
+
+CREATE UNIQUE INDEX uq_rel_project_company ON public.relationship USING btree (project_id, company_id) WHERE ((kind = 'project_company'::text) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_rel_project_stakeholder ON public.relationship USING btree (project_id, contact_id) WHERE ((kind = 'project_stakeholder'::text) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_rel_works_with ON public.relationship USING btree (LEAST(contact_id, counterparty_contact_id), GREATEST(contact_id, counterparty_contact_id)) WHERE ((kind = 'works_with'::text) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_role_assignment ON public.role_assignment USING btree (role_id, user_id, team_id) NULLS NOT DISTINCT;
+
+CREATE UNIQUE INDEX uq_signal_fingerprint ON public.signal USING btree (fingerprint) WHERE ((fingerprint IS NOT NULL) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_site_read_company_inflight ON public.site_read USING btree (company_id, seed_url) WHERE ((target_kind = 'company'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])));
+
+CREATE UNIQUE INDEX uq_site_read_onboarding_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'onboarding'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])));
+
+CREATE UNIQUE INDEX uq_site_read_triage_inflight ON public.site_read USING btree (seed_url) WHERE ((target_kind = 'domain_triage'::text) AND (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text])));
+
+CREATE UNIQUE INDEX uq_stage_position ON public.stage USING btree (pipeline_id, "position") WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_tag_name ON public.tag USING btree (lower(name)) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX uq_tag_suggestion_open_company ON public.tag_suggestion USING btree (tag_id, company_id) WHERE ((state = 'open'::text) AND (company_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_tag_suggestion_open_contact ON public.tag_suggestion USING btree (tag_id, contact_id) WHERE ((state = 'open'::text) AND (contact_id IS NOT NULL));
+
+CREATE UNIQUE INDEX uq_team_weekly_review_outlook_period ON public.team_weekly_review_outlook USING btree (team_weekly_review_id, period_kind);
+
+CREATE UNIQUE INDEX uq_transcript_read_inflight ON public.transcript_read USING btree (activity_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]));
+
+CREATE UNIQUE INDEX uq_voice_profile_user_live ON public.voice_profile USING btree (owner_id) WHERE ((scope = 'user'::text) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX uq_weekly_review_driver_deal ON public.weekly_review_driver USING btree (weekly_review_id, period_kind, bar, deal_id);
+
+CREATE UNIQUE INDEX uq_weekly_review_movement_bar ON public.weekly_review_movement USING btree (weekly_review_id, period_kind, bar);
+
+CREATE UNIQUE INDEX uq_weekly_review_outlook_period ON public.weekly_review_outlook USING btree (weekly_review_id, period_kind);
+
+CREATE INDEX voice_build_deferred_due ON public.voice_build USING btree (next_attempt_at, id) WHERE ((status = 'deferred'::text) AND (archived_at IS NULL));
+
+CREATE UNIQUE INDEX voice_build_one_active ON public.voice_build USING btree (voice_profile_id) WHERE (status = ANY (ARRAY['queued'::text, 'deferred'::text, 'running'::text]));
+
+CREATE INDEX voice_build_poll ON public.voice_build USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX voice_build_profile_version_ix ON public.voice_build USING btree (voice_profile_id, result_version);
+
+CREATE INDEX voice_build_requester_fk ON public.voice_build USING btree (requested_by) WHERE (requested_by IS NOT NULL);
+
+CREATE INDEX voice_corpus_source_manifest ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX voice_learning_signal_profile_version_ix ON public.voice_learning_signal USING btree (voice_profile_id, profile_version);
+
+CREATE INDEX voice_learning_signal_retention ON public.voice_learning_signal USING btree (retention_until) WHERE (content_erased_at IS NULL);
+
+CREATE INDEX voice_profile_delta_from_version_ix ON public.voice_profile_delta USING btree (voice_profile_id, from_version);
+
+CREATE INDEX voice_profile_delta_history ON public.voice_profile_delta USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE INDEX voice_profile_owner_fk ON public.voice_profile USING btree (owner_id) WHERE (owner_id IS NOT NULL);
+
+CREATE INDEX voice_profile_team_fk ON public.voice_profile USING btree (team_id) WHERE (team_id IS NOT NULL);
+
+CREATE INDEX voice_profile_version_history ON public.voice_profile_version USING btree (voice_profile_id, created_at DESC, id DESC) WHERE (archived_at IS NULL);
+
+CREATE UNIQUE INDEX voice_profile_version_one_active ON public.voice_profile_version USING btree (voice_profile_id) WHERE (status = 'active'::text);
+
+CREATE INDEX voice_profile_version_predecessor_ix ON public.voice_profile_version USING btree (voice_profile_id, predecessor_version);
+
+CREATE INDEX web_form_product_idx ON public.web_form USING btree (product_id) WHERE (product_id IS NOT NULL);
+
+CREATE INDEX workflow_run_by_automation ON public.workflow_run USING btree (handler, "right"(idempotency_key, 36), created_at DESC, id DESC) WHERE (status <> 'skipped'::text);
+
+CREATE INDEX workflow_run_troubled ON public.workflow_run USING btree (created_at DESC, id DESC) WHERE (status = ANY (ARRAY['failed'::text, 'blocked'::text]));
+
+CREATE INDEX worklist_snapshot_by_reader ON public.worklist_snapshot USING btree (reader_id, created_at DESC);
+
+CREATE STATISTICS public.activity_unfolded_counterparty_stats ON public.activity_unfolded_counterparty(counterparty_email) FROM public.activity;
+
+CREATE TRIGGER activity_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.activity FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.kind = 'task'::text) AND (NOT new.is_done)))) EXECUTE FUNCTION public.refuse_retired_member_work('assignee_id');
+
+CREATE CONSTRAINT TRIGGER activity_class_needs_evidence AFTER DELETE ON public.activity_retention_evidence DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.activity_class_needs_evidence();
+
+CREATE TRIGGER activity_due_time_follows_due_at BEFORE INSERT OR UPDATE OF due_at, due_has_time ON public.activity FOR EACH ROW EXECUTE FUNCTION public.activity_due_time_follows_due_at();
+
+CREATE TRIGGER activity_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome))) EXECUTE FUNCTION public.trg_activity_last_activity();
+
+CREATE TRIGGER activity_link_ceiling BEFORE INSERT ON public.activity_link FOR EACH ROW EXECUTE FUNCTION public.activity_link_refuses_past_the_ceiling();
+
+CREATE TRIGGER activity_link_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION public.trg_activity_link_last_activity();
+
+CREATE TRIGGER activity_link_no_company_meeting BEFORE INSERT OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION public.activity_link_refuses_a_company_meeting();
+
+CREATE TRIGGER activity_link_project_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION public.trg_activity_link_project_last_activity();
+
+CREATE TRIGGER activity_no_company_meeting_on_rekind BEFORE UPDATE OF kind ON public.activity FOR EACH ROW EXECUTE FUNCTION public.activity_refuses_becoming_a_company_meeting();
+
+CREATE TRIGGER activity_project_last_activity AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome ON public.activity FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin) OR (old.kind IS DISTINCT FROM new.kind) OR (old.meeting_status IS DISTINCT FROM new.meeting_status) OR (old.occurred_precision IS DISTINCT FROM new.occurred_precision) OR (old.call_outcome IS DISTINCT FROM new.call_outcome))) EXECUTE FUNCTION public.trg_activity_project_last_activity();
+
+CREATE TRIGGER activity_refuse_restricted_mutation BEFORE DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION public.activity_refuse_restricted_mutation();
+
+CREATE TRIGGER activity_retention_evidence_is_frozen BEFORE DELETE OR UPDATE ON public.activity_retention_evidence FOR EACH ROW EXECUTE FUNCTION public.activity_retention_evidence_is_frozen();
+
+CREATE TRIGGER activity_retention_evidence_names_its_record BEFORE INSERT ON public.activity_retention_evidence FOR EACH ROW EXECUTE FUNCTION public.activity_retention_evidence_names_its_record();
+
+CREATE TRIGGER activity_system_text_retire BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION public.retire_changed_system_text();
+
+CREATE TRIGGER advance_activity_domain_evidence_version BEFORE UPDATE OF occurred_at, occurred_precision, archived_at, restricted_at ON public.activity FOR EACH ROW EXECUTE FUNCTION public.advance_activity_domain_evidence_version();
+
+CREATE TRIGGER analytics_share_scope_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.analytics_share FOR EACH ROW WHEN (((new.scope_id IS NOT NULL) AND ((new.scope_kind = 'owner'::text) AND (new.revoked_at IS NULL) AND (new.expires_at > now())))) EXECUTE FUNCTION public.refuse_retired_member_work('scope_id');
+
+CREATE TRIGGER app_user_forget_weekly_plan_responses BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION public.weekly_plan_commitment_forget_manager();
+
+CREATE TRIGGER app_user_service_never_deleted BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION public.refuse_service_member_delete();
+
+CREATE TRIGGER approval_requested_decider_id_retirement_guard BEFORE INSERT OR UPDATE ON public.approval FOR EACH ROW WHEN (((new.requested_decider_id IS NOT NULL) AND (new.status = 'pending'::text))) EXECUTE FUNCTION public.refuse_retired_member_work('requested_decider_id');
+
+CREATE TRIGGER automation_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.automation FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER bind_requests_on_address_move BEFORE UPDATE OF contact_id ON public.contact_email FOR EACH ROW WHEN ((old.contact_id IS DISTINCT FROM new.contact_id)) EXECUTE FUNCTION public.bind_requests_on_address_move();
+
+CREATE TRIGGER booking_page_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.booking_page FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION public.refuse_retired_member_work('host_user_id');
+
+CREATE TRIGGER commission_entry_touch BEFORE UPDATE ON public.commission_entry FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER communication_instruction_refuse_rewrite BEFORE DELETE OR UPDATE ON public.communication_instruction FOR EACH ROW EXECUTE FUNCTION public.communication_instruction_refuse_rewrite();
+
+CREATE TRIGGER communication_instruction_wording_correction BEFORE INSERT OR UPDATE ON public.communication_instruction FOR EACH ROW EXECUTE FUNCTION public.guard_instruction_wording_correction();
+
+CREATE TRIGGER company_delete_clears_deal_partner BEFORE DELETE ON public.company FOR EACH ROW EXECUTE FUNCTION public.deal_clear_partner_attribution_on_company_delete();
+
+CREATE TRIGGER company_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.company FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER company_refuse_anchor_retirement BEFORE INSERT OR UPDATE OF merged_into_id, is_anchor ON public.company FOR EACH ROW EXECUTE FUNCTION public.company_refuse_anchor_retirement();
+
+CREATE TRIGGER consent_text_version_no_edit_after_publish BEFORE UPDATE ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION public.consent_text_version_is_immutable();
+
+CREATE TRIGGER contact_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER contract_set_updated_at BEFORE UPDATE ON public.contract FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER data_subject_request_assignee_id_retirement_guard BEFORE INSERT OR UPDATE ON public.data_subject_request FOR EACH ROW WHEN (((new.assignee_id IS NOT NULL) AND (new.status = ANY (ARRAY['open'::text, 'in_progress'::text])))) EXECUTE FUNCTION public.refuse_retired_member_work('assignee_id');
+
+CREATE TRIGGER deal_last_activity AFTER UPDATE OF company_id ON public.deal FOR EACH ROW WHEN ((old.company_id IS DISTINCT FROM new.company_id)) EXECUTE FUNCTION public.trg_deal_last_activity();
+
+CREATE TRIGGER deal_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER deal_room_document_touch BEFORE UPDATE ON public.deal_room_document FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER deal_room_participant_touch BEFORE UPDATE ON public.deal_room_participant FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER deal_room_steward_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.deal_room FOR EACH ROW WHEN (((new.steward_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state <> ALL (ARRAY['closed'::text, 'expired'::text])) AND ((new.expires_at IS NULL) OR (new.expires_at > now()))))) EXECUTE FUNCTION public.refuse_retired_member_work('steward_user_id');
+
+CREATE TRIGGER deal_room_thread_touch BEFORE UPDATE ON public.deal_room_thread FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER deal_room_touch BEFORE UPDATE ON public.deal_room FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER forecast_contribution_is_frozen BEFORE UPDATE ON public.forecast_contribution FOR EACH ROW EXECUTE FUNCTION public.forecast_contribution_is_frozen();
+
+CREATE TRIGGER forecast_snapshot_is_frozen BEFORE UPDATE ON public.forecast_snapshot FOR EACH ROW EXECUTE FUNCTION public.forecast_snapshot_is_frozen();
+
+CREATE TRIGGER home_read_fence_activity_reach AFTER UPDATE ON public.activity FOR EACH ROW WHEN (((old.audience IS DISTINCT FROM new.audience) OR ((old.restricted_at IS NULL) AND (new.restricted_at IS NOT NULL)) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)) OR (old.assignee_id IS DISTINCT FROM new.assignee_id) OR ((old.sent_by_colleague IS NOT NULL) AND (old.sent_by_colleague IS DISTINCT FROM new.sent_by_colleague)) OR (old.captured_by IS DISTINCT FROM new.captured_by) OR (old.source_system IS DISTINCT FROM new.source_system) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE CONSTRAINT TRIGGER home_read_fence_at_commit AFTER INSERT ON public.home_read_fence_pending DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION public.commit_home_read_fence();
+
+CREATE TRIGGER home_read_fence_audience_member AFTER DELETE OR UPDATE ON public.activity_audience_member FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_authority AFTER UPDATE ON public.report_projection_fence FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_capture_import AFTER UPDATE ON public.capture_import FOR EACH ROW WHEN (((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_capture_import_removed AFTER DELETE ON public.capture_import FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_commitment_admission AFTER INSERT ON public.activity_commitment_admission FOR EACH ROW WHEN (((new.outcome = 'source_unavailable'::text) OR (new.renewed_by IS NOT NULL))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_commitment_admission_change AFTER UPDATE ON public.activity_commitment_admission FOR EACH ROW WHEN ((((new.outcome = 'source_unavailable'::text) AND (old.outcome IS DISTINCT FROM new.outcome)) OR ((new.renewed_by IS NOT NULL) AND (old.renewed_by IS DISTINCT FROM new.renewed_by)) OR ((old.summary <> ''::text) AND (new.summary = ''::text)) OR ((old.source_quote <> ''::text) AND (new.source_quote = ''::text)) OR ((old.meaning IS NOT NULL) AND (new.meaning IS NULL)) OR (old.source_activity_id IS DISTINCT FROM new.source_activity_id) OR (old.locator IS DISTINCT FROM new.locator))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_company_domain AFTER UPDATE ON public.company_domain FOR EACH ROW WHEN (((old.domain_folded IS DISTINCT FROM new.domain_folded) OR (old.company_id IS DISTINCT FROM new.company_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_company_domain_removed AFTER DELETE ON public.company_domain FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_company_reach AFTER UPDATE ON public.company FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR (old.is_anchor IS DISTINCT FROM new.is_anchor) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_contact_reach AFTER UPDATE ON public.contact FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_deal_owner AFTER UPDATE ON public.deal FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_first_link AFTER INSERT ON public.activity_link REFERENCING NEW TABLE AS added_links FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence_on_first_link();
+
+CREATE TRIGGER home_read_fence_identity AFTER UPDATE OF merged_into_user_id, email_domain_folded ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_lead_owner AFTER UPDATE ON public.lead FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_link_change AFTER UPDATE ON public.activity_link FOR EACH ROW WHEN (((old.activity_id IS DISTINCT FROM new.activity_id) OR (old.contact_id IS DISTINCT FROM new.contact_id) OR (old.company_id IS DISTINCT FROM new.company_id) OR (old.deal_id IS DISTINCT FROM new.deal_id) OR (old.lead_id IS DISTINCT FROM new.lead_id) OR (old.project_id IS DISTINCT FROM new.project_id))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_link_removed AFTER DELETE ON public.activity_link FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_participant AFTER UPDATE ON public.activity_participant FOR EACH ROW WHEN (((old.user_id IS NOT NULL) AND ((old.user_id IS DISTINCT FROM new.user_id) OR (old.activity_id IS DISTINCT FROM new.activity_id) OR ((old.address IS NOT NULL) AND (new.address IS NULL)) OR ((old.contact_id IS NOT NULL) AND (new.contact_id IS NULL)) OR ((old.channel_user_id IS NOT NULL) AND (new.channel_user_id IS NULL))))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_participant_removed AFTER DELETE ON public.activity_participant FOR EACH ROW WHEN ((old.user_id IS NOT NULL)) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_project_owner AFTER UPDATE ON public.project FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_record_grant AFTER DELETE OR UPDATE ON public.record_grant FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_scrub AFTER INSERT ON public.audit_log FOR EACH ROW WHEN ((new.action = ANY (ARRAY['erase'::text, 'anonymize'::text, 'restrict'::text]))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_workspace_domain AFTER UPDATE ON public.workspace_email_domain FOR EACH ROW WHEN (((old.domain IS DISTINCT FROM new.domain) OR (old.verified AND (NOT new.verified)))) EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER home_read_fence_workspace_domain_removed AFTER DELETE ON public.workspace_email_domain FOR EACH STATEMENT EXECUTE FUNCTION public.advance_home_read_fence();
+
+CREATE TRIGGER intro_request_introducer_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.intro_request FOR EACH ROW WHEN (((new.introducer_user_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.closed_at IS NULL)))) EXECUTE FUNCTION public.refuse_retired_member_work('introducer_user_id');
+
+CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER knowledge_document_touch BEFORE UPDATE ON public.knowledge_document FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER lead_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.lead FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER list_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.list FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER list_steward_id_retirement_guard BEFORE INSERT OR UPDATE ON public.list FOR EACH ROW WHEN (((new.steward_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('steward_id');
+
+CREATE TRIGGER mail_draft_author_id_retirement_guard BEFORE INSERT OR UPDATE ON public.mail_draft FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION public.refuse_retired_member_work('author_id');
+
+CREATE TRIGGER meeting_invitation_attention_follows_status BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW EXECUTE FUNCTION public.meeting_invitation_attention_follows_status();
+
+CREATE TRIGGER meeting_invitation_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_invitation FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND ((new.status <> ALL (ARRAY['canceled'::text, 'erased'::text])) OR (NOT new.cleanup_complete)))) EXECUTE FUNCTION public.refuse_retired_member_work('host_user_id');
+
+CREATE TRIGGER meeting_proposal_host_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.meeting_proposal FOR EACH ROW WHEN (((new.host_user_id IS NOT NULL) AND true)) EXECUTE FUNCTION public.refuse_retired_member_work('host_user_id');
+
+CREATE TRIGGER notice_system_text_retire BEFORE UPDATE ON public.notice FOR EACH ROW EXECUTE FUNCTION public.retire_changed_system_text();
+
+CREATE TRIGGER privacy_notice_case_owner_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.privacy_notice_case FOR EACH ROW WHEN (((new.owner_user_id IS NOT NULL) AND (new.state = ANY (ARRAY['open'::text, 'assigned'::text, 'queued'::text, 'delivery_failed'::text, 'blocked'::text, 'source_review'::text])))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_user_id');
+
+CREATE TRIGGER project_health_assessment_append_only BEFORE DELETE OR UPDATE ON public.project_health_assessment FOR EACH ROW EXECUTE FUNCTION public.project_health_assessment_is_append_only();
+
+CREATE TRIGGER project_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.project FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER raw_original_object_retired BEFORE DELETE OR UPDATE OF payload, payload_object ON public.raw_capture FOR EACH ROW EXECUTE FUNCTION public.retire_raw_original_object();
+
+CREATE TRIGGER record_assignment_user_id_retirement_guard BEFORE INSERT OR UPDATE ON public.record_assignment FOR EACH ROW WHEN (((new.user_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('user_id');
+
+CREATE TRIGGER relationship_last_activity AFTER INSERT OR DELETE OR UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION public.trg_relationship_last_activity();
+
+CREATE TRIGGER reopen_deleted_signature_source BEFORE DELETE ON public.activity FOR EACH ROW EXECUTE FUNCTION public.reopen_deleted_signature_source();
+
+CREATE TRIGGER report_authority_field_mask BEFORE INSERT OR DELETE OR UPDATE ON public.field_mask FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_authority_role BEFORE INSERT OR DELETE OR UPDATE ON public.role FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_authority_role_assignment BEFORE INSERT OR DELETE OR UPDATE ON public.role_assignment FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_authority_team_change BEFORE UPDATE OF archived_at ON public.team FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_authority_team_delete BEFORE DELETE ON public.team FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_authority_team_membership BEFORE INSERT OR DELETE OR UPDATE ON public.team_membership FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_authority_user_change BEFORE UPDATE OF status, archived_at, seat_type, is_agent ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_authority_user_delete BEFORE DELETE ON public.app_user FOR EACH STATEMENT EXECUTE FUNCTION public.advance_report_projection_authority();
+
+CREATE TRIGGER report_definition_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.report_definition FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER report_schedule_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.report_schedule FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND new.enabled)) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER sales_initiative_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.sales_initiative FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER saved_view_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.saved_view FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER scheduled_send_scheduled_by_retirement_guard BEFORE INSERT OR UPDATE ON public.scheduled_send FOR EACH ROW WHEN (((new.scheduled_by IS NOT NULL) AND (new.status = ANY (ARRAY['scheduled'::text, 'held'::text, 'sending'::text])))) EXECUTE FUNCTION public.refuse_retired_member_work('scheduled_by');
+
+CREATE TRIGGER sdr_handoff_assigned_to_retirement_guard BEFORE INSERT OR UPDATE ON public.sdr_handoff FOR EACH ROW WHEN (((new.assigned_to IS NOT NULL) AND (new.status = 'submitted'::text))) EXECUTE FUNCTION public.refuse_retired_member_work('assigned_to');
+
+CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION public.settlement_evidence_share_activity();
+
+CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_link FOR EACH ROW EXECUTE FUNCTION public.settlement_evidence_share_link();
+
+CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION public.settlement_evidence_share_participant();
+
+CREATE TRIGGER settlement_evidence_share BEFORE INSERT OR DELETE OR UPDATE ON public.contact_email FOR EACH ROW EXECUTE FUNCTION public.settlement_evidence_share_contact_email();
+
+CREATE TRIGGER signal_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.signal FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.status = 'open'::text)))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER stamp_participant_domain_evidence BEFORE INSERT OR UPDATE ON public.activity_participant FOR EACH ROW EXECUTE FUNCTION public.stamp_participant_domain_evidence();
+
+CREATE TRIGGER trg_activity_review_response_updated BEFORE UPDATE ON public.activity_review_response FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_activity_review_template_question_keys BEFORE INSERT OR UPDATE OF questions ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION public.key_shipped_review_questions();
+
+CREATE TRIGGER trg_activity_review_template_updated BEFORE UPDATE ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_activity_updated BEFORE UPDATE ON public.activity FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_ai_task_run_updated BEFORE UPDATE ON public.ai_task_run FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_approval_autonomy_policy_updated BEFORE UPDATE ON public.approval_autonomy_policy FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_approval_updated BEFORE UPDATE ON public.approval FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_assurance_task_item_subject_keys BEFORE INSERT OR UPDATE ON public.assurance_task_item FOR EACH ROW EXECUTE FUNCTION public.trg_assurance_task_item_subject_keys();
+
+CREATE TRIGGER trg_attachment_updated BEFORE UPDATE ON public.attachment FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_audit_no_mutate BEFORE DELETE OR UPDATE ON public.audit_log FOR EACH ROW EXECUTE FUNCTION public.audit_log_immutable();
+
+CREATE TRIGGER trg_capture_backfill_updated BEFORE UPDATE ON public.capture_backfill FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_capture_sync_state_updated BEFORE UPDATE ON public.capture_sync_state FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_channel_connection_updated BEFORE UPDATE ON public.channel_connection FOR EACH ROW WHEN (((to_jsonb(old.*) - 'poll_offset'::text) IS DISTINCT FROM (to_jsonb(new.*) - 'poll_offset'::text))) EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_company_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.company FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION public.company_address_country_goes_stale();
+
+CREATE TRIGGER trg_company_domain_updated BEFORE UPDATE ON public.company_domain FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_company_fact_count_revision AFTER INSERT OR DELETE OR UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION public.company_fact_count_revision();
+
+CREATE TRIGGER trg_company_fact_updated BEFORE UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_company_geocode_state_stale AFTER UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION public.company_geocode_state_goes_stale();
+
+CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION public.company_no_ancestor_cycle();
+
+CREATE TRIGGER trg_company_profile_field_updated BEFORE UPDATE ON public.company_profile_field FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_company_relationship_type_updated BEFORE UPDATE ON public.company_relationship_type FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_company_updated BEFORE UPDATE ON public.company FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_contact_address_country_stale AFTER UPDATE OF address_postal_code, address_city, address_country ON public.contact FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION public.contact_address_country_goes_stale();
+
+CREATE TRIGGER trg_contact_channel_identity_updated BEFORE UPDATE ON public.contact_channel_identity FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_contact_email_updated BEFORE UPDATE ON public.contact_email FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_contact_phone_updated BEFORE UPDATE ON public.contact_phone FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_contact_profile_field_updated BEFORE UPDATE ON public.contact_profile_field FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_contact_updated BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_conversation_claim_updated BEFORE UPDATE ON public.conversation_claim FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_custom_field_updated BEFORE UPDATE ON public.custom_field FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_deal_acquisition_source_updated BEFORE UPDATE ON public.deal_acquisition_source FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_deal_line_item_updated BEFORE UPDATE ON public.deal_line_item FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_deal_loss_reason_mapping_updated BEFORE UPDATE ON public.deal_loss_reason_mapping FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_deal_loss_reason_updated BEFORE UPDATE ON public.deal_loss_reason FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE CONSTRAINT TRIGGER trg_deal_project_same_company AFTER INSERT OR UPDATE OF company_id, project_id ON public.deal DEFERRABLE INITIALLY IMMEDIATE FOR EACH ROW EXECUTE FUNCTION public.assert_deal_project_same_company();
+
+CREATE TRIGGER trg_deal_stage_evidence_updated BEFORE UPDATE ON public.deal_stage_evidence FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_deal_suggestion_updated BEFORE UPDATE ON public.deal_suggestion FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_deal_updated BEFORE UPDATE ON public.deal FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_dedupe_candidate_updated BEFORE UPDATE ON public.dedupe_candidate FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_dsr_updated BEFORE UPDATE ON public.data_subject_request FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_email_signature_updated BEFORE UPDATE ON public.email_signature FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_finance_connection_updated BEFORE UPDATE ON public.finance_connection FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_finance_customer_link_updated BEFORE UPDATE ON public.finance_customer_link FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_finance_external_customer_updated BEFORE UPDATE ON public.finance_external_customer FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_finance_invoice_updated BEFORE UPDATE ON public.finance_invoice FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_finance_payment_updated BEFORE UPDATE ON public.finance_payment FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_lead_disqualify_reason_updated BEFORE UPDATE ON public.lead_disqualify_reason FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_lead_origin_updated BEFORE UPDATE ON public.lead_origin FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_lead_source_updated BEFORE UPDATE ON public.lead_source FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_lead_updated BEFORE UPDATE ON public.lead FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_legal_entity_default_is_permanent BEFORE DELETE OR UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION public.legal_entity_refuse_default_retirement();
+
+CREATE TRIGGER trg_legal_entity_updated BEFORE UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_legal_review_updated BEFORE UPDATE ON public.legal_review FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_list_updated BEFORE UPDATE ON public.list FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_offer_template_updated BEFORE UPDATE ON public.offer_template FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_offer_updated BEFORE UPDATE ON public.offer FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_oli_updated BEFORE UPDATE ON public.offer_line_item FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_partner_stage_updated BEFORE UPDATE ON public.partner_stage FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_partner_updated BEFORE UPDATE ON public.partner FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_pipeline_updated BEFORE UPDATE ON public.pipeline FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_product_translation_updated BEFORE UPDATE ON public.product_translation FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_product_updated BEFORE UPDATE ON public.product FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_project_updated BEFORE UPDATE ON public.project FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_provider_connection_updated BEFORE UPDATE ON public.provider_connection FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_provider_run_release_categories BEFORE UPDATE OF state, contact_id ON public.provider_run FOR EACH ROW WHEN (((new.state <> ALL (ARRAY['queued'::text, 'submitting'::text, 'in_progress'::text, 'submission_unknown'::text])) OR (new.contact_id IS NULL))) EXECUTE FUNCTION public.provider_run_release_categories();
+
+CREATE TRIGGER trg_provider_run_updated BEFORE UPDATE ON public.provider_run FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_record_assignment_updated BEFORE UPDATE ON public.record_assignment FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_record_role_updated BEFORE UPDATE ON public.record_role FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_relationship_updated BEFORE UPDATE ON public.relationship FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_role_assignment_updated BEFORE UPDATE ON public.role_assignment FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_role_updated BEFORE UPDATE ON public.role FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_saved_view_updated BEFORE UPDATE ON public.saved_view FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_signal_entity_keys BEFORE INSERT OR UPDATE ON public.signal FOR EACH ROW EXECUTE FUNCTION public.trg_signal_entity_keys();
+
+CREATE TRIGGER trg_signal_updated BEFORE UPDATE ON public.signal FOR EACH ROW WHEN ((OLD.entity_unkeyed, OLD.entity_deal_id, OLD.entity_company_id, OLD.entity_contact_id, OLD.entity_project_id) IS NOT DISTINCT FROM (NEW.entity_unkeyed, NEW.entity_deal_id, NEW.entity_company_id, NEW.entity_contact_id, NEW.entity_project_id) OR (to_jsonb(OLD) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id']) IS DISTINCT FROM (to_jsonb(NEW) - ARRAY['entity_unkeyed', 'entity_deal_id', 'entity_company_id', 'entity_contact_id', 'entity_project_id'])) EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_stage_exit_criterion_updated BEFORE UPDATE ON public.stage_exit_criterion FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_stage_progression_outcome_updated BEFORE UPDATE ON public.stage_progression_outcome FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_stage_updated BEFORE UPDATE ON public.stage FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_system_log_no_mutate BEFORE DELETE OR UPDATE ON public.system_log FOR EACH ROW EXECUTE FUNCTION public.system_log_immutable();
+
+CREATE TRIGGER trg_tag_suggestion_updated BEFORE UPDATE ON public.tag_suggestion FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_tag_updated BEFORE UPDATE ON public.tag FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_tax_rate_append_only BEFORE DELETE OR UPDATE ON public.tax_rate FOR EACH ROW EXECUTE FUNCTION public.tax_rate_refuse_change();
+
+CREATE TRIGGER trg_team_membership_updated BEFORE UPDATE ON public.team_membership FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_team_updated BEFORE UPDATE ON public.team FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_user_record_view_entity_keys BEFORE INSERT OR UPDATE ON public.user_record_view FOR EACH ROW EXECUTE FUNCTION public.trg_user_record_view_entity_keys();
+
+CREATE TRIGGER trg_web_form_updated BEFORE UPDATE ON public.web_form FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_webhook_delivery_updated BEFORE UPDATE ON public.webhook_delivery FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER trg_webhook_subscription_updated BEFORE UPDATE ON public.webhook_subscription FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_bump_version();
+
+CREATE TRIGGER trg_weekly_plan_commitment_linked_keys BEFORE INSERT OR UPDATE ON public.weekly_plan_commitment FOR EACH ROW EXECUTE FUNCTION public.trg_weekly_plan_commitment_linked_keys();
+
+CREATE TRIGGER trg_workspace_updated BEFORE UPDATE ON public.workspace FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+
+CREATE TRIGGER voice_profile_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.voice_profile FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER web_form_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.web_form FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active'::text)))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER webhook_subscription_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.webhook_subscription FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND ((new.archived_at IS NULL) AND (new.state = 'active'::text)))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+CREATE TRIGGER weekly_plan_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.weekly_plan FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.status = 'open'::text))) EXECUTE FUNCTION public.refuse_retired_member_work('owner_id');
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES public.app_user(id) ON DELETE SET NULL (assignee_id);
+
+ALTER TABLE ONLY public.activity_audience_member
+    ADD CONSTRAINT activity_audience_member_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_calendar_method_backfill
+    ADD CONSTRAINT activity_calendar_method_backfill_activity_fk FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_channel_provider_fkey FOREIGN KEY (channel_provider) REFERENCES public.channel_provider(provider);
+
+ALTER TABLE ONLY public.activity_commitment_admission
+    ADD CONSTRAINT activity_commitment_admission_renewed_by_fkey FOREIGN KEY (renewed_by) REFERENCES public.activity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.activity_commitment_admission
+    ADD CONSTRAINT activity_commitment_admission_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES public.activity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES public.app_user(id) ON DELETE SET NULL (host_user_id);
+
+ALTER TABLE ONLY public.activity_identity
+    ADD CONSTRAINT activity_identity_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_invitation_sender_fkey FOREIGN KEY (invitation_sender) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_kind_fkey FOREIGN KEY (kind) REFERENCES public.activity_kind(kind);
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.activity_link
+    ADD CONSTRAINT activity_link_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_link
+    ADD CONSTRAINT activity_link_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_link
+    ADD CONSTRAINT activity_link_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_link
+    ADD CONSTRAINT activity_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_link
+    ADD CONSTRAINT activity_link_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_link
+    ADD CONSTRAINT activity_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_mail_reference
+    ADD CONSTRAINT activity_mail_reference_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_meeting_attendee_repair
+    ADD CONSTRAINT activity_meeting_attendee_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_meeting_history
+    ADD CONSTRAINT activity_meeting_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_meeting_rsvp_backfill
+    ADD CONSTRAINT activity_meeting_rsvp_backfill_activity_fk FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_own_sent_mail_repair
+    ADD CONSTRAINT activity_own_sent_mail_repair_activity_fk FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_participant
+    ADD CONSTRAINT activity_participant_activity_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_participant
+    ADD CONSTRAINT activity_participant_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_participant_replay
+    ADD CONSTRAINT activity_participant_replay_activity_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_participant
+    ADD CONSTRAINT activity_participant_roster_seat_fkey FOREIGN KEY (roster_seat) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity_participant
+    ADD CONSTRAINT activity_participant_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_raw_capture_id_fkey FOREIGN KEY (raw_capture_id) REFERENCES public.raw_capture(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity_reader_state
+    ADD CONSTRAINT activity_reader_state_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_reader_state
+    ADD CONSTRAINT activity_reader_state_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_reminder_delivery
+    ADD CONSTRAINT activity_reminder_delivery_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_reminder_delivery
+    ADD CONSTRAINT activity_reminder_delivery_delivered_to_fkey FOREIGN KEY (delivered_to) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_reply_verdict_history
+    ADD CONSTRAINT activity_reply_verdict_history_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_request_settlement
+    ADD CONSTRAINT activity_request_settlement_judged_through_activity_id_fkey FOREIGN KEY (judged_through_activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_request_settlement
+    ADD CONSTRAINT activity_request_settlement_request_activity_id_fkey FOREIGN KEY (request_activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_retention_evidence
+    ADD CONSTRAINT activity_retention_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_retention_evidence
+    ADD CONSTRAINT activity_retention_evidence_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity_retention_evidence
+    ADD CONSTRAINT activity_retention_evidence_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity_retention_evidence
+    ADD CONSTRAINT activity_retention_evidence_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity_review_response
+    ADD CONSTRAINT activity_review_response_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_review_response
+    ADD CONSTRAINT activity_review_response_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity_review_response
+    ADD CONSTRAINT activity_review_response_occurrence_fkey FOREIGN KEY (deal_id, closing_occurrence_id) REFERENCES public.deal_stage_history(deal_id, id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_sent_by_colleague_fkey FOREIGN KEY (sent_by_colleague) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.activity
+    ADD CONSTRAINT activity_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.agent_run
+    ADD CONSTRAINT agent_run_approval_fkey FOREIGN KEY (approval_id) REFERENCES public.approval(id) ON DELETE SET NULL (approval_id);
+
+ALTER TABLE ONLY public.agent_run
+    ADD CONSTRAINT agent_run_passport_fkey FOREIGN KEY (passport_id) REFERENCES public.passport(id) ON DELETE SET NULL (passport_id);
+
+ALTER TABLE ONLY public.agent_standing_grant
+    ADD CONSTRAINT agent_standing_grant_passport_fkey FOREIGN KEY (passport_id, user_id) REFERENCES public.passport(id, on_behalf_of) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.agent_standing_grant
+    ADD CONSTRAINT agent_standing_grant_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.agent_task
+    ADD CONSTRAINT agent_task_approval_fk FOREIGN KEY (approval_id) REFERENCES public.approval(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.agent_task
+    ADD CONSTRAINT agent_task_passport_fk FOREIGN KEY (passport_id) REFERENCES public.passport(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.ai_call
+    ADD CONSTRAINT ai_call_config_fk FOREIGN KEY (config_hash) REFERENCES public.ai_call_config(hash);
+
+ALTER TABLE ONLY public.ai_call_payload
+    ADD CONSTRAINT ai_call_payload_ai_call_fkey FOREIGN KEY (ai_call_id) REFERENCES public.ai_call(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.ai_task_run
+    ADD CONSTRAINT ai_task_run_actor_user_id_fkey FOREIGN KEY (actor_user_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.ai_task_run
+    ADD CONSTRAINT ai_task_run_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES public.passport(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.analytics_share
+    ADD CONSTRAINT analytics_share_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.analytics_share
+    ADD CONSTRAINT analytics_share_scope_team_id_fkey FOREIGN KEY (scope_team_id) REFERENCES public.team(id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE ONLY public.analytics_share
+    ADD CONSTRAINT analytics_share_scope_user_id_fkey FOREIGN KEY (scope_user_id) REFERENCES public.app_user(id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE ONLY public.analytics_share
+    ADD CONSTRAINT analytics_share_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES public.forecast_snapshot(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.app_user
+    ADD CONSTRAINT app_user_merged_into_user_id_fkey FOREIGN KEY (merged_into_user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.app_user
+    ADD CONSTRAINT app_user_routine_mail_team_id_fkey FOREIGN KEY (routine_mail_team_id) REFERENCES public.team(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.approval_autonomy_policy
+    ADD CONSTRAINT approval_autonomy_policy_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.approval
+    ADD CONSTRAINT approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.app_user(id) ON DELETE SET NULL (decided_by);
+
+ALTER TABLE ONLY public.approval
+    ADD CONSTRAINT approval_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES public.app_user(id) ON DELETE SET NULL (on_behalf_of);
+
+ALTER TABLE ONLY public.approval
+    ADD CONSTRAINT approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES public.passport(id) ON DELETE SET NULL (passport_id);
+
+ALTER TABLE ONLY public.approval_preference
+    ADD CONSTRAINT approval_preference_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.approval
+    ADD CONSTRAINT approval_requested_decider_fkey FOREIGN KEY (requested_decider_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.approval
+    ADD CONSTRAINT approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES public.oauth_grant(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.approval
+    ADD CONSTRAINT approval_staged_in_conversation_of_fkey FOREIGN KEY (staged_in_conversation_of) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.assurance_deal_receipt
+    ADD CONSTRAINT assurance_deal_receipt_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.assurance_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_exception
+    ADD CONSTRAINT assurance_exception_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.assurance_resolution
+    ADD CONSTRAINT assurance_resolution_actor_fkey FOREIGN KEY (actor_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.assurance_resolution
+    ADD CONSTRAINT assurance_resolution_exception_fkey FOREIGN KEY (exception_id) REFERENCES public.assurance_exception(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_run_finding
+    ADD CONSTRAINT assurance_run_finding_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES public.assurance_exception(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_run_finding
+    ADD CONSTRAINT assurance_run_finding_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.assurance_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_source_coverage
+    ADD CONSTRAINT assurance_source_coverage_run_fkey FOREIGN KEY (run_id) REFERENCES public.assurance_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_cycle_id_fkey FOREIGN KEY (cycle_id) REFERENCES public.assurance_cycle(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_exception_id_fkey FOREIGN KEY (exception_id) REFERENCES public.assurance_exception(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_subject_contract_id_fkey FOREIGN KEY (subject_contract_id) REFERENCES public.contract(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_subject_deal_id_fkey FOREIGN KEY (subject_deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_subject_offer_id_fkey FOREIGN KEY (subject_offer_id) REFERENCES public.offer(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_subject_signal_id_fkey FOREIGN KEY (subject_signal_id) REFERENCES public.signal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.assurance_task_item
+    ADD CONSTRAINT assurance_task_item_task_activity_id_fkey FOREIGN KEY (task_activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.attachment
+    ADD CONSTRAINT attachment_contract_id_fkey FOREIGN KEY (contract_id) REFERENCES public.contract(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.attachment_extraction
+    ADD CONSTRAINT attachment_extraction_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES public.attachment(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.attachment
+    ADD CONSTRAINT attachment_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES public.attachment(id) ON DELETE SET NULL (supersedes_id);
+
+ALTER TABLE ONLY public.audit_log
+    ADD CONSTRAINT audit_log_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES public.app_user(id) ON DELETE SET NULL (on_behalf_of);
+
+ALTER TABLE ONLY public.auth_token
+    ADD CONSTRAINT auth_token_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.automation
+    ADD CONSTRAINT automation_owner_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.automation
+    ADD CONSTRAINT automation_setter_passport_id_fkey FOREIGN KEY (setter_passport_id) REFERENCES public.passport(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.booking_alias
+    ADD CONSTRAINT booking_alias_booking_page_id_fkey FOREIGN KEY (booking_page_id) REFERENCES public.booking_page(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.booking_alias
+    ADD CONSTRAINT booking_alias_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.booking_page
+    ADD CONSTRAINT booking_page_host_fkey FOREIGN KEY (host_user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.brief_item
+    ADD CONSTRAINT brief_item_deal_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.brief_item
+    ADD CONSTRAINT brief_item_run_fkey FOREIGN KEY (brief_run_id) REFERENCES public.brief_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.brief_run
+    ADD CONSTRAINT brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_alias_refused
+    ADD CONSTRAINT capture_alias_refused_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_alias_sighting
+    ADD CONSTRAINT capture_alias_sighting_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_auto_enrich_state
+    ADD CONSTRAINT capture_auto_enrich_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_backfill
+    ADD CONSTRAINT capture_backfill_connection_fkey FOREIGN KEY (connection_id) REFERENCES public.capture_connection(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_backfill_creation
+    ADD CONSTRAINT capture_backfill_creation_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES public.capture_backfill(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT capture_connection_context_tag_id_fkey FOREIGN KEY (context_tag_id) REFERENCES public.tag(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT capture_connection_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.capture_connection
+    ADD CONSTRAINT capture_connection_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_counterparty_hold
+    ADD CONSTRAINT capture_counterparty_hold_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.capture_digest
+    ADD CONSTRAINT capture_digest_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_exclusion
+    ADD CONSTRAINT capture_exclusion_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_freemail_domain
+    ADD CONSTRAINT capture_freemail_domain_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_user(id) ON DELETE SET NULL (created_by);
+
+ALTER TABLE ONLY public.capture_import
+    ADD CONSTRAINT capture_import_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_import
+    ADD CONSTRAINT capture_import_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.capture_import
+    ADD CONSTRAINT capture_import_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.capture_owner_identity
+    ADD CONSTRAINT capture_owner_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_owner_identity_withdrawn
+    ADD CONSTRAINT capture_owner_identity_withdrawn_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_party_source
+    ADD CONSTRAINT capture_party_source_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_party_source
+    ADD CONSTRAINT capture_party_source_raw_capture_id_fkey FOREIGN KEY (raw_capture_id) REFERENCES public.raw_capture(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.capture_party_source_replay
+    ADD CONSTRAINT capture_party_source_replay_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_party_source
+    ADD CONSTRAINT capture_party_source_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_pending_counterparty
+    ADD CONSTRAINT capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_pending_counterparty
+    ADD CONSTRAINT capture_pending_counterparty_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES public.capture_backfill(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.capture_pending_counterparty
+    ADD CONSTRAINT capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_pending_counterparty
+    ADD CONSTRAINT capture_pending_counterparty_proposal_id_fkey FOREIGN KEY (proposal_id) REFERENCES public.approval(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.capture_sender_override
+    ADD CONSTRAINT capture_sender_override_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_sync_state
+    ADD CONSTRAINT capture_sync_state_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.capture_connection(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.capture_thread_verdict
+    ADD CONSTRAINT capture_thread_verdict_first_activity_id_fkey FOREIGN KEY (first_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.capture_thread_verdict
+    ADD CONSTRAINT capture_thread_verdict_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.channel_connection
+    ADD CONSTRAINT channel_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.close_date_run_member
+    ADD CONSTRAINT close_date_run_member_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.close_date_run_member
+    ADD CONSTRAINT close_date_run_member_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.close_date_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.commission_entry
+    ADD CONSTRAINT commission_entry_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.commission_entry
+    ADD CONSTRAINT commission_entry_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.commission_entry
+    ADD CONSTRAINT commission_entry_reversal_of_fkey FOREIGN KEY (reversal_of) REFERENCES public.commission_entry(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.comms_outbound
+    ADD CONSTRAINT comms_outbound_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.comms_outbound
+    ADD CONSTRAINT comms_outbound_instruction_id_fkey FOREIGN KEY (instruction_id) REFERENCES public.communication_instruction(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.comms_outbound
+    ADD CONSTRAINT comms_outbound_link_id_fkey FOREIGN KEY (link_id) REFERENCES public.confirm_token(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.comms_outbound
+    ADD CONSTRAINT comms_outbound_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.communication_basis
+    ADD CONSTRAINT communication_basis_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_basis
+    ADD CONSTRAINT communication_basis_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_basis
+    ADD CONSTRAINT communication_basis_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.communication_decision
+    ADD CONSTRAINT communication_decision_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES public.comms_outbound(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_decision
+    ADD CONSTRAINT communication_decision_instruction_id_fkey FOREIGN KEY (instruction_id) REFERENCES public.communication_instruction(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.communication_instruction
+    ADD CONSTRAINT communication_instruction_directed_by_fkey FOREIGN KEY (directed_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.communication_instruction
+    ADD CONSTRAINT communication_instruction_review_id_fkey FOREIGN KEY (review_id) REFERENCES public.communication_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_instruction
+    ADD CONSTRAINT communication_instruction_revoked_by_fkey FOREIGN KEY (revoked_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.communication_override
+    ADD CONSTRAINT communication_override_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES public.communication_override(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.communication_override
+    ADD CONSTRAINT communication_override_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_override
+    ADD CONSTRAINT communication_override_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_override
+    ADD CONSTRAINT communication_override_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.communication_review
+    ADD CONSTRAINT communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES public.scheduled_send(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_review
+    ADD CONSTRAINT communication_review_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.communication_review
+    ADD CONSTRAINT communication_review_superseded_by_fkey FOREIGN KEY (superseded_by) REFERENCES public.communication_review(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.communication_suppression
+    ADD CONSTRAINT communication_suppression_carried_from_fkey FOREIGN KEY (carried_from) REFERENCES public.communication_suppression(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.communication_suppression
+    ADD CONSTRAINT communication_suppression_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_suppression
+    ADD CONSTRAINT communication_suppression_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.communication_suppression
+    ADD CONSTRAINT communication_suppression_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.company_address_country
+    ADD CONSTRAINT company_address_country_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company
+    ADD CONSTRAINT company_assess_against_entity_id_fkey FOREIGN KEY (assess_against_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.company_brief
+    ADD CONSTRAINT company_brief_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_brief
+    ADD CONSTRAINT company_brief_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_domain
+    ADD CONSTRAINT company_domain_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_domain_disposition
+    ADD CONSTRAINT company_domain_disposition_candidate_company_fkey FOREIGN KEY (candidate_company_id) REFERENCES public.company(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.company_domain_disposition
+    ADD CONSTRAINT company_domain_disposition_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_domain_disposition
+    ADD CONSTRAINT company_domain_disposition_owner_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.company_domain_disposition
+    ADD CONSTRAINT company_domain_disposition_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES public.site_read(id) ON DELETE SET NULL (site_read_id);
+
+ALTER TABLE ONLY public.company_domain_question_reader
+    ADD CONSTRAINT company_domain_question_reader_domain_fkey FOREIGN KEY (domain) REFERENCES public.company_domain_disposition(domain) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_domain_question_reader
+    ADD CONSTRAINT company_domain_question_reader_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_dossier
+    ADD CONSTRAINT company_dossier_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_dossier
+    ADD CONSTRAINT company_dossier_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_fact
+    ADD CONSTRAINT company_fact_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_fact_revision
+    ADD CONSTRAINT company_fact_revision_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_fact
+    ADD CONSTRAINT company_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES public.site_read(id) ON DELETE SET NULL (site_read_id);
+
+ALTER TABLE ONLY public.company_geocode_state
+    ADD CONSTRAINT company_geocode_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_growth_fit
+    ADD CONSTRAINT company_growth_fit_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_growth_fit
+    ADD CONSTRAINT company_growth_fit_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company
+    ADD CONSTRAINT company_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES public.company(id) ON DELETE SET NULL (merged_into_id);
+
+ALTER TABLE ONLY public.company_offered_value
+    ADD CONSTRAINT company_offered_value_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company
+    ADD CONSTRAINT company_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.company
+    ADD CONSTRAINT company_parent_company_id_fkey FOREIGN KEY (parent_company_id) REFERENCES public.company(id) ON DELETE SET NULL (parent_company_id);
+
+ALTER TABLE ONLY public.company_profile_field
+    ADD CONSTRAINT company_profile_field_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_relationship_type
+    ADD CONSTRAINT company_relationship_typ_workspace_id_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_scan
+    ADD CONSTRAINT company_scan_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_scan
+    ADD CONSTRAINT company_scan_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company
+    ADD CONSTRAINT company_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.company_technical_state
+    ADD CONSTRAINT company_technical_state_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.company_vat_check
+    ADD CONSTRAINT company_vat_check_company_fk FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.confirm_token
+    ADD CONSTRAINT confirm_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.confirm_token
+    ADD CONSTRAINT confirm_token_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.confirm_token
+    ADD CONSTRAINT confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.consent_doi_token
+    ADD CONSTRAINT consent_doi_token_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.consent_doi_token
+    ADD CONSTRAINT consent_doi_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.consent_event
+    ADD CONSTRAINT consent_event_consent_text_version_id_fkey FOREIGN KEY (consent_text_version_id) REFERENCES public.consent_text_version(id);
+
+ALTER TABLE ONLY public.consent_event
+    ADD CONSTRAINT consent_event_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.consent_event
+    ADD CONSTRAINT consent_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id);
+
+ALTER TABLE ONLY public.consent_event
+    ADD CONSTRAINT consent_event_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.consent_qualifying_event
+    ADD CONSTRAINT consent_qualifying_event_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.consent_qualifying_event
+    ADD CONSTRAINT consent_qualifying_event_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.consent_text_version
+    ADD CONSTRAINT consent_text_version_purpose_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.contact_acquisition_evidence
+    ADD CONSTRAINT contact_acquisition_evidence_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_acquisition_evidence
+    ADD CONSTRAINT contact_acquisition_evidence_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.contact_address_country
+    ADD CONSTRAINT contact_address_country_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_brief
+    ADD CONSTRAINT contact_brief_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_brief
+    ADD CONSTRAINT contact_brief_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_channel_identity
+    ADD CONSTRAINT contact_channel_identity_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_channel_identity
+    ADD CONSTRAINT contact_channel_identity_provider_fkey FOREIGN KEY (provider) REFERENCES public.channel_provider(provider);
+
+ALTER TABLE ONLY public.contact_confirm_submission
+    ADD CONSTRAINT contact_confirm_submission_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_confirm_submission
+    ADD CONSTRAINT contact_confirm_submission_token_fkey FOREIGN KEY (token_id) REFERENCES public.confirm_token(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_consent
+    ADD CONSTRAINT contact_consent_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_consent
+    ADD CONSTRAINT contact_consent_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_consent
+    ADD CONSTRAINT contact_consent_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.contact
+    ADD CONSTRAINT contact_converted_from_lead_id_fkey FOREIGN KEY (converted_from_lead_id) REFERENCES public.lead(id) ON DELETE SET NULL (converted_from_lead_id);
+
+ALTER TABLE ONLY public.contact
+    ADD CONSTRAINT contact_created_from_activity_id_fkey FOREIGN KEY (created_from_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contact_email
+    ADD CONSTRAINT contact_email_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact
+    ADD CONSTRAINT contact_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES public.contact(id) ON DELETE SET NULL (merged_into_id);
+
+ALTER TABLE ONLY public.contact_moment_dismissal
+    ADD CONSTRAINT contact_moment_dismissal_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_moment_dismissal
+    ADD CONSTRAINT contact_moment_dismissal_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact
+    ADD CONSTRAINT contact_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.contact_phone
+    ADD CONSTRAINT contact_phone_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_phone
+    ADD CONSTRAINT contact_phone_superseded_phone_id_fkey FOREIGN KEY (superseded_phone_id) REFERENCES public.contact_phone(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contact_profile_field
+    ADD CONSTRAINT contact_profile_field_contact_fk FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_provider_claim
+    ADD CONSTRAINT contact_provider_claim_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_provider_claim
+    ADD CONSTRAINT contact_provider_claim_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.provider_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_signature_enrich_state
+    ADD CONSTRAINT contact_signature_enrich_state_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contact_signature_enrich_state
+    ADD CONSTRAINT contact_signature_enrich_state_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact_signature_enrich_state
+    ADD CONSTRAINT contact_signature_enrich_state_deferred_run_id_fkey FOREIGN KEY (deferred_run_id) REFERENCES public.capture_backfill(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contact_social
+    ADD CONSTRAINT contact_social_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.contact
+    ADD CONSTRAINT contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contract
+    ADD CONSTRAINT contract_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.contract
+    ADD CONSTRAINT contract_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contract
+    ADD CONSTRAINT contract_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.contract
+    ADD CONSTRAINT contract_superseded_by_id_fkey FOREIGN KEY (superseded_by_id) REFERENCES public.contract(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.conversation_claim
+    ADD CONSTRAINT conversation_claim_activity_fkey FOREIGN KEY (source_activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.conversation_claim
+    ADD CONSTRAINT conversation_claim_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.conversation_claim
+    ADD CONSTRAINT conversation_claim_corrector_fkey FOREIGN KEY (corrected_by_user_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.conversation_claim
+    ADD CONSTRAINT conversation_claim_taker_fkey FOREIGN KEY (taken_by_user_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.conversation_claim
+    ADD CONSTRAINT conversation_claim_task_fkey FOREIGN KEY (task_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.custom_field
+    ADD CONSTRAINT custom_field_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.data_subject_request
+    ADD CONSTRAINT data_subject_request_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_acquisition_source_fkey FOREIGN KEY (acquisition_source) REFERENCES public.deal_acquisition_source(key) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_arr_source_same_deal FOREIGN KEY (id, arr_source_offer_id) REFERENCES public.offer(deal_id, id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE SET NULL (company_id);
+
+ALTER TABLE ONLY public.deal_correction
+    ADD CONSTRAINT deal_correction_audit_log_id_fkey FOREIGN KEY (audit_log_id) REFERENCES public.audit_log(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_correction
+    ADD CONSTRAINT deal_correction_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_correction
+    ADD CONSTRAINT deal_correction_reversal_audit_id_fkey FOREIGN KEY (reversal_audit_id) REFERENCES public.audit_log(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_correction
+    ADD CONSTRAINT deal_correction_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.close_date_run(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_correction
+    ADD CONSTRAINT deal_correction_stage_history_id_fkey FOREIGN KEY (stage_history_id) REFERENCES public.deal_stage_history(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_document_hide
+    ADD CONSTRAINT deal_document_hide_attachment_fkey FOREIGN KEY (attachment_id) REFERENCES public.attachment(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_document_hide
+    ADD CONSTRAINT deal_document_hide_deal_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_line_item
+    ADD CONSTRAINT deal_line_item_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_line_item
+    ADD CONSTRAINT deal_line_item_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.product(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_loss_reason_mapping
+    ADD CONSTRAINT deal_loss_reason_mapping_reason_fkey FOREIGN KEY (reason_key) REFERENCES public.deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_lost_reason_code_fkey FOREIGN KEY (lost_reason_code) REFERENCES public.deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_move_dismissal
+    ADD CONSTRAINT deal_move_dismissal_deal_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_move_dismissal
+    ADD CONSTRAINT deal_move_dismissal_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES public.company(id) ON DELETE SET NULL (partner_company_id);
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES public.pipeline(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_product
+    ADD CONSTRAINT deal_product_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_product
+    ADD CONSTRAINT deal_product_offer_line_item_id_fkey FOREIGN KEY (offer_line_item_id) REFERENCES public.offer_line_item(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_product
+    ADD CONSTRAINT deal_product_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.product(id);
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE SET NULL (project_id);
+
+ALTER TABLE ONLY public.deal_risk_verdict
+    ADD CONSTRAINT deal_risk_verdict_day_id_fkey FOREIGN KEY (day_id) REFERENCES public.deal_risk_day(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_risk_verdict
+    ADD CONSTRAINT deal_risk_verdict_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_comment
+    ADD CONSTRAINT deal_room_comment_author_in_room FOREIGN KEY (author_participant_id, room_id) REFERENCES public.deal_room_participant(id, room_id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_comment
+    ADD CONSTRAINT deal_room_comment_author_user_fkey FOREIGN KEY (author_user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_comment
+    ADD CONSTRAINT deal_room_comment_room_fkey FOREIGN KEY (room_id) REFERENCES public.deal_room(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_comment
+    ADD CONSTRAINT deal_room_comment_thread_fkey FOREIGN KEY (thread_id) REFERENCES public.deal_room_thread(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room
+    ADD CONSTRAINT deal_room_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_document
+    ADD CONSTRAINT deal_room_document_attachment_fkey FOREIGN KEY (attachment_id) REFERENCES public.attachment(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_document
+    ADD CONSTRAINT deal_room_document_room_fkey FOREIGN KEY (room_id) REFERENCES public.deal_room(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_engagement
+    ADD CONSTRAINT deal_room_engagement_document_fkey FOREIGN KEY (document_id, room_id) REFERENCES public.deal_room_document(id, room_id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_engagement
+    ADD CONSTRAINT deal_room_engagement_participant_fkey FOREIGN KEY (participant_id, room_id) REFERENCES public.deal_room_participant(id, room_id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_engagement
+    ADD CONSTRAINT deal_room_engagement_room_fkey FOREIGN KEY (room_id) REFERENCES public.deal_room(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_invitation
+    ADD CONSTRAINT deal_room_invitation_participant_fkey FOREIGN KEY (participant_id) REFERENCES public.deal_room_participant(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_participant
+    ADD CONSTRAINT deal_room_participant_invited_by_fkey FOREIGN KEY (invited_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_room_participant
+    ADD CONSTRAINT deal_room_participant_room_fkey FOREIGN KEY (room_id) REFERENCES public.deal_room(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_session
+    ADD CONSTRAINT deal_room_session_participant_in_room FOREIGN KEY (participant_id, room_id) REFERENCES public.deal_room_participant(id, room_id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_session
+    ADD CONSTRAINT deal_room_session_room_fkey FOREIGN KEY (room_id) REFERENCES public.deal_room(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room
+    ADD CONSTRAINT deal_room_steward_fkey FOREIGN KEY (steward_user_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_room_thread
+    ADD CONSTRAINT deal_room_thread_attachment_fkey FOREIGN KEY (attachment_id) REFERENCES public.attachment(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_thread
+    ADD CONSTRAINT deal_room_thread_author_in_room FOREIGN KEY (author_participant_id, room_id) REFERENCES public.deal_room_participant(id, room_id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_thread
+    ADD CONSTRAINT deal_room_thread_author_user_fkey FOREIGN KEY (author_user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_thread
+    ADD CONSTRAINT deal_room_thread_document_fkey FOREIGN KEY (document_id) REFERENCES public.deal_room_document(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_room_thread
+    ADD CONSTRAINT deal_room_thread_resolver_fkey FOREIGN KEY (resolved_by_user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_room_thread
+    ADD CONSTRAINT deal_room_thread_room_fkey FOREIGN KEY (room_id) REFERENCES public.deal_room(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_stage_evidence
+    ADD CONSTRAINT deal_stage_evidence_contradicted_fkey FOREIGN KEY (contradicted_by) REFERENCES public.deal_stage_evidence(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_stage_evidence
+    ADD CONSTRAINT deal_stage_evidence_criterion_fkey FOREIGN KEY (criterion_id) REFERENCES public.stage_exit_criterion(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_stage_evidence
+    ADD CONSTRAINT deal_stage_evidence_deal_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_stage_evidence
+    ADD CONSTRAINT deal_stage_evidence_refuted_by_fkey FOREIGN KEY (refuted_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_stage_history
+    ADD CONSTRAINT deal_stage_history_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_stage_history
+    ADD CONSTRAINT deal_stage_history_from_stage_id_fkey FOREIGN KEY (from_stage_id) REFERENCES public.stage(id) ON DELETE SET NULL (from_stage_id);
+
+ALTER TABLE ONLY public.deal_stage_history
+    ADD CONSTRAINT deal_stage_history_lost_reason_code_fkey FOREIGN KEY (lost_reason_code_at_change) REFERENCES public.deal_loss_reason(key) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal_stage_history
+    ADD CONSTRAINT deal_stage_history_reversal_fkey FOREIGN KEY (reversal_of) REFERENCES public.deal_stage_history(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_stage_history
+    ADD CONSTRAINT deal_stage_history_to_stage_id_fkey FOREIGN KEY (to_stage_id) REFERENCES public.stage(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.deal
+    ADD CONSTRAINT deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES public.stage(id, pipeline_id);
+
+ALTER TABLE ONLY public.deal_status_card
+    ADD CONSTRAINT deal_status_card_deal_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_status_card
+    ADD CONSTRAINT deal_status_card_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_suggestion
+    ADD CONSTRAINT deal_suggestion_accepted_deal_id_fkey FOREIGN KEY (accepted_deal_id) REFERENCES public.deal(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_suggestion
+    ADD CONSTRAINT deal_suggestion_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_suggestion
+    ADD CONSTRAINT deal_suggestion_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.deal_suggestion_evidence
+    ADD CONSTRAINT deal_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_suggestion_evidence
+    ADD CONSTRAINT deal_suggestion_evidence_attachment_id_fkey FOREIGN KEY (attachment_id) REFERENCES public.attachment(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_suggestion_evidence
+    ADD CONSTRAINT deal_suggestion_evidence_signal_id_fkey FOREIGN KEY (signal_id) REFERENCES public.signal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_suggestion_evidence
+    ADD CONSTRAINT deal_suggestion_evidence_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES public.deal_suggestion(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_suggestion
+    ADD CONSTRAINT deal_suggestion_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES public.pipeline(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.deal_suggestion
+    ADD CONSTRAINT deal_suggestion_proposed_stage_id_fkey FOREIGN KEY (proposed_stage_id) REFERENCES public.stage(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_disposed_by_fkey FOREIGN KEY (disposed_by) REFERENCES public.app_user(id) ON DELETE SET NULL (disposed_by);
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_left_company_id_fkey FOREIGN KEY (left_company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_left_contact_id_fkey FOREIGN KEY (left_contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_left_lead_id_fkey FOREIGN KEY (left_lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_right_company_id_fkey FOREIGN KEY (right_company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_right_contact_id_fkey FOREIGN KEY (right_contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.dedupe_candidate
+    ADD CONSTRAINT dedupe_candidate_right_lead_id_fkey FOREIGN KEY (right_lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.data_subject_request
+    ADD CONSTRAINT dsr_assignee_fkey FOREIGN KEY (assignee_id) REFERENCES public.app_user(id) ON DELETE SET NULL (assignee_id);
+
+ALTER TABLE ONLY public.email_signature
+    ADD CONSTRAINT email_signature_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.existing_customer_notice
+    ADD CONSTRAINT existing_customer_notice_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.existing_customer_notice_purpose
+    ADD CONSTRAINT existing_customer_notice_purpose_notice_id_fkey FOREIGN KEY (notice_id) REFERENCES public.existing_customer_notice(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.existing_customer_notice_purpose
+    ADD CONSTRAINT existing_customer_notice_purpose_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.extension_secret
+    ADD CONSTRAINT extension_secret_workspace_id_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.federated_identity
+    ADD CONSTRAINT federated_identity_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.field_mask
+    ADD CONSTRAINT field_mask_maskable_fkey FOREIGN KEY (object, field) REFERENCES public.maskable_field(object, field);
+
+ALTER TABLE ONLY public.finance_customer_link
+    ADD CONSTRAINT finance_customer_link_company_fk FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_customer_link
+    ADD CONSTRAINT finance_customer_link_connection_fk FOREIGN KEY (connection_id) REFERENCES public.finance_connection(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_external_customer
+    ADD CONSTRAINT finance_external_customer_connection_fk FOREIGN KEY (connection_id) REFERENCES public.finance_connection(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_company_fk FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_connection_fk FOREIGN KEY (connection_id) REFERENCES public.finance_connection(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_invoice
+    ADD CONSTRAINT finance_invoice_credits_fk FOREIGN KEY (credits_invoice_id) REFERENCES public.finance_invoice(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_payment
+    ADD CONSTRAINT finance_payment_company_fk FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_payment
+    ADD CONSTRAINT finance_payment_connection_fk FOREIGN KEY (connection_id) REFERENCES public.finance_connection(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.finance_payment
+    ADD CONSTRAINT finance_payment_invoice_fk FOREIGN KEY (invoice_id) REFERENCES public.finance_invoice(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.activity_participant
+    ADD CONSTRAINT fk_participant_domain_evidence_version FOREIGN KEY (activity_id, domain_evidence_parent_version) REFERENCES public.activity(id, domain_evidence_version) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.forecast_call
+    ADD CONSTRAINT forecast_call_author_fkey FOREIGN KEY (author_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.forecast_call
+    ADD CONSTRAINT forecast_call_supersedes_fkey FOREIGN KEY (supersedes_id) REFERENCES public.forecast_call(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.forecast_contribution
+    ADD CONSTRAINT forecast_contribution_snapshot_fkey FOREIGN KEY (snapshot_id) REFERENCES public.forecast_snapshot(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.forecast_snapshot
+    ADD CONSTRAINT forecast_snapshot_call_fkey FOREIGN KEY (call_id) REFERENCES public.forecast_call(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.forecast_snapshot
+    ADD CONSTRAINT forecast_snapshot_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES public.pipeline(id);
+
+ALTER TABLE ONLY public.graph_contact_edge
+    ADD CONSTRAINT graph_contact_edge_deferred_run_id_fkey FOREIGN KEY (deferred_run_id) REFERENCES public.capture_backfill(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.graph_interaction_edge
+    ADD CONSTRAINT graph_interaction_edge_deferred_run_id_fkey FOREIGN KEY (deferred_run_id) REFERENCES public.capture_backfill(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.graph_interaction_edge
+    ADD CONSTRAINT graph_interaction_edge_workspace_id_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.graph_interaction_edge
+    ADD CONSTRAINT graph_interaction_edge_workspace_id_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.home_read_cache
+    ADD CONSTRAINT home_read_cache_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.home_read_forgotten
+    ADD CONSTRAINT home_read_forgotten_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.intro_request
+    ADD CONSTRAINT intro_request_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.intro_request
+    ADD CONSTRAINT intro_request_introducer_user_id_fkey FOREIGN KEY (introducer_user_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.intro_request
+    ADD CONSTRAINT intro_request_requester_user_id_fkey FOREIGN KEY (requester_user_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.intro_request
+    ADD CONSTRAINT intro_request_source_activity_id_fkey FOREIGN KEY (source_activity_id) REFERENCES public.activity(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.intro_request
+    ADD CONSTRAINT intro_request_suggested_user_id_fkey FOREIGN KEY (suggested_user_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.intro_request
+    ADD CONSTRAINT intro_request_through_contact_id_fkey FOREIGN KEY (through_contact_id) REFERENCES public.contact(id);
+
+ALTER TABLE ONLY public.knowledge_chunk
+    ADD CONSTRAINT knowledge_chunk_document_fk FOREIGN KEY (document_id) REFERENCES public.knowledge_document(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.knowledge_document
+    ADD CONSTRAINT knowledge_document_corpus_fk FOREIGN KEY (corpus_id) REFERENCES public.knowledge_corpus(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_disqualify_reason_id_fkey FOREIGN KEY (disqualify_reason_id) REFERENCES public.lead_disqualify_reason(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_from_contact_id_fkey FOREIGN KEY (from_contact_id) REFERENCES public.contact(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.lead_manual_signal
+    ADD CONSTRAINT lead_manual_signal_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.lead_manual_signal
+    ADD CONSTRAINT lead_manual_signal_set_by_fkey FOREIGN KEY (set_by) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_merged_into_id_fkey FOREIGN KEY (merged_into_id) REFERENCES public.lead(id) ON DELETE SET NULL (merged_into_id);
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_origin_fkey FOREIGN KEY (origin) REFERENCES public.lead_origin(key) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_partner_company_id_fkey FOREIGN KEY (partner_company_id) REFERENCES public.company(id) ON DELETE SET NULL (partner_company_id);
+
+ALTER TABLE ONLY public.lead_privacy_notice
+    ADD CONSTRAINT lead_privacy_notice_approval_id_fkey FOREIGN KEY (approval_id) REFERENCES public.approval(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.lead_privacy_notice
+    ADD CONSTRAINT lead_privacy_notice_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES public.comms_outbound(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.lead_privacy_notice
+    ADD CONSTRAINT lead_privacy_notice_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.product(id);
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE SET NULL (project_id);
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES public.contact(id) ON DELETE SET NULL (promoted_contact_id);
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_qualified_deal_id_fkey FOREIGN KEY (qualified_deal_id) REFERENCES public.deal(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.lead_score_history
+    ADD CONSTRAINT lead_score_history_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.lead
+    ADD CONSTRAINT lead_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.legal_entity_member
+    ADD CONSTRAINT legal_entity_member_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.legal_entity_member
+    ADD CONSTRAINT legal_entity_member_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.legal_review
+    ADD CONSTRAINT legal_review_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.legal_review
+    ADD CONSTRAINT legal_review_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.legal_review
+    ADD CONSTRAINT legal_review_previous_review_id_fkey FOREIGN KEY (previous_review_id) REFERENCES public.legal_review(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.legal_review
+    ADD CONSTRAINT legal_review_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.linkedin_account
+    ADD CONSTRAINT linkedin_account_workspace_id_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.linkedin_connection
+    ADD CONSTRAINT linkedin_connection_workspace_id_matched_company_id_fkey FOREIGN KEY (matched_company_id) REFERENCES public.company(id) ON DELETE SET NULL (matched_company_id);
+
+ALTER TABLE ONLY public.linkedin_connection
+    ADD CONSTRAINT linkedin_connection_workspace_id_matched_contact_id_fkey FOREIGN KEY (matched_contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.linkedin_connection
+    ADD CONSTRAINT linkedin_connection_workspace_id_owner_user_id_fkey FOREIGN KEY (owner_user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.list_evaluation
+    ADD CONSTRAINT list_evaluation_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.list(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.list_live_member
+    ADD CONSTRAINT list_live_member_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.list(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.list_member_event
+    ADD CONSTRAINT list_member_event_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.list(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.list_member
+    ADD CONSTRAINT list_member_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.list(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.list
+    ADD CONSTRAINT list_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.list_revision
+    ADD CONSTRAINT list_revision_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.list(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.list
+    ADD CONSTRAINT list_steward_id_fkey FOREIGN KEY (steward_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.list
+    ADD CONSTRAINT list_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.team(id) ON DELETE SET NULL (team_id);
+
+ALTER TABLE ONLY public.list_visit
+    ADD CONSTRAINT list_visit_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.list(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.list_visit
+    ADD CONSTRAINT list_visit_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.mail_draft
+    ADD CONSTRAINT mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.meeting_calendar_episode
+    ADD CONSTRAINT meeting_calendar_episode_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.meeting_invitation
+    ADD CONSTRAINT meeting_invitation_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.meeting_invitation
+    ADD CONSTRAINT meeting_invitation_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.meeting_proposal
+    ADD CONSTRAINT meeting_proposal_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.meeting_proposal
+    ADD CONSTRAINT meeting_proposal_host_user_id_fkey FOREIGN KEY (host_user_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.meeting_proposal
+    ADD CONSTRAINT meeting_proposal_invitation_id_fkey FOREIGN KEY (invitation_id) REFERENCES public.meeting_invitation(activity_id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.meeting_readiness
+    ADD CONSTRAINT meeting_readiness_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.meeting_readiness
+    ADD CONSTRAINT meeting_readiness_attendee_id_fkey FOREIGN KEY (attendee_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.mfa_recovery_code
+    ADD CONSTRAINT mfa_recovery_code_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.user_mfa(user_id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.notice
+    ADD CONSTRAINT notice_recipient_user_id_fkey FOREIGN KEY (recipient_user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.notification_digest_run
+    ADD CONSTRAINT notification_digest_run_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.notification_preference
+    ADD CONSTRAINT notification_preference_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.oauth_authorization_code
+    ADD CONSTRAINT oauth_code_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES public.passport(id) ON DELETE SET NULL (lent_passport_id);
+
+ALTER TABLE ONLY public.oauth_authorization_code
+    ADD CONSTRAINT oauth_code_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.oauth_grant
+    ADD CONSTRAINT oauth_grant_client_fkey FOREIGN KEY (client_id) REFERENCES public.oauth_client(client_id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.oauth_grant
+    ADD CONSTRAINT oauth_grant_lent_passport_fkey FOREIGN KEY (lent_passport_id) REFERENCES public.passport(id) ON DELETE SET NULL (lent_passport_id);
+
+ALTER TABLE ONLY public.oauth_grant
+    ADD CONSTRAINT oauth_grant_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.oauth_refresh_token
+    ADD CONSTRAINT oauth_refresh_grant_fkey FOREIGN KEY (grant_id) REFERENCES public.oauth_grant(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.offer
+    ADD CONSTRAINT offer_buyer_company_fkey FOREIGN KEY (buyer_company_id) REFERENCES public.company(id) ON DELETE SET NULL (buyer_company_id);
+
+ALTER TABLE ONLY public.offer
+    ADD CONSTRAINT offer_deal_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.offer
+    ADD CONSTRAINT offer_legal_entity_id_fkey FOREIGN KEY (legal_entity_id) REFERENCES public.legal_entity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.offer
+    ADD CONSTRAINT offer_template_id_fkey FOREIGN KEY (template_id) REFERENCES public.offer_template(id) ON DELETE SET NULL (template_id);
+
+ALTER TABLE ONLY public.offer_line_item
+    ADD CONSTRAINT oli_offer_fkey FOREIGN KEY (offer_id) REFERENCES public.offer(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.offer_line_item
+    ADD CONSTRAINT oli_product_fkey FOREIGN KEY (product_id) REFERENCES public.product(id) ON DELETE SET NULL (product_id);
+
+ALTER TABLE ONLY public.onboarding_wizard_state
+    ADD CONSTRAINT onboarding_wizard_state_read_fkey FOREIGN KEY (site_read_id) REFERENCES public.site_read(id) ON DELETE SET NULL (site_read_id);
+
+ALTER TABLE ONLY public.onboarding_wizard_state
+    ADD CONSTRAINT onboarding_wizard_state_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.partner
+    ADD CONSTRAINT partner_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.partner
+    ADD CONSTRAINT partner_relationship_stage_fkey FOREIGN KEY (relationship_stage) REFERENCES public.partner_stage(key) ON UPDATE RESTRICT ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.passport
+    ADD CONSTRAINT passport_grant_fkey FOREIGN KEY (oauth_grant_id) REFERENCES public.oauth_grant(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.passport
+    ADD CONSTRAINT passport_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.passport
+    ADD CONSTRAINT passport_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.preference_token
+    ADD CONSTRAINT preference_token_contact_email_id_fkey FOREIGN KEY (contact_email_id) REFERENCES public.contact_email(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.preference_token
+    ADD CONSTRAINT preference_token_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.privacy_notice_case
+    ADD CONSTRAINT privacy_notice_case_acquisition_fkey FOREIGN KEY (acquisition_id) REFERENCES public.contact_acquisition_evidence(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.privacy_notice_case
+    ADD CONSTRAINT privacy_notice_case_contact_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.privacy_notice_case
+    ADD CONSTRAINT privacy_notice_case_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES public.comms_outbound(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.privacy_notice_case
+    ADD CONSTRAINT privacy_notice_case_owner_fkey FOREIGN KEY (owner_user_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.privacy_notice_case
+    ADD CONSTRAINT privacy_notice_case_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.privacy_request_proof
+    ADD CONSTRAINT privacy_request_proof_request_fkey FOREIGN KEY (request_id) REFERENCES public.data_subject_request(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.product_translation
+    ADD CONSTRAINT product_translation_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.product(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.project
+    ADD CONSTRAINT project_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.project_health_assessment
+    ADD CONSTRAINT project_health_assessment_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.project_health_assessment
+    ADD CONSTRAINT project_health_supersedes_same_project FOREIGN KEY (project_id, supersedes_assessment_id) REFERENCES public.project_health_assessment(project_id, id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.project
+    ADD CONSTRAINT project_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.project_phase_history
+    ADD CONSTRAINT project_phase_history_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.project
+    ADD CONSTRAINT project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.provider_applied_field
+    ADD CONSTRAINT provider_applied_field_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.provider_applied_field
+    ADD CONSTRAINT provider_applied_field_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.provider_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.provider_applied_field
+    ADD CONSTRAINT provider_applied_field_run_subject_fkey FOREIGN KEY (run_id, contact_id, provider) REFERENCES public.provider_run(id, contact_id, provider) ON DELETE CASCADE DEFERRABLE INITIALLY DEFERRED NOT VALID;
+
+ALTER TABLE ONLY public.provider_connection_budget
+    ADD CONSTRAINT provider_connection_budget_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES public.provider_connection(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.provider_connection
+    ADD CONSTRAINT provider_connection_connected_by_fkey FOREIGN KEY (connected_by) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.provider_employment_resolution
+    ADD CONSTRAINT provider_employment_resolution_claim_id_fkey FOREIGN KEY (claim_id) REFERENCES public.contact_provider_claim(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.provider_employment_resolution
+    ADD CONSTRAINT provider_employment_resolution_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.provider_employment_resolution
+    ADD CONSTRAINT provider_employment_resolution_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.provider_employment_resolution
+    ADD CONSTRAINT provider_employment_resolution_relationship_id_fkey FOREIGN KEY (relationship_id) REFERENCES public.relationship(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.provider_run_category
+    ADD CONSTRAINT provider_run_category_run_fkey FOREIGN KEY (run_id, contact_id, provider) REFERENCES public.provider_run(id, contact_id, provider) ON UPDATE CASCADE ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.provider_run
+    ADD CONSTRAINT provider_run_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.provider_run
+    ADD CONSTRAINT provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.provider_run_reservation
+    ADD CONSTRAINT provider_run_reservation_run_id_fkey FOREIGN KEY (run_id) REFERENCES public.provider_run(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.record_assignment
+    ADD CONSTRAINT record_assignment_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.record_assignment
+    ADD CONSTRAINT record_assignment_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.record_assignment
+    ADD CONSTRAINT record_assignment_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.record_assignment
+    ADD CONSTRAINT record_assignment_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.record_role(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.record_assignment
+    ADD CONSTRAINT record_assignment_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.team(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.record_assignment
+    ADD CONSTRAINT record_assignment_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_granted_by_fkey FOREIGN KEY (granted_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE ONLY public.record_grant
+    ADD CONSTRAINT record_grant_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE NOT VALID;
+
+ALTER TABLE ONLY public.relationship
+    ADD CONSTRAINT relationship_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.relationship
+    ADD CONSTRAINT relationship_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.relationship
+    ADD CONSTRAINT relationship_counterparty_company_id_fkey FOREIGN KEY (counterparty_company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.relationship
+    ADD CONSTRAINT relationship_counterparty_contact_id_fkey FOREIGN KEY (counterparty_contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.relationship
+    ADD CONSTRAINT relationship_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.relationship_nudge_dismissal
+    ADD CONSTRAINT relationship_nudge_dismissal_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.relationship_nudge_dismissal
+    ADD CONSTRAINT relationship_nudge_dismissal_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.relationship
+    ADD CONSTRAINT relationship_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.report_definition
+    ADD CONSTRAINT report_definition_audience_team_id_fkey FOREIGN KEY (audience_team_id) REFERENCES public.team(id);
+
+ALTER TABLE ONLY public.report_definition
+    ADD CONSTRAINT report_definition_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.report_definition_revision
+    ADD CONSTRAINT report_definition_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.report_definition_revision
+    ADD CONSTRAINT report_definition_revision_report_id_fkey FOREIGN KEY (report_id) REFERENCES public.report_definition(id);
+
+ALTER TABLE ONLY public.report_edition_contribution
+    ADD CONSTRAINT report_edition_contribution_edition_id_fkey FOREIGN KEY (edition_id) REFERENCES public.report_edition(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.report_edition
+    ADD CONSTRAINT report_edition_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES public.report_execution(id);
+
+ALTER TABLE ONLY public.report_edition_question
+    ADD CONSTRAINT report_edition_question_edition_id_fkey FOREIGN KEY (edition_id) REFERENCES public.report_edition(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.report_edition_question_source
+    ADD CONSTRAINT report_edition_question_source_edition_id_card_id_fkey FOREIGN KEY (edition_id, card_id) REFERENCES public.report_edition_question(edition_id, card_id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.report_edition
+    ADD CONSTRAINT report_edition_report_id_fkey FOREIGN KEY (report_id) REFERENCES public.report_definition(id);
+
+ALTER TABLE ONLY public.report_execution
+    ADD CONSTRAINT report_execution_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.report_execution
+    ADD CONSTRAINT report_execution_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES public.report_definition_revision(report_id, revision);
+
+ALTER TABLE ONLY public.report_execution
+    ADD CONSTRAINT report_execution_schedule_id_fkey FOREIGN KEY (schedule_id) REFERENCES public.report_schedule(id);
+
+ALTER TABLE ONLY public.report_run
+    ADD CONSTRAINT report_run_asked_by_fkey FOREIGN KEY (asked_by) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.report_schedule
+    ADD CONSTRAINT report_schedule_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.report_schedule
+    ADD CONSTRAINT report_schedule_report_id_report_revision_fkey FOREIGN KEY (report_id, report_revision) REFERENCES public.report_definition_revision(report_id, revision);
+
+ALTER TABLE ONLY public.reporting_framework_revision
+    ADD CONSTRAINT reporting_framework_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.role_assignment
+    ADD CONSTRAINT role_assignment_role_id_fkey FOREIGN KEY (role_id) REFERENCES public.role(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.role_assignment
+    ADD CONSTRAINT role_assignment_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.team(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.role_assignment
+    ADD CONSTRAINT role_assignment_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.runner_job
+    ADD CONSTRAINT runner_job_passport_fkey FOREIGN KEY (passport_id) REFERENCES public.passport(id) ON DELETE SET NULL (passport_id);
+
+ALTER TABLE ONLY public.runner_job
+    ADD CONSTRAINT runner_job_run_fkey FOREIGN KEY (agent_run_id) REFERENCES public.agent_run(id) ON DELETE SET NULL (agent_run_id);
+
+ALTER TABLE ONLY public.sales_goal_plan
+    ADD CONSTRAINT sales_goal_plan_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.sales_goal_plan_revision
+    ADD CONSTRAINT sales_goal_plan_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.sales_goal_plan_revision
+    ADD CONSTRAINT sales_goal_plan_revision_plan_id_fkey FOREIGN KEY (plan_id) REFERENCES public.sales_goal_plan(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.sales_initiative_baseline
+    ADD CONSTRAINT sales_initiative_baseline_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.sales_initiative_baseline
+    ADD CONSTRAINT sales_initiative_baseline_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES public.sales_initiative(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.sales_initiative_member
+    ADD CONSTRAINT sales_initiative_member_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES public.sales_initiative(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.sales_initiative
+    ADD CONSTRAINT sales_initiative_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.sales_initiative_revision
+    ADD CONSTRAINT sales_initiative_revision_initiative_id_fkey FOREIGN KEY (initiative_id) REFERENCES public.sales_initiative(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.sales_target
+    ADD CONSTRAINT sales_target_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES public.pipeline(id);
+
+ALTER TABLE ONLY public.sales_target_revision
+    ADD CONSTRAINT sales_target_revision_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.sales_target_revision
+    ADD CONSTRAINT sales_target_revision_target_id_fkey FOREIGN KEY (target_id) REFERENCES public.sales_target(id);
+
+ALTER TABLE ONLY public.saved_view
+    ADD CONSTRAINT saved_view_owner_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.scheduled_send
+    ADD CONSTRAINT scheduled_send_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.scheduled_send
+    ADD CONSTRAINT scheduled_send_agent_on_behalf_of_fkey FOREIGN KEY (agent_on_behalf_of) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.scheduled_send
+    ADD CONSTRAINT scheduled_send_anchor_activity_id_fkey FOREIGN KEY (anchor_activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.scheduled_send
+    ADD CONSTRAINT scheduled_send_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES public.comms_outbound(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.scheduled_send
+    ADD CONSTRAINT scheduled_send_scheduled_by_fkey FOREIGN KEY (scheduled_by) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.sdr_handoff_event
+    ADD CONSTRAINT sdr_handoff_event_handoff_id_fkey FOREIGN KEY (handoff_id) REFERENCES public.sdr_handoff(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.sdr_handoff_event
+    ADD CONSTRAINT sdr_handoff_event_reason_id_reason_applies_to_fkey FOREIGN KEY (reason_id, reason_applies_to) REFERENCES public.sdr_handoff_reason(id, applies_to) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_reason_id_reason_applies_to_fkey FOREIGN KEY (reason_id, reason_applies_to) REFERENCES public.sdr_handoff_reason(id, applies_to) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.sdr_handoff
+    ADD CONSTRAINT sdr_handoff_submitted_by_fkey FOREIGN KEY (submitted_by) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.session
+    ADD CONSTRAINT session_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_entity_company_id_fkey FOREIGN KEY (entity_company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_entity_contact_id_fkey FOREIGN KEY (entity_contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_entity_deal_id_fkey FOREIGN KEY (entity_deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_entity_project_id_fkey FOREIGN KEY (entity_project_id) REFERENCES public.project(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_owner_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL (owner_id);
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_resolved_company_fkey FOREIGN KEY (resolved_company_id) REFERENCES public.company(id) ON DELETE SET NULL (resolved_company_id);
+
+ALTER TABLE ONLY public.signal
+    ADD CONSTRAINT signal_resolved_contact_fkey FOREIGN KEY (resolved_contact_id) REFERENCES public.contact(id) ON DELETE SET NULL (resolved_contact_id);
+
+ALTER TABLE ONLY public.signal_thread_scan
+    ADD CONSTRAINT signal_thread_scan_resolved_company_fkey FOREIGN KEY (resolved_company_id) REFERENCES public.company(id) ON DELETE SET NULL (resolved_company_id);
+
+ALTER TABLE ONLY public.signal_resolution
+    ADD CONSTRAINT sigres_company_fkey FOREIGN KEY (matched_company_id) REFERENCES public.company(id) ON DELETE SET NULL (matched_company_id);
+
+ALTER TABLE ONLY public.signal_resolution
+    ADD CONSTRAINT sigres_resolved_by_fkey FOREIGN KEY (resolved_by) REFERENCES public.app_user(id) ON DELETE SET NULL (resolved_by);
+
+ALTER TABLE ONLY public.signal_resolution
+    ADD CONSTRAINT sigres_signal_fkey FOREIGN KEY (signal_id) REFERENCES public.signal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.site_read
+    ADD CONSTRAINT site_read_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_exit_criterion
+    ADD CONSTRAINT stage_exit_criterion_stage_fkey FOREIGN KEY (stage_id) REFERENCES public.stage(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage
+    ADD CONSTRAINT stage_pipeline_id_fkey FOREIGN KEY (pipeline_id) REFERENCES public.pipeline(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_progression_outcome
+    ADD CONSTRAINT stage_progression_outcome_deal_fkey FOREIGN KEY (deal_id) REFERENCES public.deal(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_progression_outcome
+    ADD CONSTRAINT stage_progression_outcome_from_stage_fkey FOREIGN KEY (from_stage_id) REFERENCES public.stage(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_progression_outcome
+    ADD CONSTRAINT stage_progression_outcome_pipeline_fkey FOREIGN KEY (pipeline_id) REFERENCES public.pipeline(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_progression_outcome
+    ADD CONSTRAINT stage_progression_outcome_reversed_by_fkey FOREIGN KEY (reversed_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.stage_progression_outcome
+    ADD CONSTRAINT stage_progression_outcome_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES public.stage(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_progression_policy
+    ADD CONSTRAINT stage_progression_policy_enabled_by_fkey FOREIGN KEY (enabled_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.stage_progression_policy
+    ADD CONSTRAINT stage_progression_policy_from_stage_fkey FOREIGN KEY (from_stage_id) REFERENCES public.stage(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_progression_policy
+    ADD CONSTRAINT stage_progression_policy_pipeline_fkey FOREIGN KEY (pipeline_id) REFERENCES public.pipeline(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.stage_progression_policy
+    ADD CONSTRAINT stage_progression_policy_to_stage_fkey FOREIGN KEY (to_stage_id) REFERENCES public.stage(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.suggestion_dismissal
+    ADD CONSTRAINT suggestion_dismissal_company_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.suggestion_dismissal
+    ADD CONSTRAINT suggestion_dismissal_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.system_log
+    ADD CONSTRAINT system_log_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES public.app_user(id) ON DELETE SET NULL (on_behalf_of);
+
+ALTER TABLE ONLY public.tag_interest_read
+    ADD CONSTRAINT tag_interest_read_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.tag_suggestion
+    ADD CONSTRAINT tag_suggestion_company_id_fkey FOREIGN KEY (company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.tag_suggestion
+    ADD CONSTRAINT tag_suggestion_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.tag_suggestion
+    ADD CONSTRAINT tag_suggestion_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.tag_suggestion_evidence
+    ADD CONSTRAINT tag_suggestion_evidence_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.tag_suggestion_evidence
+    ADD CONSTRAINT tag_suggestion_evidence_suggestion_id_fkey FOREIGN KEY (suggestion_id) REFERENCES public.tag_suggestion(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.tag_suggestion
+    ADD CONSTRAINT tag_suggestion_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tag(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.taggable
+    ADD CONSTRAINT taggable_tag_id_fkey FOREIGN KEY (tag_id) REFERENCES public.tag(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team_membership
+    ADD CONSTRAINT team_membership_team_id_fkey FOREIGN KEY (team_id) REFERENCES public.team(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team_membership
+    ADD CONSTRAINT team_membership_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team
+    ADD CONSTRAINT team_parent_team_id_fkey FOREIGN KEY (parent_team_id) REFERENCES public.team(id) ON DELETE SET NULL (parent_team_id);
+
+ALTER TABLE ONLY public.team_weekly_review_coverage
+    ADD CONSTRAINT team_weekly_review_coverage_review_fkey FOREIGN KEY (team_weekly_review_id) REFERENCES public.team_weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team_weekly_review_member
+    ADD CONSTRAINT team_weekly_review_member_review_fkey FOREIGN KEY (team_weekly_review_id) REFERENCES public.team_weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team_weekly_review_outlook
+    ADD CONSTRAINT team_weekly_review_outlook_review_fkey FOREIGN KEY (team_weekly_review_id) REFERENCES public.team_weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team_weekly_review_rep_funnel
+    ADD CONSTRAINT team_weekly_review_rep_funnel_rep_fkey FOREIGN KEY (team_weekly_review_rep_id) REFERENCES public.team_weekly_review_rep(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team_weekly_review_rep_pattern
+    ADD CONSTRAINT team_weekly_review_rep_pattern_rep_fkey FOREIGN KEY (team_weekly_review_rep_id) REFERENCES public.team_weekly_review_rep(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.team_weekly_review_rep
+    ADD CONSTRAINT team_weekly_review_rep_review_fkey FOREIGN KEY (team_weekly_review_id) REFERENCES public.team_weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.transcript_read
+    ADD CONSTRAINT transcript_read_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES public.activity(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.user_mfa
+    ADD CONSTRAINT user_mfa_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.user_record_view
+    ADD CONSTRAINT user_record_view_entity_company_id_fkey FOREIGN KEY (entity_company_id) REFERENCES public.company(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.user_record_view
+    ADD CONSTRAINT user_record_view_entity_contact_id_fkey FOREIGN KEY (entity_contact_id) REFERENCES public.contact(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.user_record_view
+    ADD CONSTRAINT user_record_view_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.voice_build
+    ADD CONSTRAINT voice_build_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES public.voice_profile(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.voice_build
+    ADD CONSTRAINT voice_build_requester_fkey FOREIGN KEY (requested_by) REFERENCES public.app_user(id) ON DELETE SET NULL (requested_by);
+
+ALTER TABLE ONLY public.voice_build
+    ADD CONSTRAINT voice_build_result_version_fkey FOREIGN KEY (voice_profile_id, result_version) REFERENCES public.voice_profile_version(voice_profile_id, profile_version);
+
+ALTER TABLE ONLY public.voice_corpus_source
+    ADD CONSTRAINT voice_corpus_source_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES public.voice_profile(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.voice_learning_signal
+    ADD CONSTRAINT voice_learning_signal_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES public.voice_profile(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.voice_learning_signal
+    ADD CONSTRAINT voice_learning_signal_version_fkey FOREIGN KEY (voice_profile_id, profile_version) REFERENCES public.voice_profile_version(voice_profile_id, profile_version);
+
+ALTER TABLE ONLY public.voice_profile_delta
+    ADD CONSTRAINT voice_profile_delta_from_fkey FOREIGN KEY (voice_profile_id, from_version) REFERENCES public.voice_profile_version(voice_profile_id, profile_version);
+
+ALTER TABLE ONLY public.voice_profile_delta
+    ADD CONSTRAINT voice_profile_delta_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES public.voice_profile(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.voice_profile_delta
+    ADD CONSTRAINT voice_profile_delta_to_fkey FOREIGN KEY (voice_profile_id, to_version) REFERENCES public.voice_profile_version(voice_profile_id, profile_version);
+
+ALTER TABLE ONLY public.voice_profile
+    ADD CONSTRAINT voice_profile_owner_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.voice_profile
+    ADD CONSTRAINT voice_profile_team_fkey FOREIGN KEY (team_id) REFERENCES public.team(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.voice_profile_version
+    ADD CONSTRAINT voice_profile_version_predecessor_fkey FOREIGN KEY (voice_profile_id, predecessor_version) REFERENCES public.voice_profile_version(voice_profile_id, profile_version);
+
+ALTER TABLE ONLY public.voice_profile_version
+    ADD CONSTRAINT voice_profile_version_profile_fkey FOREIGN KEY (voice_profile_id) REFERENCES public.voice_profile(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.web_form_last_post
+    ADD CONSTRAINT web_form_last_post_form_id_fkey FOREIGN KEY (form_id) REFERENCES public.web_form(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.web_form
+    ADD CONSTRAINT web_form_lead_origin_fkey FOREIGN KEY (lead_origin) REFERENCES public.lead_origin(key) ON UPDATE RESTRICT ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.web_form
+    ADD CONSTRAINT web_form_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.web_form
+    ADD CONSTRAINT web_form_product_id_fkey FOREIGN KEY (product_id) REFERENCES public.product(id) ON DELETE RESTRICT;
+
+ALTER TABLE ONLY public.webhook_delivery
+    ADD CONSTRAINT webhook_delivery_subscription_fkey FOREIGN KEY (subscription_id) REFERENCES public.webhook_subscription(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.webhook_subscription
+    ADD CONSTRAINT webhook_subscription_owner_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_linked_company_id_fkey FOREIGN KEY (linked_company_id) REFERENCES public.company(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_linked_contact_id_fkey FOREIGN KEY (linked_contact_id) REFERENCES public.contact(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_linked_deal_id_fkey FOREIGN KEY (linked_deal_id) REFERENCES public.deal(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_linked_lead_id_fkey FOREIGN KEY (linked_lead_id) REFERENCES public.lead(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_linked_project_id_fkey FOREIGN KEY (linked_project_id) REFERENCES public.project(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_manager_fkey FOREIGN KEY (manager_user_id) REFERENCES public.app_user(id);
+
+ALTER TABLE ONLY public.weekly_plan_commitment
+    ADD CONSTRAINT weekly_plan_commitment_plan_fkey FOREIGN KEY (plan_id) REFERENCES public.weekly_plan(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_plan
+    ADD CONSTRAINT weekly_plan_owner_fkey FOREIGN KEY (owner_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review_deal
+    ADD CONSTRAINT weekly_review_deal_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES public.weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review_driver
+    ADD CONSTRAINT weekly_review_driver_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES public.weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review_learning_citation
+    ADD CONSTRAINT weekly_review_learning_citation_learning_fkey FOREIGN KEY (learning_id) REFERENCES public.weekly_review_learning(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review_learning
+    ADD CONSTRAINT weekly_review_learning_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES public.weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review_movement
+    ADD CONSTRAINT weekly_review_movement_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES public.weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review_outlook
+    ADD CONSTRAINT weekly_review_outlook_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES public.weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review
+    ADD CONSTRAINT weekly_review_prior_fkey FOREIGN KEY (prior_review_id) REFERENCES public.weekly_review(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.weekly_review_scorecard
+    ADD CONSTRAINT weekly_review_scorecard_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES public.weekly_review(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.weekly_review
+    ADD CONSTRAINT weekly_review_user_fkey FOREIGN KEY (user_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.withdrawal_credential
+    ADD CONSTRAINT withdrawal_credential_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES public.contact(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.withdrawal_credential
+    ADD CONSTRAINT withdrawal_credential_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES public.lead(id) ON DELETE SET NULL;
+
+ALTER TABLE ONLY public.withdrawal_credential
+    ADD CONSTRAINT withdrawal_credential_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES public.consent_purpose(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.worklist_done
+    ADD CONSTRAINT worklist_done_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.worklist_pin
+    ADD CONSTRAINT worklist_pin_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+ALTER TABLE ONLY public.worklist_snapshot
+    ADD CONSTRAINT worklist_snapshot_reader_id_fkey FOREIGN KEY (reader_id) REFERENCES public.app_user(id) ON DELETE CASCADE;
+
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_app') THEN
+    GRANT USAGE ON SCHEMA ext TO margince_app;
+    GRANT USAGE ON SCHEMA public TO margince_app;
+    GRANT ALL ON FUNCTION public.company_open_pipeline_rollup(as_of date) TO margince_app;
+    GRANT ALL ON FUNCTION public.record_stored_object_intent(requested_kind text, requested_key text) TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_email TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_participant TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_audience_member TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_calendar_method_backfill TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_clock_refold_mark TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_commitment_admission TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_identity TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_kind TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_link TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_mail_reference TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_meeting_attendee_repair TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_meeting_history TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_meeting_rsvp_backfill TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_own_sent_mail_repair TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_own_sent_mail_repair_cutoff TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_participant_replay TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_reader_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_reminder_delivery TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_reply_verdict_history TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_request_settlement TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_retention_evidence TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_review_response TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_review_template TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_sales_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.activity_waiting_horizon TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_standing_grant TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.agent_task TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_call TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_call_config TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_call_payload TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_feedback TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_model_rate TO margince_app;
+    GRANT SELECT,USAGE ON SEQUENCE public.ai_task_run_seq TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_task_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.ai_usage TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.analytics_share TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.app_user TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.approval TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.approval_autonomy_policy TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.approval_preference TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_cycle TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_deal_receipt TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_exception TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_input_change TO margince_app;
+    GRANT SELECT,USAGE ON SEQUENCE public.assurance_input_generation_seq TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_resolution TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_run_finding TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_source_coverage TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.assurance_task_item TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.attachment TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.attachment_extraction TO margince_app;
+    GRANT SELECT,INSERT ON TABLE public.audit_log TO margince_app;
+    GRANT UPDATE(before) ON TABLE public.audit_log TO margince_app;
+    GRANT UPDATE(after) ON TABLE public.audit_log TO margince_app;
+    GRANT UPDATE(evidence) ON TABLE public.audit_log TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.auth_token TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.automation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.automation_effect_claim TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.booking_alias TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.booking_page TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.brief_item TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.brief_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.bulk_confirmation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.bulk_operation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_alias_refused TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_alias_sighting TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_answered_sweep_cursor TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_auto_enrich_budget TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_auto_enrich_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_backfill TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_backfill_creation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_connection TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_counterparty_hold TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_digest TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_exclusion TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_freemail_domain TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_import TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_owner_identity TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_owner_identity_withdrawn TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_party_admission_cursor TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_party_source TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_party_source_replay TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_pending_counterparty TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_sender_override TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_sweep_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_sync_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_test_mailbox_sent TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_thread_verdict TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.capture_trace TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.channel_connection TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.channel_provider TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.close_date_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.close_date_run_member TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.commission_entry TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.comms_outbound TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.communication_basis TO margince_app;
+    GRANT SELECT,INSERT,DELETE ON TABLE public.communication_decision TO margince_app;
+    GRANT UPDATE(recipient_address) ON TABLE public.communication_decision TO margince_app;
+    GRANT UPDATE(subject_kind) ON TABLE public.communication_decision TO margince_app;
+    GRANT UPDATE(subject_id) ON TABLE public.communication_decision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.communication_instruction TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.communication_override TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.communication_review TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.communication_suppression TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_address_country TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_brief TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_domain TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_domain_disposition TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_domain_question_reader TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_dossier TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_fact TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_fact_revision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_geocode_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_growth_fit TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_offered_value TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_profile_field TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_relationship_type TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_scan TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_technical_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.company_vat_check TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.confirm_token TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.consent_doi_token TO margince_app;
+    GRANT SELECT,INSERT,DELETE ON TABLE public.consent_event TO margince_app;
+    GRANT UPDATE(contact_id) ON TABLE public.consent_event TO margince_app;
+    GRANT UPDATE(lead_id) ON TABLE public.consent_event TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.consent_purpose TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.consent_qualifying_event TO margince_app;
+    GRANT SELECT,INSERT ON TABLE public.consent_text_version TO margince_app;
+    GRANT UPDATE(effective_until) ON TABLE public.consent_text_version TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_acquisition_evidence TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_address_country TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_brief TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_channel_identity TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_confirm_submission TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_consent TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_moment_dismissal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_phone TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_profile_field TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_provider_claim TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_signature_enrich_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contact_social TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.contract TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.conversation_claim TO margince_app;
+    GRANT SELECT ON TABLE public.currency_minor_digits TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.custom_field TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.data_subject_request TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.data_task_review TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.data_task_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.data_task_run_history TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_acquisition_source TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_authorship_sweep_cursor TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_correction TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_document_hide TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_line_item TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_loss_reason TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_loss_reason_mapping TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_move_dismissal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_product TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_risk_day TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_risk_verdict TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room_comment TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room_document TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room_engagement TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room_invitation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room_participant TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room_session TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_room_thread TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_stage_evidence TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_stage_history TO margince_app;
+    GRANT SELECT,USAGE ON SEQUENCE public.deal_stage_history_write_seq TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_status_card TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_suggestion TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.deal_suggestion_evidence TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.dedupe_candidate TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.dedupe_scan_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.email_signature TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.embed_store_binding TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.embedding TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.erasure_suppression TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.event_outbox TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.existing_customer_notice TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.existing_customer_notice_purpose TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.extension_ingest_position TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.extension_ingest_refusal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.extension_secret TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.federated_identity TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.field_mask TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.field_provenance TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.finance_connection TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.finance_customer_link TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.finance_external_customer TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.finance_invoice TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.finance_payment TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.forecast_call TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.forecast_capture_status TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.forecast_contribution TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.forecast_snapshot TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.fx_rate TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.geocode_cache TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.geocode_country_cache TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.graph_contact_edge TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.graph_interaction_edge TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.home_read_cache TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.home_read_fence TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.home_read_fence_pending TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.home_read_forgotten TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.idempotency_key TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.intro_request TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.knowledge_chunk TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.knowledge_corpus TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.knowledge_document TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_disqualify_reason TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_manual_signal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_origin TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_privacy_notice TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_score_history TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.lead_source TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.legal_entity TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.legal_entity_member TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.legal_review TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.linkedin_account TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.linkedin_connection TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.list TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.list_evaluation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.list_live_member TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.list_member TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.list_member_event TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.list_revision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.list_visit TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.mail_draft TO margince_app;
+    GRANT SELECT ON TABLE public.maskable_field TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.meeting_calendar_episode TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.meeting_invitation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.meeting_proposal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.meeting_readiness TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.mfa_challenge_spent TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.mfa_recovery_code TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.notice TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.notification_digest_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.notification_preference TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.oauth_authorization_code TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.oauth_client TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.oauth_grant TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.oauth_refresh_token TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.offer TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.offer_line_item TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.offer_template TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.onboarding_wizard_state TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.partner TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.partner_stage TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.passport TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.pipeline TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.preference_token TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.privacy_notice_case TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.privacy_request_proof TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.product TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.product_translation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.project TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.project_health_assessment TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.project_phase_history TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.provider_applied_field TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.provider_connection TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.provider_connection_budget TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.provider_employment_resolution TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.provider_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.provider_run_category TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.provider_run_reservation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.raw_capture TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.record_assignment TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.record_grant TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.record_role TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.relationship TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.relationship_nudge_dismissal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_definition TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_definition_revision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_edition TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_edition_contribution TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_edition_question TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_edition_question_source TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_execution TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_projection_fence TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.report_schedule TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.reporting_framework TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.reporting_framework_revision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.restore_drill TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.retention_policy TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.role TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.role_assignment TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.runner_job TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_goal_plan TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_goal_plan_revision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative_baseline TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative_member TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_initiative_revision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_target TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sales_target_revision TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.saved_view TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.scheduled_send TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sdr_handoff TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sdr_handoff_event TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.sdr_handoff_reason TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.session TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.setting TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.setup_token TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.signal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.signal_resolution TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.signal_thread_scan TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.site_read TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.stage TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.stage_exit_criterion TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.stage_progression_outcome TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.stage_progression_policy TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.stored_object_intent TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.suggestion_dismissal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.system_log TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.tag TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.tag_interest_read TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.tag_suggestion TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.tag_suggestion_evidence TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.taggable TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.tax_rate TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_membership TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_weekly_review TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_weekly_review_coverage TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_weekly_review_member TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_weekly_review_outlook TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_weekly_review_rep TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_weekly_review_rep_funnel TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.team_weekly_review_rep_pattern TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.technical_lookup_cache TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.transcript_read TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.user_mfa TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.user_record_view TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.vault_secret TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.voice_build TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.voice_corpus_source TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.voice_learning_signal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.voice_profile TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.voice_profile_delta TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.voice_profile_version TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.web_form TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.web_form_last_post TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.webhook_delivery TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.webhook_subscription TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_plan TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_plan_commitment TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review_deal TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review_driver TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review_learning TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review_learning_citation TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review_movement TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review_outlook TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.weekly_review_scorecard TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.withdrawal_credential TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workflow_run TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.worklist_done TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.worklist_pin TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.worklist_snapshot TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workspace TO margince_app;
+    GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.workspace_email_domain TO margince_app;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT,INSERT,DELETE,UPDATE ON TABLES TO margince_app;
+  END IF;
+END $$;
+
+SET LOCAL lock_timeout = '3s';
+
+DO $$
+DECLARE
+  migrator_is_superuser boolean := (SELECT rolsuper FROM pg_roles WHERE rolname = current_user);
+  may_create_roles boolean := (SELECT rolsuper OR rolcreaterole FROM pg_roles WHERE rolname = current_user);
+  wrong_attribute boolean;
+  found text;
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'ext_runtime') THEN
+    IF NOT may_create_roles THEN
+      RAISE EXCEPTION 'the ext_runtime role does not exist. As a superuser, run: CREATE ROLE ext_runtime NOLOGIN NOINHERIT; GRANT ext_runtime TO margince_app; then run the migrations again';
+    END IF;
+    CREATE ROLE ext_runtime NOLOGIN NOINHERIT;
+  END IF;
+
+  SELECT rolcanlogin OR rolsuper OR rolinherit OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls
+    INTO wrong_attribute FROM pg_roles WHERE rolname = 'ext_runtime';
+  IF wrong_attribute AND migrator_is_superuser THEN
+    ALTER ROLE ext_runtime NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS;
+  ELSIF wrong_attribute THEN
+    RAISE EXCEPTION 'the ext_runtime role holds an attribute it must not have. As a superuser, run: ALTER ROLE ext_runtime NOLOGIN NOSUPERUSER NOINHERIT NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS; then run the migrations again';
+  END IF;
+  SELECT string_agg(granted.rolname, ', ') INTO found
+    FROM pg_auth_members m JOIN pg_roles granted ON granted.oid = m.roleid
+   WHERE m.member = 'ext_runtime'::regrole;
+  IF found IS NOT NULL THEN
+    RAISE EXCEPTION 'the ext_runtime role is a member of % and holds what that role holds. As a superuser, revoke the membership and run the migrations again', found;
+  END IF;
+  SELECT string_agg(format('%I.%I', n.nspname, c.relname), ', ') INTO found
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+   WHERE c.relkind IN ('r', 'p', 'v', 'm', 'f')
+     AND n.nspname NOT IN ('ext', 'pg_catalog', 'information_schema') AND n.nspname NOT LIKE 'pg\_toast%'
+     AND has_table_privilege('ext_runtime', c.oid, 'SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER');
+  IF found IS NOT NULL THEN
+    RAISE EXCEPTION 'the ext_runtime role holds rights on tables outside schema ext: %. As a superuser, revoke them and run the migrations again', found;
+  END IF;
+
+  IF EXISTS (SELECT FROM pg_roles WHERE rolname = 'margince_app')
+     AND NOT pg_has_role('margince_app', 'ext_runtime', 'MEMBER') THEN
+    IF NOT may_create_roles THEN
+      RAISE EXCEPTION 'margince_app may not switch to the ext_runtime role. As a superuser, run: GRANT ext_runtime TO margince_app; then run the migrations again';
+    END IF;
+    GRANT ext_runtime TO margince_app;
+  END IF;
+  GRANT USAGE ON SCHEMA ext TO ext_runtime;
+  GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ext TO ext_runtime;
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA ext TO ext_runtime;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA ext GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ext_runtime;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA ext GRANT USAGE, SELECT ON SEQUENCES TO ext_runtime;
+END $$;

@@ -32,6 +32,9 @@ func atHead(t *testing.T, ns dbmigrate.Namespace) map[string]dbmigrate.LedgerRow
 	for _, m := range ns.Migrations {
 		recorded[m.Version] = dbmigrate.LedgerRow{Name: m.Name, Digest: new(dbmigrate.Digest(m))}
 	}
+	if b := ns.Baseline; b != nil {
+		recorded[b.Migration.Version] = dbmigrate.LedgerRow{Name: b.Migration.Name, Digest: new(dbmigrate.Digest(b.Migration))}
+	}
 	return recorded
 }
 
@@ -85,9 +88,10 @@ func TestADeclaredRenumberIsJudgedAsTheMigratorLeavesIt(t *testing.T) {
 	}
 }
 
-// TestEveryWayALedgerCanLieIsRefused walks the five shapes a tracking table can
+// TestEveryWayALedgerCanLieIsRefused walks the six shapes a tracking table can
 // take that all LOOK migrated. Each is a real failure mode: a template built
-// before the newest migration landed; one whose migration was renumbered under
+// before the newest migration landed; one the history built, which lacks the
+// baseline's row; one whose migration was renumbered under
 // it; one migrated by a binary that recorded no digest; one whose migration was
 // edited after it was applied; and a clone taken from a template another branch
 // built, which is at head for that branch and carries objects this one never
@@ -104,6 +108,11 @@ func TestEveryWayALedgerCanLieIsRefused(t *testing.T) {
 		{
 			name:    "a migration this binary embeds was never applied",
 			corrupt: func(l map[string]dbmigrate.LedgerRow) { delete(l, newest.Version) },
+			expects: "behind this binary",
+		},
+		{
+			name:    "the history built it, so the baseline is not recorded",
+			corrupt: func(l map[string]dbmigrate.LedgerRow) { delete(l, ns.Baseline.Migration.Version) },
 			expects: "behind this binary",
 		},
 		{

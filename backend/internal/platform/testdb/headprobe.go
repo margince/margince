@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -197,7 +198,13 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]dbmigrate.Ledge
 	if err != nil {
 		return err.Error()
 	}
-	for _, m := range ns.Migrations {
+	// The baseline is recorded beside the versions it replaces, so a template
+	// the migrator built has its row too.
+	expected := ns.Migrations
+	if ns.Baseline != nil {
+		expected = append(slices.Clone(ns.Migrations), ns.Baseline.Migration)
+	}
+	for _, m := range expected {
 		row, ok := recorded[m.Version]
 		switch {
 		case !ok:
@@ -218,8 +225,8 @@ func namespaceAtHead(ns dbmigrate.Namespace, recorded map[string]dbmigrate.Ledge
 			return fmt.Sprintf("%s %s_%s was applied from different content than this binary embeds — the migration was edited after this database was migrated", ns.Name, m.Version, m.Name)
 		}
 	}
-	if len(recorded) != len(ns.Migrations) {
-		return fmt.Sprintf("%s records %d migrations where this binary embeds %d — this database was migrated from a different source tree", ns.Name, len(recorded), len(ns.Migrations))
+	if len(recorded) != len(expected) {
+		return fmt.Sprintf("%s records %d migrations where this binary embeds %d — this database was migrated from a different source tree", ns.Name, len(recorded), len(expected))
 	}
 	return ""
 }
