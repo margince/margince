@@ -49060,7 +49060,7 @@ type DirectCommunicationSendRequest struct {
 	// without one would record a decision nobody made.
 	Acknowledged bool `json:"acknowledged"`
 
-	// AssessmentRevision The review revision the sender read. Required when footer findings apply.
+	// AssessmentRevision The review revision the sender read. Required when footer findings apply or a refusal is the recipient's own choice, such as an objection.
 	AssessmentRevision *string `json:"assessment_revision,omitempty"`
 
 	// Explanation What this colleague says the reason is, in their own words. Required and must say something:

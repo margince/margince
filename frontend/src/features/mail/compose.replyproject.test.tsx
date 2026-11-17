@@ -2,6 +2,10 @@
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  ASYNC_UTIL_TIMEOUT_MS,
+  SLOWEST_MEASURED_TEST_MS,
+} from "../../../vitest.budget";
 import { pickOption } from "../../design-system/select-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
@@ -15,6 +19,9 @@ import {
 } from "./compose.testkit";
 
 // The project a reply files under, and the key it carries in the subject.
+
+const EIGHT_WAITS_TEST_MS =
+  ASYNC_UTIL_TIMEOUT_MS * 8 + SLOWEST_MEASURED_TEST_MS;
 
 afterEach(() => {
   cleanup();
@@ -257,7 +264,10 @@ describe("the project a reply files under", () => {
     );
   });
 
-  it("keeps the tag out once turned off, through a draft and a retype", async () => {
+  // Eight default waits in sequence, so it states its own ceiling.
+  it("keeps the tag out once turned off, through a draft and a retype", {
+    timeout: EIGHT_WAITS_TEST_MS,
+  }, async () => {
     const user = userEvent.setup();
     const sent = replyBackend(
       [{ entity_type: "deal", entity_id: "d-1" }],

@@ -12,6 +12,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
@@ -40,6 +41,8 @@ async function fetchReview(reviewId: string) {
 // somebody through an acknowledgement that cannot be recorded.
 const SETTLED_STATES = ["resolved", "superseded", "cancelled"];
 
+type CommunicationReview = components["schemas"]["CommunicationReview"];
+
 export function DirectSendAction({
   review,
   onSent,
@@ -58,9 +61,16 @@ export function DirectSendAction({
   const open = shownOpen ?? ownOpen;
   const setOpen = onOpenChange ?? setOwnOpen;
 
+  const queryKey = ["communication-review", review.reviewId];
   const opened = useQuery({
-    queryKey: ["communication-review", review.reviewId],
-    queryFn: () => fetchReview(review.reviewId),
+    queryKey,
+    // A refreshed review replaces this one in the cache, and a later read asks
+    // for the replacement: the original is cancelled.
+    queryFn: () =>
+      fetchReview(
+        queryClient.getQueryData<CommunicationReview>(queryKey)?.id ??
+          review.reviewId,
+      ),
     // Only once the human has asked to see it. A refusal read and abandoned
     // should cost nothing.
     enabled: open,
@@ -69,6 +79,8 @@ export function DirectSendAction({
     // human who has decided to overrule the engine should be told promptly
     // that the review would not open rather than watched to wait.
     retry: false,
+    // Read again on each opening (below), never while the form is open, so the
+    // warning the sender is reading does not change under the explanation.
     staleTime: Number.POSITIVE_INFINITY,
   });
 
@@ -92,15 +104,9 @@ export function DirectSendAction({
         variant="danger"
         onClick={() => {
           setOpen(true);
-          // A FAILED FETCH MUST BE RETRYABLE. Setting `open` again changes
-          // nothing when it is already true, so without this the button is a
-          // dead end after the first failure.
-          //
-          // Asked of anything not currently in flight rather than of isError
-          // alone: a query that has settled without data — refetched to
-          // nothing, evicted from the cache — is the same dead end wearing a
-          // different state.
-          if (!opened.isFetching && !opened.data) {
+          // Every press reads the review again: a failed fetch is retried, and
+          // a review another tab settled shows as settled, not as the cached copy.
+          if (!opened.isFetching) {
             void opened.refetch();
           }
         }}
@@ -118,7 +124,7 @@ export function DirectSendAction({
           {t("directSend.alreadySettled")}
         </p>
       )}
-      {open && opened.data && !settled && (
+      {open && opened.data && !opened.isFetching && !settled && (
         <DirectSendModal
           key={`${review.reviewId}:${opened.data.wording_correction?.version ?? "new"}`}
           open

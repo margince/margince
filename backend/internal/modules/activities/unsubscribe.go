@@ -284,6 +284,14 @@ func lockedPurposeKey(key string) bool {
 	return strings.EqualFold(strings.TrimSpace(key), "transactional")
 }
 
+// offersUnsubscribe is asked by delivery and the footer preview alike. It reads
+// the category, not the purpose key. A reply carries no key, and must not offer
+// a stop link for a conversation the recipient started.
+func (s *Store) offersUnsubscribe(recipients []string, surface unsubscribeSurface) bool {
+	return s.unsubscribe != nil && len(recipients) > 0 && distinctAddresses(recipients) == 1 &&
+		s.publicOriginUsable() == nil && surface.privateLinks()
+}
+
 // deliverability renders usable disclosures and private links. Missing parts
 // travel with the message for the sender's recorded confirmation.
 func (s *Store) deliverability(
@@ -307,17 +315,7 @@ func (s *Store) deliverability(
 		transmitted: body, recorded: body, disclosures: owed,
 		footerFindings: s.footerFindings(owed, recipients, surface.privateLinks()),
 	}
-	if s.unsubscribe == nil || len(recipients) == 0 || distinctAddresses(recipients) > 1 || s.publicOriginUsable() != nil {
-		return untokenized, nil
-	}
-	// WHICH MESSAGES CARRY THE SURFACE AT ALL, asked before the linker.
-	//
-	// It reads the CATEGORY and not the purpose key. The key answer was
-	// "anything but the locked transactional purpose", which has no meaning for
-	// a send that carries no key — and a composer that omits one, which is now
-	// the ordinary case for a reply, would have every message come out wearing
-	// an offer to unsubscribe from a conversation the recipient started.
-	if !surface.privateLinks() {
+	if !s.offersUnsubscribe(recipients, surface) {
 		return untokenized, nil
 	}
 	token, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipients[0], surface.purposeKey)

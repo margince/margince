@@ -35,5 +35,5 @@ func (s *Store) PreviewMailFooter(ctx context.Context, origin SendOrigin, links 
 		return MailFooterPreview{}, err
 	}
 	findings := s.footerFindings(owed, in.Recipients, surface.privateLinks())
-	return MailFooterPreview{Disclosures: owed, Findings: findings, OffersUnsubscribe: surface.privateLinks() && distinctAddresses(in.Recipients) == 1 && s.publicOriginUsable() == nil}, nil
+	return MailFooterPreview{Disclosures: owed, Findings: findings, OffersUnsubscribe: s.offersUnsubscribe(in.Recipients, surface)}, nil
 }

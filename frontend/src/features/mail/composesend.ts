@@ -22,7 +22,7 @@ import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { composedLinks, type Link, type SendGrounding } from "./composelinks";
-import { refusalOf } from "./composerefusal";
+import { type Refusal, refusalOf } from "./composerefusal";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
@@ -194,6 +194,19 @@ export function refusalIsCurrent(
     (directing || sent.answerAtSend === preview) &&
     messageOf(sent) === messageOf(now)
   );
+}
+
+// An older server's footer refusal holds only the message it refused, so a
+// changed message or a new check can be sent again.
+function refusalStillShown(
+  refusal: Refusal,
+  sent: SendRequest | undefined,
+  now: SendRequest,
+  preview: Preview | undefined,
+): Refusal {
+  return refusal === "legacyFooter" && !refusalIsCurrent(sent, now, preview)
+    ? null
+    : refusal;
 }
 
 // The message a request sends, without the bookkeeping that names drafts. A
@@ -386,8 +399,14 @@ export function useComposeSend({
     ...answer,
     refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
   };
+  const shownRefusal = refusalStillShown(
+    refusal,
+    send.variables,
+    request,
+    answer.preview,
+  );
   const hold: ReturnType<typeof sendHoldOf> =
-    refusal === "legacyFooter"
+    shownRefusal === "legacyFooter"
       ? { blocks: true, withReason: false }
       : sendHoldOf(permission, refusedNow ? sendReview : null);
   const [attempted, setAttempted] = useState(false);
@@ -447,11 +466,11 @@ export function useComposeSend({
     fields.sendUnavailable ||
     refusal === "mailbox" ||
     refusal === "sharedUnsubscribe" ||
-    refusal === "legacyFooter";
+    shownRefusal === "legacyFooter";
   return {
     send,
     blocked,
-    refusal,
+    refusal: shownRefusal,
     sendReview,
     sendError,
     claimedContext,
