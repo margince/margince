@@ -10,7 +10,6 @@ package contacts
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -244,8 +243,8 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 		}
 		where = append(where, member)
 	}
-	if in.Query != nil && *in.Query != "" {
-		where = append(where, leadQuickFindClause(*in.Query, arg))
+	if q, ok := storekit.QuickFindQuery(in.Query); ok {
+		where = append(where, leadQuickFindClause(q, arg))
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
@@ -295,7 +294,7 @@ func attachLeadRows(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) e
 const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_name, ''))`
 
 func leadQuickFindClause(query string, arg func(any) int) string {
-	pos := arg(strings.TrimSpace(query))
+	pos := arg(query)
 	return storekit.SQLf(`(%s
 		OR lower(rtrim(linkedin_url, '/')) = lower(rtrim($%d, '/')))`,
 		storekit.QuickFindClauseWith(pos, leadQuickFindExpr, storekit.LeadEmails), pos)
