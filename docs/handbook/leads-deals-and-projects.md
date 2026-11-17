@@ -24,7 +24,7 @@ Also called: add a prospect, new lead.
 ### What if someone is already a contact?
 Someone is either a lead or a contact, never both. Open a deal when an existing contact has a new opportunity.
 
-When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. When you enter the lead by hand, the form says "A contact already has this email address or LinkedIn profile, and someone is either a lead or a contact." and offers **View existing record**, which opens the contact. An automatic request is filed on the contact. Its owner gets a task to review it.
+When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. When you enter it by hand, the form refuses it and offers **View existing record**, which opens the contact. The form says "A contact already has this email address or LinkedIn profile, and someone is either a lead or a contact." An automatic request is filed on the contact. Its owner gets a task to review it.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
@@ -106,7 +106,7 @@ To disqualify a lead in Margince, open the lead, choose **More actions**, then *
 1. In **Disqualify {name}?**, pick a **Reason** (required; without one it says "Choose a reason first.").
 2. You may add a **Note (optional)**.
 3. Choose **Disqualify**.
-To disqualify several at once, tick them on the **Leads** list, pick a reason in the bulk bar and choose **Disqualify**. A message then says how many leads were disqualified, and the bar names any lead that was not.
+To disqualify several, tick them on the **Leads** list, pick a reason in the bulk bar and choose **Disqualify**. A message then says how many leads were disqualified, and the bar names any lead that was not.
 Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
@@ -154,7 +154,7 @@ days".
 
 An optional first-response target, **off by default**, runs 15 minutes to 7 days. When
 on, a lead that wrote to you by email or a website form shows as **On time**, **Due
-soon** or **Overdue**; a lead you typed in or imported gets no deadline.
+soon** or **Overdue**. A lead you typed in or imported gets no deadline.
 
 ## Deals
 
