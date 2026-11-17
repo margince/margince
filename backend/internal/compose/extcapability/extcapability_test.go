@@ -253,3 +253,35 @@ func TestRemovingAUnitDeletesItsObjectsAndNoOthers(t *testing.T) {
 		t.Errorf("the workspace sweep removed %d objects, %v; want the %d left", n, err, len(keep))
 	}
 }
+
+func TestRequestCarriesATierAttachmentsAndASchema(t *testing.T) {
+	t.Parallel()
+	req := extension.CompleteRequest{
+		Messages: []extension.Message{{Role: "user", Text: "read"}}, NoContactData: "a test",
+		Tier:        extension.ModelTierPremium,
+		Attachments: []extension.Attachment{{ContentType: "application/pdf", Data: make([]byte, 6<<20)}},
+		JSONSchema:  []byte(`{"type":"object"}`),
+	}
+	got, err := extcapability.Request(req)
+	if err != nil || got.Tier != "premium" || len(got.Attachments) != 1 || string(got.ResponseSchema) != `{"type":"object"}` {
+		t.Fatalf("got %+v, %v", got, err)
+	}
+	for name, bad := range map[string]func(*extension.CompleteRequest){
+		"tier": func(r *extension.CompleteRequest) { r.Tier = "huge" },
+		"type": func(r *extension.CompleteRequest) { r.Attachments[0].ContentType = "text/html" },
+		"too big": func(r *extension.CompleteRequest) {
+			r.Attachments[0].Data = make([]byte, extension.MaxAttachmentBytes+1)
+		},
+		"empty": func(r *extension.CompleteRequest) { r.Attachments[0].Data = nil },
+		"too many": func(r *extension.CompleteRequest) {
+			r.Attachments = make([]extension.Attachment, extension.MaxAttachments+1)
+		},
+	} {
+		r := req
+		r.Attachments = []extension.Attachment{{ContentType: "application/pdf", Data: []byte("x")}}
+		bad(&r)
+		if _, err := extcapability.Request(r); !errors.Is(err, extension.ErrInvalid) {
+			t.Errorf("%s: err = %v, want ErrInvalid", name, err)
+		}
+	}
+}
