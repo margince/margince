@@ -4,7 +4,13 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
-import { accountNameOf, accountsOf, providerName } from "./connectorprovider";
+import {
+  accountNameOf,
+  accountsOf,
+  networkName,
+  personalChannelNetwork,
+  providerName,
+} from "./connectorprovider";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
@@ -114,5 +120,20 @@ describe("providerName", () => {
   });
   it("quotes an id this build cannot name", () => {
     expect(providerName("future_vendor", t)).toBe("future_vendor");
+  });
+});
+
+describe("personalChannelNetwork", () => {
+  it("reads the chat app from a personal-channels message's source id", () => {
+    expect(
+      personalChannelNetwork("personal_channels", "c1:whatsapp:wamid.1"),
+    ).toBe("whatsapp");
+    expect(networkName("whatsapp")).toBe("WhatsApp");
+    expect(networkName("line")).toBe("Line");
+  });
+
+  it("names no chat app for any other transport", () => {
+    expect(personalChannelNetwork("telegram", "c1:whatsapp:x")).toBe("");
+    expect(personalChannelNetwork(null, undefined)).toBe("");
   });
 });

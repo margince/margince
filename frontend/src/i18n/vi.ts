@@ -2440,6 +2440,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.transcript_proposer": "Trình đọc bản ghi cuộc họp",
   "agentJob.voice_builder": "Phân tích văn phong",
   "trust.connectorTag": "Qua {connector}",
+  "trust.connectorNetworkTag": "Qua {network} · {connector}",
   "trust.stagedProposal": "Giá trị đề xuất",
   "trust.evidenceFrom": "Bằng chứng từ {source}",
   "trust.evidenceLine_one": "dòng {lines}",

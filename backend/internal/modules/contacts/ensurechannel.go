@@ -65,6 +65,8 @@ type EnsureChannelCounterpartyInput struct {
 	ActivityID ids.ActivityID // the captured activity to link
 	Source     string         // provenance channel, e.g. "telegram:<bot>:<chat>:<msg>"
 	CapturedBy string         // "connector:<provider>"
+	// OwnerID owns a contact this creates; zero leaves it ownerless.
+	OwnerID ids.UUID
 }
 
 // EnsureChannelCounterpartyResult reports what the ensure did. It carries no
@@ -298,16 +300,22 @@ func (s *Store) resolveChannelContact(ctx context.Context, tx pgx.Tx, in EnsureC
 // It reports the contact it offered as well as the winner, because the caller
 // tells a won race from a lost one by comparing the two.
 func (s *Store) offerChannelContact(ctx context.Context, tx pgx.Tx, in EnsureChannelCounterpartyInput, name string, match ContactResolution) (offered, winner ids.ContactID, recorded bool, err error) {
-	// owner_id is left NULL and visibility is 'workspace' (design D2): the
-	// bot serves the workspace, and auth's owner predicate already treats an
-	// ownerless row as workspace-shared at every row-scope tier.
+	// A workspace bot serves the workspace, so owner_id is left NULL and
+	// visibility is 'workspace' (design D2): auth's owner predicate treats an
+	// ownerless row as workspace-shared at every row-scope tier. A member's
+	// own chat app names an owner, and visibility stays 'workspace'.
 	//
 	// quarantined_at is left NULL, and not because impersonation does not
 	// happen here: both tells quarantineSuspect reads — a punycode domain, a
 	// display name naming a DIFFERENT domain than the message arrived from —
 	// are statements about a mail domain this record does not have.
+	var owner *ids.UserID
+	if !in.OwnerID.IsZero() {
+		owner = new(ids.From[ids.UserKind](in.OwnerID))
+	}
 	id, err := createContact(ctx, tx, s, match, ContactSpec{
 		FullName: name,
+		OwnerID:  owner,
 		// A channel message arrived from them: the same act as an inbound
 		// mail, over a different transport.
 		//

@@ -51,6 +51,9 @@ type EnsureChannelRequest struct {
 	ActivityID         ids.UUID
 	Source             string
 	CapturedBy         string
+	// OwnerID owns the contact this creates. Zero for a workspace bot, whose
+	// contacts stay ownerless; the member for a chat app that is theirs.
+	OwnerID ids.UUID
 }
 
 // WithChannelEnsurer returns a copy wired to the channel auto-create path. A
@@ -235,16 +238,25 @@ func (s *Sink) refuseErasedChannelAccount(ctx context.Context, tx pgx.Tx, cp con
 // defer. A human opening a conversation with the workspace's own bot IS the
 // affirmative intent the T1 tier goes looking for evidence of — nobody messages
 // a company's bot by accident, and a bot cannot be cold-mailed.
-func (s *Sink) decideChannelCounterparty(ctx context.Context) counterpartyDecision {
+func (s *Sink) decideChannelCounterparty(ctx context.Context, tx pgx.Tx, provider string) (counterpartyDecision, error) {
 	if s.channelEnsurer == nil {
-		return counterpartyDecision{}
+		return counterpartyDecision{}, nil
 	}
 	// The granting human the mail path owns its rows through is deliberately
 	// dropped: a channel connection's connected_by is audit-only (design §4.1),
 	// and reusing that admin here is exactly what would produce the owned record
 	// D2 refuses. owner stays zero, and the created contact stays ownerless.
-	actor, _ := capturePrincipal(ctx)
-	return counterpartyDecision{create: true, channel: true, capturedBy: actor.ID}
+	actor, owner := capturePrincipal(ctx)
+	// A member's own chat app is the exception: its chats are theirs, so the
+	// contact they bring in is theirs too.
+	memberBound, err := memberBoundCredentialTx(ctx, tx, provider)
+	if err != nil {
+		return counterpartyDecision{}, err
+	}
+	if !memberBound {
+		owner = ids.UUID{}
+	}
+	return counterpartyDecision{create: true, channel: true, capturedBy: actor.ID, owner: owner}, nil
 }
 
 // ensureChannelCounterparty is the auto-create follow-up for one freshly
@@ -261,6 +273,7 @@ func (s *Sink) ensureChannelCounterparty(ctx context.Context, rec connector.Norm
 		ActivityID:         ref.ID,
 		Source:             captureSource(rec),
 		CapturedBy:         decision.capturedBy,
+		OwnerID:            decision.owner,
 	})
 	if err != nil {
 		s.logEnsureFault(ctx, rec, err)

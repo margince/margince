@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"github.com/jackc/pgx/v5"
 	"testing"
 	"time"
 
@@ -217,7 +218,11 @@ func TestOnlyTheIdentitiesTheMembersOwnChatAppMetAreReachable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer tx.Rollback(context.Background())
+	t.Cleanup(func() {
+		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Error(err)
+		}
+	})
 	got, err := personalchannelwire.OwnIdentities(context.Background(), tx, e.Rep1, []connector.ChannelIdentity{own, foreign})
 	if err != nil || len(got) != 1 || got[0] != own {
 		t.Fatalf("own identities = %v, %v; want only %v", got, err, own)
@@ -235,5 +240,14 @@ func TestAGroupMessageNamingOtherParticipantsLands(t *testing.T) {
 	res := e.push(t, msg)
 	if res[0].Status != personalchannels.StatusLanded {
 		t.Fatalf("a group message with a further participant = %+v, want landed", res[0])
+	}
+}
+
+func TestAContactBroughtInThroughAMembersChatAppIsTheirs(t *testing.T) {
+	e := setupPersonalChannels(t)
+	e.push(t, whatsapp("wamid.own", "8500"))
+	if n := e.count(t, `SELECT count(*) FROM contact c JOIN contact_channel_identity i ON i.contact_id = c.id
+		WHERE i.provider = 'personal_channels' AND i.channel_user_id LIKE 'whatsapp/8500/%' AND c.owner_id = $1`, e.Rep1); n != 1 {
+		t.Fatalf("contacts owned by the member for that chat = %d, want 1", n)
 	}
 }

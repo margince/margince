@@ -365,29 +365,29 @@ func firstNonEmpty(a, b string) string {
 
 // settleSentByEcho settles the reply a pushed outbound message names as sent by
 // that message, and answers the reply's activity. A reply of another connection,
-// or none, answers nil.
-func settleSentByEcho(ctx context.Context, tx pgx.Tx, connection ids.UUID, m PushMessage, now time.Time) (*ids.UUID, error) {
+// or none, answers false.
+func settleSentByEcho(ctx context.Context, tx pgx.Tx, connection ids.UUID, m PushMessage, now time.Time) (ids.UUID, bool, error) {
 	var activity ids.UUID
 	var state string
 	err := tx.QueryRow(ctx, `SELECT activity_id, state FROM personal_channel_reply WHERE id = $1 AND connection_id = $2 FOR UPDATE`,
 		m.DeliveryID, connection).Scan(&activity, &state)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+		return ids.UUID{}, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return ids.UUID{}, false, err
 	}
 	if state != statePulled && state != stateWaiting {
-		return &activity, nil
+		return activity, true, nil
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE personal_channel_reply
 		   SET state = 'sent', provider_message_id = $2, body = NULL, recipient_account = NULL,
 		       leased_until = NULL, settled_at = $3, updated_at = $3
 		 WHERE id = $1`, m.DeliveryID, m.MessageID, now); err != nil {
-		return nil, err
+		return ids.UUID{}, false, err
 	}
 	_, err = storekit.Audit(ctx, tx, "update", replyEntity, m.DeliveryID,
 		map[string]any{auditState: state}, map[string]any{auditState: OutcomeSent})
-	return &activity, err
+	return activity, true, err
 }

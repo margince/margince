@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
-import { providerName } from "../format/connectorprovider";
+import { networkName, providerName } from "../format/connectorprovider";
 import { sourceSystemName } from "../format/sourcesystem";
 import { isMessageKey, type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -58,7 +58,7 @@ import "./trust.css";
 export type Provenance =
   // `forName` is the colleague the agent worked for, when the record says.
   | { kind: "agent"; agent?: string; job?: string; forName?: string }
-  | { kind: "connector"; connector: string }
+  | { kind: "connector"; connector: string; network?: string }
   | { kind: "system"; job?: string; relay?: RelaySend }
   | { kind: "human"; self: boolean; userId?: string; author?: SourceAuthor }
   | { kind: "buyer" }
@@ -152,9 +152,14 @@ export function provenanceLabel(
     case "system":
       return systemLabel(provenance, t);
     case "connector":
-      return t("trust.connectorTag", {
-        connector: providerName(provenance.connector, t),
-      });
+      return provenance.network
+        ? t("trust.connectorNetworkTag", {
+            network: networkName(provenance.network),
+            connector: providerName(provenance.connector, t),
+          })
+        : t("trust.connectorTag", {
+            connector: providerName(provenance.connector, t),
+          });
     case "buyer":
       return t("trust.typedByBuyer");
     case "import":

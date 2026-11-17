@@ -2510,6 +2510,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.transcript_proposer": "Transkript-Analyse",
   "agentJob.voice_builder": "Schreibstil-Analyse",
   "trust.connectorTag": "Über {connector}",
+  "trust.connectorNetworkTag": "Über {network} · {connector}",
   "trust.stagedProposal": "Vorgeschlagener Wert",
   "trust.evidenceFrom": "Beleg aus {source}",
   "trust.evidenceLine_one": "Zeile {lines}",

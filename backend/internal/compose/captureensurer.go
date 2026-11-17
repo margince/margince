@@ -185,6 +185,7 @@ func (p contactsEnsurer) EnsureChannelCounterparty(ctx context.Context, in captu
 		ActivityID:         ids.From[ids.ActivityKind](in.ActivityID),
 		Source:             in.Source,
 		CapturedBy:         in.CapturedBy,
+		OwnerID:            in.OwnerID,
 	})
 	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
 		return capture.EnsureOutcome{}, nil

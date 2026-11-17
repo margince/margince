@@ -2419,6 +2419,7 @@ export const en = {
   "agentJob.transcript_proposer": "Meeting transcript reader",
   "agentJob.voice_builder": "Writing style builder",
   "trust.connectorTag": "Via {connector}",
+  "trust.connectorNetworkTag": "Via {network} · {connector}",
   "trust.stagedProposal": "Proposed value",
   "trust.evidenceFrom": "Evidence from {source}",
   "trust.evidenceLine_one": "line {lines}",

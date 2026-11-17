@@ -177,11 +177,9 @@ func (s *Store) sentAsReply(ctx context.Context, connection ids.UUID, network st
 	var activity ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		if m.DeliveryID != (ids.UUID{}) {
-			found, err := settleSentByEcho(ctx, tx, connection, m, s.now())
-			if err != nil || found != nil {
-				if found != nil {
-					activity = *found
-				}
+			found, ok, err := settleSentByEcho(ctx, tx, connection, m, s.now())
+			if err != nil || ok {
+				activity = found
 				return err
 			}
 		}
