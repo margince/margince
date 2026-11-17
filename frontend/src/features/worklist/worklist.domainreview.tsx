@@ -9,7 +9,6 @@ import {
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ActionRow } from "../../design-system/actionrow";
 import { AppLink } from "../../design-system/applink";
 import {
   Button,
@@ -26,9 +25,9 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
+import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDate, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { searchByEntity } from "../../lib/relationshipcandidates";
@@ -43,6 +42,7 @@ import {
 } from "./worklist.domaincopy";
 import { useMarkRowsDone } from "./worklist.donequeries";
 import { worklistKey } from "./worklist.queries";
+import "./worklist.domainreview.css";
 
 const domainReviewKey = ["domain-questions"];
 
@@ -156,20 +156,6 @@ async function postAnswer({ domain, verb, companyId }: Answer) {
   );
 }
 
-// One sentence per action the panel draws, so each press says what it does.
-function actionEffects(row: DomainQuestion): MessageKey[] {
-  const effects: MessageKey[] = ["worklist.domainReview.matchEffect"];
-  if (row.reason_code !== "forwarded_identity")
-    effects.push("worklist.domainReview.createEffect");
-  effects.push(
-    row.reason_code === "vendor_verdict"
-      ? "worklist.domainReview.keepVendorEffect"
-      : "worklist.domainReview.retryEffect",
-  );
-  effects.push("worklist.domainReview.deferEffect");
-  return effects;
-}
-
 function useAnswer() {
   const client = useQueryClient();
   return useMutation({
@@ -183,6 +169,8 @@ function useAnswer() {
   });
 }
 
+// One answer per row, each with what it does beside its verb. The suggestion
+// leads and carries the panel's one fill; the rest are outlined.
 function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
   const t = useT();
   const plural = usePlural();
@@ -190,129 +178,140 @@ function DomainReviewRow({ row }: Readonly<{ row: DomainQuestion }>) {
   const client = useQueryClient();
   const canEdit = useCanWrite("company", "update");
   const defer = useMarkRowsDone();
-  const deferred = row.deferred;
   const [company, setCompany] = useState<RecordPickerCandidate | null>(null);
   const answer = useAnswer();
   const context = row.domain_context;
   const suggestion = context?.suggested_company;
-  const vendor = row.reason_code === "vendor_verdict";
+  const locked = !canEdit || answer.isPending;
   const send = (verb: Answer["verb"], companyId?: string) =>
     answer.mutate({ domain: row.domain, verb, companyId });
+  const deferRow = () =>
+    defer.mutate(
+      {
+        rows: [{ source: "domain_question", row_id: row.domain }],
+        reopen: row.deferred,
+      },
+      {
+        onSuccess: () =>
+          client.invalidateQueries({ queryKey: domainReviewKey }),
+      },
+    );
   return (
     <Panel title={domainQuestionHeading(t, row.domain, context)}>
       <PanelBody>
         <DomainQuestionOrigin domain={row.domain} context={context} />
         <p>{domainQuestionReason(t, row.reason_code, context)}</p>
+        <ErrorLine error={answer.error ?? defer.error} />
+      </PanelBody>
+      <SettingList bleed="settings">
         {suggestion && (
-          <>
-            <p>
-              {t("worklist.domainQuestion.suggested", {
-                name: suggestion.name,
-              })}{" "}
-              {suggestionBasis(t, suggestion)}
-            </p>
-            <ActionRow>
+          <SettingRow
+            label={suggestion.name}
+            description={`${suggestionBasis(t, suggestion)} ${confirmEffect(
+              { t, plural, locale },
+              row.domain,
+              suggestion.name,
+              context,
+            )}`}
+            control={
               <Button
                 variant="primary"
-                disabled={!canEdit || answer.isPending}
+                disabled={locked}
                 onClick={() => send("keep", suggestion.id)}
               >
                 {t("worklist.domainQuestion.confirm")}
               </Button>
-            </ActionRow>
-            <p className="t-caption">
-              {confirmEffect(
-                { t, plural, locale },
-                row.domain,
-                suggestion.name,
-                context,
-              )}
-            </p>
-          </>
-        )}
-        <RecordPicker
-          label={t(
-            suggestion
-              ? "worklist.domainQuestion.chooseAnother"
-              : "worklist.domainQuestion.choose",
-          )}
-          searchTargets={searchCompanies}
-          selected={company}
-          onPick={setCompany}
-          disabled={!canEdit || answer.isPending}
-        />
-        <ErrorLine error={answer.error ?? defer.error} />
-        <ActionRow>
-          <Button
-            disabled={!canEdit || !company || answer.isPending}
-            onClick={() => send("keep", company?.id)}
-          >
-            {t("worklist.domainReview.match")}
-          </Button>
-          {row.reason_code !== "forwarded_identity" && (
-            <Button
-              disabled={!canEdit || answer.isPending}
-              onClick={() => send("keep")}
-            >
-              {t("worklist.domainReview.create")}
-            </Button>
-          )}
-          {vendor ? (
-            <Button
-              disabled={!canEdit || answer.isPending}
-              onClick={() => send("keep_vendor")}
-            >
-              {t("worklist.domainReview.keepVendor")}
-            </Button>
-          ) : (
-            <Button
-              disabled={!canEdit || answer.isPending}
-              onClick={() => send("reopen")}
-            >
-              {t("worklist.domainReview.retry")}
-            </Button>
-          )}
-          <Button
-            pending={defer.isPending}
-            onClick={() =>
-              defer.mutate(
-                {
-                  rows: [{ source: "domain_question", row_id: row.domain }],
-                  reopen: deferred,
-                },
-                {
-                  onSuccess: () =>
-                    client.invalidateQueries({ queryKey: domainReviewKey }),
-                },
-              )
             }
-          >
-            {t(
-              deferred
-                ? "worklist.domainReview.restore"
-                : "worklist.domainReview.defer",
-            )}
-          </Button>
-        </ActionRow>
-        <ul className="t-caption">
-          {actionEffects(row).map((key) => (
-            <li key={key}>{t(key)}</li>
-          ))}
-        </ul>
-        <ActionRow>
-          <Button
-            variant="ghost"
-            disabled={answer.isPending}
-            onClick={() => send("discard")}
-          >
-            {t("worklist.verb.discard")}
-          </Button>
-        </ActionRow>
-        <p className="t-caption">
-          {t("worklist.domainQuestion.stopCapturingEffect", {
+          />
+        )}
+        <SettingRow
+          layout="stack"
+          label={t("worklist.domainReview.anotherLabel")}
+          description={t("worklist.domainReview.matchEffect")}
+          control={
+            <div className="domainreview-match">
+              <RecordPicker
+                label={t(
+                  suggestion
+                    ? "worklist.domainQuestion.chooseAnother"
+                    : "worklist.domainQuestion.choose",
+                )}
+                searchTargets={searchCompanies}
+                selected={company}
+                onPick={setCompany}
+                disabled={locked}
+              />
+              <Button
+                disabled={locked || !company}
+                onClick={() => send("keep", company?.id)}
+              >
+                {t("worklist.domainReview.match")}
+              </Button>
+            </div>
+          }
+        />
+        {row.reason_code !== "forwarded_identity" && (
+          <SettingRow
+            label={t("worklist.domainReview.newLabel")}
+            description={t("worklist.domainReview.createEffect")}
+            control={
+              <Button disabled={locked} onClick={() => send("keep")}>
+                {t("worklist.domainReview.create")}
+              </Button>
+            }
+          />
+        )}
+        {row.reason_code === "vendor_verdict" ? (
+          <SettingRow
+            label={t("worklist.domainReview.vendorLabel")}
+            description={t("worklist.domainReview.keepVendorEffect")}
+            control={
+              <Button disabled={locked} onClick={() => send("keep_vendor")}>
+                {t("worklist.domainReview.keepVendor")}
+              </Button>
+            }
+          />
+        ) : (
+          <SettingRow
+            label={t("worklist.domainReview.siteLabel")}
+            description={t("worklist.domainReview.retryEffect")}
+            control={
+              <Button disabled={locked} onClick={() => send("reopen")}>
+                {t("worklist.domainReview.retry")}
+              </Button>
+            }
+          />
+        )}
+        <SettingRow
+          label={t("worklist.domainReview.laterLabel")}
+          description={t("worklist.domainReview.deferEffect")}
+          control={
+            <Button pending={defer.isPending} onClick={deferRow}>
+              {t(
+                row.deferred
+                  ? "worklist.domainReview.restore"
+                  : "worklist.domainReview.defer",
+              )}
+            </Button>
+          }
+        />
+        <SettingRow
+          label={t("worklist.domainReview.mailboxesLabel")}
+          description={t("worklist.domainQuestion.stopCapturingEffect", {
             domain: row.domain,
           })}
-        </p>
+          control={
+            <Button
+              variant="ghost"
+              disabled={answer.isPending}
+              onClick={() => send("discard")}
+            >
+              {t("worklist.verb.discard")}
+            </Button>
+          }
+        />
+      </SettingList>
+      <PanelBody>
         <WebsiteDetails row={row} />
       </PanelBody>
     </Panel>

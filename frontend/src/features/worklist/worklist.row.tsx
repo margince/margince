@@ -367,7 +367,16 @@ export function WorklistRow({
             equals={answer.equals}
             onReview={onReview}
             context={context}
-            menu={menu}
+            menu={
+              answer.menu ? (
+                <>
+                  {menu}
+                  {answer.menu}
+                </>
+              ) : (
+                menu
+              )
+            }
             framed={framed}
             titled={titleLinks(emailOpener, href, source.open)}
           />
